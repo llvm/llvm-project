@@ -11,10 +11,10 @@ define void @multiply_2x2(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -41,7 +41,7 @@ define void @multiply_2x2(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP10]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[C]], align 8
-; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr double, ptr [[C]], i64 2
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr inbounds double, ptr [[C]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -58,10 +58,10 @@ define void @multiply_2x2_may_alias(ptr %A, ptr %B, ptr %C) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[B]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -88,7 +88,7 @@ define void @multiply_2x2_may_alias(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP10]], <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[C]], align 8
-; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr double, ptr [[C]], i64 2
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr inbounds double, ptr [[C]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;

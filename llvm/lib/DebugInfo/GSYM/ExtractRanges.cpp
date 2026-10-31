@@ -8,7 +8,7 @@
 
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include <inttypes.h>
 
 namespace llvm {
@@ -20,7 +20,7 @@ void encodeRange(const AddressRange &Range, FileWriter &O, uint64_t BaseAddr) {
   O.writeULEB(Range.size());
 }
 
-AddressRange decodeRange(DataExtractor &Data, uint64_t BaseAddr,
+AddressRange decodeRange(GsymDataExtractor &Data, uint64_t BaseAddr,
                          uint64_t &Offset) {
   const uint64_t AddrOffset = Data.getULEB128(&Offset);
   const uint64_t Size = Data.getULEB128(&Offset);
@@ -38,8 +38,8 @@ void encodeRanges(const AddressRanges &Ranges, FileWriter &O,
     encodeRange(Range, O, BaseAddr);
 }
 
-void decodeRanges(AddressRanges &Ranges, DataExtractor &Data, uint64_t BaseAddr,
-                  uint64_t &Offset) {
+void decodeRanges(AddressRanges &Ranges, GsymDataExtractor &Data,
+                  uint64_t BaseAddr, uint64_t &Offset) {
   Ranges.clear();
   uint64_t NumRanges = Data.getULEB128(&Offset);
   Ranges.reserve(NumRanges);
@@ -47,12 +47,12 @@ void decodeRanges(AddressRanges &Ranges, DataExtractor &Data, uint64_t BaseAddr,
     Ranges.insert(decodeRange(Data, BaseAddr, Offset));
 }
 
-void skipRange(DataExtractor &Data, uint64_t &Offset) {
+void skipRange(GsymDataExtractor &Data, uint64_t &Offset) {
   Data.getULEB128(&Offset);
   Data.getULEB128(&Offset);
 }
 
-uint64_t skipRanges(DataExtractor &Data, uint64_t &Offset) {
+uint64_t skipRanges(GsymDataExtractor &Data, uint64_t &Offset) {
   uint64_t NumRanges = Data.getULEB128(&Offset);
   for (uint64_t I = 0; I < NumRanges; ++I)
     skipRange(Data, Offset);

@@ -8,9 +8,8 @@ define <2 x i64> @func(ptr %pdst) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi 4, 1, -32
 ; CHECK-NEXT:    lxvd2x 0, 0, 4
-; CHECK-NEXT:    xxswapd 34, 0
-; CHECK-NEXT:    lxvd2x 0, 0, 4
 ; CHECK-NEXT:    stxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 34, 0
 ; CHECK-NEXT:    blr
 entry:
   %a = alloca [4 x i64], align 8

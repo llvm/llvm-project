@@ -19,7 +19,7 @@ __device__ int CheckSimple() {
   // CHECK: [[PTR1:%[0-9]+]] = getelementptr inbounds nuw [[SIMPLE_PRINTF_TY]], ptr [[BUF]], i32 0, i32 1
   // CHECK: store i64 2, ptr [[PTR1]], align 8
   // CHECK: [[PTR2:%[0-9]+]] = getelementptr inbounds nuw [[SIMPLE_PRINTF_TY]], ptr [[BUF]], i32 0, i32 2
-  // CHECK: store double 3.0{{[^,]*}}, ptr [[PTR2]], align 8
+  // CHECK: store double 3.000000e+00{{[^,]*}}, ptr [[PTR2]], align 8
   // CHECK: [[RET:%[0-9]+]] = call i32 @vprintf(ptr [[FMT]], ptr [[BUF]])
   // CHECK: ret i32 [[RET]]
   return printf(fmt, 1, 2ll, 3.0);

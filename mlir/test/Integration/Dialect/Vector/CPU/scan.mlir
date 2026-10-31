@@ -24,13 +24,13 @@ func.func @entry() {
   %y = vector.broadcast %f6 : f32 to vector<2xf32>
   %z = vector.broadcast %f6 : f32 to vector<3xf32>
   // Scan
-  %a:2 = vector.scan <add>, %x, %y {inclusive = true, reduction_dim = 0} :
+  %a:2 = vector.scan <add>, %x, %y reduction_dim = 0, inclusive = true :
     vector<3x2xf32>, vector<2xf32>
-  %b:2 = vector.scan <add>, %x, %z {inclusive = true, reduction_dim = 1} :
+  %b:2 = vector.scan <add>, %x, %z reduction_dim = 1, inclusive = true :
     vector<3x2xf32>, vector<3xf32>
-  %c:2 = vector.scan <add>, %x, %y {inclusive = false, reduction_dim = 0} :
+  %c:2 = vector.scan <add>, %x, %y reduction_dim = 0, inclusive = false :
     vector<3x2xf32>, vector<2xf32>
-  %d:2 = vector.scan <add>, %x, %z {inclusive = false, reduction_dim = 1} :
+  %d:2 = vector.scan <add>, %x, %z reduction_dim = 1, inclusive = false :
     vector<3x2xf32>, vector<3xf32>
 
   // CHECK: ( ( 1, 2 ), ( 4, 6 ), ( 9, 12 ) )

@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -filetype=null %s 2>&1 | FileCheck --check-prefixes=GFX1250-ERR --implicit-check-not=error: -strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgpu12.50 -filetype=null %s 2>&1 | FileCheck --check-prefixes=GFX1250-ERR --implicit-check-not=error: -strict-whitespace %s
 
 s_load_b32 s4, s[2:3], 10 th:TH_LOAD_NT th:TH_LOAD_NT
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -186,3 +186,8 @@ v_pk_add_min_i16 v10, v1, v2, v3 neg_hi:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX1250-ERR: v_pk_add_min_i16 v10, v1, v2, v3 neg_hi:[1,0,0]
 // GFX1250-ERR:                                  ^
+
+v_fmamk_f64 v[4:5], v[2:3], 123.0, v[7:8]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: v_fmamk_f64 v[4:5], v[2:3], 123.0, v[7:8]
+// GFX1250-ERR:                                    ^

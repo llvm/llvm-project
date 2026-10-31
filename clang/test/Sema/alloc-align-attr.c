@@ -3,8 +3,13 @@
 // return values
 void test_void_alloc_align(void) __attribute__((alloc_align(1))); // expected-warning {{'alloc_align' attribute only applies to return values that are pointers}}
 void *test_ptr_alloc_align(unsigned long long a) __attribute__((alloc_align(1))); // no-warning
+void *(*test_fn_ptr_alloc_align)(unsigned long long) __attribute__((alloc_align(1))); // no-warning
 
 int j __attribute__((alloc_align(1))); // expected-warning {{'alloc_align' attribute only applies to non-K&R-style functions}}
+// GH122058
+struct InvalidFunctionField {
+  void *f(unsigned long long) __attribute__((alloc_align(1))); // expected-error {{field 'f' declared as a function}}
+};
 void *test_no_params_zero(void) __attribute__((alloc_align(0))); // expected-error {{'alloc_align' attribute parameter 1 is out of bounds}}
 void *test_no_params(void) __attribute__((alloc_align(1))); // expected-error {{'alloc_align' attribute parameter 1 is out of bounds}}
 void *test_incorrect_param_type(float a) __attribute__((alloc_align(1))); // expected-error {{'alloc_align' attribute argument may only refer to a function parameter of integer type}}

@@ -24,11 +24,13 @@ add_llvm_component_library(LLVMipo
   GlobalSplit.cpp
   HotColdSplitting.cpp
   IPO.cpp
-  IROutliner.cpp
   InferFunctionAttrs.cpp
   Inliner.cpp
+  Instrumentor.cpp
+  InstrumentorUtils.cpp
+  InstrumentorConfigFile.cpp
+  InstrumentorStubPrinter.cpp
   Internalize.cpp
-  LoopExtractor.cpp
   LowerTypeTests.cpp
   MemProfContextDisambiguation.cpp
   MergeFunctions.cpp
@@ -59,9 +61,11 @@ add_llvm_component_library(LLVMipo
   LINK_COMPONENTS
   AggressiveInstCombine
   Analysis
+  AsmParser
   BitReader
   BitWriter
   Core
+  Demangle
   FrontendOpenMP
   InstCombine
   IRReader

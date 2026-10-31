@@ -10,6 +10,7 @@
 #define LLVM_TARGETPARSER_TRIPLE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 
@@ -74,7 +75,7 @@ public:
     ppc64,       // PPC64: powerpc64, ppu
     ppc64le,     // PPC64LE: powerpc64le
     r600,        // R600: AMD GPUs HD2XXX - HD6XXX
-    amdgcn,      // AMDGCN: AMD GCN GPUs
+    amdgpu,      // AMDGPU: AMD GCN+ GPUs
     riscv32,     // RISC-V (32-bit, little endian): riscv32
     riscv64,     // RISC-V (64-bit, little endian): riscv64
     riscv32be,   // RISC-V (32-bit, big endian): riscv32be
@@ -83,30 +84,34 @@ public:
     sparcv9,     // Sparcv9: Sparcv9
     sparcel,     // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
     systemz,     // SystemZ: s390x
-    tce,         // TCE (http://tce.cs.tut.fi/): tce
-    tcele,       // TCE little endian (http://tce.cs.tut.fi/): tcele
-    thumb,       // Thumb (little endian): thumb, thumbv.*
-    thumbeb,     // Thumb (big endian): thumbeb
-    x86,         // X86: i[3-9]86
-    x86_64,      // X86-64: amd64, x86_64
-    xcore,       // XCore: xcore
-    xtensa,      // Tensilica: Xtensa
-    nvptx,       // NVPTX: 32-bit
-    nvptx64,     // NVPTX: 64-bit
-    amdil,       // AMDIL
-    amdil64,     // AMDIL with 64-bit pointers
-    hsail,       // AMD HSAIL
-    hsail64,     // AMD HSAIL with 64-bit pointers
-    spir,        // SPIR: standard portable IR for OpenCL 32-bit version
-    spir64,      // SPIR: standard portable IR for OpenCL 64-bit version
-    spirv,       // SPIR-V with logical memory layout.
-    spirv32,     // SPIR-V with 32-bit pointers
-    spirv64,     // SPIR-V with 64-bit pointers
-    kalimba,     // Kalimba: generic kalimba
-    shave,       // SHAVE: Movidius vector VLIW processors
-    lanai,       // Lanai: Lanai 32-bit
-    wasm32,      // WebAssembly with 32-bit pointers
-    wasm64,      // WebAssembly with 64-bit pointers
+    // OpenASIP (http://openasip.org) / big endian 32b targets: tce
+    tce,
+    // OpenASIP (http://openasip.org) / little endian 32b targets: tcele
+    tcele,
+    // OpenASIP (http://openasip.org) / little endian 64b targets: tcele
+    tcele64,
+    thumb,          // Thumb (little endian): thumb, thumbv.*
+    thumbeb,        // Thumb (big endian): thumbeb
+    x86,            // X86: i[3-9]86
+    x86_64,         // X86-64: amd64, x86_64
+    xcore,          // XCore: xcore
+    xtensa,         // Tensilica: Xtensa
+    nvptx,          // NVPTX: 32-bit
+    nvptx64,        // NVPTX: 64-bit
+    amdil,          // AMDIL
+    amdil64,        // AMDIL with 64-bit pointers
+    hsail,          // AMD HSAIL
+    hsail64,        // AMD HSAIL with 64-bit pointers
+    spir,           // SPIR: standard portable IR for OpenCL 32-bit version
+    spir64,         // SPIR: standard portable IR for OpenCL 64-bit version
+    spirv,          // SPIR-V with logical memory layout.
+    spirv32,        // SPIR-V with 32-bit pointers
+    spirv64,        // SPIR-V with 64-bit pointers
+    kalimba,        // Kalimba: generic kalimba
+    shave,          // SHAVE: Movidius vector VLIW processors
+    lanai,          // Lanai: Lanai 32-bit
+    wasm32,         // WebAssembly with 32-bit pointers
+    wasm64,         // WebAssembly with 64-bit pointers
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
@@ -115,6 +120,7 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_8a,
     ARMSubArch_v9_7a,
     ARMSubArch_v9_6a,
     ARMSubArch_v9_5a,
@@ -152,8 +158,11 @@ public:
     ARMSubArch_v4t,
 
     AArch64SubArch_arm64e,
+    AArch64SubArch_arm64e_x1,
     AArch64SubArch_arm64ec,
     AArch64SubArch_lfi,
+
+    X86_64SubArch_lfi,
 
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
@@ -184,6 +193,91 @@ public:
     DXILSubArch_v1_8,
     DXILSubArch_v1_9,
     LatestDXILSubArch = DXILSubArch_v1_9,
+
+    // AMDGPU sub-arch
+    AMDGPUSubArch6,
+    AMDGPUSubArch600,
+    AMDGPUSubArch601,
+    AMDGPUSubArch602,
+
+    AMDGPUSubArch7,
+    AMDGPUSubArch700,
+    AMDGPUSubArch701,
+    AMDGPUSubArch702,
+    AMDGPUSubArch703,
+    AMDGPUSubArch704,
+    AMDGPUSubArch705,
+
+    AMDGPUSubArch8,
+    AMDGPUSubArch801,
+    AMDGPUSubArch802,
+    AMDGPUSubArch803,
+    AMDGPUSubArch805,
+
+    // 810 is its own major arch.
+    AMDGPUSubArch810,
+
+    AMDGPUSubArch9,
+    AMDGPUSubArch900,
+    AMDGPUSubArch902,
+    AMDGPUSubArch904,
+    AMDGPUSubArch906,
+    AMDGPUSubArch909,
+    AMDGPUSubArch90C,
+
+    // 908 and 90a are not covered by a generic target, and are their own major
+    // subarches.
+    AMDGPUSubArch908,
+    AMDGPUSubArch90A,
+
+    AMDGPUSubArch9_4,
+    AMDGPUSubArch942,
+    AMDGPUSubArch950,
+
+    AMDGPUSubArch10_1,
+    AMDGPUSubArch1010,
+    AMDGPUSubArch1011,
+    AMDGPUSubArch1012,
+    AMDGPUSubArch1013,
+
+    AMDGPUSubArch10_3,
+    AMDGPUSubArch1030,
+    AMDGPUSubArch1031,
+    AMDGPUSubArch1032,
+    AMDGPUSubArch1033,
+    AMDGPUSubArch1034,
+    AMDGPUSubArch1035,
+    AMDGPUSubArch1036,
+
+    AMDGPUSubArch11,
+    AMDGPUSubArch1100,
+    AMDGPUSubArch1101,
+    AMDGPUSubArch1102,
+    AMDGPUSubArch1103,
+    AMDGPUSubArch1150,
+    AMDGPUSubArch1151,
+    AMDGPUSubArch1152,
+    AMDGPUSubArch1153,
+    AMDGPUSubArch1154,
+
+    AMDGPUSubArch11_7,
+    AMDGPUSubArch1170,
+    AMDGPUSubArch1171,
+    AMDGPUSubArch1172,
+
+    AMDGPUSubArch12,
+    AMDGPUSubArch1200,
+    AMDGPUSubArch1201,
+
+    AMDGPUSubArch12_5,
+    AMDGPUSubArch1250S,
+    AMDGPUSubArch1250,
+    AMDGPUSubArch1251,
+
+    AMDGPUSubArch13,
+    AMDGPUSubArch1310,
+    FirstAMDGPUSubArch = AMDGPUSubArch6,
+    LastAMDGPUSubArch = AMDGPUSubArch1310
   };
   enum VendorType {
     UnknownVendor,
@@ -256,7 +350,8 @@ public:
     ChipStar,
     Firmware,
     QURT,
-    LastOSType = QURT
+    H2,
+    LastOSType = H2
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -375,22 +470,17 @@ public:
                   const Twine &OSStr);
   LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr,
                   const Twine &OSStr, const Twine &EnvironmentStr);
+  LLVM_ABI Triple(ArchType A, SubArchType SA = NoSubArch,
+                  VendorType V = UnknownVendor, OSType OS = UnknownOS);
+  LLVM_ABI Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
+                  EnvironmentType E);
+  LLVM_ABI Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
+                  EnvironmentType E, ObjectFormatType OF);
 
-  bool operator==(const Triple &Other) const {
-    return Arch == Other.Arch && SubArch == Other.SubArch &&
-           Vendor == Other.Vendor && OS == Other.OS &&
-           Environment == Other.Environment &&
-           ObjectFormat == Other.ObjectFormat;
-  }
-
+  LLVM_ABI bool operator==(const Triple &Other) const;
   bool operator!=(const Triple &Other) const { return !(*this == Other); }
 
-  bool operator<(const Triple &Other) const {
-    return std::tie(Arch, SubArch, Vendor, OS, Environment, ObjectFormat,
-                    Data) < std::tie(Other.Arch, Other.SubArch, Other.Vendor,
-                                     Other.OS, Other.Environment,
-                                     Other.ObjectFormat, Other.Data);
-  }
+  LLVM_ABI bool operator<(const Triple &Other) const;
 
   /// @}
   /// @name Normalization
@@ -687,6 +777,12 @@ public:
   /// Tests whether the OS is Windows.
   bool isOSWindows() const { return getOS() == Triple::Win32; }
 
+  /// Tests whether the OS is Windows or UEFI. These targets generally share
+  /// Windows low-level platform ABI conventions, but this does not imply
+  /// support for a hosted Windows environment or its runtime libraries. Use
+  /// object format or environment predicates when those properties matter.
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
+
   /// Checks if the environment is MSVC.
   bool isKnownWindowsMSVCEnvironment() const {
     return isOSWindows() && getEnvironment() == Triple::MSVC;
@@ -764,6 +860,9 @@ public:
   /// Tests whether the OS is QURT.
   bool isOSQurt() const { return getOS() == Triple::QURT; }
 
+  /// Tests whether the OS is H2.
+  bool isOSH2() const { return getOS() == Triple::H2; }
+
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const { return getObjectFormat() == Triple::ELF; }
 
@@ -822,6 +921,9 @@ public:
 
     return Version < VersionTuple(Major);
   }
+
+  /// Tests whether the environment is mlibc.
+  bool isMlibc() const { return getEnvironment() == Triple::Mlibc; }
 
   /// Tests whether the environment is musl-libc
   bool isMusl() const {
@@ -891,9 +993,9 @@ public:
   }
 
   /// Tests whether the target is AMDGCN
-  bool isAMDGCN() const { return getArch() == Triple::amdgcn; }
+  bool isAMDGCN() const { return getArch() == Triple::amdgpu; }
 
-  bool isAMDGPU() const { return getArch() == Triple::r600 || isAMDGCN(); }
+  bool isAMDGPU() const { return isAMDGCN() || getArch() == Triple::r600; }
 
   /// Tests whether the target is Thumb (little and big endian).
   bool isThumb() const {
@@ -907,8 +1009,10 @@ public:
 
   /// Tests whether the target is LFI.
   bool isLFI() const {
-    return getArch() == Triple::aarch64 &&
-           getSubArch() == Triple::AArch64SubArch_lfi;
+    return (getArch() == Triple::aarch64 &&
+            getSubArch() == Triple::AArch64SubArch_lfi) ||
+           (getArch() == Triple::x86_64 &&
+            getSubArch() == Triple::X86_64SubArch_lfi);
   }
 
   /// Tests whether the target supports the EHABI exception
@@ -1051,19 +1155,16 @@ public:
 
   /// Tests whether the target 64-bit PowerPC big endian ABI is ELFv2.
   bool isPPC64ELFv2ABI() const {
-    return (getArch() == Triple::ppc64 &&
-            ((getOS() == Triple::FreeBSD &&
-              (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
-             getOS() == Triple::OpenBSD || isMusl()));
+    return (
+        getArch() == Triple::ppc64 &&
+        (getOS() == Triple::FreeBSD || getOS() == Triple::OpenBSD || isMusl()));
   }
 
   /// Tests whether the target 32-bit PowerPC uses Secure PLT.
   bool isPPC32SecurePlt() const {
     return ((getArch() == Triple::ppc || getArch() == Triple::ppcle) &&
-            ((getOS() == Triple::FreeBSD &&
-              (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
-             getOS() == Triple::NetBSD || getOS() == Triple::OpenBSD ||
-             isMusl()));
+            (getOS() == Triple::FreeBSD || getOS() == Triple::NetBSD ||
+             getOS() == Triple::OpenBSD || isMusl()));
   }
 
   /// Tests whether the target is 32-bit RISC-V.
@@ -1121,6 +1222,11 @@ public:
            getSubArch() == Triple::AArch64SubArch_arm64e;
   }
 
+  bool isArm64e_x1() const {
+    return getArch() == Triple::aarch64 &&
+           getSubArch() == Triple::AArch64SubArch_arm64e_x1;
+  }
+
   // Tests whether the target is N32.
   bool isABIN32() const {
     EnvironmentType Env = getEnvironment();
@@ -1152,18 +1258,51 @@ public:
            Env == Triple::GNUEABIHFT64;
   }
 
-  /// Tests if the target forces hardfloat.
-  bool isHardFloatABI() const {
-    EnvironmentType Env = getEnvironment();
-    return Env == llvm::Triple::GNUEABIHF ||
-           Env == llvm::Triple::GNUEABIHFT64 ||
-           Env == llvm::Triple::MuslEABIHF || Env == llvm::Triple::EABIHF;
-  }
+  /// Returns the default floating-point ABI for this target triple, i.e. the
+  /// ABI the code generator will resolve FloatABI::Default to. \p ABIName, if
+  /// given, is the effective target ABI (e.g. "aapcs16" can force hard float on
+  /// ARM even when the ordinary default is soft).
+  LLVM_ABI FloatABI::ABIType getDefaultFloatABI(StringRef ABIName = "") const;
+
+  /// Tests if the target's default floating-point ABI is hard float.
+  bool isHardFloatABI() const { return getDefaultFloatABI() == FloatABI::Hard; }
+
+  /// Returns the default threading model for this target triple, i.e. the model
+  /// used when the "thread-model" module flag is absent.
+  LLVM_ABI ThreadModel getDefaultThreadModel() const;
+
+  /// Returns the default floating-point format for the "long double" type. A
+  /// particular module may override this default.
+  LLVM_ABI LongDoubleFormat getDefaultLongDoubleFormat() const;
+
+  /// Returns the default debugger tuning for this target triple, i.e. the
+  /// tuning used when the "debugger-tuning" module flag is absent.
+  LLVM_ABI DebuggerKind getDefaultDebuggerTuning() const;
 
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
     return !(isOSBinFormatMachO() || isOSBinFormatXCOFF() ||
              isOSBinFormatDXContainer());
+  }
+
+  /// Tests whether the target supports debug entry values.
+  bool supportsDebugEntryValues() const {
+    switch (getArch()) {
+    case Triple::x86:
+    case Triple::x86_64:
+    case Triple::aarch64:
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::mips:
+    case Triple::mipsel:
+    case Triple::mips64:
+    case Triple::mips64el:
+    case Triple::riscv32:
+    case Triple::riscv64:
+      return true;
+    default:
+      return false;
+    }
   }
 
   /// Tests whether the target uses emulated TLS as default.
@@ -1185,7 +1324,7 @@ public:
   }
 
   /// Returns the default wchar_t size (in bytes) for this target triple.
-  unsigned getDefaultWCharSize() const;
+  LLVM_ABI unsigned getDefaultWCharSize() const;
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
@@ -1273,7 +1412,7 @@ public:
   LLVM_ABI bool isCompatibleWith(const Triple &Other) const;
 
   /// Test whether the target triple is for a GPU.
-  bool isGPU() const { return isSPIRV() || isNVPTX() || isAMDGPU(); }
+  bool isGPU() const { return isSPIROrSPIRV() || isNVPTX() || isAMDGPU(); }
 
   /// Merge target triples.
   LLVM_ABI std::string merge(const Triple &Other) const;
@@ -1325,6 +1464,11 @@ public:
   /// Parse anything recognized as an architecture for the first field of the
   /// triple.
   LLVM_ABI static ArchType parseArch(StringRef Str);
+
+  /// Parse the subarchitecture encoded in the first (architecture) field of the
+  /// triple (e.g. "amdgpu9.00" -> AMDGPUSubArch900). Returns NoSubArch if the
+  /// string does not encode a recognized subarchitecture.
+  LLVM_ABI static SubArchType parseSubArch(StringRef Str);
 
   /// @}
 

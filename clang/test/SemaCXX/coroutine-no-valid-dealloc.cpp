@@ -1,6 +1,6 @@
 // Test that if the compiler will emit error message if the promise_type contain
 // operator delete but none of them are available. This is required by the standard.
-// RUN: %clang_cc1 %s -std=c++20 %s -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++20 %s -fsyntax-only -verify -Wno-coroutines-unsupported-target
 
 #include "Inputs/std-coroutine.h"
 

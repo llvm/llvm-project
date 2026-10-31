@@ -9,7 +9,7 @@
 #ifndef ____LIBUNWIND_CONFIG_H__
 #define ____LIBUNWIND_CONFIG_H__
 
-#define _LIBUNWIND_VERSION 230000
+#define _LIBUNWIND_VERSION 240000
 
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) && \
     !defined(__ARM_DWARF_EH__) && !defined(__SEH__)
@@ -17,7 +17,7 @@
 #endif
 
 #define _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86       8
-#define _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86_64    32
+#define _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86_64    59
 #define _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC       112
 #define _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC64     116
 #define _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64     95
@@ -35,6 +35,9 @@
 #if defined(_LIBUNWIND_IS_NATIVE_ONLY)
 # if defined(__linux__)
 #  define _LIBUNWIND_TARGET_LINUX 1
+# endif
+# if defined(__FreeBSD__)
+#  define _LIBUNWIND_TARGET_FREEBSD 1
 # endif
 # if defined(__HAIKU__)
 #  define _LIBUNWIND_TARGET_HAIKU 1

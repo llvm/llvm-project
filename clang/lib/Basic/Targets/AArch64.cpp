@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 using namespace clang;
@@ -204,8 +205,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   if (Triple.getOS() == llvm::Triple::Linux)
     this->MCountName = "\01_mcount";
   else if (Triple.getOS() == llvm::Triple::UnknownOS)
-    this->MCountName =
-        Opts.EABIVersion == llvm::EABI::GNU ? "\01_mcount" : "mcount";
+    this->MCountName = Triple.isGNUEnvironment() ? "\01_mcount" : "mcount";
 }
 
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
@@ -249,12 +249,13 @@ bool AArch64TargetInfo::validateGlobalRegisterVariable(
          getTargetOpts().FeatureMap.lookup(("reserve-x" + RegNum).str());
 }
 
-bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
+bool AArch64TargetInfo::validateBranchProtection(const ParsedTargetAttr &Attr,
                                                  BranchProtectionInfo &BPI,
                                                  const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
+  if (!llvm::ARM::parseBranchProtection(Attr.BranchProtection, PBP, Err,
+                                        getTriple(), HasPAuthLR))
     return false;
 
   // GCS is currently untested with ptrauth-returns, but enabling this could be
@@ -275,19 +276,34 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
   else
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
+  if (Attr.SignReturnAddrHardening.empty())
+    BPI.SignReturnAddressHardening =
+        LangOptions::SignReturnAddressHardeningKind::None;
+  else if (auto Hardening =
+               parseSignReturnAddressHardening(Attr.SignReturnAddrHardening))
+    BPI.SignReturnAddressHardening = *Hardening;
+
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
   BPI.GuardedControlStack = PBP.GuardedControlStack;
   return true;
 }
 
+std::optional<LangOptions::SignReturnAddressHardeningKind>
+AArch64TargetInfo::parseSignReturnAddressHardening(StringRef Spec) const {
+  return llvm::StringSwitch<
+             std::optional<LangOptions::SignReturnAddressHardeningKind>>(Spec)
+      .Case("load-return-address",
+            LangOptions::SignReturnAddressHardeningKind::LoadReturnAddress)
+      .Case("none", LangOptions::SignReturnAddressHardeningKind::None)
+      .Default(std::nullopt);
+}
+
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::AArch64::parseCpu(Name).has_value();
 }
 
-bool AArch64TargetInfo::setCPU(const std::string &Name) {
-  return isValidCPUName(Name);
-}
+bool AArch64TargetInfo::setCPU(StringRef Name) { return isValidCPUName(Name); }
 
 void AArch64TargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
@@ -402,10 +418,17 @@ void AArch64TargetInfo::getTargetDefinesARMV97A(const LangOptions &Opts,
   getTargetDefinesARMV96A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV98A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.8-A does not have a v8.* equivalent, but is a superset of v9.7-A.
+  getTargetDefinesARMV97A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
+  const llvm::Triple &T = getTriple();
   // Target identification.
-  if (getTriple().isWindowsArm64EC()) {
+  if (T.isWindowsArm64EC()) {
     // Define the same set of macros as would be defined on x86_64 to ensure that
     // ARM64EC datatype layouts match those of x86_64 compiled code
     Builder.defineMacro("__amd64__");
@@ -417,7 +440,14 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__aarch64__");
   }
 
-  if (getTriple().isLFI())
+  // For bare-metal none-elf.
+  if (T.getOS() == llvm::Triple::UnknownOS &&
+      T.getEnvironment() == llvm::Triple::UnknownEnvironment &&
+      T.getObjectFormat() == llvm::Triple::ELF && Opts.CPlusPlus) {
+    Builder.defineMacro("_GNU_SOURCE");
+  }
+
+  if (T.isLFI())
     Builder.defineMacro("__LFI__");
 
   // Inline assembly supports AArch64 flag outputs.
@@ -585,6 +615,18 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE_BFSCALE)
     Builder.defineMacro("__ARM_FEATURE_SVE_BFSCALE", "1");
 
+  if (HasSVE_B16MM)
+    Builder.defineMacro("__ARM_FEATURE_SVE_B16MM", "1");
+
+  if (HasF16MM)
+    Builder.defineMacro("__ARM_FEATURE_F16MM", "1");
+
+  if (HasF16F32DOT)
+    Builder.defineMacro("__ARM_FEATURE_F16F32DOT", "1");
+
+  if (HasF16F32MM)
+    Builder.defineMacro("__ARM_FEATURE_F16F32MM", "1");
+
   if (HasSVE_AES2)
     Builder.defineMacro("__ARM_FEATURE_SVE_AES2", "1");
 
@@ -594,8 +636,14 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2p2)
     Builder.defineMacro("__ARM_FEATURE_SVE2p2", "1");
 
+  if (HasSVE2p3)
+    Builder.defineMacro("__ARM_FEATURE_SVE2p3", "1");
+
   if (HasSME2p2)
     Builder.defineMacro("__ARM_FEATURE_SME2p2", "1");
+
+  if (HasSME2p3)
+    Builder.defineMacro("__ARM_FEATURE_SME2p3", "1");
 
   if (HasFMV)
     Builder.defineMacro("__HAVE_FUNCTION_MULTI_VERSIONING", "1");
@@ -750,6 +798,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV96A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_7A)
     getTargetDefinesARMV97A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_8A)
+    getTargetDefinesARMV98A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -940,7 +990,13 @@ void AArch64TargetInfo::computeFeatureLookup() {
       .Case("sve-aes2", HasSVE_AES2)
       .Case("ssve-aes", HasSSVE_AES)
       .Case("sve2p2", FPU & SveMode && HasSVE2p2)
-      .Case("sme2p2", HasSME2p2);
+      .Case("sme2p2", HasSME2p2)
+      .Case("sve2p3", FPU & SveMode && HasSVE2p3)
+      .Case("sme2p3", HasSME2p3)
+      .Case("sve-b16mm", HasSVE_B16MM)
+      .Case("f16mm", HasF16MM)
+      .Case("f16f32dot", HasF16F32DOT)
+      .Case("f16f32mm", HasF16F32MM);
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
@@ -962,9 +1018,9 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   if (!Enabled)
     return;
 
-  for (const auto *OtherArch : llvm::AArch64::ArchInfos)
-    if (ArchInfo->implies(*OtherArch))
-      Features[OtherArch->getSubArch()] = true;
+  for (const auto &OtherArch : llvm::AArch64::ArchInfos)
+    if (ArchInfo->implies(OtherArch))
+      Features[OtherArch.getSubArch()] = true;
 
   // Set any features implied by the architecture
   std::vector<StringRef> CPUFeats;
@@ -1181,6 +1237,14 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasF8F32MM = true;
     if (Feature == "+sve-f16f32mm")
       HasSVE_F16F32MM = true;
+    if (Feature == "+sve-b16mm")
+      HasSVE_B16MM = true;
+    if (Feature == "+f16mm")
+      HasF16MM = true;
+    if (Feature == "+f16f32dot")
+      HasF16F32DOT = true;
+    if (Feature == "+f16f32mm")
+      HasF16F32MM = true;
     if (Feature == "+sve-bfscale")
       HasSVE_BFSCALE = true;
     if (Feature == "+sve-aes2")
@@ -1189,8 +1253,12 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSSVE_AES = true;
     if (Feature == "+sve2p2")
       HasSVE2p2 = true;
+    if (Feature == "+sve2p3")
+      HasSVE2p3 = true;
     if (Feature == "+sme2p2")
       HasSME2p2 = true;
+    if (Feature == "+sme2p3")
+      HasSME2p3 = true;
 
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)
@@ -1245,6 +1313,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.7a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_7A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_7A;
+    if (Feature == "+v9.8a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_8A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_8A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -1374,6 +1445,11 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
     if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
+      continue;
+    }
+
+    if (Feature.starts_with("harden-pac-ret=")) {
+      Ret.SignReturnAddrHardening = Feature.split('=').second.trim();
       continue;
     }
 
@@ -1815,24 +1891,63 @@ unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
   unsigned Align =
       WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
 
-  // MSVC does size based alignment for arm64 based on alignment section in
-  // below document, replicate that to keep alignment consistent with object
-  // files compiled by MSVC.
-  // https://docs.microsoft.com/en-us/cpp/build/arm64-windows-abi-conventions
-  if (TypeSize >= 512) {              // TypeSize >= 64 bytes
-    Align = std::max(Align, 128u);    // align type at least 16 bytes
-  } else if (TypeSize >= 64) {        // TypeSize >= 8 bytes
-    Align = std::max(Align, 64u);     // align type at least 8 butes
-  } else if (TypeSize >= 16) {        // TypeSize >= 2 bytes
-    Align = std::max(Align, 32u);     // align type at least 4 bytes
-  }
-  return Align;
+  return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
 }
 
 MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
                                            const TargetOptions &Opts)
     : WindowsARM64TargetInfo(Triple, Opts) {
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
+}
+
+UEFIAArch64TargetInfo::UEFIAArch64TargetInfo(const llvm::Triple &Triple,
+                                             const TargetOptions &Opts)
+    : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts) {
+  // The UEFI spec does not mandate specific C++ ABI, integer widths, or
+  // alignment. We are setting these defaults to match the Windows ARM64 target
+  // as it is the only way to build EFI applications with Clang/LLVM today.
+  // This is an LLP64 platform.
+  // int:4, long:4, long long:8, long double:8.
+  TheCXXABI.set(TargetCXXABI::Microsoft);
+  IntWidth = IntAlign = 32;
+  LongWidth = LongAlign = 32;
+  DoubleAlign = LongLongAlign = 64;
+  LongDoubleWidth = LongDoubleAlign = 64;
+  LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+  IntMaxType = SignedLongLong;
+  Int64Type = SignedLongLong;
+  SizeType = UnsignedLongLong;
+  PtrDiffType = SignedLongLong;
+  IntPtrType = SignedLongLong;
+}
+
+TargetInfo::BuiltinVaListKind
+UEFIAArch64TargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}
+
+TargetInfo::CallingConvCheckResult
+UEFIAArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86ThisCall:
+  case CC_X86FastCall:
+  case CC_X86VectorCall:
+    return CCCR_Ignore;
+  case CC_C:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
+  case CC_PreserveNone:
+  case CC_Win64:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
+}
+
+TargetInfo::CallingConvKind
+UEFIAArch64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
+  return CCK_MicrosoftWin64;
 }
 
 AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(

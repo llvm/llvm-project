@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Function.h"
+#include "IROptions.h"
 #include "SymbolTableListTraitsImpl.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -45,7 +46,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ModRef.h"
@@ -56,15 +56,10 @@
 #include <string>
 
 using namespace llvm;
-using ProfileCount = Function::ProfileCount;
 
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
 template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
-
-static cl::opt<int> NonGlobalValueMaxNameSize(
-    "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
-    cl::desc("Maximum size for the name of non-global values."));
 
 void Function::renumberBlocks() {
   validateBlockNumbers();
@@ -93,10 +88,13 @@ void Function::convertToNewDbgValues() {
   }
 }
 
-void Function::convertFromNewDbgValues() {
+bool Function::convertFromNewDbgValues() {
+  bool Modified = false;
   for (auto &BB : *this) {
-    BB.convertFromNewDbgValues();
+    if (BB.convertFromNewDbgValues())
+      Modified = true;
   }
+  return Modified;
 }
 
 //===----------------------------------------------------------------------===//
@@ -114,9 +112,9 @@ void Argument::setParent(Function *parent) {
 
 bool Argument::hasNonNullAttr(bool AllowUndefOrPoison) const {
   if (!getType()->isPointerTy()) return false;
-  if (getParent()->hasParamAttribute(getArgNo(), Attribute::NonNull) &&
-      (AllowUndefOrPoison ||
-       getParent()->hasParamAttribute(getArgNo(), Attribute::NoUndef)))
+  AttributeSet Attrs = getAttributes();
+  if (Attrs.hasAttribute(Attribute::NonNull) &&
+      (AllowUndefOrPoison || Attrs.hasAttribute(Attribute::NoUndef)))
     return true;
   else if (getDereferenceableBytes() > 0 &&
            !NullPointerIsDefined(getParent(),
@@ -162,21 +160,21 @@ bool Argument::hasPreallocatedAttr() const {
 
 bool Argument::hasPassPointeeByValueCopyAttr() const {
   if (!getType()->isPointerTy()) return false;
-  AttributeList Attrs = getParent()->getAttributes();
-  return Attrs.hasParamAttr(getArgNo(), Attribute::ByVal) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::InAlloca) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::Preallocated);
+  AttributeSet Attrs = getAttributes();
+  return Attrs.hasAttribute(Attribute::ByVal) ||
+         Attrs.hasAttribute(Attribute::InAlloca) ||
+         Attrs.hasAttribute(Attribute::Preallocated);
 }
 
 bool Argument::hasPointeeInMemoryValueAttr() const {
   if (!getType()->isPointerTy())
     return false;
-  AttributeList Attrs = getParent()->getAttributes();
-  return Attrs.hasParamAttr(getArgNo(), Attribute::ByVal) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::StructRet) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::InAlloca) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::Preallocated) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::ByRef);
+  AttributeSet Attrs = getAttributes();
+  return Attrs.hasAttribute(Attribute::ByVal) ||
+         Attrs.hasAttribute(Attribute::StructRet) ||
+         Attrs.hasAttribute(Attribute::InAlloca) ||
+         Attrs.hasAttribute(Attribute::Preallocated) ||
+         Attrs.hasAttribute(Attribute::ByRef);
 }
 
 /// For a byval, sret, inalloca, or preallocated parameter, get the in-memory
@@ -199,17 +197,13 @@ static Type *getMemoryParamAllocType(AttributeSet ParamAttrs) {
 }
 
 uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
-  AttributeSet ParamAttrs =
-      getParent()->getAttributes().getParamAttrs(getArgNo());
-  if (Type *MemTy = getMemoryParamAllocType(ParamAttrs))
+  if (Type *MemTy = getMemoryParamAllocType(getAttributes()))
     return DL.getTypeAllocSize(MemTy);
   return 0;
 }
 
 Type *Argument::getPointeeInMemoryValueType() const {
-  AttributeSet ParamAttrs =
-      getParent()->getAttributes().getParamAttrs(getArgNo());
-  return getMemoryParamAllocType(ParamAttrs);
+  return getMemoryParamAllocType(getAttributes());
 }
 
 MaybeAlign Argument::getParamAlign() const {
@@ -306,9 +300,9 @@ bool Argument::hasSExtAttr() const {
 }
 
 bool Argument::onlyReadsMemory() const {
-  AttributeList Attrs = getParent()->getAttributes();
-  return Attrs.hasParamAttr(getArgNo(), Attribute::ReadOnly) ||
-         Attrs.hasParamAttr(getArgNo(), Attribute::ReadNone);
+  AttributeSet Attrs = getAttributes();
+  return Attrs.hasAttribute(Attribute::ReadOnly) ||
+         Attrs.hasAttribute(Attribute::ReadNone);
 }
 
 void Argument::addAttrs(AttrBuilder &B) {
@@ -434,9 +428,17 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
                        ? "b_key"
                        : "a_key");
   }
+
+  if (auto Value = dyn_cast_if_present<MDString>(
+          M->getModuleFlag("sign-return-address-harden")))
+    B.addAttribute("sign-return-address-harden", Value->getString());
   AddAttributeIfSet("branch-target-enforcement");
   AddAttributeIfSet("branch-protection-pauth-lr");
   AddAttributeIfSet("guarded-control-stack");
+  AddAttributeIfSet("ptrauth-returns");
+  AddAttributeIfSet("ptrauth-auth-traps");
+  AddAttributeIfSet("ptrauth-indirect-gotos");
+  AddAttributeIfSet("aarch64-jump-table-hardening");
 
   F->addFnAttrs(B);
   return F;
@@ -490,7 +492,8 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
 
   // We only need a symbol table for a function if the context keeps value names
   if (!getContext().shouldDiscardValueNames())
-    SymTab = std::make_unique<ValueSymbolTable>(NonGlobalValueMaxNameSize);
+    SymTab = std::make_unique<ValueSymbolTable>(
+        getIROptions(getContext()).non_global_value_max_name_size);
 
   // If the function has arguments, mark them as lazily built.
   if (Ty->getNumParams())
@@ -508,7 +511,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
     // Don't set the attributes if the intrinsic signature is invalid. This
     // case will either be auto-upgraded or fail verification.
     SmallVector<Type *> OverloadTys;
-    if (!Intrinsic::getIntrinsicSignature(IntID, Ty, OverloadTys))
+    if (!Intrinsic::isSignatureValid(IntID, Ty, OverloadTys))
       return;
 
     setAttributes(Intrinsic::getAttributes(getContext(), IntID, Ty));
@@ -1083,47 +1086,29 @@ void Function::setValueSubclassDataBit(unsigned Bit, bool On) {
     setValueSubclassData(getSubclassDataFromValue() & ~(1 << Bit));
 }
 
-void Function::setEntryCount(ProfileCount Count,
+void Function::setEntryCount(uint64_t Count,
                              const DenseSet<GlobalValue::GUID> *S) {
-#if !defined(NDEBUG)
-  auto PrevCount = getEntryCount();
-  assert(!PrevCount || PrevCount->getType() == Count.getType());
-#endif
-
   auto ImportGUIDs = getImportGUIDs();
   if (S == nullptr && ImportGUIDs.size())
     S = &ImportGUIDs;
 
   MDBuilder MDB(getContext());
-  setMetadata(
-      LLVMContext::MD_prof,
-      MDB.createFunctionEntryCount(Count.getCount(), Count.isSynthetic(), S));
+  setMetadata(LLVMContext::MD_prof, MDB.createFunctionEntryCount(Count, S));
 }
 
-void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
-                             const DenseSet<GlobalValue::GUID> *Imports) {
-  setEntryCount(ProfileCount(Count, Type), Imports);
-}
-
-std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
+std::optional<uint64_t> Function::getEntryCount() const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
-      if (MDS->getString() == MDProfLabels::FunctionEntryCount) {
-        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
-        uint64_t Count = CI->getValue().getZExtValue();
-        // A value of -1 is used for SamplePGO when there were no samples.
-        // Treat this the same as unknown.
-        if (Count == (uint64_t)-1)
-          return std::nullopt;
-        return ProfileCount(Count, PCT_Real);
-      } else if (AllowSynthetic &&
-                 MDS->getString() ==
-                     MDProfLabels::SyntheticFunctionEntryCount) {
-        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
-        uint64_t Count = CI->getValue().getZExtValue();
-        return ProfileCount(Count, PCT_Synthetic);
-      }
+      if (MDS->getString() != MDProfLabels::FunctionEntryCount)
+        return std::nullopt;
+      ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
+      uint64_t Count = CI->getValue().getZExtValue();
+      // A value of -1 is used for SamplePGO when there were no samples.
+      // Treat this the same as unknown.
+      if (Count == static_cast<uint64_t>(-1))
+        return std::nullopt;
+      return Count;
     }
   return std::nullopt;
 }

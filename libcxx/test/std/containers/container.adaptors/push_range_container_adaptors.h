@@ -98,8 +98,8 @@ constexpr TestCase<T> FullContainer_LongRange{
 
 // Container adaptors tests.
 
-template <class Adaptor, class Iter, class Sent>
-constexpr void test_push_range(bool is_result_heapified = false) {
+template <class Adaptor, class Iter, class Sent, bool IsResultHeapified = false>
+constexpr void test_push_range() {
   using T = typename Adaptor::value_type;
 
   auto test = [&](auto& test_case) {
@@ -110,7 +110,7 @@ constexpr void test_push_range(bool is_result_heapified = false) {
     UnwrapAdaptor<Adaptor> unwrap_adaptor(std::move(adaptor));
     auto& c = unwrap_adaptor.get_container();
 
-    if (is_result_heapified) {
+    if constexpr (IsResultHeapified) {
       assert(std::ranges::is_heap(c));
       return std::ranges::is_permutation(c, test_case.expected);
     } else {
@@ -207,8 +207,8 @@ struct Container {
   friend bool operator==(const Container&, const Container&) = default;
 };
 
-template <template <class...> class AdaptorT, class T>
-void test_push_range_inserter_choice(bool is_result_heapified = false) {
+template <template <class...> class AdaptorT, class T, bool IsResultHeapified = false>
+void test_push_range_inserter_choice() {
   { // `append_range` is preferred if available.
     using BaseContainer = Container<T, InserterChoice::AppendRange>;
     using Adaptor       = AdaptorT<T, BaseContainer>;
@@ -220,7 +220,7 @@ void test_push_range_inserter_choice(bool is_result_heapified = false) {
     UnwrapAdaptor<Adaptor> unwrap_adaptor(std::move(adaptor));
     auto& c = unwrap_adaptor.get_container();
     assert(c.inserter_choice == InserterChoice::AppendRange);
-    if (is_result_heapified) {
+    if constexpr (IsResultHeapified) {
       assert(std::ranges::is_heap(c));
       assert(std::ranges::is_permutation(c, in));
     } else {
@@ -239,7 +239,7 @@ void test_push_range_inserter_choice(bool is_result_heapified = false) {
     UnwrapAdaptor<Adaptor> unwrap_adaptor(std::move(adaptor));
     auto& c = unwrap_adaptor.get_container();
     assert(c.inserter_choice == InserterChoice::PushBack);
-    if (is_result_heapified) {
+    if constexpr (IsResultHeapified) {
       assert(std::ranges::is_heap(c));
       assert(std::ranges::is_permutation(c, in));
     } else {

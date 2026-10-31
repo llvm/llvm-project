@@ -42,8 +42,8 @@ void ReturnUndefChecker::checkPreStmt(const ReturnStmt *RS,
     return;
   SVal RetVal = C.getSVal(RetE);
 
-  const StackFrameContext *SFC = C.getStackFrame();
-  QualType RT = CallEvent::getDeclaredResultType(SFC->getDecl());
+  const StackFrame *SF = C.getStackFrame();
+  QualType RT = CallEvent::getDeclaredResultType(SF->getDecl());
 
   if (RetVal.isUndef()) {
     // "return;" is modeled to evaluate to an UndefinedVal. Allow UndefinedVal
@@ -60,7 +60,7 @@ void ReturnUndefChecker::checkPreStmt(const ReturnStmt *RS,
     // Not all blocks have explicitly-specified return types; if the return type
     // is not available, but the return value expression has 'void' type, assume
     // Sema already checked it.
-    if (RT.isNull() && isa<BlockDecl>(SFC->getDecl()) &&
+    if (RT.isNull() && isa<BlockDecl>(SF->getDecl()) &&
         RetE->getType()->isVoidType())
       return;
 
@@ -79,7 +79,7 @@ void ReturnUndefChecker::checkPreStmt(const ReturnStmt *RS,
 
 static void emitBug(CheckerContext &C, const BugType &BT, StringRef Msg,
                     const Expr *RetE, const Expr *TrackingE = nullptr) {
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
 

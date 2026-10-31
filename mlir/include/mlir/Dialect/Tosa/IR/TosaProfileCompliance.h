@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 #define MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 
+#include <initializer_list>
 #include <unordered_map>
 
 #include "mlir/Dialect/Tosa/IR/TargetEnv.h"
@@ -16,17 +17,28 @@
 
 #include "mlir/Support/TypeID.h"
 
-using namespace mlir;
-using namespace mlir::tosa;
-
+namespace mlir {
+namespace tosa {
 //===----------------------------------------------------------------------===//
 // Type Compilance Definition
 //===----------------------------------------------------------------------===//
 
-typedef struct {
+struct TypeInfo {
+  TypeInfo(mlir::TypeID typeID, uint32_t bitWidth)
+      : typeID(typeID), bitWidth(bitWidth), valueTypeID(mlir::TypeID()),
+        scaleTypeID(mlir::TypeID()), blockShape(std::nullopt) {}
+
+  TypeInfo(mlir::TypeID typeID, uint32_t bitWidth, mlir::TypeID valueTypeID,
+           mlir::TypeID scaleTypeID, tosa::BlockShape blockShape)
+      : typeID(typeID), bitWidth(bitWidth), valueTypeID(valueTypeID),
+        scaleTypeID(scaleTypeID), blockShape(blockShape) {}
+
   mlir::TypeID typeID;
   uint32_t bitWidth;
-} TypeInfo;
+  mlir::TypeID valueTypeID;
+  mlir::TypeID scaleTypeID;
+  std::optional<tosa::BlockShape> blockShape;
+};
 
 enum CheckCondition {
   invalid,
@@ -36,8 +48,25 @@ enum CheckCondition {
   allOf
 };
 
-using VersionedTypeInfo =
-    std::pair<SmallVector<TypeInfo>, SpecificationVersion>;
+struct TypeInfoRef {
+  const TypeInfo *ptr;
+  TypeInfoRef(const TypeInfo &info) : ptr(&info) {}
+};
+
+struct VersionedTypeInfo {
+  SmallVector<TypeInfo> first;
+  SpecificationVersion second;
+
+  VersionedTypeInfo() = default;
+  VersionedTypeInfo(std::initializer_list<TypeInfoRef> types,
+                    SpecificationVersion version);
+  VersionedTypeInfo(SmallVector<TypeInfo> types, SpecificationVersion version);
+  VersionedTypeInfo(const VersionedTypeInfo &other);
+  VersionedTypeInfo(VersionedTypeInfo &&other);
+  VersionedTypeInfo &operator=(const VersionedTypeInfo &other);
+  VersionedTypeInfo &operator=(VersionedTypeInfo &&other);
+  ~VersionedTypeInfo();
+};
 
 template <typename T>
 struct OpComplianceInfo {
@@ -46,7 +75,23 @@ struct OpComplianceInfo {
   SmallVector<T> mode;
   SmallVector<VersionedTypeInfo> operandTypeInfoSet;
   CheckCondition condition = CheckCondition::anyOf;
+
+  OpComplianceInfo() = default;
+  OpComplianceInfo(std::initializer_list<T> mode,
+                   std::initializer_list<VersionedTypeInfo> operandTypeInfoSet,
+                   CheckCondition condition = CheckCondition::anyOf);
+  OpComplianceInfo(SmallVector<T> mode,
+                   SmallVector<VersionedTypeInfo> operandTypeInfoSet,
+                   CheckCondition condition = CheckCondition::anyOf);
+  OpComplianceInfo(const OpComplianceInfo &other);
+  OpComplianceInfo(OpComplianceInfo &&other);
+  OpComplianceInfo &operator=(const OpComplianceInfo &other);
+  OpComplianceInfo &operator=(OpComplianceInfo &&other);
+  ~OpComplianceInfo();
 };
+
+extern template struct OpComplianceInfo<Profile>;
+extern template struct OpComplianceInfo<Extension>;
 
 using OperationProfileComplianceMap =
     std::unordered_map<std::string, SmallVector<OpComplianceInfo<Profile>>>;
@@ -66,10 +111,16 @@ public:
 
   void addType(Type t) { tyInfo.push_back(convertTypeToInfo(t)); }
   void addValue(Value v) { tyInfo.push_back(convertValueToInfo(v)); }
-  SmallVector<TypeInfo> getInfo() { return tyInfo; }
+  ArrayRef<TypeInfo> getInfo() const { return tyInfo; }
 
 private:
   TypeInfo convertTypeToInfo(Type type) {
+    if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type)) {
+      Type valueTy = blockScaledTy.getValueType();
+      Type scaleTy = blockScaledTy.getScaleType();
+      return {type.getTypeID(), tosa::getBitWidth(valueTy), valueTy.getTypeID(),
+              scaleTy.getTypeID(), blockScaledTy.getBlockShape()};
+    }
     return {type.getTypeID(), tosa::getBitWidth(type)};
   }
 
@@ -110,11 +161,8 @@ public:
 
   // Accessor of the compliance info map.
   template <typename T>
-  std::unordered_map<std::string, SmallVector<OpComplianceInfo<T>>>
-  getProfileComplianceMap() {
-    // Only profile and extension compliance info are provided.
-    return {};
-  }
+  const std::unordered_map<std::string, SmallVector<OpComplianceInfo<T>>> &
+  getProfileComplianceMap() const;
 
   // Verify if the operation is allowed to be executed in the given target
   // environment.
@@ -123,19 +171,20 @@ public:
   LogicalResult checkInvalid(Operation *op);
 
   template <typename T>
-  LogicalResult checkProfileOrExtension(
-      Operation *op, const tosa::TargetEnv &targetEnv,
-      const SmallVector<ArrayRef<T>> &specDefinedProfileSet);
+  LogicalResult checkProfileOrExtension(Operation *op,
+                                        const tosa::TargetEnv &targetEnv);
 
-  bool isSameTypeInfo(TypeInfo a, TypeInfo b) {
-    return a.typeID == b.typeID && a.bitWidth == b.bitWidth;
+  bool isSameTypeInfo(const TypeInfo &a, const TypeInfo &b) {
+    return a.typeID == b.typeID && a.bitWidth == b.bitWidth &&
+           a.valueTypeID == b.valueTypeID && a.scaleTypeID == b.scaleTypeID &&
+           a.blockShape == b.blockShape;
   }
 
   // Find the required profiles or extensions from the compliance info according
   // to the operand type combination.
   template <typename T>
   SmallVector<OpComplianceInfo<T>>
-  findMatchedEntries(Operation *op, SmallVector<OpComplianceInfo<T>> compInfo);
+  findMatchedEntries(Operation *op, ArrayRef<OpComplianceInfo<T>> compInfo);
 
   // Debug utilites.
   template <typename T>
@@ -145,7 +194,7 @@ public:
   SmallVector<StringRef>
   stringifyProfile(const SmallVector<ArrayRef<T>> &profileSet);
 
-  static llvm::SmallString<7> stringifyTypeInfo(const TypeInfo &typeInfo);
+  static llvm::SmallString<32> stringifyTypeInfo(const TypeInfo &typeInfo);
 
 private:
   template <typename T>
@@ -155,5 +204,15 @@ private:
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;
 };
+
+template <>
+const OperationProfileComplianceMap &
+TosaProfileCompliance::getProfileComplianceMap<Profile>() const;
+
+template <>
+const OperationExtensionComplianceMap &
+TosaProfileCompliance::getProfileComplianceMap<Extension>() const;
+} // namespace tosa
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H

@@ -15,19 +15,26 @@
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
+#include <flang/Lower/OpenMP.h>
 #include <flang/Lower/OpenMP/Clauses.h>
 #include <flang/Lower/PFTBuilder.h>
 #include <flang/Lower/Support/PrivateReductionUtils.h>
 #include <flang/Optimizer/Builder/BoxValue.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
-#include <flang/Optimizer/HLFIR/HLFIROps.h>
+#include <flang/Optimizer/Support/InternalNames.h>
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
+#include <flang/Semantics/omp-declare-variant.h>
+#include <flang/Semantics/openmp-utils.h>
+#include <flang/Semantics/scope.h>
+#include <flang/Semantics/symbol.h>
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
 #include <flang/Utils/OpenMP.h>
@@ -35,6 +42,7 @@
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/TargetParser/Triple.h>
 
 #include <functional>
 #include <iterator>
@@ -69,11 +77,6 @@ namespace lower {
 namespace omp {
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
-  // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have implicit
-  // default mappers available so that OpenMP offloading can correctly map them.
-  if (semantics::IsIsoCType(&typeSpec))
-    return true;
-
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
 
   std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
@@ -140,6 +143,18 @@ mlir::Type getLoopVarType(lower::AbstractConverter &converter,
          "OpenMP loop iteration variable size must be transformed into 32-bit "
          "or 64-bit");
   return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
+}
+
+std::size_t getLoopVarSize(const semantics::Symbol &sym) {
+  const semantics::Symbol &ultimate = sym.GetUltimate();
+  // The storage of an ALLOCATABLE or POINTER is its descriptor; use the kind.
+  if (semantics::IsAllocatableOrPointer(ultimate))
+    if (const semantics::DeclTypeSpec *type = ultimate.GetType())
+      if (const semantics::IntrinsicTypeSpec *intrinsic = type->AsIntrinsic())
+        if (std::optional<std::int64_t> kind =
+                evaluate::ToInt64(intrinsic->kind()))
+          return *kind;
+  return ultimate.size();
 }
 
 semantics::Symbol *
@@ -455,6 +470,12 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         interimMapType &= ~mlir::omp::ClauseMapFlags::to;
         interimMapType &= ~mlir::omp::ClauseMapFlags::from;
         interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
+        // We do not want to carry over the separation of descriptor and pointer
+        // mapping of any intermediate components we emit maps for as this can
+        // result in very odd differing behaviour when either ref_ptr/ptee is
+        // specified.
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptee;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
@@ -562,16 +583,43 @@ void insertChildMapInfoIntoParent(
     lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
+    llvm::SmallVectorImpl<Object> &mapObjects) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // If any of our children have the close map type applied and our parent
+  // does not, we must remove it as a user has specified only the members
+  // get close e.g.
+  //
+  //    map(close, to: x%y, x%z)
+  //
+  // This will generate invalid code that will crash at runtime. As we must
+  // allocate this parent, to then transfer individual members, and the
+  // parent has not been specified to have close mapping. As close is
+  // considered a hint, we simply remove it/ignore it.
+  //
+  // The alternative would be to promote the parent to close in these
+  // scenarios, the downside would be cases such as map(close, to: x%x, x%z)
+  // any intermediate member that was not specified in the parent between
+  // the x and z members (e.g. x.y in prior example) would also get close
+  // mapping from the parent. But this way we would still be able to have
+  // close map apply to member mappings, without having to allocate the whole
+  // record type.
+  auto removeCloseMapType = [](OmpMapParentAndMemberData &data) {
+    for (mlir::omp::MapInfoOp memberMap : data.memberMap)
+      if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::close) ==
+          mlir::omp::ClauseMapFlags::close)
+        memberMap.setMapType(memberMap.getMapType() &
+                             ~mlir::omp::ClauseMapFlags::close);
+  };
+
   for (auto indices : parentMemberIndices) {
     auto *parentIter =
-        llvm::find_if(mapSyms, [&indices](const semantics::Symbol *v) {
-          return v == indices.first.sym();
+        llvm::find_if(mapObjects, [&indices](const Object &object) {
+          return object.sym() == indices.first.sym();
         });
-    if (parentIter != mapSyms.end()) {
+    if (parentIter != mapObjects.end()) {
       auto mapOp = llvm::cast<mlir::omp::MapInfoOp>(
-          mapOperands[std::distance(mapSyms.begin(), parentIter)]
+          mapOperands[std::distance(mapObjects.begin(), parentIter)]
               .getDefiningOp());
 
       // Once explicit members are attached to a parent map, do not also invoke
@@ -579,6 +627,13 @@ void insertChildMapInfoIntoParent(
       // components leading to duplicate mappings at runtime.
       if (!indices.second.memberMap.empty() && mapOp.getMapperIdAttr())
         mapOp.setMapperIdAttr(nullptr);
+
+      // If the explicit parent map itself does not have close mapping, then
+      // close mapping for its explicitly mapped members must be ignored. The
+      // semantic checker emits the corresponding user warning.
+      if ((mapOp.getMapType() & mlir::omp::ClauseMapFlags::close) !=
+          mlir::omp::ClauseMapFlags::close)
+        removeCloseMapType(indices.second);
 
       // NOTE: To maintain appropriate SSA ordering, we move the parent map
       // which will now have references to its children after the last
@@ -597,13 +652,21 @@ void insertChildMapInfoIntoParent(
       mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
           indices.second.memberPlacementIndices));
     } else {
-      // NOTE: We take the map type of the first child, this may not
-      // be the correct thing to do, however, we shall see. For the moment
-      // it allows this to work with enter and exit without causing MLIR
-      // verification issues. The more appropriate thing may be to take
-      // the "main" map type clause from the directive being used.
-      mlir::omp::ClauseMapFlags mapType =
-          indices.second.memberMap[0].getMapType();
+      // NOTE: We do not assign default mapped parents a map type, as
+      // selecting a child can result in the incorrect map type being
+      // applied to the parent and data being incorrectly moved to or
+      // from device. We make an exception currently for present.
+      mlir::omp::ClauseMapFlags mapType = mlir::omp::ClauseMapFlags::storage;
+
+      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+        if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::present) ==
+            mlir::omp::ClauseMapFlags::present)
+          mapType |= mlir::omp::ClauseMapFlags::present;
+
+      // A synthesized parent map cannot request close mapping. Remove close
+      // mapping from its explicitly mapped members. The semantic checker emits
+      // the corresponding user warning.
+      removeCloseMapType(indices.second);
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());
@@ -631,7 +694,7 @@ void insertChildMapInfoIntoParent(
           /*partialMap=*/true);
 
       mapOperands.push_back(mapOp);
-      mapSyms.push_back(indices.first.sym());
+      mapObjects.push_back(indices.first);
     }
   }
 }
@@ -687,7 +750,12 @@ static void processTileSizesFromOpenMPConstruct(
   }
 }
 
-pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
+// Searches the nested evaluations of \p eval for the next DO construct of a
+// loop nest, returning nullptr when there is none left to descend into. This
+// can happen when COLLAPSE counts loops that a transforming construct such as
+// TILE generates from the source DO loops. getNestedDoConstruct wraps this for
+// callers that require a DO construct and asserts when none is found.
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
   for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
     // In an OpenMPConstruct there can be compiler directives:
     // 1 <<OpenMPConstruct>>
@@ -702,11 +770,23 @@ pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
     //     <<DoConstruct>> -> 7
     if (nested.getIf<parser::NonLabelDoStmt>())
       continue;
-    assert(nested.getIf<parser::DoConstruct>() &&
-           "Unexpected construct in the nested evaluations");
-    return &nested;
+    if (nested.getIf<parser::DoConstruct>())
+      return &nested;
+    // Loop transformations can introduce nested OpenMP
+    // constructs between the directive and the actual do-loop nest.
+    if (nested.getIf<parser::OpenMPConstruct>())
+      return tryGetNestedDoConstruct(nested);
+    // Skip valid intervening code in imperfect loop nests
+    continue;
   }
-  llvm_unreachable("Expected do loop to be in the nested evaluations");
+  return nullptr;
+}
+
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
+  pft::Evaluation *doConstruct{tryGetNestedDoConstruct(eval)};
+  if (!doConstruct)
+    llvm_unreachable("Expected do loop to be in the nested evaluations");
+  return doConstruct;
 }
 
 /// Populates the sizes vector with values if the given OpenMPConstruct
@@ -784,6 +864,38 @@ void collectLoopRelatedInfo(
     const parser::LoopControl::Bounds *bounds =
         std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
     assert(bounds && "Expected bounds for worksharing do loop");
+    // Check for non-rectangular loops: if any bound of this loop references
+    // an iteration variable from an enclosing collapsed loop, this is a
+    // non-rectangular loop nest which is not yet supported by the
+    // OpenMPIRBuilder's collapseLoops.
+    if (!iv.empty()) {
+      auto referencesOuterIV = [&iv](const semantics::SomeExpr &expr) -> bool {
+        for (const semantics::SymbolRef &sym :
+             evaluate::GetSymbolVector(expr)) {
+          for (const semantics::Symbol *outerIV : iv) {
+            if (&sym->GetUltimate() == &outerIV->GetUltimate())
+              return true;
+          }
+        }
+        return false;
+      };
+      if (const auto *lowerExpr = semantics::GetExpr(bounds->Lower()))
+        if (referencesOuterIV(*lowerExpr))
+          TODO(currentLocation,
+               "Non-rectangular loop nests with COLLAPSE are not yet "
+               "supported");
+      if (const auto *upperExpr = semantics::GetExpr(bounds->Upper()))
+        if (referencesOuterIV(*upperExpr))
+          TODO(currentLocation,
+               "Non-rectangular loop nests with COLLAPSE are not yet "
+               "supported");
+      if (auto &step = bounds->Step())
+        if (const auto *stepExpr = semantics::GetExpr(step))
+          if (referencesOuterIV(*stepExpr))
+            TODO(currentLocation,
+                 "Non-rectangular loop nests with COLLAPSE are not yet "
+                 "supported");
+    }
     lower::StatementContext stmtCtx;
     result.loopLowerBounds.push_back(fir::getBase(
         converter.genExprValue(*semantics::GetExpr(bounds->Lower()), stmtCtx)));
@@ -797,10 +909,18 @@ void collectLoopRelatedInfo(
           currentLocation, firOpBuilder.getIntegerType(32), 1));
     }
     iv.push_back(bounds->Name().thing.symbol);
-    loopVarTypeSize = std::max(
-        loopVarTypeSize, bounds->Name().thing.symbol->GetUltimate().size());
-    if (--collapseValue)
-      doConstructEval = getNestedDoConstruct(*doConstructEval);
+    loopVarTypeSize =
+        std::max(loopVarTypeSize, getLoopVarSize(*bounds->Name().thing.symbol));
+    if (--collapseValue) {
+      doConstructEval = tryGetNestedDoConstruct(*doConstructEval);
+      // No DO construct left to descend into: COLLAPSE (or a tile SIZES list)
+      // counts loops generated by a nested loop-transforming construct. Not
+      // yet supported in lowering.
+      if (!doConstructEval)
+        TODO(currentLocation,
+             "Collapsing a loop nest that contains a loop-transforming "
+             "construct");
+    }
   } while (collapseValue > 0);
 
   convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);
@@ -978,21 +1098,20 @@ mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
       builder, loc, getTotalElements(builder, loc, entity), elemBytes);
 }
 
-bool hasIteratorIVReference(
-    const omp::Object &object,
-    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms) {
-  auto ref = object.ref();
-  if (!ref)
-    return false;
+llvm::SmallVector<IteratorRange>
+getIteratorRangesForObject(const omp::Object &object,
+                           llvm::ArrayRef<IteratorRange> ranges) {
+  llvm::SmallVector<IteratorRange> objectRanges;
+  if (ranges.empty())
+    return objectRanges;
 
-  Fortran::lower::SomeExpr expr = toEvExpr(*ref);
-
-  for (Fortran::evaluate::SymbolRef s : CollectSymbols(expr)) {
-    const Fortran::semantics::Symbol &ult = s->GetUltimate();
-    if (ivSyms.contains(&ult))
-      return true;
-  }
-  return false;
+  assert(object.sourceIteratorReferences &&
+         "expected source iterator references for the locator");
+  for (const IteratorRange &range : ranges)
+    if (llvm::is_contained(*object.sourceIteratorReferences,
+                           &range.ivSym->GetUltimate()))
+      objectRanges.push_back(range);
+  return objectRanges;
 }
 
 void defaultMangler(Fortran::lower::AbstractConverter &converter,
@@ -1004,117 +1123,330 @@ void defaultMangler(Fortran::lower::AbstractConverter &converter,
     mapperIdName = converter.mangleName(mapperIdName, memberSym->owner());
 }
 
-// Build the array coordinate for an object that uses iterator variables.
-// If the object is a section, use the first element of that section
-// as the coordinate. Currently only support top-level ArrayRef designators.
-//
-// Examples:
-//   a(i, j)       -> coordinates for a(i, j)
-//   a(i:i+1, j+2) -> coordinates for a(i, j+2)
-std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
-    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
-    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc) {
-  const std::optional<ExprTy> &ref = object.ref();
-  assert(ref && "expected iterator-dependent object to have a reference");
-
-  std::optional<Fortran::evaluate::DataRef> dataRef =
-      Fortran::evaluate::ExtractDataRef(*ref);
-  if (!dataRef)
-    return std::nullopt;
-  const auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
-  if (!arrayRef || arrayRef->subscript().empty())
-    return std::nullopt;
-
-  auto &builder = converter.getFirOpBuilder();
-  const Fortran::semantics::Symbol *sym = object.sym();
-  assert(sym && "expected symbol for iterator-dependent object");
-  fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*sym);
-  mlir::Value one =
-      builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-  llvm::SmallVector<mlir::Value> indices;
-  indices.reserve(arrayRef->subscript().size());
-
-  for (const auto &[dim, subscript] : llvm::enumerate(arrayRef->subscript())) {
-    mlir::Value idx;
-    if (const auto *triplet =
-            std::get_if<Fortran::evaluate::Triplet>(&subscript.u)) {
-      // Sections use the first element of the section as the base address, so
-      // the coordinate for this dimension comes from the triplet lower bound.
-      std::optional<
-          Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>
-          lowerBound = triplet->lower();
-      if (!lowerBound) {
-        // Get lower bound if not provided by user.
-        // For example: !$omp task affinity(iterator(i = 1:n, j = 1:m) : a(:i+1,
-        // j+2))
-        idx = fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
-      } else {
-        idx = fir::getBase(
-            createSomeExtendedExpression(loc, converter, toEvExpr(*lowerBound),
-                                         converter.getSymbolMap(), stmtCtx));
-      }
-    } else {
-      // Not handling vector subscripts for now.
-      if (subscript.Rank() > 0)
-        return std::nullopt;
-
-      const auto *indirect =
-          std::get_if<Fortran::evaluate::IndirectSubscriptIntegerExpr>(
-              &subscript.u);
-      assert(indirect && "expected non-triplet subscript");
-
-      // Scalar subscripts, including reordered indices and expressions like
-      // i+1 or j+2, lower directly through expression lowering.
-      idx = fir::getBase(createSomeExtendedExpression(
-          loc, converter, toEvExpr(indirect->value()), converter.getSymbolMap(),
-          stmtCtx));
-    }
-    indices.push_back(idx);
-  }
-
-  return indices;
+static const semantics::DerivedTypeSpec *
+getSymbolDerivedType(const semantics::Symbol &symbol) {
+  const semantics::Symbol &ultimate = symbol.GetUltimate();
+  if (const semantics::DeclTypeSpec *declType = ultimate.GetType())
+    if (const auto *derived = declType->AsDerived())
+      return derived;
+  return nullptr;
 }
 
-// Build the element address for an iterator-dependent affinity object from a
-// base entity and lowered indices.
-mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
-                                  hlfir::Entity entity,
-                                  llvm::ArrayRef<mlir::Value> ivs,
-                                  mlir::Location loc) {
-  auto &builder = converter.getFirOpBuilder();
-  mlir::Value base = entity.getBase();
+static std::string
+getDefaultMapperID(Fortran::lower::AbstractConverter &converter,
+                   fir::FirOpBuilder &firOpBuilder,
+                   const semantics::DerivedTypeSpec *typeSpec) {
+  // Nested derived-type components inside a declare mapper may use their own
+  // default mapper. Only suppress the mapper currently being built.
+  if (!typeSpec)
+    return {};
 
-  // If base is a reference-to-box, load it so array_coor sees the box value
-  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(base.getType())) {
-    if (mlir::isa<fir::BoxType>(refTy.getEleTy()))
-      base = fir::LoadOp::create(builder, loc, base);
+  std::string mapperIdName =
+      typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+  if (!semantics::IsIsoCType(typeSpec) && !typeSpec->parameters().empty()) {
+    if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+            converter.genType(*typeSpec))) {
+      mapperIdName =
+          Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
+              recordType);
+
+      auto [nameKind, deconstructed] =
+          fir::NameUniquer::deconstruct(recordType.getName());
+      if (nameKind == fir::NameUniquer::NameKind::DERIVED_TYPE) {
+        llvm::SmallVector<llvm::StringRef> modules;
+        llvm::SmallVector<llvm::StringRef> procs;
+        for (const std::string &module : deconstructed.modules)
+          modules.emplace_back(module);
+        for (const std::string &proc : deconstructed.procs)
+          procs.emplace_back(proc);
+        std::string kindlessMapperName = fir::NameUniquer::doGenerated(
+            modules, procs, deconstructed.blockId,
+            deconstructed.name + llvm::omp::OmpDefaultMapperName);
+        if (auto explicitMapper = converter.getModuleOp()
+                                      .lookupSymbol<mlir::omp::DeclareMapperOp>(
+                                          kindlessMapperName);
+            explicitMapper && explicitMapper.getType() == recordType)
+          return kindlessMapperName;
+      }
+    }
   }
-
-  // Build shape from the entity extents
-  mlir::Value shape;
-  auto extents = hlfir::genExtentsVector(loc, builder, entity);
-  assert(extents.size() == ivs.size() &&
-         "expected the number of extents and iteration variables to match for "
-         "iterator");
-  if (entity.mayHaveNonDefaultLowerBounds()) {
-    llvm::SmallVector<mlir::Value> lowerBounds;
-    lowerBounds.reserve(ivs.size());
-    for (unsigned dim = 0; dim < ivs.size(); ++dim)
-      lowerBounds.push_back(hlfir::genLBound(loc, builder, entity, dim));
-    shape = builder.genShape(loc, lowerBounds, extents);
+  if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
+    mapperIdName =
+        converter.mangleName(mapperIdName, sym->GetUltimate().owner());
   } else {
-    shape = fir::ShapeOp::create(builder, loc, extents);
+    mapperIdName = converter.mangleName(mapperIdName, *typeSpec->GetScope());
   }
 
-  mlir::Type elementToRefTy =
-      fir::ReferenceType::get(entity.getFortranElementType());
+  // Make sure we don't return a mapper to self.
+  if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
+          firOpBuilder.getRegion().getParentOp()))
+    if (mapperIdName == declMapOp.getSymName())
+      return {};
+  return mapperIdName;
+}
 
-  return fir::ArrayCoorOp::create(builder, loc, elementToRefTy,
-                                  /*memref=*/base,
-                                  /*shape=*/shape,
-                                  /*slice=*/mlir::Value{},
-                                  /*indices=*/ivs,
-                                  /*typeparams=*/mlir::ValueRange{});
+static std::string
+findMapperIfTypeMatch(Fortran::lower::AbstractConverter &converter,
+                      const semantics::DerivedTypeSpec *objectTypeSpec,
+                      llvm::StringRef explicitMapperName) {
+  auto declMapperOp =
+      converter.getModuleOp().lookupSymbol<mlir::omp::DeclareMapperOp>(
+          explicitMapperName);
+  if (!declMapperOp)
+    return "__implicit_mapper";
+
+  // Verify if the explicit mapper provided matches the type being mapped.
+  // If it does return the mapper name, if it doesn't return null-ary.
+  mlir::Type mapperType = declMapperOp.getType();
+  mlir::Type objectType = converter.genType(*objectTypeSpec);
+  auto mapperRecordType = mlir::dyn_cast<fir::RecordType>(mapperType);
+  auto objectRecordType = mlir::dyn_cast<fir::RecordType>(objectType);
+  if (mapperRecordType && objectRecordType &&
+      mapperRecordType.getName() == objectRecordType.getName())
+    return explicitMapperName.str();
+
+  return "__implicit_mapper";
+}
+
+static mlir::FlatSymbolRefAttr
+addImplicitMapper(Fortran::lower::AbstractConverter &converter,
+                  mlir::Location loc, const omp::Object &object,
+                  std::string &mapperIdName, bool allowGenerate) {
+  if (!allowGenerate || mapperIdName.empty())
+    return mlir::FlatSymbolRefAttr();
+
+  const semantics::DerivedTypeSpec *typeSpec =
+      getSymbolDerivedType(*object.sym());
+  if (!typeSpec && object.sym()->owner().IsDerivedType())
+    typeSpec = object.sym()->owner().derivedTypeSpec();
+
+  if (!typeSpec)
+    return mlir::FlatSymbolRefAttr();
+
+  mlir::Type type = converter.genType(*typeSpec);
+  auto recordType = mlir::dyn_cast<fir::RecordType>(type);
+  if (!recordType)
+    return mlir::FlatSymbolRefAttr();
+
+  return utils::openmp::getOrGenImplicitDefaultDeclareMapper(
+      converter.getFirOpBuilder(), loc, recordType, mapperIdName,
+      [&](std::string &mapperIdName, llvm::StringRef memberName) {
+        defaultMangler(converter, mapperIdName, memberName);
+      });
+}
+
+mlir::FlatSymbolRefAttr resolveMapperId(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const omp::Object &object, llvm::StringRef mapperIdNameRef,
+    mlir::omp::ClauseMapFlags mapTypeBits, llvm::omp::Directive directive) {
+  const semantics::DerivedTypeSpec *objectTypeSpec =
+      getSymbolDerivedType(*object.sym());
+  if (!objectTypeSpec)
+    return mlir::FlatSymbolRefAttr();
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::FlatSymbolRefAttr mapperId;
+  std::string mapperIdName = mapperIdNameRef.str();
+  // if we have an explicit mapper specified, we need to check it matches
+  // the type being mapped, if it doesn't we fallback to look for a user
+  // default mapper or generate an compiler defined default mapper if
+  // relevant. This function will return "__implicit_mapper" if we find that
+  // the map isn't relevant to the explicit declare mapper, which allows it
+  // to fallback.
+  if (!mapperIdName.empty() && mapperIdName != "__implicit_mapper")
+    mapperIdName =
+        findMapperIfTypeMatch(converter, objectTypeSpec, mapperIdName);
+
+  if (mapperIdName == "__implicit_mapper") {
+    mapperIdName = getDefaultMapperID(converter, firOpBuilder, objectTypeSpec);
+    // Currently we do not apply implicit compiler generated delcare mappers
+    // to enter, exit or update directives. However, we will syntheize one
+    // below if we're not a target enter/exit/update and no user defined
+    // implicit declare mapper has been defined and we meet the other
+    // conditions
+    // TODO/FIXME: Loosen this restriction to comply with the OpenMP
+    // specification.
+    auto *userDefinedDefault =
+        converter.getModuleOp().lookupSymbol(mapperIdName);
+    if (!userDefinedDefault &&
+        directive != llvm::omp::Directive::OMPD_target_enter_data &&
+        directive != llvm::omp::Directive::OMPD_target_exit_data &&
+        directive != llvm::omp::Directive::OMPD_target_update) {
+      bool isAllocOrPointer =
+          semantics::IsAllocatableOrObjectPointer(object.sym());
+      bool isPointer = semantics::IsPointer(*object.sym());
+      bool isImplicitMap =
+          (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
+          mlir::omp::ClauseMapFlags::implicit;
+      bool needsDefaultMapper =
+          requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+      // For implicit captures, avoid synthesizing default mappers for
+      // pointer entities (which can over-map pointer payloads) and for
+      // plain non-allocatable/non-pointer entities. Keep implicit mapper
+      // support for allocatables.
+      if (isImplicitMap && (isPointer || !isAllocOrPointer))
+        needsDefaultMapper = false;
+      mapperId = addImplicitMapper(converter, loc, object, mapperIdName,
+                                   /*allowGenerate=*/needsDefaultMapper);
+    }
+  }
+
+  // Make sure we've generated the symbol in one of our previous steps
+  // before assigning the symbol.
+  if (!mapperIdName.empty() &&
+      converter.getModuleOp().lookupSymbol(mapperIdName))
+    mapperId =
+        mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(), mapperIdName);
+  return mapperId;
+}
+
+// ---------------------------------------------------------------------------
+// OpenMP variant-matching context construction from an MLIR module
+// ---------------------------------------------------------------------------
+
+static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
+  auto iface =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
+  auto targetTriples = iface.getTargetTriples();
+  if (!targetTriples.empty())
+    if (auto tripleAttr =
+            llvm::dyn_cast<mlir::StringAttr>(targetTriples.front()))
+      return llvm::Triple(tripleAttr.getValue());
+  return llvm::Triple();
+}
+
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module) {
+  auto offloadModule =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
+  if (offloadModule.getIsTargetDevice())
+    return fir::getTargetTriple(module).isAMDGCN();
+  llvm::ArrayRef<mlir::Attribute> targetTriples =
+      offloadModule.getTargetTriples();
+  return !targetTriples.empty() &&
+         llvm::all_of(targetTriples, [](mlir::Attribute attr) {
+           auto tripleAttr = llvm::dyn_cast<mlir::StringAttr>(attr);
+           return tripleAttr && llvm::Triple(tripleAttr.getValue()).isAMDGCN();
+         });
+}
+
+static bool scopeRequiresUnifiedSharedMemory(const semantics::Scope &scope) {
+  if (const semantics::Symbol *symbol = scope.symbol()) {
+    bool requiresUSM = common::visit(
+        [](const auto &details) {
+          using Details = std::decay_t<decltype(details)>;
+          if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
+                                          Details>)
+            return details.ompRequires().test(
+                llvm::omp::Clause::OMPC_unified_shared_memory);
+          return false;
+        },
+        symbol->details());
+    if (requiresUSM)
+      return true;
+  }
+
+  return llvm::any_of(scope.children(), scopeRequiresUnifiedSharedMemory);
+}
+
+bool requiresUnifiedSharedMemory(mlir::ModuleOp module,
+                                 semantics::SemanticsContext &semaCtx) {
+  auto offloadModule = llvm::cast<mlir::omp::OffloadModuleInterface>(*module);
+  return mlir::omp::bitEnumContainsAny(
+             offloadModule.getRequires(),
+             mlir::omp::ClauseRequires::unified_shared_memory) ||
+         scopeRequiresUnifiedSharedMemory(semaCtx.globalScope());
+}
+
+semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
+    mlir::ModuleOp module,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits) {
+  bool isDeviceCompilation =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation())
+          .getIsTargetDevice();
+  mlir::LLVM::TargetFeaturesAttr features = fir::getTargetFeatures(module);
+  return semantics::omp::OmpVariantMatchContext(
+      isDeviceCompilation, fir::getTargetTriple(module),
+      getOffloadTargetTriple(module),
+      features ? features.getFeaturesString() : std::string{}, constructTraits);
+}
+
+void collectEnclosingConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+  // Collect enclosing OpenMP operations so variants chosen by an outer
+  // metadirective are part of this metadirective's context. For example, an
+  // inner metadirective inside `target` and an outer-selected `parallel` must
+  // be able to match construct={target, parallel}. The final reverse yields
+  // outermost-to-innermost order as required by OMPContext.
+  for (; op; op = op->getParentOp()) {
+    if (mlir::isa<mlir::omp::WsloopOp>(op))
+      constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
+    if (mlir::isa<mlir::omp::ParallelOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_parallel_parallel);
+    if (mlir::isa<mlir::omp::TeamsOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_teams_teams);
+    if (mlir::isa<mlir::omp::TargetOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_target_target);
+  }
+  std::reverse(constructTraits.begin(), constructTraits.end());
+}
+
+const semantics::Symbol *
+resolveDeclareVariantCallee(const semantics::Symbol &base,
+                            AbstractConverter &converter) {
+  const semantics::Symbol &ultimate{base.GetUltimate()};
+
+  const auto *details{ultimate.detailsIf<semantics::SubprogramDetails>()};
+  assert(details && !details->ompDeclareVariants().empty() &&
+         "resolveDeclareVariantCallee called on symbol with no variants");
+
+  semantics::SemanticsContext &semaCtx{ultimate.owner().context()};
+  llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> vmis;
+  llvm::SmallVector<const semantics::Symbol *, 4> variants;
+  for (const semantics::OmpDeclareVariantEntry &entry :
+       details->ompDeclareVariants()) {
+    // Variant selection cannot yet honour some selector features that the
+    // parser/semantics otherwise accept; reject them before building the match
+    // info (MakeVariantMatchInfo asserts none are present). This mirrors how
+    // METADIRECTIVE lowering rejects the same features.
+    if (entry.matchSelector) {
+      switch (semantics::omp::FindUnsupportedSelectorFeature(
+          *entry.matchSelector, semaCtx)) {
+      case semantics::omp::UnsupportedSelectorFeature::TargetDevice:
+        TODO(converter.getCurrentLocation(),
+             "target_device selector in DECLARE VARIANT");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::
+          ClauseOrExtensionProperty:
+        TODO(converter.getCurrentLocation(),
+             "clause or extension trait matching in DECLARE VARIANT");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::None:
+        break;
+      }
+    }
+    llvm::omp::VariantMatchInfo &vmi{vmis.emplace_back()};
+    if (entry.matchSelector)
+      semantics::omp::MakeVariantMatchInfo(vmi, *entry.matchSelector, semaCtx);
+    variants.push_back(&entry.variant.get());
+  }
+
+  llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
+  collectEnclosingConstructTraits(
+      converter.getFirOpBuilder().getInsertionBlock()->getParentOp(),
+      constructTraits);
+  semantics::omp::OmpVariantMatchContext ompCtx =
+      makeVariantMatchContext(converter.getModuleOp(), constructTraits);
+
+  const int bestIdx{llvm::omp::getBestVariantMatchForContext(vmis, ompCtx)};
+  // Return nullptr when no variant matches the current context; the caller
+  // will fall back to the base symbol.
+  if (bestIdx < 0)
+    return nullptr;
+  return variants[bestIdx];
 }
 
 } // namespace omp

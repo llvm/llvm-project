@@ -22,10 +22,14 @@
 
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/ItaniumCXXABIUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -82,9 +86,6 @@ public:
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
 
-  void emitBeginCatch(CIRGenFunction &cgf, const CXXCatchStmt *catchStmt,
-                      mlir::Value ehToken) override;
-
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
                               CXXDtorType dt) const override {
     // Itanium does not emit any destructor variant as an inline thunk.
@@ -112,6 +113,9 @@ public:
 
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
+  cir::GlobalViewAttr
+  getVTableAddressPointAttr(BaseSubobject base,
+                            const CXXRecordDecl *vtableClass) override;
   mlir::Value getVTableAddressPointInStructorWithVTT(
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase);
@@ -360,6 +364,7 @@ void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
   auto *md = cast<CXXMethodDecl>(gd.getDecl());
   StructorCIRGen cirGenType = getCIRGenToUse(cgm, md);
   const auto *cd = dyn_cast<CXXConstructorDecl>(md);
+  const CXXDestructorDecl *dd = cd ? nullptr : cast<CXXDestructorDecl>(md);
 
   if (cd ? gd.getCtorType() == Ctor_Complete
          : gd.getDtorType() == Dtor_Complete) {
@@ -383,7 +388,19 @@ void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
 
   auto fn = cgm.codegenCXXStructor(gd);
 
-  cgm.maybeSetTrivialComdat(*md, fn);
+  if (cirGenType == StructorCIRGen::COMDAT) {
+    llvm::SmallString<256> comdatKey;
+    llvm::raw_svector_ostream out(comdatKey);
+    ItaniumMangleContext &mangler =
+        cast<ItaniumMangleContext>(cgm.getCXXABI().getMangleContext());
+    if (dd)
+      mangler.mangleCXXDtorComdat(dd, out);
+    else
+      mangler.mangleCXXCtorComdat(cd, out);
+    fn.setComdat(llvm::StringRef(comdatKey));
+  } else {
+    cgm.maybeSetTrivialComdat(*md, fn);
+  }
 }
 
 void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
@@ -500,7 +517,7 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   vtable.setLinkage(linkage);
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
-    vtable.setComdat(true);
+    vtable.setSelfComdat();
 
   // Set the right visibility.
   cgm.setGVProperties(vtable, rd);
@@ -622,197 +639,6 @@ public:
                                 cir::GlobalLinkageKind linkage,
                                 mlir::SymbolTable::Visibility visibility);
 };
-} // namespace
-
-// TODO(cir): Will be removed after sharing them with the classical codegen
-namespace {
-
-// Pointer type info flags.
-enum {
-  /// PTI_Const - Type has const qualifier.
-  PTI_Const = 0x1,
-
-  /// PTI_Volatile - Type has volatile qualifier.
-  PTI_Volatile = 0x2,
-
-  /// PTI_Restrict - Type has restrict qualifier.
-  PTI_Restrict = 0x4,
-
-  /// PTI_Incomplete - Type is incomplete.
-  PTI_Incomplete = 0x8,
-
-  /// PTI_ContainingClassIncomplete - Containing class is incomplete.
-  /// (in pointer to member).
-  PTI_ContainingClassIncomplete = 0x10,
-
-  /// PTI_TransactionSafe - Pointee is transaction_safe function (C++ TM TS).
-  // PTI_TransactionSafe = 0x20,
-
-  /// PTI_Noexcept - Pointee is noexcept function (C++1z).
-  PTI_Noexcept = 0x40,
-};
-
-// VMI type info flags.
-enum {
-  /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
-  VMI_NonDiamondRepeat = 0x1,
-
-  /// VMI_DiamondShaped - Class is diamond shaped.
-  VMI_DiamondShaped = 0x2
-};
-
-// Base class type info flags.
-enum {
-  /// BCTI_Virtual - Base class is virtual.
-  BCTI_Virtual = 0x1,
-
-  /// BCTI_Public - Base class is public.
-  BCTI_Public = 0x2
-};
-
-/// Given a builtin type, returns whether the type
-/// info for that type is defined in the standard library.
-/// TODO(cir): this can unified with LLVM codegen
-static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
-  // Itanium C++ ABI 2.9.2:
-  //   Basic type information (e.g. for "int", "bool", etc.) will be kept in
-  //   the run-time support library. Specifically, the run-time support
-  //   library should contain type_info objects for the types X, X* and
-  //   X const*, for every X in: void, std::nullptr_t, bool, wchar_t, char,
-  //   unsigned char, signed char, short, unsigned short, int, unsigned int,
-  //   long, unsigned long, long long, unsigned long long, float, double,
-  //   long double, char16_t, char32_t, and the IEEE 754r decimal and
-  //   half-precision floating point types.
-  //
-  // GCC also emits RTTI for __int128.
-  // FIXME: We do not emit RTTI information for decimal types here.
-
-  // Types added here must also be added to emitFundamentalRTTIDescriptors.
-  switch (ty->getKind()) {
-  case BuiltinType::WasmExternRef:
-  case BuiltinType::HLSLResource:
-    llvm_unreachable("NYI");
-  case BuiltinType::Void:
-  case BuiltinType::NullPtr:
-  case BuiltinType::Bool:
-  case BuiltinType::WChar_S:
-  case BuiltinType::WChar_U:
-  case BuiltinType::Char_U:
-  case BuiltinType::Char_S:
-  case BuiltinType::UChar:
-  case BuiltinType::SChar:
-  case BuiltinType::Short:
-  case BuiltinType::UShort:
-  case BuiltinType::Int:
-  case BuiltinType::UInt:
-  case BuiltinType::Long:
-  case BuiltinType::ULong:
-  case BuiltinType::LongLong:
-  case BuiltinType::ULongLong:
-  case BuiltinType::Half:
-  case BuiltinType::Float:
-  case BuiltinType::Double:
-  case BuiltinType::LongDouble:
-  case BuiltinType::Float16:
-  case BuiltinType::Float128:
-  case BuiltinType::Ibm128:
-  case BuiltinType::Char8:
-  case BuiltinType::Char16:
-  case BuiltinType::Char32:
-  case BuiltinType::Int128:
-  case BuiltinType::UInt128:
-    return true;
-
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
-  case BuiltinType::Id:
-#include "clang/Basic/OpenCLImageTypes.def"
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) case BuiltinType::Id:
-#include "clang/Basic/OpenCLExtensionTypes.def"
-  case BuiltinType::OCLSampler:
-  case BuiltinType::OCLEvent:
-  case BuiltinType::OCLClkEvent:
-  case BuiltinType::OCLQueue:
-  case BuiltinType::OCLReserveID:
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64ACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
-#include "clang/Basic/PPCTypes.def"
-#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/RISCVVTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
-#include "clang/Basic/AMDGPUTypes.def"
-  case BuiltinType::ShortAccum:
-  case BuiltinType::Accum:
-  case BuiltinType::LongAccum:
-  case BuiltinType::UShortAccum:
-  case BuiltinType::UAccum:
-  case BuiltinType::ULongAccum:
-  case BuiltinType::ShortFract:
-  case BuiltinType::Fract:
-  case BuiltinType::LongFract:
-  case BuiltinType::UShortFract:
-  case BuiltinType::UFract:
-  case BuiltinType::ULongFract:
-  case BuiltinType::SatShortAccum:
-  case BuiltinType::SatAccum:
-  case BuiltinType::SatLongAccum:
-  case BuiltinType::SatUShortAccum:
-  case BuiltinType::SatUAccum:
-  case BuiltinType::SatULongAccum:
-  case BuiltinType::SatShortFract:
-  case BuiltinType::SatFract:
-  case BuiltinType::SatLongFract:
-  case BuiltinType::SatUShortFract:
-  case BuiltinType::SatUFract:
-  case BuiltinType::SatULongFract:
-  case BuiltinType::BFloat16:
-    return false;
-
-  case BuiltinType::Dependent:
-#define BUILTIN_TYPE(Id, SingletonId)
-#define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
-#include "clang/AST/BuiltinTypes.def"
-    llvm_unreachable("asking for RRTI for a placeholder type!");
-
-  case BuiltinType::ObjCId:
-  case BuiltinType::ObjCClass:
-  case BuiltinType::ObjCSel:
-    llvm_unreachable("FIXME: Objective-C types are unsupported!");
-  }
-
-  llvm_unreachable("Invalid BuiltinType Kind!");
-}
-
-static bool typeInfoIsInStandardLibrary(const PointerType *pointerTy) {
-  QualType pointeeTy = pointerTy->getPointeeType();
-  const auto *builtinTy = dyn_cast<BuiltinType>(pointeeTy);
-  if (!builtinTy)
-    return false;
-
-  // Check the qualifiers.
-  Qualifiers quals = pointeeTy.getQualifiers();
-  quals.removeConst();
-
-  if (!quals.empty())
-    return false;
-
-  return typeInfoIsInStandardLibrary(builtinTy);
-}
-
-/// IsStandardLibraryRTTIDescriptor - Returns whether the type
-/// information for the given type exists in the standard library.
-static bool isStandardLibraryRttiDescriptor(QualType ty) {
-  // Type info for builtin types is defined in the standard library.
-  if (const auto *builtinTy = dyn_cast<BuiltinType>(ty))
-    return typeInfoIsInStandardLibrary(builtinTy);
-
-  // Type info for some pointer types to builtin types is defined in the
-  // standard library.
-  if (const auto *pointerTy = dyn_cast<PointerType>(ty))
-    return typeInfoIsInStandardLibrary(pointerTy);
-
-  return false;
-}
 
 /// ShouldUseExternalRTTIDescriptor - Returns whether the type information for
 /// the given type exists somewhere else, and that we should not emit the type
@@ -857,148 +683,6 @@ static bool shouldUseExternalRttiDescriptor(CIRGenModule &cgm, QualType ty) {
   }
 
   return false;
-}
-
-/// Contains virtual and non-virtual bases seen when traversing a class
-/// hierarchy.
-struct SeenBases {
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> nonVirtualBases;
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> virtualBases;
-};
-
-/// Compute the value of the flags member in abi::__vmi_class_type_info.
-///
-static unsigned computeVmiClassTypeInfoFlags(const CXXBaseSpecifier *base,
-                                             SeenBases &bases) {
-
-  unsigned flags = 0;
-  auto *baseDecl = base->getType()->castAsCXXRecordDecl();
-
-  if (base->isVirtual()) {
-    // Mark the virtual base as seen.
-    if (!bases.virtualBases.insert(baseDecl).second) {
-      // If this virtual base has been seen before, then the class is diamond
-      // shaped.
-      flags |= VMI_DiamondShaped;
-    } else {
-      if (bases.nonVirtualBases.count(baseDecl))
-        flags |= VMI_NonDiamondRepeat;
-    }
-  } else {
-    // Mark the non-virtual base as seen.
-    if (!bases.nonVirtualBases.insert(baseDecl).second) {
-      // If this non-virtual base has been seen before, then the class has non-
-      // diamond shaped repeated inheritance.
-      flags |= VMI_NonDiamondRepeat;
-    } else {
-      if (bases.virtualBases.count(baseDecl))
-        flags |= VMI_NonDiamondRepeat;
-    }
-  }
-
-  // Walk all bases.
-  for (const auto &bs : baseDecl->bases())
-    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
-
-  return flags;
-}
-
-static unsigned computeVmiClassTypeInfoFlags(const CXXRecordDecl *rd) {
-  unsigned flags = 0;
-  SeenBases bases;
-
-  // Walk all bases.
-  for (const auto &bs : rd->bases())
-    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
-
-  return flags;
-}
-
-// Return whether the given record decl has a "single,
-// public, non-virtual base at offset zero (i.e. the derived class is dynamic
-// iff the base is)", according to Itanium C++ ABI, 2.95p6b.
-// TODO(cir): this can unified with LLVM codegen
-static bool canUseSingleInheritance(const CXXRecordDecl *rd) {
-  // Check the number of bases.
-  if (rd->getNumBases() != 1)
-    return false;
-
-  // Get the base.
-  CXXRecordDecl::base_class_const_iterator base = rd->bases_begin();
-
-  // Check that the base is not virtual.
-  if (base->isVirtual())
-    return false;
-
-  // Check that the base is public.
-  if (base->getAccessSpecifier() != AS_public)
-    return false;
-
-  // Check that the class is dynamic iff the base is.
-  auto *baseDecl = base->getType()->castAsCXXRecordDecl();
-  return baseDecl->isEmpty() ||
-         baseDecl->isDynamicClass() == rd->isDynamicClass();
-}
-
-/// IsIncompleteClassType - Returns whether the given record type is incomplete.
-static bool isIncompleteClassType(const RecordType *recordTy) {
-  return !recordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
-}
-
-/// Returns whether the given type contains an
-/// incomplete class type. This is true if
-///
-///   * The given type is an incomplete class type.
-///   * The given type is a pointer type whose pointee type contains an
-///     incomplete class type.
-///   * The given type is a member pointer type whose class is an incomplete
-///     class type.
-///   * The given type is a member pointer type whoise pointee type contains an
-///     incomplete class type.
-/// is an indirect or direct pointer to an incomplete class type.
-static bool containsIncompleteClassType(QualType ty) {
-  if (const auto *recordTy = dyn_cast<RecordType>(ty)) {
-    if (isIncompleteClassType(recordTy))
-      return true;
-  }
-
-  if (const auto *pointerTy = dyn_cast<PointerType>(ty))
-    return containsIncompleteClassType(pointerTy->getPointeeType());
-
-  if (const auto *memberPointerTy = dyn_cast<MemberPointerType>(ty)) {
-    // Check if the class type is incomplete.
-    if (!memberPointerTy->getMostRecentCXXRecordDecl()->hasDefinition())
-      return true;
-
-    return containsIncompleteClassType(memberPointerTy->getPointeeType());
-  }
-
-  return false;
-}
-
-static unsigned extractPBaseFlags(const ASTContext &ctx, QualType &ty) {
-  unsigned flags = 0;
-
-  if (ty.isConstQualified())
-    flags |= PTI_Const;
-  if (ty.isVolatileQualified())
-    flags |= PTI_Volatile;
-  if (ty.isRestrictQualified())
-    flags |= PTI_Restrict;
-
-  ty = ty.getUnqualifiedType();
-
-  if (containsIncompleteClassType(ty))
-    flags |= PTI_Incomplete;
-
-  if (const auto *proto = ty->getAs<FunctionProtoType>()) {
-    if (proto->isNothrow()) {
-      flags |= PTI_Noexcept;
-      ty = ctx.getFunctionTypeWithExceptionSpec(ty, EST_None);
-    }
-  }
-
-  return flags;
 }
 
 const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
@@ -1069,7 +753,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
       return classTypeInfo;
     }
 
-    if (canUseSingleInheritance(rd)) {
+    if (CodeGenUtils::canUseSingleInheritance(rd)) {
       return siClassTypeInfo;
     }
 
@@ -1114,7 +798,7 @@ static cir::GlobalLinkageKind getTypeInfoLinkage(CIRGenModule &cgm,
   //   generated for the incomplete type that will not resolve to the final
   //   complete class RTTI (because the latter need not exist), possibly by
   //   making it a local static object.
-  if (containsIncompleteClassType(ty))
+  if (CodeGenUtils::containsIncompleteClassType(ty))
     return cir::GlobalLinkageKind::InternalLinkage;
 
   switch (ty->getLinkage()) {
@@ -1198,16 +882,15 @@ CIRGenItaniumRTTIBuilder::getAddrOfExternalRTTIDescriptor(mlir::Location loc,
   CIRGenBuilderTy &builder = cgm.getBuilder();
 
   // Look for an existing global.
-  cir::GlobalOp gv = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+  cir::GlobalOp gv = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
   if (!gv) {
     // Create a new global variable.
     // From LLVM codegen => Note for the future: If we would ever like to do
     // deferred emission of RTTI, check if emitting vtables opportunistically
     // need any adjustment.
-    gv = CIRGenModule::createGlobalOp(cgm, loc, name, builder.getUInt8PtrTy(),
-                                      /*isConstant=*/true);
+    gv = cgm.createGlobalOp(loc, name, builder.getUInt8PtrTy(),
+                            /*isConstant=*/true);
     const CXXRecordDecl *rd = ty->getAsCXXRecordDecl();
     cgm.setGVProperties(gv, rd);
 
@@ -1237,6 +920,11 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
   cir::GlobalOp vTable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, vTableName, vtableGlobalTy, cir::GlobalLinkageKind::ExternalLinkage,
       CharUnits::fromQuantity(align));
+  // Note: createOrReplaceCXXRuntimeVariable isn't exactly what classic-codegen
+  // does here: it just does a getOrInsertGlobal at the module level. However,
+  // the above function does MOST of what we want, except it sets the global as
+  // constant, when we don't want that.  So set it here instead.
+  vTable.setConstant(false);
 
   // The vtable address point is 2.
   mlir::Attribute field{};
@@ -1279,7 +967,7 @@ void CIRGenItaniumRTTIBuilder::buildVMIClassTypeInfo(mlir::Location loc,
   //   __flags is a word with flags describing details about the class
   //   structure, which may be referenced by using the __flags_masks
   //   enumeration. These flags refer to both direct and indirect bases.
-  unsigned flags = computeVmiClassTypeInfoFlags(rd);
+  unsigned flags = CodeGenUtils::computeVMIClassTypeInfoFlags(rd);
   fields.push_back(cir::IntAttr::get(unsignedIntLTy, flags));
 
   // Itanium C++ ABI 2.9.5p6c:
@@ -1346,9 +1034,9 @@ void CIRGenItaniumRTTIBuilder::buildVMIClassTypeInfo(mlir::Location loc,
     // The low-order byte of __offset_flags contains flags, as given by the
     // masks from the enumeration __offset_flags_masks.
     if (base.isVirtual())
-      offsetFlags |= BCTI_Virtual;
+      offsetFlags |= CodeGenUtils::BCTI_Virtual;
     if (base.getAccessSpecifier() == AS_public)
-      offsetFlags |= BCTI_Public;
+      offsetFlags |= CodeGenUtils::BCTI_Public;
 
     fields.push_back(cir::IntAttr::get(offsetFlagsLTy, offsetFlags));
   }
@@ -1375,7 +1063,8 @@ void CIRGenItaniumRTTIBuilder::buildPointerTypeInfo(mlir::Location loc,
   //         __noexcept_mask = 0x40
   //       };
   //   };
-  const unsigned int flags = extractPBaseFlags(cgm.getASTContext(), ty);
+  const unsigned int flags =
+      CodeGenUtils::extractPBaseFlags(cgm.getASTContext(), ty);
 
   mlir::Type unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
   mlir::Attribute flagsAttr = cir::IntAttr::get(unsignedIntTy, flags);
@@ -1398,11 +1087,12 @@ void CIRGenItaniumRTTIBuilder::buildPointerToMemberTypeInfo(
   //    };
   QualType pointeeTy = ty->getPointeeType();
 
-  unsigned flags = extractPBaseFlags(cgm.getASTContext(), pointeeTy);
+  unsigned flags =
+      CodeGenUtils::extractPBaseFlags(cgm.getASTContext(), pointeeTy);
 
   const auto *rd = ty->getMostRecentCXXRecordDecl();
   if (!rd->hasDefinition())
-    flags |= PTI_ContainingClassIncomplete;
+    flags |= CodeGenUtils::PTI_ContainingClassIncomplete;
 
   mlir::Type unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
   mlir::Attribute flagsAttr = cir::IntAttr::get(unsignedIntTy, flags);
@@ -1428,8 +1118,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
   llvm::raw_svector_ostream out(name);
   cgm.getCXXABI().getMangleContext().mangleCXXRTTI(ty, out);
 
-  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
   if (oldGV && !oldGV.isDeclaration()) {
     assert(!oldGV.hasAvailableExternallyLinkage() &&
@@ -1439,7 +1128,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
   }
 
   // Check if there is already an external RTTI descriptor for this type.
-  if (isStandardLibraryRttiDescriptor(ty) ||
+  if (CodeGenUtils::isStandardLibraryRTTIDescriptor(ty) ||
       shouldUseExternalRttiDescriptor(cgm, ty))
     return getAddrOfExternalRTTIDescriptor(loc, ty);
 
@@ -1560,7 +1249,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
       break;
     }
 
-    if (canUseSingleInheritance(rd)) {
+    if (CodeGenUtils::canUseSingleInheritance(rd)) {
       buildSIClassTypeInfo(loc, rd);
     } else {
       buildVMIClassTypeInfo(loc, rd);
@@ -1604,12 +1293,11 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   cgm.getCXXABI().getMangleContext().mangleCXXRTTI(ty, out);
 
   // Create new global and search for an existing global.
-  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+  auto oldGV = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
 
-  cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(cgm, loc, name, init.getType(),
-                                   /*isConstant=*/true);
+  cir::GlobalOp gv = cgm.createGlobalOp(loc, name, init.getType(),
+                                        /*isConstant=*/true);
+  gv.setLinkage(linkage);
 
   // Export the typeinfo in the same circumstances as the vtable is
   // exported.
@@ -1626,14 +1314,12 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
       cgm.errorNYI("buildTypeInfo: old GV !use_empty");
       return {};
     }
+    cgm.eraseGlobalSymbol(oldGV);
     oldGV->erase();
   }
 
-  if (cgm.supportsCOMDAT() && cir::isWeakForLinker(gv.getLinkage())) {
-    assert(!cir::MissingFeatures::setComdat());
-    cgm.errorNYI("buildTypeInfo: supportsCOMDAT & isWeakForLinker");
-    return {};
-  }
+  if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
+    gv.setSelfComdat();
 
   CharUnits align = cgm.getASTContext().toCharUnitsFromBits(
       cgm.getTarget().getPointerAlign(LangAS::Default));
@@ -1765,11 +1451,6 @@ void CIRGenItaniumCXXABI::registerGlobalDtor(const VarDecl *vd,
   if (vd->isNoDestroy(cgm.getASTContext()))
     return;
 
-  if (vd->getTLSKind()) {
-    cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: TLS");
-    return;
-  }
-
   // HLSL doesn't support atexit.
   if (cgm.getLangOpts().HLSL) {
     cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: HLSL");
@@ -1818,7 +1499,7 @@ void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &cgf, bool isNoReturn) {
   if (isNoReturn) {
     CIRGenBuilderTy &builder = cgf.getBuilder();
     assert(cgf.currSrcLoc && "expected source location");
-    mlir::Location loc = *cgf.currSrcLoc;
+    mlir::Location loc = cgf.getLoc(*cgf.currSrcLoc);
     insertThrowAndSplit(builder, loc);
   } else {
     cgm.errorNYI("emitRethrow with isNoReturn false");
@@ -1885,6 +1566,7 @@ CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
   switch (cgm.getASTContext().getCXXABIKind()) {
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericAArch64:
+  case TargetCXXABI::GenericARM:
     return new CIRGenItaniumCXXABI(cgm);
 
   case TargetCXXABI::AppleARM64:
@@ -1972,16 +1654,17 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
                                             cgf.getPointerAlign());
     }
 
-    // Add !invariant.load md to virtual function load to indicate that
-    // function didn't change inside vtable.
+    // Set invariant on the cir.load of virtual function pointer to indicate
+    // that function didn't change inside vtable.
     // It's safe to add it without -fstrict-vtable-pointers, but it would not
     // help in devirtualization because it will only matter if we will have 2
     // the same virtual function loads from the same vtable load, which won't
     // happen without enabled devirtualization with -fstrict-vtable-pointers.
     if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        cgm.getCodeGenOpts().StrictVTablePointers) {
-      cgm.errorNYI(loc, "getVirtualFunctionPointer: strictVTablePointers");
-    }
+        cgm.getCodeGenOpts().StrictVTablePointers)
+      if (auto loadOp = vfuncLoad.getDefiningOp<cir::LoadOp>())
+        loadOp.setInvariant(true);
+
     vfunc = vfuncLoad;
   }
 
@@ -2032,6 +1715,27 @@ CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject base,
       cir::AddressPointAttr::get(cgm.getBuilder().getContext(),
                                  addressPoint.VTableIndex,
                                  addressPoint.AddressPointIndex));
+}
+
+cir::GlobalViewAttr CIRGenItaniumCXXABI::getVTableAddressPointAttr(
+    BaseSubobject base, const CXXRecordDecl *vtableClass) {
+  cir::GlobalOp vtable = getAddrOfVTable(vtableClass, CharUnits());
+
+  // Find the appropriate vtable within the vtable group, and the address point
+  // within that vtable.
+  VTableLayout::AddressPointLocation addressPoint =
+      cgm.getItaniumVTableContext()
+          .getVTableLayout(vtableClass)
+          .getAddressPoint(base);
+
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::ArrayAttr indices = builder.getArrayAttr(
+      {builder.getI32IntegerAttr(addressPoint.VTableIndex),
+       builder.getI32IntegerAttr(addressPoint.AddressPointIndex)});
+  return cir::GlobalViewAttr::get(
+      cir::VPtrType::get(builder.getContext()),
+      mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr()), indices,
+      /*addressPoint=*/true);
 }
 
 mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
@@ -2095,7 +1799,11 @@ static void emitCallToBadCast(CIRGenFunction &cgf, mlir::Location loc) {
   // TODO(cir): set the calling convention to the runtime function.
   assert(!cir::MissingFeatures::opFuncCallingConv());
 
-  cgf.emitRuntimeCall(loc, getBadCastFn(cgf));
+  mlir::NamedAttrList attrs;
+  attrs.set(cir::CIRDialect::getNoReturnAttrName(),
+            mlir::UnitAttr::get(&cgf.cgm.getMLIRContext()));
+
+  cgf.emitRuntimeCall(loc, getBadCastFn(cgf), {}, attrs);
   cir::UnreachableOp::create(cgf.getBuilder(), loc);
   cgf.getBuilder().clearInsertionPoint();
 }
@@ -2103,58 +1811,6 @@ static void emitCallToBadCast(CIRGenFunction &cgf, mlir::Location loc) {
 void CIRGenItaniumCXXABI::emitBadCastCall(CIRGenFunction &cgf,
                                           mlir::Location loc) {
   emitCallToBadCast(cgf, loc);
-}
-
-// TODO(cir): This could be shared with classic codegen.
-static CharUnits computeOffsetHint(ASTContext &astContext,
-                                   const CXXRecordDecl *src,
-                                   const CXXRecordDecl *dst) {
-  CXXBasePaths paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                     /*DetectVirtual=*/false);
-
-  // If Dst is not derived from Src we can skip the whole computation below and
-  // return that Src is not a public base of Dst.  Record all inheritance paths.
-  if (!dst->isDerivedFrom(src, paths))
-    return CharUnits::fromQuantity(-2);
-
-  unsigned numPublicPaths = 0;
-  CharUnits offset;
-
-  // Now walk all possible inheritance paths.
-  for (const CXXBasePath &path : paths) {
-    if (path.Access != AS_public) // Ignore non-public inheritance.
-      continue;
-
-    ++numPublicPaths;
-
-    for (const CXXBasePathElement &pathElement : path) {
-      // If the path contains a virtual base class we can't give any hint.
-      // -1: no hint.
-      if (pathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1);
-
-      if (numPublicPaths > 1) // Won't use offsets, skip computation.
-        continue;
-
-      // Accumulate the base class offsets.
-      const ASTRecordLayout &L =
-          astContext.getASTRecordLayout(pathElement.Class);
-      offset += L.getBaseClassOffset(
-          pathElement.Base->getType()->getAsCXXRecordDecl());
-    }
-  }
-
-  // -2: Src is not a public base of Dst.
-  if (numPublicPaths == 0)
-    return CharUnits::fromQuantity(-2);
-
-  // -3: Src is a multiple public base type but never a virtual base type.
-  if (numPublicPaths > 1)
-    return CharUnits::fromQuantity(-3);
-
-  // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
-  // Return the offset of Src from the origin of Dst.
-  return offset;
 }
 
 static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
@@ -2326,9 +1982,9 @@ static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
                                                     QualType srcRecordTy,
                                                     QualType destRecordTy) {
   auto srcRtti = mlir::cast<cir::GlobalViewAttr>(
-      cgf.cgm.getAddrOfRTTIDescriptor(loc, srcRecordTy));
+      cgf.cgm.getAddrOfRTTIDescriptor(loc, srcRecordTy.getUnqualifiedType()));
   auto destRtti = mlir::cast<cir::GlobalViewAttr>(
-      cgf.cgm.getAddrOfRTTIDescriptor(loc, destRecordTy));
+      cgf.cgm.getAddrOfRTTIDescriptor(loc, destRecordTy.getUnqualifiedType()));
 
   cir::FuncOp runtimeFuncOp = getItaniumDynamicCastFn(cgf);
   cir::FuncOp badCastFuncOp = getBadCastFn(cgf);
@@ -2337,7 +1993,8 @@ static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
 
   const CXXRecordDecl *srcDecl = srcRecordTy->getAsCXXRecordDecl();
   const CXXRecordDecl *destDecl = destRecordTy->getAsCXXRecordDecl();
-  CharUnits offsetHint = computeOffsetHint(cgf.getContext(), srcDecl, destDecl);
+  CharUnits offsetHint =
+      CodeGenUtils::computeOffsetHint(cgf.getContext(), srcDecl, destDecl);
 
   mlir::Type ptrdiffTy = cgf.convertType(cgf.getContext().getPointerDiffType());
   auto offsetHintAttr = cir::IntAttr::get(ptrdiffTy, offsetHint.getQuantity());
@@ -2456,9 +2113,10 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       std::max(sizeSize, ctx.getPreferredTypeAlignInChars(elementType));
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
+  mlir::Type u8Ty = cgf.getBuilder().getUInt8Ty();
   cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Value baseBytePtr =
-      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8PtrTy);
+      cgf.getBuilder().createBitcast(newPtr.getPointer(), u8PtrTy);
 
   // Compute an offset to the cookie.
   CharUnits cookieOffset = cookieSize - sizeSize;
@@ -2472,7 +2130,7 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   CharUnits baseAlignment = newPtr.getAlignment();
   CharUnits cookiePtrAlignment = baseAlignment.alignmentAtOffset(cookieOffset);
-  Address cookiePtr(cookiePtrValue, u8PtrTy, cookiePtrAlignment);
+  Address cookiePtr(cookiePtrValue, u8Ty, cookiePtrAlignment);
 
   // Write the number of elements into the appropriate slot.
   Address numElementsPtr =
@@ -2490,242 +2148,6 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
       cgf.getBuilder().createPtrBitcast(dataPtr, newPtr.getElementType());
   CharUnits finalAlignment = baseAlignment.alignmentAtOffset(cookieSize);
   return Address(finalPtr, newPtr.getElementType(), finalAlignment);
-}
-
-namespace {
-/// From traditional LLVM, useful info for LLVM lowering support:
-/// A cleanup to call __cxa_end_catch.  In many cases, the caught
-/// exception type lets us state definitively that the thrown exception
-/// type does not have a destructor.  In particular:
-///   - Catch-alls tell us nothing, so we have to conservatively
-///     assume that the thrown exception might have a destructor.
-///   - Catches by reference behave according to their base types.
-///   - Catches of non-record types will only trigger for exceptions
-///     of non-record types, which never have destructors.
-///   - Catches of record types can trigger for arbitrary subclasses
-///     of the caught type, so we have to assume the actual thrown
-///     exception type might have a throwing destructor, even if the
-///     caught type's destructor is trivial or nothrow.
-struct CallEndCatch final : EHScopeStack::Cleanup {
-  CallEndCatch(bool mightThrow, mlir::Value catchToken)
-      : mightThrow(mightThrow), catchToken(catchToken) {}
-  bool mightThrow;
-  mlir::Value catchToken;
-
-  void emit(CIRGenFunction &cgf, Flags flags) override {
-    // Traditional LLVM codegen would emit a call to __cxa_end_catch
-    // here. For CIR, just let it pass since the cleanup is going
-    // to be emitted on a later pass when lowering the catch region.
-    // CGF.EmitRuntimeCallOrTryCall(getEndCatchFn(CGF.CGM));
-    cir::EndCatchOp::create(cgf.getBuilder(), *cgf.currSrcLoc, catchToken);
-    cir::YieldOp::create(cgf.getBuilder(), *cgf.currSrcLoc);
-  }
-};
-} // namespace
-
-static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Value ehToken,
-                                  mlir::Type exnPtrTy, bool endMightThrow) {
-  auto catchTokenTy = cir::CatchTokenType::get(cgf.getBuilder().getContext());
-  auto beginCatch = cir::BeginCatchOp::create(cgf.getBuilder(),
-                                              cgf.getBuilder().getUnknownLoc(),
-                                              catchTokenTy, exnPtrTy, ehToken);
-
-  cgf.ehStack.pushCleanup<CallEndCatch>(
-      NormalAndEHCleanup,
-      endMightThrow && !cgf.cgm.getLangOpts().AssumeNothrowExceptionDtor,
-      beginCatch.getCatchToken());
-
-  return beginCatch.getExnPtr();
-}
-
-/// A "special initializer" callback for initializing a catch
-/// parameter during catch initialization.
-static void initCatchParam(CIRGenFunction &cgf, mlir::Value ehToken,
-                           const VarDecl &catchParam, Address paramAddr,
-                           SourceLocation loc) {
-  CanQualType catchType =
-      cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
-  mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
-
-  // If we're catching by reference, we can just cast the object
-  // pointer to the appropriate pointer.
-  if (isa<ReferenceType>(catchType)) {
-    QualType caughtType = cast<ReferenceType>(catchType)->getPointeeType();
-    bool endCatchMightThrow = caughtType->isRecordType();
-
-    mlir::Value adjustedExn =
-        callBeginCatch(cgf, ehToken, cirCatchTy, endCatchMightThrow);
-
-    // We have no way to tell the personality function that we're
-    // catching by reference, so if we're catching a pointer,
-    // __cxa_begin_catch will actually return that pointer by value.
-    if (const PointerType *pt = dyn_cast<PointerType>(caughtType)) {
-      QualType pointeeType = pt->getPointeeType();
-      // When catching by reference, generally we should just ignore
-      // this by-value pointer and use the exception object instead.
-      if (!pointeeType->isRecordType()) {
-        cgf.cgm.errorNYI(loc,
-                         "initCatchParam: catching a pointer of non-record");
-      } else {
-        // Pull the pointer for the reference type off.
-        mlir::Type ptrTy = cgf.convertTypeForMem(caughtType);
-
-        // Create the temporary and write the adjusted pointer into it.
-        Address exnPtrTmp = cgf.createTempAlloca(
-            ptrTy, cgf.getPointerAlign(), cgf.getLoc(loc), "exn.byref.tmp");
-        mlir::Value casted = cgf.getBuilder().createBitcast(adjustedExn, ptrTy);
-        cgf.getBuilder().createStore(cgf.getLoc(loc), casted, exnPtrTmp);
-
-        // Bind the reference to the temporary.
-        adjustedExn = exnPtrTmp.emitRawPointer();
-      }
-    }
-
-    mlir::Value exnCast =
-        cgf.getBuilder().createBitcast(adjustedExn, cirCatchTy);
-    cgf.getBuilder().createStore(cgf.getLoc(loc), exnCast, paramAddr);
-    return;
-  }
-
-  // Scalars and complexes.
-  cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
-  if (tek != cir::TEK_Aggregate) {
-    // Notes for LLVM lowering:
-    // If the catch type is a pointer type, __cxa_begin_catch returns
-    // the pointer by value.
-    if (catchType->hasPointerRepresentation()) {
-      mlir::Value catchParam =
-          callBeginCatch(cgf, ehToken, cirCatchTy, /*endMightThrow=*/false);
-      switch (catchType.getQualifiers().getObjCLifetime()) {
-      case Qualifiers::OCL_Strong:
-        cgf.cgm.errorNYI(loc,
-                         "initCatchParam: PointerRepresentation OCL_Strong");
-        return;
-
-      case Qualifiers::OCL_ExplicitNone:
-      case Qualifiers::OCL_Autoreleasing:
-        cgf.cgm.errorNYI(loc, "initCatchParam: PointerRepresentation "
-                              "OCL_ExplicitNone & OCL_Autoreleasing");
-        return;
-
-      case Qualifiers::OCL_None:
-        cgf.getBuilder().createStore(cgf.getLoc(loc), catchParam, paramAddr);
-        return;
-
-      case Qualifiers::OCL_Weak:
-        cgf.cgm.errorNYI(loc, "initCatchParam: PointerRepresentation OCL_Weak");
-        return;
-      }
-
-      llvm_unreachable("bad ownership qualifier!");
-    }
-
-    // Otherwise, it returns a pointer into the exception object.
-    mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
-    mlir::Value catchParam =
-        callBeginCatch(cgf, ehToken, cgf.getBuilder().getPointerTo(cirCatchTy),
-                       /*endMightThrow=*/false);
-    LValue srcLV = cgf.makeNaturalAlignAddrLValue(catchParam, catchType);
-    LValue destLV = cgf.makeAddrLValue(paramAddr, catchType);
-    switch (tek) {
-    case cir::TEK_Complex: {
-      mlir::Value load = cgf.emitLoadOfComplex(srcLV, loc);
-      cgf.emitStoreOfComplex(cgf.getLoc(loc), load, destLV, /*isInit=*/true);
-      return;
-    }
-    case cir::TEK_Scalar: {
-      mlir::Value exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
-      cgf.emitStoreOfScalar(exnLoad, destLV, /*isInit=*/true);
-      return;
-    }
-    case cir::TEK_Aggregate:
-      llvm_unreachable("evaluation kind filtered out!");
-    }
-
-    llvm_unreachable("bad evaluation kind");
-  }
-
-  assert(isa<RecordType>(catchType) && "unexpected catch type!");
-  auto *catchRD = catchType->getAsCXXRecordDecl();
-  CharUnits caughtExnAlignment = cgf.cgm.getClassPointerAlignment(catchRD);
-
-  // Check for a copy expression.  If we don't have a copy expression,
-  // that means a trivial copy is okay.
-  const Expr *copyExpr = catchParam.getInit();
-  if (!copyExpr) {
-    mlir::Type cirCatchPtrTy = cgf.getBuilder().getPointerTo(cirCatchTy);
-    mlir::Value rawAdjustedExn =
-        callBeginCatch(cgf, ehToken, cirCatchPtrTy, /*endMightThrow=*/true);
-    Address adjustedExn(rawAdjustedExn, cirCatchTy, caughtExnAlignment);
-    LValue dest = cgf.makeAddrLValue(paramAddr, catchType);
-    LValue src = cgf.makeAddrLValue(adjustedExn, catchType);
-    cgf.emitAggregateCopy(dest, src, catchType, AggValueSlot::DoesNotOverlap);
-    return;
-  }
-
-  cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Aggregate non-trivial copy");
-}
-
-/// Begins a catch statement by initializing the catch variable and
-/// calling __cxa_begin_catch.
-void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &cgf,
-                                         const CXXCatchStmt *catchStmt,
-                                         mlir::Value ehToken) {
-  // We have to be very careful with the ordering of cleanups here:
-  //   C++ [except.throw]p4:
-  //     The destruction [of the exception temporary] occurs
-  //     immediately after the destruction of the object declared in
-  //     the exception-declaration in the handler.
-  //
-  // So the precise ordering is:
-  //   1.  Construct catch variable.
-  //   2.  __cxa_begin_catch
-  //   3.  Enter __cxa_end_catch cleanup
-  //   4.  Enter dtor cleanup
-  //
-  // We do this by using a slightly abnormal initialization process.
-  // Delegation sequence:
-  //   - ExitCXXTryStmt opens a RunCleanupsScope
-  //     - EmitAutoVarAlloca creates the variable and debug info
-  //       - InitCatchParam initializes the variable from the exception
-  //       - CallBeginCatch calls __cxa_begin_catch
-  //       - CallBeginCatch enters the __cxa_end_catch cleanup
-  //     - EmitAutoVarCleanups enters the variable destructor cleanup
-  //   - EmitCXXTryStmt emits the code for the catch body
-  //   - EmitCXXTryStmt close the RunCleanupsScope
-
-  VarDecl *catchParam = catchStmt->getExceptionDecl();
-  if (!catchParam) {
-    callBeginCatch(cgf, ehToken, cgf.getBuilder().getVoidPtrTy(),
-                   /*endMightThrow=*/true);
-    return;
-  }
-
-  auto getCatchParamAllocaIP = [&]() {
-    cir::CIRBaseBuilderTy::InsertPoint currIns =
-        cgf.getBuilder().saveInsertionPoint();
-    mlir::Operation *currParent = currIns.getBlock()->getParentOp();
-
-    mlir::Block *insertBlock = nullptr;
-    if (auto scopeOp = currParent->getParentOfType<cir::ScopeOp>()) {
-      insertBlock = &scopeOp.getScopeRegion().getBlocks().back();
-    } else if (auto fnOp = currParent->getParentOfType<cir::FuncOp>()) {
-      insertBlock = &fnOp.getRegion().getBlocks().back();
-    } else {
-      llvm_unreachable("unknown outermost scope-like parent");
-    }
-    return cgf.getBuilder().getBestAllocaInsertPoint(insertBlock);
-  };
-
-  // Emit the local. Make sure the alloca's superseed the current scope, since
-  // these are going to be consumed by `cir.catch`, which is not within the
-  // current scope.
-
-  CIRGenFunction::AutoVarEmission var =
-      cgf.emitAutoVarAlloca(*catchParam, getCatchParamAllocaIP());
-  initCatchParam(cgf, ehToken, *catchParam, var.getObjectAddress(cgf),
-                 catchStmt->getBeginLoc());
-  cgf.emitAutoVarCleanups(var);
 }
 
 bool CIRGenItaniumCXXABI::hasAnyUnusedVirtualInlineFunction(
@@ -2859,8 +2281,10 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
-  cir::PointerType i8PtrTy = builder.getUInt8PtrTy();
-  mlir::Value v = builder.createBitcast(initialPtr.getPointer(), i8PtrTy);
+  cir::PointerType ui8DefaultASPtrTy = builder.getUInt8PtrTy();
+  mlir::Value v =
+      builder.createPtrBitcast(initialPtr.getPointer(), builder.getUInt8Ty());
+  auto i8PtrTy = mlir::cast<cir::PointerType>(v.getType());
 
   // In a base-to-derived cast, the non-virtual adjustment is applied first.
   if (nonVirtualAdjustment && !isReturnAdjustment) {
@@ -2873,11 +2297,11 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
   if (virtualAdjustment) {
     mlir::Value vtablePtr = cgf.getVTablePtr(
         loc, Address(v, clang::CharUnits::One()), unadjustedClass);
-    vtablePtr = builder.createBitcast(vtablePtr, i8PtrTy);
+    vtablePtr = builder.createBitcast(vtablePtr, ui8DefaultASPtrTy);
 
     mlir::Value offset;
     mlir::Value offsetPtr =
-        cir::PtrStrideOp::create(builder, loc, i8PtrTy, vtablePtr,
+        cir::PtrStrideOp::create(builder, loc, ui8DefaultASPtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());

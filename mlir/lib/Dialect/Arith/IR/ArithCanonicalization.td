@@ -15,6 +15,15 @@ include "mlir/Dialect/Arith/IR/ArithOps.td"
 // Create zero attribute of type matching the argument's type.
 def GetZeroAttr : NativeCodeCall<"$_builder.getZeroAttr($0.getType())">;
 
+// A value whose type is a scalar or has a static shape, i.e. one for which a
+// splat constant can be built. Guards patterns that materialize a constant via
+// GetZeroAttr, which asserts on a dynamically-shaped type.
+def IsScalarOrHasStaticShape :
+    Constraint<CPred<"!::llvm::isa<::mlir::ShapedType>($0.getType()) || "
+                     "::llvm::cast<::mlir::ShapedType>($0.getType())"
+                     ".hasStaticShape()">,
+               "type is a scalar or has a static shape">;
+
 // Add two integer attributes and create a new one with the result.
 def AddIntAttrs : NativeCodeCall<"addIntegerAttrs($_builder, $0, $1, $2)">;
 
@@ -24,13 +33,50 @@ def SubIntAttrs : NativeCodeCall<"subIntegerAttrs($_builder, $0, $1, $2)">;
 // Multiply two integer attributes and create a new one with the result.
 def MulIntAttrs : NativeCodeCall<"mulIntegerAttrs($_builder, $0, $1, $2)">;
 
-// Merge overflow flags from 2 ops, selecting the most conservative combination.
+// Bitwise-and two integer attributes and create a new one with the result.
+def AndIntAttrs : NativeCodeCall<"andIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Bitwise-or two integer attributes and create a new one with the result.
+def OrIntAttrs : NativeCodeCall<"orIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Bitwise-xor two integer attributes and create a new one with the result.
+def XorIntAttrs : NativeCodeCall<"xorIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Intersect overflow flags. Callers must ensure the common flags remain valid
+// after rewriting.
 def MergeOverflow : NativeCodeCall<"mergeOverflowFlags($0, $1)">;
+
+// For fixed-width integers, retain common flags only if the constant arithmetic
+// does not overflow in their respective signedness. Pass constants in folding
+// order.
+class MergeOverflowForReassociation<string op> : NativeCodeCall<
+    "mergeOverflowFlagsForReassociation($0, $1, $2, $3, " #
+    "&APInt::s" # op # "_ov, &APInt::u" # op # "_ov)">;
+def MergeOverflowForAdd : MergeOverflowForReassociation<"add">;
+def MergeOverflowForSub : MergeOverflowForReassociation<"sub">;
+def MergeOverflowForMul : MergeOverflowForReassociation<"mul">;
+
+// Drop the signed no-wrap flag.
+def DropNSW : NativeCodeCall<
+    "IntegerOverflowFlagsAttr::get($_builder.getContext(), "
+    "$0.getValue() & ~IntegerOverflowFlags::nsw)">;
 
 // Default overflow flag (all wraparounds allowed).
 defvar DefOverflow = ConstantEnumCase<Arith_IntegerOverflowAttr, "none">;
 
 class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
+
+// Check that two values have the same type.
+def TypesMatch : Constraint<CPred<"$0.getType() == $1.getType()">>;
+
+// Check that an IntegerAttr's type matches the result value's type.
+def IntAttrTypeMatchesResult :
+    Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">>;
+
+// Check that a CmpIPredicateAttr is eq or ne.
+def IsEqualityCmpIPredicate :
+    Constraint<CPred<"$0.getValue() == arith::CmpIPredicate::eq || "
+                     "$0.getValue() == arith::CmpIPredicate::ne">>;
 
 //===----------------------------------------------------------------------===//
 // AddIOp
@@ -39,13 +85,17 @@ class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
 // addi is commutative and will be canonicalized to have its constants appear
 // as the second operand.
 
+// Constant reassociation preserves the modular result, but combining the
+// constants may overflow even when the original operations do not. Check the
+// constant arithmetic before retaining common overflow flags.
+
 // addi(addi(x, c0), c1) -> addi(x, c0 + c1)
 def AddIAddConstant :
     Pat<(Arith_AddIOp:$res
           (Arith_AddIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForAdd $ovf1, $ovf2, $c0, $c1))>;
 
 // addi(subi(x, c0), c1) -> addi(x, c1 - c0)
 def AddISubConstantRHS :
@@ -53,7 +103,7 @@ def AddISubConstantRHS :
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForSub $ovf1, $ovf2, $c1, $c0))>;
 
 // addi(subi(c0, x), c1) -> subi(c0 + c1, x)
 def AddISubConstantLHS :
@@ -61,7 +111,7 @@ def AddISubConstantLHS :
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForAdd $ovf1, $ovf2, $c0, $c1))>;
 
 def IsScalarOrSplatNegativeOne :
     Constraint<And<[
@@ -90,9 +140,9 @@ def MulIMulIConstant :
           (Arith_MulIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_MulIOp $x, (Arith_ConstantOp (MulIntAttrs $res, $c0, $c1)),
-            (MergeOverflow $ovf1, $ovf2)),
-             [(Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c0),
-              (Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c1)]>;
+            (MergeOverflowForMul $ovf1, $ovf2, $c0, $c1)),
+             [(IntAttrTypeMatchesResult $res, $c0),
+              (IntAttrTypeMatchesResult $res, $c1)]>;
 
 //===----------------------------------------------------------------------===//
 // AddUIExtendedOp
@@ -103,6 +153,17 @@ def MulIMulIConstant :
 def AddUIExtendedToAddI:
     Pattern<(Arith_AddUIExtendedOp:$res $x, $y),
              [(Arith_AddIOp $x, $y, DefOverflow), (replaceWithValue $x)],
+             [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// subui_extended(x, y) -> [subi(x, y), x], when the `borrow` result has no
+// uses. Since the 'borrow' result is unused, any replacement value will do.
+def SubUIExtendedToSubI:
+    Pattern<(Arith_SubUIExtendedOp:$res $x, $y),
+             [(Arith_SubIOp $x, $y, DefOverflow), (replaceWithValue $x)],
              [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
 
 //===----------------------------------------------------------------------===//
@@ -123,7 +184,7 @@ def SubILHSAddConstant :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_AddIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForSub $ovf1, $ovf2, $c1, $c0))>;
 
 // subi(subi(x, c0), c1) -> subi(x, c0 + c1)
 def SubIRHSSubConstantRHS :
@@ -131,7 +192,7 @@ def SubIRHSSubConstantRHS :
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp $x, (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForAdd $ovf1, $ovf2, $c0, $c1))>;
 
 // subi(subi(c0, x), c1) -> subi(c0 - c1, x)
 def SubIRHSSubConstantLHS :
@@ -139,7 +200,7 @@ def SubIRHSSubConstantLHS :
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1),
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (SubIntAttrs $res, $c0, $c1)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForSub $ovf1, $ovf2, $c0, $c1))>;
 
 // subi(c1, subi(x, c0)) -> subi(c0 + c1, x)
 def SubILHSSubConstantRHS :
@@ -147,7 +208,7 @@ def SubILHSSubConstantRHS :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_SubIOp $x, (ConstantLikeMatcher APIntAttr:$c0), $ovf1), $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (AddIntAttrs $res, $c0, $c1)), $x,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForAdd $ovf1, $ovf2, $c0, $c1))>;
 
 // subi(c1, subi(c0, x)) -> addi(x, c1 - c0)
 def SubILHSSubConstantLHS :
@@ -155,13 +216,14 @@ def SubILHSSubConstantLHS :
           (ConstantLikeMatcher APIntAttr:$c1),
           (Arith_SubIOp (ConstantLikeMatcher APIntAttr:$c0), $x, $ovf1), $ovf2),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)),
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflowForSub $ovf1, $ovf2, $c1, $c0))>;
 
 // subi(subi(a, b), a) -> subi(0, b)
 def SubISubILHSRHSLHS :
     Pat<(Arith_SubIOp:$res (Arith_SubIOp $x, $y, $ovf1), $x, $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (GetZeroAttr $y)), $y,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(IsScalarOrHasStaticShape $y)]>;
 
 //===----------------------------------------------------------------------===//
 // MulSIExtendedOp
@@ -209,6 +271,15 @@ def MulUIExtendedToMulI :
 // xori is commutative and will be canonicalized to have its constants appear
 // as the second operand.
 
+// xori(xori(x, c0), c1) -> xori(x, c0 ^ c1)
+def XOrIXOrIConstant :
+    Pat<(Arith_XOrIOp:$res
+          (Arith_XOrIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_XOrIOp $x, (Arith_ConstantOp (XorIntAttrs $res, $c0, $c1))),
+             [(IntAttrTypeMatchesResult $res, $c0),
+              (IntAttrTypeMatchesResult $res, $c1)]>;
+
 // not(cmpi(pred, a, b)) -> cmpi(~pred, a, b), where not(x) is xori(x, 1)
 def InvertPredicate : NativeCodeCall<"invertPredicate($0)">;
 def XOrINotCmpI :
@@ -224,12 +295,12 @@ def XOrIOfExtUI :
     Pat<(Arith_XOrIOp (Arith_ExtUIOp $x, $nneg1), (Arith_ExtUIOp $y, $nneg2)),
         (Arith_ExtUIOp (Arith_XOrIOp $x, $y),
                        (NativeCodeCall<"($0 && $1) ? $0 : UnitAttr()"> $nneg1, $nneg2)),
-      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+      [(TypesMatch $x, $y)]>;
 
 // xor extsi(x), extsi(y) -> extsi(xor(x,y))
 def XOrIOfExtSI :
     Pat<(Arith_XOrIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)), (Arith_ExtSIOp (Arith_XOrIOp $x, $y)),
-      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+      [(TypesMatch $x, $y)]>;
 
 //===----------------------------------------------------------------------===//
 // CmpIOp
@@ -241,10 +312,7 @@ def CmpIExtSI :
           (Arith_ExtSIOp $a),
           (Arith_ExtSIOp $b)),
         (Arith_CmpIOp $pred, $a, $b),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $a, $b),
-         (Constraint<
-            CPred<"$0.getValue() == arith::CmpIPredicate::eq || "
-                  "$0.getValue() == arith::CmpIPredicate::ne">> $pred)]>;
+        [(TypesMatch $a, $b), (IsEqualityCmpIPredicate $pred)]>;
 
 // cmpi(== or !=, a ext iNN, b ext iNN) == cmpi(== or !=, a, b)
 def CmpIExtUI :
@@ -252,10 +320,7 @@ def CmpIExtUI :
           (Arith_ExtUIOp $a, $nneg1),
           (Arith_ExtUIOp $b, $nneg2)),
         (Arith_CmpIOp $pred, $a, $b),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $a, $b),
-         (Constraint<
-            CPred<"$0.getValue() == arith::CmpIPredicate::eq || "
-                  "$0.getValue() == arith::CmpIPredicate::ne">> $pred)]>;
+        [(TypesMatch $a, $b), (IsEqualityCmpIPredicate $pred)]>;
 
 //===----------------------------------------------------------------------===//
 // SelectOp
@@ -283,6 +348,42 @@ def SelectI1ToNot :
                   (ConstantLikeMatcher ConstantAttr<I1Attr, "0">),
                   (ConstantLikeMatcher ConstantAttr<I1Attr, "1">)),
         (Arith_XOrIOp $pred, (Arith_ConstantOp ConstantAttr<I1Attr, "1">))>;
+
+class SelectCmpIToMinMaxBase<string pred, Op minMaxOp> :
+    Pat<(SelectOp
+          (Arith_CmpIOp
+            ConstantEnumCase<Arith_CmpIPredicateAttr, pred>,
+            $a, $b),
+          $a, $b),
+        (minMaxOp $a, $b)>;
+
+class SelectCmpIInverseToMinMaxBase<string pred, Op minMaxOp> :
+    Pat<(SelectOp
+          (Arith_CmpIOp
+            ConstantEnumCase<Arith_CmpIPredicateAttr, pred>,
+            $a, $b),
+          $b, $a),
+        (minMaxOp $a, $b)>;
+
+// select(cmpi pred, a, b), a, b => min/max(a, b)
+def SelectCmpISltToMinSI : SelectCmpIToMinMaxBase<"slt", Arith_MinSIOp>;
+def SelectCmpISleToMinSI : SelectCmpIToMinMaxBase<"sle", Arith_MinSIOp>;
+def SelectCmpISgtToMaxSI : SelectCmpIToMinMaxBase<"sgt", Arith_MaxSIOp>;
+def SelectCmpISgeToMaxSI : SelectCmpIToMinMaxBase<"sge", Arith_MaxSIOp>;
+def SelectCmpIUltToMinUI : SelectCmpIToMinMaxBase<"ult", Arith_MinUIOp>;
+def SelectCmpIUleToMinUI : SelectCmpIToMinMaxBase<"ule", Arith_MinUIOp>;
+def SelectCmpIUgtToMaxUI : SelectCmpIToMinMaxBase<"ugt", Arith_MaxUIOp>;
+def SelectCmpIUgeToMaxUI : SelectCmpIToMinMaxBase<"uge", Arith_MaxUIOp>;
+
+// select(cmpi pred, a, b), b, a => inverse min/max(a, b)
+def SelectCmpISltToMaxSI : SelectCmpIInverseToMinMaxBase<"slt", Arith_MaxSIOp>;
+def SelectCmpISleToMaxSI : SelectCmpIInverseToMinMaxBase<"sle", Arith_MaxSIOp>;
+def SelectCmpISgtToMinSI : SelectCmpIInverseToMinMaxBase<"sgt", Arith_MinSIOp>;
+def SelectCmpISgeToMinSI : SelectCmpIInverseToMinMaxBase<"sge", Arith_MinSIOp>;
+def SelectCmpIUltToMaxUI : SelectCmpIInverseToMinMaxBase<"ult", Arith_MaxUIOp>;
+def SelectCmpIUleToMaxUI : SelectCmpIInverseToMinMaxBase<"ule", Arith_MaxUIOp>;
+def SelectCmpIUgtToMinUI : SelectCmpIInverseToMinMaxBase<"ugt", Arith_MinUIOp>;
+def SelectCmpIUgeToMinUI : SelectCmpIInverseToMinMaxBase<"uge", Arith_MinUIOp>;
 
 //===----------------------------------------------------------------------===//
 // IndexCastOp
@@ -323,6 +424,15 @@ def ExtSIOfExtUI :
 // AndIOp
 //===----------------------------------------------------------------------===//
 
+// andi(andi(x, c0), c1) -> andi(x, c0 & c1)
+def AndIAndIConstant :
+    Pat<(Arith_AndIOp:$res
+          (Arith_AndIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_AndIOp $x, (Arith_ConstantOp (AndIntAttrs $res, $c0, $c1))),
+             [(IntAttrTypeMatchesResult $res, $c0),
+              (IntAttrTypeMatchesResult $res, $c1)]>;
+
 // and extui(x), extui(y) -> extui(and(x,y))
 // AND can only clear bits, so if either operand is non-negative (sign bit 0),
 // the result also has sign bit 0. Preserves nneg if either operand has it.
@@ -330,17 +440,26 @@ def AndOfExtUI :
     Pat<(Arith_AndIOp (Arith_ExtUIOp $x, $nneg1), (Arith_ExtUIOp $y, $nneg2)),
         (Arith_ExtUIOp (Arith_AndIOp $x, $y),
                        (NativeCodeCall<"$0 ? $0 : $1"> $nneg1, $nneg2)),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+        [(TypesMatch $x, $y)]>;
 
 // and extsi(x), extsi(y) -> extsi(and(x,y))
 def AndOfExtSI :
     Pat<(Arith_AndIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)),
         (Arith_ExtSIOp (Arith_AndIOp $x, $y)),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+        [(TypesMatch $x, $y)]>;
 
 //===----------------------------------------------------------------------===//
 // OrIOp
 //===----------------------------------------------------------------------===//
+
+// ori(ori(x, c0), c1) -> ori(x, c0 | c1)
+def OrIOrIConstant :
+    Pat<(Arith_OrIOp:$res
+          (Arith_OrIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_OrIOp $x, (Arith_ConstantOp (OrIntAttrs $res, $c0, $c1))),
+             [(IntAttrTypeMatchesResult $res, $c0),
+              (IntAttrTypeMatchesResult $res, $c1)]>;
 
 // or extui(x), extui(y) -> extui(or(x,y))
 // OR preserves nneg only if both operands are non-negative: or of two values
@@ -349,13 +468,13 @@ def OrOfExtUI :
     Pat<(Arith_OrIOp (Arith_ExtUIOp $x, $nneg1), (Arith_ExtUIOp $y, $nneg2)),
         (Arith_ExtUIOp (Arith_OrIOp $x, $y),
                        (NativeCodeCall<"($0 && $1) ? $0 : UnitAttr()"> $nneg1, $nneg2)),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+        [(TypesMatch $x, $y)]>;
 
 // or extsi(x), extsi(y) -> extsi(or(x,y))
 def OrOfExtSI :
     Pat<(Arith_OrIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)),
         (Arith_ExtSIOp (Arith_OrIOp $x, $y)),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+        [(TypesMatch $x, $y)]>;
 
 //===----------------------------------------------------------------------===//
 // TruncIOp
@@ -387,10 +506,15 @@ def TruncIExtUIToExtUI :
          (ValueWiderThan $tr, $x)]>;
 
 // trunci(shrsi(x, c)) -> trunci(shrui(x, c))
+// Drop nsw because the zero-filled bits may differ from the truncated result's
+// sign bit. These bits satisfy nuw, and exact is unaffected.
 def TruncIShrSIToTrunciShrUI :
     Pat<(Arith_TruncIOp:$tr
-          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0), $exact), $overflow),
-        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0)), $exact), $overflow),
+          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0), $exact),
+          $overflow),
+        (Arith_TruncIOp
+          (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0)), $exact),
+          (DropNSW $overflow)),
         [(TruncationMatchesShiftAmount $x, $tr, $c0)]>;
 
 //===----------------------------------------------------------------------===//
@@ -433,25 +557,65 @@ def UIToFPOfExtUI :
         (Arith_UIToFPOp $x, $nneg1)>;
 
 //===----------------------------------------------------------------------===//
+// AddFOp
+//===----------------------------------------------------------------------===//
+
+// addf(negf(x), y) -> subf(y, x)
+// addf(x, negf(y)) -> subf(x, y)
+//
+// Valid for any rounding mode, which is propagated to the subf: negf is an
+// exact sign flip, IEEE addition is commutative, and y - x is the correctly
+// rounded y + (-x), so subf(y, x) and addf(negf(x), y) are bit-identical.
+def AddFOfNegFLhs :
+    Pat<(Arith_AddFOp (Arith_NegFOp $x, $_), $y, $fmf, $rm),
+        (Arith_SubFOp $y, $x, $fmf, $rm)>;
+
+def AddFOfNegFRhs :
+    Pat<(Arith_AddFOp $x, (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_SubFOp $x, $y, $fmf, $rm)>;
+
+//===----------------------------------------------------------------------===//
+// SubFOp
+//===----------------------------------------------------------------------===//
+
+// Match a constant (scalar or splat) -0.0 float.
+def IsNegZeroFloat :
+    Constraint<CPred<"m_NegZeroFloat().match($0)">,
+               "is negative-zero float constant">;
+
+// subf(-0, x) -> negf(x)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
+def SubFOfNegZero :
+    Pat<(Arith_SubFOp (ConstantLikeMatcher AnyAttr:$c), $x, $fmf, $rm),
+        (Arith_NegFOp $x, $fmf),
+        [(IsNegZeroFloat $c),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
+
+//===----------------------------------------------------------------------===//
 // MulFOp
 //===----------------------------------------------------------------------===//
 
 // mulf(negf(x), negf(y)) -> mulf(x,y)
-// (retain fastmath flags of original mulf)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
 def MulFOfNegF :
-    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
-        (Arith_MulFOp $x, $y, $fmf),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_MulFOp $x, $y, $fmf, $rm),
+        [(TypesMatch $x, $y),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 //===----------------------------------------------------------------------===//
 // DivFOp
 //===----------------------------------------------------------------------===//
 
 // divf(negf(x), negf(y)) -> divf(x,y)
-// (retain fastmath flags of original divf)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
 def DivFOfNegF :
-    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
-        (Arith_DivFOp $x, $y, $fmf),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_DivFOp $x, $y, $fmf, $rm),
+        [(TypesMatch $x, $y),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 #endif // ARITH_PATTERNS

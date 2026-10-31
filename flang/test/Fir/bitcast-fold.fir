@@ -24,3 +24,23 @@ func.func @bitcast_chain_collapse(%x : i32) -> !fir.logical<4> {
   // CHECK-NEXT: return %[[RES]]
   return %1 : !fir.logical<4>
 }
+
+func.func @bitcast_convert_fold_true() -> i1 {
+  %c3_i32 = arith.constant 3 : i32
+  %1 = fir.bitcast %c3_i32 : (i32) -> !fir.logical<4>
+  %2 = fir.convert %1 : (!fir.logical<4>) -> i1
+  return %2 : i1
+}
+// CHECK-LABEL:   func.func @bitcast_convert_fold_true() -> i1 {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant true
+// CHECK:           return %[[CONSTANT_0]] : i1
+
+func.func @bitcast_convert_fold_false() -> i1 {
+  %c0_i32 = arith.constant 0 : i32
+  %1 = fir.bitcast %c0_i32 : (i32) -> !fir.logical<4>
+  %2 = fir.convert %1 : (!fir.logical<4>) -> i1
+  return %2 : i1
+}
+// CHECK-LABEL:   func.func @bitcast_convert_fold_false() -> i1 {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant false
+// CHECK:           return %[[CONSTANT_0]] : i1

@@ -59,7 +59,9 @@ using namespace mlir::detail;
 
 void OperationName::print(raw_ostream &os) const { os << getStringRef(); }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void OperationName::dump() const { print(llvm::errs()); }
+#endif
 
 //===--------------------------------------------------------------------===//
 // AsmParser
@@ -90,6 +92,15 @@ DialectAsmPrinter::~DialectAsmPrinter() = default;
 //===----------------------------------------------------------------------===//
 
 OpAsmPrinter::~OpAsmPrinter() = default;
+
+void OpAsmPrinter::printOperands(OperandRange operands) {
+  llvm::interleaveComma(operands, getStream(),
+                        [this](Value value) { printOperand(value); });
+}
+
+void OpAsmPrinter::printOperandTypes(ValueTypeRange<OperandRange> types) {
+  llvm::interleaveComma(types, *this);
+}
 
 void OpAsmPrinter::printFunctionalType(Operation *op) {
   auto &os = getStream();
@@ -201,6 +212,10 @@ struct AsmPrinterOptions {
   llvm::cl::opt<bool> useNameLocAsPrefix{
       "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
       llvm::cl::desc("Print SSA IDs using NameLocs as prefixes")};
+
+  llvm::cl::opt<bool> alwaysUseAliasesOpt{
+      "mlir-print-always-use-aliases", llvm::cl::init(false),
+      llvm::cl::desc("Always use aliases even for non top-level ops")};
 };
 } // namespace
 
@@ -217,9 +232,9 @@ void mlir::registerAsmPrinterCLOptions() {
 OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
-      assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
-      useNameLocAsPrefix(false) {
+      assumeVerifiedFlag(false), alwaysUseAliasesFlag(false),
+      printLocalScope(false), printValueUsersFlag(false),
+      printUniqueSSAIDsFlag(false), useNameLocAsPrefix(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -239,6 +254,7 @@ OpPrintingFlags::OpPrintingFlags()
   printValueUsersFlag = clOptions->printValueUsers;
   printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
   useNameLocAsPrefix = clOptions->useNameLocAsPrefix;
+  alwaysUseAliasesFlag = clOptions->alwaysUseAliasesOpt;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -287,6 +303,11 @@ OpPrintingFlags &OpPrintingFlags::skipRegions(bool skip) {
 /// Do not verify the operation when using custom operation printers.
 OpPrintingFlags &OpPrintingFlags::assumeVerified(bool enable) {
   assumeVerifiedFlag = enable;
+  return *this;
+}
+
+OpPrintingFlags &OpPrintingFlags::alwaysUseAliases(bool enable) {
+  alwaysUseAliasesFlag = enable;
   return *this;
 }
 
@@ -367,6 +388,10 @@ bool OpPrintingFlags::shouldSkipRegions() const { return skipRegionsFlag; }
 /// Return if operation verification should be skipped.
 bool OpPrintingFlags::shouldAssumeVerified() const {
   return assumeVerifiedFlag;
+}
+
+bool OpPrintingFlags::shouldAlwaysUseAliases() const {
+  return alwaysUseAliasesFlag;
 }
 
 /// Return if the printer should use local scope when dumping the IR.
@@ -762,8 +787,10 @@ private:
       printType(type);
 
     // Consider the attributes of the operation for aliases.
-    for (const NamedAttribute &attr : op->getAttrs())
+    for (const NamedAttribute &attr : op->getRawDictionaryAttrs())
       printAttribute(attr.getValue());
+    op->getName().walkInherentAttrs(
+        op, [&](StringRef, Attribute &attr) { printAttribute(attr); });
   }
 
   /// Print the given block. If 'printBlockArgs' is false, the arguments of the
@@ -1330,6 +1357,9 @@ private:
 void AliasState::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
     DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+  // Each initialization starts fresh: a state reused across prints must not
+  // carry the previous op's aliases.
+  attrTypeToAlias.clear();
   AliasInitializer initializer(interfaces, aliasAllocator);
   initializer.initialize(op, printerFlags, attrTypeToAlias);
 }
@@ -1994,6 +2024,9 @@ public:
 
   /// Initialize the alias state to enable the printing of aliases.
   void initializeAliases(Operation *op) {
+    // A state reused across prints must not re-print the previous op's
+    // dialect resources.
+    dialectResources.clear();
     aliasState.initialize(op, printerFlags, interfaces);
   }
 
@@ -2688,7 +2721,7 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
     // printDenseElementsAttrImpl. This lambda was hitting a bug in gcc 9.1,9.2
     // and hence was replaced.
     if (llvm::isa<IntegerType>(complexElementType)) {
-      auto valueIt = attr.value_begin<std::complex<APInt>>();
+      auto valueIt = attr.value_begin<mlir::Complex<APInt>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
         auto complexValue = *(valueIt + index);
         os << "(";
@@ -2698,7 +2731,7 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
         os << ")";
       });
     } else {
-      auto valueIt = attr.value_begin<std::complex<APFloat>>();
+      auto valueIt = attr.value_begin<mlir::Complex<APFloat>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
         auto complexValue = *(valueIt + index);
         os << "(";
@@ -2805,6 +2838,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       .Case<Float8E4M3B11FNUZType>([&](Type) { os << "f8E4M3B11FNUZ"; })
       .Case<Float8E3M4Type>([&](Type) { os << "f8E3M4"; })
       .Case<Float8E8M0FNUType>([&](Type) { os << "f8E8M0FNU"; })
+      .Case<Float8E5M3FNUType>([&](Type) { os << "f8E5M3FNU"; })
       .Case<BFloat16Type>([&](Type) { os << "bf16"; })
       .Case<Float16Type>([&](Type) { os << "f16"; })
       .Case<FloatTF32Type>([&](Type) { os << "tf32"; })
@@ -2907,6 +2941,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         os << '>';
       })
       .Case<NoneType>([&](Type) { os << "none"; })
+      .Case<TokenType>([&](Type) { os << "token"; })
       .Case([&](GraphType graphTy) {
         os << '(';
         interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });
@@ -3241,7 +3276,9 @@ void AsmPrinter::Impl::printAffineExprInternal(
           os << " - ";
           printAffineExprInternal(rhs.getLHS(), BindingStrength::Strong,
                                   printValueName);
-          os << " * " << -rrhs.getValue();
+          // Use unsigned negation to avoid signed integer overflow for
+          // INT64_MIN.
+          os << " * " << -static_cast<uint64_t>(rrhs.getValue());
           if (enclosingTightness == BindingStrength::Strong)
             os << ')';
           return;
@@ -3254,7 +3291,8 @@ void AsmPrinter::Impl::printAffineExprInternal(
   if (auto rhsConst = dyn_cast<AffineConstantExpr>(rhsExpr)) {
     if (rhsConst.getValue() < 0) {
       printAffineExprInternal(lhsExpr, BindingStrength::Weak, printValueName);
-      os << " - " << -rhsConst.getValue();
+      // Use unsigned negation to avoid signed integer overflow for INT64_MIN.
+      os << " - " << -static_cast<uint64_t>(rhsConst.getValue());
       if (enclosingTightness == BindingStrength::Strong)
         os << ')';
       return;
@@ -3465,33 +3503,49 @@ private:
   class ResourceBuilder : public AsmResourceBuilder {
   public:
     using ValueFn = function_ref<void(raw_ostream &)>;
-    using PrintFn = function_ref<void(StringRef, ValueFn)>;
+    // `sizeHint` is the exact number of characters `valueFn` will write, or -1
+    // if unknown, so the char limit can be applied before paying the cost of
+    // invoking `valueFn` (e.g. hex-encoding a large blob).
+    using PrintFn = function_ref<void(StringRef, ValueFn, int64_t sizeHint)>;
 
     ResourceBuilder(PrintFn printFn) : printFn(printFn) {}
     ~ResourceBuilder() override = default;
 
     void buildBool(StringRef key, bool data) final {
-      printFn(key, [&](raw_ostream &os) { os << (data ? "true" : "false"); });
+      printFn(
+          key, [&](raw_ostream &os) { os << (data ? "true" : "false"); },
+          /*sizeHint=*/-1);
     }
 
     void buildString(StringRef key, StringRef data) final {
-      printFn(key, [&](raw_ostream &os) {
-        os << "\"";
-        llvm::printEscapedString(data, os);
-        os << "\"";
-      });
+      printFn(
+          key,
+          [&](raw_ostream &os) {
+            os << "\"";
+            llvm::printEscapedString(data, os);
+            os << "\"";
+          },
+          /*sizeHint=*/-1);
     }
 
     void buildBlob(StringRef key, ArrayRef<char> data,
                    uint32_t dataAlignment) final {
-      printFn(key, [&](raw_ostream &os) {
-        // Store the blob in a hex string containing the alignment and the data.
-        llvm::support::ulittle32_t dataAlignmentLE(dataAlignment);
-        os << "\"0x"
-           << llvm::toHex(StringRef(reinterpret_cast<char *>(&dataAlignmentLE),
-                                    sizeof(dataAlignment)))
-           << llvm::toHex(StringRef(data.data(), data.size())) << "\"";
-      });
+      // Two hex chars per byte of the alignment word and the data, plus the
+      // `"0x`/`"` wrapping; exact, so the limit can be checked pre-encoding.
+      int64_t sizeHint = 2 * int64_t(sizeof(dataAlignment) + data.size()) + 4;
+      printFn(
+          key,
+          [&](raw_ostream &os) {
+            // Store the blob in a hex string containing the alignment and the
+            // data.
+            llvm::support::ulittle32_t dataAlignmentLE(dataAlignment);
+            os << "\"0x"
+               << llvm::toHex(
+                      StringRef(reinterpret_cast<char *>(&dataAlignmentLE),
+                                sizeof(dataAlignment)))
+               << llvm::toHex(StringRef(data.data(), data.size())) << "\"";
+          },
+          sizeHint);
     }
 
   private:
@@ -3556,7 +3610,8 @@ void OperationPrinter::printResourceFileMetadata(
   auto processProvider = [&](StringRef dictName, StringRef name, auto &provider,
                              auto &&...providerArgs) {
     bool hadEntry = false;
-    auto printFn = [&](StringRef key, ResourceBuilder::ValueFn valueFn) {
+    auto printFn = [&](StringRef key, ResourceBuilder::ValueFn valueFn,
+                       int64_t sizeHint) {
       checkAddMetadataDict();
 
       std::string resourceStr;
@@ -3566,6 +3621,11 @@ void OperationPrinter::printResourceFileMetadata(
       if (charLimit.has_value()) {
         // Don't compute resourceStr when charLimit is 0.
         if (charLimit.value() == 0)
+          return;
+
+        // Skip serializing entirely if the exact size already exceeds the
+        // limit, e.g. hex-encoding a large blob.
+        if (sizeHint >= 0 && uint64_t(sizeHint) > charLimit.value())
           return;
 
         llvm::raw_string_ostream ss(resourceStr);
@@ -3829,9 +3889,7 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
     os << ')';
   }
 
-  printOptionalAttrDict(op->getPropertiesStorage()
-                            ? llvm::to_vector(op->getDiscardableAttrs())
-                            : op->getAttrs());
+  printOptionalAttrDict(op->getRawDictionaryAttrs().getValue());
 
   // Print the type signature of the operation.
   os << " : ";
@@ -4028,10 +4086,12 @@ void Attribute::print(raw_ostream &os, AsmState &state, bool elideType) const {
                                        : AttrTypeElision::Never);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Attribute::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void Attribute::printStripped(raw_ostream &os, AsmState &state) const {
   if (!*this) {
@@ -4077,6 +4137,7 @@ void Type::print(raw_ostream &os, AsmState &state) const {
   AsmPrinter::Impl(os, state.getImpl()).printType(*this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Type::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
@@ -4091,6 +4152,7 @@ void IntegerSet::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void AffineExpr::print(raw_ostream &os) const {
   if (!expr) {
@@ -4101,10 +4163,12 @@ void AffineExpr::print(raw_ostream &os) const {
   AsmPrinter::Impl(os, state.getImpl()).printAffineExpr(*this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void AffineExpr::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 void AffineMap::print(raw_ostream &os) const {
   if (!map) {
@@ -4154,10 +4218,12 @@ raw_ostream &mlir::operator<<(raw_ostream &os, Value value) {
   return os;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Value::dump() const {
   print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
+#endif
 
 void Value::printAsOperand(raw_ostream &os, AsmState &state) const {
   // TODO: This doesn't necessarily capture all potential cases.
@@ -4209,7 +4275,12 @@ void Operation::print(raw_ostream &os, const OpPrintingFlags &printerFlags) {
 }
 void Operation::print(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
-  if (!getParent() && !state.getPrinterFlags().shouldUseLocalScope()) {
+  // alwaysUseAliases takes precedence over local scope, not just as a
+  // tiebreak: pass instrumentation prints nested ops with local scope, so
+  // without precedence the per-function dumps this flag targets would never
+  // use aliases. The two compose: aliases stay consistent within each dump.
+  if (state.getPrinterFlags().shouldAlwaysUseAliases() ||
+      (!getParent() && !state.getPrinterFlags().shouldUseLocalScope())) {
     state.getImpl().initializeAliases(this);
     printer.printTopLevelOperation(this);
   } else {
@@ -4217,10 +4288,12 @@ void Operation::print(raw_ostream &os, AsmState &state) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Operation::dump() {
   print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
+#endif
 
 void Operation::dumpPretty() {
   print(llvm::errs(), OpPrintingFlags().useLocalScope().assumeVerified());
@@ -4244,7 +4317,9 @@ void Block::print(raw_ostream &os, AsmState &state) {
   OperationPrinter(os, state.getImpl()).print(this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Block::dump() { print(llvm::errs()); }
+#endif
 
 /// Print out the name of the block without printing its body.
 void Block::printAsOperand(raw_ostream &os, bool printType) {

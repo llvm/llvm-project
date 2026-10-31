@@ -59,6 +59,16 @@ def TilingInterface : OpInterface<"TilingInterface"> {
     description below):
       - `getTiledImplementationFromOperandTiles`
       - `getIterationDomainTileFromOperandTiles`.
+
+    `getTiledImplementation`, `generateResultTileValue`,
+    `getTiledImplementationFromOperandTiles` and
+    `getIterationDomainTileFromOperandTiles` each have a second, overloaded form
+    taking an extra `ArrayRef<InnerTileAlignment>` caller hint (see
+    `InnerTileAlignment` in TilingInterface.h). The hint-bearing overload
+    defaults to forwarding to the hint-less one, so only ops that opt in consult
+    it. Because the two forms share a source name, an implementer that defines
+    only the hint-less overload hides the inherited defaulted one (C++ name
+    hiding) and fails to compile when the interface forwards to it.
   }];
   let cppNamespace = "::mlir";
   let methods = [
@@ -113,6 +123,28 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return {};
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Variant of `getTiledImplementation` that additionally takes a
+          per-iteration-domain `InnerTileAlignment` hint (see
+          `InnerTileAlignment`) asserting how each loop tile size relates to a
+          pack/unpack inner tile. The hint is consulted only by pack/unpack
+          implementations and may be empty (all `Unknown`). The default
+          implementation ignores it and forwards to the hint-less overload.
+        }],
+        /*retType=*/"::mlir::FailureOr<::mlir::TilingResult>",
+        /*methodName=*/"getTiledImplementation",
+        /*args=*/(ins
+            "::mlir::OpBuilder &":$b,
+            "::mlir::ArrayRef<::mlir::OpFoldResult> ":$offsets,
+            "::mlir::ArrayRef<::mlir::OpFoldResult> ":$sizes,
+            "::mlir::ArrayRef<::mlir::InnerTileAlignment> ":$innerTileAlignments),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return ::mlir::cast<::mlir::TilingInterface>($_op.getOperation())
+              .getTiledImplementation(b, offsets, sizes);
         }]
       >,
       InterfaceMethod<
@@ -201,6 +233,28 @@ def TilingInterface : OpInterface<"TilingInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
+          Variant of `generateResultTileValue` that additionally takes a
+          per-iteration-domain `InnerTileAlignment` hint (see
+          `InnerTileAlignment`). The hint is consulted only by pack/unpack
+          implementations and may be empty (all `Unknown`). The default
+          implementation ignores it and forwards to the hint-less overload.
+        }],
+        /*retType=*/"::mlir::FailureOr<::mlir::TilingResult>",
+        /*methodName=*/"generateResultTileValue",
+        /*args=*/(ins
+          "::mlir::OpBuilder &":$b,
+          "unsigned":$resultNumber,
+          "::mlir::ArrayRef<::mlir::OpFoldResult>":$offsets,
+          "::mlir::ArrayRef<::mlir::OpFoldResult>":$sizes,
+          "::mlir::ArrayRef<::mlir::InnerTileAlignment>":$innerTileAlignments),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return ::mlir::cast<::mlir::TilingInterface>($_op.getOperation())
+              .generateResultTileValue(b, resultNumber, offsets, sizes);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
           Method to generate the tiled implementation of an operation that uses
           the exact tiles of the given operands.
 
@@ -227,6 +281,29 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Variant of `getTiledImplementationFromOperandTiles` that additionally
+          takes a per-iteration-domain `InnerTileAlignment` hint (see
+          `InnerTileAlignment`). The hint is consulted only by pack/unpack
+          implementations and may be empty (all `Unknown`). The default
+          implementation ignores it and forwards to the hint-less overload.
+        }],
+        /*retType=*/"::mlir::FailureOr<::mlir::TilingResult>",
+        /*methodName=*/"getTiledImplementationFromOperandTiles",
+        /*args=*/(ins
+          "::mlir::OpBuilder &":$b,
+          "::mlir::ArrayRef<unsigned>":$operandNumbers,
+          "::mlir::ArrayRef<::mlir::SmallVector<::mlir::OpFoldResult>>":$allOffsets,
+          "::mlir::ArrayRef<::mlir::SmallVector<::mlir::OpFoldResult>>":$allSizes,
+          "::mlir::ArrayRef<::mlir::InnerTileAlignment>":$innerTileAlignments),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return ::mlir::cast<::mlir::TilingInterface>($_op.getOperation())
+              .getTiledImplementationFromOperandTiles(b, operandNumbers,
+                                                      allOffsets, allSizes);
         }]
       >,
       InterfaceMethod<
@@ -302,6 +379,33 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Variant of `getIterationDomainTileFromOperandTiles` that additionally
+          takes a per-iteration-domain `InnerTileAlignment` hint (see
+          `InnerTileAlignment`). The hint is consulted only by pack/unpack
+          implementations and may be empty (all `Unknown`). The default
+          implementation ignores it and forwards to the hint-less overload.
+        }],
+        /*retType=*/"::llvm::LogicalResult",
+        /*methodName=*/"getIterationDomainTileFromOperandTiles",
+        /*args=*/(ins
+          "::mlir::OpBuilder &":$b,
+          "::mlir::ArrayRef<unsigned>":$operandNumbers,
+          "::mlir::ArrayRef<::mlir::SmallVector<::mlir::OpFoldResult>> ":$allOffsets,
+          "::mlir::ArrayRef<::mlir::SmallVector<::mlir::OpFoldResult>> ":$allSizes,
+          "::mlir::SmallVectorImpl<::mlir::OpFoldResult> &":$iterDomainOffsets,
+          "::mlir::SmallVectorImpl<::mlir::OpFoldResult> &":$iterDomainSizes,
+          "::mlir::ArrayRef<::mlir::InnerTileAlignment> ":$innerTileAlignments),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return ::mlir::cast<::mlir::TilingInterface>($_op.getOperation())
+              .getIterationDomainTileFromOperandTiles(b, operandNumbers,
+                                                      allOffsets, allSizes,
+                                                      iterDomainOffsets,
+                                                      iterDomainSizes);
         }]
       >,
       InterfaceMethod<

@@ -16,8 +16,8 @@ define void @copy_bitcast_fusion(ptr noalias %foo, ptr noalias %bar) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[FOO]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[FOO]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP5]], i64 1
 ; CHECK-NEXT:    store <2 x float> [[TMP7]], ptr [[BAR]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

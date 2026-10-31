@@ -11,12 +11,14 @@
 #define _LIBCPP___ITERATOR_COMMON_ITERATOR_H
 
 #include <__assert>
+#include <__concepts/arithmetic.h>
 #include <__concepts/assignable.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/copyable.h>
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
+#include <__concepts/referenceable.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__iterator/concepts.h>
@@ -28,7 +30,6 @@
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_pointer.h>
-#include <__type_traits/is_referenceable.h>
 #include <__utility/declval.h>
 #include <variant>
 
@@ -111,7 +112,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         std::holds_alternative<_Iter>(__hold_), "Attempted to dereference a non-dereferenceable common_iterator");
     return *std::__unchecked_get<_Iter>(__hold_);
@@ -237,7 +238,7 @@ public:
     return std::__unchecked_get<_Sent>(__x.__hold_) - std::__unchecked_get<_I2>(__y.__hold_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
   iter_move(const common_iterator& __i) noexcept(noexcept(ranges::iter_move(std::declval<const _Iter&>())))
     requires input_iterator<_Iter>
   {
@@ -282,14 +283,22 @@ struct __arrow_type_or_void<_Iter, _Sent> {
   using type _LIBCPP_NODEBUG = decltype(std::declval<const common_iterator<_Iter, _Sent>&>().operator->());
 };
 
-template <input_iterator _Iter, class _Sent>
-struct iterator_traits<common_iterator<_Iter, _Sent>> {
-  using iterator_concept  = _If<forward_iterator<_Iter>, forward_iterator_tag, input_iterator_tag>;
+template <class _Iter>
+struct __common_iterator_category_base {};
+
+template <class _Iter>
+  requires integral<iter_difference_t<_Iter>>
+struct __common_iterator_category_base<_Iter> {
   using iterator_category = _If<__denotes_forward_iter<_Iter>, forward_iterator_tag, input_iterator_tag>;
-  using pointer           = typename __arrow_type_or_void<_Iter, _Sent>::type;
-  using value_type        = iter_value_t<_Iter>;
-  using difference_type   = iter_difference_t<_Iter>;
-  using reference         = iter_reference_t<_Iter>;
+};
+
+template <input_iterator _Iter, class _Sent>
+struct iterator_traits<common_iterator<_Iter, _Sent>> : __common_iterator_category_base<_Iter> {
+  using iterator_concept = _If<forward_iterator<_Iter>, forward_iterator_tag, input_iterator_tag>;
+  using pointer          = typename __arrow_type_or_void<_Iter, _Sent>::type;
+  using value_type       = iter_value_t<_Iter>;
+  using difference_type  = iter_difference_t<_Iter>;
+  using reference        = iter_reference_t<_Iter>;
 };
 
 #endif // _LIBCPP_STD_VER >= 20

@@ -11,6 +11,11 @@
 // keep the SupportTests target small.
 
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -40,6 +45,81 @@ TEST(TargetRegistry, TargetHasArchType) {
     }
   }
   ASSERT_NE(Count, 0);
+}
+
+TEST(TargetRegistry, IsValidFeatureListFormat) {
+  // Valid strings
+
+  // Empty string is a valid feature string
+  EXPECT_TRUE(Target::isValidFeatureListFormat(""));
+
+  EXPECT_TRUE(Target::isValidFeatureListFormat("+some_feature"));
+  EXPECT_TRUE(Target::isValidFeatureListFormat("-some_feature"));
+  EXPECT_TRUE(
+      Target::isValidFeatureListFormat("+feature1,-feature2,+feature3"));
+  EXPECT_TRUE(Target::isValidFeatureListFormat("+123"));
+
+  // Strings with single trailing comma are also valid
+  EXPECT_TRUE(Target::isValidFeatureListFormat("-feature,"));
+  EXPECT_TRUE(
+      Target::isValidFeatureListFormat("-feature1,+feature2,+feature3,"));
+
+  // Invalid strings
+
+  // Feature don't start with '+' or '-'
+  EXPECT_FALSE(Target::isValidFeatureListFormat("invalid_string"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+good,bad"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("bad,+good"));
+
+  // String has spaces
+  EXPECT_FALSE(Target::isValidFeatureListFormat(" "));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(", "));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(" avx"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+avx, -sse"));
+
+  // Redundant commas
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+feature1,,+feature2"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(",+feature"));
+  EXPECT_FALSE(
+      Target::isValidFeatureListFormat("+feature1,,,+feature2,,+feature3"));
+
+  // Feature consists only of '+' or '-'
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("-"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat("+avx,-"));
+
+  // Only commas
+  EXPECT_FALSE(Target::isValidFeatureListFormat(","));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(",,"));
+  EXPECT_FALSE(Target::isValidFeatureListFormat(",,,"));
+}
+
+TEST(TargetRegistry, SubtargetCopyPreservesHwMode) {
+  InitializeAllTargetInfos();
+  InitializeAllTargetMCs();
+
+  for (StringRef TripleName :
+       {"x86_64-unknown-linux-gnu", "riscv64-unknown-elf"}) {
+    SCOPED_TRACE(TripleName);
+    Triple TT(TripleName);
+    std::string Error;
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
+    if (!TheTarget)
+      continue;
+    std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
+    MCTargetOptions MCOptions;
+    std::unique_ptr<MCAsmInfo> MAI(
+        TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
+    std::unique_ptr<MCSubtargetInfo> STI(
+        TheTarget->createMCSubtargetInfo(TT, "", ""));
+    ASSERT_TRUE(MRI && MAI && STI);
+    ASSERT_NE(STI->getHwMode(), 0u);
+    ASSERT_NE(STI->getHwModeSet(), 0u);
+    MCContext Ctx(TT, *MAI, *MRI, *STI);
+    MCSubtargetInfo &Copy = Ctx.getSubtargetCopy(*STI);
+    EXPECT_EQ(Copy.getHwMode(), STI->getHwMode());
+    EXPECT_EQ(Copy.getHwModeSet(), STI->getHwModeSet());
+  }
 }
 
 } // end namespace

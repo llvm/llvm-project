@@ -214,27 +214,9 @@ void mlir::affine::getTripCountMapAndOperands(
 /// getTripCount) and is able to determine constant trip count in non-trivial
 /// cases.
 std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
-  SmallVector<Value, 4> operands;
-  AffineMap map;
-  getTripCountMapAndOperands(forOp, &map, &operands);
-
-  if (!map)
-    return std::nullopt;
-
-  // Take the min if all trip counts are constant.
-  std::optional<uint64_t> tripCount;
-  for (auto resultExpr : map.getResults()) {
-    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
-      if (tripCount.has_value())
-        tripCount =
-            std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
-      else
-        tripCount = constExpr.getValue();
-    } else {
-      return std::nullopt;
-    }
-  }
-  return tripCount;
+  if (std::optional<APInt> tripCount = forOp.getStaticTripCount())
+    return tripCount->getZExtValue();
+  return std::nullopt;
 }
 
 /// Returns the greatest known integral divisor of the trip count. Affine

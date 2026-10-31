@@ -24,7 +24,7 @@ class CPlusPlusLanguage : public Language {
 public:
   class CxxMethodName : public Language::MethodName {
   public:
-    CxxMethodName(ConstString s) : Language::MethodName(s) {}
+    CxxMethodName(std::string s) : Language::MethodName(std::move(s)) {}
 
     bool ContainsPath(llvm::StringRef path);
 
@@ -53,7 +53,7 @@ public:
   ~CPlusPlusLanguage() override = default;
 
   virtual std::unique_ptr<Language::MethodName>
-  GetMethodName(ConstString name) const override;
+  GetMethodName(llvm::StringRef name) const override;
 
   std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const override;
@@ -88,6 +88,15 @@ public:
   static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
   bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
+
+  bool HandlesManglingScheme(Mangled::ManglingScheme scheme) const override;
+
+  DemangledName DemangleSymbol(ConstString mangled,
+                               Mangled::ManglingScheme scheme,
+                               const DemangleOptions &options) const override;
+
+  std::unique_ptr<MangledNameParser>
+  CreateMangledNameParser(Mangled::ManglingScheme scheme) const override;
 
   bool DemangledNameContainsPath(llvm::StringRef path,
                                  ConstString demangled) const override;
@@ -229,7 +238,7 @@ public:
   static llvm::Expected<ConstString>
   SubstituteStructorAliases_ItaniumMangle(llvm::StringRef mangled_name);
 
-  llvm::StringRef GetInstanceVariableName() override { return "this"; }
+  llvm::StringRef GetInstanceName() override { return "this"; }
 
   FormatEntity::Entry GetFunctionNameFormat() const override;
 

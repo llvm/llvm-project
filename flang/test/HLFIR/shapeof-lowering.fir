@@ -6,7 +6,7 @@ func.func @shapeof_asexpr(%arg0: !fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir
   %59:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
   %60 = fir.box_addr %arg0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
   %61 = fir.shape_shift %59#0, %59#1 : (index, index) -> !fir.shapeshift<1>
-  %62:2 = hlfir.declare %60(%61) {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
+  %62:2 = hlfir.declare %60(%61) uniq_name(".tmp.intrinsic_result") : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
   %true = arith.constant true
   %63 = hlfir.as_expr %62#0 move %true : (!fir.box<!fir.array<?xf32>>, i1) -> !hlfir.expr<?xf32>
   %64 = hlfir.shape_of %63 : (!hlfir.expr<?xf32>) -> !fir.shape<1>
@@ -20,10 +20,13 @@ func.func @shapeof_asexpr(%arg0: !fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir
 // CHECK-NEXT:    %[[SHPE_SHFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // CHECK-NEXT:    %[[VAR:.*]]:2 = hlfir.declare %[[BOX_ADDR]](%[[SHPE_SHFT]])
 // CHECK-NEXT:    %[[TRUE:.*]] = arith.constant true
+// CHECK-NEXT:    %[[REBOX:.*]] = fir.rebox %[[VAR]]#0 :
 // CHECK-NEXT:    %[[TUPLE0:.*]] = fir.undefined tuple
 // CHECK-NEXT:    %[[TUPLE1:.*]] = fir.insert_value %[[TUPLE0]], %[[TRUE]]
-// CHECK-NEXT:    %[[TUPLE2:.*]] = fir.insert_value %[[TUPLE1]], %[[VAR]]#0
-// CHECK-NEXT:    %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1
+// CHECK-NEXT:    %[[TUPLE2:.*]] = fir.insert_value %[[TUPLE1]], %[[REBOX]]
+// CHECK-NEXT:    %[[C0_2:.*]] = arith.constant 0 : index
+// CHECK-NEXT:    %[[BOX_DIMS2:.*]]:3 = fir.box_dims %[[REBOX]], %[[C0_2]]
+// CHECK-NEXT:    %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS2]]#1
 // CHECK-NEXT:    return %[[SHAPE]]
 
 func.func @shapeof_elemental() -> !fir.shape<1> {

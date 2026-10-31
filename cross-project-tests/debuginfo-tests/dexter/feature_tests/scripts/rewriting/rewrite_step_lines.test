@@ -1,0 +1,21 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+RUN: %dexter_regression_test_cxx_build %S/Inputs/rewrite_step_lines.cpp \
+RUN:   -o %t/test
+RUN: %dexter_regression_test_run --binary %t/test \
+RUN:   --results-directory %t/results -- %S/Inputs/rewrite_step_lines.cpp 2>&1 \
+RUN:   | FileCheck %s
+RUN: diff %t/results/rewrite_step_lines.cpp \
+RUN:   %S/Inputs/rewrite_step_lines_expected.cpp
+
+Test that Dexter can rewrite expected values for !step nodes.
+
+CHECK: Rewrote script to add 1 expected values.
+
+CHECK: total_line_steps: 67
+CHECK: correct_line_steps: 67
+CHECK: correct_line_score: 100.0% (67/67)
+CHECK: misordered_line_steps: 0
+CHECK: missing_lines: 0
+CHECK: incorrect_line_steps: 0
+CHECK: unexpected_lines: 0

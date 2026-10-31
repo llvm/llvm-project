@@ -38,7 +38,7 @@ public:
   bool runImpl(MachineFunction &MF);
 
 private:
-  bool eliminateDeadMI(MachineFunction &MF);
+  bool eliminateDeadMI(MachineFunction &MF, bool &NeedAnotherIteration);
 };
 
 class DeadMachineInstructionElim : public MachineFunctionPass {
@@ -57,12 +57,18 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
 };
 } // namespace
 
 PreservedAnalyses
 DeadMachineInstructionElimPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
+
   if (!DeadMachineInstructionElimImpl().runImpl(MF))
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
@@ -83,26 +89,36 @@ bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   LivePhysRegs.init(*ST.getRegisterInfo());
 
-  bool AnyChanges = eliminateDeadMI(MF);
-  while (AnyChanges && eliminateDeadMI(MF))
-    ;
+  bool NeedAnotherIteration;
+  bool AnyChanges = eliminateDeadMI(MF, NeedAnotherIteration);
+  while (NeedAnotherIteration)
+    eliminateDeadMI(MF, NeedAnotherIteration);
   return AnyChanges;
 }
 
-bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
+bool DeadMachineInstructionElimImpl::eliminateDeadMI(
+    MachineFunction &MF, bool &NeedAnotherIteration) {
   bool AnyChanges = false;
+  SmallPtrSet<MachineBasicBlock *, 4> NeedsProcessing;
 
   // Loop over all instructions in all blocks, from bottom to top, so that it's
   // more likely that chains of dependent but ultimately dead instructions will
   // be cleaned up.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     LivePhysRegs.addLiveOuts(*MBB);
+    NeedsProcessing.erase(MBB);
 
     // Now scan the instructions and delete dead ones, tracking physreg
     // liveness as we go.
     for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
+      if (MI.isDebugInstr())
+        continue;
       // If the instruction is dead, delete it!
       if (MI.isDead(*MRI, &LivePhysRegs)) {
+        if (MI.isPHI()) {
+          for (MachineBasicBlock *P : MBB->predecessors())
+            NeedsProcessing.insert(P);
+        }
         LLVM_DEBUG(dbgs() << "DeadMachineInstructionElim: DELETING: " << MI);
         // It is possible that some DBG_VALUE instructions refer to this
         // instruction. They will be deleted in the live debug variable
@@ -112,9 +128,18 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
         ++NumDeletes;
         continue;
       }
+
+      for (MachineOperand &MO : MI.all_defs()) {
+        Register Reg = MO.getReg();
+        if (Reg.isPhysical() && !MO.isDead() && !MRI->isReserved(Reg) &&
+            LivePhysRegs.available(Reg))
+          MO.setIsDead();
+      }
+
       LivePhysRegs.stepBackward(MI);
     }
   }
   LivePhysRegs.clear();
+  NeedAnotherIteration = !NeedsProcessing.empty();
   return AnyChanges;
 }

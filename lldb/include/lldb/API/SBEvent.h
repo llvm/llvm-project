@@ -74,7 +74,7 @@ protected:
   friend class SBThread;
   friend class SBWatchpoint;
 
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::python::SWIGBridge;
 
   SBEvent(lldb::EventSP &event_sp);

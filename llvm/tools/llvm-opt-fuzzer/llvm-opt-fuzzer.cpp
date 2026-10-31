@@ -19,6 +19,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -36,6 +37,7 @@ static cl::opt<std::string> PassPipeline(
     cl::desc("A textual description of the pass pipeline for testing"));
 
 static std::unique_ptr<IRMutator> Mutator;
+static cl::LibraryOptionsContext LibraryOptions;
 static std::unique_ptr<TargetMachine> TM;
 
 std::unique_ptr<IRMutator> createOptMutator() {
@@ -115,6 +117,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   //
 
   LLVMContext Context;
+  Context.getLibraryOptions().assign(LibraryOptions);
   auto M = parseAndVerify(Data, Size, Context);
   if (!M) {
     errs() << "error: input module is broken!\n";
@@ -125,14 +128,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   //
 
   M->setTargetTriple(TM->getTargetTriple());
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
   codegen::setFunctionAttributes(*M, TM->getTargetCPU(),
                                  TM->getTargetFeatureString());
 
   // Create pass pipeline
   //
 
-  PassBuilder PB(TM.get());
+  PassBuilder PB(Context, TM.get());
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -189,8 +192,8 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   // Parse input options
   //
 
-  handleExecNameEncodedOptimizerOpts(ExecName);
-  parseFuzzerCLOpts(*argc, *argv);
+  handleExecNameEncodedOptimizerOpts(LibraryOptions, ExecName);
+  parseFuzzerCLOpts(LibraryOptions, *argc, *argv);
 
   // Create TargetMachine
   //
@@ -199,8 +202,9 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     exit(1);
   }
   ExitOnError ExitOnErr(std::string(ExecName) + ": error:");
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(
-      Triple::normalize(TargetTripleStr)));
+
+  Triple TT(Triple::normalize(TargetTripleStr));
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(LibraryOptions, TT));
 
   // Check that pass pipeline is specified and correct
   //
@@ -210,7 +214,9 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     exit(1);
   }
 
-  PassBuilder PB(TM.get());
+  LLVMContext Context;
+  Context.getLibraryOptions().assign(LibraryOptions);
+  PassBuilder PB(Context, TM.get());
   ModulePassManager MPM;
   if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
     errs() << ExecName << ": " << toString(std::move(Err)) << "\n";

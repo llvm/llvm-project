@@ -365,6 +365,18 @@ bool HexagonDAGToDAGISel::SelectBrevLdIntrinsic(SDNode *IntN) {
   return false;
 }
 
+static SDValue getCircRegister(SelectionDAG &DAG, SDLoc DL, SDNode *N,
+                               unsigned MOp, unsigned CSOp) {
+  SDValue RC = DAG.getTargetConstant(Hexagon::CircRegsRegClassID, DL, MVT::i32);
+  SDValue SubRegCS = DAG.getTargetConstant(Hexagon::isub_lo, DL, MVT::i32);
+  SDValue SubRegM = DAG.getTargetConstant(Hexagon::isub_hi, DL, MVT::i32);
+  const SDValue RegSequenceOps[] = {RC, N->getOperand(MOp), SubRegM,
+                                    N->getOperand(CSOp), SubRegCS};
+  SDNode *M_CS = DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::i64,
+                                    RegSequenceOps);
+  return SDValue(M_CS, 0);
+}
+
 /// Generate a machine instruction node for the new circular buffer intrinsics.
 /// The new versions use a CSx register instead of the K field.
 bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
@@ -400,14 +412,15 @@ bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
     if (IntN->getNumOperands() == 6) {
       auto Inc = cast<ConstantSDNode>(IntN->getOperand(3));
       SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), DL, MVT::i32);
-      // Operands: { Base, Increment, Modifier, Start, Chain }.
-      Ops = { IntN->getOperand(2), I, IntN->getOperand(4), IntN->getOperand(5),
-              IntN->getOperand(0) };
-    } else
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 4, 5);
+      // Operands: { Base, Increment, Modifier_Start, Chain }.
+      Ops = {IntN->getOperand(2), I, M_CS, IntN->getOperand(0)};
+    } else {
       // Handle load.*_pcr case which has 5 operands.
-      // Operands: { Base, Modifier, Start, Chain }.
-      Ops = { IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(4),
-              IntN->getOperand(0) };
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 3, 4);
+      // Operands: { Base, Modifier_Start, Chain }.
+      Ops = {IntN->getOperand(2), M_CS, IntN->getOperand(0)};
+    }
     MachineSDNode *Res = CurDAG->getMachineNode(FLI->second, DL, RTys, Ops);
     ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
     ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));
@@ -435,14 +448,17 @@ bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
     if (IntN->getNumOperands() == 7) {
       auto Inc = cast<ConstantSDNode>(IntN->getOperand(3));
       SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), DL, MVT::i32);
-      // Operands: { Base, Increment, Modifier, Value, Start, Chain }.
-      Ops = { IntN->getOperand(2), I, IntN->getOperand(4), IntN->getOperand(5),
-              IntN->getOperand(6), IntN->getOperand(0) };
-    } else
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 4, 6);
+      // Operands: { Base, Increment, Modifier_Start, Value, Chain }.
+      Ops = {IntN->getOperand(2), I, M_CS, IntN->getOperand(5),
+             IntN->getOperand(0)};
+    } else {
       // Handle store.*_pcr case which has 6 operands.
-      // Operands: { Base, Modifier, Value, Start, Chain }.
-      Ops = { IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(4),
-              IntN->getOperand(5), IntN->getOperand(0) };
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 3, 5);
+      // Operands: { Base, Modifier_Start, Value, Chain }.
+      Ops = {IntN->getOperand(2), M_CS, IntN->getOperand(4),
+             IntN->getOperand(0)};
+    }
     MachineSDNode *Res = CurDAG->getMachineNode(FSI->second, DL, RTys, Ops);
     ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
     ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));
@@ -676,8 +692,17 @@ void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
 }
 
 void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
-  unsigned IID = N->getConstantOperandVal(0);
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
   unsigned Bits;
+
+  // On v79 and above, IEEE HVX instructions are no longer present.
+  // The related intrinsics must be translated to QFloat implicitly in order
+  // to provide backward compatibility.
+  if (HST->useHVXV79Ops() && isIEEEHVXIntrinsic(IID)) {
+    translateIEEEIntrinsicToQFloat(N, IID);
+    return;
+  }
+
   switch (IID) {
   case Intrinsic::hexagon_S2_vsplatrb:
     Bits = 8;
@@ -785,6 +810,7 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
   } else {
     auto &HMFI = *MF->getInfo<HexagonMachineFunctionInfo>();
     Register AR = HMFI.getStackAlignBaseReg();
+    assert(AR.isValid() && "Missing stack align base register");
     SDValue CH = CurDAG->getEntryNode();
     SDValue Ops[] = { CurDAG->getCopyFromReg(CH, DL, AR, MVT::i32), FI, Zero };
     R = CurDAG->getMachineNode(Hexagon::PS_fia, DL, MVT::i32, Ops);
@@ -1315,7 +1341,7 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
       if (!UVT.isSimple() || !UVT.isInteger() || UVT.getSimpleVT() == MVT::i1)
         continue;
       // Do not generate select for all i1 vector type.
-      if (UVT.isVector() && UVT.getVectorElementType() == MVT::i1)
+      if (UVT.isVectorOf(MVT::i1))
         continue;
       if (isMemOPCandidate(N, U))
         continue;
@@ -1424,35 +1450,10 @@ void HexagonDAGToDAGISel::emitFunctionEntryCode() {
   if (!HFI.needsAligna(*MF))
     return;
 
-  MachineFrameInfo &MFI = MF->getFrameInfo();
-  MachineBasicBlock *EntryBB = &MF->front();
-  Align EntryMaxA = MFI.getMaxAlign();
-
-  // Reserve the first non-volatile register.
-  Register AP = 0;
   auto &HRI = *HST.getRegisterInfo();
-  BitVector Reserved = HRI.getReservedRegs(*MF);
-  for (const MCPhysReg *R = HRI.getCalleeSavedRegs(MF); *R; ++R) {
-    if (Reserved[*R])
-      continue;
-    AP = *R;
-    break;
-  }
+  Register AP = HRI.computeStackAlignBaseRegister(*MF);
   assert(AP.isValid() && "Couldn't reserve stack align register");
-  BuildMI(EntryBB, DebugLoc(), HII->get(Hexagon::PS_aligna), AP)
-      .addImm(EntryMaxA.value());
   MF->getInfo<HexagonMachineFunctionInfo>()->setStackAlignBaseReg(AP);
-}
-
-void HexagonDAGToDAGISel::updateAligna() {
-  auto &HFI = *MF->getSubtarget<HexagonSubtarget>().getFrameLowering();
-  if (!HFI.needsAligna(*MF))
-    return;
-  auto *AlignaI = const_cast<MachineInstr*>(HFI.getAlignaInstr(*MF));
-  assert(AlignaI != nullptr);
-  unsigned MaxA = MF->getFrameInfo().getMaxAlign().value();
-  if (AlignaI->getOperand(1).getImm() < MaxA)
-    AlignaI->getOperand(1).setImm(MaxA);
 }
 
 // Match a frame index that can be used in an addressing mode.

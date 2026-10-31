@@ -184,6 +184,15 @@
 // RUN: %clang_cl /Od -### -- %s 2>&1 | FileCheck -check-prefix=Od %s
 // Od: -O0
 
+// clang-cl optimization options are independent of the host toolchain.
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu /O1 -### -- %s 2>&1 | FileCheck %s --check-prefix=CL-LINUX-OS
+// CL-LINUX-OS: "-cc1"
+// CL-LINUX-OS-SAME: "-Os"
+
+// RUN: %clang_cl --target=x86_64-w64-windows-gnu /O2 -### -- %s 2>&1 | FileCheck %s --check-prefix=CL-MINGW-O3
+// CL-MINGW-O3: "-cc1"
+// CL-MINGW-O3-SAME: "-O3"
+
 // RUN: %clang_cl /Oi- /Oi -### -- %s 2>&1 | FileCheck -check-prefix=Oi %s
 // Oi-NOT: -fno-builtin
 
@@ -444,6 +453,7 @@
 // RUN:     /constexpr:depth1000 /constexpr:backtrace1000 /constexpr:steps1000 \
 // RUN:     /AIfoo \
 // RUN:     /AI foo_does_not_exist \
+// RUN:     /BE \
 // RUN:     /Bt \
 // RUN:     /Bt+ \
 // RUN:     /clr:pure \
@@ -621,11 +631,15 @@
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++20 -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX20 %s
 // STDCXX20: -std=c++20
 
-// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++23preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX23PREVIEW %s
-// STDCXX23PREVIEW: -std=c++23
+// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++23        -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX23 %s
+// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++23preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX23 %s
+// STDCXX23: -std=c++23
+
+// RUN: %clang_cl -fmsc-version=1900 -TP -std:c++26preview -### -- %s 2>&1 | FileCheck -check-prefix=STDCXX26PREVIEW %s
+// STDCXX26PREVIEW: -std=c++26
 
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++latest -### -- %s 2>&1 | FileCheck -check-prefix=STDCXXLATEST %s
-// STDCXXLATEST: -std=c++26
+// STDCXXLATEST: -std=c++2d
 
 // RUN: env CL="/Gy" %clang_cl -### -- %s 2>&1 | FileCheck -check-prefix=ENV-CL %s
 // ENV-CL: "-ffunction-sections"
@@ -715,7 +729,10 @@
 // RUN:     -fdebug-compilation-dir=. \
 // RUN:     -ffile-compilation-dir=. \
 // RUN:     -fdiagnostics-parseable-fixits \
+// RUN:     -fdiagnostics-print-source-range-info \
 // RUN:     -fdiagnostics-absolute-paths \
+// RUN:     -fdiagnostics-show-inlining-chain \
+// RUN:     -fno-diagnostics-show-inlining-chain \
 // RUN:     -ferror-limit=10 \
 // RUN:     -fident \
 // RUN:     -fno-ident \
@@ -752,6 +769,8 @@
 // RUN:     -fcs-profile-generate=dir \
 // RUN:     -fpseudo-probe-for-profiling \
 // RUN:     -ftime-trace \
+// RUN:     -fmath-errno \
+// RUN:     -fno-math-errno \
 // RUN:     -fmodules \
 // RUN:     -fno-modules \
 // RUN:     -fimplicit-module-maps \
@@ -842,7 +861,7 @@
 // EXTERNAL_W0: "-Wno-system-headers"
 // EXTERNAL_Wn: "-Wsystem-headers"
 
-// RUN: %clang_cl -vctoolsdir "" /arm64EC /c -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC %s 
+// RUN: %clang_cl -vctoolsdir "" /arm64EC /c -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC %s
 // ARM64EC-NOT: /arm64EC has been overridden by specified target
 // ARM64EC: "-triple" "arm64ec-pc-windows-msvc19.33.0"
 // ARM64EC-SAME: "--dependent-lib=softintrin"
@@ -851,11 +870,20 @@
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored
 
 // RUN: %clang_cl /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWIND
-// EPILOGUNWIND: -fwinx64-eh-unwindv2=best-effort
+// EPILOGUNWIND: -fwinx64-eh-unwind=v2-best-effort
 
 // RUN: %clang_cl /d2epilogunwindrequirev2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
+// /d2epilogunwindrequirev2 always wins over /d2epilogunwind, regardless of
+// the order they appear on the command line (matches MSVC).
+// RUN: %clang_cl /d2epilogunwind /d2epilogunwindrequirev2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
 // RUN: %clang_cl /d2epilogunwindrequirev2 /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
-// EPILOGUNWINDREQUIREV2: -fwinx64-eh-unwindv2=require
+// EPILOGUNWINDREQUIREV2: -fwinx64-eh-unwind=v2-required
+
+// RUN: not %clang --target=x86_64-windows-msvc -fsyntax-only -fwinx64-eh-unwind=invalid %s 2>&1 | FileCheck %s --check-prefix=UNWIND_INVALID
+// UNWIND_INVALID: error: invalid value 'invalid' in '-fwinx64-eh-unwind=invalid'
+
+// RUN: not %clang --target=x86_64-windows-msvc -fwinx64-eh-unwindv2=invalid -### %s 2>&1 | FileCheck %s --check-prefix=UNWINDV2_INVALID
+// UNWINDV2_INVALID: error: invalid value 'invalid' in '-fwinx64-eh-unwindv2=invalid'
 
 // RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
 // FUNCOVERRIDE: -loader-replaceable-function=override_me1

@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <array>
+#include <bitset>
 #include <map>
 #include <set>
 
 #include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/RichManglingContext.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -32,10 +33,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 Symtab::Symtab(ObjectFile *objfile)
-    : m_objfile(objfile), m_symbols(), m_file_addr_to_index(*this),
-      m_name_to_symbol_indices(), m_mutex(),
-      m_file_addr_to_index_computed(false), m_name_indexes_computed(false),
-      m_loaded_from_cache(false), m_saved_to_cache(false) {
+    : m_objfile(objfile), m_file_addr_to_index(*this) {
   m_name_to_symbol_indices.emplace(std::make_pair(
       lldb::eFunctionNameTypeNone, UniqueCStringMap<uint32_t>()));
   m_name_to_symbol_indices.emplace(std::make_pair(
@@ -91,15 +89,15 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
   //    s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
   s->Indent();
   const FileSpec &file_spec = m_objfile->GetFileSpec();
-  const char *object_name = nullptr;
+  llvm::StringRef object_name;
   if (m_objfile->GetModule())
-    object_name = m_objfile->GetModule()->GetObjectName().GetCString();
+    object_name = m_objfile->GetModule()->GetObjectName();
 
   if (file_spec)
-    s->Printf("Symtab, file = %s%s%s%s, num_symbols = %" PRIu64,
-              file_spec.GetPath().c_str(), object_name ? "(" : "",
-              object_name ? object_name : "", object_name ? ")" : "",
-              (uint64_t)m_symbols.size());
+    s->Format("Symtab, file = {0}{1}{2}{3}, num_symbols = {4}",
+              file_spec.GetPath(), !object_name.empty() ? "(" : "",
+              !object_name.empty() ? object_name : "",
+              !object_name.empty() ? ")" : "", (uint64_t)m_symbols.size());
   else
     s->Printf("Symtab, num_symbols = %" PRIu64 "", (uint64_t)m_symbols.size());
 
@@ -241,208 +239,189 @@ const Symbol *Symtab::SymbolAtIndex(size_t idx) const {
   return nullptr;
 }
 
-static bool lldb_skip_name(llvm::StringRef mangled,
-                           Mangled::ManglingScheme scheme) {
-  switch (scheme) {
-  case Mangled::eManglingSchemeItanium: {
-    if (mangled.size() < 3 || !mangled.starts_with("_Z"))
-      return true;
-
-    // Avoid the following types of symbols in the index.
-    switch (mangled[2]) {
-    case 'G': // guard variables
-    case 'T': // virtual tables, VTT structures, typeinfo structures + names
-    case 'Z': // named local entities (if we eventually handle
-              // eSymbolTypeData, we will want this back)
-      return true;
-
-    default:
-      break;
-    }
-
-    // Include this name in the index.
-    return false;
-  }
-
-  // No filters for this scheme yet. Include all names in indexing.
-  case Mangled::eManglingSchemeMSVC:
-  case Mangled::eManglingSchemeRustV0:
-  case Mangled::eManglingSchemeD:
-  case Mangled::eManglingSchemeSwift:
-    return false;
-
-  // Don't try and demangle things we can't categorize.
-  case Mangled::eManglingSchemeNone:
-    return true;
-  }
-  llvm_unreachable("unknown scheme!");
-}
-
 void Symtab::InitNameIndexes() {
   // Protected function, no need to lock mutex...
-  if (!m_name_indexes_computed) {
-    m_name_indexes_computed = true;
-    ElapsedTime elapsed(m_objfile->GetModule()->GetSymtabIndexTime());
-    LLDB_SCOPED_TIMER();
+  if (m_name_indexes_computed)
+    return;
 
-    // Collect all loaded language plugins.
-    std::vector<Language *> languages;
-    Language::ForEach([&languages](Language *l) {
-      languages.push_back(l);
-      return IterationAction::Continue;
-    });
+  m_name_indexes_computed = true;
+  ElapsedTime elapsed(m_objfile->GetModule()->GetSymtabIndexTime());
+  LLDB_SCOPED_TIMER();
 
-    auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
-    auto &basename_to_index =
-        GetNameToSymbolIndexMap(lldb::eFunctionNameTypeBase);
-    auto &method_to_index =
-        GetNameToSymbolIndexMap(lldb::eFunctionNameTypeMethod);
-    auto &selector_to_index =
-        GetNameToSymbolIndexMap(lldb::eFunctionNameTypeSelector);
-    // Create the name index vector to be able to quickly search by name
-    const size_t num_symbols = m_symbols.size();
-    name_to_index.Reserve(num_symbols);
+  // Collect all loaded language plugins.
+  std::vector<Language *> languages;
+  Language::ForEach([&languages](Language *l) {
+    languages.push_back(l);
+    return IterationAction::Continue;
+  });
 
-    // The "const char *" in "class_contexts" and backlog::value_type::second
-    // must come from a ConstString::GetCString()
-    std::set<const char *> class_contexts;
-    std::vector<std::pair<NameToIndexMap::Entry, const char *>> backlog;
-    backlog.reserve(num_symbols / 2);
+  auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
+  auto &basename_to_index =
+      GetNameToSymbolIndexMap(lldb::eFunctionNameTypeBase);
+  auto &method_to_index =
+      GetNameToSymbolIndexMap(lldb::eFunctionNameTypeMethod);
+  auto &selector_to_index =
+      GetNameToSymbolIndexMap(lldb::eFunctionNameTypeSelector);
+  // Create the name index vector to be able to quickly search by name
+  const size_t num_symbols = m_symbols.size();
+  name_to_index.Reserve(num_symbols);
 
-    // Instantiation of the demangler is expensive, so better use a single one
-    // for all entries during batch processing.
-    RichManglingContext rmc;
-    for (uint32_t value = 0; value < num_symbols; ++value) {
-      Symbol *symbol = &m_symbols[value];
+  // The "const char *" in "class_contexts" and backlog::value_type::second
+  // must come from a ConstString::GetCString()
+  std::set<const char *> class_contexts;
+  std::vector<std::pair<NameToIndexMap::Entry, const char *>> backlog;
+  backlog.reserve(num_symbols / 2);
 
-      // Don't let trampolines get into the lookup by name map If we ever need
-      // the trampoline symbols to be searchable by name we can remove this and
-      // then possibly add a new bool to any of the Symtab functions that
-      // lookup symbols by name to indicate if they want trampolines. We also
-      // don't want any synthetic symbols with auto generated names in the
-      // name lookups.
-      if (symbol->IsTrampoline() || symbol->IsSyntheticWithAutoGeneratedName())
-        continue;
+  // A single parser per mangling scheme handles all of its names, so that it
+  // can reuse its demangler. Parsers are only created for the schemes that
+  // occur, and a nullptr means that no language parses the scheme.
+  std::array<std::unique_ptr<Language::MangledNameParser>,
+             Mangled::kNumManglingSchemes>
+      parsers;
+  std::bitset<Mangled::kNumManglingSchemes> created_parsers;
+  auto parse_function_name =
+      [&](const Mangled &mangled) -> std::optional<Mangled::FunctionNameParts> {
+    Mangled::ManglingScheme scheme =
+        Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
+    if (!created_parsers.test(scheme)) {
+      created_parsers.set(scheme);
+      if (Language *lang = Language::FindPluginForManglingScheme(scheme))
+        parsers[scheme] = lang->CreateMangledNameParser(scheme);
+    }
+    if (!parsers[scheme])
+      return std::nullopt;
+    return parsers[scheme]->Parse(mangled);
+  };
+  for (size_t value = 0; value < num_symbols; ++value) {
+    Symbol *symbol = &m_symbols[value];
 
-      // If the symbol's name string matched a Mangled::ManglingScheme, it is
-      // stored in the mangled field.
-      Mangled &mangled = symbol->GetMangled();
-      if (ConstString name = mangled.GetMangledName()) {
-        name_to_index.Append(name, value);
+    // Don't let trampolines get into the lookup by name map If we ever need
+    // the trampoline symbols to be searchable by name we can remove this and
+    // then possibly add a new bool to any of the Symtab functions that
+    // lookup symbols by name to indicate if they want trampolines. We also
+    // don't want any synthetic symbols with auto generated names in the
+    // name lookups.
+    if (symbol->IsTrampoline() || symbol->IsSyntheticWithAutoGeneratedName())
+      continue;
 
-        if (symbol->ContainsLinkerAnnotations()) {
-          // If the symbol has linker annotations, also add the version without
-          // the annotations.
-          ConstString stripped = ConstString(
-              m_objfile->StripLinkerSymbolAnnotations(name.GetStringRef()));
-          name_to_index.Append(stripped, value);
-        }
+    // If the symbol's name string matched a Mangled::ManglingScheme, it is
+    // stored in the mangled field.
+    Mangled &mangled = symbol->GetMangled();
+    if (ConstString name = mangled.GetMangledName()) {
+      name_to_index.Append(name, value);
 
-        const SymbolType type = symbol->GetType();
-        if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
-          if (mangled.GetRichManglingInfo(rmc, lldb_skip_name)) {
-            RegisterMangledNameEntry(value, class_contexts, backlog, rmc);
-            continue;
-          }
-        }
+      if (symbol->ContainsLinkerAnnotations()) {
+        // If the symbol has linker annotations, also add the version without
+        // the annotations.
+        ConstString stripped = ConstString(
+            m_objfile->StripLinkerSymbolAnnotations(name.GetStringRef()));
+        name_to_index.Append(stripped, value);
       }
 
-      // Symbol name strings that didn't match a Mangled::ManglingScheme, are
-      // stored in the demangled field.
-      if (ConstString name = mangled.GetDemangledName()) {
-        name_to_index.Append(name, value);
-
-        if (symbol->ContainsLinkerAnnotations()) {
-          // If the symbol has linker annotations, also add the version without
-          // the annotations.
-          name = ConstString(
-              m_objfile->StripLinkerSymbolAnnotations(name.GetStringRef()));
-          name_to_index.Append(name, value);
-        }
-
-        // If the demangled name turns out to be an ObjC name, and is a category
-        // name, add the version without categories to the index too.
-        for (Language *lang : languages) {
-          for (auto variant : lang->GetMethodNameVariants(name)) {
-            if (variant.GetType() & lldb::eFunctionNameTypeSelector)
-              selector_to_index.Append(variant.GetName(), value);
-            else if (variant.GetType() & lldb::eFunctionNameTypeFull)
-              name_to_index.Append(variant.GetName(), value);
-            else if (variant.GetType() & lldb::eFunctionNameTypeMethod)
-              method_to_index.Append(variant.GetName(), value);
-            else if (variant.GetType() & lldb::eFunctionNameTypeBase)
-              basename_to_index.Append(variant.GetName(), value);
-          }
+      const SymbolType type = symbol->GetType();
+      if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
+        if (std::optional<Mangled::FunctionNameParts> parts =
+                parse_function_name(mangled)) {
+          RegisterMangledNameEntry(value, *parts, class_contexts, backlog);
+          continue;
         }
       }
     }
 
-    for (const auto &record : backlog) {
-      RegisterBacklogEntry(record.first, record.second, class_contexts);
-    }
+    // Symbol name strings that didn't match a Mangled::ManglingScheme, are
+    // stored in the demangled field.
+    if (ConstString name = mangled.GetDemangledName()) {
+      name_to_index.Append(name, value);
 
-    name_to_index.Sort();
-    name_to_index.SizeToFit();
-    selector_to_index.Sort();
-    selector_to_index.SizeToFit();
-    basename_to_index.Sort();
-    basename_to_index.SizeToFit();
-    method_to_index.Sort();
-    method_to_index.SizeToFit();
+      if (symbol->ContainsLinkerAnnotations()) {
+        // If the symbol has linker annotations, also add the version without
+        // the annotations.
+        name = ConstString(
+            m_objfile->StripLinkerSymbolAnnotations(name.GetStringRef()));
+        name_to_index.Append(name, value);
+      }
+
+      // If the demangled name turns out to be an ObjC name, and is a category
+      // name, add the version without categories to the index too.
+      for (Language *lang : languages) {
+        for (auto variant : lang->GetMethodNameVariants(name)) {
+          if (variant.GetType() & lldb::eFunctionNameTypeSelector)
+            selector_to_index.Append(ConstString(variant.GetName()), value);
+          else if (variant.GetType() & lldb::eFunctionNameTypeFull)
+            name_to_index.Append(ConstString(variant.GetName()), value);
+          else if (variant.GetType() & lldb::eFunctionNameTypeMethod)
+            method_to_index.Append(ConstString(variant.GetName()), value);
+          else if (variant.GetType() & lldb::eFunctionNameTypeBase)
+            basename_to_index.Append(ConstString(variant.GetName()), value);
+        }
+      }
+    }
   }
+
+  for (const auto &record : backlog)
+    RegisterBacklogEntry(record.first, record.second, class_contexts);
+
+  name_to_index.Sort();
+  name_to_index.SizeToFit();
+  selector_to_index.Sort();
+  selector_to_index.SizeToFit();
+  basename_to_index.Sort();
+  basename_to_index.SizeToFit();
+  method_to_index.Sort();
+  method_to_index.SizeToFit();
 }
 
 void Symtab::RegisterMangledNameEntry(
-    uint32_t value, std::set<const char *> &class_contexts,
-    std::vector<std::pair<NameToIndexMap::Entry, const char *>> &backlog,
-    RichManglingContext &rmc) {
+    uint32_t value, const Mangled::FunctionNameParts &parts,
+    std::set<const char *> &class_contexts,
+    std::vector<std::pair<NameToIndexMap::Entry, const char *>> &backlog) {
   // Only register functions that have a base name.
-  llvm::StringRef base_name = rmc.ParseFunctionBaseName();
-  if (base_name.empty())
+  if (!parts.basename)
     return;
 
   // The base name will be our entry's name.
-  NameToIndexMap::Entry entry(ConstString(base_name), value);
-  llvm::StringRef decl_context = rmc.ParseFunctionDeclContextName();
+  NameToIndexMap::Entry entry(parts.basename, value);
 
-  // Register functions with no context.
-  if (decl_context.empty()) {
+  switch (parts.kind) {
+  case Mangled::FunctionNameKind::TopLevel:
     // This has to be a basename
-    auto &basename_to_index =
-        GetNameToSymbolIndexMap(lldb::eFunctionNameTypeBase);
-    basename_to_index.Append(entry);
+    GetNameToSymbolIndexMap(lldb::eFunctionNameTypeBase).Append(entry);
     // If there is no context (no namespaces or class scopes that come before
     // the function name) then this also could be a fullname.
-    auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
-    name_to_index.Append(entry);
+    GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone).Append(entry);
     return;
-  }
 
-  // Make sure we have a pool-string pointer and see if we already know the
-  // context name.
-  const char *decl_context_ccstr = ConstString(decl_context).GetCString();
-  auto it = class_contexts.find(decl_context_ccstr);
+  case Mangled::FunctionNameKind::InNamespace:
+    GetNameToSymbolIndexMap(lldb::eFunctionNameTypeBase).Append(entry);
+    return;
 
-  auto &method_to_index =
-      GetNameToSymbolIndexMap(lldb::eFunctionNameTypeMethod);
+  case Mangled::FunctionNameKind::Method:
+    GetNameToSymbolIndexMap(lldb::eFunctionNameTypeMethod).Append(entry);
+    return;
+
   // Register constructors and destructors. They are methods and create
   // declaration contexts.
-  if (rmc.IsCtorOrDtor()) {
-    method_to_index.Append(entry);
-    if (it == class_contexts.end())
-      class_contexts.insert(it, decl_context_ccstr);
+  case Mangled::FunctionNameKind::ConstructorOrDestructor:
+    GetNameToSymbolIndexMap(lldb::eFunctionNameTypeMethod).Append(entry);
+    class_contexts.insert(parts.decl_context.GetCString());
+    return;
+
+  case Mangled::FunctionNameKind::Unknown: {
+    const char *decl_context_ccstr = parts.decl_context.GetCString();
+
+    // Register regular methods with a known declaration context.
+    if (class_contexts.count(decl_context_ccstr)) {
+      GetNameToSymbolIndexMap(lldb::eFunctionNameTypeMethod).Append(entry);
+      return;
+    }
+
+    // Regular methods in unknown declaration contexts are put to the backlog.
+    // We will revisit them once we processed all remaining symbols.
+    backlog.push_back(std::make_pair(entry, decl_context_ccstr));
     return;
   }
-
-  // Register regular methods with a known declaration context.
-  if (it != class_contexts.end()) {
-    method_to_index.Append(entry);
-    return;
   }
-
-  // Regular methods in unknown declaration contexts are put to the backlog. We
-  // will revisit them once we processed all remaining symbols.
-  backlog.push_back(std::make_pair(entry, decl_context_ccstr));
+  llvm_unreachable("unknown function name kind");
 }
 
 void Symtab::RegisterBacklogEntry(
@@ -684,8 +663,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   if (symbol_name) {
-    if (!m_name_indexes_computed)
-      InitNameIndexes();
+    InitNameIndexes();
 
     return GetNameIndexes(symbol_name, indexes);
   }
@@ -701,8 +679,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
   LLDB_SCOPED_TIMER();
   if (symbol_name) {
     const size_t old_size = indexes.size();
-    if (!m_name_indexes_computed)
-      InitNameIndexes();
+    InitNameIndexes();
 
     std::vector<uint32_t> all_name_indexes;
     const size_t name_match_count =
@@ -823,8 +800,7 @@ Symtab::FindAllSymbolsWithNameAndType(ConstString name,
 
   // Initialize all of the lookup by name indexes before converting NAME to a
   // uniqued string NAME_STR below.
-  if (!m_name_indexes_computed)
-    InitNameIndexes();
+  InitNameIndexes();
 
   if (name) {
     // The string table did have a string that matched, but we need to check
@@ -841,8 +817,7 @@ void Symtab::FindAllSymbolsWithNameAndType(
   LLDB_SCOPED_TIMER();
   // Initialize all of the lookup by name indexes before converting NAME to a
   // uniqued string NAME_STR below.
-  if (!m_name_indexes_computed)
-    InitNameIndexes();
+  InitNameIndexes();
 
   if (name) {
     // The string table did have a string that matched, but we need to check
@@ -870,8 +845,7 @@ Symbol *Symtab::FindFirstSymbolWithNameAndType(ConstString name,
                                                Visibility symbol_visibility) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   LLDB_SCOPED_TIMER();
-  if (!m_name_indexes_computed)
-    InitNameIndexes();
+  InitNameIndexes();
 
   if (name) {
     std::vector<uint32_t> matching_indexes;
@@ -1126,8 +1100,8 @@ void Symtab::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
     }
   }
 
-  if (!m_name_indexes_computed)
-    InitNameIndexes();
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  InitNameIndexes();
 
   for (lldb::FunctionNameType type :
        {lldb::eFunctionNameTypeBase, lldb::eFunctionNameTypeMethod,
@@ -1175,10 +1149,12 @@ std::string Symtab::GetCacheKey() {
 }
 
 void Symtab::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache();
+  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
   if (!cache)
     return; // Caching is not enabled.
-  InitNameIndexes(); // Init the name indexes so we can cache them as well.
+
+  // Init the name indexes so we can cache them as well.
+  InitNameIndexes();
   const auto byte_order = endian::InlHostByteOrder();
   DataEncoder file(byte_order, /*addr_size=*/8);
   // Encode will return false if the symbol table's object file doesn't have
@@ -1233,7 +1209,16 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
-constexpr uint32_t CURRENT_CACHE_VERSION = 1;
+constexpr uint32_t CURRENT_CACHE_VERSION = 3;
+
+// If the size of the Symbol object changes, the serialized
+// format likely also needs to change so the
+// CURRENT_CACHE_VERSION number will need to be incremented.
+#if __SIZEOF_POINTER__ == 8
+static_assert(
+    sizeof(lldb_private::Symbol) == 72,
+    "Symbol size has changed, DataFileCache version likely needs updating");
+#endif
 
 /// The encoding format for the symbol table is as follows:
 ///
@@ -1255,8 +1240,8 @@ bool Symtab::Encode(DataEncoder &encoder) const {
     return false;
   ConstStringTable strtab;
 
-  // Encoder the symbol table into a separate encoder first. This allows us
-  // gather all of the strings we willl need in "strtab" as we will need to
+  // Encode the symbol table into a separate encoder first. This allows us
+  // gather all of the strings we will need in "strtab" as we will need to
   // write the string table out before the symbol table.
   DataEncoder symtab_encoder(encoder.GetByteOrder(),
                               encoder.GetAddressByteSize());
@@ -1343,7 +1328,7 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 bool Symtab::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache();
+  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
   if (!cache)
     return false;
 

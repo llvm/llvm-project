@@ -9,8 +9,7 @@
 
 #
 # This script performs a monolithic build of the monorepo and runs the tests of
-# most projects on Windows. This should be replaced by per-project scripts that
-# run only the relevant tests.
+# most projects on Windows.
 #
 
 source .ci/utils.sh
@@ -21,7 +20,7 @@ runtimes="${3}"
 runtimes_targets="${4}"
 
 runtime_cmake_args=()
-if [[ " ${runtimes_targets} " == *" check-libclc-amdgcn-amd-amdhsa-llvm "* ]]; then
+if [[ " ${runtimes_targets} " == *" check-libclc "* ]]; then
   runtime_cmake_args+=(
     -D RUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES=libclc
     -D LLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa-llvm"

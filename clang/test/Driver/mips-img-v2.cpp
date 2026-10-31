@@ -1,7 +1,7 @@
 // Check frontend and linker invocations on the IMG v2 MIPS toolchain.
 
 // -EB -mips32r6 -mhard-float -mabi=32
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -29,7 +29,7 @@
 // EB-HARD-O32: "[[TC]]/../../../../sysroot/mips-r6-hard/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 
 // -EB -mips64r6 -mhard-float -mabi=n32
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -57,7 +57,7 @@
 // EB-HARD-N32: "[[TC]]/../../../../sysroot/mips-r6-hard/usr{{/|\\\\}}lib32{{/|\\\\}}crtn.o"
 
 // -EB -mips64r6 -mhard-float -mabi=64
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips64-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -85,7 +85,7 @@
 // EB-HARD-N64: "[[TC]]/../../../../sysroot/mips-r6-hard/usr{{/|\\\\}}lib64{{/|\\\\}}crtn.o"
 
 // -EL -mips32r6 -mhard-float -mabi=32
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -113,7 +113,7 @@
 // EL-HARD-O32: "[[TC]]/../../../../sysroot/mipsel-r6-hard/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 
 // -EL -mips64r6 -mhard-float -mabi=n32
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -141,7 +141,7 @@
 // EL-HARD-N32: "[[TC]]/../../../../sysroot/mipsel-r6-hard/usr{{/|\\\\}}lib32{{/|\\\\}}crtn.o"
 
 // -EL -mips64r6 -mhard-float -mabi=64
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips64-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -169,7 +169,7 @@
 // EL-HARD-N64: "[[TC]]/../../../../sysroot/mipsel-r6-hard/usr{{/|\\\\}}lib64{{/|\\\\}}crtn.o"
 
 // -EB -mips32r6 -msoft-float
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -197,7 +197,7 @@
 // EB-SOFT: "[[TC]]/../../../../sysroot/mips-r6-soft/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 
 // -EL -mips32r6 -msoft-float
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -225,7 +225,7 @@
 // EL-SOFT: "[[TC]]/../../../../sysroot/mipsel-r6-soft/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 
 // -EB -mips32r6 -mhard-float -mmicromips
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -253,7 +253,7 @@
 // EB-HARD-MICRO: "[[TC]]/../../../../sysroot/micromips-r6-hard/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 
 // -EB -mips32r6 -msoft-float -mmicromips
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -281,7 +281,7 @@
 // EB-SOFT-MICRO: "[[TC]]/../../../../sysroot/micromips-r6-soft/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 
 // -EL -mips32r6 -mhard-float -mmicromips
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -309,7 +309,7 @@
 // EL-HARD-MICRO: "[[TC]]/../../../../sysroot/micromipsel-r6-hard/usr{{/|\\\\}}lib{{/|\\\\}}crtn.o"
 
 // -EL -mips32r6 -msoft-float -mmicromips
-// RUN: %clang -### %s 2>&1 \
+// RUN: %clang --sysroot= -### %s 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \

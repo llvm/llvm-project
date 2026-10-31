@@ -10,10 +10,7 @@
 
 // Test hardening assertions for std::vector<bool>.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=none
-// UNSUPPORTED: c++03
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-fast
 
 #include <vector>
 

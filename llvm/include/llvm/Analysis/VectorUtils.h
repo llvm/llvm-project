@@ -14,6 +14,8 @@
 #define LLVM_ANALYSIS_VECTORUTILS_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
@@ -118,6 +120,7 @@ public:
   /// @}
 };
 
+struct AnalysisOptions;
 template <typename T> class ArrayRef;
 class DemandedBits;
 template <typename InstTy> class InterleaveGroup;
@@ -129,6 +132,16 @@ class Value;
 namespace Intrinsic {
 typedef unsigned ID;
 }
+
+/// The kind of update operation performed on the buckets of a histogram, i.e.
+/// buckets[indices[i]] = UpdateOp(buckets[indices[i]], Val).
+enum class HistogramUpdateKind {
+  Add,
+  Sub,
+  UAddSat,
+  UMax,
+  UMin,
+};
 
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
@@ -146,8 +159,7 @@ LLVM_ABI bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// intrinsic is redundant, but we want to implement scalarization of the
 /// vector. To prevent the requirement that an intrinsic also implements
 /// vectorization we provide this separate function.
-LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID,
-                                      const TargetTransformInfo *TTI);
+LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 /// \p TTI is used to consider target specific intrinsics, if no target specific
@@ -163,6 +175,21 @@ isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID, unsigned ScalarOpdIdx,
 LLVM_ABI bool
 isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
                                        const TargetTransformInfo *TTI);
+
+/// Returns the argument index of the pointer parameter for the vector memory
+/// intrinsic \p ID, or `std::nullopt` if the intrinsic does not have a pointer
+/// operand.
+LLVM_ABI std::optional<unsigned>
+getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID);
+
+/// Returns the argument index of the data value of the vector store intrinsic
+/// \p ID, or `std::nullopt` if the intrinsic does not have a data operand.
+LLVM_ABI std::optional<unsigned>
+getVectorStoreIntrinsicDataArgIdx(Intrinsic::ID ID);
+
+/// Returns the argument index of the mask for the vector intrinsic \p ID, or
+/// `std::nullopt` if the intrinsic does not have a mask operand.
+LLVM_ABI std::optional<unsigned> getVectorIntrinsicMaskArgIdx(Intrinsic::ID ID);
 
 /// Identifies if the vector form of the intrinsic that returns a struct is
 /// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
@@ -476,16 +503,6 @@ LLVM_ABI llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
 LLVM_ABI Value *concatenateVectors(IRBuilderBase &Builder,
                                    ArrayRef<Value *> Vecs);
 
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be false or undef.  That is, return true if all
-/// lanes can be assumed inactive.
-LLVM_ABI bool maskIsAllZeroOrUndef(Value *Mask);
-
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be true or undef.  That is, return true if all
-/// lanes can be assumed active.
-LLVM_ABI bool maskIsAllOneOrUndef(Value *Mask);
-
 /// Given a mask vector of i1, Return true if any of the elements of this
 /// predicate mask are known to be true or undef.  That is, return true if at
 /// least one lane can be assumed active.
@@ -553,11 +570,6 @@ public:
       return false;
     int32_t Key = *MaybeKey;
 
-    // Skip if the key is used for either the tombstone or empty special values.
-    if (DenseMapInfo<int32_t>::getTombstoneKey() == Key ||
-        DenseMapInfo<int32_t>::getEmptyKey() == Key)
-      return false;
-
     // Skip if there is already a member with the same index.
     if (Members.contains(Key))
       return false;
@@ -594,6 +606,15 @@ public:
   InstTy *getMember(uint32_t Index) const {
     int32_t Key = SmallestKey + Index;
     return Members.lookup(Key);
+  }
+
+  /// Return an iterator range over the non-null members of this group, in
+  /// index order.
+  auto members() const {
+    return make_filter_range(
+        map_range(seq<uint32_t>(0, Factor),
+                  [this](uint32_t I) { return getMember(I); }),
+        [](InstTy *I) { return I != nullptr; });
   }
 
   /// Get the index for the given member. Unlike the key in the member
@@ -668,10 +689,9 @@ private:
 /// between the member and the group in a map.
 class InterleavedAccessInfo {
 public:
-  InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
-                        DominatorTree *DT, LoopInfo *LI,
-                        const LoopAccessInfo *LAI)
-      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
+  LLVM_ABI InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
+                                 DominatorTree *DT, LoopInfo *LI,
+                                 const LoopAccessInfo *LAI, bool OptForSize);
 
   ~InterleavedAccessInfo() { invalidateGroups(); }
 
@@ -733,6 +753,8 @@ public:
   bool hasGroups() const { return !InterleaveGroups.empty(); }
 
 private:
+  const AnalysisOptions &Opts;
+
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.
   /// Simplifies SCEV expressions in the context of existing SCEV assumptions.
   /// The interleaved access analysis can also add new predicates (for example
@@ -743,6 +765,7 @@ private:
   DominatorTree *DT;
   LoopInfo *LI;
   const LoopAccessInfo *LAI;
+  bool OptForSize;
 
   /// True if the loop may contain non-reversed interleaved groups with
   /// out-of-bounds accesses. We ensure we don't speculatively access memory
@@ -810,13 +833,16 @@ private:
     delete Group;
   }
 
-  /// Collect all the accesses with a constant stride in program order.
+  /// Collect all the accesses with a constant stride in program order. Any
+  /// SCEV predicates needed to compute the strides are added to \p
+  /// Predicates if it is not nullptr.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const DenseMap<Value *, const SCEV *> &Strides);
+      const SymbolicStrideMap &Strides,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
-  LLVM_ABI static bool isStrided(int Stride);
+  LLVM_ABI bool isStrided(int Stride) const;
 
   /// Returns true if \p BB is a predicated block.
   bool isPredicated(BasicBlock *BB) const {

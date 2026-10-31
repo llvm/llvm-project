@@ -4,12 +4,12 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 add_subdirectory(syscall_wrappers)
+add_subdirectory(stat)
 
 add_object_library(
   linux_util
   SRCS
     exit.cpp
-    fcntl.cpp
   HDRS
     io.h
     syscall.h
@@ -17,12 +17,8 @@ add_object_library(
     .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
     libc.src.__support.common
     libc.src.__support.CPP.string_view
-    libc.hdr.fcntl_macros
-    libc.hdr.types.struct_flock
-    libc.hdr.types.struct_flock64
-    libc.hdr.types.struct_f_owner_ex
-    libc.hdr.types.off_t
     libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.syscall_wrappers.exit_group
 )
 
 add_header_library(
@@ -30,8 +26,15 @@ add_header_library(
   HDRS
     auxv.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.sys_auxv_macros
+    libc.hdr.sys_mman_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.CPP.optional
@@ -39,16 +42,79 @@ add_header_library(
 )
 
 add_header_library(
-  getrandom
+  network_syscall_policy
   HDRS
-    getrandom.h
+    network_syscall_policy.h
   DEPENDS
+    libc.hdr.types.socklen_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_sockaddr
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvfrom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendto
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socket
+    libc.src.__support.common
+    libc.src.__support.error_or
+)
+
+add_header_library(
+  path
+  HDRS
+    path.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
+)
+
+add_header_library(
+  shell_fork
+  HDRS
+    shell_fork.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.pid_t
+    libc.src.__support.common
+    libc.src.__support.CPP.functional
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clone3
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execle
+    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
+    libc.src.unistd.environ
+)
+
+add_header_library(
+  sigmask
+  HDRS
+    sigmask.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.hdr.types.size_t
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config
-    libc.hdr.types.ssize_t
-    libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+)
+
+add_header_library(
+  sysinfo
+  HDRS
+    sysinfo.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.ctype_utils
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getaffinity
 )
 
 add_header_library(

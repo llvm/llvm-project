@@ -21,7 +21,7 @@ RT_EXT_API_GROUP_BEGIN
 Descriptor *RTDEF(CUFAllocDescriptor)(
     std::size_t sizeInBytes, const char *sourceFile, int sourceLine) {
   return reinterpret_cast<Descriptor *>(
-      CUFAllocManaged(sizeInBytes, /*asyncObject=*/nullptr));
+      CUFAllocManaged(sizeInBytes, /*alignment=*/0, /*asyncObject=*/nullptr));
 }
 
 void RTDEF(CUFFreeDescriptor)(

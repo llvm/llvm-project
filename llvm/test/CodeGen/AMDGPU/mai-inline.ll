@@ -1,14 +1,14 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 < %s | FileCheck -check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgpu9.08 < %s | FileCheck -check-prefixes=GCN,GFX908 %s
 
 ; GCN-LABEL: {{^}}accvgpr_write_read:
-; GFX908: v_accvgpr_write [[AREG:a[0-9]+]], 1
-; GFX908: v_accvgpr_read [[VREG:v[0-9]+]], [[AREG]]
+; GFX908: v_accvgpr_write_b32 [[AREG:a[0-9]+]], 1
+; GFX908: v_accvgpr_read_b32 [[VREG:v[0-9]+]], [[AREG]]
 ; GFX908: global_store_dword v{{[0-9]+}}, [[VREG]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @accvgpr_write_read(ptr addrspace(1) %arg) {
 bb:
   %in.1 = load float, ptr addrspace(1) %arg
-  %init = tail call float asm "v_accvgpr_write $0, 1", "=a"()
-  %read = tail call float asm "v_accvgpr_read $0, $1", "=v,a"(float %init)
+  %init = tail call float asm "v_accvgpr_write_b32 $0, 1", "=a"()
+  %read = tail call float asm "v_accvgpr_read_b32 $0, $1", "=v,a"(float %init)
   store float %read, ptr addrspace(1) %arg
   ret void
 }

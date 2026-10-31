@@ -138,7 +138,8 @@ aarch64::getAArch64TargetTuneCPU(const llvm::opt::ArgList &Args,
 
 // Decode AArch64 features from string like +[no]featureA+[no]featureB+...
 static bool DecodeAArch64Features(const Driver &D, StringRef text,
-                                  llvm::AArch64::ExtensionSet &Extensions) {
+                                  llvm::AArch64::ExtensionSet &Extensions,
+                                  std::optional<std::string> &InvalidArg) {
   SmallVector<StringRef, 8> Split;
   text.split(Split, StringRef("+"), -1, false);
 
@@ -147,8 +148,10 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
       D.Diag(clang::diag::err_drv_no_neon_modifier);
       continue;
     }
-    if (!Extensions.parseModifier(Feature))
+    if (!Extensions.parseModifier(Feature)) {
+      InvalidArg.emplace(("+" + Feature).str());
       return false;
+    }
   }
 
   return true;
@@ -175,9 +178,9 @@ static bool DecodeAArch64HostFeatures(llvm::AArch64::ExtensionSet &Extensions) {
 // Check if the CPU name and feature modifiers in -mcpu are legal. If yes,
 // decode CPU and feature.
 static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
-                              llvm::AArch64::ExtensionSet &Extensions) {
-  std::pair<StringRef, StringRef> Split = Mcpu.split("+");
-  StringRef CPU = Split.first;
+                              llvm::AArch64::ExtensionSet &Extensions,
+                              std::optional<std::string> &InvalidArg) {
+  auto [CPU, Features] = Mcpu.split("+");
   const bool IsNative = CPU == "native";
 
   if (IsNative)
@@ -185,16 +188,18 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
 
   const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
       llvm::AArch64::parseCpu(CPU);
-  if (!CpuInfo)
+  if (!CpuInfo) {
+    InvalidArg.emplace(CPU.str());
     return false;
+  }
 
   Extensions.addCPUDefaults(*CpuInfo);
 
   if (IsNative && !DecodeAArch64HostFeatures(Extensions))
     return false;
 
-  if (Split.second.size() &&
-      !DecodeAArch64Features(D, Split.second, Extensions))
+  if (Features.size() &&
+      !DecodeAArch64Features(D, Features, Extensions, InvalidArg))
     return false;
 
   return true;
@@ -203,22 +208,25 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu,
 static bool
 getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
                                 const ArgList &Args,
-                                llvm::AArch64::ExtensionSet &Extensions) {
+                                llvm::AArch64::ExtensionSet &Extensions,
+                                std::optional<std::string> &InvalidArg) {
   std::string MarchLowerCase = March.lower();
-  std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
+  auto [CPU, Features] = StringRef(MarchLowerCase).split("+");
 
-  if (Split.first == "native")
-    return DecodeAArch64Mcpu(D, MarchLowerCase, Extensions);
+  if (CPU == "native")
+    return DecodeAArch64Mcpu(D, MarchLowerCase, Extensions, InvalidArg);
 
   const llvm::AArch64::ArchInfo *ArchInfo =
-      llvm::AArch64::parseArch(Split.first);
-  if (!ArchInfo)
+      llvm::AArch64::parseArch(CPU);
+  if (!ArchInfo) {
+    InvalidArg.emplace(CPU.str());
     return false;
+  }
 
   Extensions.addArchDefaults(*ArchInfo);
 
-  if ((Split.second.size() &&
-       !DecodeAArch64Features(D, Split.second, Extensions)))
+  if ((Features.size() &&
+       !DecodeAArch64Features(D, Features, Extensions, InvalidArg)))
     return false;
 
   return true;
@@ -227,23 +235,27 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
 static bool
 getAArch64ArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
                                const ArgList &Args,
-                               llvm::AArch64::ExtensionSet &Extensions) {
+                               llvm::AArch64::ExtensionSet &Extensions,
+                               std::optional<std::string> &InvalidArg) {
   std::string McpuLowerCase = Mcpu.lower();
-  return DecodeAArch64Mcpu(D, McpuLowerCase, Extensions);
+  return DecodeAArch64Mcpu(D, McpuLowerCase, Extensions, InvalidArg);
 }
 
-static bool getAArch64MicroArchFeaturesFromMtune(const Driver &D,
-                                                 StringRef Mtune,
-                                                 const ArgList &Args) {
+static bool
+getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
+                                     const ArgList &Args,
+                                     std::optional<std::string> &InvalidArg) {
   // Check CPU name is valid, but ignore any extensions on it.
   std::string MtuneLowerCase = Mtune.lower();
   llvm::AArch64::ExtensionSet Extensions;
-  return DecodeAArch64Mcpu(D, MtuneLowerCase, Extensions);
+  return DecodeAArch64Mcpu(D, MtuneLowerCase, Extensions, InvalidArg);
 }
 
-static bool getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
-                                                const ArgList &Args) {
-  return getAArch64MicroArchFeaturesFromMtune(D, Mcpu, Args);
+static bool
+getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
+                                    const ArgList &Args,
+                                    std::optional<std::string> &InvalidArg) {
+  return getAArch64MicroArchFeaturesFromMtune(D, Mcpu, Args, InvalidArg);
 }
 
 void aarch64::getAArch64TargetFeatures(const Driver &D,
@@ -253,6 +265,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        bool ForAS, bool ForMultilib) {
   Arg *A;
   bool success = true;
+  std::optional<std::string> InvalidArg;
   llvm::StringRef WaMArch;
   llvm::AArch64::ExtensionSet Extensions;
   if (ForAS)
@@ -265,37 +278,46 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   // "-Xassembler -march" is detected. Otherwise it may return false
   // and causes Clang to error out.
   if (!WaMArch.empty())
-    success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Extensions);
+    success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Extensions,
+                                              InvalidArg);
   else if ((A = Args.getLastArg(options::OPT_march_EQ)))
-    success =
-        getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Extensions);
+    success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args,
+                                              Extensions, InvalidArg);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success =
-        getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
+    success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions,
+                                             InvalidArg);
   else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
-        D, getAArch64TargetCPUByTriple(Triple), Args, Extensions);
+        D, getAArch64TargetCPUByTriple(Triple), Args, Extensions, InvalidArg);
   else
     // Default to 'A' profile if the architecture is not specified.
-    success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
+    success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions,
+                                              InvalidArg);
 
   if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
-    success = getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args);
+    success = getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args,
+                                                   InvalidArg);
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success = getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args);
+    success =
+        getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args, InvalidArg);
   else if (success) {
     if (auto TuneCPU = getAArch64TargetTuneCPUByTriple(Triple))
-      success = getAArch64MicroArchFeaturesFromMtune(D, *TuneCPU, Args);
+      success =
+          getAArch64MicroArchFeaturesFromMtune(D, *TuneCPU, Args, InvalidArg);
   }
 
   if (!success) {
     auto Diag = D.Diag(diag::err_drv_unsupported_option_argument);
     // If "-Wa,-march=" is used, 'WaMArch' will contain the argument's value,
     // while 'A' is uninitialized. Only dereference 'A' in the other case.
-    if (!WaMArch.empty())
+    if (!WaMArch.empty() && InvalidArg)
+      Diag << "-march=" << *InvalidArg;
+    else if (!WaMArch.empty())
       Diag << "-march=" << WaMArch;
-    else
+    else if (!InvalidArg)
       Diag << A->getSpelling() << A->getValue();
+    else
+      Diag << A->getSpelling() << *InvalidArg;
   }
 
   // -mgeneral-regs-only disables all floating-point features.

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefixes=CO-V4,HSA,ALL %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d < %s | FileCheck -check-prefixes=CO-V4,OS-MESA3D,ALL %s
-; RUN: llc -mtriple=amdgcn-mesa-unknown < %s | FileCheck -check-prefixes=OS-UNKNOWN,ALL %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefixes=CO-V4,HSA,ALL %s
+; RUN: llc -mtriple=amdgpu6.00-mesa-mesa3d < %s | FileCheck -check-prefixes=CO-V4,OS-MESA3D,ALL %s
+; RUN: llc -mtriple=amdgpu6.00-mesa-unknown < %s | FileCheck -check-prefixes=OS-UNKNOWN,ALL %s
 
 ; ALL-LABEL: {{^}}test:
 ; OS-MESA3D: enable_sgpr_kernarg_segment_ptr = 1

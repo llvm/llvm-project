@@ -372,7 +372,7 @@ func.func @multiple_materialize_in_destination_buffer(%m: memref<5xf32>, %f: f32
 func.func @eliminate_all_empty_tensors() -> tensor<5x6x128xf32> {
   %cst_1 = arith.constant 1.0 : f32
   %cst_2 = arith.constant 2.0 : f32
-  // CHECK: memref.alloc() {alignment = 64 : i64} : memref<5x6x128xf32>
+  // CHECK: memref.alloc() alignment = 64 : memref<5x6x128xf32>
   // CHECK-NOT: memref.alloc
   %empty_1 = tensor.empty() : tensor<5x6x64xf32>
   %res_1 = linalg.fill ins(%cst_1 : f32) outs(%empty_1 : tensor<5x6x64xf32>) -> tensor<5x6x64xf32>
@@ -393,7 +393,7 @@ func.func @eliminate_all_empty_tensors() -> tensor<5x6x128xf32> {
 func.func @eliminate_concatenated_empty_tensors() -> tensor<5x6x128xf32> {
   %cst_1 = arith.constant 1.0 : f32
   %cst_2 = arith.constant 2.0 : f32
-  // CHECK: memref.alloc() {alignment = 64 : i64} : memref<5x6x128xf32>
+  // CHECK: memref.alloc() alignment = 64 : memref<5x6x128xf32>
   // CHECK-NOT: memref.alloc
   %concatenated_empty = tensor.empty() : tensor<5x6x128xf32>
   %empty_1 = tensor.empty() : tensor<5x6x64xf32>
@@ -416,7 +416,7 @@ func.func @eliminate_concatenated_empty_tensors() -> tensor<5x6x128xf32> {
 
 // CHECK-ELIM-LABEL:   func.func @multi_use_of_the_same_tensor_empty
 // CHECK-LABEL:   func.func @multi_use_of_the_same_tensor_empty
-//       CHECK:   memref.alloc() {alignment = 64 : i64} : memref<5x6x128xf32>
+//       CHECK:   memref.alloc() alignment = 64 : memref<5x6x128xf32>
 //   CHECK-NOT:   memref.alloc
 //   CHECK-NOT:   memref.copy
 //  CHECK-ELIM:   tensor.extract_slice {{.*}}[0, 0, 0]
@@ -445,7 +445,7 @@ func.func @multi_use_of_the_same_tensor_empty_creates_non_existent_read(%arg1: t
     -> (tensor<5x6x128xf32>, tensor<5x6x64xf32>) {
   %cst_1 = arith.constant 1.0 : f32
   %empty_1 = tensor.empty() : tensor<5x6x64xf32>
-  // CHECK: memref.alloc() {alignment = 64 : i64} : memref<5x6x64xf32>
+  // CHECK: memref.alloc() alignment = 64 : memref<5x6x64xf32>
   // CHECK-NOT: memref.alloc
   %res_1 = linalg.fill ins(%cst_1 : f32) outs(%empty_1 : tensor<5x6x64xf32>) -> tensor<5x6x64xf32>
   %res_2 = linalg.generic{

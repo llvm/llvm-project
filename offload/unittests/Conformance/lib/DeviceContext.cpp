@@ -154,11 +154,12 @@ const llvm::SetVector<llvm::StringRef> &mathtest::getPlatforms() {
   return Platforms;
 }
 
-void detail::allocManagedMemory(ol_device_handle_t DeviceHandle,
+void detail::allocManagedMemory(ol_context_handle_t Context,
+                                ol_device_handle_t DeviceHandle,
                                 std::size_t Size,
                                 void **AllocationOut) noexcept {
-  OL_CHECK(
-      olMemAlloc(DeviceHandle, OL_ALLOC_TYPE_MANAGED, Size, AllocationOut));
+  OL_CHECK(olMemAlloc(Context, DeviceHandle, OL_ALLOC_TYPE_MANAGED, Size,
+                      AllocationOut));
 }
 
 //===----------------------------------------------------------------------===//
@@ -175,6 +176,7 @@ DeviceContext::DeviceContext(std::size_t GlobalDeviceId)
                 llvm::Twine(Devices.size()));
 
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  OL_CHECK(olCreateContext(1, &DeviceHandle, &Context));
 }
 
 DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
@@ -210,6 +212,12 @@ DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
 
   GlobalDeviceId = *FoundGlobalDeviceId;
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  OL_CHECK(olCreateContext(1, &DeviceHandle, &Context));
+}
+
+DeviceContext::~DeviceContext() {
+  if (Context)
+    olDestroyContext(Context);
 }
 
 [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
@@ -245,7 +253,7 @@ DeviceContext::loadBinary(llvm::StringRef Directory,
 
   ol_program_handle_t ProgramHandle = nullptr;
   const ol_result_t OlResult =
-      olCreateProgram(DeviceHandle, BinaryData->getBufferStart(),
+      olCreateProgram(Context, DeviceHandle, BinaryData->getBufferStart(),
                       BinaryData->getBufferSize(), &ProgramHandle);
 
   if (OlResult != OL_SUCCESS) {
@@ -286,17 +294,18 @@ DeviceContext::getKernelHandle(ol_program_handle_t ProgramHandle,
   return Handle;
 }
 
-void DeviceContext::launchKernelImpl(
-    ol_symbol_handle_t KernelHandle, uint32_t NumGroups, uint32_t GroupSize,
-    const void *KernelArgs, std::size_t KernelArgsSize) const noexcept {
+void DeviceContext::launchKernelImpl(ol_symbol_handle_t KernelHandle,
+                                     uint32_t NumGroups, uint32_t GroupSize,
+                                     size_t NumArgs, void **ArgPtrs,
+                                     const size_t *ArgSizes) const noexcept {
   ol_kernel_launch_size_args_t LaunchSizeArgs;
   LaunchSizeArgs.Dimensions = 1;
   LaunchSizeArgs.NumGroups = {NumGroups, 1, 1};
   LaunchSizeArgs.GroupSize = {GroupSize, 1, 1};
   LaunchSizeArgs.DynSharedMemory = 0;
 
-  OL_CHECK(olLaunchKernel(nullptr, DeviceHandle, KernelHandle, KernelArgs,
-                          KernelArgsSize, &LaunchSizeArgs));
+  OL_CHECK(olLaunchKernel(nullptr, DeviceHandle, KernelHandle, &LaunchSizeArgs,
+                          nullptr, NumArgs, ArgPtrs, ArgSizes));
 }
 
 [[nodiscard]] llvm::StringRef DeviceContext::getName() const noexcept {

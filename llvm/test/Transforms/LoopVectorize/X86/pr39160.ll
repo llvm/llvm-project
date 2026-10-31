@@ -14,14 +14,14 @@ define i32 @foo(ptr addrspace(1) %p) {
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDVAR]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 1, [[INDVAR]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP0]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 1, [[N_VEC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[N_VEC]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[N_VEC]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 6, [[TMP2]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

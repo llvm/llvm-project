@@ -17,6 +17,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class Instruction;
 
 // Class for identifying profitable indirect call promotion candidates when
@@ -30,12 +31,13 @@ private:
   // TotalCount is the total call count for the indirect-call callsite.
   // RemainingCount is the TotalCount minus promoted-direct-call count.
   // Return true we should promote this indirect-call target.
-  bool isPromotionProfitable(uint64_t Count, uint64_t TotalCount,
-                             uint64_t RemainingCount);
+  bool isPromotionProfitable(const AnalysisOptions &Opts, uint64_t Count,
+                             uint64_t TotalCount, uint64_t RemainingCount);
 
   // Returns the number of profitable candidates to promote for the
   // current ValueDataArray and the given \p Inst.
-  uint32_t getProfitablePromotionCandidates(const Instruction *Inst,
+  uint32_t getProfitablePromotionCandidates(const AnalysisOptions &Opts,
+                                            const Instruction *Inst,
                                             uint64_t TotalCount);
 
   // Noncopyable
@@ -57,9 +59,11 @@ public:
   ///
   /// The returned array space is owned by this class, and overwritten on
   /// subsequent calls.
-  MutableArrayRef<InstrProfValueData> getPromotionCandidatesForInstruction(
-      const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates,
-      unsigned MaxNumValueData = 0);
+  LLVM_ABI MutableArrayRef<InstrProfValueData>
+  getPromotionCandidatesForInstruction(const Instruction *I,
+                                       uint64_t &TotalCount,
+                                       uint32_t &NumCandidates,
+                                       unsigned MaxNumValueData = 0);
 };
 
 } // end namespace llvm

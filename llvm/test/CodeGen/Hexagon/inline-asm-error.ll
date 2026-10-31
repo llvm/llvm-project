@@ -1,6 +1,6 @@
 ; RUN: not llc -mtriple=hexagon < %s 2>&1 | FileCheck %s
 
-; CHECK: error: Don't know how to handle indirect register inputs yet for constraint 'r'
+; CHECK: error: cannot handle indirect register inputs yet for constraint 'r'
 
 %s.0 = type { ptr, i32, %s.1 }
 %s.1 = type { %s.2 }

@@ -63,7 +63,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   /// A non-owning pointer to slice_array.__vp_.
@@ -110,9 +110,9 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::GetChildAtIndex(
   offset = offset + m_start->GetValueAsUnsigned(0);
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), offset,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), offset,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 lldb::ChildCacheState
@@ -147,10 +147,10 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (!m_start)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  auto optional_idx = formatters::ExtractIndexFromString(name);
   if (!optional_idx) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }

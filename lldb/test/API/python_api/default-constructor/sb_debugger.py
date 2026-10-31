@@ -20,6 +20,8 @@ def fuzz_obj(obj):
     obj.GetCommandInterpreter()
     obj.HandleCommand("nothing here")
     listener = obj.GetListener()
+    broadcaster = obj.GetBroadcaster()
+    broadcaster.GetName()
     try:
         obj.HandleProcessEvent(lldb.SBProcess(), lldb.SBEvent(), None, None)
     except Exception:

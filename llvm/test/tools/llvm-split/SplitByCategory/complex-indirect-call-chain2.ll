@@ -1,6 +1,6 @@
 ; Check that Module splitting can trace indirect calls through signatures.
 
-; RUN: llvm-split -split-by-category=module-id -S < %s -o %t
+; RUN: llvm-split -split-by-category=attribute --category-attribute=module-id -S < %s -o %t
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefix CHECK0 \
 ; RUN:     --implicit-check-not @kernel_A --implicit-check-not @bbb
 ; RUN: FileCheck %s -input-file=%t_1.ll --check-prefix CHECK1 \

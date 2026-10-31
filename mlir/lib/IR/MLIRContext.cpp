@@ -182,12 +182,15 @@ public:
   /// An allocator used for AbstractAttribute and AbstractType objects.
   llvm::BumpPtrAllocator abstractDialectSymbolAllocator;
 
-  /// This is a mapping from operation name to the operation info describing it.
-  llvm::StringMap<std::unique_ptr<OperationName::Impl>> operations;
+  /// This is a mapping from unregistered operation name to the operation info
+  /// describing it.
+  llvm::StringMap<std::unique_ptr<OperationName::Impl>>
+      unregisteredOperationsByName;
 
   /// A vector of operation info specifically for registered operations.
   llvm::DenseMap<TypeID, RegisteredOperationName> registeredOperations;
-  llvm::StringMap<RegisteredOperationName> registeredOperationsByName;
+  llvm::StringMap<std::unique_ptr<OperationName::Impl>, llvm::BumpPtrAllocator>
+      registeredOperationsByName;
 
   /// This is a sorted container of registered operations for a deterministic
   /// and efficient `getRegisteredOperations` implementation.
@@ -269,13 +272,33 @@ public:
   /// destruction.
   DistinctAttributeAllocator distinctAttributeAllocator;
 
+  /// Bundled state dynamically allocated when in a transient scope.
+  struct TransientScopeState {
+    /// Set of operation names in `unregisteredOperationsByName` at snapshot
+    /// time.
+    llvm::DenseSet<StringRef> baseOperations;
+
+    /// Number of entries in `dialectReferencingStrAttrs` per dialect at
+    /// snapshot time.
+    llvm::DenseMap<StringRef, size_t> baseDialectReferencingStrAttrCounts;
+  };
+  std::unique_ptr<TransientScopeState> transientState;
+
 public:
   MLIRContextImpl(bool threadingIsEnabled)
       : threadingIsEnabled(threadingIsEnabled) {
     if (threadingIsEnabled) {
       ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
       threadPool = ownedThreadPool.get();
+    } else {
+      disableUniquerMultithreading(true);
     }
+  }
+  /// Update the threading mode for each of the uniquers.
+  void disableUniquerMultithreading(bool disable) {
+    affineUniquer.disableMultithreading(disable);
+    attributeUniquer.disableMultithreading(disable);
+    typeUniquer.disableMultithreading(disable);
   }
   ~MLIRContextImpl() {
     for (auto typeMapping : registeredTypes)
@@ -362,22 +385,20 @@ MLIRContext::~MLIRContext() {
   impl->remarkEngine.reset();
 }
 
-/// Copy the specified array of elements into memory managed by the provided
-/// bump pointer allocator.  This assumes the elements are all PODs.
-template <typename T>
-static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
-                                    ArrayRef<T> elements) {
-  auto result = allocator.Allocate<T>(elements.size());
-  llvm::uninitialized_copy(elements, result);
-  return ArrayRef<T>(result, elements.size());
-}
-
 //===----------------------------------------------------------------------===//
 // Action Handling
 //===----------------------------------------------------------------------===//
 
 void MLIRContext::registerActionHandler(HandlerTy handler) {
   getImpl().actionHandler = std::move(handler);
+}
+
+const MLIRContext::HandlerTy &MLIRContext::getActionHandler() const {
+  return getImpl().actionHandler;
+}
+
+MLIRContext::HandlerTy &MLIRContext::getActionHandler() {
+  return getImpl().actionHandler;
 }
 
 /// Dispatch the provided action to the handler if any, or just execute it.
@@ -420,6 +441,9 @@ void MLIRContext::appendDialectRegistry(const DialectRegistry &registry) {
   assert(impl->multiThreadedExecutionContext == 0 &&
          "appending to the MLIRContext dialect registry while in a "
          "multi-threaded execution context");
+  assert(!impl->transientState &&
+         "cannot append to dialect registry while in a transient scope");
+
   registry.appendTo(impl->dialectsRegistry);
 
   // For the already loaded dialects, apply any possible extensions immediately.
@@ -444,7 +468,7 @@ std::vector<Dialect *> MLIRContext::getLoadedDialects() {
 }
 std::vector<StringRef> MLIRContext::getAvailableDialects() {
   std::vector<StringRef> result;
-  for (auto dialect : impl->dialectsRegistry.getDialectNames())
+  for (auto dialect : impl->dialectsRegistry.getRegisteredDialectNames())
     result.push_back(dialect);
   return result;
 }
@@ -478,6 +502,8 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
 
   if (dialectIt.second) {
     LDBG() << "Load new dialect in Context " << dialectNamespace;
+    assert(!impl.transientState &&
+           "cannot load new dialects while in a transient scope");
 #ifndef NDEBUG
     if (impl.multiThreadedExecutionContext != 0)
       llvm::report_fatal_error(
@@ -594,9 +620,9 @@ void MLIRContext::allowUnregisteredDialects(bool allowing) {
 }
 
 /// Return true if multi-threading is enabled by the context.
-bool MLIRContext::isMultithreadingEnabled() {
-  return impl->threadingIsEnabled && llvm::llvm_is_multithreaded();
-}
+#if LLVM_ENABLE_THREADS
+bool MLIRContext::isMultithreadingEnabled() { return impl->threadingIsEnabled; }
+#endif
 
 /// Set the flag specifying if multi-threading is disabled by the context.
 void MLIRContext::disableMultithreading(bool disable) {
@@ -610,10 +636,7 @@ void MLIRContext::disableMultithreading(bool disable) {
 
   impl->threadingIsEnabled = !disable;
 
-  // Update the threading mode for each of the uniquers.
-  impl->affineUniquer.disableMultithreading(disable);
-  impl->attributeUniquer.disableMultithreading(disable);
-  impl->typeUniquer.disableMultithreading(disable);
+  impl->disableUniquerMultithreading(disable);
 
   // Destroy thread pool (stop all threads) if it is no longer needed, or create
   // a new one if multithreading was re-enabled.
@@ -669,6 +692,95 @@ void MLIRContext::exitMultiThreadedExecution() {
 #ifndef NDEBUG
   --impl->multiThreadedExecutionContext;
 #endif
+}
+
+void MLIRContext::beginTransientScope() {
+  MLIRContextImpl &ctxImpl = getImpl();
+  assert(ctxImpl.multiThreadedExecutionContext == 0 &&
+         "Beginning a transient scope while in a multi-threaded execution "
+         "context");
+  assert(!ctxImpl.transientState && "context is already in a transient scope");
+  ctxImpl.transientState =
+      std::make_unique<MLIRContextImpl::TransientScopeState>();
+
+  // Begin transient scope in the uniquers.
+  ctxImpl.typeUniquer.beginTransientScope();
+  ctxImpl.attributeUniquer.beginTransientScope();
+  ctxImpl.affineUniquer.beginTransientScope();
+  ctxImpl.distinctAttributeAllocator.beginTransientScope();
+
+  // Record base unregistered operations.
+  {
+    llvm::sys::SmartScopedReader<true> contextLock(ctxImpl.operationInfoMutex);
+    for (const auto &entry : ctxImpl.unregisteredOperationsByName)
+      ctxImpl.transientState->baseOperations.insert(entry.first());
+  }
+
+  // Record dialect referencing string attribute counts.
+  {
+    llvm::sys::SmartScopedLock<true> lock(ctxImpl.dialectRefStrAttrMutex);
+    for (const auto &entry : ctxImpl.dialectReferencingStrAttrs)
+      ctxImpl.transientState->baseDialectReferencingStrAttrCounts[entry.first] =
+          entry.second.size();
+  }
+}
+
+void MLIRContext::endTransientScope() {
+  MLIRContextImpl &ctxImpl = getImpl();
+  assert(ctxImpl.transientState && "context is not in a transient scope");
+  assert(ctxImpl.multiThreadedExecutionContext == 0 &&
+         "Ending a transient scope while in a multi-threaded execution "
+         "context");
+  if (!ctxImpl.transientState)
+    return;
+
+  // Prune unregistered operations created during transient scope before
+  // destroying the attribute uniquer that holds their string attribute names.
+  {
+    llvm::sys::SmartScopedWriter<true> contextLock(ctxImpl.operationInfoMutex);
+    SmallVector<StringRef> opsToErase;
+    for (const auto &entry : ctxImpl.unregisteredOperationsByName)
+      if (!ctxImpl.transientState->baseOperations.contains(entry.first()))
+        opsToErase.push_back(entry.first());
+    for (StringRef op : opsToErase)
+      ctxImpl.unregisteredOperationsByName.erase(op);
+  }
+
+  // Restore dialect referencing string attributes before destroying the
+  // attribute uniquer that holds the underlying StringAttrStorage pointers.
+  // Note: Transient entries are always appended to the end of each dialect's
+  // vector, so truncating via resize() to the base count safely removes only
+  // transient entries while preserving base entries.
+  {
+    llvm::sys::SmartScopedLock<true> lock(ctxImpl.dialectRefStrAttrMutex);
+    SmallVector<StringRef> dialectsToErase;
+    for (auto &entry : ctxImpl.dialectReferencingStrAttrs) {
+      auto countIt =
+          ctxImpl.transientState->baseDialectReferencingStrAttrCounts.find(
+              entry.first);
+      if (countIt ==
+          ctxImpl.transientState->baseDialectReferencingStrAttrCounts.end()) {
+        dialectsToErase.push_back(entry.first);
+      } else {
+        entry.second.resize(countIt->second);
+      }
+    }
+    for (StringRef dialect : dialectsToErase)
+      ctxImpl.dialectReferencingStrAttrs.erase(dialect);
+  }
+
+  // End transient scope in the uniquers now that all referencing structures
+  // are cleaned up.
+  ctxImpl.typeUniquer.endTransientScope();
+  ctxImpl.attributeUniquer.endTransientScope();
+  ctxImpl.affineUniquer.endTransientScope();
+  ctxImpl.distinctAttributeAllocator.endTransientScope();
+
+  ctxImpl.transientState.reset();
+}
+
+bool MLIRContext::isInTransientScope() const {
+  return getImpl().transientState != nullptr;
 }
 
 /// Return true if we should attach the operation to diagnostics emitted via
@@ -805,21 +917,21 @@ OperationName::Impl::Impl(StringRef name, Dialect *dialect, TypeID typeID,
 OperationName::OperationName(StringRef name, MLIRContext *context) {
   MLIRContextImpl &ctxImpl = context->getImpl();
 
+  // Check the registered info map first. In the overwhelmingly common case,
+  // the entry will be in here and it also removes the need to acquire any
+  // locks.
+  auto registeredIt = ctxImpl.registeredOperationsByName.find(name);
+  if (LLVM_LIKELY(registeredIt != ctxImpl.registeredOperationsByName.end())) {
+    impl = registeredIt->second.get();
+    return;
+  }
+
   // Check for an existing name in read-only mode.
   bool isMultithreadingEnabled = context->isMultithreadingEnabled();
   if (isMultithreadingEnabled) {
-    // Check the registered info map first. In the overwhelmingly common case,
-    // the entry will be in here and it also removes the need to acquire any
-    // locks.
-    auto registeredIt = ctxImpl.registeredOperationsByName.find(name);
-    if (LLVM_LIKELY(registeredIt != ctxImpl.registeredOperationsByName.end())) {
-      impl = registeredIt->second.impl;
-      return;
-    }
-
     llvm::sys::SmartScopedReader<true> contextLock(ctxImpl.operationInfoMutex);
-    auto it = ctxImpl.operations.find(name);
-    if (it != ctxImpl.operations.end()) {
+    auto it = ctxImpl.unregisteredOperationsByName.find(name);
+    if (it != ctxImpl.unregisteredOperationsByName.end()) {
       impl = it->second.get();
       return;
     }
@@ -828,7 +940,7 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   // Acquire a writer-lock so that we can safely create the new instance.
   ScopedWriterLock lock(ctxImpl.operationInfoMutex, isMultithreadingEnabled);
 
-  auto it = ctxImpl.operations.try_emplace(name);
+  auto it = ctxImpl.unregisteredOperationsByName.try_emplace(name);
   if (it.second) {
     auto nameAttr = StringAttr::get(context, name);
     it.first->second = std::make_unique<UnregisteredOpModel>(
@@ -892,8 +1004,8 @@ void OperationName::UnregisteredOpModel::setInherentAttr(Operation *op,
   *op->getPropertiesStorage().as<Attribute *>() =
       attrs.getDictionary(op->getContext());
 }
-void OperationName::UnregisteredOpModel::populateInherentAttrs(
-    Operation *op, NamedAttrList &attrs) {}
+void OperationName::UnregisteredOpModel::walkInherentAttrs(
+    Operation *op, InherentAttrVisitor visitor) {}
 LogicalResult OperationName::UnregisteredOpModel::verifyInherentAttrs(
     OperationName opName, NamedAttrList &attributes,
     function_ref<InFlightDiagnostic()> emitError) {
@@ -955,7 +1067,7 @@ RegisteredOperationName::lookup(StringRef name, MLIRContext *ctx) {
   auto &impl = ctx->getImpl();
   auto it = impl.registeredOperationsByName.find(name);
   if (it != impl.registeredOperationsByName.end())
-    return it->getValue();
+    return RegisteredOperationName(it->second.get());
   return std::nullopt;
 }
 
@@ -981,15 +1093,13 @@ void RegisteredOperationName::insert(
     impl->attributeNames = cachedAttrNames;
   }
   StringRef name = impl->getName().strref();
-  // Insert the operation info if it doesn't exist yet.
-  ctxImpl.operations[name] = std::move(ownedImpl);
 
   // Update the registered info for this operation.
   auto emplaced = ctxImpl.registeredOperations.try_emplace(
       impl->getTypeID(), RegisteredOperationName(impl));
   assert(emplaced.second && "operation name registration must be successful");
   auto emplacedByName = ctxImpl.registeredOperationsByName.try_emplace(
-      name, RegisteredOperationName(impl));
+      name, std::move(ownedImpl));
   (void)emplacedByName;
   assert(emplacedByName.second &&
          "operation name registration must be successful");
@@ -1003,6 +1113,10 @@ void RegisteredOperationName::insert(
                                  rhs.getIdentifier().strref();
                         }),
       value);
+}
+
+void *RegisteredOperationName::allocateModelStorage() {
+  return ::operator new(sizeof(Impl));
 }
 
 //===----------------------------------------------------------------------===//

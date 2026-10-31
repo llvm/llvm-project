@@ -196,6 +196,8 @@
 #    define ASAN_SHADOW_OFFSET_CONST 0x30000000
 #  elif SANITIZER_IOS
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
+#  elif SANITIZER_AIX
+#    define ASAN_SHADOW_OFFSET_CONST 0x40000000
 #  elif defined(__hexagon__)
 #    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  else
@@ -210,10 +212,16 @@
 #    define ASAN_SHADOW_OFFSET_CONST 0x0000800000000000
 #  elif SANITIZER_RISCV64
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
+#  elif SANITIZER_ALPHA
+#    define ASAN_SHADOW_OFFSET_CONST 0x70000000000
 #  elif defined(__aarch64__)
 #    define ASAN_SHADOW_OFFSET_CONST 0x0000001000000000
 #  elif defined(__powerpc64__)
-#    define ASAN_SHADOW_OFFSET_CONST 0x0000100000000000
+#    if SANITIZER_AIX
+#      define ASAN_SHADOW_OFFSET_CONST 0x0a01000000000000
+#    else
+#      define ASAN_SHADOW_OFFSET_CONST 0x0000100000000000
+#    endif
 #  elif defined(__s390x__)
 #    define ASAN_SHADOW_OFFSET_CONST 0x0010000000000000
 #  elif SANITIZER_FREEBSD
@@ -292,6 +300,8 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 #  if defined(__sparc__) && SANITIZER_WORDSIZE == 64
 #    include "asan_mapping_sparc64.h"
+#  elif SANITIZER_AIX && SANITIZER_WORDSIZE == 64
+#    include "asan_mapping_aix64.h"
 #  else
 #    define MEM_TO_SHADOW(mem) \
       ((STRIP_MTE_TAG(mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
@@ -311,6 +321,15 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 #    define kMidShadowBeg MEM_TO_SHADOW(kMidMemBeg)
 #    define kMidShadowEnd MEM_TO_SHADOW(kMidMemEnd)
+
+// If the first byte of shadow can be placed after the last byte of app mem,
+// we don't need a gap since the shadow's shadow won't be in the middle
+// of app mem.
+#    if SANITIZER_APPLE
+#      define kGaplessShadow (kLowShadowBeg > kHighMemEnd)
+#    else
+#      define kGaplessShadow (false)
+#    endif
 
 // With the zero shadow base we can not actually map pages starting from 0.
 // This constant is somewhat arbitrary.

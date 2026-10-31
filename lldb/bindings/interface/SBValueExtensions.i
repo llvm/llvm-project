@@ -19,9 +19,10 @@ STRING_EXTENSION_OUTSIDE(SBValue)
 
             def __getitem__(self, key):
                 if isinstance(key, int):
-                    count = len(self)
-                    if -count <= key < count:
-                        key %= count
+                    if key < 0:
+                        # Support pythonic negative indexing.
+                        key += len(self)
+                    if key >= 0:
                         return self.sbvalue.GetChildAtIndex(key)
                 return None
 
@@ -55,7 +56,8 @@ STRING_EXTENSION_OUTSIDE(SBValue)
 
         def __iter__(self):
             '''Iterate over all child values of a lldb.SBValue object.'''
-            return lldb_iter(self, 'GetNumChildren', 'GetChildAtIndex')
+            for i in range(self.GetNumChildren()):
+                yield self.GetChildAtIndex(i)
 
         def __len__(self):
             '''Return the number of child values of a lldb.SBValue object.'''
@@ -68,7 +70,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
         type = property(GetType, None, doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
         size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this value.''')
         is_in_scope = property(IsInScope, None, doc='''A read only property that returns a boolean value that indicates whether this value is currently lexically in scope.''')
-        format = property(GetName, SetFormat, doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
+        format = property(GetFormat, SetFormat, doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
         value = property(GetValue, SetValueFromCString, doc='''A read/write property that gets/sets value from a string.''')
         value_type = property(GetValueType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eValueType") that represents the type of this value (local, argument, global, register, etc.).''')
         changed = property(GetValueDidChange, None, doc='''A read only property that returns a boolean value that indicates if this value has changed since it was last updated.''')
@@ -86,6 +88,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
         process = property(GetProcess, None, doc='''A read only property that returns the lldb.SBProcess that this value is associated with, the returned value might be invalid and should be tested.''')
         thread = property(GetThread, None, doc='''A read only property that returns the lldb.SBThread that this value is associated with, the returned value might be invalid and should be tested.''')
         frame = property(GetFrame, None, doc='''A read only property that returns the lldb.SBFrame that this value is associated with, the returned value might be invalid and should be tested.''')
+        parent = property(GetParent, None, doc='''A read only property that returns the lldb.SBValue that is the parent of this value.''')
         num_children = property(GetNumChildren, None, doc='''A read only property that returns the number of child lldb.SBValues that this value has.''')
         unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this SBValue as an usigned integer.''')
         signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this SBValue as a signed integer.''')

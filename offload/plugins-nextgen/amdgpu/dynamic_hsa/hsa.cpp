@@ -61,6 +61,7 @@ DLWRAP(hsa_amd_agent_iterate_memory_pools, 3)
 DLWRAP(hsa_amd_memory_pool_allocate, 4)
 DLWRAP(hsa_amd_memory_pool_free, 1)
 DLWRAP(hsa_amd_memory_async_copy, 8)
+DLWRAP(hsa_amd_memory_async_copy_on_engine, 10)
 DLWRAP(hsa_amd_memory_pool_get_info, 3)
 DLWRAP(hsa_amd_agents_allow_access, 4)
 DLWRAP(hsa_amd_memory_lock, 5)
@@ -71,10 +72,18 @@ DLWRAP(hsa_amd_signal_create, 5)
 DLWRAP(hsa_amd_signal_async_handler, 5)
 DLWRAP(hsa_amd_pointer_info, 5)
 DLWRAP(hsa_amd_profiling_get_dispatch_time, 3)
+DLWRAP(hsa_amd_profiling_get_async_copy_time, 2)
 DLWRAP(hsa_amd_profiling_set_profiler_enabled, 2)
 DLWRAP(hsa_code_object_reader_create_from_memory, 3)
 DLWRAP(hsa_code_object_reader_destroy, 1)
 DLWRAP(hsa_executable_load_agent_code_object, 5)
+DLWRAP(hsa_amd_vmem_address_reserve, 4)
+DLWRAP(hsa_amd_vmem_address_free, 2)
+DLWRAP(hsa_amd_vmem_handle_create, 5)
+DLWRAP(hsa_amd_vmem_handle_release, 1)
+DLWRAP(hsa_amd_vmem_map, 5)
+DLWRAP(hsa_amd_vmem_unmap, 2)
+DLWRAP(hsa_amd_vmem_set_access, 4)
 
 DLWRAP_FINALIZE()
 
@@ -89,25 +98,13 @@ DLWRAP_FINALIZE()
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 #endif
 
-static bool checkForHSA() {
-  // return true if dlopen succeeded and all functions found
-
-  const char *HsaLib = DYNAMIC_HSA_PATH;
-  std::string ErrMsg;
-  auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
-      llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
-  if (!DynlibHandle->isValid()) {
-    ODBG(OLDT_Init) << "Unable to load library '" << HsaLib << "': " << ErrMsg;
-    return false;
-  }
-
+static bool resolveSymbols(llvm::sys::DynamicLibrary &Lib, const char *Name) {
   for (size_t I = 0; I < dlwrap::size(); I++) {
     const char *Sym = dlwrap::symbol(I);
 
-    void *P = DynlibHandle->getAddressOfSymbol(Sym);
+    void *P = Lib.getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << HsaLib
-                      << "'!";
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << Name << "'!";
       return false;
     }
     ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
@@ -115,8 +112,33 @@ static bool checkForHSA() {
 
     *dlwrap::pointer(I) = P;
   }
-
   return true;
+}
+
+static bool checkForHSA() {
+  // return true if dlopen succeeded and all functions found
+
+  // Resolve through the process rather than the library handle so that
+  // definitions already in the global scope take precedence like a normal link.
+  auto Process = llvm::sys::DynamicLibrary::getPermanentLibrary(nullptr);
+  if (resolveSymbols(Process, "<process>"))
+    return true;
+
+  const char *HsaLib = DYNAMIC_HSA_PATH ".1";
+  std::string ErrMsg;
+  auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+      llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
+  if (!DynlibHandle->isValid()) {
+    HsaLib = DYNAMIC_HSA_PATH;
+    DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+        llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
+  }
+  if (!DynlibHandle->isValid()) {
+    ODBG(OLDT_Init) << "Unable to load library '" << HsaLib << "': " << ErrMsg;
+    return false;
+  }
+
+  return resolveSymbols(Process, HsaLib);
 }
 
 hsa_status_t hsa_init() {

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 | FileCheck %s
 ; Make sure we vectorize with debugging turned on.
 
 source_filename = "test/Transforms/LoopVectorize/dbg.value.ll"
@@ -35,7 +35,7 @@ for.end:
 }
 
 
-attributes #0 = { "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #0 = { "frame-pointer"="non-leaf" }
 
 !llvm.dbg.cu = !{!11}
 !llvm.module.flags = !{!14}

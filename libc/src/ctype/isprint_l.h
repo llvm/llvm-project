@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_CTYPE_ISPRINT_H
-#define LLVM_LIBC_SRC_CTYPE_ISPRINT_H
+#ifndef LLVM_LIBC_SRC_CTYPE_ISPRINT_L_H
+#define LLVM_LIBC_SRC_CTYPE_ISPRINT_L_H
 
 #include "hdr/types/locale_t.h"
 #include "src/__support/macros/config.h"
@@ -18,4 +18,4 @@ int isprint_l(int c, locale_t locale);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif //  LLVM_LIBC_SRC_CTYPE_ISPRINT_H
+#endif //  LLVM_LIBC_SRC_CTYPE_ISPRINT_L_H

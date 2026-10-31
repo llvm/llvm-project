@@ -9,6 +9,10 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -18,6 +22,7 @@
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Tooling.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
@@ -449,6 +454,86 @@ TEST(IndexTest, ReadWriteRoles) {
                            WrittenAt(Position(5, 7)))),
             Contains(AllOf(QName("foo"), HasRole(SymbolRole::Read),
                            WrittenAt(Position(6, 17))))));
+}
+
+// Two `Holder<decltype([]{})>` instantiations have distinct closure types,
+// therefore they should have distinct USRs.
+TEST(USRTest, NestedLambdaTagsInTemplateArg) {
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      R"cpp(
+        template <class T> struct Holder { void reset(T*) {} };
+        void caller() {
+          Holder<decltype([]{})>().reset(nullptr);
+          Holder<decltype([]{})>().reset(nullptr);
+        }
+      )cpp",
+      {"-std=c++20"});
+  ASSERT_TRUE(AST);
+
+  using namespace ast_matchers;
+  auto Matches = match(
+      cxxMemberCallExpr(callee(cxxMethodDecl(ofClass(
+          classTemplateSpecializationDecl(hasName("Holder")).bind("spec"))))),
+      AST->getASTContext());
+  ASSERT_EQ(Matches.size(), 2u);
+
+  llvm::SmallString<128> U0, U1;
+  ASSERT_FALSE(generateUSRForDecl(
+      Matches[0].getNodeAs<ClassTemplateSpecializationDecl>("spec"), U0));
+  ASSERT_FALSE(generateUSRForDecl(
+      Matches[1].getNodeAs<ClassTemplateSpecializationDecl>("spec"), U1));
+  EXPECT_NE(U0, U1) << "U0=" << U0.str() << "  U1=" << U1.str();
+}
+
+// A variant of `NestedLambdaTagsInTemplateArg` that tests when the template
+// specializations have identical expansion location but distinct spelling
+// location.
+TEST(USRTest, NestedLambdaTagsInTemplateArgWithSameSpellingDistinctExpansion) {
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      R"cpp(
+        #define MY_SPEC Holder<decltype([]{})>().reset(nullptr); \
+                        Holder<decltype([]{})>().reset(nullptr)
+        template <class T> struct Holder { void reset(T*) {} };
+        void caller() {
+          MY_SPEC;
+        }
+      )cpp",
+      {"-std=c++20"});
+  ASSERT_TRUE(AST);
+
+  using namespace ast_matchers;
+  auto Matches =
+      match(cxxMemberCallExpr(callee(cxxMethodDecl(ofClass(
+                classTemplateSpecializationDecl(
+                    hasName("Holder"),
+                    hasTemplateArgument(
+                        0, refersToType(hasDeclaration(
+                               cxxRecordDecl(isLambda()).bind("closure")))))
+                    .bind("spec"))))),
+            AST->getASTContext());
+  ASSERT_EQ(Matches.size(), 2u);
+
+  const auto *CTSD1 =
+      Matches[0].getNodeAs<ClassTemplateSpecializationDecl>("spec");
+  const auto *CTSD2 =
+      Matches[1].getNodeAs<ClassTemplateSpecializationDecl>("spec");
+  const auto *CRD1 = Matches[0].getNodeAs<CXXRecordDecl>("closure");
+  const auto *CRD2 = Matches[1].getNodeAs<CXXRecordDecl>("closure");
+
+  // First, check that the two specializations have distinct USR names:
+  llvm::SmallString<128> U0, U1;
+  ASSERT_FALSE(generateUSRForDecl(CTSD1, U0));
+  ASSERT_FALSE(generateUSRForDecl(CTSD2, U1));
+  ASSERT_NE(U0, U1) << "U0=" << U0.str() << "  U1=" << U1.str();
+
+  // Second, check that the two lambda types have distinct spellingLoc offsets
+  // but identical expansionLoc offsets:
+  const SourceManager &SM = AST->getASTContext().getSourceManager();
+
+  ASSERT_NE(SM.getDecomposedLoc(SM.getSpellingLoc(CRD1->getBeginLoc())),
+            SM.getDecomposedLoc(SM.getSpellingLoc(CRD2->getBeginLoc())));
+  ASSERT_EQ(SM.getDecomposedLoc(SM.getExpansionLoc(CRD1->getBeginLoc())),
+            SM.getDecomposedLoc(SM.getExpansionLoc(CRD2->getBeginLoc())));
 }
 
 } // namespace

@@ -379,13 +379,12 @@ define i64 @cttz_i64_zero_test(i64 %n) nounwind {
 ;
 ; X86-CMOV-LABEL: cttz_i64_zero_test:
 ; X86-CMOV:       # %bb.0:
-; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
-; X86-CMOV-NEXT:    movl $32, %edx
-; X86-CMOV-NEXT:    cmovnel %ecx, %edx
-; X86-CMOV-NEXT:    addl $32, %edx
-; X86-CMOV-NEXT:    bsfl %eax, %eax
-; X86-CMOV-NEXT:    cmovel %edx, %eax
+; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    movl $32, %ecx
+; X86-CMOV-NEXT:    cmovnel %eax, %ecx
+; X86-CMOV-NEXT:    addl $32, %ecx
+; X86-CMOV-NEXT:    bsfl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    cmovel %ecx, %eax
 ; X86-CMOV-NEXT:    xorl %edx, %edx
 ; X86-CMOV-NEXT:    retl
 ;

@@ -41,6 +41,17 @@
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
 
+#if defined(_LIBUNWIND_TARGET_FREEBSD) && defined(_LIBUNWIND_TARGET_AARCH64)
+#include <errno.h>
+#include <machine/frame.h>
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/ucontext.h>
+#include <sys/user.h>
+#include <unistd.h>
+#define _LIBUNWIND_CHECK_FREEBSD_SIGRETURN 1
+#endif
+
 #if defined(_LIBUNWIND_TARGET_HAIKU) &&                                        \
     (defined(_LIBUNWIND_TARGET_I386) || defined(_LIBUNWIND_TARGET_X86_64))
 #include <OS.h>
@@ -1055,7 +1066,8 @@ private:
   template <typename Registers> int stepThroughSigReturn(Registers &) {
     return UNW_STEP_END;
   }
-#elif defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
+#elif defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                           \
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool setInfoForSigReturn();
   int stepThroughSigReturn();
 #endif
@@ -1090,6 +1102,8 @@ private:
     if ( compactSaysUseDwarf() )
       return stepWithDwarfFDE(stage2);
 #endif
+    // Compact encodings can't describe signal frames.
+    _isSignalFrame = false;
     R dummy;
     return stepWithCompactEncoding(dummy);
   }
@@ -1363,6 +1377,10 @@ private:
                            reinterpret_cast<tbtable *>(_info.unwind_info),
                            _registers, _isSignalFrame);
   }
+  bool isKnownVapiNotActive() const { return _isKnownVapiNotActive; }
+  void setIsKnownVapiNotActive(bool val) { _isKnownVapiNotActive = val; }
+  static pint_t getVAPILR();
+
 #endif // defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
 
   A               &_addressSpace;
@@ -1371,19 +1389,30 @@ private:
   bool             _unwindInfoMissing;
   bool             _isSignalFrame;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                             \
     defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool             _isSigReturn = false;
 #endif
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
   uint32_t _walkedFrames;
 #endif
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+  // TODO: this will need to be recorded in the unw_context_t by unw_getcontext
+  // to support cases where the cursor is retrieved prior to invocation of the
+  // Virtual API.
+  bool _isKnownVapiNotActive;
+#endif
 };
-
 
 template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
     : _addressSpace(as), _registers(context), _unwindInfoMissing(false),
-      _isSignalFrame(false) {
+      _isSignalFrame(false)
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+      ,
+      _isKnownVapiNotActive(false)
+#endif
+{
   static_assert((check_fit<UnwindCursor<A, R>, unw_cursor_t>::does_fit),
                 "UnwindCursor<> does not fit in unw_cursor_t");
   static_assert((alignof(UnwindCursor<A, R>) <= alignof(unw_cursor_t)),
@@ -1393,12 +1422,16 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
 
 template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(A &as, void *)
-    : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false) {
+    : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false)
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+      ,
+      _isKnownVapiNotActive(false)
+#endif
+{
   memset(static_cast<void *>(&_info), 0, sizeof(_info));
   // FIXME
   // fill in _registers from thread arg
 }
-
 
 template <typename A, typename R>
 bool UnwindCursor<A, R>::validReg(int regNum) {
@@ -1469,6 +1502,30 @@ template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
   static constexpr size_t _EXTRA_LIBUNWIND_FRAMES_WALKED = 5 - 1;
   _registers.returnto(_walkedFrames + _EXTRA_LIBUNWIND_FRAMES_WALKED);
 #else
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+  if (isKnownVapiNotActive()) {
+    // If the current frame is known VAPI not active, execute the VAPI return
+    // glue to clear the VAPI control block. The VAPI return glue is used by
+    // AIX longjmp based on the VAPI active status recorded by setjmp in the
+    // jmp_buf, which means that the VAPI return glue can be called solely on
+    // the basis of the VAPI active status of the target context.
+
+    // VAPI return glue address is the VAPI glue address - 4.
+#ifdef __64BIT__
+    constexpr pint_t VAPIReturnGlue = 0x8e40 - 4;
+#else
+    constexpr pint_t VAPIReturnGlue = 0x8c40 - 4;
+#endif
+
+    _LIBUNWIND_TRACE_UNWINDING("VAPI: executing return glue %p\n",
+                               reinterpret_cast<void *>(VAPIReturnGlue));
+    register auto *registers __asm__("r30") = &_registers;
+    __asm__ __volatile__("bla %[retglue]"
+                         : "+r"(registers)
+                         : [retglue] "i"(VAPIReturnGlue));
+    registers->jumpto();
+  }
+#endif // defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
   _registers.jumpto();
 #endif
 }
@@ -1869,6 +1926,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
   // do a binary search of second level page index
   uint32_t encoding = 0;
   pint_t funcStart = 0;
+  pint_t rangeStart = 0;
   pint_t funcEnd = 0;
   pint_t lsda = 0;
   pint_t personality = 0;
@@ -1908,21 +1966,39 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
       }
     }
     encoding = pageIndex.encoding(low);
-    funcStart = pageIndex.functionOffset(low) + sects.dso_base;
+    rangeStart = pageIndex.functionOffset(low) + sects.dso_base;
+
+    // If UNWIND_IS_NOT_FUNCTION_START is set, walk backwards to find the actual
+    // function start.
+    funcStart = rangeStart;
+    if (encoding & UNWIND_IS_NOT_FUNCTION_START) {
+      assert(low != 0 &&
+             "UNWIND_IS_NOT_FUNCTION_START comact unwind must be preceded by a "
+             "~UNWIND_IS_NOT_FUNCTION_START entry for the same function");
+      uint32_t backIndex = low;
+      do {
+        --backIndex;
+      } while (backIndex > 0 &&
+               (pageIndex.encoding(backIndex) & UNWIND_IS_NOT_FUNCTION_START));
+      funcStart = pageIndex.functionOffset(backIndex) + sects.dso_base;
+    }
+
     if (pc < funcStart) {
       if (log)
-        fprintf(
-            stderr,
-            "\tpc not in table, pc=0x%llX, funcStart=0x%llX, funcEnd=0x%llX\n",
-            (uint64_t) pc, (uint64_t) funcStart, (uint64_t) funcEnd);
+        fprintf(stderr,
+                "\tpc not in table, pc=0x%llX, funcStart=0x%llX, "
+                "rangeStart=0x%llX, funcEnd=0x%llX\n",
+                (uint64_t)pc, (uint64_t)funcStart, (uint64_t)rangeStart,
+                (uint64_t)funcEnd);
       return false;
     }
     if (pc > funcEnd) {
       if (log)
-        fprintf(
-            stderr,
-            "\tpc not in table, pc=0x%llX, funcStart=0x%llX, funcEnd=0x%llX\n",
-            (uint64_t) pc, (uint64_t) funcStart, (uint64_t) funcEnd);
+        fprintf(stderr,
+                "\tpc not in table, pc=0x%llX, funcStart=0x%llX, "
+                "rangeStart=0x%llX, funcEnd=0x%llX\n",
+                (uint64_t)pc, (uint64_t)funcStart, (uint64_t)rangeStart,
+                (uint64_t)funcEnd);
       return false;
     }
   } else if (pageKind == UNWIND_SECOND_LEVEL_COMPRESSED) {
@@ -1956,19 +2032,55 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
         high = mid;
       }
     }
-    funcStart = pageIndex.functionOffset(low) + firstLevelFunctionOffset
-                                                              + sects.dso_base;
+    rangeStart = pageIndex.functionOffset(low) + firstLevelFunctionOffset +
+                 sects.dso_base;
     if (low < last)
       funcEnd =
           pageIndex.functionOffset(low + 1) + firstLevelFunctionOffset
                                                               + sects.dso_base;
     else
       funcEnd = firstLevelNextPageFunctionOffset + sects.dso_base;
+
+    auto encodingAtIndex = [&](uint32_t idx) -> uint32_t {
+      uint16_t encIdx = pageIndex.encodingIndex(idx);
+      if (encIdx < sectionHeader.commonEncodingsArrayCount()) {
+        return _addressSpace.get32(
+            sects.compact_unwind_section +
+            sectionHeader.commonEncodingsArraySectionOffset() +
+            encIdx * sizeof(uint32_t));
+      } else {
+        uint16_t pageEncIdx =
+            encIdx - (uint16_t)sectionHeader.commonEncodingsArrayCount();
+        return _addressSpace.get32(secondLevelAddr +
+                                   pageHeader.encodingsPageOffset() +
+                                   pageEncIdx * sizeof(uint32_t));
+      }
+    };
+
+    encoding = encodingAtIndex(low);
+
+    // If UNWIND_IS_NOT_FUNCTION_START is set, walk backwards to find the actual
+    // function start.
+    funcStart = rangeStart;
+    if (encoding & UNWIND_IS_NOT_FUNCTION_START) {
+      assert(low != 0 &&
+             "UNWIND_IS_NOT_FUNCTION_START comact unwind must be preceded by a "
+             "~UNWIND_IS_NOT_FUNCTION_START entry for the same function.");
+      uint32_t backIndex = low;
+      do {
+        --backIndex;
+      } while (backIndex > 0 &&
+               (encodingAtIndex(backIndex) & UNWIND_IS_NOT_FUNCTION_START));
+      funcStart = pageIndex.functionOffset(backIndex) +
+                  firstLevelFunctionOffset + sects.dso_base;
+    }
+
     if (pc < funcStart) {
       _LIBUNWIND_DEBUG_LOG("malformed __unwind_info, pc=0x%llX "
                            "not in second level compressed unwind table. "
-                           "funcStart=0x%llX",
-                            (uint64_t) pc, (uint64_t) funcStart);
+                           "funcStart=0x%llX, rangeStart=0x%llX",
+                           (uint64_t)pc, (uint64_t)funcStart,
+                           (uint64_t)rangeStart);
       return false;
     }
     if (pc > funcEnd) {
@@ -1977,21 +2089,6 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
                            "funcEnd=0x%llX",
                            (uint64_t) pc, (uint64_t) funcEnd);
       return false;
-    }
-    uint16_t encodingIndex = pageIndex.encodingIndex(low);
-    if (encodingIndex < sectionHeader.commonEncodingsArrayCount()) {
-      // encoding is in common table in section header
-      encoding = _addressSpace.get32(
-          sects.compact_unwind_section +
-          sectionHeader.commonEncodingsArraySectionOffset() +
-          encodingIndex * sizeof(uint32_t));
-    } else {
-      // encoding is in page specific table
-      uint16_t pageEncodingIndex =
-          encodingIndex - (uint16_t)sectionHeader.commonEncodingsArrayCount();
-      encoding = _addressSpace.get32(secondLevelAddr +
-                                     pageHeader.encodingsPageOffset() +
-                                     pageEncodingIndex * sizeof(uint32_t));
     }
   } else {
     _LIBUNWIND_DEBUG_LOG(
@@ -2069,7 +2166,18 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
     fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX), "
                     "encoding=0x%08X, lsda=0x%08llX for funcStart=0x%llX\n",
             (uint64_t) pc, encoding, (uint64_t) lsda, (uint64_t) funcStart);
+
+  // For ARM64 PAuth_LR frames, start_ip should be the pacibsppc address
+  // (rangeStart). For all other cases, start_ip should be the function start.
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+  if ((encoding & UNWIND_ARM64_MODE_MASK) == UNWIND_ARM64_MODE_FRAME_PAUTH_LR) {
+    _info.start_ip = rangeStart;
+  } else {
+    _info.start_ip = funcStart;
+  }
+#else
   _info.start_ip = funcStart;
+#endif
   _info.end_ip = funcEnd;
   _info.lsda = lsda;
   // We use memmove to copy the personality function as we have already manually
@@ -2459,6 +2567,45 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
   return true;
 }
 
+// VAPI glue addresses
+constexpr uintptr_t vapi_glue_addr_ext_32 = 0x8b80;
+constexpr uintptr_t vapi_addr_64 = 0x8e00;
+constexpr size_t vapi_size_64 = 0x0200;
+constexpr uintptr_t vapi_glue_addr_begin =
+    vapi_glue_addr_ext_32; // Start address in 32-bit
+constexpr uintptr_t vapi_glue_addr_end =
+    vapi_addr_64 + vapi_size_64; // End address in 64-bit
+
+#ifdef __64BIT__
+constexpr size_t VAPI_CB_SIZE = 256;
+constexpr ptrdiff_t TLS_POINTER_OFFSET = 30 * 1024;
+constexpr size_t TLSCB_BASE_SIZE = 256;
+
+static __inline__ __attribute__((__always_inline__)) char *tptr(void) {
+  char *result;
+  __asm__("mr %0, 13" : "=r"(result));
+  return result;
+}
+#else // 32-bit
+constexpr size_t VAPI_CB_SIZE = 128;
+constexpr ptrdiff_t TLS_POINTER_OFFSET = 31 * 1024;
+constexpr size_t TLSCB_BASE_SIZE = 128;
+
+static __inline__ __attribute__((__always_inline__)) char *tptr(void) {
+  char *result;
+  __asm__("mfspr %0, 259" : "=r"(result));
+  return result;
+}
+#endif
+
+constexpr ptrdiff_t VAPI_CB_OFFSET =
+    TLS_POINTER_OFFSET + VAPI_CB_SIZE + TLSCB_BASE_SIZE;
+
+template <typename A, typename R>
+typename UnwindCursor<A, R>::pint_t UnwindCursor<A, R>::getVAPILR() {
+  return *reinterpret_cast<pint_t *>(tptr() - VAPI_CB_OFFSET + 8);
+}
+
 // Step back up the stack following the frame back link.
 template <typename A, typename R>
 int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
@@ -2510,6 +2657,16 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
   if (isSignalFrame) {
     _LIBUNWIND_TRACE_UNWINDING("Possible signal handler frame: lastStack=%p",
                                reinterpret_cast<void *>(lastStack));
+
+    pint_t returnAddressInStack = reinterpret_cast<pint_t *>(lastStack)[2];
+    if (vapi_glue_addr_begin <= returnAddressInStack &&
+        returnAddressInStack < vapi_glue_addr_end) {
+      _LIBUNWIND_TRACE_UNWINDING(
+          "The return address in stack %p is within the range of VAPI address;"
+          " set isKnownVapiNotActive to true\n",
+          reinterpret_cast<void *>(returnAddressInStack));
+      setIsKnownVapiNotActive(true);
+    }
 
     sigcontext *sigContext = reinterpret_cast<sigcontext *>(
         reinterpret_cast<char *>(lastStack) + STKMINALIGN);
@@ -2579,6 +2736,17 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     } else {
       // Otherwise, use the LR value in the stack link area.
       returnAddress = reinterpret_cast<pint_t *>(lastStack)[2];
+
+      if (vapi_glue_addr_begin <= returnAddress &&
+          returnAddress < vapi_glue_addr_end) {
+        _LIBUNWIND_TRACE_UNWINDING(
+            "The return address=%p is within the range of VAPI address;",
+            reinterpret_cast<void *>(returnAddress));
+        setIsKnownVapiNotActive(true);
+        returnAddress = getVAPILR();
+        _LIBUNWIND_TRACE_UNWINDING("return address=%p from VAPI\n",
+                                   reinterpret_cast<void *>(returnAddress));
+      }
     }
 
     // Reset LR in the current context.
@@ -2709,6 +2877,16 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
   // Return address is the address after call site instruction.
   pint_t nextReturnAddress = reinterpret_cast<pint_t *>(nextStack)[2];
 
+  if (vapi_glue_addr_begin <= nextReturnAddress &&
+      nextReturnAddress < vapi_glue_addr_end) {
+    _LIBUNWIND_TRACE_UNWINDING(
+        "The next return address=%p is within the range of VAPI address;",
+        reinterpret_cast<void *>(nextReturnAddress));
+    nextReturnAddress = getVAPILR();
+    _LIBUNWIND_TRACE_UNWINDING("the next return address=%p from VAPI\n",
+                               reinterpret_cast<void *>(nextReturnAddress));
+  }
+
   if (nextReturnAddress > 0x01 && nextReturnAddress < 0x10000) {
     _LIBUNWIND_TRACE_UNWINDING("The next is a signal handler frame: "
                                "nextStack=%p, next return address=%p\n",
@@ -2725,6 +2903,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                             \
     defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   _isSigReturn = false;
 #endif
@@ -2858,6 +3037,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #endif // #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                             \
     defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (setInfoForSigReturn())
     return;
@@ -3164,6 +3344,65 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_S390X)
 
+#if defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn() {
+  // Ask the kernel rather than reading instructions at a possibly invalid PC.
+  // This is only used when no unwind information was found. Keep the result
+  // local to avoid shared mutable state when unwinding from a signal handler.
+  struct kinfo_sigtramp kst = {};
+  size_t len = sizeof(kst);
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_SIGTRAMP, getpid()};
+  const int savedErrno = errno;
+  const int result = sysctl(mib, 4, &kst, &len, nullptr, 0);
+  errno = savedErrno;
+  if (result != 0)
+    return false;
+
+  const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  const pint_t start = reinterpret_cast<pint_t>(kst.ksigtramp_start);
+  const pint_t end = reinterpret_cast<pint_t>(kst.ksigtramp_end);
+  if (pc < start || pc >= end)
+    return false;
+
+  _info = {};
+  _info.start_ip = start;
+  _info.end_ip = end;
+  _isSigReturn = true;
+  return true;
+}
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn() {
+  // The trampoline leaves SP pointing at the sigframe installed by sendsig().
+  const pint_t sigctx = _registers.getSP() + offsetof(struct sigframe, sf_uc) +
+                        offsetof(ucontext_t, uc_mcontext);
+  const pint_t gprs = sigctx + offsetof(mcontext_t, mc_gpregs);
+  for (int i = 0; i < 30; ++i)
+    _registers.setRegister(
+        UNW_AARCH64_X0 + i,
+        _addressSpace.get64(gprs + offsetof(struct gpregs, gp_x) + i * 8));
+  _registers.setRegister(
+      UNW_AARCH64_LR,
+      _addressSpace.get64(gprs + offsetof(struct gpregs, gp_lr)));
+  _registers.setSP(_addressSpace.get64(gprs + offsetof(struct gpregs, gp_sp)));
+  _registers.setIP(_addressSpace.get64(gprs + offsetof(struct gpregs, gp_elr)));
+
+  if (_addressSpace.get32(sigctx + offsetof(mcontext_t, mc_flags)) &
+      _MC_FP_VALID) {
+    const pint_t fprs = sigctx + offsetof(mcontext_t, mc_fpregs) +
+                        offsetof(struct fpregs, fp_q);
+    for (int i = 0; i < 32; ++i)
+      _registers.setFloatRegister(UNW_AARCH64_V0 + i,
+                                  _addressSpace.getDouble(fprs + i * 16));
+  }
+  _isSignalFrame = true;
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_TARGET_AARCH64)
+#endif // defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN)
+
 #if defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn() {
@@ -3263,6 +3502,7 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   // Use unwinding info to modify register set as if function returned.
   int result;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
+    defined(_LIBUNWIND_CHECK_FREEBSD_SIGRETURN) ||                             \
     defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (_isSigReturn) {
     result = this->stepThroughSigReturn();

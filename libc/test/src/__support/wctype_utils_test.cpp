@@ -1,7 +1,16 @@
+//===-- Unittests for wctype utils ----------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "hdr/types/wctype_t.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/wctype/wctype_classification_utils.h"
+#include "src/__support/wctype/wctype_conversion_utils.h"
 #include "test/UnitTest/Test.h"
-
 namespace {
 
 namespace ascii_mode {
@@ -9,7 +18,12 @@ namespace ascii_mode {
 #define LIBC_CONF_WCTYPE_MODE LIBC_WCTYPE_MODE_ASCII
 
 #undef LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
+
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp = ::LIBC_NAMESPACE::cpp;
+} // namespace LIBC_NAMESPACE_DECL
 #include "src/__support/wctype_utils.h"
+
 } // namespace ascii_mode
 
 namespace utf8_mode {
@@ -19,9 +33,15 @@ namespace utf8_mode {
 namespace LIBC_NAMESPACE_DECL {
 using ::LIBC_NAMESPACE::lookup_properties;
 using ::LIBC_NAMESPACE::PropertyFlag;
+namespace wctype_internal {
+using ::LIBC_NAMESPACE::wctype_internal::tolower;
+using ::LIBC_NAMESPACE::wctype_internal::toupper;
+} // namespace wctype_internal
+namespace cpp = ::LIBC_NAMESPACE::cpp;
 } // namespace LIBC_NAMESPACE_DECL
 
 #undef LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
+
 #include "src/__support/wctype_utils.h"
 } // namespace utf8_mode
 
@@ -531,6 +551,24 @@ TEST(LlvmLibcWctypeUtilsTest, IsCntrlUtf8) {
   for (const auto &tc : cases) {
     EXPECT_EQ(iscntrl(static_cast<wchar_t>(tc.wc)), tc.expected) << tc.name;
   }
+}
+
+TEST(LlvmLibcWctypeUtilsTest, ThreewayCmpSingle) {
+  using utf8_mode::LIBC_NAMESPACE::internal::threeway_cmp_single;
+
+  EXPECT_EQ(threeway_cmp_single(L'A', L'A'), 0);
+
+  EXPECT_LT(threeway_cmp_single(wchar_t{67}, wchar_t{120}), 0);
+  EXPECT_GT(threeway_cmp_single(wchar_t{120}, wchar_t{67}), 0);
+
+  EXPECT_LT(threeway_cmp_single(wchar_t{1}, WCHAR_MAX), 0);
+  EXPECT_GT(threeway_cmp_single(WCHAR_MAX, wchar_t{1}), 0);
+
+  EXPECT_LT(threeway_cmp_single(WCHAR_MIN, wchar_t{1}), 0);
+  EXPECT_GT(threeway_cmp_single(wchar_t{1}, WCHAR_MIN), 0);
+
+  EXPECT_LT(threeway_cmp_single(WCHAR_MIN, WCHAR_MAX), 0);
+  EXPECT_GT(threeway_cmp_single(WCHAR_MAX, WCHAR_MIN), 0);
 }
 
 } // namespace

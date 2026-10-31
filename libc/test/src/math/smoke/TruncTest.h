@@ -66,10 +66,10 @@ public:
   }
 };
 
-#define LIST_TRUNC_TESTS(T, func)                                              \
-  using LlvmLibcTruncTest = TruncTest<T>;                                      \
-  TEST_F(LlvmLibcTruncTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcTruncTest, RoundedNubmers) { testRoundedNumbers(&func); }     \
-  TEST_F(LlvmLibcTruncTest, Fractions) { testFractions(&func); }
+#define LIST_TRUNC_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = TruncTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testRoundedNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_TRUNCTEST_H

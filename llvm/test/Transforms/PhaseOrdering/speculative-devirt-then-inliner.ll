@@ -1,4 +1,4 @@
-; RUN: opt -S -O3 -enable-devirtualize-speculatively %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes="default<O3>" -enable-devirtualize-speculatively %s 2>&1 | FileCheck %s
 
 ; Test that the devirtualized calls are inlined.
 

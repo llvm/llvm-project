@@ -65,10 +65,11 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
   if (SrcTy == DestTy)
     return V; // no-op cast
 
-  if (V->isAllOnesValue())
+  // Pointers have no all-ones constant.
+  if (V->isAllOnesValue() && !DestTy->isPtrOrPtrVectorTy())
     return Constant::getAllOnesValue(DestTy);
 
-  // Handle ConstantInt -> ConstantFP
+  // Handle ConstantInt -> Constant{Byte, FP}
   if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
@@ -76,18 +77,45 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
     if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
       return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
 
+    if (DestTy->isByteOrByteVectorTy() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantByte::get(DestTy, CI->getValue());
+
     // Make sure dest type is compatible with the folded fp constant.
     // See note below regarding the PPC_FP128 restriction.
-    if (!DestTy->isFPOrFPVectorTy() || DestTy->isPPC_FP128Ty() ||
-        DestTy->getScalarSizeInBits() != SrcTy->getScalarSizeInBits())
-      return nullptr;
+    if (DestTy->isFPOrFPVectorTy() && !DestTy->isPPC_FP128Ty() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantFP::get(
+          DestTy,
+          APFloat(DestTy->getScalarType()->getFltSemantics(), CI->getValue()));
 
-    return ConstantFP::get(
-        DestTy,
-        APFloat(DestTy->getScalarType()->getFltSemantics(), CI->getValue()));
+    return nullptr;
   }
 
-  // Handle ConstantFP -> Constant{Int, FP}
+  // Handle ConstantByte -> Constant{Int, FP}
+  if (ConstantByte *CB = dyn_cast<ConstantByte>(V)) {
+    // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
+    // This allows for other simplifications (although some of them
+    // can only be handled by Analysis/ConstantFolding.cpp).
+    if (isa<VectorType>(DestTy) && !isa<VectorType>(SrcTy))
+      return ConstantExpr::getBitCast(ConstantVector::get(V), DestTy);
+
+    if (DestTy->isIntOrIntVectorTy() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantInt::get(DestTy, CB->getValue());
+
+    // Make sure dest type is compatible with the folded fp constant.
+    // See note below regarding the PPC_FP128 restriction.
+    if (DestTy->isFPOrFPVectorTy() && !DestTy->isPPC_FP128Ty() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantFP::get(
+          DestTy,
+          APFloat(DestTy->getScalarType()->getFltSemantics(), CB->getValue()));
+
+    return nullptr;
+  }
+
+  // Handle ConstantFP -> Constant{Int, Byte, FP}
   if (ConstantFP *FP = dyn_cast<ConstantFP>(V)) {
     // Handle half <-> bfloat
     if (!isa<VectorType>(SrcTy) && DestTy->isFloatingPointTy()) {
@@ -111,11 +139,16 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
       return nullptr;
 
     // Make sure dest type is compatible with the folded integer constant.
-    if (!DestTy->isIntOrIntVectorTy() ||
-        DestTy->getScalarSizeInBits() != SrcTy->getScalarSizeInBits())
-      return nullptr;
+    if (DestTy->isIntOrIntVectorTy() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantInt::get(DestTy, FP->getValueAPF().bitcastToAPInt());
 
-    return ConstantInt::get(DestTy, FP->getValueAPF().bitcastToAPInt());
+    // Make sure dest type is compatible with the folded byte constant.
+    if (DestTy->isByteOrByteVectorTy() &&
+        DestTy->getScalarSizeInBits() == SrcTy->getScalarSizeInBits())
+      return ConstantByte::get(DestTy, FP->getValueAPF().bitcastToAPInt());
+
+    return nullptr;
   }
 
   return nullptr;
@@ -410,7 +443,7 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
 
   // Inserting null into all zeros is still all zeros.
   // TODO: This is true for undef and poison splats too.
-  if (isa<ConstantAggregateZero>(Val) && Elt->isNullValue())
+  if (Val->isNullValue() && Elt->isNullValue())
     return Val;
 
   ConstantInt *CIdx = dyn_cast<ConstantInt>(Idx);
@@ -482,13 +515,12 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   for (unsigned i = 0; i != MaskNumElts; ++i) {
     int Elt = Mask[i];
     if (Elt == -1) {
-      Result.push_back(UndefValue::get(EltTy));
+      Result.push_back(PoisonValue::get(EltTy));
       continue;
     }
     Constant *InElt;
-    if (unsigned(Elt) >= SrcNumElts*2)
-      InElt = UndefValue::get(EltTy);
-    else if (unsigned(Elt) >= SrcNumElts) {
+    assert(unsigned(Elt) < SrcNumElts * 2 && "Invalid shuffle mask element");
+    if (unsigned(Elt) >= SrcNumElts) {
       Type *Ty = IntegerType::get(V2->getContext(), 32);
       InElt =
         ConstantExpr::getExtractElement(V2,
@@ -964,7 +996,9 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
 static ICmpInst::Predicate areGlobalsPotentiallyEqual(const GlobalValue *GV1,
                                                       const GlobalValue *GV2) {
   auto isGlobalUnsafeForEquality = [](const GlobalValue *GV) {
-    if (GV->isInterposable() || GV->hasGlobalUnnamedAddr())
+    // noipa doesn't affect which definition (and so which address) a global
+    // resolves to, so it's ignored here.
+    if (GV->isInterposable(/*CheckNoIPA=*/false) || GV->hasGlobalUnnamedAddr())
       return true;
     if (const auto *GVar = dyn_cast<GlobalVariable>(GV)) {
       Type *Ty = GVar->getValueType();
@@ -1216,91 +1250,12 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     }
   } else {
     // Evaluate the relation between the two constants, per the predicate.
-    int Result = -1;  // -1 = unknown, 0 = known false, 1 = known true.
-    switch (evaluateICmpRelation(C1, C2)) {
-    default: llvm_unreachable("Unknown relational!");
-    case ICmpInst::BAD_ICMP_PREDICATE:
-      break;  // Couldn't determine anything about these constants.
-    case ICmpInst::ICMP_EQ:   // We know the constants are equal!
-      // If we know the constants are equal, we can decide the result of this
-      // computation precisely.
-      Result = ICmpInst::isTrueWhenEqual(Predicate);
-      break;
-    case ICmpInst::ICMP_ULT:
-      switch (Predicate) {
-      case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_ULE:
-        Result = 1; break;
-      case ICmpInst::ICMP_UGT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_UGE:
-        Result = 0; break;
-      default:
-        break;
-      }
-      break;
-    case ICmpInst::ICMP_SLT:
-      switch (Predicate) {
-      case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_SLE:
-        Result = 1; break;
-      case ICmpInst::ICMP_SGT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_SGE:
-        Result = 0; break;
-      default:
-        break;
-      }
-      break;
-    case ICmpInst::ICMP_UGT:
-      switch (Predicate) {
-      case ICmpInst::ICMP_UGT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_UGE:
-        Result = 1; break;
-      case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_ULE:
-        Result = 0; break;
-      default:
-        break;
-      }
-      break;
-    case ICmpInst::ICMP_SGT:
-      switch (Predicate) {
-      case ICmpInst::ICMP_SGT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_SGE:
-        Result = 1; break;
-      case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_SLE:
-        Result = 0; break;
-      default:
-        break;
-      }
-      break;
-    case ICmpInst::ICMP_ULE:
-      if (Predicate == ICmpInst::ICMP_UGT)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_ULT || Predicate == ICmpInst::ICMP_ULE)
-        Result = 1;
-      break;
-    case ICmpInst::ICMP_SLE:
-      if (Predicate == ICmpInst::ICMP_SGT)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_SLT || Predicate == ICmpInst::ICMP_SLE)
-        Result = 1;
-      break;
-    case ICmpInst::ICMP_UGE:
-      if (Predicate == ICmpInst::ICMP_ULT)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_UGT || Predicate == ICmpInst::ICMP_UGE)
-        Result = 1;
-      break;
-    case ICmpInst::ICMP_SGE:
-      if (Predicate == ICmpInst::ICMP_SLT)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_SGT || Predicate == ICmpInst::ICMP_SGE)
-        Result = 1;
-      break;
-    case ICmpInst::ICMP_NE:
-      if (Predicate == ICmpInst::ICMP_EQ)
-        Result = 0;
-      if (Predicate == ICmpInst::ICMP_NE)
-        Result = 1;
-      break;
+    ICmpInst::Predicate RelPred = evaluateICmpRelation(C1, C2);
+    if (RelPred != ICmpInst::BAD_ICMP_PREDICATE) {
+      if (std::optional<bool> Res =
+              ICmpInst::isImpliedByMatchingCmp(RelPred, Predicate))
+        return ConstantInt::get(ResultTy, *Res);
     }
-
-    // If we evaluated the result, return it now.
-    if (Result != -1)
-      return ConstantInt::get(ResultTy, Result);
 
     if ((!isa<ConstantExpr>(C1) && isa<ConstantExpr>(C2)) ||
         (C1->isNullValue() && !C2->isNullValue())) {

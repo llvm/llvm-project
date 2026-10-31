@@ -114,6 +114,76 @@ _start:
 .size _start, .-_start
 .endif
 
+## Check LDR relaxation works on LDRSW (literal)
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
+# RUN:    --defsym RELAX_SIMPLE_LDRSW=1 %s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.so -Wl,-q
+# RUN: llvm-bolt %t.so -o %t.bolt
+# RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELAX_LDRSW
+
+# RELAX_LDRSW: adrp
+# RELAX_LDRSW-NEXT: ldrsw
+
+.ifdef RELAX_SIMPLE_LDRSW
+  .text
+  .global _start
+  .type _start, %function
+_start:
+  .cfi_startproc
+  ldrsw x0, _foo
+  ret
+  .cfi_endproc
+.size _start, .-_start
+.endif
+
+## Check that a literal reference carrying an addend keeps it: the literal is
+## symbolized against the data object containing it, so the relaxed pair has
+## to name the same object plus the same offset, not the start of the object.
+## `_pool` is page-aligned, so every lo12 below is the offset within it.
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
+# RUN:    --defsym RELAX_ADDEND=1 %s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.so -Wl,-q
+# RUN: llvm-bolt %t.so -o %t.bolt
+# RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELAX_ADDEND
+
+# RELAX_ADDEND:      adrp x0
+# RELAX_ADDEND-NEXT: ldr x0, [x0]
+# RELAX_ADDEND-NEXT: adrp x1
+# RELAX_ADDEND-NEXT: ldr x1, [x1, #0x8]
+# RELAX_ADDEND-NEXT: adrp x2
+# RELAX_ADDEND-NEXT: ldr w2, [x2, #0x14]
+# RELAX_ADDEND-NEXT: adrp x3
+# RELAX_ADDEND-NEXT: ldrsw x3, [x3, #0x18]
+
+.ifdef RELAX_ADDEND
+  .text
+  .global _start
+  .type _start, %function
+_start:
+  .cfi_startproc
+  ldr x0, _pool
+  ldr x1, _pool+8
+  ldr w2, _vec+4
+  ldrsw x3, _vec+8
+  ret
+  .cfi_endproc
+.size _start, .-_start
+
+  .section .data_pool,"a",@progbits
+  .p2align 12
+  .global _pool
+_pool:
+  .xword 0x1111111111111111
+  .xword 0x2222222222222222
+.size _pool, .-_pool
+  .global _vec
+_vec:
+  .xword 0, 0, 0, 0
+.size _vec, .-_vec
+.endif
+
   .section .text_cold
   .global _foo
   .align 3

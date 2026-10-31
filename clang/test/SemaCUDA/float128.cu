@@ -6,7 +6,6 @@
 
 // cpu-no-diagnostics
 typedef _Complex float __cfloat128 __attribute__ ((__mode__ (__TC__)));
-typedef __float128 _Float128;
 
 // gpu-note@+1 {{'a' defined here}}
 __attribute__((device)) __float128 f(__float128 a, float b) {

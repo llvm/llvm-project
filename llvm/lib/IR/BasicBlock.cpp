@@ -31,8 +31,8 @@ using namespace llvm;
 STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 
 DbgMarker *BasicBlock::createMarker(Instruction *I) {
-  if (I->DebugMarker)
-    return I->DebugMarker;
+  if (DbgMarker *Marker = I->getDbgMarker())
+    return Marker;
   DbgMarker *Marker = new DbgMarker();
   Marker->MarkedInstr = I;
   I->DebugMarker = Marker;
@@ -77,7 +77,7 @@ void BasicBlock::convertToNewDbgValues() {
 
     // Create a marker to store DbgRecords in.
     createMarker(&I);
-    DbgMarker *Marker = I.DebugMarker;
+    DbgMarker *Marker = I.getDbgMarker();
 
     for (DbgRecord *DVR : DbgVarRecs)
       Marker->insertDbgRecord(DVR, false);
@@ -86,38 +86,42 @@ void BasicBlock::convertToNewDbgValues() {
   }
 }
 
-void BasicBlock::convertFromNewDbgValues() {
+bool BasicBlock::convertFromNewDbgValues() {
+  bool Modified = false;
   invalidateOrders();
 
   // Iterate over the block, finding instructions annotated with DbgMarkers.
-  // Convert any attached DbgRecords to debug intrinsics and insert ahead of the
-  // instruction.
+  // Convert any attached DbgRecords to debug intrinsics and insert ahead of
+  // the instruction.
   for (auto &Inst : *this) {
-    if (!Inst.DebugMarker)
+    DbgMarker *Marker = Inst.getDbgMarker();
+    if (!Marker)
       continue;
 
-    DbgMarker &Marker = *Inst.DebugMarker;
-    for (DbgRecord &DR : Marker.getDbgRecordRange())
+    for (DbgRecord &DR : Marker->getDbgRecordRange())
       InstList.insert(Inst.getIterator(),
                       DR.createDebugIntrinsic(getModule(), nullptr));
 
-    Marker.eraseFromParent();
+    Marker->eraseFromParent();
+    Modified = true;
   }
 
   // Assume no trailing DbgRecords: we could technically create them at the end
   // of the block, after a terminator, but this would be non-cannonical and
   // indicates that something else is broken somewhere.
   assert(!getTrailingDbgRecords());
+  return Modified;
 }
 
 #ifndef NDEBUG
 void BasicBlock::dumpDbgValues() const {
   for (auto &Inst : *this) {
-    if (!Inst.DebugMarker)
+    DbgMarker *Marker = Inst.getDbgMarker();
+    if (!Marker)
       continue;
 
-    dbgs() << "@ " << Inst.DebugMarker << " ";
-    Inst.DebugMarker->dump();
+    dbgs() << "@ " << Marker << " ";
+    Marker->dump();
   };
 }
 #endif
@@ -175,8 +179,7 @@ BasicBlock::~BasicBlock() {
   // is no indirect branch).  Handle these cases by zapping the BlockAddress
   // nodes.  There are no other possible uses at this point.
   if (hasAddressTaken()) {
-    assert(!use_empty() && "There should be at least one blockaddress!");
-    BlockAddress *BA = cast<BlockAddress>(user_back());
+    BlockAddress *BA = BlockAddress::lookup(this);
 
     Constant *Replacement = ConstantInt::get(Type::getInt32Ty(getContext()), 1);
     BA->replaceAllUsesWith(
@@ -186,11 +189,9 @@ BasicBlock::~BasicBlock() {
 
   assert(getParent() == nullptr && "BasicBlock still linked into the program!");
   dropAllReferences();
-  for (auto &Inst : *this) {
-    if (!Inst.DebugMarker)
-      continue;
-    Inst.DebugMarker->eraseFromParent();
-  }
+  for (auto &Inst : *this)
+    if (DbgMarker *Marker = Inst.getDbgMarker())
+      Marker->eraseFromParent();
   InstList.clear();
 }
 
@@ -240,14 +241,6 @@ const CallInst *BasicBlock::getTerminatingMustTailCall() const {
   if (Value *RV = RI->getReturnValue()) {
     if (RV != Prev)
       return nullptr;
-
-    // Look through the optional bitcast.
-    if (auto *BI = dyn_cast<BitCastInst>(Prev)) {
-      RV = BI->getOperand(0);
-      Prev = BI->getPrevNode();
-      if (!Prev || RV != Prev)
-        return nullptr;
-    }
   }
 
   if (auto *CI = dyn_cast<CallInst>(Prev)) {
@@ -293,20 +286,6 @@ const Instruction *BasicBlock::getFirstMayFaultInst() const {
   return nullptr;
 }
 
-const Instruction* BasicBlock::getFirstNonPHI() const {
-  for (const Instruction &I : *this)
-    if (!isa<PHINode>(I))
-      return &I;
-  return nullptr;
-}
-
-Instruction *BasicBlock::getFirstNonPHI() {
-  for (Instruction &I : *this)
-    if (!isa<PHINode>(I))
-      return &I;
-  return nullptr;
-}
-
 BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I))
@@ -323,13 +302,9 @@ BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
   return end();
 }
 
-BasicBlock::const_iterator
-BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
+BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrPseudoProbe() const {
   for (const Instruction &I : *this) {
-    if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
-      continue;
-
-    if (SkipPseudoOp && isa<PseudoProbeInst>(I))
+    if (isa<PHINode, PseudoProbeInst>(I))
       continue;
 
     BasicBlock::const_iterator It = I.getIterator();
@@ -341,16 +316,9 @@ BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
   return end();
 }
 
-BasicBlock::const_iterator
-BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
+BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrLifetime() const {
   for (const Instruction &I : *this) {
-    if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
-      continue;
-
-    if (I.isLifetimeStartOrEnd())
-      continue;
-
-    if (SkipPseudoOp && isa<PseudoProbeInst>(I))
+    if (isa<PHINode, PseudoProbeInst>(I) || I.isLifetimeStartOrEnd())
       continue;
 
     BasicBlock::const_iterator It = I.getIterator();
@@ -376,7 +344,7 @@ BasicBlock::const_iterator BasicBlock::getFirstInsertionPt() const {
   return InsertPt;
 }
 
-BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrDbgOrAlloca() const {
+BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrAlloca() const {
   const_iterator InsertPt = getFirstNonPHIIt();
   if (InsertPt == end())
     return end();
@@ -387,8 +355,7 @@ BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrDbgOrAlloca() const {
   if (isEntryBlock()) {
     const_iterator End = end();
     while (InsertPt != End &&
-           (isa<AllocaInst>(*InsertPt) || isa<DbgInfoIntrinsic>(*InsertPt) ||
-            isa<PseudoProbeInst>(*InsertPt))) {
+           (isa<AllocaInst>(*InsertPt) || isa<PseudoProbeInst>(*InsertPt))) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&*InsertPt)) {
         if (!AI->isStaticAlloca())
           break;
@@ -507,10 +474,6 @@ bool BasicBlock::canSplitPredecessors() const {
 
 bool BasicBlock::isLegalToHoistInto() const {
   auto *Term = getTerminator();
-  // No terminator means the block is under construction.
-  if (!Term)
-    return true;
-
   // If the block has no successors, there can be no instructions to hoist.
   assert(Term->getNumSuccessors() > 0);
 
@@ -526,7 +489,7 @@ bool BasicBlock::isEntryBlock() const {
 }
 
 BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
-  assert(getTerminator() && "Can't use splitBasicBlock on degenerate BB!");
+  assert(hasTerminator() && "Can't use splitBasicBlock on degenerate BB!");
   assert(I != InstList.end() &&
          "Trying to get me to create degenerate basic block!");
 
@@ -534,7 +497,7 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
                                        this->getNextNode());
 
   // Save DebugLoc of split point before invalidating iterator.
-  DebugLoc Loc = I->getStableDebugLoc();
+  DebugLoc Loc = I->getDebugLoc();
   if (Loc)
     Loc = Loc->getWithoutAtom();
 
@@ -556,7 +519,7 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
 }
 
 BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
-  assert(getTerminator() &&
+  assert(hasTerminator() &&
          "Can't use splitBasicBlockBefore on degenerate BB!");
   assert(I != InstList.end() &&
          "Trying to get me to create degenerate basic block!");
@@ -648,12 +611,6 @@ std::optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
   return std::nullopt;
 }
 
-BasicBlock::iterator llvm::skipDebugIntrinsics(BasicBlock::iterator It) {
-  while (isa<DbgInfoIntrinsic>(It))
-    ++It;
-  return It;
-}
-
 void BasicBlock::renumberInstructions() {
   unsigned Order = 0;
   for (Instruction &I : *this)
@@ -687,7 +644,7 @@ void BasicBlock::flushTerminatorDbgRecords() {
 
   // Transfer DbgRecords from the trailing position onto the terminator.
   createMarker(Term);
-  Term->DebugMarker->absorbDebugValues(*TrailingDbgRecords, false);
+  Term->getDbgMarker()->absorbDebugValues(*TrailingDbgRecords, false);
   TrailingDbgRecords->eraseFromParent();
   deleteTrailingDbgRecords();
 }
@@ -740,7 +697,7 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
   if (!First->hasDbgRecords())
     return;
 
-  createMarker(Dest)->absorbDebugValues(*First->DebugMarker, InsertAtHead);
+  createMarker(Dest)->absorbDebugValues(*First->getDbgMarker(), InsertAtHead);
 }
 
 void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
@@ -1018,7 +975,7 @@ DbgMarker *BasicBlock::getMarker(InstListType::iterator It) {
     DbgMarker *DM = getTrailingDbgRecords();
     return DM;
   }
-  return It->DebugMarker;
+  return It->getDbgMarker();
 }
 
 void BasicBlock::reinsertInstInDbgRecords(
@@ -1075,10 +1032,11 @@ void BasicBlock::reinsertInstInDbgRecords(
   ThisMarker->absorbDebugValues(Range, *DM, true);
 }
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 /// In asserts builds, this checks the numbering. In non-asserts builds, it
 /// is defined as a no-op inline function in BasicBlock.h.
 void BasicBlock::validateInstrOrdering() const {
+#ifndef NDEBUG
   if (!isInstrOrderValid())
     return;
   const Instruction *Prev = nullptr;
@@ -1087,6 +1045,7 @@ void BasicBlock::validateInstrOrdering() const {
            "cached instruction ordering is incorrect");
     Prev = &I;
   }
+#endif
 }
 #endif
 

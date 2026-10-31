@@ -26,9 +26,9 @@ define i32 @ctz6(ptr nocapture readonly %b) !prof !0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.cttz.i64(i64 [[TMP0]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 0, i64 [[TMP1]], !prof [[PROF_1:![0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP3]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:

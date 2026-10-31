@@ -28,17 +28,17 @@
 ; Concrete out-of-line tree of foo().
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_abstract_origin {{.*}} "_Z3foov"
+;
+; CHECK:   DW_TAG_variable
+; CHECK:     DW_AT_abstract_origin {{.*}} "objB"
+; CHECK:   DW_TAG_variable
+; CHECK:     DW_AT_abstract_origin {{.*}} "objA"
 
 ;;; FIXME: 'struct B' should be in the abstract tree below, not here.
 ; CHECK:   DW_TAG_structure_type
 ; CHECK:     DW_AT_name	("B")
 ; CHECK:     DW_TAG_member
 ; CHECK:     NULL
-;
-; CHECK:   DW_TAG_variable
-; CHECK:     DW_AT_abstract_origin {{.*}} "objB"
-; CHECK:   DW_TAG_variable
-; CHECK:     DW_AT_abstract_origin {{.*}} "objA"
 
 ; CHECK:   NULL
 

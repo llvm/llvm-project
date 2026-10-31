@@ -10,4 +10,4 @@
 
 #include "src/math/totalorderf.h"
 
-LIST_TOTALORDER_TESTS(float, LIBC_NAMESPACE::totalorderf)
+LIST_TOTALORDER_TESTS(Totalorderf, float, LIBC_NAMESPACE::totalorderf)

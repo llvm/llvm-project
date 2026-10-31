@@ -16,8 +16,8 @@ define void @test_phi_in_landingpad() personality ptr
 ; CHECK-NEXT:    [[Y1:%.*]] = phi double [ undef, [[ENTRY]] ], [ undef, [[INNER]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            catch ptr null
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[X1]], i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> [[TMP3]], double [[Y1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[X1]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> [[TMP3]], double [[Y1]], i64 1
 ; CHECK-NEXT:    br label [[DONE]]
 ; CHECK:       done:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ undef, [[INNER]] ], [ [[TMP0]], [[LPAD]] ]

@@ -20,7 +20,7 @@ def TruePredicate : Predicate<"true">;
 //   All instructions in the EVEX space can access the EGPR in their
 //   register/memory operands.
 //
-// For the above intructions, the only difference in encoding is reflected in
+// For the above instructions, the only difference in encoding is reflected in
 // the REX2/EVEX prefix when EGPR is used, i.e. the opcode and opcode name are
 // unchanged. We don’t add new entries in TD, and instead we extend GPR with
 // R16-R31 and make them allocatable only when the feature EGPR is available.
@@ -50,8 +50,6 @@ def PreferLegacySetCC  : Predicate<"!Subtarget->hasZU() || "
                                    "Subtarget->preferLegacySetCC()">;
 def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
                                     "!Subtarget->preferLegacySetCC()">;
-def HasNDDI      : Predicate<"Subtarget->hasNDD() && Subtarget->hasNDDI()">;
-def NoNDDI       : Predicate<"!Subtarget->hasNDD() || !Subtarget->hasNDDI()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasJMPABS    : Predicate<"Subtarget->hasJMPABS()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
@@ -79,6 +77,7 @@ def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
 def HasAVX10_1   : Predicate<"Subtarget->hasAVX10_1()">;
 def HasAVX10_2   : Predicate<"Subtarget->hasAVX10_2()">;
 def NoAVX10_2    : Predicate<"!Subtarget->hasAVX10_2()">;
+def HasAVX10_V2_AUX : Predicate<"Subtarget->hasAVX10_V2_AUX()">;
 def HasAVX512    : Predicate<"Subtarget->hasAVX512()">;
 def UseAVX       : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX512()">;
 def UseAVX2      : Predicate<"Subtarget->hasAVX2() && !Subtarget->hasAVX512()">;
@@ -88,6 +87,7 @@ def HasVPOPCNTDQ : Predicate<"Subtarget->hasVPOPCNTDQ()">;
 def HasDQI       : Predicate<"Subtarget->hasDQI()">;
 def NoDQI        : Predicate<"!Subtarget->hasDQI()">;
 def HasBWI       : Predicate<"Subtarget->hasBWI()">;
+def HasBMM       : Predicate<"Subtarget->hasBMM()">;
 def NoBWI        : Predicate<"!Subtarget->hasBWI()">;
 def HasVLX       : Predicate<"Subtarget->hasVLX()">;
 def NoVLX        : Predicate<"!Subtarget->hasVLX()">;
@@ -191,28 +191,28 @@ def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
 def HasAMXFP8    : Predicate<"Subtarget->hasAMXFP8()">;
 def HasAMXMOVRS  : Predicate<"Subtarget->hasAMXMOVRS()">;
 def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
-def HasAMXTF32   : Predicate<"Subtarget->hasAMXTF32()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasUSERMSR   : Predicate<"Subtarget->hasUSERMSR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
+def HasADX       : Predicate<"Subtarget->hasADX()">;
 
 def HasX86_64    : Predicate<"Subtarget->hasX86_64()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
-                             AssemblerPredicate<(all_of (not Is64Bit)), "Not 64-bit mode">;
+                             AssemblerPredicate<(none_of Is64Bit), "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
                              AssemblerPredicate<(all_of Is64Bit), "64-bit mode">;
 
 def IsX32Mode  : Predicate<"Subtarget->getTargetTriple().isX32()">,
                             AssemblerPredicate<(all_of IsX32), "x32 ABI">;
 def NotX32Mode  : Predicate<"!Subtarget->getTargetTriple().isX32()">,
-                            AssemblerPredicate<(all_of (not IsX32)), "not x32 ABI">;
+                            AssemblerPredicate<(none_of IsX32), "not x32 ABI">;
 
 def IsLP64  : Predicate<"Subtarget->isTarget64BitLP64()">;
 def NotLP64 : Predicate<"!Subtarget->isTarget64BitLP64()">;
 def In16BitMode  : Predicate<"Subtarget->is16Bit()">,
                              AssemblerPredicate<(all_of Is16Bit), "16-bit mode">;
 def Not16BitMode : Predicate<"!Subtarget->is16Bit()">,
-                             AssemblerPredicate<(all_of (not Is16Bit)), "Not 16-bit mode">;
+                             AssemblerPredicate<(none_of Is16Bit), "Not 16-bit mode">;
 def In32BitMode  : Predicate<"Subtarget->is32Bit()">,
                              AssemblerPredicate<(all_of Is32Bit), "32-bit mode">;
 def IsWin64      : Predicate<"Subtarget->isTargetWin64()">;
@@ -252,7 +252,8 @@ let RecomputePerFunction = 1 in {
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
-def FavorMemIndirectCall  : Predicate<"!Subtarget->slowTwoMemOps()">;
+def FavorMemIndirectCall  : Predicate<"!Subtarget->slowTwoMemOps() && "
+                                      "!Subtarget->slowIndirectCall()">;
 def HasFastMem32 : Predicate<"!Subtarget->isUnalignedMem32Slow()">;
 def HasFastLZCNT : Predicate<"Subtarget->hasFastLZCNT()">;
 def HasFastSHLDRotate : Predicate<"Subtarget->hasFastSHLDRotate()">;

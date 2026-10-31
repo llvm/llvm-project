@@ -20,3 +20,6 @@ define ptr @get_globalvaraddr() {
   %val = load i32, ptr @var
   ret ptr @var
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 0}

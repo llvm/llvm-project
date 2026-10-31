@@ -78,7 +78,7 @@ void StringCompareCheck::check(const MatchFinder::MatchResult &Result) {
       const auto *Str2 = Result.Nodes.getNodeAs<Stmt>("str2");
       const auto *Compare = Result.Nodes.getNodeAs<Stmt>("compare");
 
-      auto Diag = diag(Matched->getBeginLoc(), CompareMessage);
+      const auto Diag = diag(Matched->getBeginLoc(), CompareMessage);
 
       if (Str1->isArrow())
         Diag << FixItHint::CreateInsertion(Str1->getBeginLoc(), "*");

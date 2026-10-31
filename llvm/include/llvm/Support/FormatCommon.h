@@ -19,12 +19,12 @@ enum class AlignStyle { Left, Center, Right };
 /// Helper class to format to a \p Width wide field, with alignment \p Where
 /// within that field.
 struct FmtAlign {
-  support::detail::format_adapter &Adapter;
+  support::detail::FormatFunctorRef Adapter;
   AlignStyle Where;
   unsigned Width;
   char Fill;
 
-  FmtAlign(support::detail::format_adapter &Adapter, AlignStyle Where,
+  FmtAlign(support::detail::FormatFunctorRef Adapter, AlignStyle Where,
            unsigned Width, char Fill = ' ')
       : Adapter(Adapter), Where(Where), Width(Width), Fill(Fill) {}
 
@@ -35,13 +35,13 @@ struct FmtAlign {
     // TODO: Make the format method return the number of bytes written, that
     // way we can also skip the intermediate stream for left-aligned output.
     if (Width == 0) {
-      Adapter.format(S, Options);
+      Adapter(S, Options);
       return;
     }
     SmallString<64> Item;
     raw_svector_ostream Stream(Item);
 
-    Adapter.format(Stream, Options);
+    Adapter(Stream, Options);
     if (Width <= Item.size()) {
       S << Item;
       return;

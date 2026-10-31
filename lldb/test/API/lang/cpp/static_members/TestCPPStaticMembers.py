@@ -11,7 +11,8 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     # We fail to lookup static members on Windows.
-    @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
+    @requireExpressionEvaluation
     def test_access_from_main(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -23,7 +24,8 @@ class TestCase(TestBase):
         self.expect_expr("my_a.s_c", result_type="int", result_value="3")
 
     # We fail to lookup static members on Windows.
-    @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
+    @requireExpressionEvaluation
     def test_access_from_member_function(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -45,7 +47,8 @@ class TestCase(TestBase):
         )
 
     # We fail to lookup static members on Windows.
-    @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
+    @requireExpressionEvaluation
     def test_no_crash_in_IR_arithmetic(self):
         """
         Test that LLDB doesn't crash on evaluating specific expression involving

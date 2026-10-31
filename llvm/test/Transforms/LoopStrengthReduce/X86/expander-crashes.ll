@@ -11,7 +11,7 @@ target triple = "x86_64-apple-macosx10.15.0"
 define i64 @blam(ptr %start, ptr %end, ptr %ptr.2) {
 ; CHECK-LABEL: @blam(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START1:%.*]] = ptrtoint ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[START1:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
 ; CHECK:       loop.1.header:
 ; CHECK-NEXT:    [[LSR_IV4:%.*]] = phi i64 [ [[LSR_IV_NEXT5:%.*]], [[LOOP_1_HEADER]] ], [ [[START1]], [[ENTRY:%.*]] ]
@@ -55,7 +55,7 @@ loop.2.ph:
 loop.2.header:
   %iv2 = phi ptr [ %iv2.next, %loop.2.latch ], [ %iv.next, %loop.2.ph ]
   %tmp7 = getelementptr inbounds %struct.hoge, ptr %iv2, i64 0, i32 3
-  %tmp8 = ptrtoint ptr %tmp7 to i64
+  %tmp8 = ptrtoaddr ptr %tmp7 to i64
   call void @use.i64(i64 %tmp8)
   %tmp9 = getelementptr inbounds %struct.hoge, ptr %iv2, i64 0, i32 2
   store i32 10, ptr %tmp9, align 8
@@ -67,7 +67,7 @@ loop.2.latch:
   br label %loop.2.header
 
 loop.2.exit:                                             ; preds = %bb6
-  %iv2.cast = ptrtoint ptr %iv2 to i64
+  %iv2.cast = ptrtoaddr ptr %iv2 to i64
   ret i64 %iv2.cast
 }
 

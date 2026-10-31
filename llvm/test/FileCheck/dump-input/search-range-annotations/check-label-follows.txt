@@ -1,0 +1,74 @@
+; Because -dump-input-filter=error includes a failed directive's search range
+; end, input line 15 below is revealed, and -dump-input-context=2 reveals the
+; surrounding lines.  Those lines are where the actual problem is: the "host
+; triples:" header is off by one.  Sometimes the key to understanding a
+; directive's failure is where the following CHECK-LABEL matched because it
+; limits the search range.
+
+RUN: rm -rf %t
+RUN: split-file %s %t
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input-context=2 -v %t/check.txt < %t/input.txt \
+RUN:               -dump-input-filter=error 2>&1 | \
+RUN:   FileCheck %s -match-full-lines -check-prefix=DMP
+
+     DMP:<<<<<<
+DMP-NEXT:           1: offload triples: 
+DMP-NEXT:label:1'0     ^~~~~~~~~~~~~~~~
+DMP-NEXT:label:1'1     ^~~~~~~~~~~~~~~~
+DMP-NEXT:check:2'0                    {   search range start (exclusive)
+DMP-NEXT:check:2'1                        error: no match found in search range
+DMP-NEXT:           2: - x86_64-linux-gnu 
+DMP-NEXT:check:2'2       ?                  possible intended match
+DMP-NEXT:           3: - x86_64-unknown-linux-gnu 
+DMP-NEXT:           4: - x86_64-pc-linux-gnu 
+DMP-NEXT:           .
+DMP-NEXT:           .
+DMP-NEXT:           .
+DMP-NEXT:          13: - x86_64-linux-android 
+DMP-NEXT:          14: - amdgcn-amd-amdhsa
+DMP-NEXT:          15: host triples: 
+DMP-NEXT:label:3       ^~~~~~~~~~~~~
+DMP-NEXT:check:2'3                  }  search range end (exclusive)
+DMP-NEXT:          16: - nvptx64-nvidia-cuda 
+DMP-NEXT:          17: - x86_64-linux-gnu 
+DMP-NEXT:           .
+DMP-NEXT:           .
+DMP-NEXT:           .
+DMP-NEXT:>>>>>>
+
+;--- check.txt
+CHECK-LABEL: offload triples:
+      CHECK: nvptx64-nvidia-cuda
+CHECK-LABEL: host triples:
+
+;--- input.txt
+offload triples:
+- x86_64-linux-gnu
+- x86_64-unknown-linux-gnu
+- x86_64-pc-linux-gnu
+- x86_64-redhat-linux6E
+- x86_64-redhat-linux
+- x86_64-suse-linux
+- x86_64-manbo-linux-gnu
+- x86_64-linux-gnu
+- x86_64-slackware-linux
+- x86_64-unknown-linux
+- x86_64-amazon-linux
+- x86_64-linux-android
+- amdgcn-amd-amdhsa
+host triples:
+- nvptx64-nvidia-cuda
+- x86_64-linux-gnu
+- x86_64-unknown-linux-gnu
+- x86_64-pc-linux-gnu
+- x86_64-redhat-linux6E
+- x86_64-redhat-linux
+- x86_64-suse-linux
+- x86_64-manbo-linux-gnu
+- x86_64-linux-gnu
+- x86_64-slackware-linux
+- x86_64-unknown-linux
+- x86_64-amazon-linux
+- x86_64-linux-android

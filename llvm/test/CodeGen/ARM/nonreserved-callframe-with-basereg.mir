@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=prologepilog %s -o -  | FileCheck %s
+# RUN: llc -run-pass=prolog-epilog %s -o -  | FileCheck %s
 
 # Make sure we use the correct offset for stack accesses using the base pointer
 # within call frame blocks. Key points of test:

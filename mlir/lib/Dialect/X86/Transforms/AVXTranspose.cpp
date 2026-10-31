@@ -41,6 +41,7 @@ Value mlir::x86::avx2::inline_asm::mm256BlendPsAsm(ImplicitLocOpBuilder &b,
       b, v1.getType(), /*operands=*/asmVals, /*asm_string=*/asmStr,
       /*constraints=*/asmCstr, /*has_side_effects=*/false,
       /*is_align_stack=*/false, LLVM::TailCallKind::None,
+      /*convergent=*/false,
       /*asm_dialect=*/asmDialectAttr,
       /*operand_attrs=*/ArrayAttr());
   return asmOp.getResult(0);

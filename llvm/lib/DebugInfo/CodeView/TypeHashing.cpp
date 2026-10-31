@@ -15,15 +15,11 @@ using namespace llvm;
 using namespace llvm::codeview;
 
 LocallyHashedType DenseMapInfo<LocallyHashedType>::Empty{0, {}};
-LocallyHashedType DenseMapInfo<LocallyHashedType>::Tombstone{hash_code(-1), {}};
 
 static std::array<uint8_t, 8> EmptyHash = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
-static std::array<uint8_t, 8> TombstoneHash = {
-    {0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
 GloballyHashedType DenseMapInfo<GloballyHashedType>::Empty{EmptyHash};
-GloballyHashedType DenseMapInfo<GloballyHashedType>::Tombstone{TombstoneHash};
 
 LocallyHashedType LocallyHashedType::hashType(ArrayRef<uint8_t> RecordData) {
   return {llvm::hash_value(RecordData), RecordData};

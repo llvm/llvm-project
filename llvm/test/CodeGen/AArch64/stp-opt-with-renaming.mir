@@ -749,10 +749,10 @@ body:             |
     ; CHECK-LABEL: name: bundled_load_rename
     ; CHECK: liveins: $z3, $z19, $p0, $z16
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $q16, $q20 = LDPQi $sp, 0 :: (load (s128)), (load (s128), align 32)
-    ; CHECK-NEXT: BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z20 {
+    ; CHECK-NEXT: renamable $q16, $q18 = LDPQi $sp, 0 :: (load (s128)), (load (s128), align 32)
+    ; CHECK-NEXT: BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z18 {
     ; CHECK-NEXT:   $z3 = MOVPRFX_ZZ $z19
-    ; CHECK-NEXT:   $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, $z20
+    ; CHECK-NEXT:   $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, $z18
     ; CHECK-NEXT: }
     ; CHECK-NEXT: RET undef $lr
     renamable $q16 = LDRQui $sp, 1 :: (load 16)

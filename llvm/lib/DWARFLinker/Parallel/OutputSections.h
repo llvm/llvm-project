@@ -10,6 +10,7 @@
 #define LLVM_LIB_DWARFLINKER_PARALLEL_OUTPUTSECTIONS_H
 
 #include "ArrayList.h"
+#include "ModulePool.h"
 #include "StringEntryToDwarfStringPoolEntryMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -100,6 +101,19 @@ struct DebugDieTypeRefPatch : SectionPatch {
   TypeEntry *RefTypeName = nullptr;
 };
 
+/// This structure is used to update a DW_AT_import reference to a
+/// DW_TAG_module. The reference resolves to the module's anchor once the link
+/// has filled it in, and to the inherited target otherwise. The inherited
+/// target is always resolved as an inter-CU reference, so that the attribute
+/// keeps the width it was emitted with whichever of the two wins.
+struct DebugDieModuleRefPatch : DebugDieRefPatch {
+  DebugDieModuleRefPatch(uint64_t PatchOffset, CompileUnit *RefCU,
+                         uint32_t RefIdx, ModuleAnchor *Anchor)
+      : DebugDieRefPatch(PatchOffset, nullptr, RefCU, RefIdx), Anchor(Anchor) {}
+
+  ModuleAnchor *Anchor = nullptr;
+};
+
 /// This structure is used to update reference to the type DIE.
 struct DebugType2TypeDieRefPatch : SectionPatch {
   DebugType2TypeDieRefPatch(uint64_t PatchOffset, DIE *Die, TypeEntry *TypeName,
@@ -163,6 +177,7 @@ struct SectionDescriptor : SectionDescriptorBase {
         ListDebugULEB128DieRefPatch(&GlobalData.getAllocator()),
         ListDebugOffsetPatch(&GlobalData.getAllocator()),
         ListDebugDieTypeRefPatch(&GlobalData.getAllocator()),
+        ListDebugDieModuleRefPatch(&GlobalData.getAllocator()),
         ListDebugType2TypeDieRefPatch(&GlobalData.getAllocator()),
         ListDebugTypeStrPatch(&GlobalData.getAllocator()),
         ListDebugTypeLineStrPatch(&GlobalData.getAllocator()),
@@ -202,6 +217,7 @@ public:
   ADD_PATCHES_LIST(DebugULEB128DieRefPatch)
   ADD_PATCHES_LIST(DebugOffsetPatch)
   ADD_PATCHES_LIST(DebugDieTypeRefPatch)
+  ADD_PATCHES_LIST(DebugDieModuleRefPatch)
   ADD_PATCHES_LIST(DebugType2TypeDieRefPatch)
   ADD_PATCHES_LIST(DebugTypeStrPatch)
   ADD_PATCHES_LIST(DebugTypeLineStrPatch)

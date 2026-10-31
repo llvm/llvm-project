@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include <memory>
 
 #define GET_GICOMBINER_DEPS
@@ -324,10 +325,10 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned NumOfDotMI;
   if (SrcTy.getNumElements() % 16 == 0) {
     NumOfDotMI = SrcTy.getNumElements() / 16;
-    MidTy = LLT::fixed_vector(4, 32);
+    MidTy = LLT::fixed_vector(4, LLT::integer(32));
   } else if (SrcTy.getNumElements() % 8 == 0) {
     NumOfDotMI = SrcTy.getNumElements() / 8;
-    MidTy = LLT::fixed_vector(2, 32);
+    MidTy = LLT::fixed_vector(2, LLT::integer(32));
   } else {
     llvm_unreachable("Source type number of elements is not multiple of 8");
   }
@@ -347,40 +348,37 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       SmallVector<Register> Leftover2;
 
       // Split the elements into v16i8 and v8i8
-      LLT MainTy = LLT::fixed_vector(16, 8);
+      LLT MainTy = LLT::fixed_vector(16, LLT::integer(8));
       LLT LeftoverTy1, LeftoverTy2;
-      if ((!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
-                         LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder,
-                         MRI)) ||
-          (!extractParts(Ext2SrcReg, MRI.getType(Ext2SrcReg), MainTy,
-                         LeftoverTy2, Ext2UnmergeReg, Leftover2, Builder,
-                         MRI))) {
+      if (!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
+                        LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder, MRI) ||
+          !extractParts(Ext2SrcReg, MRI.getType(Ext2SrcReg), MainTy,
+                        LeftoverTy2, Ext2UnmergeReg, Leftover2, Builder, MRI)) {
         llvm_unreachable("Unable to split this vector properly");
       }
 
       // Pad the leftover v8i8 vector with register of 0s of type v8i8
-      Register v8Zeroes = Builder.buildConstant(LLT::fixed_vector(8, 8), 0)
-                              ->getOperand(0)
-                              .getReg();
+      auto v8Zeroes =
+          Builder.buildConstant(LLT::fixed_vector(8, LLT::integer(8)), 0);
 
       Ext1UnmergeReg.push_back(
           Builder
-              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+              .buildMergeLikeInstr(LLT::fixed_vector(16, LLT::integer(8)),
                                    {Leftover1[0], v8Zeroes})
               .getReg(0));
       Ext2UnmergeReg.push_back(
           Builder
-              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+              .buildMergeLikeInstr(LLT::fixed_vector(16, LLT::integer(8)),
                                    {Leftover2[0], v8Zeroes})
               .getReg(0));
 
     } else {
       // Unmerge the source vectors to v16i8
       unsigned SrcNumElts = SrcTy.getNumElements();
-      extractParts(Ext1SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
-                   Ext1UnmergeReg, Builder, MRI);
-      extractParts(Ext2SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
-                   Ext2UnmergeReg, Builder, MRI);
+      extractParts(Ext1SrcReg, LLT::fixed_vector(16, LLT::integer(8)),
+                   SrcNumElts / 16, Ext1UnmergeReg, Builder, MRI);
+      extractParts(Ext2SrcReg, LLT::fixed_vector(16, LLT::integer(8)),
+                   SrcNumElts / 16, Ext2UnmergeReg, Builder, MRI);
     }
 
     // Build the UDOT instructions
@@ -390,23 +388,23 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       LLT ZeroesLLT;
       // Check if it is 16 or 8 elements. Set Zeroes to the according size
       if (MRI.getType(Ext1UnmergeReg[i]).getNumElements() == 16) {
-        ZeroesLLT = LLT::fixed_vector(4, 32);
+        ZeroesLLT = LLT::fixed_vector(4, LLT::integer(32));
         NumElements += 4;
       } else {
-        ZeroesLLT = LLT::fixed_vector(2, 32);
+        ZeroesLLT = LLT::fixed_vector(2, LLT::integer(32));
         NumElements += 2;
       }
-      auto Zeroes = Builder.buildConstant(ZeroesLLT, 0)->getOperand(0).getReg();
+      auto Zeroes = Builder.buildConstant(ZeroesLLT, 0);
       DotReg.push_back(
           Builder
-              .buildInstr(DotOpcode, {MRI.getType(Zeroes)},
+              .buildInstr(DotOpcode, {ZeroesLLT},
                           {Zeroes, Ext1UnmergeReg[i], Ext2UnmergeReg[i]})
               .getReg(0));
     }
 
     // Merge the output
-    auto ConcatMI =
-        Builder.buildConcatVectors(LLT::fixed_vector(NumElements, 32), DotReg);
+    auto ConcatMI = Builder.buildConcatVectors(
+        LLT::fixed_vector(NumElements, LLT::integer(32)), DotReg);
 
     // Put it through a vector reduction
     Builder.buildVecReduceAdd(MI.getOperand(0).getReg(),
@@ -478,11 +476,11 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     LLT LeftoverTy;
     SmallVector<Register, 4> LeftoverRegs;
     if (SrcScalSize == 8)
-      MainTy = LLT::fixed_vector(16, 8);
+      MainTy = LLT::fixed_vector(16, LLT::integer(8));
     else if (SrcScalSize == 16)
-      MainTy = LLT::fixed_vector(8, 16);
+      MainTy = LLT::fixed_vector(8, LLT::integer(16));
     else if (SrcScalSize == 32)
-      MainTy = LLT::fixed_vector(4, 32);
+      MainTy = LLT::fixed_vector(4, LLT::integer(32));
     else
       llvm_unreachable("Source's Scalar Size not supported");
 
@@ -497,8 +495,8 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
 
   unsigned MidScalarSize = MainTy.getScalarSizeInBits() * 2;
-  LLT MidScalarLLT = LLT::scalar(MidScalarSize);
-  Register ZeroReg = B.buildConstant(LLT::scalar(64), 0).getReg(0);
+  LLT MidScalarLLT = LLT::integer(MidScalarSize);
+  Register ZeroReg = B.buildConstant(LLT::integer(64), 0).getReg(0);
   for (unsigned I = 0; I < WorkingRegisters.size(); I++) {
     // If the number of elements is too small to build an instruction, extend
     // its size before applying addlv
@@ -508,14 +506,15 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
       WorkingRegisters[I] =
           B.buildInstr(std::get<1>(MatchInfo) ? TargetOpcode::G_SEXT
                                               : TargetOpcode::G_ZEXT,
-                       {LLT::fixed_vector(4, 16)}, {WorkingRegisters[I]})
+                       {LLT::fixed_vector(4, LLT::integer(16))},
+                       {WorkingRegisters[I]})
               .getReg(0);
     }
 
     // Generate the {U/S}ADDLV instruction, whose output is always double of the
     // Src's Scalar size
-    LLT AddlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, 32)
-                                      : LLT::fixed_vector(2, 64);
+    LLT AddlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, LLT::integer(32))
+                                      : LLT::fixed_vector(2, LLT::integer(64));
     Register AddlvReg =
         B.buildInstr(Opc, {AddlvTy}, {WorkingRegisters[I]}).getReg(0);
 
@@ -529,9 +528,10 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
                                          {MidScalarLLT}, {AddlvReg, ZeroReg})
                                 .getReg(0);
     } else {
-      Register ExtractReg = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
-                                         {LLT::scalar(32)}, {AddlvReg, ZeroReg})
-                                .getReg(0);
+      Register ExtractReg =
+          B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT, {LLT::integer(32)},
+                       {AddlvReg, ZeroReg})
+              .getReg(0);
       WorkingRegisters[I] =
           B.buildTrunc({MidScalarLLT}, {ExtractReg}).getReg(0);
     }
@@ -613,9 +613,8 @@ void applyPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
-                        const CombinerHelper &Helper,
-                        GISelChangeObserver &Observer) {
+bool matchSimplifyUADDO(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        std::pair<Register, Register> &MatchInfo) {
   // Try simplify G_UADDO with 8 or 16 bit operands to wide G_ADD and TBNZ if
   // result is only used in the no-overflow case. It is restricted to cases
   // where we know that the high-bits of the operands are 0. If there's an
@@ -644,8 +643,6 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
   //   %cond = G_ICMP NE, %bit, 0
   //   G_BRCOND %cond, %error.bb
 
-  auto &MRI = *B.getMRI();
-
   MachineOperand *DefOp0 = MRI.getOneDef(MI.getOperand(2).getReg());
   MachineOperand *DefOp1 = MRI.getOneDef(MI.getOperand(3).getReg());
   Register Op0Wide;
@@ -657,16 +654,12 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
   LLT WideTy1 = MRI.getType(Op1Wide);
   Register ResVal = MI.getOperand(0).getReg();
   LLT OpTy = MRI.getType(ResVal);
-  MachineInstr *Op0WideDef = MRI.getVRegDef(Op0Wide);
-  MachineInstr *Op1WideDef = MRI.getVRegDef(Op1Wide);
-
   unsigned OpTySize = OpTy.getScalarSizeInBits();
   // First check that the G_TRUNC feeding the G_UADDO are no-ops, because the
   // inputs have been zero-extended.
-  if (Op0WideDef->getOpcode() != TargetOpcode::G_ASSERT_ZEXT ||
-      Op1WideDef->getOpcode() != TargetOpcode::G_ASSERT_ZEXT ||
-      OpTySize != Op0WideDef->getOperand(2).getImm() ||
-      OpTySize != Op1WideDef->getOperand(2).getImm())
+  if (!mi_match(Op0Wide, MRI,
+                m_GAssertZext(m_Reg(), m_SpecificImm(OpTySize))) ||
+      !mi_match(Op1Wide, MRI, m_GAssertZext(m_Reg(), m_SpecificImm(OpTySize))))
     return false;
 
   // Only scalar UADDO with either 8 or 16 bit operands are handled.
@@ -695,7 +688,21 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
              }))
     return false;
 
-  // Remove G_ADDO.
+  MatchInfo = {Op0Wide, Op1Wide};
+  return true;
+}
+
+void applySimplifyUADDO(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        MachineIRBuilder &B, GISelChangeObserver &Observer,
+                        const CombinerHelper &Helper,
+                        const std::pair<Register, Register> &MatchInfo) {
+  Register Op0Wide = MatchInfo.first;
+  Register Op1Wide = MatchInfo.second;
+  Register ResVal = MI.getOperand(0).getReg();
+  Register ResStatus = MI.getOperand(1).getReg();
+  unsigned OpTySize = MRI.getType(ResVal).getScalarSizeInBits();
+
+  // Remove G_UADDO.
   B.setInstrAndDebugLoc(*MI.getNextNode());
   MI.eraseFromParent();
 
@@ -708,9 +715,9 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
   Register CondBit = MRI.cloneVirtualRegister(Op0Wide);
   B.buildAnd(
       CondBit, AddDst,
-      B.buildConstant(LLT::scalar(32), OpTySize == 8 ? 1 << 8 : 1 << 16));
+      B.buildConstant(LLT::integer(32), OpTySize == 8 ? 1 << 8 : 1 << 16));
   B.buildICmp(CmpInst::ICMP_NE, ResStatus, CondBit,
-              B.buildConstant(LLT::scalar(32), 0));
+              B.buildConstant(LLT::integer(32), 0));
 
   // Update ZEXts users of the result value. Because all uses are in the
   // no-overflow case, we know that the top bits are 0 and we can ignore ZExts.
@@ -724,8 +731,307 @@ bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
       Helper.replaceRegWith(MRI, OldR, AddDst);
     }
   }
+}
 
-  return true;
+// Look for load + shuffles that can be converted to LD2/LD3/LD4
+bool matchDeinterleavingLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             SmallVector<Register> &Srcs) {
+  GLoad &Load = cast<GLoad>(MI);
+  LLT Ty = MRI.getType(Load.getDstReg());
+  if (!Ty.isVector() || !Load.isSimple() ||
+      Load.getMemSizeInBits() != Ty.getSizeInBits())
+    return false;
+
+  switch (Ty.getScalarSizeInBits()) {
+  case 8:
+  case 16:
+  case 32:
+  case 64:
+    break;
+  default:
+    return false;
+  }
+
+  // Find shuffle uses that deinterleave the result. We are generally looking
+  // for Factor deinterleaves of each value, but some might be missing.
+  unsigned Factor = 0;
+  for (MachineInstr &Use : MRI.use_nodbg_instructions(Load.getDstReg())) {
+    auto *Shuf = dyn_cast<GShuffleVector>(&Use);
+    if (!Shuf || Shuf->getSrc1Reg() != Load.getDstReg())
+      return false;
+    ArrayRef<int> Mask = Shuf->getMask();
+
+    if (!Factor) {
+      if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2))
+        Factor = 2;
+      else if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 3))
+        Factor = 3;
+      else if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 4))
+        Factor = 4;
+      else
+        return false;
+
+      Srcs.resize(Factor);
+    }
+
+    LLT SubTy = MRI.getType(Shuf->getReg(0));
+    if (Ty.getSizeInBits() != SubTy.getSizeInBits() * Factor ||
+        SubTy.getSizeInBits() % 64 != 0)
+      return false;
+
+    unsigned Index;
+    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index) ||
+        Index >= Factor || Srcs[Index].isValid())
+      return false;
+    Srcs[Index] = Shuf->getReg(0);
+  }
+
+  return Factor != 0;
+}
+
+void applyDeinterleavingLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &B, SmallVector<Register> &Srcs) {
+  unsigned Factor = Srcs.size();
+  unsigned IID;
+  switch (Factor) {
+  case 2:
+    IID = Intrinsic::aarch64_neon_ld2;
+    break;
+  case 3:
+    IID = Intrinsic::aarch64_neon_ld3;
+    break;
+  case 4:
+    IID = Intrinsic::aarch64_neon_ld4;
+    break;
+  default:
+    llvm_unreachable("Unexpected deinterleave size!");
+  }
+
+  Register Pointer = MI.getOperand(1).getReg();
+  assert(MI.getNumMemOperands() == 1);
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  MachineFunction &MF = *MI.getParent()->getParent();
+
+  // Generate a LD2/3/4 per vector part into Srcs registers. Blank/noreg
+  // elements will be filled with a valid register.
+  auto generateLoad = [&](SmallVector<Register> &Srcs, LLT Ty,
+                          unsigned Offset) {
+    auto PtrOffset = Pointer;
+    if (Offset != 0)
+      PtrOffset =
+          B.buildObjectPtrOffset(MRI.getType(Pointer), Pointer,
+                                 B.buildConstant(LLT::integer(64), Offset))
+              .getReg(0);
+    for (Register &S : Srcs)
+      if (!S.isValid())
+        S = MRI.createGenericVirtualRegister(Ty);
+    auto LD = B.buildIntrinsic(IID, Srcs);
+    LD.addReg(PtrOffset);
+    LD.addMemOperand(
+        MF.getMachineMemOperand(MMO, Offset, Ty.multiplyElements(Factor)));
+  };
+
+  // Erase the old instructions
+  for (Register Src : Srcs)
+    if (Src.isValid())
+      MRI.getVRegDef(Src)->eraseFromParent();
+
+  // Generate loads split into 128 / 64bit chunks concat together.
+  LLT Ty = MRI.getType(*find_if(Srcs, [](Register R) { return R.isValid(); }));
+  LLT MainTy =
+      LLT::fixed_vector(128 / Ty.getScalarSizeInBits(), Ty.getScalarType());
+  if (Ty == MainTy || Ty == MainTy.divide(2)) {
+    // For 128bit and 64bit vectors we build the ld2/ld3/ld4 inplace
+    generateLoad(Srcs, Ty, 0);
+  } else {
+    // For larger vectors we split into more smaller chunks of size 128bit with
+    // a possible 64bit remainder.
+    unsigned NumVecs = Ty.getSizeInBits() / 128;
+    SmallVector<SmallVector<Register>> Regs;
+    for (unsigned I = 0; I < NumVecs; I++) {
+      Regs.push_back(SmallVector<Register>(Factor));
+      generateLoad(Regs.back(), MainTy, I * 16 * Factor);
+    }
+    if (Ty.getSizeInBits() % 128 == 0) {
+      // Merge all Regs into the final result vectors.
+      for (unsigned R = 0; R < Factor; R++) {
+        if (!Srcs[R].isValid())
+          continue;
+        SmallVector<Register> Ops;
+        for (unsigned I = 0; I < NumVecs; I++)
+          Ops.push_back(Regs[I][R]);
+        B.buildMergeLikeInstr(Srcs[R], Ops);
+      }
+    } else {
+      LLT LeftOverTy = MainTy.divide(2);
+      SmallVector<Register> LeftOverRegs(Factor);
+      generateLoad(LeftOverRegs, LeftOverTy, NumVecs * 16 * Factor);
+
+      // Split up Regs to LeftOverTy and combine back to larger vectors.
+      for (unsigned R = 0; R < Factor; R++) {
+        if (!Srcs[R].isValid())
+          continue;
+        SmallVector<Register> Ops;
+        for (unsigned I = 0; I < NumVecs; I++) {
+          auto Unmerge = B.buildUnmerge(LeftOverTy, Regs[I][R]);
+          Ops.push_back(Unmerge.getReg(0));
+          Ops.push_back(Unmerge.getReg(1));
+        }
+        Ops.push_back(LeftOverRegs[R]);
+        B.buildMergeLikeInstr(Srcs[R], Ops);
+      }
+    }
+  }
+
+  MI.eraseFromParent();
+}
+
+// Look for store + shuffles that can be converted to ST2/ST3/ST4
+bool matchInterleavingStore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            SmallVector<Register> &Srcs) {
+  GStore &Store = cast<GStore>(MI);
+  LLT Ty = MRI.getType(Store.getValueReg());
+  if (!Ty.isVector() || !Store.isSimple() ||
+      Store.getMemSizeInBits() != Ty.getSizeInBits() ||
+      !MRI.hasOneNonDBGUse(Store.getValueReg()))
+    return false;
+
+  switch (Ty.getScalarSizeInBits()) {
+  case 8:
+  case 16:
+  case 32:
+  case 64:
+    break;
+  default:
+    return false;
+  }
+
+  MachineInstr *Value = MRI.getVRegDef(Store.getValueReg());
+  if (auto *Shuf = dyn_cast<GShuffleVector>(Value)) {
+    ArrayRef<int> Mask = Shuf->getMask();
+    if (Ty.getSizeInBits() % 128 == 0 &&
+        ShuffleVectorInst::isInterleaveMask(Mask, 2, Mask.size())) {
+      if (MRI.getType(Shuf->getOperand(1).getReg()).getNumElements() ==
+          Mask.size() / 2) {
+        Srcs.push_back(Shuf->getOperand(1).getReg());
+        Srcs.push_back(Shuf->getOperand(2).getReg());
+        return true;
+      }
+
+      MachineInstr *C1 = MRI.getVRegDef(Shuf->getOperand(1).getReg());
+      if (MRI.getType(Shuf->getOperand(1).getReg()).getNumElements() !=
+              Mask.size() ||
+          C1->getOpcode() != TargetOpcode::G_CONCAT_VECTORS ||
+          C1->getNumOperands() != 3)
+        return false;
+      Srcs.push_back(C1->getOperand(1).getReg());
+      Srcs.push_back(C1->getOperand(2).getReg());
+      return true;
+    }
+    if (Ty.getSizeInBits() % 192 == 0 &&
+        ShuffleVectorInst::isInterleaveMask(Mask, 3, Mask.size())) {
+      MachineInstr *C1 = MRI.getVRegDef(Shuf->getOperand(1).getReg());
+      MachineInstr *C2 = MRI.getVRegDef(Shuf->getOperand(2).getReg());
+      if (C1->getOpcode() != TargetOpcode::G_CONCAT_VECTORS ||
+          C1->getNumOperands() != 3 ||
+          C2->getOpcode() != TargetOpcode::G_CONCAT_VECTORS ||
+          C2->getNumOperands() != 3)
+        return false;
+      Srcs.push_back(C1->getOperand(1).getReg());
+      Srcs.push_back(C1->getOperand(2).getReg());
+      Srcs.push_back(C2->getOperand(1).getReg());
+      return true;
+    }
+    if (Ty.getSizeInBits() % 256 == 0 &&
+        ShuffleVectorInst::isInterleaveMask(Mask, 4, Mask.size())) {
+      MachineInstr *C1 = MRI.getVRegDef(Shuf->getOperand(1).getReg());
+      MachineInstr *C2 = MRI.getVRegDef(Shuf->getOperand(2).getReg());
+      if (C1->getOpcode() != TargetOpcode::G_CONCAT_VECTORS ||
+          C1->getNumOperands() != 3 ||
+          C2->getOpcode() != TargetOpcode::G_CONCAT_VECTORS ||
+          C2->getNumOperands() != 3)
+        return false;
+      Srcs.push_back(C1->getOperand(1).getReg());
+      Srcs.push_back(C1->getOperand(2).getReg());
+      Srcs.push_back(C2->getOperand(1).getReg());
+      Srcs.push_back(C2->getOperand(2).getReg());
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void applyInterleavingStore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            MachineIRBuilder &B, SmallVector<Register> &Srcs) {
+  unsigned IID;
+  switch (Srcs.size()) {
+  case 2:
+    IID = Intrinsic::aarch64_neon_st2;
+    break;
+  case 3:
+    IID = Intrinsic::aarch64_neon_st3;
+    break;
+  case 4:
+    IID = Intrinsic::aarch64_neon_st4;
+    break;
+  default:
+    llvm_unreachable("Unexpected deinterleave size!");
+  }
+
+  // Break down larger vectors into 128 blocks and a possible 64bit remainder
+  LLT Ty = MRI.getType(Srcs[0]);
+  LLT MainTy =
+      LLT::fixed_vector(128 / Ty.getScalarSizeInBits(), Ty.getScalarType());
+  LLT LeftOverTy;
+  SmallVector<SmallVector<Register>> Regs(Srcs.size()), LeftOver(Srcs.size());
+  if (Ty == MainTy) {
+    for (unsigned I = 0; I < Srcs.size(); I++)
+      Regs[I].push_back(Srcs[I]);
+  } else if (Ty == MainTy.divide(2)) {
+    for (unsigned I = 0; I < Srcs.size(); I++)
+      LeftOver[I].push_back(Srcs[I]);
+    LeftOverTy = MainTy.divide(2);
+  } else {
+    for (unsigned I = 0; I < Srcs.size(); I++)
+      extractParts(Srcs[I], Ty, MainTy, LeftOverTy, Regs[I], LeftOver[I], B,
+                   MRI);
+    assert(LeftOver[0].size() == 0 ||
+           (LeftOver[0].size() == 1 && LeftOverTy == MainTy.divide(2)));
+  }
+
+  Register Pointer = MI.getOperand(1).getReg();
+  assert(MI.getNumMemOperands() == 1);
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  MachineFunction &MF = *MI.getParent()->getParent();
+
+  // Generate a ST2/3/4 per vector part
+  auto generateStore = [&](SmallVector<Register> Srcs, LLT Ty,
+                           unsigned Offset) {
+    auto PtrOffset = Pointer;
+    if (Offset != 0)
+      PtrOffset =
+          B.buildObjectPtrOffset(MRI.getType(Pointer), Pointer,
+                                 B.buildConstant(LLT::integer(64), Offset))
+              .getReg(0);
+    auto ST = B.buildIntrinsic(IID, ArrayRef<Register>());
+    for (Register S : Srcs)
+      ST.addReg(S);
+    ST.addReg(PtrOffset);
+    ST.addMemOperand(
+        MF.getMachineMemOperand(MMO, Offset, Ty.multiplyElements(Srcs.size())));
+  };
+  for (unsigned I = 0; I < Regs[0].size(); I++) {
+    for (unsigned S = 0; S < Srcs.size(); S++)
+      Srcs[S] = Regs[S][I];
+    generateStore(Srcs, MainTy, I * 16 * Srcs.size());
+  }
+  if (!LeftOver[0].empty()) {
+    for (unsigned S = 0; S < Srcs.size(); S++)
+      Srcs[S] = LeftOver[S][0];
+    generateStore(Srcs, LeftOverTy, Regs[0].size() * 16 * Srcs.size());
+  }
+  MI.eraseFromParent();
 }
 
 class AArch64PreLegalizerCombinerImpl : public Combiner {
@@ -777,30 +1083,6 @@ AArch64PreLegalizerCombinerImpl::AArch64PreLegalizerCombinerImpl(
 bool AArch64PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   if (tryCombineAllImpl(MI))
     return true;
-
-  unsigned Opc = MI.getOpcode();
-  switch (Opc) {
-  case TargetOpcode::G_SHUFFLE_VECTOR:
-    return Helper.tryCombineShuffleVector(MI);
-  case TargetOpcode::G_UADDO:
-    return tryToSimplifyUADDO(MI, B, Helper, Observer);
-  case TargetOpcode::G_MEMCPY_INLINE:
-    return Helper.tryEmitMemcpyInline(MI);
-  case TargetOpcode::G_MEMCPY:
-  case TargetOpcode::G_MEMMOVE:
-  case TargetOpcode::G_MEMSET: {
-    // If we're at -O0 set a maxlen of 32 to inline, otherwise let the other
-    // heuristics decide.
-    unsigned MaxLen = CInfo.EnableOpt ? 0 : 32;
-    // Try to inline memcpy type calls if optimizations are enabled.
-    if (Helper.tryCombineMemCpyFamily(MI, MaxLen))
-      return true;
-    if (Opc == TargetOpcode::G_MEMSET)
-      return llvm::AArch64GISelUtils::tryEmitBZero(MI, B, Libcalls,
-                                                   CInfo.EnableMinSize);
-    return false;
-  }
-  }
 
   return false;
 }
@@ -858,7 +1140,6 @@ void AArch64PreLegalizerCombinerLegacy::getAnalysisUsage(
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   AU.addRequired<LibcallLoweringInfoWrapper>();
@@ -931,13 +1212,13 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   auto &MAMProxy =
       MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
-  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+  const ModuleLibcallLoweringInfo *LibcallResult =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(
           *MF.getFunction().getParent());
   if (!LibcallResult)
     reportFatalUsageError("LibcallLoweringModuleAnalysis result not available");
 
-  const LibcallLoweringInfo &Libcalls = LibcallResult->getLibcallLowering(ST);
+  const LibcallLoweringInfo &Libcalls = getLibcallLowering(*LibcallResult, ST);
 
   bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
 
@@ -947,7 +1228,6 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GISelValueTrackingAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<GISelCSEAnalysis>();
   return PA;
 }

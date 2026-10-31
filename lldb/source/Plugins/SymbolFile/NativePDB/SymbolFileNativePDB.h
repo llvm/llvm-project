@@ -140,11 +140,25 @@ public:
 
   std::optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
 
-  /// Find the mangled name for a function
+  /// Build the asm label for the declaration of a function so that calls to it
+  /// are routed through ResolveFunctionCallLabel.
   ///
   /// \param id A symbol ID of a S_LPROC32/S_GPROC32 record
-  /// \returns The mangled name of the function (if available)
-  std::optional<llvm::StringRef> FindMangledFunctionName(PdbCompilandSymId id);
+  /// \returns The label, or an empty string if \p id is not a function.
+  std::string GetFunctionCallLabel(PdbCompilandSymId id);
+
+  /// Build the asm label for a method that was declared in the field list of
+  /// its class.
+  ///
+  /// \param method_type The type of the method in the field list.
+  /// \param qualified_name The name of the method including its class.
+  /// \returns The label of the definition of the method, or an empty string
+  /// if the method is not defined in this module.
+  std::string GetMethodCallLabel(llvm::codeview::TypeIndex method_type,
+                                 llvm::StringRef qualified_name);
+
+  llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(FunctionCallLabel &label) override;
 
   void FindTypes(const lldb_private::TypeQuery &match,
                  lldb_private::TypeResults &results) override;
@@ -234,6 +248,8 @@ private:
   lldb::TypeSP GetOrCreateType(llvm::codeview::TypeIndex ti);
   lldb::VariableSP GetOrCreateGlobalVariable(PdbGlobalSymId var_id);
   Block *GetOrCreateBlock(PdbCompilandSymId block_id);
+  lldb::VariableSP GetOrCreateLocalStaticVariable(PdbCompilandSymId scope_id,
+                                                  PdbCompilandSymId var_id);
   lldb::VariableSP GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
                                             PdbCompilandSymId var_id,
                                             bool is_param,
@@ -270,6 +286,11 @@ private:
   void ParseInlineSite(PdbCompilandSymId inline_site_id, Address func_addr);
 
   std::vector<CompilerContext> GetContextForType(llvm::codeview::TypeIndex ti);
+  std::vector<CompilerContext> GetContextForTypedef(PdbGlobalSymId id);
+
+  /// Returns true if \p udt is a typedef rather than the S_UDT that is emitted
+  /// for every tag type.
+  bool IsTypedefUdt(const llvm::codeview::UDTSym &udt);
 
   /// Caches the basenames of symbols found in the globals stream.
   ///
@@ -293,6 +314,18 @@ private:
   llvm::StringRef StripMangledFunctionName(llvm::StringRef mangled,
                                            PdbTypeSymId func_ty);
 
+  std::string MakeFunctionCallLabel(PdbSymUid uid, llvm::StringRef lookup_name);
+
+  /// Append the function referenced by the S_PROCREF/S_LPROCREF \p global.
+  void AppendFunctionForProcRef(PdbGlobalSymId global,
+                                SymbolContextList &sc_list);
+
+  /// Find the S_GPROC32/S_LPROC32 record named \p qualified_name whose type is
+  /// \p method_type.
+  std::optional<PdbCompilandSymId>
+  FindMethodDefinition(llvm::StringRef qualified_name,
+                       llvm::codeview::TypeIndex method_type);
+
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;
@@ -314,6 +347,8 @@ private:
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
 
+  bool m_parent_map_built = false;
+
   struct UdtDeclaration {
     /// This could either be an index into the `/names` section (string table,
     /// LF_UDT_MOD_SRC_LINE) or, this could be an index into the IPI stream to a
@@ -327,6 +362,8 @@ private:
   std::once_flag m_cached_udt_declarations;
 
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
+  /// typedef basename -> Global ID(s) of its S_UDT
+  lldb_private::UniqueCStringMap<uint32_t> m_typedef_base_names;
 
   /// mangled name/full function name -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;

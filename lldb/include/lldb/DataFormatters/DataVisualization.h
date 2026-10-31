@@ -11,7 +11,6 @@
 
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
 
@@ -50,22 +49,14 @@ public:
   static lldb::SyntheticChildrenSP
   GetSyntheticChildren(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
 
-  static bool
-  AnyMatches(const FormattersMatchCandidate &candidate_type,
-             TypeCategoryImpl::FormatCategoryItems items =
-                 TypeCategoryImpl::ALL_ITEM_TYPES,
-             bool only_enabled = true, const char **matching_category = nullptr,
-             TypeCategoryImpl::FormatCategoryItems *matching_type = nullptr);
-
   class NamedSummaryFormats {
   public:
-    static bool GetSummaryFormat(ConstString type,
+    static bool GetSummaryFormat(llvm::StringRef type,
                                  lldb::TypeSummaryImplSP &entry);
 
-    static void Add(ConstString type,
-                    const lldb::TypeSummaryImplSP &entry);
+    static void Add(llvm::StringRef type, const lldb::TypeSummaryImplSP &entry);
 
-    static bool Delete(ConstString type);
+    static bool Delete(llvm::StringRef type);
 
     static void Clear();
 
@@ -78,27 +69,27 @@ public:
 
   class Categories {
   public:
-    static bool GetCategory(ConstString category,
+    static bool GetCategory(llvm::StringRef category,
                             lldb::TypeCategoryImplSP &entry,
                             bool allow_create = true);
 
     static bool GetCategory(lldb::LanguageType language,
                             lldb::TypeCategoryImplSP &entry);
 
-    static void Add(ConstString category);
+    static void Add(llvm::StringRef category);
 
-    static bool Delete(ConstString category);
+    static bool Delete(llvm::StringRef category);
 
     static void Clear();
 
-    static void Clear(ConstString category);
+    static void Clear(llvm::StringRef category);
 
-    static void Enable(ConstString category,
+    static void Enable(llvm::StringRef category,
                        TypeCategoryMap::Position = TypeCategoryMap::Default);
 
     static void Enable(lldb::LanguageType lang_type);
 
-    static void Disable(ConstString category);
+    static void Disable(llvm::StringRef category);
 
     static void Disable(lldb::LanguageType lang_type);
 

@@ -106,17 +106,14 @@ public:
     llvm_unreachable("Unsupported");
   }
 
-  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override {
-    llvm_unreachable("Unsupported");
-  }
-
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() override {
     llvm_unreachable("Unsupported");
   }
 

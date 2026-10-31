@@ -3,6 +3,7 @@
 # target application executable.
 
 add_lld_unittests(LLDAsLibELFTests
+  OutputStream.cpp
   ROCm.cpp
   SomeDrivers.cpp
 )

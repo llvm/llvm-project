@@ -121,6 +121,23 @@ unsigned _BitInt(1) Size1PostDecUnsigned(unsigned _BitInt(1) A) {
   return A;
 }
 
+void SwitchSmallBitInt(unsigned _BitInt(3) B) {
+  // CHECK-LABEL: define{{.*}}@SwitchSmallBitInt
+  // CHECK: %[[PARAM_ADDR:.*]] = alloca i8
+  // CHECK: %[[PARAM_LOAD:.*]] = load i8, ptr %[[PARAM_ADDR]]
+  // CHECK: %[[PARAM_TRUNC:.*]] = trunc i8 %[[PARAM_LOAD]] to i3
+  // CHECK: switch i3 %[[PARAM_TRUNC]], label %{{.*}} [
+  // CHECK:   i3 0, label %
+  // CHECK:   i3 1, label %
+  // CHECK:   i3 2, label %
+  // CHECK: ]
+
+  switch (B) {
+    case 0wb ... 2wb:
+      break;
+  }
+}
+
 #if __BITINT_MAXWIDTH__ > 128
 struct S1 {
   _BitInt(17) A;

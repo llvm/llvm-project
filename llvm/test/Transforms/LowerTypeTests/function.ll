@@ -33,9 +33,9 @@ target datalayout = "e-p:64:64"
 ; JT8: @f = alias [8 x i8], ptr @[[JT:.*]]
 ; JT16: @f = alias [16 x i8], ptr @[[JT:.*]]
 
-; JT4: @g = internal alias [4 x i8], getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
-; JT8: @g = internal alias [8 x i8], getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
-; JT16: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT4: @g = internal alias [4 x i8], getelementptr inbounds (i8, ptr @[[JT]], i64 4)
+; JT8: @g = internal alias [8 x i8], getelementptr inbounds (i8, ptr @[[JT]], i64 8)
+; JT16: @g = internal alias [16 x i8], getelementptr inbounds (i8, ptr @[[JT]], i64 16)
 
 ; NATIVE: define hidden void @f.cfi()
 ; WASM32: define void @f() !type !{{[0-9]+}} !wasm.index ![[I0:[0-9]+]]
@@ -63,9 +63,9 @@ define i1 @foo(ptr %p) {
   ret i1 %x
 }
 
-; JT4:  define private void @[[JT]]() #[[ATTR:.*]] align 4 {
-; JT8:  define private void @[[JT]]() #[[ATTR:.*]] align 8 {
-; JT16: define private void @[[JT]]() #[[ATTR:.*]] align 16 {
+; JT4:  define private void @[[JT]]() #[[ATTR:.*]] prefalign(4) !elf_section_properties ![[PROP:[0-9]*]] {
+; JT8:  define private void @[[JT]]() #[[ATTR:.*]] prefalign(8) !elf_section_properties ![[PROP:[0-9]*]] {
+; JT16: define private void @[[JT]]() #[[ATTR:.*]] prefalign(16) !elf_section_properties ![[PROP:[0-9]*]] {
 
 ; X86:      jmp ${0:c}@plt
 ; X86-SAME: int3
@@ -126,6 +126,10 @@ define i1 @foo(ptr %p) {
 ; RISCV: attributes #[[ATTR]] = { naked noinline "target-features"="-c,-relax" }
 ; LOONGARCH64: attributes #[[ATTR]] = { naked noinline }
 ; HEXAGON: attributes #[[ATTR]] = { naked noinline }
+
+; JT4: ![[PROP]] =  !{i64 1879002126, i64 4}
+; JT8: ![[PROP]] =  !{i64 1879002126, i64 8}
+; JT16: ![[PROP]] =  !{i64 1879002126, i64 16}
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}

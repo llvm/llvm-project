@@ -61,10 +61,11 @@ InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
                   entsize),
       bss(0), decodedCrel(0), keepUnique(0), nopFiller(0),
       content_(data.data()), size(data.size()) {
-  // In order to reduce memory allocation, we assume that mergeable
-  // sections are smaller than 4 GiB, which is not an unreasonable
-  // assumption as of 2017.
-  if (sectionKind == SectionBase::Merge && content().size() > UINT32_MAX)
+  // In order to reduce memory allocation, we assume that mergeable and
+  // .eh_frame sections are smaller than 4 GiB.
+  if ((sectionKind == SectionBase::Merge ||
+       sectionKind == SectionBase::EHFrame) &&
+      content().size() > UINT32_MAX)
     ErrAlways(getCtx()) << this << ": section too large";
 
   // The ELF spec states that a value of 0 means the section has
@@ -231,6 +232,12 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
 uint64_t SectionBase::getVA(uint64_t offset) const {
   const OutputSection *out = getOutputSection();
   return (out ? out->addr : 0) + getOffset(offset);
+}
+
+uint64_t SectionBase::getRelocVA(uint64_t offset) const {
+  if (auto *es = dyn_cast<EhInputSection>(this))
+    return es->getParent()->getVA(offset);
+  return getVA(offset);
 }
 
 OutputSection *SectionBase::getOutputSection() {
@@ -837,18 +844,15 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLTREL:
     return r.sym->getVA(ctx, a) - ctx.in.gotPlt->getVA();
   case R_GOTPLT:
-  case R_RELAX_TLS_GD_TO_IE_GOTPLT:
     return r.sym->getGotVA(ctx) + a - ctx.in.gotPlt->getVA();
   case R_TLSLD_GOT_OFF:
   case R_GOT_OFF:
-  case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return r.sym->getGotOffset(ctx) + a;
   case RE_AARCH64_GOT_PAGE_PC:
     return getAArch64Page(r.sym->getGotVA(ctx) + a) - getAArch64Page(p);
   case RE_AARCH64_GOT_PAGE:
     return r.sym->getGotVA(ctx) + a - getAArch64Page(ctx.in.got->getVA());
   case R_GOT_PC:
-  case R_RELAX_TLS_GD_TO_IE:
     return r.sym->getGotVA(ctx) + a - p;
   case R_GOTPLT_GOTREL:
     return r.sym->getGotPltVA(ctx) + a - ctx.in.got->getVA();
@@ -986,9 +990,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return getPPC64TocBase(ctx) + a;
   case R_RELAX_GOT_PC:
     return r.sym->getVA(ctx, a) - p;
-  case R_RELAX_TLS_GD_TO_LE:
-  case R_RELAX_TLS_IE_TO_LE:
-  case R_RELAX_TLS_LD_TO_LE:
   case R_TPREL:
     // It is not very clear what to return if the symbol is undefined. With
     // --noinhibit-exec, even a non-weak undefined reference may reach here.
@@ -997,7 +998,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     if (r.sym->isUndefined())
       return a;
     return getTlsTpOffset(ctx, *r.sym) + a;
-  case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_TPREL_NEG:
     if (r.sym->isUndefined())
       return a;
@@ -1356,16 +1356,6 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
 void InputSection::replace(InputSection *other) {
   addralign = std::max(addralign, other->addralign);
 
-  // When a section is replaced with another section that was allocated to
-  // another partition, the replacement section (and its associated sections)
-  // need to be placed in the main partition so that both partitions will be
-  // able to access it.
-  if (partition != other->partition) {
-    partition = 1;
-    for (InputSection *isec : dependentSections)
-      isec->partition = 1;
-  }
-
   other->repl = repl;
   other->markDead();
 }
@@ -1430,7 +1420,18 @@ template <class ELFT> void EhInputSection::split() {
     unsigned firstRel = -1;
     if (relI != rels.size() && rels[relI].offset < off + size)
       firstRel = relI;
-    (id == 0 ? cies : fdes).emplace_back(off, this, size, firstRel);
+    if (id == 0) {
+      cies.emplace_back(off, size, firstRel, -1);
+    } else {
+      auto cieOff = off + 4 - id;
+      auto it = partition_point(
+          cies, [=](const EhSectionPiece &p) { return p.inputOff < cieOff; });
+      if (it == cies.end() || it->inputOff != cieOff) {
+        msg = "invalid CIE reference";
+        break;
+      }
+      fdes.emplace_back(off, size, firstRel, it - cies.begin());
+    }
     d = d.slice(size);
   }
   if (msg)
@@ -1556,9 +1557,12 @@ SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
   // For non-string fixed-size records, piece index = offset / entsize.
   if (!(flags & SHF_STRINGS))
     return pieces[offset / entsize];
-  return partition_point(
-      pieces,
-      [=](const SectionPiece &p) { return p.inputOff <= offset; })[-1];
+  // Find the last piece whose inputOff <= offset. Prefer a conditional move
+  // to a mispredicated branch.
+  SectionPiece *p = pieces.data();
+  for (size_t n = pieces.size(); n > 1; n -= n / 2)
+    p = LLVM_UNPREDICTABLE(p[n / 2].inputOff <= offset) ? p + n / 2 : p;
+  return *p;
 }
 
 // Return the offset in an output section for a given input offset.

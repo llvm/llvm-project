@@ -101,7 +101,7 @@ void ignore_all_except_myty_divrem(int A, int B, myty C, myty D) {
   (void)(A%B);
 }
 
-// Matches the example from clang/docs/SanitizerSpecialCaseList.rst
+// Matches the example from clang/docs/SanitizerSpecialCaseList.md
 typedef char T;
 typedef char U;
 // TRUNC2-LABEL: docs_example
@@ -113,4 +113,3 @@ void docs_example(int toobig) {
 // TRUNC2-NOT: %handler.implicit_conversion
   char c = toobig;
 }
-

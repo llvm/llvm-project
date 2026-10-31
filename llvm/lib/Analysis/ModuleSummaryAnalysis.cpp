@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -33,6 +34,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -40,6 +42,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -62,29 +65,7 @@ using namespace llvm::memprof;
 
 #define DEBUG_TYPE "module-summary-analysis"
 
-// Option to force edges cold which will block importing when the
-// -import-cold-multiplier is set to 0. Useful for debugging.
 namespace llvm {
-FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold =
-    FunctionSummary::FSHT_None;
-
-static cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
-    "force-summary-edges-cold", cl::Hidden, cl::location(ForceSummaryEdgesCold),
-    cl::desc("Force all edges in the function summary to cold"),
-    cl::values(clEnumValN(FunctionSummary::FSHT_None, "none", "None."),
-               clEnumValN(FunctionSummary::FSHT_AllNonCritical,
-                          "all-non-critical", "All non-critical edges."),
-               clEnumValN(FunctionSummary::FSHT_All, "all", "All edges.")));
-
-static cl::opt<std::string> ModuleSummaryDotFile(
-    "module-summary-dot-file", cl::Hidden, cl::value_desc("filename"),
-    cl::desc("File to emit dot graph of new summary into"));
-
-static cl::opt<bool> EnableMemProfIndirectCallSupport(
-    "enable-memprof-indirect-call-support", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Enable MemProf support for summarizing and cloning indirect calls"));
-
 // This can be used to override the number of callees created from VP metadata
 // normally taken from the -icp-max-prom option with a larger amount, if useful
 // for analysis. Use a separate option so that we can control the number of
@@ -175,6 +156,27 @@ findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
                                                  V.Value));
   }
   return HasBlockAddress;
+}
+
+/// Collect globals referenced via !implicit.ref metadata on a function
+/// and add them as reference edges in the module summary. This ensures
+/// ThinLTO liveness analysis treats them as live when the function is
+/// live, and imports them alongside the function during cross-module
+/// importing.
+static void findImplicitRefEdges(
+    ModuleSummaryIndex &Index, const Function &F,
+    SetVector<ValueInfo, SmallVector<ValueInfo, 0>> &RefEdges) {
+  if (!F.hasMetadata(LLVMContext::MD_implicit_ref))
+    return;
+  SmallVector<MDNode *, 4> MDs;
+  F.getMetadata(LLVMContext::MD_implicit_ref, MDs);
+  for (MDNode *MD : MDs) {
+    for (const MDOperand &Op : MD->operands()) {
+      if (auto *VAM = dyn_cast_or_null<ValueAsMetadata>(Op.get()))
+        if (auto *GV = dyn_cast<GlobalValue>(VAM->getValue()))
+          RefEdges.insert(Index.getOrInsertValueInfo(GV));
+    }
+  }
 }
 
 static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
@@ -316,10 +318,10 @@ static bool mustBeUnreachableFunction(const Function &F) {
 }
 
 static void computeFunctionSummary(
-    ModuleSummaryIndex &Index, const Module &M, const Function &F,
-    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI, DominatorTree &DT,
-    bool HasLocalsInUsedOrAsm, DenseSet<GlobalValue::GUID> &CantBePromoted,
-    bool IsThinLTO,
+    const AnalysisOptions &Opts, ModuleSummaryIndex &Index, const Module &M,
+    const Function &F, BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+    DominatorTree &DT, bool HasLocalsInUsedOrAsm,
+    DenseSet<GlobalValue::GUID> &CantBePromoted, bool IsThinLTO,
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   // Summary not currently supported for anonymous functions, they should
   // have been named.
@@ -346,6 +348,8 @@ static void computeFunctionSummary(
   // list.
   bool HasLocalIFuncCallOrRef = false;
   findRefEdges(Index, &F, RefEdges, Visited, HasLocalIFuncCallOrRef);
+  findImplicitRefEdges(Index, F, RefEdges);
+
   std::vector<const Instruction *> NonVolatileLoads;
   std::vector<const Instruction *> NonVolatileStores;
 
@@ -374,7 +378,7 @@ static void computeFunctionSummary(
     }
 
     for (const Instruction &I : BB) {
-      if (I.isDebugOrPseudoInst())
+      if (isa<PseudoProbeInst>(I))
         continue;
       ++NumInsts;
 
@@ -456,7 +460,7 @@ static void computeFunctionSummary(
         auto ScaledCount = PSI->getProfileCount(*CB, BFI);
         auto Hotness = ScaledCount ? getHotness(*ScaledCount, PSI)
                                    : CalleeInfo::HotnessType::Unknown;
-        if (ForceSummaryEdgesCold != FunctionSummary::FSHT_None)
+        if (Opts.force_summary_edges_cold != ForceSummaryHotness::None)
           Hotness = CalleeInfo::HotnessType::Cold;
 
         // Use the original CalledValue, in case it was an alias. We want
@@ -495,16 +499,26 @@ static void computeFunctionSummary(
           for (const auto &Op : MD->operands()) {
             Function *Callee = mdconst::extract_or_null<Function>(Op);
             if (Callee)
-              CallGraphEdges[Index.getOrInsertValueInfo(Callee)];
+              CallGraphEdges[Index.getOrInsertValueInfo(Callee)]
+                  .setHasIndirectCall(true);
           }
         }
 
         CandidateProfileData =
             ICallAnalysis.getPromotionCandidatesForInstruction(
                 &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
-        for (const auto &Candidate : CandidateProfileData)
-          CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
-              .updateHotness(getHotness(Candidate.Count, PSI));
+        for (const auto &Candidate : CandidateProfileData) {
+          auto &Edge =
+              CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)];
+          Edge.updateHotness(getHotness(Candidate.Count, PSI));
+          Edge.setHasIndirectCall(true);
+          // Record that the profiled target was reached via a tail call, so
+          // that MemProf context disambiguation can identify frames missing
+          // from profiled contexts due to indirect tail calls (see
+          // findProfiledCalleeThroughTailCalls).
+          if (CB->isTailCall())
+            Edge.setHasTailCall(true);
+        }
       }
 
       // Summarize memprof related metadata. This is only needed for ThinLTO.
@@ -512,7 +526,7 @@ static void computeFunctionSummary(
         continue;
 
       // Skip indirect calls if we haven't enabled memprof ICP.
-      if (!CalledFunction && !EnableMemProfIndirectCallSupport)
+      if (!CalledFunction && !Opts.enable_memprof_indirect_call_support)
         continue;
 
       // Ensure we keep this analysis in sync with the handling in the ThinLTO
@@ -607,7 +621,7 @@ static void computeFunctionSummary(
               Index.getOrInsertValueInfo(cast<GlobalValue>(CalledValue));
           Callsites.push_back({CalleeValueInfo, StackIdIndices});
         } else {
-          assert(EnableMemProfIndirectCallSupport);
+          assert(Opts.enable_memprof_indirect_call_support);
           // For indirect callsites, create multiple Callsites, one per target.
           // This enables having a different set of clone versions per target,
           // and we will apply the cloning decisions while speculatively
@@ -682,7 +696,7 @@ static void computeFunctionSummary(
   // sample PGO, to enable the same inlines as the profiled optimized binary.
   for (auto &I : F.getImportGUIDs())
     CallGraphEdges[Index.getOrInsertValueInfo(I)].updateHotness(
-        ForceSummaryEdgesCold == FunctionSummary::FSHT_All
+        Opts.force_summary_edges_cold == ForceSummaryHotness::All
             ? CalleeInfo::HotnessType::Cold
             : CalleeInfo::HotnessType::Critical);
 
@@ -944,6 +958,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     ProfileSummaryInfo *PSI,
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   assert(PSI);
+  const AnalysisOptions &Opts = getAnalysisOptions(M);
   bool EnableSplitLTOUnit = false;
   bool UnifiedLTO = false;
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
@@ -1056,16 +1071,19 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     DominatorTree DT(const_cast<Function &>(F));
     BlockFrequencyInfo *BFI = nullptr;
     std::unique_ptr<BlockFrequencyInfo> BFIPtr;
-    if (GetBFICallback)
-      BFI = GetBFICallback(F);
-    else if (F.hasProfileData()) {
-      LoopInfo LI{DT};
-      BranchProbabilityInfo BPI{F, LI};
-      BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, LI);
-      BFI = BFIPtr.get();
+    if (F.hasProfileData()) {
+      if (GetBFICallback) {
+        BFI = GetBFICallback(F);
+      } else {
+        CycleInfo CI;
+        CI.compute(const_cast<Function &>(F));
+        BranchProbabilityInfo BPI{F, CI};
+        BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, CI);
+        BFI = BFIPtr.get();
+      }
     }
 
-    computeFunctionSummary(Index, M, F, BFI, PSI, DT,
+    computeFunctionSummary(Opts, Index, M, F, BFI, PSI, DT,
                            !LocalsUsed.empty() || HasLocalInlineAsmSymbol,
                            CantBePromoted, IsThinLTO, GetSSICallback);
   }
@@ -1138,12 +1156,14 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     }
   }
 
-  if (!ModuleSummaryDotFile.empty()) {
+  if (!Opts.module_summary_dot_file.empty()) {
     std::error_code EC;
-    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::OF_Text);
+    raw_fd_ostream OSDot(Opts.module_summary_dot_file, EC,
+                         sys::fs::OpenFlags::OF_Text);
     if (EC)
       report_fatal_error(Twine("Failed to open dot file ") +
-                         ModuleSummaryDotFile + ": " + EC.message() + "\n");
+                         Opts.module_summary_dot_file + ": " + EC.message() +
+                         "\n");
     Index.exportToDot(OSDot, {});
   }
 
@@ -1151,6 +1171,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 }
 
 AnalysisKey ModuleSummaryIndexAnalysis::Key;
+AnalysisKey ImmutableModuleSummaryIndexAnalysis::Key;
 
 ModuleSummaryIndex
 ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
@@ -1242,8 +1263,6 @@ INITIALIZE_PASS(ImmutableModuleSummaryIndexWrapperPass, "module-summary-info",
 bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
   if (!CB)
     return false;
-  if (CB->isDebugOrPseudoInst())
-    return false;
   auto *CI = dyn_cast<CallInst>(CB);
   auto *CalledValue = CB->getCalledOperand();
   auto *CalledFunction = CB->getCalledFunction();
@@ -1266,7 +1285,8 @@ bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
       return false;
   } else {
     // Skip indirect calls if we haven't enabled memprof ICP.
-    if (!EnableMemProfIndirectCallSupport)
+    if (!getAnalysisOptions(CB->getContext())
+             .enable_memprof_indirect_call_support)
       return false;
     // Skip inline assembly calls.
     if (CI && CI->isInlineAsm())

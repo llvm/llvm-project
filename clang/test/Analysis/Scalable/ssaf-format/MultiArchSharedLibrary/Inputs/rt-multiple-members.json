@@ -1,0 +1,37 @@
+{
+  "members": [
+    {
+      "data": [],
+      "id_table": [],
+      "linkage_table": [],
+      "lu_namespace": [
+        {
+          "kind": "LinkUnit",
+          "name": "libfoo"
+        }
+      ],
+      "target_triple": "arm64-apple-macosx",
+      "type": "LUSummary"
+    },
+    {
+      "data": [],
+      "id_table": [],
+      "linkage_table": [],
+      "lu_namespace": [
+        {
+          "kind": "LinkUnit",
+          "name": "libfoo"
+        }
+      ],
+      "target_triple": "x86_64-apple-macosx",
+      "type": "LUSummary"
+    }
+  ],
+  "namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "libfoo"
+    }
+  ],
+  "type": "MultiArchSharedLibrary"
+}

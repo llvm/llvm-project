@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCLFI.h"
+#include "MCCLOptions.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -21,19 +22,16 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 
-static const char NoteNamespace[] = "LFI";
+using namespace llvm;
 
-namespace llvm {
+const char NoteNamespace[] = "LFI";
 
-cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
-                                  cl::desc("Enable rewriting for LFI."),
-                                  cl::init(true));
+constexpr unsigned X86BundleSize = 32;
 
-void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
-                             const Triple &TheTriple) {
+void llvm::initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
+                                   const Triple &TheTriple) {
   assert(TheTriple.isLFI());
 
   std::string Error;
@@ -41,7 +39,7 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
 
   // Create the target-specific MCLFIRewriter.
   assert(TheTarget != nullptr);
-  if (FlagEnableRewriting) {
+  if (getMCCLOptions(Ctx.getTargetOptions()).lfi_enable_rewriter) {
     auto MRI =
         std::unique_ptr<MCRegisterInfo>(TheTarget->createMCRegInfo(TheTriple));
     auto MII = std::unique_ptr<MCInstrInfo>(TheTarget->createMCInstrInfo());
@@ -50,7 +48,14 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
   }
 }
 
-void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
+void llvm::emitLFIBundleAlign(MCStreamer &Streamer, MCContext &Ctx) {
+  const Triple &TheTriple = Ctx.getTargetTriple();
+  assert(TheTriple.isLFI());
+  if (TheTriple.getArch() == Triple::x86_64)
+    Streamer.emitBundleAlignMode(Align(X86BundleSize));
+}
+
+void llvm::emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
   const Triple &TheTriple = Ctx.getTargetTriple();
   assert(TheTriple.isLFI());
 
@@ -61,15 +66,20 @@ void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
     NoteName = ".note.LFI.ABI.aarch64";
     NoteArch = "aarch64";
     break;
+  case Triple::x86_64:
+    NoteName = ".note.LFI.ABI.x86_64";
+    NoteArch = "x86_64";
+    break;
   default:
     reportFatalUsageError("Unsupported architecture for LFI");
   }
 
   // Emit an ELF Note section in its own COMDAT group which identifies LFI
   // object files.
-  MCSectionELF *Note = Ctx.getELFSection(NoteName, ELF::SHT_NOTE,
-                                         ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
-                                         NoteName, /*IsComdat=*/true);
+  MCSectionELF *Note = Ctx.getELFSection(
+      NoteName, ELF::SHT_NOTE,
+      ELF::SHF_ALLOC | ELF::SHF_GROUP | ELF::SHF_GNU_RETAIN, 0, NoteName,
+      /*IsComdat=*/true);
 
   Streamer.switchSection(Note);
   Streamer.emitIntValue(strlen(NoteNamespace) + 1, 4);
@@ -82,5 +92,3 @@ void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
   Streamer.emitIntValue(0, 1); // NUL terminator
   Streamer.emitValueToAlignment(Align(4));
 }
-
-} // namespace llvm

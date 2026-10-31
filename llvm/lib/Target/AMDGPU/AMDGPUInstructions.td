@@ -19,6 +19,7 @@ def AddrSpaces {
   int Constant = 4;
   int Private = 5;
   int Constant32Bit = 6;
+  int VGPR = 13;
 }
 
 
@@ -92,9 +93,13 @@ def IEEEModeDisabled : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode
 
 def FMA : Predicate<"Subtarget->hasFMA()">;
 
-def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
+def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 
-def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))>;
+def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 
 class CustomOperandClass<string name, bit optional, string predicateMethod,
                          string parserMethod, string defaultMethod>
@@ -204,6 +209,13 @@ class is_canonicalized_2<SDPatternOperator op> : PatFrag<
     const SITargetLowering &Lowering =
               *static_cast<const SITargetLowering *>(getTargetLowering());
 
+    // A poison operand is trivially canonical, but packing it is
+    // pointless. Leave those to the cheaper build_vector-with-undef
+    // patterns rather than materializing a v_pack for a don't-care
+    // lane.
+    if (N->getOperand(0).isUndef() || N->getOperand(1).isUndef())
+      return false;
+
     return Lowering.isCanonicalized(*CurDAG, N->getOperand(0)) &&
       Lowering.isCanonicalized(*CurDAG, N->getOperand(1));
    }]> {
@@ -225,6 +237,22 @@ class FoldTernaryOpPat<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
 
 def imad : FoldTernaryOpPat<mul, add>;
 
+// Match binary op with source operands that won't fold into sdwa patterns.
+class BinOp_no_sdwa<SDPatternOperator binop> : PatFrag<
+  (ops node:$lhs, node:$rhs),
+  (binop node:$lhs, node:$rhs),
+  [{
+    return !isSDWAOperand(Op.getOperand(0).getNode()) &&
+           !isSDWAOperand(Op.getOperand(1).getNode());
+  }]> {
+  let GISelPredicateCode = [{
+    return true; // TODO
+  }];
+}
+
+def AMDGPUmul_i24_no_sdwa : BinOp_no_sdwa<AMDGPUmul_i24>;
+def AMDGPUmul_u24_no_sdwa : BinOp_no_sdwa<AMDGPUmul_u24>;
+
 let Properties = [SDNPCommutative, SDNPAssociative] in {
 def smax_oneuse : HasOneUseBinOp<smax>;
 def smin_oneuse : HasOneUseBinOp<smin>;
@@ -233,6 +261,8 @@ def umin_oneuse : HasOneUseBinOp<umin>;
 
 def fminnum_oneuse : HasOneUseBinOp<fminnum>;
 def fmaxnum_oneuse : HasOneUseBinOp<fmaxnum>;
+def fminimumnum_oneuse : HasOneUseBinOp<fminimumnum>;
+def fmaximumnum_oneuse : HasOneUseBinOp<fmaximumnum>;
 def fminimum_oneuse : HasOneUseBinOp<fminimum>;
 def fmaximum_oneuse : HasOneUseBinOp<fmaximum>;
 
@@ -245,7 +275,8 @@ def or_oneuse : HasOneUseBinOp<or>;
 def xor_oneuse : HasOneUseBinOp<xor>;
 } // Properties = [SDNPCommutative, SDNPAssociative]
 
-def not_oneuse : HasOneUseUnaryOp<not>;
+def not_oneuse  : HasOneUseUnaryOp<not>;
+def vnot_oneuse : HasOneUseUnaryOp<vnot>;
 
 def add_oneuse : HasOneUseBinOp<add>;
 def sub_oneuse : HasOneUseBinOp<sub>;
@@ -264,40 +295,53 @@ def AMDGPUmul_i24_oneuse : HasOneUseBinOp<AMDGPUmul_i24>;
 
 // Constrained shift PatFrags.
 
+// G_CONSTANT is assigned the SGPR bank, so a VGPR G_AND reads the mask through
+// a COPY. An SGPR G_AND feeding a VGPR shift likewise has a COPY on the amount.
+// GIIgnoreCopies looks through those copies; the pattern shape is unchanged.
+let GIIgnoreCopies = 1 in {
+
 def csh_mask_16 : PatFrag<(ops node:$src0), (and node:$src0, imm),
-  [{ return isUnneededShiftMask(N, 4); }]> {
+  [{ return isUnneededShiftMask(N, 4); }]>, GISelFlags {
     let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 4); }];
   }
 
 def csh_mask_32 : PatFrag<(ops node:$src0), (and node:$src0, imm),
-  [{ return isUnneededShiftMask(N, 5); }]> {
+  [{ return isUnneededShiftMask(N, 5); }]>, GISelFlags {
     let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 5); }];
   }
 
 def csh_mask_64 : PatFrag<(ops node:$src0), (and node:$src0, imm),
-  [{ return isUnneededShiftMask(N, 6); }]> {
+  [{ return isUnneededShiftMask(N, 6); }]>, GISelFlags {
     let GISelPredicateCode = [{ return isUnneededShiftMask(MI, 6); }];
   }
+
+} // End GIIgnoreCopies = 1
 
 foreach width = [16, 32, 64] in {
 defvar csh_mask = !cast<SDPatternOperator>("csh_mask_"#width);
 
 def cshl_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(shl node:$src0, node:$src1), (shl node:$src0, (csh_mask node:$src1))]>;
+  [(shl node:$src0, node:$src1), (shl node:$src0, (csh_mask node:$src1))]>, GISelFlags {
+    let GIIgnoreCopies = 1;
+  }
 defvar cshl = !cast<SDPatternOperator>("cshl_"#width);
 def cshl_#width#_oneuse : HasOneUseBinOp<cshl>;
 def clshl_rev_#width : PatFrag <(ops node:$src0, node:$src1),
   (cshl $src1, $src0)>;
 
 def csrl_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(srl node:$src0, node:$src1), (srl node:$src0, (csh_mask node:$src1))]>;
+  [(srl node:$src0, node:$src1), (srl node:$src0, (csh_mask node:$src1))]>, GISelFlags {
+    let GIIgnoreCopies = 1;
+  }
 defvar csrl = !cast<SDPatternOperator>("csrl_"#width);
 def csrl_#width#_oneuse : HasOneUseBinOp<csrl>;
 def clshr_rev_#width : PatFrag <(ops node:$src0, node:$src1),
   (csrl $src1, $src0)>;
 
 def csra_#width : PatFrags<(ops node:$src0, node:$src1),
-  [(sra node:$src0, node:$src1), (sra node:$src0, (csh_mask node:$src1))]>;
+  [(sra node:$src0, node:$src1), (sra node:$src0, (csh_mask node:$src1))]>, GISelFlags {
+    let GIIgnoreCopies = 1;
+  }
 defvar csra = !cast<SDPatternOperator>("csra_"#width);
 def csra_#width#_oneuse : HasOneUseBinOp<csra>;
 def cashr_rev_#width : PatFrag <(ops node:$src0, node:$src1),
@@ -497,19 +541,11 @@ def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextloadi16 node:$ptr)> {
   let IsLoad = 1;
 }
 
+def atomic_load_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = 1;
+}
+
 def atomic_load_nonext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_16 node:$ptr)> {
-  let IsAtomic = 1;
-}
-
-def atomic_load_nonext_32_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_32 node:$ptr)> {
-  let IsAtomic = 1;
-}
-
-def atomic_load_nonext_64_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_64 node:$ptr)> {
-  let IsAtomic = 1;
-}
-
-def atomic_load_nonext_128_#as : PatFrag<(ops node:$ptr), (atomic_load_nonext_128 node:$ptr)> {
   let IsAtomic = 1;
 }
 
@@ -569,16 +605,14 @@ def truncstorei16_hi16_#as : StoreHi16<truncstorei16, i16>;
 } // End let IsStore = 1, AddressSpaces = ...
 
 let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
+def atomic_store_#as : PatFrag<(ops node:$val, node:$ptr),
+                               (atomic_store node:$val, node:$ptr)> {
+  let IsTruncStore = 0;
+}
 def atomic_store_8_#as : PatFrag<(ops node:$val, node:$ptr),
                                  (atomic_store_8 node:$val, node:$ptr)>;
 def atomic_store_16_#as : PatFrag<(ops node:$val, node:$ptr),
                                   (atomic_store_16 node:$val, node:$ptr)>;
-def atomic_store_32_#as : PatFrag<(ops node:$val, node:$ptr),
-                                  (atomic_store_32 node:$val, node:$ptr)>;
-def atomic_store_64_#as : PatFrag<(ops node:$val, node:$ptr),
-                                  (atomic_store_64 node:$val, node:$ptr)>;
-def atomic_store_128_#as : PatFrag<(ops node:$val, node:$ptr),
-                                   (atomic_store_128 node:$val, node:$ptr)>;
 } // End let IsAtomic = 1, AddressSpaces = ...
 } // End foreach as
 
@@ -749,7 +783,7 @@ int BF16_NEG_ONE = 0xBF80;
 def CONST : Constants;
 
 def fpimm_zero : FPImmLeaf<fAny, [{ return Imm.isZero(); }]> ;
-def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+1.0); }]> ;
+def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isOne(); }]> ;
 def fpimm_half : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.5); }]> ;
 
 /* Generic helper patterns for intrinsics */
@@ -810,13 +844,13 @@ def cvt_flr_i32_f32 : PatFrag<
 
 let AddedComplexity = 2 in {
 class IMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
-  (add (AMDGPUmul_i24 i32:$src0, i32:$src1), i32:$src2),
+  (add (AMDGPUmul_i24_no_sdwa i32:$src0, i32:$src1), i32:$src2),
   !if(HasClamp, (Inst $src0, $src1, $src2, (i1 0)),
                 (Inst $src0, $src1, $src2))
 >;
 
 class UMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
-  (add (AMDGPUmul_u24 i32:$src0, i32:$src1), i32:$src2),
+  (add (AMDGPUmul_u24_no_sdwa i32:$src0, i32:$src1), i32:$src2),
   !if(HasClamp, (Inst $src0, $src1, $src2, (i1 0)),
                 (Inst $src0, $src1, $src2))
 >;
@@ -830,13 +864,15 @@ class RcpPat<Instruction RcpInst, ValueType vt> : AMDGPUPat <
 // Instructions which select to the same v_min_f*
 def fminnum_like : PatFrags<(ops node:$src0, node:$src1),
   [(fminnum_ieee node:$src0, node:$src1),
-   (fminnum node:$src0, node:$src1)]
+   (fminnum node:$src0, node:$src1),
+   (fminimumnum node:$src0, node:$src1)]
 >;
 
 // Instructions which select to the same v_max_f*
 def fmaxnum_like : PatFrags<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee node:$src0, node:$src1),
-   (fmaxnum node:$src0, node:$src1)]
+   (fmaxnum node:$src0, node:$src1),
+   (fmaximumnum node:$src0, node:$src1)]
 >;
 
 class NeverNaNPats<dag ops, list<dag> frags> : PatFrags<ops, frags> {
@@ -850,22 +886,26 @@ class NeverNaNPats<dag ops, list<dag> frags> : PatFrags<ops, frags> {
 
 def fminnum_like_nnan : NeverNaNPats<(ops node:$src0, node:$src1),
   [(fminnum_ieee node:$src0, node:$src1),
-   (fminnum node:$src0, node:$src1)]
+   (fminnum node:$src0, node:$src1),
+   (fminimumnum node:$src0, node:$src1)]
 >;
 
 def fmaxnum_like_nnan : NeverNaNPats<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee node:$src0, node:$src1),
-   (fmaxnum node:$src0, node:$src1)]
+   (fmaxnum node:$src0, node:$src1),
+   (fmaximumnum node:$src0, node:$src1)]
 >;
 
 def fminnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
   [(fminnum_ieee_oneuse node:$src0, node:$src1),
-   (fminnum_oneuse node:$src0, node:$src1)]
+   (fminnum_oneuse node:$src0, node:$src1),
+   (fminimumnum_oneuse node:$src0, node:$src1)]
 >;
 
 def fmaxnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee_oneuse node:$src0, node:$src1),
-   (fmaxnum_oneuse node:$src0, node:$src1)]
+   (fmaxnum_oneuse node:$src0, node:$src1),
+   (fmaximumnum_oneuse node:$src0, node:$src1)]
 >;
 
 def any_fmad : PatFrags<(ops node:$src0, node:$src1, node:$src2),

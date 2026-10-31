@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
@@ -483,8 +484,10 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   else if (Arch.consume_front("rv64"))
     XLen = 64;
 
-  if (XLen == 0 || Arch.empty() || (Arch[0] != 'i' && Arch[0] != 'e'))
+  auto IsBaseISA = [](char C) { return C == 'i' || C == 'e' || C == 'y'; };
+  if (XLen == 0 || Arch.empty() || !IsBaseISA(Arch[0]))
     return getError("arch string must begin with valid base ISA");
+  char BaseISA = Arch[0];
 
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
 
@@ -529,6 +532,19 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
       return getError("failed to parse major version number");
 
+    if (IsBaseISA(ExtName[0])) {
+      if (ExtName.size() > 1)
+        return getError("base ISA '" + Twine(ExtName[0]) +
+                        "' is missing version number");
+      if (ExtName[0] != BaseISA)
+        return getError("conflicting base ISAs '" + Twine(BaseISA) + "' and '" +
+                        ExtName + "'");
+    } else if (RISCVISAUtils::AllStdExts.contains(ExtName[0]) &&
+               ExtName.size() > 1) {
+      return getError("extension '" + Twine(ExtName[0]) +
+                      "' is missing version number");
+    }
+
     if ((ExtName[0] == 'z' || ExtName[0] == 's' || ExtName[0] == 'x') &&
         (ExtName.size() == 1 || isDigit(ExtName[1])))
       return getError("'" + Twine(ExtName[0]) +
@@ -541,6 +557,10 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
              .second)
       return getError("duplicate extension '" + ExtName + "'");
   }
+  // Plain 'y' always implies 'i' (which is omitted in the normalized arch
+  // string). Y+E requires a long base name arch string.
+  if (BaseISA == 'y')
+    ISAInfo->Exts["i"] = *findDefaultVersion("i");
   ISAInfo->updateImpliedLengths();
   return std::move(ISAInfo);
 }
@@ -593,7 +613,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   if (XLen == 0 || Arch.empty())
     return getError(
-        "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
+        "string must begin with rv32{i,e,g,y}, rv64{i,e,g,y}, or a supported "
         "profile name");
 
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
@@ -606,14 +626,18 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   unsigned Major, Minor, ConsumeLength;
 
-  // First letter should be 'e', 'i' or 'g'.
+  // First letter should be 'e', 'i', 'g' or 'y'.
   switch (Baseline) {
   default:
     return getError("first letter after \'rv" + Twine(XLen) +
-                    "\' should be 'e', 'i' or 'g'");
+                    "\' should be 'e', 'i', 'g' or 'y'");
   case 'e':
   case 'i':
-    // Baseline is `i` or `e`
+  case 'y':
+    // Baseline is 'i', 'e', or 'y' (which implies 'i' in updateImplication).
+    // TODO: arch string syntax for RVE+RVY (and y in non-first position) will
+    // be included following conclusion of "long base name" syntax
+    // https://lists.riscv.org/g/tech-unprivileged/message/1134
     if (auto E = getExtensionVersion(
             StringRef(&Baseline, 1), Arch, Major, Minor, ConsumeLength,
             EnableExperimentalExtension, ExperimentalExtensionVersionCheck))
@@ -730,6 +754,10 @@ static Error getIncompatibleError(StringRef Ext1, StringRef Ext2) {
                   "' extensions are incompatible");
 }
 
+static Error getBaseIncompatibleError(StringRef Ext, StringRef Base) {
+  return getError("'" + Ext + "' is incompatible with " + Base + " base");
+}
+
 static Error getExtensionRequiresError(StringRef Ext, StringRef ReqExt) {
   return getError("'" + Ext + "' requires '" + ReqExt +
                   "' extension to also be specified");
@@ -745,16 +773,19 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZvl = MinVLen != 0;
   bool HasZcmp = Exts.count("zcmp") != 0;
   bool HasXqccmp = Exts.count("xqccmp") != 0;
+  bool HasZcmt = Exts.count("zcmt") != 0;
+  bool HasXqccmt = Exts.count("xqccmt") != 0;
 
   static constexpr StringLiteral ZcdOverlaps[] = {
-      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"},
+      {"zcmt"},   {"zcmp"},   {"xqccmi"}, {"xqccmp"},
+      {"xqccmt"}, {"xqciac"}, {"xqcicm"},
   };
   static constexpr StringLiteral RV32Only[] = {
-      {"zcf"},     {"zclsd"},   {"zilsd"},    {"xwchc"},   {"xqci"},
-      {"xqcia"},   {"xqciac"},  {"xqcibi"},   {"xqcibm"},  {"xqcicli"},
-      {"xqcicm"},  {"xqcics"},  {"xqcicsr"},  {"xqciint"}, {"xqciio"},
-      {"xqcilb"},  {"xqcili"},  {"xqcilia"},  {"xqcilo"},  {"xqcilsm"},
-      {"xqcisim"}, {"xqcisls"}, {"xqcisync"},
+      {"zcf"},     {"zclsd"},   {"zilsd"},   {"xwchc"},    {"xqccmi"},
+      {"xqci"},    {"xqcia"},   {"xqciac"},  {"xqcibi"},   {"xqcibm"},
+      {"xqcicli"}, {"xqcicm"},  {"xqcics"},  {"xqcicsr"},  {"xqciint"},
+      {"xqciio"},  {"xqcilb"},  {"xqcili"},  {"xqcilia"},  {"xqcilo"},
+      {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}, {"xqcisync"},
   };
 
   if (HasI && HasE)
@@ -793,8 +824,28 @@ Error RISCVISAInfo::checkDependency() {
   if (Exts.count("zclsd") != 0 && Exts.count("zcf") != 0)
     return getIncompatibleError("zclsd", "zcf");
 
+  if (Exts.count("y") != 0) {
+    if (XLen == 32) {
+      // On RV32Y systems the zclsd/zcf encodings are used for y load/stores.
+      if (Exts.count("zclsd") != 0)
+        return getBaseIncompatibleError("zclsd", "rv32y");
+      if (Exts.count("zcf") != 0)
+        return getBaseIncompatibleError("zcf", "rv32y");
+    } else {
+      // On RV64Y systems the zcd encodings are used for y load/stores.
+      if (Exts.count("zcd") != 0)
+        return getBaseIncompatibleError("zcd", "rv64y");
+      for (auto Ext : ZcdOverlaps)
+        if (Exts.count(Ext.str()))
+          return getBaseIncompatibleError(Ext, "rv64y");
+    }
+  }
+
   if (HasZcmp && HasXqccmp)
     return getIncompatibleError("zcmp", "xqccmp");
+
+  if (HasZcmt && HasXqccmt)
+    return getIncompatibleError("zcmt", "xqccmt");
 
   return Error::success();
 }
@@ -843,21 +894,23 @@ void RISCVISAInfo::updateImplication() {
     }
   }
 
-  // Add Zcd if C and D are enabled.
-  if (Exts.count("c") && Exts.count("d") && !Exts.count("zcd")) {
+  // Add Zcd if C and D are enabled and we aren't targeting 64-bit RVY.
+  if (Exts.count("c") && Exts.count("d") && !Exts.count("zcd") &&
+      (XLen == 32 || !Exts.count("y"))) {
     auto Version = findDefaultVersion("zcd");
     Exts["zcd"] = *Version;
   }
 
-  // Add Zcf if C and F are enabled on RV32.
-  if (XLen == 32 && Exts.count("c") && Exts.count("f") && !Exts.count("zcf")) {
+  // Add Zcf if C and F are enabled on RV32 and Y is not enabled.
+  if (XLen == 32 && Exts.count("c") && Exts.count("f") && !Exts.count("zcf") &&
+      !Exts.count("y")) {
     auto Version = findDefaultVersion("zcf");
     Exts["zcf"] = *Version;
   }
 
-  // Add Zcf if Zce and F are enabled on RV32.
+  // Add Zcf if Zce and F are enabled on RV32 and Y is not enabled.
   if (XLen == 32 && Exts.count("zce") && Exts.count("f") &&
-      !Exts.count("zcf")) {
+      !Exts.count("zcf") && !Exts.count("y")) {
     auto Version = findDefaultVersion("zcf");
     Exts["zcf"] = *Version;
   }
@@ -872,18 +925,24 @@ void RISCVISAInfo::updateImplication() {
   // For RV64:
   //   - No D: Zca alone implies C
   //   - D: Zca + Zcd implies C
+  // For RV32Y (Zcf incompatible):
+  //   - No D (but maybe F): Zca alone implies C
+  //   - F and D: Zca + Zcd implies C
+  // For RV64Y (Zcf and Zcd incompatible):
+  //   - Zca alone implies C
   if (Exts.count("zca") && !Exts.count("c")) {
     bool ShouldAddC = false;
     if (XLen == 32) {
       if (Exts.count("d"))
-        ShouldAddC = Exts.count("zcf") && Exts.count("zcd");
+        ShouldAddC =
+            Exts.count("zcd") && (Exts.count("y") || Exts.count("zcf"));
       else if (Exts.count("f"))
-        ShouldAddC = Exts.count("zcf");
+        ShouldAddC = Exts.count("y") || Exts.count("zcf");
       else
         ShouldAddC = true;
     } else if (XLen == 64) {
       if (Exts.count("d"))
-        ShouldAddC = Exts.count("zcd");
+        ShouldAddC = Exts.count("y") || Exts.count("zcd");
       else
         ShouldAddC = true;
     }
@@ -897,9 +956,10 @@ void RISCVISAInfo::updateImplication() {
       Exts.count("zcmp") && Exts.count("zcmt")) {
     bool ShouldAddZce = false;
     if (XLen == 32) {
-      ShouldAddZce = !Exts.count("f") || Exts.count("zcf");
+      ShouldAddZce = !Exts.count("f") || Exts.count("zcf") || Exts.count("y");
     } else if (XLen == 64) {
-      ShouldAddZce = true;
+      // Zce is incompatible with RV64Y, only add it if Y is not enabled.
+      ShouldAddZce = !Exts.count("y");
     }
     if (ShouldAddZce)
       Exts["zce"] = *findDefaultVersion("zce");
@@ -1008,9 +1068,18 @@ std::string RISCVISAInfo::toString() const {
 
   Arch << "rv" << XLen;
 
+  bool HasY = Exts.count("y") != 0;
   ListSeparator LS("_");
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
+    if (HasY) {
+      // Plain 'y' always implies 'i' (which is omitted in the normalized arch
+      // string). Y+E requires a long base name arch string.
+      if (ExtName == "i")
+        continue;
+      if (ExtName == "e")
+        reportFatalUsageError("Y+E is not supported yet");
+    }
     auto ExtInfo = Ext.second;
     Arch << LS << ExtName;
     Arch << ExtInfo.Major << "p" << ExtInfo.Minor;
@@ -1031,22 +1100,26 @@ RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
 }
 
 StringRef RISCVISAInfo::computeDefaultABI() const {
+  bool HasY = Exts.count("y") != 0;
   if (XLen == 32) {
+    if (Exts.count("xcheriot"))
+      return "cheriot";
     if (Exts.count("e"))
-      return "ilp32e";
+      return HasY ? "il32pc64e" : "ilp32e";
     if (Exts.count("d"))
-      return "ilp32d";
+      return HasY ? "il32pc64d" : "ilp32d";
     if (Exts.count("f"))
-      return "ilp32f";
-    return "ilp32";
+      return HasY ? "il32pc64f" : "ilp32f";
+    return HasY ? "il32pc64" : "ilp32";
   } else if (XLen == 64) {
+    // RV64E has no capability ABI (yet).
     if (Exts.count("e"))
       return "lp64e";
     if (Exts.count("d"))
-      return "lp64d";
+      return HasY ? "l64pc128d" : "lp64d";
     if (Exts.count("f"))
-      return "lp64f";
-    return "lp64";
+      return HasY ? "l64pc128f" : "lp64f";
+    return HasY ? "l64pc128" : "lp64";
   }
   llvm_unreachable("Invalid XLEN");
 }
@@ -1087,12 +1160,6 @@ std::string RISCVISAInfo::getTargetFeatureForExtension(StringRef Ext) {
   return isExperimentalExtension(Name) ? "experimental-" + Name.str()
                                        : Name.str();
 }
-
-struct RISCVExtBit {
-  const StringLiteral ext;
-  uint8_t groupid;
-  uint8_t bitpos;
-};
 
 struct RISCVExtensionBitmask {
   const char *Name;

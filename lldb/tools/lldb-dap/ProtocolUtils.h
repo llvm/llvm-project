@@ -17,6 +17,8 @@
 #include "Protocol/ProtocolTypes.h"
 
 #include "lldb/API/SBAddress.h"
+#include "lldb/API/SBStructuredData.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_dap {
 
@@ -49,6 +51,10 @@ std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
 ///     An optional "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
 std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
+
+/// Converts structured data to JSON, or std::nullopt if it is invalid or empty.
+std::optional<llvm::json::Value>
+GetStructuredDataAsJSON(const lldb::SBStructuredData &data);
 
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);
@@ -106,6 +112,14 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 ///     A string representing the size in a readable format (e.g., "1 KB",
 ///     "2 MB").
 std::string ConvertDebugInfoSizeToString(uint64_t debug_size);
+
+/// Add a mask to the breakpoint's id, this is to avoid id collision
+/// as internally, lldb breakpoint's id and watchpoint's id starts from one.
+/// Similar to the variables_reference we start from 8'000'000.
+inline lldb::break_id_t ApplyWatchpointMask(lldb::break_id_t breakpoint_id) {
+  constexpr lldb::break_id_t watchpoint_mask = 8'000'000;
+  return watchpoint_mask + breakpoint_id;
+}
 
 } // namespace lldb_dap
 

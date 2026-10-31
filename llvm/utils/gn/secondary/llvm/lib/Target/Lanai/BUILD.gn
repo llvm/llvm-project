@@ -18,11 +18,18 @@ tablegen("LanaiGenSDNodeInfo") {
   td_file = "Lanai.td"
 }
 
+tablegen("LanaiOptions") {
+  visibility = [ ":LLVMLanaiCodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "LanaiOptions.td"
+}
+
 static_library("LLVMLanaiCodeGen") {
   deps = [
     ":LanaiGenCallingConv",
     ":LanaiGenDAGISel",
     ":LanaiGenSDNodeInfo",
+    ":LanaiOptions",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -32,6 +39,8 @@ static_library("LLVMLanaiCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -39,6 +48,7 @@ static_library("LLVMLanaiCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "LanaiAsmPrinter.cpp",
+    "LanaiCodeGenPassBuilder.cpp",
     "LanaiDelaySlotFiller.cpp",
     "LanaiFrameLowering.cpp",
     "LanaiISelDAGToDAG.cpp",

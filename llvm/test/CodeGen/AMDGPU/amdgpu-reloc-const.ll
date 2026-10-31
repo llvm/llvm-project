@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -filetype=obj -o %t.o < %s && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00--amdpal -filetype=obj -o %t.o < %s && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
 
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn--amdpal -mcpu=gfx900 -filetype=obj -o %t.o < %s && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
+; RUN: llc -global-isel -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu9.00--amdpal -filetype=obj -o %t.o < %s && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
 
 ; GCN-LABEL: {{^}}ps_main:
 ; GCN: v_mov_b32_{{.*}} v[[relocreg:[0-9]+]], doff_0_0_b@abs32@lo

@@ -188,11 +188,12 @@ t:
 define i32 @test_select_beq_neg(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_beq_neg:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    beqi a0, -1, .LBB10_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB10_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    beqi a3, -1, .LBB10_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB10_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_beq_neg:
@@ -212,11 +213,12 @@ define i32 @test_select_beq_neg(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_select_bne_neg(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_bne_neg:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    bnei a0, -1, .LBB11_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB11_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    bnei a3, -1, .LBB11_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB11_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_bne_neg:
@@ -236,11 +238,12 @@ define i32 @test_select_bne_neg(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_select_beq_zero(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_beq_zero:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    beqz a0, .LBB12_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB12_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    beqz a3, .LBB12_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB12_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_beq_zero:
@@ -260,11 +263,12 @@ define i32 @test_select_beq_zero(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_select_bne_zero(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_bne_zero:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    bnez a0, .LBB13_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB13_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    bnez a3, .LBB13_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB13_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_bne_zero:
@@ -284,11 +288,12 @@ define i32 @test_select_bne_zero(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_select_beq_1(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_beq_1:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    beqi a0, 1, .LBB14_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB14_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    beqi a3, 1, .LBB14_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB14_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_beq_1:
@@ -308,11 +313,12 @@ define i32 @test_select_beq_1(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_select_bne_1(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_bne_1:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    bnei a0, 1, .LBB15_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB15_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    bnei a3, 1, .LBB15_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB15_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_bne_1:
@@ -332,11 +338,12 @@ define i32 @test_select_bne_1(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_select_beq_31(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_beq_31:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    beqi a0, 31, .LBB16_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB16_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    beqi a3, 31, .LBB16_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB16_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_beq_31:
@@ -356,11 +363,12 @@ define i32 @test_select_beq_31(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_select_bne_31(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_bne_31:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    bnei a0, 31, .LBB17_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB17_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    bnei a3, 31, .LBB17_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB17_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_bne_31:
@@ -380,12 +388,13 @@ define i32 @test_select_bne_31(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_select_beq_32(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_beq_32:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    li a3, 32
-; ZIBI-RV32-NEXT:    beq a0, a3, .LBB18_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB18_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
+; ZIBI-RV32-NEXT:    li a4, 32
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    beq a3, a4, .LBB18_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB18_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_beq_32:
@@ -406,12 +415,13 @@ define i32 @test_select_beq_32(i32 %a, i32 %b, i32 %c) nounwind {
 define i32 @test_select_bne_32(i32 %a, i32 %b, i32 %c) nounwind {
 ; ZIBI-RV32-LABEL: test_select_bne_32:
 ; ZIBI-RV32:       # %bb.0:
-; ZIBI-RV32-NEXT:    li a3, 32
-; ZIBI-RV32-NEXT:    bne a0, a3, .LBB19_2
-; ZIBI-RV32-NEXT:  # %bb.1:
-; ZIBI-RV32-NEXT:    mv a1, a2
-; ZIBI-RV32-NEXT:  .LBB19_2:
+; ZIBI-RV32-NEXT:    mv a3, a0
+; ZIBI-RV32-NEXT:    li a4, 32
 ; ZIBI-RV32-NEXT:    mv a0, a1
+; ZIBI-RV32-NEXT:    bne a3, a4, .LBB19_2
+; ZIBI-RV32-NEXT:  # %bb.1:
+; ZIBI-RV32-NEXT:    mv a0, a2
+; ZIBI-RV32-NEXT:  .LBB19_2:
 ; ZIBI-RV32-NEXT:    ret
 ;
 ; ZIBI-RV64-LABEL: test_select_bne_32:

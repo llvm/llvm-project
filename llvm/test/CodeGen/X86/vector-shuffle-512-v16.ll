@@ -220,9 +220,8 @@ define <16 x float> @shuffle_f32_v16f32_00_08_00_08_00_08_00_08_00_08_00_08_00_0
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; FAST-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; FAST-NEXT:    vmovaps {{.*#+}} ymm2 = [0,16,0,16,0,16,0,16]
+; FAST-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [0,16,0,16,0,16,0,16,0,16,0,16,0,16,0,16]
 ; FAST-NEXT:    vpermt2ps %zmm1, %zmm2, %zmm0
-; FAST-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; FAST-NEXT:    retq
   %v0 = insertelement <8 x float> poison, float %a0, i64 0
   %v1 = insertelement <8 x float> poison, float %a1, i64 0
@@ -565,6 +564,16 @@ define <16 x i32> @shuffle_v16i32_16_zz_17_zz_18_zz_19_zz_20_zz_21_zz_22_zz_23_z
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x i32> zeroinitializer, <16 x i32> %a, <16 x i32> <i32 16, i32 0, i32 17, i32 0, i32 18, i32 0, i32 19, i32 0, i32 20, i32 0, i32 21, i32 0, i32 22, i32 0, i32 23, i32 0>
   ret <16 x i32> %shuffle
+}
+
+; Float-domain rotate matching __builtin_ia32_alignd512(A, B, 3) lowering.
+define <16 x float> @shuffle_v16f32_03_04_05_06_07_08_09_10_11_12_13_14_15_16_17_18(<16 x float> %a, <16 x float> %b) {
+; ALL-LABEL: shuffle_v16f32_03_04_05_06_07_08_09_10_11_12_13_14_15_16_17_18:
+; ALL:       # %bb.0:
+; ALL-NEXT:    valignd {{.*#+}} zmm0 = zmm1[3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0,1,2]
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <16 x float> %b, <16 x float> %a, <16 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18>
+  ret <16 x float> %shuffle
 }
 
 define <16 x i32> @shuffle_v16i32_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_16(<16 x i32> %a, <16 x i32> %b) {
@@ -947,6 +956,32 @@ define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_00_01_02_
   ret <16 x float> %res
 }
 
+define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_04_05_06_07_04_05_06_07(<4 x float> %a, <4 x float> %b) {
+; ALL-LABEL: mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_04_05_06_07_04_05_06_07:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  ret <16 x float> %shuffle
+}
+
+define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_04_05_06_07_04_05_06_07_00_01_02_03(<4 x float> %a, <4 x float> %b) {
+; ALL-LABEL: mask_shuffle_v4f32_v16f32_00_01_02_03_04_05_06_07_04_05_06_07_00_01_02_03:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm2
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+  ret <16 x float> %shuffle
+}
+
 %struct.foo = type { [4 x double], [3 x [4 x double]], [4 x double] }
 
 ; This test previously hung in shuffle combining. https://github.com/ispc/ispc/issues/1864
@@ -959,7 +994,7 @@ define void @ispc_1864(ptr %arg) {
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    .cfi_def_cfa_register %rbp
 ; ALL-NEXT:    andq $-64, %rsp
-; ALL-NEXT:    subq $4864, %rsp # imm = 0x1300
+; ALL-NEXT:    subq $4800, %rsp # imm = 0x12C0
 ; ALL-NEXT:    vbroadcastss {{.*#+}} ymm0 = [-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0]
 ; ALL-NEXT:    vmulps 32(%rdi), %ymm0, %ymm0
 ; ALL-NEXT:    vcvtps2pd %ymm0, %zmm0

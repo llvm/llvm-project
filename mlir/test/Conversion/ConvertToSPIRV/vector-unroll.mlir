@@ -140,3 +140,25 @@ func.func @unroll_from_elements_2d(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f3
   // return %[[RES0]], %%[[RES1]] : vector<2xf32>, vector<2xf32>
   return %1 : vector<2x2xf32>
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/203220
+
+// CHECK-LABEL: @zero_d_vector_return
+// CHECK-SAME: (%[[ARG0:.+]]: vector<f32>)
+func.func @zero_d_vector_return(%arg0: vector<f32>) -> vector<f32> {
+  // CHECK: return %[[ARG0]] : vector<f32>
+  return %arg0 : vector<f32>
+}
+
+// -----
+
+// CHECK-LABEL: @zero_d_vector_elementwise
+// CHECK-SAME: (%[[ARG0:.+]]: vector<f32>, %[[ARG1:.+]]: vector<f32>)
+func.func @zero_d_vector_elementwise(%arg0: vector<f32>, %arg1: vector<f32>) -> vector<f32> {
+  // CHECK: %[[ADD:.*]] = arith.addf %[[ARG0]], %[[ARG1]] : vector<f32>
+  // CHECK: return %[[ADD]] : vector<f32>
+  %0 = arith.addf %arg0, %arg1 : vector<f32>
+  return %0 : vector<f32>
+}

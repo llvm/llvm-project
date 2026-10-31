@@ -18,6 +18,7 @@
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -85,7 +86,7 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   if (F.hasFnAttribute("ptrauth-returns"))
     return true;
   if (!F.hasFnAttribute("sign-return-address-key")) {
-    if (STI.getTargetTriple().isOSWindows())
+    if (STI.getTargetTriple().isOSWindowsOrUEFI())
       return true;
     return false;
   }
@@ -93,6 +94,12 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   const StringRef Key =
       F.getFnAttribute("sign-return-address-key").getValueAsString();
   assert(Key == "a_key" || Key == "b_key");
+  if (STI.getTargetTriple().isOSWindowsOrUEFI() && Key == "a_key" &&
+      GetSignReturnAddress(F) != SignReturnAddress::None) {
+    F.getContext().diagnose(DiagnosticInfoUnsupported{
+        F, "A-key return address signing is unsupported on AArch64 Windows"});
+    return true;
+  }
   return Key == "b_key";
 }
 
@@ -120,6 +127,18 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
+  Attribute SignReturnAddrHardenFnAttr =
+      F.getFnAttribute("sign-return-address-harden");
+  if (SignReturnAddrHardenFnAttr.isValid()) {
+    SignReturnAddressHardening =
+        StringSwitch<SignReturnAddressHardeningKind>(
+            SignReturnAddrHardenFnAttr.getValueAsString())
+            .Case("none", SignReturnAddressHardeningKind::None)
+            .Case("load-return-address",
+                  SignReturnAddressHardeningKind::LoadReturnAddress)
+            .DefaultUnreachable();
+  }
+
   // BTI/PAuthLR are set on the function attribute.
   BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
   BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
@@ -138,7 +157,7 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     ProbeSize = PS->getZExtValue();
   assert(int64_t(ProbeSize) > 0 && "Invalid stack probe size");
 
-  if (STI->isTargetWindows()) {
+  if (STI->isTargetWindowsOrUEFI()) {
     if (!F.hasFnAttribute("no-stack-arg-probe"))
       StackProbeSize = ProbeSize;
   } else {
@@ -206,8 +225,7 @@ bool AArch64FunctionInfo::needsShadowCallStackPrologueEpilogue(
 bool AArch64FunctionInfo::needsDwarfUnwindInfo(
     const MachineFunction &MF) const {
   if (!NeedsDwarfUnwindInfo)
-    NeedsDwarfUnwindInfo = MF.needsFrameMoves() &&
-                           !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+    NeedsDwarfUnwindInfo = !MF.usesWindowsUnwindInfo() && MF.needsFrameMoves();
 
   return *NeedsDwarfUnwindInfo;
 }

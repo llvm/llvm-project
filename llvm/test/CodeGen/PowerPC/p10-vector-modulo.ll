@@ -78,9 +78,10 @@ entry:
 define <2 x i64> @test_vmodud_with_div(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vmodud_with_div:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmodud v4, v2, v3
-; CHECK-NEXT:    vdivud v2, v2, v3
-; CHECK-NEXT:    vaddudm v2, v4, v2
+; CHECK-NEXT:    vdivud v4, v2, v3
+; CHECK-NEXT:    vmulld v3, v4, v3
+; CHECK-NEXT:    vsubudm v2, v2, v3
+; CHECK-NEXT:    vaddudm v2, v2, v4
 ; CHECK-NEXT:    blr
 entry:
   %rem = urem <2 x i64> %a, %b
@@ -92,9 +93,10 @@ entry:
 define <2 x i64> @test_vmodsd_with_div(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vmodsd_with_div:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmodsd v4, v2, v3
-; CHECK-NEXT:    vdivsd v2, v2, v3
-; CHECK-NEXT:    vaddudm v2, v4, v2
+; CHECK-NEXT:    vdivsd v4, v2, v3
+; CHECK-NEXT:    vmulld v3, v4, v3
+; CHECK-NEXT:    vsubudm v2, v2, v3
+; CHECK-NEXT:    vaddudm v2, v2, v4
 ; CHECK-NEXT:    blr
 entry:
   %rem = srem <2 x i64> %a, %b
@@ -106,9 +108,10 @@ entry:
 define <4 x i32> @test_vmoduw_with_div(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vmoduw_with_div:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmoduw v4, v2, v3
-; CHECK-NEXT:    vdivuw v2, v2, v3
-; CHECK-NEXT:    vadduwm v2, v4, v2
+; CHECK-NEXT:    vdivuw v4, v2, v3
+; CHECK-NEXT:    vmuluwm v3, v4, v3
+; CHECK-NEXT:    vsubuwm v2, v2, v3
+; CHECK-NEXT:    vadduwm v2, v2, v4
 ; CHECK-NEXT:    blr
 entry:
   %rem = urem <4 x i32> %a, %b
@@ -120,9 +123,10 @@ entry:
 define <4 x i32> @test_vmodsw_div(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vmodsw_div:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmodsw v4, v2, v3
-; CHECK-NEXT:    vdivsw v2, v2, v3
-; CHECK-NEXT:    vadduwm v2, v4, v2
+; CHECK-NEXT:    vdivsw v4, v2, v3
+; CHECK-NEXT:    vmuluwm v3, v4, v3
+; CHECK-NEXT:    vsubuwm v2, v2, v3
+; CHECK-NEXT:    vadduwm v2, v2, v4
 ; CHECK-NEXT:    blr
 entry:
   %rem = srem <4 x i32> %a, %b

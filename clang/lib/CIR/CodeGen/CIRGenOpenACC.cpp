@@ -48,9 +48,7 @@ mlir::Value CIRGenFunction::emitOpenACCIntExpr(const Expr *intExpr) {
           ? mlir::IntegerType::SignednessSemantics::Signed
           : mlir::IntegerType::SignednessSemantics::Unsigned);
 
-  auto conversionOp = mlir::UnrealizedConversionCastOp::create(
-      builder, exprLoc, targetType, expr);
-  return conversionOp.getResult(0);
+  return builder.createBuiltinIntCast(exprLoc, expr, targetType);
 }
 
 mlir::Value CIRGenFunction::createOpenACCConstantInt(mlir::Location loc,

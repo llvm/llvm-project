@@ -59,11 +59,11 @@ class Module;
 
 // Pass that converts lookup tables to relative lookup tables.
 class RelLookupTableConverterPass
-    : public PassInfoMixin<RelLookupTableConverterPass> {
+    : public OptionalPassInfoMixin<RelLookupTableConverterPass> {
 public:
   RelLookupTableConverterPass() = default;
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

@@ -1,14 +1,20 @@
-//===-- Definition of EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL type ----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Definition of EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL type.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TYPES_EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_H
 #define LLVM_LIBC_TYPES_EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_H
 
+#include "../llvm-libc-macros/EFIAPI-macros.h"
 #include "../llvm-libc-macros/stdint-macros.h"
 #include "EFI_STATUS.h"
 #include "size_t.h"

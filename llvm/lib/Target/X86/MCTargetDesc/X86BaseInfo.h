@@ -20,6 +20,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace llvm {
 namespace X86 {
@@ -1155,6 +1156,43 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
   }
 }
 
+/// \returns the operand index for the first field of the memory operand,
+/// adjusted with getOperandBias(), or -1 if the instruction has no memory
+/// operands.
+inline int getMemoryOperandIdx(const MCInstrDesc &Desc) {
+  int MemRefIdx = getMemoryOperandNo(Desc.TSFlags);
+  if (MemRefIdx < 0)
+    return -1;
+  return MemRefIdx + getOperandBias(Desc);
+}
+
+/// Determine if this immediate can fit in a disp8 or a compressed disp8 for
+/// EVEX instructions. \p will be set to the value to pass to the ImmOffset
+/// parameter of emitImmediate.
+inline bool isDispOrCDisp8(uint64_t TSFlags, int64_t Value,
+                           int *ImmOffset = nullptr) {
+  bool HasEVEX = (TSFlags & X86II::EncodingMask) == X86II::EVEX;
+
+  unsigned CD8_Scale =
+      (TSFlags & X86II::CD8_Scale_Mask) >> X86II::CD8_Scale_Shift;
+  CD8_Scale = CD8_Scale ? 1U << (CD8_Scale - 1) : 0U;
+  if (!HasEVEX || !CD8_Scale)
+    return isInt<8>(Value);
+
+  assert(isPowerOf2_32(CD8_Scale) && "Unexpected CD8 scale!");
+  if (Value & (CD8_Scale - 1)) // Unaligned offset
+    return false;
+
+  int64_t CDisp8 = Value / static_cast<int64_t>(CD8_Scale);
+  if (!isInt<8>(CDisp8))
+    return false;
+
+  // ImmOffset will be added to Value in emitImmediate leaving just CDisp8.
+  if (ImmOffset)
+    *ImmOffset = CDisp8 - Value;
+  return true;
+}
+
 /// \returns true if the register is a XMM.
 inline bool isXMMReg(MCRegister Reg) {
   static_assert(X86::XMM15 - X86::XMM0 == 15,
@@ -1341,7 +1379,7 @@ inline bool isKMergeMasked(uint64_t TSFlags) {
   return isKMasked(TSFlags) && (TSFlags & X86II::EVEX_Z) == 0;
 }
 
-/// \returns true if the intruction needs a SIB.
+/// \returns true if the instruction needs a SIB.
 inline bool needSIB(MCRegister BaseReg, MCRegister IndexReg, bool In64BitMode) {
   // The SIB byte must be used if there is an index register.
   if (IndexReg)

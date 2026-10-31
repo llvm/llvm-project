@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveStacks.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConvergenceVerifier.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -69,7 +68,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -99,6 +97,20 @@ namespace {
 /// at one time.
 static ManagedStatic<sys::SmartMutex<true>> ReportedErrorsLock;
 
+static bool hasPhysRegClassForType(const TargetRegisterInfo &TRI,
+                                   MCRegister Reg, LLT Ty) {
+  assert(Reg.isPhysical() && "reg must be a physical register");
+  assert(Ty.isValid() && "expected a valid type");
+
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+  if (TRI.isTypeLegalForClass(*RC, Ty))
+    return true;
+
+  return llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass &RC) {
+    return RC.contains(Reg) && TRI.isTypeLegalForClass(RC, Ty);
+  });
+}
+
 struct MachineVerifier {
   MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b,
                   raw_ostream *OS, bool AbortOnError = true)
@@ -110,13 +122,11 @@ struct MachineVerifier {
       : PASS(pass), OS(OS ? *OS : nulls()), Banner(b),
         ReportedErrs(AbortOnError) {}
 
-  MachineVerifier(const char *b, LiveVariables *LiveVars,
-                  LiveIntervals *LiveInts, LiveStacks *LiveStks,
+  MachineVerifier(const char *b, LiveIntervals *LiveInts, LiveStacks *LiveStks,
                   SlotIndexes *Indexes, raw_ostream *OS,
                   bool AbortOnError = true)
-      : OS(OS ? *OS : nulls()), Banner(b), LiveVars(LiveVars),
-        LiveInts(LiveInts), LiveStks(LiveStks), Indexes(Indexes),
-        ReportedErrs(AbortOnError) {}
+      : OS(OS ? *OS : nulls()), Banner(b), LiveInts(LiveInts),
+        LiveStks(LiveStks), Indexes(Indexes), ReportedErrs(AbortOnError) {}
 
   /// \returns true if no problems were found.
   bool verify(const MachineFunction &MF);
@@ -151,6 +161,11 @@ struct MachineVerifier {
   RegSet regsLive;
   RegVector regsDefined, regsDead, regsKilled;
   RegMaskVector regMasks;
+
+  // Live physical register defs of the current instruction, and the operand
+  // indices of its dead physical register defs.
+  SmallVector<MCRegister, 4> LivePhysDefs;
+  SmallVector<unsigned, 4> DeadPhysDefOps;
 
   SlotIndex lastIndex;
 
@@ -236,7 +251,6 @@ struct MachineVerifier {
   }
 
   // Analysis information if available
-  LiveVariables *LiveVars = nullptr;
   LiveIntervals *LiveInts = nullptr;
   LiveStacks *LiveStks = nullptr;
   SlotIndexes *Indexes = nullptr;
@@ -301,6 +315,7 @@ struct MachineVerifier {
 
   void visitMachineInstrBefore(const MachineInstr *MI);
   void visitMachineOperand(const MachineOperand *MO, unsigned MONum);
+  void visitMachineInstrAfter(const MachineInstr *MI);
   void visitMachineBundleAfter(const MachineInstr *MI);
   void visitMachineBasicBlockAfter(const MachineBasicBlock *MBB);
   void visitMachineFunctionAfter();
@@ -341,7 +356,6 @@ struct MachineVerifier {
   void checkPHIOps(const MachineBasicBlock &MBB);
 
   void calcRegsRequired();
-  void verifyLiveVariables();
   void verifyLiveIntervals();
   void verifyLiveInterval(const LiveInterval &);
   void verifyLiveRangeValue(const LiveRange &, const VNInfo *, VirtRegOrUnit,
@@ -370,7 +384,6 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<LiveStacksWrapperLegacy>();
-    AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.setPreservesAll();
@@ -415,7 +428,6 @@ FunctionPass *llvm::createMachineVerifierPass(const std::string &Banner) {
 void llvm::verifyMachineFunction(const std::string &Banner,
                                  const MachineFunction &MF) {
   // TODO: Use MFAM after porting below analyses.
-  // LiveVariables *LiveVars;
   // LiveIntervals *LiveInts;
   // LiveStacks *LiveStks;
   // SlotIndexes *Indexes;
@@ -436,8 +448,8 @@ bool MachineFunction::verify(MachineFunctionAnalysisManager &MFAM,
 bool MachineFunction::verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
                              const char *Banner, raw_ostream *OS,
                              bool AbortOnError) const {
-  return MachineVerifier(Banner, /*LiveVars=*/nullptr, LiveInts,
-                         /*LiveStks=*/nullptr, Indexes, OS, AbortOnError)
+  return MachineVerifier(Banner, LiveInts, /*LiveStks=*/nullptr, Indexes, OS,
+                         AbortOnError)
       .verify(*this);
 }
 
@@ -486,10 +498,6 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
   if (PASS) {
     auto *LISWrapper = PASS->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
     LiveInts = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-    // We don't want to verify LiveVariables if LiveIntervals is available.
-    auto *LVWrapper = PASS->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
-    if (!LiveInts)
-      LiveVars = LVWrapper ? &LVWrapper->getLV() : nullptr;
     auto *LSWrapper = PASS->getAnalysisIfAvailable<LiveStacksWrapperLegacy>();
     LiveStks = LSWrapper ? &LSWrapper->getLS() : nullptr;
     auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
@@ -498,8 +506,6 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
   if (MFAM) {
     MachineFunction &Func = const_cast<MachineFunction &>(MF);
     LiveInts = MFAM->getCachedResult<LiveIntervalsAnalysis>(Func);
-    if (!LiveInts)
-      LiveVars = MFAM->getCachedResult<LiveVariablesAnalysis>(Func);
     // TODO: LiveStks = MFAM->getCachedResult<LiveStacksAnalysis>(Func);
     Indexes = MFAM->getCachedResult<SlotIndexesAnalysis>(Func);
   }
@@ -552,6 +558,7 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
 
         visitMachineOperand(&Op, I);
       }
+      visitMachineInstrAfter(&MI);
 
       // Was this the last bundled instruction?
       InBundle = MI.isBundledWithSucc();
@@ -717,12 +724,19 @@ void MachineVerifier::visitMachineFunctionBefore() {
   }
 }
 
+static bool hasPHIs(const MachineFunction &MF) {
+  return !MF.getProperties().hasNoPHIs() &&
+         any_of(MF, [](const MachineBasicBlock &MBB) {
+           return !MBB.phis().empty();
+         });
+}
+
 void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
   FirstNonPHI = nullptr;
 
-  if (!MF->getProperties().hasNoPHIs() && MRI->tracksLiveness()) {
+  if (MRI->tracksLiveness() && hasPHIs(*MF)) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
@@ -769,21 +783,17 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     }
   }
 
-  const MCAsmInfo *AsmInfo = TM->getMCAsmInfo();
   const BasicBlock *BB = MBB->getBasicBlock();
   const Function &F = MF->getFunction();
   if (LandingPadSuccs.size() > 1 &&
-      !(AsmInfo &&
-        AsmInfo->getExceptionHandlingType() == ExceptionHandling::SjLj &&
-        BB && isa<SwitchInst>(BB->getTerminator())) &&
+      !(BB && isa<SwitchInst>(BB->getTerminator())) &&
       !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     report("MBB has more than one landing pad successor", MBB);
 
   // Call analyzeBranch. If it succeeds, there several more conditions to check.
-  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  const MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
-  if (!TII->analyzeBranch(*const_cast<MachineBasicBlock *>(MBB), TBB, FBB,
-                          Cond)) {
+  if (!TII->analyzeBranch(*MBB, TBB, FBB, Cond)) {
     // Ok, analyzeBranch thinks it knows what's going on with this block. Let's
     // check whether its answers match up with reality.
     if (!TBB && !FBB) {
@@ -1252,7 +1262,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_ZEXTLOAD:
-  case TargetOpcode::G_SEXTLOAD: {
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_FPEXTLOAD:
+  case TargetOpcode::G_FPTRUNCSTORE: {
     LLT ValTy = MRI->getType(MI->getOperand(0).getReg());
     LLT PtrTy = MRI->getType(MI->getOperand(1).getReg());
     if (!PtrTy.isPointer())
@@ -1265,11 +1277,14 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
              MI);
     } else {
       const MachineMemOperand &MMO = **MI->memoperands_begin();
-      if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
-          MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
+      if (isa<GExtLoad>(*MI)) {
         if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
                                 ValTy.getSizeInBits()))
           report("Generic extload must have a narrower memory type", MI);
+      } else if (isa<GFPTruncStore>(*MI)) {
+        if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
+                                ValTy.getSizeInBits()))
+          report("Generic truncstore must have a narrower memory type", MI);
       } else if (MI->getOpcode() == TargetOpcode::G_LOAD) {
         if (TypeSize::isKnownGT(MMO.getSize().getValue(),
                                 ValTy.getSizeInBytes()))
@@ -1294,7 +1309,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       }
 
       const AtomicOrdering Order = MMO.getSuccessOrdering();
-      if (Opc == TargetOpcode::G_STORE) {
+      if (isa<GAnyStore>(*MI)) {
         if (Order == AtomicOrdering::Acquire ||
             Order == AtomicOrdering::AcquireRelease)
           report("atomic store cannot use acquire ordering", MI);
@@ -1344,6 +1359,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     if (SameType && SrcTy.isVector())
       SameType &= SrcTy.getElementCount() == DstTy.getElementCount();
+    if (SameType && SrcTy.isFloatOrFloatVector())
+      SameType &= SrcTy.getFpSemantics() == DstTy.getFpSemantics();
 
     if (SameType)
       report("bitcast must change the type", MI);
@@ -1826,12 +1843,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (Src1Ty.isScalable() != DstTy.isScalable()) {
-      report("Vector types must both be fixed or both be scalable", MI);
+    if (!DstTy.isScalable() && Src1Ty.isScalable()) {
+      report("Cannot insert a scalable vector into a fixed length vector", MI);
       break;
     }
 
-    if (ElementCount::isKnownGT(Src1Ty.getElementCount(),
+    bool IsMixedFixedIntoScalable =
+        DstTy.isScalableVector() && Src1Ty.isFixedVector();
+
+    if (!IsMixedFixedIntoScalable &&
+        ElementCount::isKnownGT(Src1Ty.getElementCount(),
                                 DstTy.getElementCount())) {
       report("Second source must be smaller than destination vector", MI);
       break;
@@ -1847,7 +1868,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
-    if (Idx >= DstMinLen || Idx + Src1MinLen > DstMinLen) {
+    if (Idx >= DstMinLen ||
+        (!IsMixedFixedIntoScalable && Idx + Src1MinLen > DstMinLen)) {
       report("Subvector type and index must not cause insert to overrun the "
              "vector being inserted into",
              MI);
@@ -1887,8 +1909,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (SrcTy.isScalable() != DstTy.isScalable()) {
-      report("Vector types must both be fixed or both be scalable", MI);
+    if (DstTy.isScalable() && !SrcTy.isScalable()) {
+      report("Cannot extract a scalable vector from a fixed length vector", MI);
       break;
     }
 
@@ -1907,8 +1929,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
+    bool IsMixedFixedFromScalable =
+        DstTy.isFixedVector() && SrcTy.isScalableVector();
     uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
-    if (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen) {
+    if (Idx >= SrcMinLen ||
+        (!IsMixedFixedFromScalable && Idx + DstMinLen > SrcMinLen)) {
       report("Destination type and index must not cause extract to overrun the "
              "source vector",
              MI);
@@ -1969,8 +1994,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
 
-    if (!DstTy.isScalableVector()) {
-      report("Destination type must be a scalable vector", MI);
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
       break;
     }
 
@@ -2100,9 +2125,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::G_BZERO:
-  case TargetOpcode::G_MEMSET: {
+  case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE: {
     ArrayRef<MachineMemOperand *> MMOs = MI->memoperands();
-    std::string Name = Opc == TargetOpcode::G_MEMSET ? "memset" : "bzero";
+    std::string Name = Opc == TargetOpcode::G_MEMSET          ? "memset"
+                       : Opc == TargetOpcode::G_MEMSET_INLINE ? "memset_inline"
+                                                              : "bzero";
     if (MMOs.size() != 1) {
       report(Twine(Name, " must have 1 memory operand"), MI);
       break;
@@ -2122,9 +2150,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (DstPtrTy.getAddressSpace() != MMOs[0]->getAddrSpace())
       report("inconsistent " + Twine(Name, " address space"), MI);
 
-    if (!MI->getOperand(MI->getNumOperands() - 1).isImm() ||
-        (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
-      report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
+    if (Opc != TargetOpcode::G_MEMSET_INLINE) {
+      if (!MI->getOperand(MI->getNumOperands() - 1).isImm() ||
+          (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
+        report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
+    }
 
     break;
   }
@@ -2158,6 +2188,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:
   case TargetOpcode::G_VECREDUCE_ADD:
   case TargetOpcode::G_VECREDUCE_MUL:
   case TargetOpcode::G_VECREDUCE_AND:
@@ -2298,6 +2330,25 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   }
 }
 
+void MachineVerifier::visitMachineInstrAfter(const MachineInstr *MI) {
+  // A dead def is contradictory if the same instruction has a live def of the
+  // same register. Overlapping dead and live defs of different registers
+  // describe a partially used def.
+  if (!LivePhysDefs.empty()) {
+    for (unsigned MONum : DeadPhysDefOps) {
+      const MachineOperand &MO = MI->getOperand(MONum);
+      if (is_contained(LivePhysDefs, MO.getReg().asMCReg())) {
+        report("Dead def has a live def of the same register on the same "
+               "instruction",
+               &MO, MONum);
+      }
+    }
+  }
+
+  LivePhysDefs.clear();
+  DeadPhysDefOps.clear();
+}
+
 void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   const MCInstrDesc &MCID = MI->getDesc();
   if (MI->getNumOperands() < MCID.getNumOperands()) {
@@ -2327,7 +2378,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
       report("Unspillable Terminator does not define a reg", MI);
     Register Def = MI->getOperand(0).getReg();
-    if (Def.isVirtual() && !MF->getProperties().hasNoPHIs() &&
+    if (Def.isVirtual() && hasPHIs(*MF) &&
         std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
       report("Unspillable Terminator expected to have at most one use!", MI);
   }
@@ -2406,18 +2457,14 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     TypeSize SrcSize = TypeSize::getZero();
     TypeSize DstSize = TypeSize::getZero();
     if (SrcReg.isPhysical() && DstTy.isValid()) {
-      const TargetRegisterClass *SrcRC =
-          TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
-      if (!SrcRC)
+      if (!hasPhysRegClassForType(*TRI, SrcReg, DstTy))
         SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     } else {
       SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     }
 
     if (DstReg.isPhysical() && SrcTy.isValid()) {
-      const TargetRegisterClass *DstRC =
-          TRI->getMinimalPhysRegClassLLT(DstReg, SrcTy);
-      if (!DstRC)
+      if (!hasPhysRegClassForType(*TRI, DstReg, SrcTy))
         DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
     } else {
       DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
@@ -2612,7 +2659,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       if (MO->isReg()) {
         if (MCOI.OperandType == MCOI::OPERAND_IMMEDIATE ||
             (MCOI.OperandType == MCOI::OPERAND_PCREL &&
-             !TII->isPCRelRegisterOperandLegal(*MO)))
+             !TII->isPCRelRegisterOperandLegal(*MI, MONum)))
           report("Expected a non-register operand.", MO, MONum);
       }
     }
@@ -2680,6 +2727,17 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         report("Missing tie flags on tied operand", MO, MONum);
       if (MI->findTiedOperandIdx(OtherIdx) != MONum)
         report("Inconsistent tie links", MO, MONum);
+
+      // See IsUndef in MachineOperand.h.
+      if (MO->isUse() && MO->isUndef() && Reg.isVirtual() &&
+          OtherMO.getReg() != Reg &&
+          any_of(MI->all_uses(), [&](const MachineOperand &Other) {
+            return &Other != MO && Other.isUndef() && Other.getReg() == Reg &&
+                   Other.getSubReg() == MO->getSubReg();
+          }))
+        report("Tied undef use shares a virtual register with another read", MO,
+               MONum);
+
       if (MONum < MCID.getNumDefs()) {
         if (OtherIdx < MCID.getNumOperands()) {
           if (-1 == MCID.getOperandConstraint(OtherIdx, MCOI::TIED_TO))
@@ -3024,16 +3082,6 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     if (MO->isKill())
       addRegWithSubRegs(regsKilled, Reg);
 
-    // Check that LiveVars knows this kill (unless we are inside a bundle, in
-    // which case we have already checked that LiveVars knows any kills on the
-    // bundle header instead).
-    if (LiveVars && Reg.isVirtual() && MO->isKill() &&
-        !MI->isBundledWithPred()) {
-      LiveVariables::VarInfo &VI = LiveVars->getVarInfo(Reg);
-      if (!is_contained(VI.Kills, MI))
-        report("Kill missing from LiveVariables", MO, MONum);
-    }
-
     // Check LiveInts liveness and kill.
     if (LiveInts && !LiveInts->isNotInMIMap(*MI)) {
       SlotIndex UseIdx;
@@ -3147,6 +3195,13 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       addRegWithSubRegs(regsDead, Reg);
     else
       addRegWithSubRegs(regsDefined, Reg);
+
+    if (Reg.isPhysical()) {
+      if (MO->isDead())
+        DeadPhysDefOps.push_back(MONum);
+      else
+        LivePhysDefs.push_back(Reg.asMCReg());
+    }
 
     // Verify SSA form.
     if (MRI->isSSA() && Reg.isVirtual()) {
@@ -3515,8 +3570,6 @@ void MachineVerifier::visitMachineFunctionAfter() {
     }
   }
 
-  if (LiveVars)
-    verifyLiveVariables();
   if (LiveInts)
     verifyLiveIntervals();
 
@@ -3559,32 +3612,6 @@ void MachineVerifier::visitMachineFunctionAfter() {
           auto Result = SeenNumbers.insert((unsigned)Num);
           if (!Result.second)
             report("Instruction has a duplicated value tracking number", &MI);
-        }
-      }
-    }
-  }
-}
-
-void MachineVerifier::verifyLiveVariables() {
-  assert(LiveVars && "Don't call verifyLiveVariables without LiveVars");
-  for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
-    Register Reg = Register::index2VirtReg(I);
-    LiveVariables::VarInfo &VI = LiveVars->getVarInfo(Reg);
-    for (const auto &MBB : *MF) {
-      BBInfo &MInfo = MBBInfoMap[&MBB];
-
-      // Our vregsRequired should be identical to LiveVariables' AliveBlocks
-      if (MInfo.vregsRequired.count(Reg)) {
-        if (!VI.AliveBlocks.test(MBB.getNumber())) {
-          report("LiveVariables: Block missing from AliveBlocks", &MBB);
-          OS << "Virtual register " << printReg(Reg)
-             << " must be live through the block.\n";
-        }
-      } else {
-        if (VI.AliveBlocks.test(MBB.getNumber())) {
-          report("LiveVariables: Block should not be in AliveBlocks", &MBB);
-          OS << "Virtual register " << printReg(Reg)
-             << " is not needed live through the block.\n";
         }
       }
     }

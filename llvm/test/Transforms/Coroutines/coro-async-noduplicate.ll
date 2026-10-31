@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=simplifycfg < %s | FileCheck %s --check-prefixes=CHECK
+; RUN: opt -S -passes=simplifycfg < %s | FileCheck %s
 
 ;; This used to crash:
 ; RUN: opt -S -passes='cgscc(simplifycfg,coro-split)' < %s

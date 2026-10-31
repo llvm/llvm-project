@@ -3,19 +3,18 @@ if(NOT(LLVM_LIBC_FULL_BUILD))
   libc_set_definition(use_system_file "LIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
-add_libc_unittest(
+add_libc_test(
   parser_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     parser_test.cpp
-  LINK_LIBRARIES
-    LibcScanfHelpers
   DEPENDS
     libc.src.stdio.scanf_core.parser
     libc.src.stdio.scanf_core.core_structs
     libc.src.__support.CPP.string_view
     libc.src.__support.arg_list
+    libc.test.UnitTest.ScanfMatcher
 )
 
 if(NOT(TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD AND
@@ -25,10 +24,10 @@ if(NOT(TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD AND
   return()
 endif()
 
-add_libc_unittest(
+add_libc_test(
   reader_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     reader_test.cpp
   DEPENDS
@@ -38,10 +37,10 @@ add_libc_unittest(
     ${use_system_file}
 )
 
-add_libc_unittest(
+add_libc_test(
   converter_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     converter_test.cpp
   DEPENDS

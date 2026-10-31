@@ -194,9 +194,16 @@ public:
   /// Get or create a new ConcreteT instance within the ctx. If the arguments
   /// provided are invalid, errors are emitted using the provided `emitError`
   /// and a null object is returned.
-  template <typename... Args>
+  ///
+  /// Workaround: We use Arg1 && instead of MLIRContext * in the parameter list
+  /// to work around a bug in Clang 21.1.8 where Clang segfaults during SFINAE
+  /// overload resolution when attempting to match non-pointer arguments
+  /// against an unconstrained MLIRContext * parameter.
+  template <typename Arg1, typename... Args,
+            typename = std::enable_if_t<std::is_convertible_v<
+                llvm::remove_cvref_t<Arg1>, MLIRContext *>>>
   static ConcreteT getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
-                              MLIRContext *ctx, Args... args) {
+                              Arg1 &&ctx, Args... args) {
     // If the construction invariants fail then we return a null attribute.
     if (failed(ConcreteT::verifyInvariants(emitErrorFn, args...)))
       return ConcreteT();

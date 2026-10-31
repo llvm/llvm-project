@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
@@ -26,9 +27,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -42,6 +45,15 @@ using namespace mlir;
 static inline bool isFnEntryBlock(Block *block) {
   return block->isEntryBlock() &&
          isa_and_nonnull<spirv::FuncOp>(block->getParentOp());
+}
+
+static void setInherentOrDiscardableAttr(Operation *op, StringAttr name,
+                                         Attribute value) {
+  if (op->getName().getInherentAttr(op, name).has_value()) {
+    op->getName().setInherentAttr(op, name, value);
+    return;
+  }
+  op->setDiscardableAttr(name, value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -91,6 +103,14 @@ LogicalResult spirv::Deserializer::deserialize() {
       return failure();
     }
   }
+
+  if (failed(resolveDeferredIdDecorations()))
+    return failure();
+
+  if (!functionParameterAttrs.empty())
+    return emitError(unknownLoc, "FuncParamAttr decoration on result <id> ")
+           << functionParameterAttrs.begin()->first
+           << " is not supported: expected OpFunctionParameter or OpFunction";
 
   attachVCETriple();
 
@@ -205,10 +225,8 @@ spirv::Deserializer::processExtInstImport(ArrayRef<uint32_t> words) {
 }
 
 void spirv::Deserializer::attachVCETriple() {
-  (*module)->setAttr(
-      spirv::ModuleOp::getVCETripleAttrName(),
-      spirv::VerCapExtAttr::get(version, capabilities.getArrayRef(),
-                                extensions.getArrayRef(), context));
+  module->setVceTripleAttr(spirv::VerCapExtAttr::get(
+      version, capabilities.getArrayRef(), extensions.getArrayRef(), context));
 }
 
 LogicalResult
@@ -216,14 +234,10 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2)
     return emitError(unknownLoc, "OpMemoryModel must have two operands");
 
-  (*module)->setAttr(
-      module->getAddressingModelAttrName(),
-      opBuilder.getAttr<spirv::AddressingModelAttr>(
-          static_cast<spirv::AddressingModel>(operands.front())));
+  module->setAddressingModel(
+      static_cast<spirv::AddressingModel>(operands.front()));
 
-  (*module)->setAttr(module->getMemoryModelAttrName(),
-                     opBuilder.getAttr<spirv::MemoryModelAttr>(
-                         static_cast<spirv::MemoryModel>(operands.back())));
+  module->setMemoryModel(static_cast<spirv::MemoryModel>(operands.back()));
 
   return success();
 }
@@ -283,6 +297,25 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
         symbol, FPRoundingModeAttr::get(opBuilder.getContext(),
                                         static_cast<FPRoundingMode>(words[2])));
     break;
+  case spirv::Decoration::FuncParamAttr: {
+    if (words.size() != 3)
+      return emitError(unknownLoc,
+                       "OpDecorate with FuncParamAttr needs a single "
+                       "function parameter attribute");
+    auto value = spirv::symbolizeFunctionParameterAttribute(words[2]);
+    if (!value)
+      return emitError(unknownLoc, "invalid FunctionParameterAttribute code: ")
+             << words[2];
+    SmallVector<Attribute> attrs;
+    if (auto previous = functionParameterAttrs.lookup(words[0]))
+      llvm::append_range(attrs, previous);
+    attrs.push_back(
+        spirv::FunctionParameterAttributeAttr::get(context, *value));
+    functionParameterAttrs[words[0]] = opBuilder.getArrayAttr(attrs);
+    break;
+  }
+  case spirv::Decoration::Alignment:
+  case spirv::Decoration::MaxByteOffset:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
   case spirv::Decoration::Location:
@@ -339,6 +372,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::AliasedPointer:
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
+  case spirv::Decoration::CPacked:
   case spirv::Decoration::Flat:
   case spirv::Decoration::NonReadable:
   case spirv::Decoration::NonWritable:
@@ -353,6 +387,8 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
+  case spirv::Decoration::Volatile:
+  case spirv::Decoration::SaturatedConversion:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecorate with ")
              << decorationName << " needs a single target <id>";
@@ -377,8 +413,64 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
       return res;
     break;
   }
+  case spirv::Decoration::AlignmentId:
+  case spirv::Decoration::MaxByteOffsetId:
+  case spirv::Decoration::CounterBuffer:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorateId with ")
+             << decorationName << " needs a single <id> operand";
+    }
+    pendingIdDecorations.push_back({words[0],
+                                    static_cast<spirv::Decoration>(words[1]),
+                                    words[2], unknownLoc});
+    break;
   default:
     return emitError(unknownLoc, "unhandled Decoration : '") << decorationName;
+  }
+  return success();
+}
+
+LogicalResult spirv::Deserializer::resolveDeferredIdDecorations() {
+  for (const DeferredIdDecoration &entry : pendingIdDecorations) {
+    StringRef decorationName = stringifyDecoration(entry.decoration);
+    StringAttr symbol = getSymbolDecoration(decorationName);
+
+    // Resolve the operand <id> to a symbol name. The operand must reference a
+    // module-scope symbol op (global variable or specialization constant).
+    StringRef operandSymName;
+    if (spirv::GlobalVariableOp varOp =
+            globalVariableMap.lookup(entry.operandID))
+      operandSymName = varOp.getSymName();
+    else if (spirv::SpecConstantOp specOp =
+                 specConstMap.lookup(entry.operandID))
+      operandSymName = specOp.getSymName();
+    else
+      return emitError(entry.loc, "OpDecorateId with ")
+             << decorationName << " references <id> " << entry.operandID
+             << " which is not a global variable or specialization constant";
+
+    auto symRef = FlatSymbolRefAttr::get(context, operandSymName);
+
+    // Resolve the decoration target. By the time this method runs, all
+    // instructions have been processed, so every defined <id> must appear in
+    // one of these maps; an unresolved target indicates malformed input.
+    Operation *targetOp = nullptr;
+    if (spirv::GlobalVariableOp varOp =
+            globalVariableMap.lookup(entry.targetID))
+      targetOp = varOp;
+    else if (spirv::SpecConstantOp specOp = specConstMap.lookup(entry.targetID))
+      targetOp = specOp;
+    else if (spirv::FuncOp fnOp = funcMap.lookup(entry.targetID))
+      targetOp = fnOp;
+    else if (Value v = valueMap.lookup(entry.targetID))
+      targetOp = v.getDefiningOp();
+
+    if (!targetOp)
+      return emitError(entry.loc, "OpDecorateId with ")
+             << decorationName << " references unknown target <id> "
+             << entry.targetID;
+
+    setInherentOrDiscardableAttr(targetOp, symbol, symRef);
   }
   return success();
 }
@@ -421,56 +513,43 @@ LogicalResult spirv::Deserializer::processMemberName(ArrayRef<uint32_t> words) {
 
 LogicalResult spirv::Deserializer::setFunctionArgAttrs(
     uint32_t argID, SmallVectorImpl<Attribute> &argAttrs, size_t argIndex) {
-  if (!decorations.contains(argID)) {
-    argAttrs[argIndex] = DictionaryAttr::get(context, {});
-    return success();
-  }
-
   spirv::DecorationAttr foundDecorationAttr;
-  for (NamedAttribute decAttr : decorations[argID]) {
-    for (auto decoration :
-         {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
-          spirv::Decoration::AliasedPointer,
-          spirv::Decoration::RestrictPointer}) {
-
-      if (decAttr.getName() !=
-          getSymbolDecoration(stringifyDecoration(decoration)))
-        continue;
-
-      if (foundDecorationAttr)
-        return emitError(unknownLoc,
-                         "more than one Aliased/Restrict decorations for "
-                         "function argument with result <id> ")
-               << argID;
-
-      foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
-      break;
-    }
-
+  NamedAttrList attributes;
+  if (auto it = functionParameterAttrs.find(argID);
+      it != functionParameterAttrs.end()) {
+    attributes.set(spirv::getFuncParamAttrName(), it->second);
+    functionParameterAttrs.erase(it);
+  }
+  for (NamedAttribute decAttr : decorations.lookup(argID)) {
     if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
-                                 spirv::Decoration::RelaxedPrecision))) {
-      // TODO: Current implementation supports only one decoration per function
-      // parameter so RelaxedPrecision cannot be applied at the same time as,
-      // for example, Aliased/Restrict/etc. This should be relaxed to allow any
-      // combination of decoration allowed by the spec to be supported.
-      if (foundDecorationAttr)
-        return emitError(unknownLoc, "already found a decoration for function "
-                                     "argument with result <id> ")
-               << argID;
-
-      foundDecorationAttr = spirv::DecorationAttr::get(
-          context, spirv::Decoration::RelaxedPrecision);
+                                 spirv::Decoration::Alignment))) {
+      attributes.set(spirv::getFuncParamAlignmentAttrName(),
+                     decAttr.getValue());
+      continue;
     }
+    if (!isa<UnitAttr>(decAttr.getValue()))
+      return emitError(unknownLoc, "unhandled decoration '")
+             << decAttr.getName().getValue()
+             << "' on function argument with result <id> " << argID;
+
+    // TODO: Support multiple decorations per function parameter.
+    if (foundDecorationAttr)
+      return emitError(unknownLoc, "already found a decoration for function "
+                                   "argument with result <id> ")
+             << argID;
+
+    std::optional<spirv::Decoration> decoration = spirv::symbolizeDecoration(
+        llvm::convertToCamelFromSnakeCase(decAttr.getName(), true));
+    if (!decoration)
+      return emitError(unknownLoc, "unknown decoration '")
+             << decAttr.getName().getValue()
+             << "' on function argument with result <id> " << argID;
+    foundDecorationAttr = spirv::DecorationAttr::get(context, *decoration);
   }
 
-  if (!foundDecorationAttr)
-    return emitError(unknownLoc, "unimplemented decoration support for "
-                                 "function argument with result <id> ")
-           << argID;
-
-  NamedAttribute attr(StringAttr::get(context, spirv::DecorationAttr::name),
-                      foundDecorationAttr);
-  argAttrs[argIndex] = DictionaryAttr::get(context, attr);
+  if (foundDecorationAttr)
+    attributes.set(spirv::DecorationAttr::name, foundDecorationAttr);
+  argAttrs[argIndex] = attributes.getDictionary(context);
   return success();
 }
 
@@ -517,10 +596,19 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   std::string fnName = getFunctionSymbol(fnID);
   auto funcOp = spirv::FuncOp::create(opBuilder, unknownLoc, fnName,
                                       functionType, fnControl.value());
+  if (auto it = functionParameterAttrs.find(fnID);
+      it != functionParameterAttrs.end()) {
+    if (functionType.getNumResults() == 0)
+      return emitError(unknownLoc,
+                       "FuncParamAttr decoration requires a non-void function "
+                       "result");
+    funcOp.setResultAttr(0, spirv::getFuncParamAttrName(), it->second);
+    functionParameterAttrs.erase(it);
+  }
   // Processing other function attributes.
   if (decorations.count(fnID)) {
     for (auto attr : decorations[fnID].getAttrs()) {
-      funcOp->setAttr(attr.getName(), attr.getValue());
+      setInherentOrDiscardableAttr(funcOp, attr.getName(), attr.getValue());
     }
   }
   curFunction = funcMap[fnID] = funcOp;
@@ -864,9 +952,18 @@ spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
 std::optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
-  if (constIt == constantMap.end())
+  if (constIt != constantMap.end())
+    return constIt->getSecond();
+
+  auto replicatedConstIt = constantCompositeReplicateMap.find(id);
+  if (replicatedConstIt == constantCompositeReplicateMap.end())
     return std::nullopt;
-  return constIt->getSecond();
+
+  auto [value, type] = replicatedConstIt->getSecond();
+  auto shapedType = dyn_cast<ShapedType>(type);
+  if (!shapedType)
+    return std::nullopt;
+  return std::make_pair(SplatElementsAttr::get(shapedType, value), type);
 }
 
 std::optional<std::pair<Attribute, Type>>
@@ -914,10 +1011,11 @@ spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
                                         TypedAttr defaultValue) {
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
   auto op = spirv::SpecConstantOp::create(opBuilder, unknownLoc, symName,
-                                          defaultValue);
+                                          defaultValue,
+                                          /*sym_visibility=*/nullptr);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
-      op->setAttr(attr.getName(), attr.getValue());
+      setInherentOrDiscardableAttr(op, attr.getName(), attr.getValue());
   }
   specConstMap[resultID] = op;
   return op;
@@ -1004,7 +1102,7 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
   // Decorations.
   if (decorations.count(variableID)) {
     for (auto attr : decorations[variableID].getAttrs())
-      varOp->setAttr(attr.getName(), attr.getValue());
+      setInherentOrDiscardableAttr(varOp, attr.getName(), attr.getValue());
   }
   globalVariableMap[variableID] = varOp;
   return success();
@@ -1153,6 +1251,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processImageType(operands);
   case spirv::Opcode::OpTypeSampler:
     return processSamplerType(operands);
+  case spirv::Opcode::OpTypeNamedBarrier:
+    return processNamedBarrierType(operands);
   case spirv::Opcode::OpTypeSampledImage:
     return processSampledImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
@@ -1450,8 +1550,9 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
 
     if (!unresolvedMemberTypes.empty())
       deferredStructTypesInfos.push_back(
-          {structTy, unresolvedMemberTypes, memberTypes, offsetInfo,
-           memberDecorationsInfo, structDecorationsInfo});
+          {structTy, std::move(unresolvedMemberTypes), std::move(memberTypes),
+           std::move(offsetInfo), std::move(memberDecorationsInfo),
+           std::move(structDecorationsInfo)});
     else if (failed(structTy.trySetBody(memberTypes, offsetInfo,
                                         memberDecorationsInfo,
                                         structDecorationsInfo)))
@@ -1643,6 +1744,15 @@ spirv::Deserializer::processSamplerType(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpTypeSampler must have no parameters");
 
   typeMap[operands[0]] = spirv::SamplerType::get(context);
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processNamedBarrierType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 1)
+    return emitError(unknownLoc, "OpTypeNamedBarrier must have no parameters");
+
+  typeMap[operands[0]] = spirv::NamedBarrierType::get(context);
   return success();
 }
 
@@ -1842,7 +1952,7 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, shapedType);
-  } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
+  } else if (isa<spirv::ArrayType, spirv::StructType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
   } else {
@@ -1878,19 +1988,19 @@ LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
   uint32_t resultID = operands[1];
   uint32_t constantID = operands[2];
 
-  std::optional<std::pair<Attribute, Type>> constantInfo =
-      getConstant(constantID);
-  if (constantInfo.has_value()) {
-    constantCompositeReplicateMap.try_emplace(
-        resultID, constantInfo.value().first, resultType);
-    return success();
-  }
-
   std::optional<std::pair<Attribute, Type>> replicatedConstantCompositeInfo =
       getConstantCompositeReplicate(constantID);
   if (replicatedConstantCompositeInfo.has_value()) {
     constantCompositeReplicateMap.try_emplace(
         resultID, replicatedConstantCompositeInfo.value().first, resultType);
+    return success();
+  }
+
+  std::optional<std::pair<Attribute, Type>> constantInfo =
+      getConstant(constantID);
+  if (constantInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, constantInfo.value().first, resultType);
     return success();
   }
 
@@ -1930,7 +2040,7 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
 
   auto op = spirv::SpecConstantCompositeOp::create(
       opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
-      opBuilder.getArrayAttr(elements));
+      opBuilder.getArrayAttr(elements), /*sym_visibility=*/nullptr);
   specConstCompositeMap[resultID] = op;
 
   return success();
@@ -1964,7 +2074,8 @@ LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
       getSpecConstant(operands[2]);
   auto op = spirv::EXTSpecConstantCompositeReplicateOp::create(
       opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
-      SymbolRefAttr::get(constituentSpecConstantOp));
+      SymbolRefAttr::get(constituentSpecConstantOp),
+      /*sym_visibility=*/nullptr);
 
   specConstCompositeReplicateMap[resultID] = op;
 
@@ -2324,26 +2435,51 @@ LogicalResult spirv::Deserializer::processSwitch(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpSwitch must at least specify selector and "
                                  "a default target");
 
-  if (operands.size() % 2)
-    return emitError(unknownLoc,
-                     "OpSwitch must at have an even number of operands: "
-                     "selector, default target and any number of literal and "
-                     "label <id> pairs");
-
   Value selector = getValue(operands[0]);
+  if (!selector)
+    return emitError(unknownLoc, "unknown OpSwitch selector <id>: ")
+           << operands[0];
+  auto selectorType = dyn_cast<IntegerType>(selector.getType());
+  if (!selectorType)
+    return emitError(unknownLoc, "OpSwitch selector must be an integer");
+
+  // Each case literal has the width of the selector type. Literals wider than
+  // one word span multiple words with the low-order word first.
+  unsigned bitWidth = selectorType.getWidth();
+  unsigned literalWords = llvm::divideCeil(bitWidth, 32);
+  unsigned wordsPerCase = literalWords + 1;
+  if ((operands.size() - 2) % wordsPerCase != 0)
+    return emitError(unknownLoc, "OpSwitch must specify selector, default "
+                                 "target and any number of literal and label "
+                                 "<id> pairs, where each literal of a ")
+           << bitWidth << "-bit selector spans " << literalWords << " word(s)";
+
   Block *defaultBlock = getOrCreateBlock(operands[1]);
   Location loc = createFileLineColLoc(opBuilder);
 
-  SmallVector<int32_t> literals;
+  SmallVector<APInt> literals;
   SmallVector<Block *> blocks;
-  for (unsigned i = 2, e = operands.size(); i < e; i += 2) {
-    literals.push_back(operands[i]);
-    blocks.push_back(getOrCreateBlock(operands[i + 1]));
+  for (unsigned i = 2, e = operands.size(); i < e; i += wordsPerCase) {
+    APInt literal;
+    if (bitWidth <= 32) {
+      // Sub-word literals occupy the low-order bits of the word and are
+      // sign-extended for signed selector types, so truncate to the selector
+      // width.
+      literal = APInt(bitWidth, operands[i], /*isSigned=*/true,
+                      /*implicitTrunc=*/true);
+    } else {
+      literal = APInt(bitWidth, 0);
+      for (unsigned w = 0; w < literalWords; ++w)
+        literal.insertBits(APInt(32, operands[i + w]), w * 32);
+    }
+    literals.push_back(literal);
+    blocks.push_back(getOrCreateBlock(operands[i + literalWords]));
   }
 
   SmallVector<ValueRange> targetOperands(blocks.size(), {});
   spirv::SwitchOp::create(opBuilder, loc, selector, defaultBlock,
-                          ArrayRef<Value>(), literals, blocks, targetOperands);
+                          ArrayRef<Value>(), ArrayRef<APInt>(literals), blocks,
+                          targetOperands);
 
   return success();
 }
@@ -2738,6 +2874,8 @@ LogicalResult ControlFlowStructurizer::structurize() {
       if (it != blockMergeInfo.end()) {
         // Use the original location for nested selection/loop ops.
         Location loc = it->second.loc;
+        // Copy the control before the erase below invalidates `it`.
+        uint32_t nestedControl = it->second.control;
 
         Block *newHeader = mapper.lookupOrNull(block);
         if (!newHeader)
@@ -2756,10 +2894,9 @@ LogicalResult ControlFlowStructurizer::structurize() {
         if (Block *mappedTo = mapper.lookupOrNull(newMerge))
           newMerge = mappedTo;
 
-        // The iterator should be erased before adding a new entry into
-        // blockMergeInfo to avoid iterator invalidation.
+        // Erase the stale entry before inserting the remapped one.
         blockMergeInfo.erase(it);
-        blockMergeInfo.try_emplace(newHeader, loc, it->second.control, newMerge,
+        blockMergeInfo.try_emplace(newHeader, loc, nestedControl, newMerge,
                                    newContinue);
       }
 
@@ -2919,8 +3056,9 @@ LogicalResult spirv::Deserializer::splitSelectionHeader() {
     // Do not split a block that only contains a conditional branch / switch,
     // unless it is also a merge block of another construct - in that case we
     // want to split the block. We do not want two constructs to share header /
-    // merge block.
-    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
+    // merge block. The entry block cannot join a region, so split it too.
+    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock ||
+        isFnEntryBlock(block)) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
       spirv::BranchOp::create(builder, block->getParent()->getLoc(), newBlock);

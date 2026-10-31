@@ -1,4 +1,4 @@
-//===-- include/flang/Runtime/CUDA/common.h ------------------*- C++ -*-===//
+//===-- include/flang/Runtime/CUDA/common.h ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,6 @@
 #ifndef FORTRAN_RUNTIME_CUDA_COMMON_H_
 #define FORTRAN_RUNTIME_CUDA_COMMON_H_
 
-#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
 /// Type of memory for allocation/deallocation

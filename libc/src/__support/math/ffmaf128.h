@@ -11,7 +11,7 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/common.h"
@@ -21,7 +21,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float ffmaf128(float128 x, float128 y, float128 z) {
+LIBC_INLINE constexpr float ffmaf128(float128 x, float128 y, float128 z) {
   return fputil::fma<float>(x, y, z);
 }
 
@@ -29,6 +29,6 @@ LIBC_INLINE float ffmaf128(float128 x, float128 y, float128 z) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_FFMAF128_H

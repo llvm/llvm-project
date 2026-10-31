@@ -2,7 +2,7 @@
 // RUN:   -test-lower-to-arm-sme -test-lower-to-llvm -verify-diagnostics | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
-// RUN:   -march=aarch64 -mattr="+sve,+sme" \
+// RUN:   -march=aarch64 -mattr="+sme" \
 // RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib | \
 // RUN: FileCheck %s
 

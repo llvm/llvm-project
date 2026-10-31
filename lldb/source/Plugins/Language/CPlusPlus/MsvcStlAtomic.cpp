@@ -26,7 +26,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   ValueObject *m_storage = nullptr;
@@ -52,7 +52,7 @@ lldb::ValueObjectSP
 lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
   if (idx == 0 && m_storage && m_element_type.IsValid())
-    return m_storage->Cast(m_element_type)->Clone(ConstString("Value"));
+    return m_storage->Cast(m_element_type)->Clone("Value");
   return nullptr;
 }
 
@@ -82,8 +82,9 @@ lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-llvm::Expected<size_t> lldb_private::formatters::
-    MsvcStlAtomicSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t>
+lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "Value")
     return 0;
   return llvm::createStringErrorV("type has no child named '{0}'", name);

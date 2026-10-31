@@ -402,8 +402,8 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     Note that there may be multiple ways to infer a resulting rank-reduced type.
       e.g. 1x6x1 could potentially rank-reduce to either 1x6 or 6x1 2-D shapes.
 
-    To disambiguate, the inference helpers `inferCanonicalRankReducedResultType`
-    only drop the first unit dimensions, in order:
+    To disambiguate, canonical rank-reduction inference drops only the first
+    unit dimensions, in order:
       e.g. 1x6x1 rank-reduced to 2-D will infer the 6x1 2-D shape, but not 1x6.
 
     Verification however has access to result type and does not need to infer.
@@ -501,23 +501,6 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
       ArrayRef<int64_t> staticSizes);
     static RankedTensorType inferResultType(
       RankedTensorType sourceTensorType,
-      ArrayRef<OpFoldResult> staticSizes);
-
-    /// If the rank is reduced (i.e. the desiredResultRank is smaller than the
-    /// number of sizes), drop as many size 1 as needed to produce an inferred type
-    /// with the desired rank.
-    ///
-    /// Note that there may be multiple ways to compute this rank-reduced type:
-    ///   e.g. 1x6x1 can rank-reduce to either 1x6 or 6x1 2-D tensors.
-    ///
-    /// To disambiguate, this function always drops the first 1 sizes occurrences.
-    static RankedTensorType inferCanonicalRankReducedResultType(
-      unsigned resultRank,
-      RankedTensorType sourceRankedTensorType,
-      ArrayRef<int64_t> staticSizes);
-    static RankedTensorType inferCanonicalRankReducedResultType(
-      unsigned resultRank,
-      RankedTensorType sourceRankedTensorType,
       ArrayRef<OpFoldResult> staticSizes);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
@@ -1235,9 +1218,11 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
       "ArrayRef<ReassociationIndices>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
-      $_state.addAttribute("reassociation",
-          getReassociationIndicesAttribute($_builder, reassociation));
-      build($_builder, $_state, resultType, src, attrs);
+      buildPropertiesAndDiscardableAttributes($_state, attrs);
+      $_state.getOrAddProperties<Properties>().reassociation =
+          getReassociationIndicesAttribute($_builder, reassociation);
+      $_state.addOperands(src);
+      $_state.addTypes(resultType);
     }]>,
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationExprs>":$reassociation,
@@ -1290,6 +1275,9 @@ def Tensor_PadOp : Tensor_Op<"pad", [
     The result tensor dimensions are `low[i]` + `dim[i]` + `high[i]` for each
     dimension `i`. The number of elements of `low` and `high` must match the
     rank of the input tensor. They can be either a constant or a dynamic value.
+    The padding amounts must be non-negative. A negative constant is rejected
+    by the verifier. A negative dynamic value is undefined behavior: the
+    verifier does not look through the defining op of an SSA value.
 
     The region of the `tensor.pad` operation returns the value to use
     for the padding. The arguments of the region represent the index

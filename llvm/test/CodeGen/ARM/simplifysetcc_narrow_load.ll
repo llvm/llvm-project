@@ -24,9 +24,7 @@ define i1 @test_129_15_0(ptr %y) {
 ; CHECK-LE-LABEL: test_129_15_0:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldrh r0, [r0]
-; CHECK-LE-NEXT:    mov r1, #255
-; CHECK-LE-NEXT:    orr r1, r1, #32512
-; CHECK-LE-NEXT:    ands r0, r0, r1
+; CHECK-LE-NEXT:    bics r0, r0, #32768
 ; CHECK-LE-NEXT:    movne r0, #1
 ; CHECK-LE-NEXT:    mov pc, lr
 ;

@@ -1,0 +1,134 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
+# RUN: %clang %cflags -Wl,-q -Wl,-e,main %t.o -o %t.exe
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | \
+# RUN:   FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.bolt
+
+## Check that a DWARF64 DW_FORM_ref_addr inside .debug_info is cloned and
+## rewritten as an 8-byte debug-info offset.
+
+# CHECK-LABEL: .debug_info contents:
+# CHECK: Compile Unit:{{.*}} format = DWARF64, version = 0x0005
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name [DW_FORM_strp]{{.*}}"main-cu"
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name [DW_FORM_strp]{{.*}}"global"
+# CHECK: DW_AT_type [DW_FORM_ref_addr] (0x{{[0-9a-f]+}} "int")
+# CHECK: Compile Unit:{{.*}} format = DWARF64, version = 0x0005
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name [DW_FORM_strp]{{.*}}"type-cu"
+# CHECK: DW_TAG_base_type
+# CHECK: DW_AT_name [DW_FORM_strp]{{.*}}"int"
+
+  .text
+  .globl main
+  .type main,@function
+main:
+.Lfunc_begin0:
+  .file 0 "." "dwarf64-ref-addr.s"
+  .loc 0 1 0
+  xorl %eax, %eax
+  retq
+.Lfunc_end0:
+  .size main, .Lfunc_end0-main
+
+  .section .debug_abbrev,"",@progbits
+.Labbrev:
+  .byte 1                         # Abbrev code
+  .byte 0x11                      # DW_TAG_compile_unit
+  .byte 1                         # DW_CHILDREN_yes
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x10                      # DW_AT_stmt_list
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x01                      # DW_FORM_addr
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0
+  .byte 0
+  .byte 2                         # Abbrev code
+  .byte 0x34                      # DW_TAG_variable
+  .byte 0                         # DW_CHILDREN_no
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x49                      # DW_AT_type
+  .byte 0x10                      # DW_FORM_ref_addr
+  .byte 0
+  .byte 0
+  .byte 3                         # Abbrev code
+  .byte 0x11                      # DW_TAG_compile_unit
+  .byte 1                         # DW_CHILDREN_yes
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x10                      # DW_AT_stmt_list
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0
+  .byte 0
+  .byte 4                         # Abbrev code
+  .byte 0x24                      # DW_TAG_base_type
+  .byte 0                         # DW_CHILDREN_no
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x3e                      # DW_AT_encoding
+  .byte 0x0b                      # DW_FORM_data1
+  .byte 0x0b                      # DW_AT_byte_size
+  .byte 0x0b                      # DW_FORM_data1
+  .byte 0
+  .byte 0
+  .byte 0
+
+  .section .debug_info,"",@progbits
+.Lcu0_begin:
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Lcu0_end-.Lcu0_start     # DWARF64 unit length
+.Lcu0_start:
+  .short 5                        # Version
+  .byte 1                         # DW_UT_compile
+  .byte 8                         # Address size
+  .quad .Labbrev                  # Abbrev offset
+  .byte 1                         # DW_TAG_compile_unit
+  .quad .Lstr_main_cu             # DW_AT_name
+  .quad .Lline_table_start0       # DW_AT_stmt_list
+  .quad main                      # DW_AT_low_pc
+  .long .Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
+  .byte 2                         # DW_TAG_variable
+  .quad .Lstr_global              # DW_AT_name
+  .quad .Lint_die                 # DW_AT_type
+  .byte 0                         # End children
+.Lcu0_end:
+
+.Lcu1_begin:
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Lcu1_end-.Lcu1_start     # DWARF64 unit length
+.Lcu1_start:
+  .short 5                        # Version
+  .byte 1                         # DW_UT_compile
+  .byte 8                         # Address size
+  .quad .Labbrev                  # Abbrev offset
+  .byte 3                         # DW_TAG_compile_unit
+  .quad .Lstr_type_cu             # DW_AT_name
+  .quad .Lline_table_start0       # DW_AT_stmt_list
+.Lint_die:
+  .byte 4                         # DW_TAG_base_type
+  .quad .Lstr_int                 # DW_AT_name
+  .byte 0x05                      # DW_ATE_signed
+  .byte 4                         # DW_AT_byte_size
+  .byte 0                         # End children
+.Lcu1_end:
+
+  .section .debug_str,"MS",@progbits,1
+.Lstr_main_cu:
+  .asciz "main-cu"
+.Lstr_type_cu:
+  .asciz "type-cu"
+.Lstr_global:
+  .asciz "global"
+.Lstr_int:
+  .asciz "int"
+
+  .section .debug_line,"",@progbits
+.Lline_table_start0:

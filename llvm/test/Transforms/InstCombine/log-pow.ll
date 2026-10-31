@@ -26,7 +26,7 @@ define double @log_powi_const(double %x) {
 define double @log_powi_nonconst(double %x, i32 %y) {
 ; CHECK-LABEL: @log_powi_nonconst(
 ; CHECK-NEXT:    [[LOG1:%.*]] = call fast double @llvm.log.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[CAST:%.*]] = sitofp i32 [[Y:%.*]] to double
+; CHECK-NEXT:    [[CAST:%.*]] = sitofp fast i32 [[Y:%.*]] to double
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[LOG1]], [[CAST]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
@@ -38,7 +38,7 @@ define double @log_powi_nonconst(double %x, i32 %y) {
 define double @logf64_powi_nonconst(double %x, i32 %y) {
 ; CHECK-LABEL: @logf64_powi_nonconst(
 ; CHECK-NEXT:    [[LOG1:%.*]] = call fast double @llvm.log.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[CAST:%.*]] = sitofp i32 [[Y:%.*]] to double
+; CHECK-NEXT:    [[CAST:%.*]] = sitofp fast i32 [[Y:%.*]] to double
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[LOG1]], [[CAST]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
@@ -61,7 +61,7 @@ define float @logf_powfi_const(float %x) {
 define float @logf_powfi_nonconst(float %x, i32 %y) {
 ; CHECK-LABEL: @logf_powfi_nonconst(
 ; CHECK-NEXT:    [[LOG1:%.*]] = call fast float @llvm.log.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CAST:%.*]] = sitofp i32 [[Y:%.*]] to float
+; CHECK-NEXT:    [[CAST:%.*]] = sitofp fast i32 [[Y:%.*]] to float
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[LOG1]], [[CAST]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -127,7 +127,7 @@ define float @function_pointer(ptr %fptr, float %p1) {
 
 define double @log10_exp(double %x) {
 ; CHECK-LABEL: @log10_exp(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], 0x3FDBCB7B1526E50E
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], f0x3FDBCB7B1526E50E
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
   %exp = call fast double @exp(double %x)
@@ -137,7 +137,7 @@ define double @log10_exp(double %x) {
 
 define <2 x float> @logv_exp2v(<2 x float> %x) {
 ; CHECK-LABEL: @logv_exp2v(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float 0x3FE62E4300000000)
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[X:%.*]], splat (float f0x3F317218)
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %exp = call fast <2 x float> @llvm.exp2.v2f32(<2 x float> %x)
@@ -147,7 +147,7 @@ define <2 x float> @logv_exp2v(<2 x float> %x) {
 
 define float @log2f_exp10f(float %x) {
 ; CHECK-LABEL: @log2f_exp10f(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X:%.*]], 0x400A934F00000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X:%.*]], f0x40549A78
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %exp = call fast float @exp10f(float %x)

@@ -1385,6 +1385,19 @@ ITT_EXTERN_C int _N_(init_ittlib)(const char *lib_name,
         }
         groups = __itt_get_groups();
         if (DL_SYMBOLS && (groups != __itt_group_none || lib_name != NULL)) {
+          /* CodeQL reports this __itt_load_lib call as an "Uncontrolled
+           * process operation": uncontrolled external input (the
+           * INTEL_LIBITTNOTIFY{32,64} environment variable) is passed to a
+           * library-loading function. This appears to be intended, matching
+           * the guidance in Intel's "Compile and Link with ITT API"
+           * documentation, which describes the env var as a path to a library
+           * to load:
+           * https://intel.github.io/ittapi/src/compile-and-link-with-itt-api.html
+           * CodeQL reference error:
+           * https://codeql.github.com/codeql-query-help/cpp/cpp-uncontrolled-process-operation/
+           * The warning issuppressed below.
+           */
+          // codeql[cpp/uncontrolled-process-operation]
           _N_(_ittapi_global).lib = __itt_load_lib(
               (lib_name == NULL) ? ittnotify_lib_name : lib_name);
 

@@ -62,7 +62,7 @@ void UseBoolLiteralsCheck::check(const MatchFinder::MatchResult &Result) {
   if (InMacro && IgnoreMacros)
     return;
 
-  auto Diag =
+  const auto Diag =
       diag(Expression->getExprLoc(),
            "converting integer literal to bool, use bool literal instead");
 

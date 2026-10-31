@@ -38,6 +38,7 @@ class OpBuilder;
 
 namespace spirv {
 class VerCapExtAttr;
+class SPIRVDialect;
 } // namespace spirv
 } // namespace mlir
 
@@ -57,7 +58,7 @@ public:
   static inline mlir::spirv::FuncOp getFromVoidPointer(void *p) {
     return mlir::spirv::FuncOp::getFromOpaquePointer(p);
   }
-  static constexpr int numLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 3;
 };
 
 } // namespace llvm

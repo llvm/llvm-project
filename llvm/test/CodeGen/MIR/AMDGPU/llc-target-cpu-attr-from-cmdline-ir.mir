@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=hawaii -run-pass=none -o - %s | FileCheck -check-prefix=MCPU %s
-# RUN: llc -mtriple=amdgcn -mattr=+unaligned-access-mode -run-pass=none -o - %s | FileCheck -check-prefix=MATTR %s
+# RUN: llc -mtriple=amdgpu7 -mcpu=hawaii -run-pass=none -o - %s | FileCheck -check-prefix=MCPU %s
+# RUN: llc -mtriple=amdgpu7 -mattr=+unaligned-access-mode -run-pass=none -o - %s | FileCheck -check-prefix=MATTR %s
 
 # FIXME: This overrides attributes that already are present. It should probably
 # only touch functions without an existing attribute.
@@ -7,10 +7,10 @@
 # MCPU:  @with_cpu_attr() #0 {
 # MCPU: @no_cpu_attr() #1 {
 
-# MCPU: attributes #0 = { "target-cpu"="fiji" }
+# MCPU: attributes #0 = { "target-cpu"="gfx700" }
 # MCPU: attributes #1 = { "target-cpu"="hawaii" }
 
-# MATTR:  attributes #0 = { "target-cpu"="fiji" "target-features"="+unaligned-access-mode" }
+# MATTR:  attributes #0 = { "target-cpu"="gfx700" "target-features"="+unaligned-access-mode" }
 # MATTR: attributes #1 = { "target-features"="+unaligned-access-mode" }
 
 --- |
@@ -22,7 +22,7 @@
     ret void
   }
 
-  attributes #0 = { "target-cpu"="fiji" }
+  attributes #0 = { "target-cpu"="gfx700" }
 ...
 
 ---

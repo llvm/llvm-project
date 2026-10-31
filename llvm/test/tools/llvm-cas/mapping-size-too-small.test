@@ -1,0 +1,22 @@
+RUN: rm -rf %t && mkdir -p %t
+RUN: split-file %s %t
+
+# Check that if we start with a larger CAS it does not blow up when read with a smaller size.
+RUN: env LLVM_CAS_MAX_MAPPING_SIZE=10240 llvm-cas -cas %t/cas -make-blob -data %t/input > %t/casid
+RUN: env LLVM_CAS_MAX_MAPPING_SIZE=1024 llvm-cas -cas %t/cas -cat-node-data @%t/casid | FileCheck %s
+# CHECK: 01234567890
+
+RUN: rm -rf %t/cas
+RUN: env LLVM_CAS_MAX_MAPPING_SIZE=1024 not llvm-cas -cas %t/cas -make-blob -data %t/input 2>&1 | FileCheck %s -check-prefix=TOO_SMALL
+# TOO_SMALL: memory mapped file allocator is out of space
+
+
+//--- input
+01234567890
+01234567890
+01234567890
+01234567890
+01234567890
+01234567890
+01234567890
+01234567890

@@ -57,7 +57,7 @@ public:
 protected:
   friend class SBInstructionList;
   friend class lldb_private::python::SWIGBridge;
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
 
   lldb_private::ExecutionContextRef *get() const;
 

@@ -38,7 +38,7 @@ class AArch64LinuxTaggedMemoryReadTestCase(TestBase):
         )
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_tagged_memory_read(self):
         self.setup_test()
 
@@ -64,7 +64,7 @@ class AArch64LinuxTaggedMemoryReadTestCase(TestBase):
         self.expect("memory read", patterns=[tagged_addr_pattern], matching=False)
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_tagged_memory_find(self):
         self.setup_test()
 

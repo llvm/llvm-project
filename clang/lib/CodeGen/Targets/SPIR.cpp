@@ -9,8 +9,11 @@
 #include "ABIInfoImpl.h"
 #include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/LLVMContext.h"
 
 #include <stdint.h>
 #include <utility>
@@ -72,7 +75,7 @@ class AMDGCNSPIRVABIInfo : public SPIRVABIInfo {
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
-  ABIArgInfo classifyArgumentType(QualType Ty) const;
+  ABIArgInfo classifyArgumentType(QualType Ty, bool Variadic) const;
 
 public:
   AMDGCNSPIRVABIInfo(CodeGenTypes &CGT) : SPIRVABIInfo(CGT) {}
@@ -90,11 +93,6 @@ public:
       : TargetCodeGenInfo(std::make_unique<CommonSPIRABIInfo>(CGT)) {}
   CommonSPIRTargetCodeGenInfo(std::unique_ptr<ABIInfo> ABIInfo)
       : TargetCodeGenInfo(std::move(ABIInfo)) {}
-
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
 
   unsigned getDeviceKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
@@ -137,10 +135,15 @@ public:
                            CodeGen::CodeGenModule &M) const override;
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
                                 llvm::AtomicOrdering Ordering) const override;
+  void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                               llvm::Instruction &AtomicInst,
+                               const AtomicExpr *Expr = nullptr) const override;
   bool supportsLibCall() const override {
     return getABIInfo().getTarget().getTriple().getVendor() !=
            llvm::Triple::AMD;
   }
+
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
 };
 } // End anonymous namespace.
 
@@ -182,11 +185,6 @@ void SPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   // The logic is same as in DefaultABIInfo with an exception on the kernel
   // arguments handling.
   llvm::CallingConv::ID CC = FI.getCallingConvention();
-
-  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments()))
-    I.info = ArgumentsCount < FI.getNumRequiredArgs()
-                 ? classifyArgumentType(I.type)
-                 : ABIArgInfo::getDirect();
 
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
@@ -259,7 +257,7 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   // Lower single-element structs to just return a regular value.
-  if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
+  if (const Type *SeltTy = isSingleElementRecord(RetTy, getContext()))
     return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
   if (const auto *RD = RetTy->getAsRecordDecl();
@@ -293,7 +291,7 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
 
   // TODO: Can we omit empty structs?
 
-  if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+  if (const Type *SeltTy = isSingleElementRecord(Ty, getContext()))
     Ty = QualType(SeltTy, 0);
 
   llvm::Type *OrigLTy = CGT.ConvertType(Ty);
@@ -319,12 +317,19 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
   return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
 }
 
-ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty) const {
+ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty,
+                                                    bool Variadic) const {
   assert(NumRegsLeft <= MaxNumRegsForArgsRet && "register estimate underflow");
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
-  // TODO: support for variadics.
+  if (Variadic) {
+    return ABIArgInfo::getDirect(/*T=*/nullptr,
+                                 /*Offset=*/0,
+                                 /*Padding=*/nullptr,
+                                 /*CanBeFlattened=*/false,
+                                 /*Align=*/0);
+  }
 
   if (!isAggregateTypeForABI(Ty)) {
     ABIArgInfo ArgInfo = DefaultABIInfo::classifyArgumentType(Ty);
@@ -349,7 +354,7 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty) const {
   // Lower single-element structs to just pass a regular value. TODO: We
   // could do reasonable-size multiple-element structs too, using getExpand(),
   // though watch out for things like bitfields.
-  if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+  if (const Type *SeltTy = isSingleElementRecord(Ty, getContext()))
     return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
   if (const auto *RD = Ty->getAsRecordDecl();
@@ -395,12 +400,17 @@ void AMDGCNSPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
+  unsigned ArgumentIndex = 0;
+  const unsigned NumRequiredArgs = FI.getNumRequiredArgs();
+
   NumRegsLeft = MaxNumRegsForArgsRet;
   for (auto &I : FI.arguments()) {
-    if (CC == llvm::CallingConv::SPIR_KERNEL)
+    if (CC == llvm::CallingConv::SPIR_KERNEL) {
       I.info = classifyKernelArgumentType(I.type);
-    else
-      I.info = classifyArgumentType(I.type);
+    } else {
+      bool FixedArgument = ArgumentIndex++ < NumRequiredArgs;
+      I.info = classifyArgumentType(I.type, !FixedArgument);
+    }
   }
 }
 
@@ -442,6 +452,15 @@ unsigned CommonSPIRTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::SPIR_KERNEL;
 }
 
+LangAS SPIRVTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place, use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
+}
+
 void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
     const FunctionType *&FT) const {
   // Convert HIP kernels to SPIR-V kernels.
@@ -455,7 +474,7 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
 void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
-      FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
+      FT, FT->getExtInfo().withCallingConv(CC_C));
 }
 
 // LLVM currently assumes a null pointer has the bit pattern 0, but some GPU
@@ -468,19 +487,7 @@ llvm::Constant *
 CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
                                             llvm::PointerType *PT,
                                             QualType QT) const {
-  LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
-                  ? LangAS::Default
-                  : QT->getPointeeType().getAddressSpace();
-  unsigned ASAsInt = static_cast<unsigned>(AS);
-  unsigned FirstTargetASAsInt =
-      static_cast<unsigned>(LangAS::FirstTargetAddressSpace);
-  unsigned CodeSectionINTELAS = FirstTargetASAsInt + 9;
-  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
-  // function pointers to/from the generic AS.
-  bool IsFunctionPtrAS =
-      CGM.getTriple().isSPIRV() && ASAsInt == CodeSectionINTELAS;
-  if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
-      AS == LangAS::opencl_constant || IsFunctionPtrAS)
+  if (!CodeGenUtils::spirNullPointerNeedsGenericCast(QT, CGM.getTriple()))
     return llvm::ConstantPointerNull::get(PT);
 
   auto &Ctx = CGM.getContext();
@@ -532,8 +539,14 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
     return;
 
   unsigned N = M.getLangOpts().GPUMaxThreadsPerBlock;
-  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>())
+  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
     N = FlatWGS->getMax()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+  } else if (auto LB = FD->getAttr<CUDALaunchBoundsAttr>()) {
+    if (uint64_t MaxThreads = LB->getMaxThreads()
+                                  ->EvaluateKnownConstInt(M.getContext())
+                                  .getExtValue())
+      N = MaxThreads;
+  }
 
   // We encode the maximum flat WG size in the first component of the 3D
   // max_work_group_size attribute, which will get reverse translated into the
@@ -550,30 +563,28 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
 
 StringRef SPIRVTargetCodeGenInfo::getLLVMSyncScopeStr(
     const LangOptions &, SyncScope Scope, llvm::AtomicOrdering) const {
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return "subgroup";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return "device";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return "";
-  }
-  return "";
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(),
+                                       getAtomicScope(Scope));
+}
+
+void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(
+    CodeGenFunction &CGF, llvm::Instruction &AtomicInst,
+    const AtomicExpr *AE) const {
+  if (CGF.CGM.getTriple().getVendor() != llvm::Triple::VendorType::AMD)
+    return;
+
+  auto *RMW = dyn_cast<llvm::AtomicRMWInst>(&AtomicInst);
+  if (!RMW)
+    return;
+
+  AtomicOptions AO = CGF.CGM.getAtomicOpts();
+  llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+  if (!AO.getOption(clang::AtomicOptionKind::FineGrainedMemory))
+    RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
+  if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
+    RMW->setMetadata("amdgpu.no.remote.memory", Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode))
+    addAtomicIgnoreDenormalModeMetadata(CGF, *RMW);
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.
@@ -858,6 +869,17 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
          "The element type for a SPIR-V resource must be a scalar integer or "
          "floating point type.");
 
+  assert((!SampledType->isIntegerTy(64) || NumChannels <= 2) &&
+         "A 64-bit SPIR-V resource element can have at most 2 components.");
+
+  // SPIR-V has no 64-bit multi-component image format, so pack a 2-component
+  // 64-bit typed buffer into a 4-component 32-bit image. The backend
+  // reinterprets it with OpBitcast on load and store.
+  if (SampledType->isIntegerTy(64) && NumChannels == 2) {
+    SampledType = llvm::Type::getInt32Ty(Ctx);
+    NumChannels = 4;
+  }
+
   // These parameters correspond to the operands to the OpTypeImage SPIR-V
   // instruction. See
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpTypeImage.
@@ -890,10 +912,10 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   IntParams[1] = 2;
 
   // Arrayed
-  IntParams[2] = 0;
+  IntParams[2] = static_cast<unsigned>(attributes.IsArray);
 
   // MS
-  IntParams[3] = 0;
+  IntParams[3] = static_cast<unsigned>(attributes.isMultiSampled());
 
   // Sampled
   IntParams[4] =

@@ -4,6 +4,42 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle -O2 | FileCheck %s --check-prefixes=AVX512NOTDQ,AVX512NOTDQ-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl,+fast-variable-perlane-shuffle -O2 | FileCheck %s --check-prefixes=AVX512NOTDQ,AVX512NOTDQ-FAST-PERLANE
 
+define void @select_v16i8_signbits(<16 x i8> %maskvec,<16 x i8> %a1,<16 x i8> %a2,ptr %a3) {
+; AVX512-LABEL: select_v16i8_signbits:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm2
+; AVX512-NEXT:    vmovdqa %xmm2, (%rdi)
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: select_v16i8_signbits:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm2
+; AVX512NOTDQ-NEXT:    vmovdqa %xmm2, (%rdi)
+; AVX512NOTDQ-NEXT:    retq
+    %mask = icmp slt <16 x i8> %maskvec, zeroinitializer
+    %sel = select <16 x i1> %mask, <16 x i8> %a1, <16 x i8> %a2
+    store <16 x i8> %sel, ptr %a3
+    ret void
+}
+define void @select_v32i8_signbits(<32 x i8> %maskvec,<32 x i8> %a1,<32 x i8> %a2,ptr %a3) {
+; AVX512-LABEL: select_v32i8_signbits:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm2
+; AVX512-NEXT:    vmovdqa %ymm2, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: select_v32i8_signbits:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm2
+; AVX512NOTDQ-NEXT:    vmovdqa %ymm2, (%rdi)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+    %mask = icmp slt <32 x i8> %maskvec, zeroinitializer
+    %sel = select <32 x i1> %mask, <32 x i8> %a1, <32 x i8> %a2
+    store <32 x i8> %sel, ptr %a3
+    ret void
+}
 define void @load_v8i1_broadcast_4_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v8i1_broadcast_4_v2i1:
 ; AVX512:       # %bb.0:
@@ -11,8 +47,7 @@ define void @load_v8i1_broadcast_4_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a
 ; AVX512-NEXT:    kshiftrb $4, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpbroadcastq %xmm2, %xmm2
-; AVX512-NEXT:    vpmovq2m %xmm2, %k1
-; AVX512-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -41,8 +76,7 @@ define void @load_v8i1_broadcast_7_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a
 ; AVX512-NEXT:    kshiftrb $6, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
-; AVX512-NEXT:    vpmovq2m %xmm2, %k1
-; AVX512-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -71,8 +105,7 @@ define void @load_v16i1_broadcast_8_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %
 ; AVX512-NEXT:    kshiftrw $8, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpbroadcastq %xmm2, %xmm2
-; AVX512-NEXT:    vpmovq2m %xmm2, %k1
-; AVX512-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -100,8 +133,7 @@ define void @load_v16i1_broadcast_8_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a2
 ; AVX512-NEXT:    kshiftrw $8, %k0, %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %xmm2
 ; AVX512-NEXT:    vpbroadcastd %xmm2, %xmm2
-; AVX512-NEXT:    vpmovd2m %xmm2, %k1
-; AVX512-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -129,8 +161,7 @@ define void @load_v16i1_broadcast_15_v2i1(ptr %a0,<2 x double> %a1,<2 x double> 
 ; AVX512-NEXT:    kshiftrw $14, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
-; AVX512-NEXT:    vpmovq2m %xmm2, %k1
-; AVX512-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -158,8 +189,7 @@ define void @load_v16i1_broadcast_15_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a
 ; AVX512-NEXT:    kshiftrw $12, %k0, %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %xmm2
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[3,3,3,3]
-; AVX512-NEXT:    vpmovd2m %xmm2, %k1
-; AVX512-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -187,8 +217,7 @@ define void @load_v32i1_broadcast_16_v2i1(ptr %a0,<2 x double> %a1,<2 x double> 
 ; AVX512-NEXT:    kshiftrd $16, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpbroadcastq %xmm2, %xmm2
-; AVX512-NEXT:    vpmovq2m %xmm2, %k1
-; AVX512-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -216,8 +245,7 @@ define void @load_v32i1_broadcast_16_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a
 ; AVX512-NEXT:    kshiftrd $16, %k0, %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %xmm2
 ; AVX512-NEXT:    vpbroadcastd %xmm2, %xmm2
-; AVX512-NEXT:    vpmovd2m %xmm2, %k1
-; AVX512-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -244,8 +272,7 @@ define void @load_v32i1_broadcast_16_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a
 ; AVX512-NEXT:    kmovb 2(%rdi), %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %ymm2
 ; AVX512-NEXT:    vpbroadcastd %xmm2, %ymm2
-; AVX512-NEXT:    vpmovd2m %ymm2, %k1
-; AVX512-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; AVX512-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm1
 ; AVX512-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -274,8 +301,7 @@ define void @load_v32i1_broadcast_31_v2i1(ptr %a0,<2 x double> %a1,<2 x double> 
 ; AVX512-NEXT:    kshiftrd $30, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
-; AVX512-NEXT:    vpmovq2m %xmm2, %k1
-; AVX512-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -303,8 +329,7 @@ define void @load_v32i1_broadcast_31_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a
 ; AVX512-NEXT:    kshiftrd $28, %k0, %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %xmm2
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[3,3,3,3]
-; AVX512-NEXT:    vpmovd2m %xmm2, %k1
-; AVX512-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -332,8 +357,7 @@ define void @load_v32i1_broadcast_31_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a
 ; AVX512-FAST-NEXT:    vpmovm2d %k0, %ymm2
 ; AVX512-FAST-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [7,7,7,7,7,7,7,7]
 ; AVX512-FAST-NEXT:    vpermd %ymm2, %ymm3, %ymm2
-; AVX512-FAST-NEXT:    vpmovd2m %ymm2, %k1
-; AVX512-FAST-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; AVX512-FAST-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm1
 ; AVX512-FAST-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512-FAST-NEXT:    vzeroupper
 ; AVX512-FAST-NEXT:    retq
@@ -344,8 +368,7 @@ define void @load_v32i1_broadcast_31_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a
 ; AVX512-FAST-PERLANE-NEXT:    vpmovm2d %k0, %ymm2
 ; AVX512-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} ymm2 = ymm2[3,3,3,3,7,7,7,7]
 ; AVX512-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,2,2,2]
-; AVX512-FAST-PERLANE-NEXT:    vpmovd2m %ymm2, %k1
-; AVX512-FAST-PERLANE-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; AVX512-FAST-PERLANE-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm1
 ; AVX512-FAST-PERLANE-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX512-FAST-PERLANE-NEXT:    retq
@@ -390,8 +413,7 @@ define void @load_v64i1_broadcast_32_v2i1(ptr %a0,<2 x double> %a1,<2 x double> 
 ; AVX512-NEXT:    kshiftrq $32, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpbroadcastq %xmm2, %xmm2
-; AVX512-NEXT:    vpmovq2m %xmm2, %k1
-; AVX512-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -419,8 +441,7 @@ define void @load_v64i1_broadcast_32_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a
 ; AVX512-NEXT:    kshiftrq $32, %k0, %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %xmm2
 ; AVX512-NEXT:    vpbroadcastd %xmm2, %xmm2
-; AVX512-NEXT:    vpmovd2m %xmm2, %k1
-; AVX512-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -447,8 +468,7 @@ define void @load_v64i1_broadcast_32_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a
 ; AVX512-NEXT:    kmovb 4(%rdi), %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %ymm2
 ; AVX512-NEXT:    vpbroadcastd %xmm2, %ymm2
-; AVX512-NEXT:    vpmovd2m %ymm2, %k1
-; AVX512-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; AVX512-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm1
 ; AVX512-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -505,8 +525,7 @@ define void @load_v64i1_broadcast_63_v2i1(ptr %a0,<2 x double> %a1,<2 x double> 
 ; AVX512-NEXT:    kshiftrq $62, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
-; AVX512-NEXT:    vpmovq2m %xmm2, %k1
-; AVX512-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -534,8 +553,7 @@ define void @load_v64i1_broadcast_63_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a
 ; AVX512-NEXT:    kshiftrq $60, %k0, %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %xmm2
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[3,3,3,3]
-; AVX512-NEXT:    vpmovd2m %xmm2, %k1
-; AVX512-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
+; AVX512-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -563,8 +581,7 @@ define void @load_v64i1_broadcast_63_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a
 ; AVX512-FAST-NEXT:    vpmovm2d %k0, %ymm2
 ; AVX512-FAST-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [7,7,7,7,7,7,7,7]
 ; AVX512-FAST-NEXT:    vpermd %ymm2, %ymm3, %ymm2
-; AVX512-FAST-NEXT:    vpmovd2m %ymm2, %k1
-; AVX512-FAST-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; AVX512-FAST-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm1
 ; AVX512-FAST-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512-FAST-NEXT:    vzeroupper
 ; AVX512-FAST-NEXT:    retq
@@ -575,8 +592,7 @@ define void @load_v64i1_broadcast_63_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a
 ; AVX512-FAST-PERLANE-NEXT:    vpmovm2d %k0, %ymm2
 ; AVX512-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} ymm2 = ymm2[3,3,3,3,7,7,7,7]
 ; AVX512-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,2,2,2]
-; AVX512-FAST-PERLANE-NEXT:    vpmovd2m %ymm2, %k1
-; AVX512-FAST-PERLANE-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; AVX512-FAST-PERLANE-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm1
 ; AVX512-FAST-PERLANE-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX512-FAST-PERLANE-NEXT:    retq
@@ -1619,4 +1635,3 @@ define void @load_v64i1_broadcast_63_v16i1_store(ptr %a0,ptr %a1) {
     store <16 x i1> %d1, ptr %a1
     ret void
 }
-

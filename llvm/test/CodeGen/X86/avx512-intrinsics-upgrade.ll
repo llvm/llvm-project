@@ -1823,12 +1823,14 @@ define void@test_storent_q_512(<8 x i64> %data, ptr %ptr) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vmovntps %zmm0, (%eax) ## encoding: [0x62,0xf1,0x7c,0x48,0x2b,0x00]
+; X86-NEXT:    sfence ## encoding: [0x0f,0xae,0xf8]
 ; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-LABEL: test_storent_q_512:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vmovntps %zmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x48,0x2b,0x07]
+; X64-NEXT:    sfence ## encoding: [0x0f,0xae,0xf8]
 ; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   call void @llvm.x86.avx512.storent.q.512(ptr %ptr, <8 x i64> %data)
@@ -1842,12 +1844,14 @@ define void @test_storent_pd_512(<8 x double> %data, ptr %ptr) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vmovntps %zmm0, (%eax) ## encoding: [0x62,0xf1,0x7c,0x48,0x2b,0x00]
+; X86-NEXT:    sfence ## encoding: [0x0f,0xae,0xf8]
 ; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-LABEL: test_storent_pd_512:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vmovntps %zmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x48,0x2b,0x07]
+; X64-NEXT:    sfence ## encoding: [0x0f,0xae,0xf8]
 ; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   call void @llvm.x86.avx512.storent.pd.512(ptr %ptr, <8 x double> %data)
@@ -1861,12 +1865,14 @@ define void @test_storent_ps_512(<16 x float> %data, ptr %ptr) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vmovntps %zmm0, (%eax) ## encoding: [0x62,0xf1,0x7c,0x48,0x2b,0x00]
+; X86-NEXT:    sfence ## encoding: [0x0f,0xae,0xf8]
 ; X86-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-LABEL: test_storent_ps_512:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vmovntps %zmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x48,0x2b,0x07]
+; X64-NEXT:    sfence ## encoding: [0x0f,0xae,0xf8]
 ; X64-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   call void @llvm.x86.avx512.storent.ps.512(ptr %ptr, <16 x float> %data)
@@ -5152,6 +5158,16 @@ define <8 x i64> @test_mask_valign_q(<8 x i64> %a, <8 x i64> %b, <8 x i64> %src,
 }
 
 declare <8 x i64> @llvm.x86.avx512.mask.valign.q.512(<8 x i64>, <8 x i64>, i32, <8 x i64>, i8)
+
+define <16 x i32> @test_valign_d(<16 x i32> %a, <16 x i32> %b) {
+; CHECK-LABEL: test_valign_d:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    valignd $3, %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf3,0x7d,0x48,0x03,0xc1,0x03]
+; CHECK-NEXT:    ## zmm0 = zmm1[3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0,1,2]
+; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <16 x i32> @llvm.x86.avx512.mask.valign.d.512(<16 x i32> %a, <16 x i32> %b, i32 3, <16 x i32> zeroinitializer, i16 -1)
+  ret <16 x i32> %res
+}
 
 define <16 x i32> @test_maskz_valign_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; X86-LABEL: test_maskz_valign_d:

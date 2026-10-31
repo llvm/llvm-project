@@ -1,5 +1,5 @@
 add_mlir_dialect(AMDGPU amdgpu)
-add_mlir_doc(AMDGPU AMDGPU Dialects/ -gen-dialect-doc)
+add_mlir_doc(AMDGPU AMDGPU Dialects/ -gen-dialect-doc -dialect amdgpu)
 
 set(LLVM_TARGET_DEFINITIONS AMDGPUEnums.td)
 mlir_tablegen(AMDGPUEnums.h.inc -gen-enum-decls)

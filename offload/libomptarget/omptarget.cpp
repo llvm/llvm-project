@@ -15,7 +15,7 @@
 #include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
-#include "PluginManager.h"
+#include "OpenMP/OffloadRTL.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
@@ -33,6 +33,7 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Object/ObjectFile.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -42,55 +43,6 @@ using llvm::SmallVector;
 using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
-
-int AsyncInfoTy::synchronize() {
-  int Result = OFFLOAD_SUCCESS;
-  if (!isQueueEmpty()) {
-    switch (SyncType) {
-    case SyncTy::BLOCKING:
-      // If we have a queue we need to synchronize it now.
-      Result = Device.synchronize(*this);
-      assert(AsyncInfo.Queue == nullptr &&
-             "The device plugin should have nulled the queue to indicate there "
-             "are no outstanding actions!");
-      break;
-    case SyncTy::NON_BLOCKING:
-      Result = Device.queryAsync(*this);
-      break;
-    }
-  }
-
-  // Run any pending post-processing function registered on this async object.
-  if (Result == OFFLOAD_SUCCESS && isQueueEmpty())
-    Result = runPostProcessing();
-
-  return Result;
-}
-
-void *&AsyncInfoTy::getVoidPtrLocation() {
-  BufferLocations.push_back(nullptr);
-  return BufferLocations.back();
-}
-
-bool AsyncInfoTy::isDone() const { return isQueueEmpty(); }
-
-int32_t AsyncInfoTy::runPostProcessing() {
-  size_t Size = PostProcessingFunctions.size();
-  for (size_t I = 0; I < Size; ++I) {
-    const int Result = PostProcessingFunctions[I]();
-    if (Result != OFFLOAD_SUCCESS)
-      return Result;
-  }
-
-  // Clear the vector up until the last known function, since post-processing
-  // procedures might add new procedures themselves.
-  const auto *PrevBegin = PostProcessingFunctions.begin();
-  PostProcessingFunctions.erase(PrevBegin, PrevBegin + Size);
-
-  return OFFLOAD_SUCCESS;
-}
-
-bool AsyncInfoTy::isQueueEmpty() const { return AsyncInfo.Queue == nullptr; }
 
 /* All begin addresses for partially mapped structs must be aligned, up to 16,
  * in order to ensure proper alignment of members. E.g.
@@ -176,7 +128,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
       }
 
       SourceInfo Info(Loc);
-      if (Info.isAvailible())
+      if (Info.isAvailable())
         fprintf(stderr, "%s:%d:%d: ", Info.getFilename(), Info.getLine(),
                 Info.getColumn());
       else
@@ -211,7 +163,7 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
   void *Rc = NULL;
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     Rc = malloc(Size);
     ODBG(ODT_Interface) << Name << " returns host ptr " << Rc;
     return Rc;
@@ -236,7 +188,7 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
     return;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     free(DevicePtr);
     ODBG(ODT_Interface) << Name << " deallocated host ptr";
     return;
@@ -264,20 +216,19 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
     return NULL;
   }
 
-  void *RC = NULL;
-
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  int32_t Err = 0;
-  Err = DeviceOrErr->RTL->data_lock(DeviceNum, HostPtr, Size, &RC);
-  if (Err) {
-    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr;
+  // Register and page-lock the memory.
+  auto LockedPtrOrErr = DeviceOrErr->registerMemory(HostPtr, Size);
+  if (!LockedPtrOrErr) {
+    std::string ErrStr = toString(LockedPtrOrErr.takeError());
+    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr << ": " << ErrStr;
     return nullptr;
   }
-  ODBG(ODT_Interface) << Name << " returns device ptr " << RC;
-  return RC;
+  ODBG(ODT_Interface) << Name << " returns device ptr " << *LockedPtrOrErr;
+  return *LockedPtrOrErr;
 }
 
 void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
@@ -288,7 +239,11 @@ void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  DeviceOrErr->RTL->data_unlock(DeviceNum, HostPtr);
+  // Unregister and unlock the memory.
+  if (auto Err = DeviceOrErr->unregisterMemory(HostPtr)) {
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(ODT_Interface) << "Could not unlock ptr " << HostPtr << ": " << ErrStr;
+  }
   ODBG(ODT_Interface) << Name << " returns";
 }
 
@@ -353,6 +308,8 @@ static char *getOrCreateSourceBufferForSubmitData(AsyncInfoTy &AsyncInfo,
   // Create a dynamic buffer for larger data and schedule its deletion.
   char *DataBuffer = new char[Size];
   AsyncInfo.addPostProcessingFunction([DataBuffer]() {
+    ODBG(ODT_DataTransfer) << "Releasing submitData source buffer at "
+                           << static_cast<void *>(DataBuffer);
     delete[] DataBuffer;
     return OFFLOAD_SUCCESS;
   });
@@ -660,7 +617,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
         HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry(),
-        /*ReleaseHDTTMap=*/true, StateInfo);
+        /*ReleaseHDTTMap=*/true, StateInfo, Loc);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -806,10 +763,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 ///
 /// (4) and (1) are both trying to modify the device memory corresponding to
 /// `&p`. So, if we decide that (4) should do an attachment, we also need to
-/// ensure that (4) happens after (1) is complete.
-///
-/// For this purpose, we insert a data_fence before the first
-/// pointer-attachment, (3), to ensure that all pending transfers finish first.
+/// ensure that (4) happens after (1) is complete. Since all supported
+/// backends execute enqueued work on a given queue in submission order, this
+/// is already guaranteed as long as (1) and (4) are submitted to the same
+/// queue, without requiring an explicit fence.
 int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                          AsyncInfoTy &AsyncInfo) {
   // Report all tracked allocations from both main loop and ATTACH processing
@@ -836,7 +793,6 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                       << "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS is true";
 
   int Ret = OFFLOAD_SUCCESS;
-  bool IsFirstPointerAttachment = true;
   for (size_t EntryIdx = 0; EntryIdx < StateInfo.AttachEntries.size();
        ++EntryIdx) {
     const auto &AttachEntry = StateInfo.AttachEntries[EntryIdx];
@@ -925,18 +881,6 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
     TargetPointerResultTy &PtrTPR = *PtrTPROpt;
     void **TgtPtrBase = reinterpret_cast<void **>(PtrTPR.TargetPointer);
 
-    // Insert a data-fence before the first pointer-attachment.
-    if (IsFirstPointerAttachment) {
-      IsFirstPointerAttachment = false;
-      ODBG(ODT_Mapping)
-          << "Inserting a data fence before the first pointer attachment.";
-      Ret = Device.dataFence(AsyncInfo);
-      if (Ret != OFFLOAD_SUCCESS) {
-        REPORT() << "Failed to insert data fence.";
-        return OFFLOAD_FAIL;
-      }
-    }
-
     // Do the pointer-attachment, i.e. update the device pointer to point to
     // device pointee.
     Ret = performPointerAttachment(Device, AsyncInfo, HstPtr, HstPteeBase,
@@ -974,6 +918,11 @@ struct PostProcessingInfo {
       : HstPtrBegin(HstPtr), DataSize(Size), ArgType(ArgType),
         TPR(std::move(TPR)) {}
 };
+
+static bool rangesOverlap(uintptr_t LBegin, uintptr_t LEnd, uintptr_t RBegin,
+                          uintptr_t REnd) {
+  return std::max(LBegin, RBegin) < std::min(LEnd, REnd);
+}
 
 } // namespace
 
@@ -1231,7 +1180,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         }
       }
 
-      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry);
+      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry,
+                                    /*HDTTMapPtr=*/nullptr, Loc);
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT() << "Copying data from device failed.";
         return OFFLOAD_FAIL;
@@ -1412,14 +1362,31 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (hst:" << HstPtrBegin
                       << ") -> (tgt:" << TgtPtrBegin << ")";
     int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, AsyncInfo,
-                                TPR.getEntry());
+                                TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data to device failed.";
       return OFFLOAD_FAIL;
     }
     if (TPR.getEntry()) {
+      uintptr_t UpdatedBegin = reinterpret_cast<uintptr_t>(TgtPtrBegin);
+      uintptr_t UpdatedEnd = UpdatedBegin + ArgSize;
       int Ret = TPR.getEntry()->foreachShadowPointerInfo(
           [&](ShadowPtrInfoTy &ShadowPtr) {
+            uintptr_t ShadowBegin =
+                reinterpret_cast<uintptr_t>(ShadowPtr.TgtPtrAddr);
+            uintptr_t ShadowEnd = ShadowBegin + ShadowPtr.PtrSize;
+
+            // The TO/update path has already issued an H2D memcpy for
+            // [UpdatedBegin, UpdatedEnd). If that memcpy did not touch this
+            // shadow pointer/descriptor slot on the device, there is nothing to
+            // fix up. If it did touch any byte, restore the whole saved target
+            // pointer/descriptor: a partially overwritten pointer/descriptor is
+            // not meaningful, and preserving the device attachment is safer
+            // than leaving mixed host/device descriptor bytes behind.
+            if (!rangesOverlap(UpdatedBegin, UpdatedEnd, ShadowBegin,
+                               ShadowEnd))
+              return OFFLOAD_SUCCESS;
+
             constexpr int64_t VoidPtrSize = sizeof(void *);
             if (ShadowPtr.PtrSize > VoidPtrSize) {
               ODBG(ODT_Mapping)
@@ -1453,7 +1420,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (tgt:" << TgtPtrBegin
                       << ") -> (hst:" << HstPtrBegin << ")";
     int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, AsyncInfo,
-                                  TPR.getEntry());
+                                  TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data from device failed.";
       return OFFLOAD_FAIL;
@@ -1692,8 +1659,6 @@ class PrivateArgumentManagerTy {
 
   /// A vector of information of all first-private arguments to be packed
   SmallVector<FirstPrivateArgInfoTy> FirstPrivateArgInfo;
-  /// Host buffer for all arguments to be packed
-  SmallVector<char> FirstPrivateArgBuffer;
   /// The total size of all arguments to be packed
   int64_t FirstPrivateArgSize = 0;
 
@@ -1966,8 +1931,17 @@ public:
     if (!FirstPrivateArgInfo.empty()) {
       assert(FirstPrivateArgSize != 0 &&
              "FirstPrivateArgSize is 0 but FirstPrivateArgInfo is empty");
-      FirstPrivateArgBuffer.resize(FirstPrivateArgSize, 0);
-      auto *Itr = FirstPrivateArgBuffer.begin();
+      // The packed buffer is the host source of the asynchronous submitData
+      // below, so its lifetime must outlive this object rather than be tied to
+      // it.
+      char *FirstPrivateArgBuffer =
+          getOrCreateSourceBufferForSubmitData(AsyncInfo, FirstPrivateArgSize);
+      // Not strictly necessary: the loop below writes every entry, and the
+      // inter-entry padding gaps it skips are never read by the device. Zero
+      // them anyway to keep the transferred buffer deterministic, which makes
+      // dumps easier to read and avoids tripping memory sanitizers.
+      std::memset(FirstPrivateArgBuffer, 0, FirstPrivateArgSize);
+      auto *Itr = FirstPrivateArgBuffer;
       // Copy all host data to this buffer
       for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
         // First pad the pointer as we (have to) pad it on the device too.
@@ -1983,7 +1957,7 @@ public:
       }
       // Allocate target memory
       void *TgtPtr =
-          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer.data());
+          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer);
       if (TgtPtr == nullptr) {
         ODBG(ODT_Alloc)
             << "Failed to allocate target memory for private arguments.";
@@ -1993,7 +1967,10 @@ public:
       ODBG(ODT_Alloc) << "Allocated " << FirstPrivateArgSize
                       << " bytes of target memory at " << TgtPtr;
       // Transfer data to target device
-      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer.data(),
+      ODBG(ODT_DataTransfer)
+          << "Submitting packed firstprivate arguments from host buffer at "
+          << static_cast<void *>(FirstPrivateArgBuffer);
+      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer,
                                   FirstPrivateArgSize, AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
         ODBG(ODT_DataTransfer) << "Failed to submit data of private arguments.";
@@ -2008,7 +1985,8 @@ public:
         TP += Info.Padding;
         Ptr = reinterpret_cast<void *>(TP);
         TP += Info.Size;
-        ODBG(ODT_Mapping) << "Firstprivate array " << Info.HstPtrBegin
+        ODBG(ODT_Mapping) << "Firstprivate array "
+                          << static_cast<void *>(Info.HstPtrBegin)
                           << " of size " << (Info.HstPtrEnd - Info.HstPtrBegin)
                           << " mapped to " << Ptr;
       }
@@ -2337,20 +2315,20 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     TIMESCOPE_WITH_DETAILS_AND_IDENT(
         "Kernel Target",
         "NumArguments=" + std::to_string(KernelArgs.NumArgs) +
-            ";NumTeams=" + std::to_string(KernelArgs.NumTeams[0]) +
+            ";NumTeams=" + std::to_string(KernelArgs.UserNumBlocks[0]) +
             ";TripCount=" + std::to_string(KernelArgs.Tripcount),
         Loc);
 
 #ifdef OMPT_SUPPORT
     /// RAII to establish tool anchors before and after kernel launch
-    int32_t NumTeams = KernelArgs.NumTeams[0];
+    int32_t NumTeams = KernelArgs.UserNumBlocks[0];
     // No need to guard this with OMPT_IF_BUILT
     InterfaceRAII TargetSubmitRAII(
         RegionInterface.getCallbacks<ompt_callback_target_submit>(), NumTeams);
 #endif
 
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
-                              KernelArgs, AsyncInfo);
+                              KernelArgs, nullptr, AsyncInfo);
   }
 
   if (Ret != OFFLOAD_SUCCESS) {
@@ -2379,67 +2357,123 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 /// and informing the record-replayer of whether to store the output
 /// in some file.
 int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
-                       bool IsRecord, bool SaveOutput,
-                       uint64_t &ReqPtrArgOffset) {
-  return Device.RTL->initialize_record_replay(Device.DeviceID, MemorySize,
-                                              VAddr, IsRecord, SaveOutput,
-                                              ReqPtrArgOffset);
+                       bool IsRecord, bool SaveOutput, bool EmitReport,
+                       const char *OutputDirPath) {
+  return Device.RTL->initialize_record_replay(
+      Device.DeviceID, MemorySize, VAddr, IsRecord,
+      /*IsNative=*/true, SaveOutput, EmitReport, /*ReportFilename=*/"",
+      OutputDirPath);
 }
 
 /// Executes a kernel using pre-recorded information for loading to
 /// device memory to launch the target kernel with the pre-recorded
 /// configuration.
 int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                  void *DeviceMemory, int64_t DeviceMemorySize, void **TgtArgs,
-                  ptrdiff_t *TgtOffsets, int32_t NumArgs, int32_t NumTeams,
-                  int32_t ThreadLimit, uint64_t LoopTripCount,
-                  AsyncInfoTy &AsyncInfo) {
+                  void *DeviceMemory, int64_t DeviceMemorySize,
+                  void *ReuseDeviceAlloc,
+                  const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+                  void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
+                  int32_t NumTeams, int32_t ThreadLimit,
+                  uint32_t SharedMemorySize, uint64_t LoopTripCount,
+                  AsyncInfoTy &AsyncInfo,
+                  KernelReplayOutcomeTy *ReplayOutcome) {
   int32_t DeviceId = Device.DeviceID;
-  TableMap *TM = getTableMap(HostPtr);
-  // Fail if the table map fails to find the target kernel pointer for the
-  // provided host pointer.
-  if (!TM) {
-    REPORT() << "Host ptr " << HostPtr
-             << " does not have a matching target pointer.";
-    return OFFLOAD_FAIL;
+  int32_t NumSymbols = NumGlobals + 1;
+
+  struct SymbolDataTy {
+    void *DevPtr = nullptr;
+    TableMap *TM = nullptr;
+    __tgt_target_table *TargetTable = nullptr;
+  };
+  SmallVector<SymbolDataTy> Symbols(NumSymbols);
+
+  for (int32_t I = 0; I < NumSymbols; ++I) {
+    // The first symbol is the kernel entry.
+    void *SymbolHostPtr = (I == 0) ? HostPtr : Globals[I - 1].Address;
+
+    // Get the table map for each symbol.
+    Symbols[I].TM = getTableMap(SymbolHostPtr);
+    if (!Symbols[I].TM) {
+      REPORT() << "Host pointer " << SymbolHostPtr
+               << " does not have a matching target pointer.";
+      return OFFLOAD_FAIL;
+    }
   }
 
-  // Retrieve the target table of offloading entries.
-  __tgt_target_table *TargetTable = nullptr;
+  // Retrieve the target table for each symbol.
   {
     std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
-    assert(TM->Table->TargetsTable.size() > (size_t)DeviceId &&
-           "Not expecting a device ID outside the table's bounds!");
-    TargetTable = TM->Table->TargetsTable[DeviceId];
+    for (auto &S : Symbols) {
+      assert(S.TM->Table->TargetsTable.size() > (size_t)DeviceId &&
+             "Not expecting a device ID outside the table's bounds!");
+      S.TargetTable = S.TM->Table->TargetsTable[DeviceId];
+      assert(S.TargetTable && "Global data has not been mapped\n");
+    }
   }
-  assert(TargetTable && "Global data has not been mapped\n");
 
-  // Retrieve the target kernel pointer, allocate and store the recorded device
-  // memory data, and launch device execution.
-  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].Address;
-  ODBG(ODT_Kernel) << "Launching target execution "
-                   << TargetTable->EntriesBegin[TM->Index].SymbolName
-                   << " with pointer " << TgtEntryPtr << " (index=" << TM->Index
-                   << ").";
+  // Retrieve the device pointers for each symbol.
+  for (auto &S : Symbols)
+    S.DevPtr = S.TargetTable->EntriesBegin[S.TM->Index].Address;
 
-  void *TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
-                                  TARGET_ALLOC_DEFAULT);
-  Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
+  // Initialize the device memory of each global.
+  for (int32_t I = 0; I < NumGlobals; ++I) {
+    assert(Globals[I].AuxAddr && "Global has no AuxAddr.");
+    assert(Globals[I].Size && "Global has Size zero.");
+
+    // Initialize the value of the global in the device.
+    int Ret = Device.submitData(Symbols[I + 1].DevPtr, Globals[I].AuxAddr,
+                                Globals[I].Size, AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT() << "Failed to submit data to a global.";
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  // Reuse a previous device allocation or allocate a new device buffer. Do not
+  // allocate anything if the size is zero.
+  void *&TgtPtr = ReuseDeviceAlloc;
+  if (!TgtPtr && DeviceMemorySize) {
+    TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
+                              TARGET_ALLOC_DEFAULT);
+    if (!TgtPtr) {
+      REPORT() << "Failed to allocate device memory.";
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  // Save the device allocation for future replays of the same kernel.
+  if (ReplayOutcome)
+    ReplayOutcome->ReplayDeviceAlloc = TgtPtr;
+
+  // Initialize the device memory.
+  if (DeviceMemorySize) {
+    int Ret =
+        Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT() << "Failed to submit data to the device memory.";
+      return OFFLOAD_FAIL;
+    }
+  }
 
   KernelArgsTy KernelArgs{};
   KernelArgs.Version = OMP_KERNEL_ARG_VERSION;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;
-  KernelArgs.NumTeams[0] = NumTeams;
-  KernelArgs.ThreadLimit[0] = ThreadLimit;
+  KernelArgs.UserNumBlocks[0] = NumTeams;
+  KernelArgs.UserNumBlocks[1] = 1;
+  KernelArgs.UserNumBlocks[2] = 1;
+  KernelArgs.UserThreadLimit[0] = ThreadLimit;
+  KernelArgs.UserThreadLimit[1] = 1;
+  KernelArgs.UserThreadLimit[2] = 1;
+  KernelArgs.DynCGroupMem = SharedMemorySize;
+  KernelArgs.Flags.StrictBlocks = true;
+  KernelArgs.Flags.StrictThreads = true;
 
-  int Ret = Device.launchKernel(TgtEntryPtr, TgtArgs, TgtOffsets, KernelArgs,
-                                AsyncInfo);
-
+  int Ret = Device.launchKernel(Symbols[0].DevPtr, TgtArgs, TgtOffsets,
+                                KernelArgs, ReplayOutcome, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
-    REPORT() << "Executing target region abort target.";
+    REPORT() << "Failed to launch kernel replay.";
     return OFFLOAD_FAIL;
   }
-
   return OFFLOAD_SUCCESS;
 }

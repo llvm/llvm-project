@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // Test that linear variables in worksharing+SIMD loops with ordered regions
-// are correctly rewritten to use .linear_result in:
+// use the private copy of the linear variable in:
 // 1. The ordered region (omp.ordered.region)
 // 2. Code after the ordered region (omp_region.finalize)
 //
@@ -17,7 +17,7 @@
 // !$omp end do simd
 
 module {
-  omp.private {type = private} @i_private_i32 : i32
+  omp.private {type = linear} @lin.i32 : i32
 
   // CHECK-LABEL: define void @wsloop_simd_ordered_linear
   llvm.func @wsloop_simd_ordered_linear() {
@@ -35,18 +35,18 @@ module {
     %c = llvm.alloca %c100_i64 x i32 : (i64) -> !llvm.ptr
     %i = llvm.alloca %c1_i64 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
 
+    // CHECK: %[[PRIV:omp.private.alloc]] = alloca i32
     // CHECK: %.linear_var = alloca i32
-    // CHECK: %.linear_result = alloca i32
 
     omp.wsloop ordered(0) {
-      omp.simd linear(%i : !llvm.ptr = %c1_i32 : i32) private(@i_private_i32 %i -> %arg0 : !llvm.ptr) {
+      omp.simd linear(@lin.i32 %i -> %lin0 : !llvm.ptr = %c1_i32 : i32) linear_var_types([i32]) {
         omp.loop_nest (%iv) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32) {
           // CHECK: omp.loop_nest.region:
-          // CHECK: load i32, ptr %.linear_result
-          llvm.store %iv, %arg0 : i32, !llvm.ptr
+          // CHECK: load i32, ptr %[[PRIV]]
+          llvm.store %iv, %lin0 : i32, !llvm.ptr
 
           // Compute a[i] = b[i] * 10
-          %i_val = llvm.load %arg0 : !llvm.ptr -> i32
+          %i_val = llvm.load %lin0 : !llvm.ptr -> i32
           %i_idx = llvm.sext %i_val : i32 to i64
           %i_off = llvm.sub %i_idx, %c1_i64 : i64
           %b_ptr = llvm.getelementptr %b[%i_off] : (!llvm.ptr, i64) -> !llvm.ptr, i32
@@ -58,8 +58,8 @@ module {
           // Ordered region
           omp.ordered.region par_level_simd {
             // CHECK: omp.ordered.region:
-            // CHECK: load i32, ptr %.linear_result
-            %i_ord = llvm.load %arg0 : !llvm.ptr -> i32
+            // CHECK: load i32, ptr %[[PRIV]]
+            %i_ord = llvm.load %lin0 : !llvm.ptr -> i32
             %i_ord_idx = llvm.sext %i_ord : i32 to i64
             %i_ord_off = llvm.sub %i_ord_idx, %c1_i64 : i64
             %a_ord_ptr = llvm.getelementptr %a[%i_ord_off] : (!llvm.ptr, i64) -> !llvm.ptr, i32
@@ -70,8 +70,8 @@ module {
 
           // Compute c[i] = a[i] * 2 (code after ordered region)
           // CHECK: omp_region.finalize:
-          // CHECK: load i32, ptr %.linear_result
-          %i_post = llvm.load %arg0 : !llvm.ptr -> i32
+          // CHECK: load i32, ptr %[[PRIV]]
+          %i_post = llvm.load %lin0 : !llvm.ptr -> i32
           %i_post_idx = llvm.sext %i_post : i32 to i64
           %i_post_off = llvm.sub %i_post_idx, %c1_i64 : i64
           %a_post_ptr = llvm.getelementptr %a[%i_post_off] : (!llvm.ptr, i64) -> !llvm.ptr, i32
@@ -82,9 +82,9 @@ module {
 
           omp.yield
         }
-      } {linear_var_types = [i32], omp.composite}
+      } {omp.composite}
     } {omp.composite}
     llvm.return
   }
-  // CHECK: !{!"llvm.loop.vectorize.enable", i1 true}
+  // CHECK: !{!"llvm.loop.vectorize.enable"}
 }

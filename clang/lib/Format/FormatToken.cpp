@@ -79,6 +79,17 @@ bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
   return false;
 }
 
+bool FormatToken::mustBreakAfterAttributes(const FormatStyle &Style) const {
+  switch (Style.BreakAfterAttributes) {
+  case FormatStyle::ABS_Always:
+    return true;
+  case FormatStyle::ABS_Never:
+    return false;
+  default: // ABS_Leave and ABS_LeaveAll
+    return NewlinesBefore > 0;
+  }
+}
+
 bool FormatToken::opensBlockOrBlockTypeList(const FormatStyle &Style) const {
   // C# Does not indent object initialisers as continuations.
   if (is(tok::l_brace) && getBlockKind() == BK_BracedInit && Style.isCSharp())
@@ -186,7 +197,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
   if (Style.Cpp11BracedListStyle != FormatStyle::BLS_Block &&
-      !Style.BinPackArguments &&
+      Style.PackArguments.BinPack == FormatStyle::BPAS_OnePerLine &&
       (Commas.size() < 19 || !Style.BinPackLongBracedList)) {
     return;
   }

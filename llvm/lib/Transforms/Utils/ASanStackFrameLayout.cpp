@@ -66,8 +66,7 @@ ComputeASanStackFrameLayout(SmallVectorImpl<ASanStackVariableDescription> &Vars,
   ASanStackFrameLayout Layout;
   Layout.Granularity = Granularity;
   Layout.FrameAlignment = std::max(Granularity, Vars[0].Alignment);
-  uint64_t Offset =
-      std::max(std::max(MinHeaderSize, Granularity), Vars[0].Alignment);
+  uint64_t Offset = std::max({MinHeaderSize, Granularity, Vars[0].Alignment});
   assert((Offset % Granularity) == 0);
   for (size_t i = 0; i < NumVars; i++) {
     bool IsLast = i == NumVars - 1;

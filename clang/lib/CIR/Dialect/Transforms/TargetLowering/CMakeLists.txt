@@ -1,13 +1,17 @@
 add_clang_library(MLIRCIRTargetLowering
+  CIRABIRewriteContext.cpp
   CIRCXXABI.cpp
   LowerModule.cpp
   LowerItaniumCXXABI.cpp
+  LowerMicrosoftCXXABI.cpp
   TargetLoweringInfo.cpp
   Targets/AMDGPU.cpp
   Targets/NVPTX.cpp
+  Targets/SPIRV.cpp
 
   DEPENDS
   clangBasic
+  mlir-headers
 
   LINK_COMPONENTS
   TargetParser
@@ -15,10 +19,12 @@ add_clang_library(MLIRCIRTargetLowering
   LINK_LIBS PUBLIC
 
   clangBasic
+  MLIRABI
   MLIRIR
   MLIRPass
   MLIRDLTIDialect
   MLIRCIR
+  MLIRCIRAnalysis
   MLIRCIRInterfaces
   MLIRLLVMDialect
 )

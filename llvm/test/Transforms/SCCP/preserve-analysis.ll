@@ -1,7 +1,8 @@
-; RUN: opt < %s -debug-pass-manager -passes='loop-vectorize,sccp,loop-vectorize' 2>&1 -S | FileCheck --check-prefix=NEW-PM %s
+; RUN: opt < %s -debug-pass-manager -passes='require<domtree>,loop-vectorize,sccp,loop-vectorize,require<domtree>' 2>&1 -S | FileCheck --check-prefix=NEW-PM %s
 
 ; Check that DT is preserved by SCCP by running it between 2
-; loop-vectorize runs.
+; loop-vectorize runs. LoopAnalysis needs a dominator tree only for an
+; irreducible CFG, so the pipeline requires one on either side.
 
 ; NEW-PM-DAG: Running analysis: LoopAnalysis on test
 ; NEW-PM-DAG: Running analysis: DominatorTreeAnalysis on test

@@ -1,0 +1,14 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "TypeConstrainedPointersAnalysisResult",
+      "result": {
+        "TypeConstrainedPointersAnalysisResult": [
+          "not-an-object"
+        ]
+      }
+    }
+  ],
+  "type": "WPASuite"
+}

@@ -18,7 +18,6 @@
 #include "edit-input.h"
 #include "edit-output.h"
 #include "io-api-common.h"
-#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/format.h"
@@ -26,6 +25,7 @@
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Common/optional.h"
 #include <cstdlib>
 #include <memory>
@@ -242,6 +242,11 @@ RT_API_ATTRS Cookie BeginUnformattedIO(
   } else {
     if (iostat == IostatOk) {
       iostat = unit->SetDirection(DIR);
+    }
+    if (iostat == IostatOk) {
+      if (unit->IsAfterEndfile() && DIR == Direction::Output) {
+        iostat = IostatWriteAfterEndfile;
+      }
     }
     if (iostat == IostatOk) {
       IoStatementState &io{

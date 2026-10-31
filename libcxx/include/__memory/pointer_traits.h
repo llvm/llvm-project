@@ -14,12 +14,10 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/detected_or.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_class.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/nat.h>
@@ -139,9 +137,6 @@ using __rebind_pointer_t _LIBCPP_NODEBUG = typename pointer_traits<_From>::templ
 
 // to_address
 
-template <class _Pointer, class = void>
-struct __to_address_helper;
-
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* __to_address(_Tp* __p) _NOEXCEPT {
   static_assert(!is_function<_Tp>::value, "_Tp is a function type");
@@ -149,48 +144,38 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* __to_address(_Tp* __p) _NOEXCEPT {
 }
 
 template <class _Pointer, class = void>
-struct _HasToAddress : false_type {};
+inline const bool __has_to_address_v = false;
 
 template <class _Pointer>
-struct _HasToAddress<_Pointer, decltype((void)pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>())) >
-    : true_type {};
+inline const bool
+    __has_to_address_v<_Pointer,
+                       decltype((void)pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))> = true;
 
 template <class _Pointer, class = void>
-struct _HasArrow : false_type {};
+inline const bool __has_arrow_v = false;
 
 template <class _Pointer>
-struct _HasArrow<_Pointer, decltype((void)std::declval<const _Pointer&>().operator->()) > : true_type {};
+inline const bool __has_arrow_v<_Pointer, decltype((void)std::declval<const _Pointer&>().operator->()) > = true;
 
-template <class _Pointer>
-struct _IsFancyPointer {
-  static const bool value = _HasArrow<_Pointer>::value || _HasToAddress<_Pointer>::value;
-};
-
-// enable_if is needed here to avoid instantiating checks for fancy pointers on raw pointers
-template <class _Pointer, __enable_if_t< _And<is_class<_Pointer>, _IsFancyPointer<_Pointer> >::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR __decay_t<decltype(__to_address_helper<_Pointer>::__call(std::declval<const _Pointer&>()))>
+template <class _Pointer, __enable_if_t<__has_to_address_v<_Pointer>, int> = 0>
+_LIBCPP_CONSTEXPR __decay_t<decltype(pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))>
 __to_address(const _Pointer& __p) _NOEXCEPT {
-  return __to_address_helper<_Pointer>::__call(__p);
+  return pointer_traits<_Pointer>::to_address(__p);
 }
 
-template <class _Pointer, class>
-struct __to_address_helper {
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR static decltype(std::__to_address(std::declval<const _Pointer&>().operator->()))
-  __call(const _Pointer& __p) _NOEXCEPT {
-    return std::__to_address(__p.operator->());
-  }
-};
-
 template <class _Pointer>
-struct __to_address_helper<_Pointer,
-                           decltype((void)pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))> {
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR static decltype(pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))
-  __call(const _Pointer& __p) _NOEXCEPT {
-    return pointer_traits<_Pointer>::to_address(__p);
-  }
+struct __to_address_arrow_result;
+
+template <class _Pointer, __enable_if_t<!__has_to_address_v<_Pointer> && __has_arrow_v<_Pointer>, int> = 0>
+_LIBCPP_CONSTEXPR typename __to_address_arrow_result<_Pointer>::type __to_address(const _Pointer& __p) _NOEXCEPT {
+  return std::__to_address(__p.operator->());
+}
+
+// The return type needs to see all `__to_address` overloads, so this is delayed until after all the overloads have been
+// defined. This could also be moved to a trailing return type, but that's not available in C++03.
+template <class _Pointer>
+struct __to_address_arrow_result {
+  using type _LIBCPP_NODEBUG = __decay_t<decltype(std::__to_address(std::declval<const _Pointer&>().operator->()))>;
 };
 
 #if _LIBCPP_STD_VER >= 20

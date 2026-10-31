@@ -23,7 +23,6 @@ template <class S>
 TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos, typename S::size_type n, typename S::value_type str, S expected) {
   const typename S::size_type old_size = s.size();
-  S s0                                 = s;
   if (pos <= old_size) {
     s.insert(pos, n, str);
     LIBCPP_ASSERT(s.__invariants());
@@ -32,6 +31,7 @@ test(S s, typename S::size_type pos, typename S::size_type n, typename S::value_
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s0 = s;
     try {
       s.insert(pos, n, str);
       assert(false);
@@ -141,6 +141,17 @@ int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());
+#endif
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  { // Append with invalid parameters
+    std::string str = "Banane";
+    try {
+      str.insert(0, std::string::npos, 'a');
+      assert(false);
+    } catch (const std::length_error&) {
+    }
+  }
 #endif
 
   return 0;

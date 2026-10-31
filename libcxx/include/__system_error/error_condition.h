@@ -23,6 +23,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Tp>
 struct is_error_condition_enum : public false_type {};
@@ -124,6 +125,7 @@ struct hash<error_condition> : public __unary_function<error_condition, size_t> 
   }
 };
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H

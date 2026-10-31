@@ -23,10 +23,10 @@
 #include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -163,6 +163,7 @@ protected:
                                                               .addImm(0);
         }
 
+        MachineInstr *Call;
         if (IsAIX) {
           if (IsTLSLDAIXMI) {
             // The relative order between the node that loads the variable
@@ -179,8 +180,8 @@ protected:
             if (!RegInfo.use_empty(OutReg)) {
               std::set<MachineInstr *> Uses;
               // Collect all instructions that use the OutReg.
-              for (MachineOperand &MO : RegInfo.use_operands(OutReg))
-                Uses.insert(MO.getParent());
+              for (MachineInstr &UseMI : RegInfo.use_instructions(OutReg))
+                Uses.insert(&UseMI);
               // Find the first user (e.g.: lwax/stfdx) of the OutReg within the
               // current BB.
               MachineBasicBlock::iterator UseIter = MBB.begin();
@@ -250,7 +251,7 @@ protected:
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
                 .addReg(InReg);
             // The call to .__tls_get_mod.
-            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3);
+            Call = BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3);
           } else if (!IsTLSTPRelMI) {
             // The variable offset and region handle (for TLSGD) are copied in
             // r4 and r3. The copies are followed by
@@ -259,12 +260,14 @@ protected:
                 .addReg(MI.getOperand(1).getReg());
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
                 .addReg(MI.getOperand(2).getReg());
-            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3).addReg(GPR4);
+            Call = BuildMI(MBB, I, DL, TII->get(Opc2), GPR3)
+                       .addReg(GPR3)
+                       .addReg(GPR4);
           } else
             // The opcode of GETtlsTpointer32AIX does not change, because later
             // this instruction will be expanded into a call to .__get_tpointer,
             // which will return the thread pointer into r3.
-            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3);
+            Call = BuildMI(MBB, I, DL, TII->get(Opc2), GPR3);
         } else {
           MachineInstr *Addi;
           if (IsPCREL) {
@@ -277,13 +280,15 @@ protected:
 
           Addi->addOperand(MI.getOperand(2));
 
-          MachineInstr *Call =
-              (BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3));
+          Call = BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3);
           if (IsPCREL)
             Call->addOperand(MI.getOperand(2));
           else
             Call->addOperand(MI.getOperand(3));
         }
+
+        Call->setPhysRegsDeadExcept(GPR3, *Subtarget.getRegisterInfo());
+
         if (NeedFence)
           BuildMI(MBB, I, DL, TII->get(PPC::ADJCALLSTACKUP)).addImm(0).addImm(0);
 
@@ -322,19 +327,14 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<LiveIntervalsWrapperPass>();
-      AU.addRequired<SlotIndexesWrapperPass>();
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
 }
 
-INITIALIZE_PASS_BEGIN(PPCTLSDynamicCall, DEBUG_TYPE,
-                      "PowerPC TLS Dynamic Call Fixup", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_END(PPCTLSDynamicCall, DEBUG_TYPE,
-                    "PowerPC TLS Dynamic Call Fixup", false, false)
+INITIALIZE_PASS(PPCTLSDynamicCall, DEBUG_TYPE, "PowerPC TLS Dynamic Call Fixup",
+                false, false)
 
 char PPCTLSDynamicCall::ID = 0;
 FunctionPass*

@@ -1,9 +1,9 @@
 if(NOT (TARGET libc.src.__support.threads.thread AND
-        TARGET libc.src.__support.threads.mutex))
+  TARGET libc.src.__support.threads.mutex))
   return()
 endif()
 
-add_libc_integration_test_suite(libc-support-threads-integration-tests)
+add_libc_testsuite(libc-support-threads-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   thread_detach_test
@@ -33,7 +33,7 @@ add_integration_test(
   SRCS
     main_exit_test.cpp
   DEPENDS
-    libc.src.__support.threads.thread
+    libc.src.stdlib.__cxa_thread_atexit_impl
 )
 
 add_integration_test(
@@ -43,6 +43,37 @@ add_integration_test(
   SRCS
     double_exit_test.cpp
   DEPENDS
-    libc.src.__support.threads.thread
     libc.src.stdlib.exit
+    libc.src.stdlib.__cxa_thread_atexit_impl
+)
+
+add_integration_test(
+  futex_requeue_test
+  SUITE
+    libc-support-threads-integration-tests
+  SRCS
+    futex_requeue_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)
+
+add_integration_test(
+  cndvar_test
+  SUITE
+    libc-support-threads-integration-tests
+  SRCS
+    cndvar_test.cpp
+  DEPENDS
+    libc.hdr.time_macros
+    libc.src.__support.CPP.expected
+    libc.src.__support.threads.CndVar
+    libc.src.__support.threads.mutex
+    libc.src.__support.threads.mutex_common
+    libc.src.__support.threads.sleep
+    libc.src.__support.time.clock_gettime
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
 )

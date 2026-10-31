@@ -48,7 +48,7 @@ ThreadPlanCallUserExpression::~ThreadPlanCallUserExpression() = default;
 void ThreadPlanCallUserExpression::GetDescription(
     Stream *s, lldb::DescriptionLevel level) {
   if (level == eDescriptionLevelBrief)
-    s->Printf("User Expression thread plan");
+    s->PutCString("User Expression thread plan");
   else
     ThreadPlanCallFunction::GetDescription(s, level);
 }

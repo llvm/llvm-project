@@ -43,6 +43,9 @@ DWARF:      Bucket 0 [
 DWARF-NEXT:   Name {{.*}} {
 DWARF-NEXT:     Hash: {{.*}}
 DWARF-NEXT:     String: {{.*}} "C"
+## The first two entries below are emitted into the artificial type unit.
+## The parallel linker currently does not emit DW_IDX_parent for TU entries
+## (TODO in AcceleratorRecordsSaver.cpp) while the third entry (real CU) does.
 DWARF-NEXT:     Entry {{.*}} {
 DWARF-NEXT:       Abbrev: {{.*}}
 DWARF-NEXT:       Tag: DW_TAG_namespace
@@ -57,6 +60,7 @@ DWARF-NEXT:     Entry {{.*}} {
 DWARF-NEXT:       Abbrev: {{.*}}
 DWARF-NEXT:       Tag: DW_TAG_namespace
 DWARF:       DW_IDX_die_offset: 0x0000003c
+DWARF-NEXT:  DW_IDX_parent: Entry @ 0x{{0*[1-9a-f][0-9a-f]*}}
 DWARF-NEXT:     }
 
 DWARF-NEXT:   }

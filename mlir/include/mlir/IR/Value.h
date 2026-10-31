@@ -162,8 +162,8 @@ public:
   void replaceAllUsesExcept(Value newValue, Operation *exceptedUser);
 
   /// Replace all uses of 'this' value with 'newValue' if the given callback
-  /// returns true.
-  void replaceUsesWithIf(Value newValue,
+  /// returns true. Returns whether any uses were replaced.
+  bool replaceUsesWithIf(Value newValue,
                          function_ref<bool(OpOperand &)> shouldReplace);
 
   /// Returns true if the value is used outside of the given block.
@@ -223,7 +223,9 @@ public:
   void print(raw_ostream &os) const;
   void print(raw_ostream &os, const OpPrintingFlags &flags) const;
   void print(raw_ostream &os, AsmState &state) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   /// Print this value as if it were an operand.
   void printAsOperand(raw_ostream &os, AsmState &state) const;
@@ -500,14 +502,6 @@ namespace llvm {
 
 template <>
 struct DenseMapInfo<mlir::Value> {
-  static mlir::Value getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Value::getFromOpaquePointer(pointer);
-  }
-  static mlir::Value getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Value::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(mlir::Value val) {
     return mlir::hash_value(val);
   }
@@ -515,37 +509,13 @@ struct DenseMapInfo<mlir::Value> {
 };
 template <>
 struct DenseMapInfo<mlir::BlockArgument> : public DenseMapInfo<mlir::Value> {
-  static mlir::BlockArgument getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return reinterpret_cast<mlir::detail::BlockArgumentImpl *>(pointer);
-  }
-  static mlir::BlockArgument getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return reinterpret_cast<mlir::detail::BlockArgumentImpl *>(pointer);
-  }
 };
 template <>
 struct DenseMapInfo<mlir::OpResult> : public DenseMapInfo<mlir::Value> {
-  static mlir::OpResult getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
-  }
-  static mlir::OpResult getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
-  }
 };
 template <typename T>
 struct DenseMapInfo<mlir::detail::TypedValue<T>>
     : public DenseMapInfo<mlir::Value> {
-  static mlir::detail::TypedValue<T> getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
-  }
-  static mlir::detail::TypedValue<T> getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
-  }
 };
 
 /// Allow stealing the low bits of a value.

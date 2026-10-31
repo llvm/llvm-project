@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <bool IsDown>
-LIBC_INLINE constexpr long double nextupdown(long double x) {
+LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR long double nextupdown(long double x) {
   constexpr Sign sign = IsDown ? Sign::NEG : Sign::POS;
 
   using FPBits_t = FPBits<long double>;

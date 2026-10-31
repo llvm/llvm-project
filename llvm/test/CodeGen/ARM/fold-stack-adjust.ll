@@ -114,7 +114,7 @@ define i64 @check_no_return_clobber() minsize {
   ret i64 0
 }
 
-define arm_aapcs_vfpcc double @check_vfp_no_return_clobber() minsize {
+define arm_aapcs_vfpcc double @check_vfp_no_return_clobber() minsize "target-features"="+v6t2,+vfp2" {
 ; CHECK-FNSTART-LABEL: check_vfp_no_return_clobber:
 ; CHECK: push {r[[GLOBREG:[0-9]+]], lr}
 ; CHECK: vpush {d0, d1, d2, d3, d4, d5, d6, d7, d8, d9}

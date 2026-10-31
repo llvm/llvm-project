@@ -38,28 +38,24 @@ namespace llvm {
 class ModuleSlotTracker;
 
 template <class GraphType> struct GraphTraits;
-class CFGViewerPass : public PassInfoMixin<CFGViewerPass> {
+class CFGViewerPass : public RequiredPassInfoMixin<CFGViewerPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
-class CFGOnlyViewerPass : public PassInfoMixin<CFGOnlyViewerPass> {
+class CFGOnlyViewerPass : public RequiredPassInfoMixin<CFGOnlyViewerPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
-class CFGPrinterPass : public PassInfoMixin<CFGPrinterPass> {
+class CFGPrinterPass : public RequiredPassInfoMixin<CFGPrinterPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
-class CFGOnlyPrinterPass : public PassInfoMixin<CFGOnlyPrinterPass> {
+class CFGOnlyPrinterPass : public RequiredPassInfoMixin<CFGOnlyPrinterPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class DOTFuncInfo {

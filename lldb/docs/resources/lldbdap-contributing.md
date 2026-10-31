@@ -20,7 +20,7 @@ requests](https://github.com/llvm/llvm-project/pulls).
 
 ## Building `lldb-dap` from source
 
-To build lldb-dap from source, first need to [setup a LLDB build](https://lldb.llvm.org/resources/build.html).
+To build lldb-dap from source, first need to [setup a LLDB build](build.md).
 After doing so, run `ninja lldb-dap`. To use your freshly built `lldb-dap`
 binary, install the VS Code extension and point it to lldb-dap by setting the
 `lldb-dap.executable-path` setting.
@@ -44,9 +44,9 @@ components:
   configuration files.
 
 Since lldb-dap builds on top of LLDB, all of LLDB's extensibility mechanisms
-such as [Variable Pretty-Printing](https://lldb.llvm.org/use/variable.html),
-[Frame recognizers](https://lldb.llvm.org/use/python-reference.html#writing-lldb-frame-recognizers-in-python)
-and [Python Scripting](https://lldb.llvm.org/use/python.html) are available
+such as [Variable Pretty-Printing](../use/variable.md),
+[Frame recognizers](../use/tutorials/custom-frame-recognizers.md)
+and [Python Scripting](../use/python-reference.md) are available
 also in lldb-dap.
 
 When adding new functionality, you generally want to add it on the lowest
@@ -56,6 +56,7 @@ to LLDB's core in order to improve your debugging experience in VS Code.
 ### The Debug Adapter Protocol
 
 The most relevant resources for the Debug Adapter Protocol are:
+
 * [The overview](https://microsoft.github.io/debug-adapter-protocol/overview)
   which provides a high-level introduction,
 * the [human-readable specification](https://microsoft.github.io/debug-adapter-protocol/specification), and
@@ -69,9 +70,9 @@ Protocol](https://github.com/microsoft/debug-adapter-protocol/issues) to check
 if there already is a proposal serving your use case. If so, try to take
 inspiration from it. If not, consider opening an upstream issue.
 
-To avoid naming collisions with potential future extensions of the Debug
-Adapter protocol, all non-standard extensions should use the prefix
-`$__lldb_extension` in their JSON property names.
+To avoid naming collisions with future versions of the Debug Adapter
+Protocol, follow the naming rules in
+[LLDB-DAP Extensions](./lldbdap-extensions.md#naming-rules).
 
 ### Debugging the Debug Adapter Protocol
 
@@ -92,8 +93,8 @@ changed.
 
 ### Pre-requisites
 
-- Install a modern version of node (e.g. `v20.0.0`).
-- On VS Code, execute the command `Install 'code' command in PATH`. You need to
+* Install a modern version of node (e.g. `v20.0.0`).
+* On VS Code, execute the command `Install 'code' command in PATH`. You need to
   do it only once. This enables the command `code` in the PATH.
 
 ### Packaging and installation
@@ -162,6 +163,72 @@ forcefully performs a deep copy of all symlinks.*
 
 *Note: It's possible to use this kind flow for local installations, but it's
 not recommended because updating `lldb-dap` requires rebuilding the extension.*
+
+## Debugging the VS Code extension
+
+To set breakpoints and step through the TypeScript source of the VS Code
+extension, you need an [Extension Development
+Host](https://code.visualstudio.com/api/get-started/your-first-extension#debugging-the-extension).
+
+### Pre-requisites
+
+Complete the steps in [Building the VS Code extension from source](#building-the-vs-code-extension-from-source)
+before proceeding.
+
+### Configuring `.vscode/launch.json`
+
+From the root of the `llvm-project` workspace, create (or add to)
+`.vscode/launch.json`:
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/lldb/tools/lldb-dap/extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/lldb/tools/lldb-dap/extension/out/**/*.js"
+      ],
+      "preLaunchTask": "compile-debug"
+    }
+  ]
+}
+```
+
+The `preLaunchTask` runs the `compile-debug` npm script, which bundles the
+extension with source maps so VS Code can resolve breakpoints back to the
+original TypeScript files. Add the corresponding task to `.vscode/tasks.json`:
+
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "compile-debug",
+      "type": "npm",
+      "script": "compile-debug",
+      "options": {
+        "cwd": "${workspaceFolder}/lldb/tools/lldb-dap/extension"
+      }
+    }
+  ]
+}
+```
+
+### Starting a debug session
+
+1. Open the **Run and Debug** panel (`Ctrl+Shift+D` / `Cmd+Shift+D`).
+2. Select **Launch Extension** from the dropdown and press **F5**.
+3. An Extension Development Host window opens with the local extension loaded.
+4. In the host window, set `lldb-dap.executable-path` to your locally built
+   `lldb-dap` binary (e.g. `llvm-build/debug/bin/lldb-dap`).
+5. Set breakpoints in the TypeScript source inside the original window and
+   start a debug session in the host window to hit them.
 
 ## Formatting the Typescript code
 

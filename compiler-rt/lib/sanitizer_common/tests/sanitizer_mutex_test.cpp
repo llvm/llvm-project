@@ -118,12 +118,6 @@ static void *read_write_thread(void *param) {
   return 0;
 }
 
-template<typename MutexType>
-static void check_locked(MutexType *mtx) {
-  GenericScopedLock<MutexType> l(mtx);
-  mtx->CheckLocked();
-}
-
 TEST(SanitizerCommon, SpinMutex) {
   SpinMutex mtx;
   mtx.Init();

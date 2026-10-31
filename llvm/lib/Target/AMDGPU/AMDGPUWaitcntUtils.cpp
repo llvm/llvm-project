@@ -7,9 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUWaitcntUtils.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm::AMDGPU {
+
+static cl::opt<bool> ExpertSchedulingModeFlag(
+    "amdgpu-expert-scheduling-mode",
+    cl::desc("Enable expert scheduling mode 2 for all functions (GFX12+ only)"),
+    cl::init(false), cl::Hidden);
+
+bool isExpertSchedulingMode(const GCNSubtarget &ST, const Function &F) {
+  return ST.hasExpertSchedulingMode() &&
+         (ExpertSchedulingModeFlag.getNumOccurrences()
+              ? ExpertSchedulingModeFlag
+              : F.getFnAttribute("amdgpu-expert-scheduling-mode")
+                    .getValueAsBool());
+}
 
 iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
   return enum_seq(LOAD_CNT, MaxCounter);
@@ -35,14 +52,66 @@ StringLiteral getInstCounterName(InstCounterType T) {
     return "X_CNT";
   case ASYNC_CNT:
     return "ASYNC_CNT";
-  case VA_VDST:
-    return "VA_VDST";
+  case TENSOR_CNT:
+    return "TENSOR_CNT";
+  case VA_VDST_RD:
+    return "VA_VDST_RD";
+  case VA_VDST_WR:
+    return "VA_VDST_WR";
   case VM_VSRC:
     return "VM_VSRC";
   case NUM_INST_CNTS:
     return "NUM_INST_CNTS";
   }
   llvm_unreachable("Unhandled InstCounterType");
+}
+
+HardwareLimits::HardwareLimits(const IsaVersion &IV) {
+  bool HasExtendedWaitCounts = IV.Major >= 12;
+  if (HasExtendedWaitCounts) {
+    LoadcntMax = getLoadcntBitMask(IV);
+    DscntMax = getDscntBitMask(IV);
+  } else {
+    LoadcntMax = getVmcntBitMask(IV);
+    DscntMax = getLgkmcntBitMask(IV);
+  }
+  ExpcntMax = getExpcntBitMask(IV);
+  StorecntMax = getStorecntBitMask(IV);
+  SamplecntMax = getSamplecntBitMask(IV);
+  BvhcntMax = getBvhcntBitMask(IV);
+  KmcntMax = getKmcntBitMask(IV);
+  XcntMax = getXcntBitMask(IV);
+  AsyncMax = getAsynccntBitMask(IV);
+  VaVdstMax = DepCtr::getVaVdstBitMask();
+  VmVsrcMax = DepCtr::getVmVsrcBitMask();
+}
+
+unsigned HardwareLimits::get(InstCounterType T) const {
+  switch (T) {
+  case AMDGPU::LOAD_CNT:
+    return LoadcntMax;
+  case AMDGPU::DS_CNT:
+    return DscntMax;
+  case AMDGPU::EXP_CNT:
+    return ExpcntMax;
+  case AMDGPU::STORE_CNT:
+    return StorecntMax;
+  case AMDGPU::SAMPLE_CNT:
+    return SamplecntMax;
+  case AMDGPU::BVH_CNT:
+    return BvhcntMax;
+  case AMDGPU::KM_CNT:
+    return KmcntMax;
+  case AMDGPU::X_CNT:
+    return XcntMax;
+  case AMDGPU::VA_VDST_RD:
+  case AMDGPU::VA_VDST_WR:
+    return VaVdstMax;
+  case AMDGPU::VM_VSRC:
+    return VmVsrcMax;
+  default:
+    return 0;
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -85,6 +154,33 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version,
                              const Waitcnt &Decoded) {
   return encodeStorecntDscnt(Version, Decoded.get(STORE_CNT),
                              Decoded.get(DS_CNT));
+}
+
+std::optional<AMDGPU::InstCounterType> counterTypeForInstr(unsigned Opcode) {
+  switch (Opcode) {
+  case AMDGPU::S_WAIT_LOADCNT:
+    return AMDGPU::LOAD_CNT;
+  case AMDGPU::S_WAIT_EXPCNT:
+    return AMDGPU::EXP_CNT;
+  case AMDGPU::S_WAIT_STORECNT:
+    return AMDGPU::STORE_CNT;
+  case AMDGPU::S_WAIT_SAMPLECNT:
+    return AMDGPU::SAMPLE_CNT;
+  case AMDGPU::S_WAIT_BVHCNT:
+    return AMDGPU::BVH_CNT;
+  case AMDGPU::S_WAIT_DSCNT:
+    return AMDGPU::DS_CNT;
+  case AMDGPU::S_WAIT_KMCNT:
+    return AMDGPU::KM_CNT;
+  case AMDGPU::S_WAIT_XCNT:
+    return AMDGPU::X_CNT;
+  case AMDGPU::S_WAIT_ASYNCCNT:
+    return AMDGPU::ASYNC_CNT;
+  case AMDGPU::S_WAIT_TENSORCNT:
+    return AMDGPU::TENSOR_CNT;
+  default:
+    return {};
+  }
 }
 
 } // namespace llvm::AMDGPU

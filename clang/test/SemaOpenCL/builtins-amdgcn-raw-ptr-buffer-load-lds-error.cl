@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx90a -S -verify=gfx90a,expected -o - %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx950 -S -verify=gfx950,expected  -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.0a-unknown-unknown -S -verify=gfx90a,expected -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.50-unknown-unknown -S -verify=gfx950,expected  -o - %s
 // REQUIRES: amdgpu-registered-target
 
 void test_amdgcn_raw_ptr_buffer_load_lds(__amdgpu_buffer_rsrc_t rsrc, __local void* lds, int offset, int soffset, int x) {

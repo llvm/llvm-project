@@ -13,10 +13,8 @@ std::map<int, int> ConstructRandomMap(int size) {
   return m;
 }
 
-}  // namespace
-
 // Basic version.
-static void BM_MapLookup(benchmark::State& state) {
+void BM_MapLookup(benchmark::State& state) {
   const int size = static_cast<int>(state.range(0));
   std::map<int, int> m;
   for (auto _ : state) {
@@ -31,6 +29,7 @@ static void BM_MapLookup(benchmark::State& state) {
   state.SetItemsProcessed(state.iterations() * size);
 }
 BENCHMARK(BM_MapLookup)->Range(1 << 3, 1 << 12);
+}  // namespace
 
 // Using fixtures.
 class MapFixture : public ::benchmark::Fixture {
@@ -39,7 +38,7 @@ class MapFixture : public ::benchmark::Fixture {
     m = ConstructRandomMap(static_cast<int>(st.range(0)));
   }
 
-  void TearDown(const ::benchmark::State&) override { m.clear(); }
+  void TearDown(const ::benchmark::State& /*unused*/) override { m.clear(); }
 
   std::map<int, int> m;
 };

@@ -72,8 +72,8 @@
   !1 = !DIFile(filename: "dbgcall-site-lea-interpretation.c", directory: "/dir")
   !2 = !{}
   !3 = !{!4, !5}
-  !4 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 8, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
-  !5 = !DISubprogram(name: "foo2", scope: !1, file: !1, line: 9, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !4 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 8, flags: DIFlagPrototyped, type: !11, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubprogram(name: "foo2", scope: !1, file: !1, line: 9, flags: DIFlagPrototyped, type: !11, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !6 = !{i32 2, !"Dwarf Version", i32 4}
   !7 = !{i32 2, !"Debug Info Version", i32 3}
   !8 = !{i32 1, !"wchar_size", i32 4}
@@ -92,14 +92,14 @@ liveins:
   - { reg: '$esi', virtual-reg: '' }
   - { reg: '$edx', virtual-reg: '' }
 callSites:       
-  - { bb: 0, offset: 21, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 21, fwdArgRegs:
       - { arg: 0, reg: '$edi' }
       - { arg: 1, reg: '$esi' }
       - { arg: 2, reg: '$rdx' }
       - { arg: 3, reg: '$rcx' }
       - { arg: 4, reg: '$r8' }
       - { arg: 5, reg: '$r9d' } }
-  - { bb: 0, offset: 24, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 24, fwdArgRegs:
       - { arg: 0, reg: '$rdi' } }
 body:             |
   bb.0.entry:

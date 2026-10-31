@@ -19,11 +19,11 @@ B::~B() {
 }
 
 // CHECK: cir.func{{.*}} @_Z3bazv()
-// CHECK:   %[[B:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["b"]
+// CHECK:   %[[B:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_B>
 // CHECK:   cir.call @_ZN1BD1Ev(%[[B]]) nothrow : (!cir.ptr<!rec_B> {{.*}}) -> ()
 
 // CHECK: cir.func{{.*}} @_ZN1BD2Ev(%arg0: !cir.ptr<!rec_B>
-// CHECK:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["this", init]
+// CHECK:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_B>>
 // CHECK:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
 

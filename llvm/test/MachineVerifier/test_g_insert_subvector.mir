@@ -60,6 +60,9 @@ body: |
 
     %20:_(<2 x s32>) = G_IMPLICIT_DEF
 
-    ; CHECK: Vector types must both be fixed or both be scalable
-    %21:_(<vscale x 1 x s32>) = G_INSERT_SUBVECTOR %12, %20, 2
+    ; CHECK: Cannot insert a scalable vector into a fixed length vector
+    %23:_(<4 x s32>) = G_INSERT_SUBVECTOR %20, %2, 0
+
+    ; CHECK: Subvector type and index must not cause insert to overrun the vector being inserted into
+    %21:_(<vscale x 4 x s32>) = G_INSERT_SUBVECTOR %12, %2, 4
 ...

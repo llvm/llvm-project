@@ -14,7 +14,7 @@
 #include <string>
 
 namespace llvm {
-class MachineVerifierPass : public PassInfoMixin<MachineVerifierPass> {
+class MachineVerifierPass : public RequiredPassInfoMixin<MachineVerifierPass> {
   std::string Banner;
 
 public:
@@ -22,7 +22,6 @@ public:
       : Banner(Banner) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -asm-verbose=false -relocation-model=pic -fast-isel=false -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+atomics,+sign-ext | FileCheck %s
 
 ; Test that atomic operations in PIC mode.  Specifically we verify
-; that atomic operations on global address load addres via @GOT or
+; that atomic operations on global address load address via @GOT or
 ; @MBREL relocations.
 
 target triple = "wasm32-unknown-emscripten"

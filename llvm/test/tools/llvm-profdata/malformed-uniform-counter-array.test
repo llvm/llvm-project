@@ -1,0 +1,119 @@
+// Check malformed uniform counter array pointers in raw profiles.
+
+// gnuwin32 printf does not work for this test because it will print \15 (CR)
+// whenever \12 (LF) is in the input string.
+UNSUPPORTED: system-windows
+
+// UniformCounterPtr is one byte before UniformCountersDelta.
+RUN: printf '\201rforpl\377' > %t.neg.profraw
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\130\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\110\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\130\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\150\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\067\265\035\031\112\165\023\344' >> %t.neg.profraw
+RUN: printf '\02\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\110\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\127\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\130\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\067\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\101\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\5\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\6\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\3\0bar\0\0\0' >> %t.neg.profraw
+RUN: not llvm-profdata merge -o /dev/null %t.neg.profraw 2>&1 | FileCheck %s --check-prefix=NEG
+NEG: malformed instrumentation profile data: uniform counter offset -1 is negative
+NEG: error: no profile can be merged
+
+// UniformCounterPtr points one byte past the end of the uniform-counter section.
+RUN: printf '\201rforpl\377' > %t.past.profraw
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\130\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\110\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\130\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\150\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\067\265\035\031\112\165\023\344' >> %t.past.profraw
+RUN: printf '\02\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\110\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\150\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\130\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\067\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\101\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\5\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\6\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\3\0bar\0\0\0' >> %t.past.profraw
+RUN: not llvm-profdata merge -o /dev/null %t.past.profraw 2>&1 | FileCheck %s --check-prefix=PAST
+PAST: malformed instrumentation profile data: uniform counter offset 16 is greater than the maximum uniform counter offset 15
+PAST: error: no profile can be merged
+
+// UniformCounterPtr leaves only one uniform counter, but NumCounters is two.
+RUN: printf '\201rforpl\377' > %t.too-many.profraw
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\130\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\110\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\130\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\150\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\067\265\035\031\112\165\023\344' >> %t.too-many.profraw
+RUN: printf '\02\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\110\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\140\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\130\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\067\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\101\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\5\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\6\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\3\0bar\0\0\0' >> %t.too-many.profraw
+RUN: not llvm-profdata merge -o /dev/null %t.too-many.profraw 2>&1 | FileCheck %s --check-prefix=TOO-MANY
+TOO-MANY: malformed instrumentation profile data: number of uniform counters 2 is greater than the maximum number of uniform counters 1
+TOO-MANY: error: no profile can be merged

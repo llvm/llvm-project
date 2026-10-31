@@ -17,12 +17,16 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
+#include <optional>
+#include <utility>
 
 namespace fir {
 #define GEN_PASS_DEF_LOOPINVARIANTCODEMOTION
@@ -45,7 +49,7 @@ using namespace mlir;
 /// may be added later).
 /// The safety of hoisting is proven by:
 ///   * Proving that the loop runs at least one iteration.
-///   * Proving that is is always safe to load from this location
+///   * Proving that it is always safe to load from this location
 ///     (see isSafeToHoistLoad() comments below).
 struct LoopInvariantCodeMotion
     : fir::impl::LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
@@ -54,6 +58,27 @@ struct LoopInvariantCodeMotion
 };
 
 } // namespace
+
+/// Returns 'loc' with its line and column cleared but the file and surrounding
+/// structure kept. Line zero marks the location as compiler-generated; the
+/// file is kept for consumers that require a file:line.
+static Location dropLineInfo(Location loc) {
+  if (auto fileLoc = dyn_cast<FileLineColRange>(loc)) {
+    return FileLineColLoc::get(fileLoc.getFilename(), /*line=*/0, /*column=*/0);
+  }
+  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
+    llvm::SmallVector<Location> locs;
+    for (Location nested : fusedLoc.getLocations()) {
+      locs.push_back(dropLineInfo(nested));
+    }
+    return FusedLoc::get(locs, fusedLoc.getMetadata(), loc.getContext());
+  }
+  if (auto callSiteLoc = dyn_cast<CallSiteLoc>(loc)) {
+    return CallSiteLoc::get(dropLineInfo(callSiteLoc.getCallee()),
+                            callSiteLoc.getCaller());
+  }
+  return loc;
+}
 
 /// 'location' is a memory reference used by a memory access.
 /// The type of 'location' defines the data type of the access
@@ -88,6 +113,12 @@ static bool isNonOptionalScalar(Value location) {
     }
     Operation *defOp = location.getDefiningOp();
     if (!defOp) {
+      // A compute-region argument forwards a mapped input. Recover its storage
+      // provenance before checking whether a speculative scalar read is safe.
+      if (Value operand = acc::getACCOperandForBlockArg(location)) {
+        location = operand;
+        continue;
+      }
       // If this is a function argument
       auto blockArg = cast<BlockArgument>(location);
       Block *block = blockArg.getOwner();
@@ -104,9 +135,10 @@ static bool isNonOptionalScalar(Value location) {
       return false;
     }
 
-    // Scalars "defined" by fir.alloca and fir.address_of
-    // are present.
-    if (isa<fir::AllocaOp, fir::AddrOfOp>(defOp)) {
+    // Scalars "defined" by fir.address_of or that are new
+    // allocations (e.g. fir.alloca, cuf.alloc, etc.) are present.
+    if (isa<fir::AddrOfOp>(defOp) ||
+        fir::isNewAllocationResult(cast<OpResult>(location)).value_or(false)) {
       LDBG() << "Success: is non optional scalar";
       return true;
     }
@@ -141,13 +173,13 @@ static bool isNonOptionalScalar(Value location) {
 
       // TODO: we can probably use FIR AliasAnalysis' getSource()
       // method to identify the storage in more cases.
-      Value memref = llvm::TypeSwitch<Operation *, Value>(defOp)
-                         .Case<fir::DeclareOp, hlfir::DeclareOp>(
-                             [](auto op) { return op.getMemref(); })
-                         .Default([](auto) { return nullptr; });
+      location = llvm::TypeSwitch<Operation *, Value>(defOp)
+                     .Case<fir::DeclareOp, hlfir::DeclareOp>(
+                         [](auto op) { return op.getMemref(); })
+                     .Default([](auto) { return nullptr; });
 
-      if (memref)
-        return isNonOptionalScalar(memref);
+      if (location)
+        continue;
 
       LDBG() << "Failure: cannot reason about variable storage";
       return false;
@@ -237,6 +269,28 @@ static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
   return false;
 }
 
+/// Returns true iff hoisting \p op out of a nested region is expected to be
+/// inexpensive. This is a cost heuristic only; the safety of the hoisting is
+/// established separately.
+///
+/// fir.convert and fir.address_of are at most one instruction and are often
+/// free. A load of a trivial non-vector type is a single access, and a load of
+/// a descriptor of known rank is a fixed-size copy. Vector loads may be large,
+/// an assumed-rank descriptor load lowers to a runtime-sized memcpy, and
+/// CHARACTER, derived types and arrays may be arbitrarily large, so those are
+/// left to the aggressive mode.
+static bool isCheapToHoistFromNestedRegion(Operation *op) {
+  if (isa<fir::ConvertOp, fir::AddrOfOp>(op))
+    return true;
+  if (auto load = dyn_cast<fir::LoadOp>(op)) {
+    Type resultType = load.getType();
+    if (isa<fir::BaseBoxType>(resultType))
+      return !fir::isa_unknown_size_box(resultType);
+    return fir::isa_trivial(resultType) && !fir::isa_vector(resultType);
+  }
+  return false;
+}
+
 /// Recursively collect regions from operations inside \p region, skipping
 /// IsolatedFromAbove operations (whose regions form a separate scope) and
 /// LoopLikeOpInterface operations (which have their own LICM invocation).
@@ -262,12 +316,66 @@ void LoopInvariantCodeMotion::runOnOperation() {
 
   LDBG() << "Enter [HL]FIR LoopInvariantCodeMotion()";
 
+  // Build a recursive-effects cache scoped to this pass run and link it to
+  // a fir::AliasAnalysis that will live inside the mlir::AliasAnalysis
+  // aggregator. Every query against that AliasAnalysis (direct, or via the
+  // aggregator) now routes recursive-effect ops through the cache. The
+  // cache's destructor nulls the back-pointer on the registered
+  // AliasAnalysis when LICM exits, so the aggregator never dereferences a
+  // dead cache.
+  //
+  // LICM only hoists pure-read ops out of loops; writes are never moved,
+  // ops are never erased, and SSA values are not RAUW'd. That matches the
+  // cache's safety invariant for the whole pass run on this function.
+  fir::AliasAnalysisRecursiveEffectsCache cachedAA;
   auto &aliasAnalysis = getAnalysis<AliasAnalysis>();
-  aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis{});
+  // Two independent, complementary caches are enabled for this pass:
+  //
+  //   * the recursive-effects cache (`cachedAA`), which memoizes per-operation
+  //     read/write summaries so mod-ref queries do not re-walk the regions of
+  //     ops with HasRecursiveMemoryEffects, and
+  //   * getSource() memoization, which memoizes source classification keyed on
+  //     (value, flags).
+  //
+  // Both are frozen-snapshot caches with no automatic invalidation, and both
+  // are sound here for the same reason: LICM only hoists pure-read ops, never
+  // moves writes, erases ops, or RAUWs values, so neither the effects of an
+  // operation nor the source of a value changes across the hoists. They live
+  // no longer than this analysis instance, which the pass manager drops when
+  // the analysis is invalidated after the pass.
+  fir::AliasAnalysis firAliasAnalysis{cachedAA};
+  firAliasAnalysis.enableSourceCache();
+  aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
 
   std::function<bool(Operation *, LoopLikeOpInterface, bool)>
       shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike,
                                 bool maybeConditionallyExecuted) {
+        // Never hoist a producer of a !fir.field. Lowering a consumer of a
+        // field value inspects its defining operation: for a record whose
+        // layout is known at compile time the field becomes an LLVM GEP struct
+        // index, which must be a constant. Hoisting fir.field_index out of the
+        // arms of a construct (e.g. the CASEs of a SELECT CASE, each passing a
+        // different component of the same derived type) leaves those arms as
+        // otherwise-identical blocks differing only in this operand, which lets
+        // block merging thread it through a new block argument -- destroying
+        // the defining operation that codegen needs.
+        if (llvm::any_of(op->getResultTypes(),
+                         [](mlir::Type t) { return isa<fir::FieldType>(t); })) {
+          LDBG() << "Not hoisting producer of a field value: " << *op;
+          return false;
+        }
+
+        // Never hoist a loop. Moving it out of the loop it is nested in
+        // changes how it is scheduled relative to the iterations of that loop
+        // (e.g. an inner loop of an OpenACC parallel loop that ends up outside
+        // of the parallel region is no longer executed by every iteration of
+        // the parallel loop).
+        // TODO This is a workaround, we should find a better solution here.
+        if (isa<LoopLikeOpInterface>(op)) {
+          LDBG() << "Not hoisting loop-like operation: " << *op;
+          return false;
+        }
+
         if (isPure(op)) {
           LDBG() << "Pure operation: " << *op;
           return true;
@@ -306,7 +414,22 @@ void LoopInvariantCodeMotion::runOnOperation() {
                             maybeConditionallyExecuted);
       };
 
-  getOperation()->walk([&](LoopLikeOpInterface loopLike) {
+  // Resolve the name once: ancestor checks compare interned operation names,
+  // not strings. Keep analysis scope independent of the selected loop scope.
+  std::optional<OperationName> scopeOpName;
+  if (!onlyInside.empty())
+    scopeOpName.emplace(onlyInside, &getContext());
+  Operation *function = getOperation();
+  function->walk([&](LoopLikeOpInterface loopLike) {
+    if (scopeOpName) {
+      Operation *scope = loopLike->getParentOp();
+      while (scope != function && scope->getName() != *scopeOpName)
+        scope = scope->getParentOp();
+      if (scope->getName() != *scopeOpName) {
+        LDBG() << "Skipping loop-like without " << *scopeOpName << " parent";
+        return;
+      }
+    }
     if (!fir::canMoveOutOf(loopLike, nullptr)) {
       LDBG() << "Cannot hoist anything out of loop operation: ";
       LDBG_OS([&](llvm::raw_ostream &os) {
@@ -335,8 +458,30 @@ void LoopInvariantCodeMotion::runOnOperation() {
     auto isDefinedOutsideRegion = [&](Value value, Region *) {
       return loopLike.isDefinedOutsideOfLoop(value);
     };
+    // Check canMoveOutOf for the candidate and all its nested operations.
+    // Moving an operation with regions also moves its contents, so
+    // restrictions like cuf.kernel blocking !fir.ref operands must be
+    // checked transitively.
+    auto canMoveOutOfOp = [&](Operation *regionOwner, Operation *candidate) {
+      // fir::canMoveOutOf() consults only the region owner's
+      // OperationMoveOpInterface. Without it, the candidate and everything
+      // nested in it may move, so skip the walk over the candidate's
+      // regions: repeating it for every nested candidate and every
+      // intermediate ancestor is quadratic in the size of the loop body.
+      if (!isa<fir::OperationMoveOpInterface>(regionOwner))
+        return true;
+      if (!fir::canMoveOutOf(regionOwner, candidate))
+        return false;
+      bool blocked = false;
+      candidate->walk([&](Operation *nested) {
+        if (nested != candidate && !fir::canMoveOutOf(regionOwner, nested))
+          blocked = true;
+        return blocked ? WalkResult::interrupt() : WalkResult::advance();
+      });
+      return !blocked;
+    };
     auto canMoveOutOfLoop = [&](Operation *op) {
-      if (!fir::canMoveOutOf(loopLike, op)) {
+      if (!canMoveOutOfOp(loopLike, op)) {
         LDBG() << "Cannot hoist " << *op << " out of the loop";
         return false;
       }
@@ -348,6 +493,9 @@ void LoopInvariantCodeMotion::runOnOperation() {
     };
     auto moveOutOfRegion = [&](Operation *op, Region *) {
       loopLike.moveOutOfLoop(op);
+      // A hoisted operation no longer belongs to the statement it was written
+      // in. Clear its debug location to avoid reporting that line early.
+      op->setLoc(dropLineInfo(op->getLoc()));
     };
 
     moveLoopInvariantCode(
@@ -383,6 +531,26 @@ void LoopInvariantCodeMotion::runOnOperation() {
       return;
 
     auto shouldMoveFromNestedRegion = [&](Operation *op, Region *) {
+      // Check that all intermediate operations between op and the loop
+      // allow the candidate to be moved out.  For example, cuf.kernel
+      // restricts hoisting of operations with !fir.ref operands.
+      for (Operation *ancestor = op->getParentOp();
+           ancestor != loopLike.getOperation();
+           ancestor = ancestor->getParentOp()) {
+        if (!ancestor) {
+          // The operation is no longer nested inside the loop (a parent
+          // operation was already hoisted out). Nothing to do.
+          return false;
+        }
+        if (!canMoveOutOfOp(ancestor, op)) {
+          LDBG() << "Cannot hoist " << *op
+                 << " out of intermediate operation: ";
+          LDBG_OS([&](llvm::raw_ostream &os) {
+            ancestor->print(os, OpPrintingFlags().skipRegions());
+          });
+          return false;
+        }
+      }
       return canMoveOutOfLoop(op) &&
              shouldMoveOutOfLoop(op, loopLike,
                                  /*maybeConditionallyExecuted=*/true);
@@ -391,14 +559,12 @@ void LoopInvariantCodeMotion::runOnOperation() {
       moveLoopInvariantCode(nestedRegions, isDefinedOutsideRegion,
                             shouldMoveFromNestedRegion, moveOutOfRegion);
     } else {
-      // "cheap" mode: only hoist fir.convert.
-      // TODO: refine the cost model for "cheap" hoisting to include
-      // other inexpensive operations.
+      // "cheap" mode: only hoist operations that are inexpensive to move.
       moveLoopInvariantCode(
           nestedRegions, isDefinedOutsideRegion,
           /*shouldMoveOutOfRegion=*/
           [&](Operation *op, Region *region) {
-            return isa<fir::ConvertOp>(op) &&
+            return isCheapToHoistFromNestedRegion(op) &&
                    shouldMoveFromNestedRegion(op, region);
           },
           moveOutOfRegion);

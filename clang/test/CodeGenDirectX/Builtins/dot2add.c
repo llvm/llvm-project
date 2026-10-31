@@ -8,6 +8,7 @@ typedef half half2 __attribute__((ext_vector_type(2)));
 // CHECK-LABEL: define float @test_dot2add(
 // CHECK-SAME: <2 x half> noundef [[X:%.*]], <2 x half> noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca <2 x half>, align 2
 // CHECK-NEXT:    [[Y_ADDR:%.*]] = alloca <2 x half>, align 2
 // CHECK-NEXT:    [[Z_ADDR:%.*]] = alloca float, align 4

@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVCtorDtorLowering.h"
-#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -26,6 +24,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/SPIRVAddrSpace.h"
 #include "llvm/Transforms/IPO/OpenMPOpt.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -44,8 +43,6 @@ static cl::opt<bool>
                   cl::init(true), cl::Hidden);
 
 namespace {
-constexpr int SPIRV_GLOBAL_AS = 1;
-
 std::string getHash(StringRef Str) {
   llvm::MD5 Hasher;
   llvm::MD5::MD5Result Hash;
@@ -103,7 +100,7 @@ void createInitOrFiniCalls(Function &F, bool IsCtor) {
   IRBuilder<> IRB(BasicBlock::Create(C, "entry", &F));
   auto *LoopBB = BasicBlock::Create(C, "while.entry", &F);
   auto *ExitBB = BasicBlock::Create(C, "while.end", &F);
-  Type *PtrTy = IRB.getPtrTy(SPIRV_GLOBAL_AS);
+  Type *PtrTy = IRB.getPtrTy(SPIRVAS::CrossWorkgroup);
 
   auto CreateGlobal = [&](const char *Name) -> GlobalVariable * {
     auto *GV = new GlobalVariable(
@@ -111,7 +108,7 @@ void createInitOrFiniCalls(Function &F, bool IsCtor) {
         /*isConstant=*/false, GlobalValue::WeakAnyLinkage,
         Constant::getNullValue(PointerType::getUnqual(C)), Name,
         /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
-        /*AddressSpace=*/SPIRV_GLOBAL_AS);
+        /*AddressSpace=*/SPIRVAS::CrossWorkgroup);
     GV->setVisibility(GlobalVariable::ProtectedVisibility);
     return GV;
   };
@@ -188,7 +185,7 @@ bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV, bool IsCtor) {
     auto *GV = new GlobalVariable(M, F->getType(), /*IsConstant=*/true,
                                   GlobalValue::ExternalLinkage, F, NameStr,
                                   nullptr, GlobalValue::NotThreadLocal,
-                                  /*AddressSpace=*/SPIRV_GLOBAL_AS);
+                                  /*AddressSpace=*/SPIRVAS::CrossWorkgroup);
     GV->setSection(IsCtor ? ".init_array" + PriorityStr
                           : ".fini_array" + PriorityStr);
     GV->setVisibility(GlobalVariable::ProtectedVisibility);

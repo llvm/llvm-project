@@ -276,6 +276,12 @@ void mapLoadCommandData<MachO::build_version_command>(
   IO.mapOptional("Tools", LoadCommand.Tools);
 }
 
+template <>
+void mapLoadCommandData<MachO::target_triple_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
+}
+
 void MappingTraits<MachOYAML::LoadCommand>::mapping(
     IO &IO, MachOYAML::LoadCommand &LoadCommand) {
   MachO::LoadCommandType TempCmd = static_cast<MachO::LoadCommandType>(
@@ -622,6 +628,11 @@ void MappingTraits<MachO::build_version_command>::mapping(
   IO.mapRequired("minos", LoadCommand.minos);
   IO.mapRequired("sdk", LoadCommand.sdk);
   IO.mapRequired("ntools", LoadCommand.ntools);
+}
+
+void MappingTraits<MachO::target_triple_command>::mapping(
+    IO &IO, MachO::target_triple_command &LoadCommand) {
+  IO.mapRequired("triple", LoadCommand.triple);
 }
 
 void MappingTraits<MachO::fileset_entry_command>::mapping(

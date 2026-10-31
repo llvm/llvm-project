@@ -21,24 +21,24 @@ using namespace llvm;
 
 /// \return
 ///   The given string or \b std::nullopt if it's empty.
-static std::optional<const char *> ToOptionalString(const char *s) {
-  if (!s)
+static std::optional<llvm::StringRef> ToOptionalString(llvm::StringRef s) {
+  if (s.empty())
     return std::nullopt;
   return s;
 }
 
-static const char *GetModuleName(const SymbolContext &sc) {
+static llvm::StringRef GetModuleName(const SymbolContext &sc) {
   if (!sc.module_sp)
-    return nullptr;
-  return sc.module_sp->GetFileSpec().GetFilename().AsCString(nullptr);
+    return {};
+  return sc.module_sp->GetFileSpec().GetFilename();
 }
 
 /// \return
 ///   The module name (basename if the module is a file, or the actual name if
 ///   it's a virtual module), or \b nullptr if no name nor module was found.
-static const char *GetModuleName(const TraceDumper::TraceItem &item) {
+static llvm::StringRef GetModuleName(const TraceDumper::TraceItem &item) {
   if (!item.symbol_info)
-    return nullptr;
+    return {};
   return GetModuleName(item.symbol_info->sc);
 }
 
@@ -133,8 +133,8 @@ public:
           !IsSameInstructionSymbolContext(*item.prev_symbol_info,
                                           *item.symbol_info)) {
         m_s << "  ";
-        const char *module_name = GetModuleName(item);
-        if (!module_name)
+        llvm::StringRef module_name = GetModuleName(item);
+        if (module_name.empty())
           m_s << "(none)";
         else if (!item.symbol_info->sc.function && !item.symbol_info->sc.symbol)
           m_s.Format("{0}`(none)", module_name);
@@ -239,8 +239,8 @@ private:
     }
     const SymbolContext &sc = function_call.GetSymbolInfo().sc;
 
-    const char *module_name = GetModuleName(sc);
-    if (!module_name)
+    llvm::StringRef module_name = GetModuleName(sc);
+    if (module_name.empty())
       m_s << "(none)";
     else if (!sc.function && !sc.symbol)
       m_s << module_name << "`(none)";

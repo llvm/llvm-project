@@ -15,9 +15,9 @@ define float @test1(float %a, i1 %bc) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi float [ [[A:%.*]], [[BB1]] ], [ 0x7FF8000000000000, [[BB2]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi float [ [[A:%.*]], [[BB1]] ], [ +qnan, [[BB2]] ]
 ; CHECK-NEXT:    [[V_1:%.*]] = fmul float [[P]], 0.000000e+00
-; CHECK-NEXT:    [[V_2:%.*]] = fadd float [[V_1]], 0xFFF8000000000000
+; CHECK-NEXT:    [[V_2:%.*]] = fadd float [[V_1]], -qnan
 ; CHECK-NEXT:    ret float [[V_2]]
 ;
 entry:
@@ -30,9 +30,9 @@ bb2:
   br label %exit
 
 exit:
-  %p = phi float [ %a, %bb1 ], [ 0x7FF8000000000000, %bb2 ]
+  %p = phi float [ %a, %bb1 ], [ +qnan, %bb2 ]
   %v.1 = fmul float %p, 0.000000e+00
-  %v.2 = fadd float %v.1, 0xFFF8000000000000
+  %v.2 = fadd float %v.1, -qnan
   ret float %v.2
 }
 
@@ -46,9 +46,9 @@ define float @test2(float %a, i1 %bc) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi float [ 0x7FF8000000000000, [[BB1]] ], [ [[A:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi float [ +qnan, [[BB1]] ], [ [[A:%.*]], [[BB2]] ]
 ; CHECK-NEXT:    [[V_1:%.*]] = fmul float [[P]], 0.000000e+00
-; CHECK-NEXT:    ret float 0xFFF8000000000000
+; CHECK-NEXT:    ret float -qnan
 ;
 entry:
   br i1 %bc, label %bb1, label %bb2
@@ -60,8 +60,8 @@ bb2:
   br label %exit
 
 exit:
-  %p = phi float [ 0x7FF8000000000000, %bb1 ], [ %a, %bb2 ]
+  %p = phi float [ +qnan, %bb1 ], [ %a, %bb2 ]
   %v.1 = fmul float %p, 0.000000e+00
-  %v.2 = fadd float %v.1, 0xFFF8000000000000
+  %v.2 = fadd float %v.1, -qnan
   ret float %v.2
 }

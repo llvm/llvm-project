@@ -20,6 +20,14 @@ TEST_P(olGetQueueInfoTest, SuccessDevice) {
   ASSERT_EQ(Device, RetrievedDevice);
 }
 
+TEST_P(olGetQueueInfoTest, SuccessContext) {
+  ol_context_handle_t RetrievedContext;
+  ASSERT_SUCCESS(olGetQueueInfo(Queue, OL_QUEUE_INFO_CONTEXT,
+                                sizeof(ol_context_handle_t),
+                                &RetrievedContext));
+  ASSERT_EQ(Context, RetrievedContext);
+}
+
 TEST_P(olGetQueueInfoTest, SuccessEmpty) {
   bool Empty;
   ASSERT_SUCCESS(
@@ -58,4 +66,11 @@ TEST_P(olGetQueueInfoTest, InvalidNullPointerPropValue) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetQueueInfo(Queue, OL_QUEUE_INFO_DEVICE,
                               sizeof(RetrievedDevice), nullptr));
+}
+
+TEST_P(olGetQueueInfoTest, SuccessNativeHandle) {
+  void *Handle = nullptr;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(olGetQueueInfo(
+      Queue, OL_QUEUE_INFO_NATIVE_HANDLE, sizeof(Handle), &Handle));
+  ASSERT_NE(Handle, nullptr);
 }

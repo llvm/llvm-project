@@ -51,6 +51,12 @@ using DeclareTargetOperands = detail::Clauses<DeviceTypeClauseOps>;
 /// representative name.
 using TargetEnterExitUpdateDataOperands = TargetEnterDataOperands;
 
+/// Extended TargetOperands with kernel_type attribute.
+struct TargetExtOperands : public TargetOperands {
+  /// Kernel execution mode for the target region.
+  TargetExecModeAttr kernelType;
+};
+
 } // namespace omp
 } // namespace mlir
 

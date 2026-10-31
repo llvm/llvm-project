@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir --delta-passes=instructions -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir --delta-passes=instructions -mtriple=amdgpu9.00-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS: V_MOV_B32
@@ -20,6 +20,7 @@
 # RESULT: bb.9:
 # RESULT: bb.10.exitblock:
 # RESULT: bb.11 (machine-block-address-taken):
+# RESULT: bb.12 (label-must-be-emitted):
 
 --- |
   define void @func(i32 %size)  {
@@ -72,4 +73,6 @@ body:             |
     S_ENDPGM 0, implicit %0
 
   bb.11 (machine-block-address-taken):
+
+  bb.12 (label-must-be-emitted):
 ...

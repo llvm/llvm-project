@@ -178,9 +178,7 @@ define i2 @vmsk_sgt_v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: vmsk_sgt_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
+; CHECK-NEXT:    vextrins.b $vr0, $vr0, 129
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 56
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
@@ -194,8 +192,7 @@ define i2 @vmsk_sgt_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: vmsk_sgt_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
+; CHECK-NEXT:    vextrins.h $vr0, $vr0, 65
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 48
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
@@ -209,8 +206,7 @@ define i2 @vmsk_sgt_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: vmsk_sgt_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vslt.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 16
-; CHECK-NEXT:    vslli.d $vr0, $vr0, 32
+; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -263,7 +259,6 @@ define i4 @vmsk_sgt_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vslli.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vmskltz.w $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -301,7 +296,6 @@ define i8 @vmsk_sgt_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 8
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -340,9 +334,7 @@ define i2 @vmsk_sgt_and_sgt_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8>
 ; CHECK-NEXT:    vslt.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.b $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
+; CHECK-NEXT:    vextrins.b $vr0, $vr0, 129
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 56
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
@@ -360,8 +352,7 @@ define i2 @vmsk_sgt_and_sgt_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x
 ; CHECK-NEXT:    vslt.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.h $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
+; CHECK-NEXT:    vextrins.h $vr0, $vr0, 65
 ; CHECK-NEXT:    vslli.d $vr0, $vr0, 48
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
@@ -379,8 +370,7 @@ define i2 @vmsk_sgt_and_sgt_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 ; CHECK-NEXT:    vslt.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vslt.w $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 16
-; CHECK-NEXT:    vslli.d $vr0, $vr0, 32
+; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vmskltz.d $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -449,7 +439,6 @@ define i4 @vmsk_sgt_and_sgt_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x
 ; CHECK-NEXT:    vslt.h $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vslli.w $vr0, $vr0, 16
 ; CHECK-NEXT:    vmskltz.w $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -499,7 +488,6 @@ define i8 @vmsk_sgt_and_sgt_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8>
 ; CHECK-NEXT:    vslt.b $vr1, $vr3, $vr2
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 8
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret
@@ -670,11 +658,10 @@ entry:
 define i32 @vmsk2_sgt_allones_i8(<32 x i8> %a) {
 ; LA32-LABEL: vmsk2_sgt_allones_i8:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vrepli.b $vr2, -1
-; LA32-NEXT:    vslt.b $vr0, $vr2, $vr0
+; LA32-NEXT:    vxori.b $vr0, $vr0, 255
 ; LA32-NEXT:    vmskltz.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vslt.b $vr0, $vr2, $vr1
+; LA32-NEXT:    vxori.b $vr0, $vr1, 255
 ; LA32-NEXT:    vmskltz.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a1, $vr0, 0
 ; LA32-NEXT:    slli.w $a1, $a1, 16
@@ -683,11 +670,10 @@ define i32 @vmsk2_sgt_allones_i8(<32 x i8> %a) {
 ;
 ; LA64-LABEL: vmsk2_sgt_allones_i8:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vrepli.b $vr2, -1
-; LA64-NEXT:    vslt.b $vr0, $vr2, $vr0
+; LA64-NEXT:    vxori.b $vr0, $vr0, 255
 ; LA64-NEXT:    vmskltz.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vslt.b $vr0, $vr2, $vr1
+; LA64-NEXT:    vxori.b $vr0, $vr1, 255
 ; LA64-NEXT:    vmskltz.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a1, $vr0, 0
 ; LA64-NEXT:    slli.d $a1, $a1, 16
@@ -788,11 +774,9 @@ entry:
 define i32 @vmsk2_sle_allones_i8(<32 x i8> %a) {
 ; LA32-LABEL: vmsk2_sle_allones_i8:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vslei.b $vr0, $vr0, -1
 ; LA32-NEXT:    vmskltz.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vslei.b $vr0, $vr1, -1
-; LA32-NEXT:    vmskltz.b $vr0, $vr0
+; LA32-NEXT:    vmskltz.b $vr0, $vr1
 ; LA32-NEXT:    vpickve2gr.hu $a1, $vr0, 0
 ; LA32-NEXT:    slli.w $a1, $a1, 16
 ; LA32-NEXT:    or $a0, $a0, $a1
@@ -800,11 +784,9 @@ define i32 @vmsk2_sle_allones_i8(<32 x i8> %a) {
 ;
 ; LA64-LABEL: vmsk2_sle_allones_i8:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vslei.b $vr0, $vr0, -1
 ; LA64-NEXT:    vmskltz.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vslei.b $vr0, $vr1, -1
-; LA64-NEXT:    vmskltz.b $vr0, $vr0
+; LA64-NEXT:    vmskltz.b $vr0, $vr1
 ; LA64-NEXT:    vpickve2gr.hu $a1, $vr0, 0
 ; LA64-NEXT:    slli.d $a1, $a1, 16
 ; LA64-NEXT:    or $a0, $a0, $a1

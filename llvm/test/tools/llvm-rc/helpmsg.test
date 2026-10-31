@@ -17,6 +17,7 @@
 ; CHECK-NEXT:    /L <value>  Set the default language identifier.
 ; CHECK-NEXT:    /no-preprocess Don't try to preprocess the input file.
 ; CHECK-NEXT:    /N          Null-terminate all strings in the string table.
+; CHECK-NEXT:    /showIncludes Print cl.exe-style include information to stderr.
 ; CHECK-NEXT:    /U <value>  Undefine a symbol for the C preprocessor.
 ; CHECK-NEXT:    /V          Be verbose.
 ; CHECK-NEXT:    /X          Ignore 'include' variable.

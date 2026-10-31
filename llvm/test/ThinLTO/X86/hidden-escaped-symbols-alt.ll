@@ -35,7 +35,7 @@ define i8 @main() {
 ; CHECK-HIDE: @"\01_hide_me" = hidden local_unnamed_addr global i8 8, align 1
 
 ; CHECK-REF: @hide_me = external local_unnamed_addr global i8
-; CHECK-REF: define dso_local i8 @main() local_unnamed_addr #0 {
+; CHECK-REF: define dso_local i8 @main() local_unnamed_addr #0
 ; CHECK-REF:   %1 = load i8, ptr @hide_me, align 1
 ; CHECK-REF:   ret i8 %1
 ; CHECK-REF: }

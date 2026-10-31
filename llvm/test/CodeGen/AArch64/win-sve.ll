@@ -1514,6 +1514,8 @@ define tailcc void @f15(double %d, <vscale x 4 x i32> %vs, [9 x i64], i32 %i) {
 ; CHECK-LABEL: f15:
 ; CHECK:       .seh_proc f15
 ; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    .seh_stackalloc 80
+; CHECK-NEXT:    .seh_end_c
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    str z8, [sp] // 16-byte Folded Spill
@@ -1582,14 +1584,11 @@ define void @f16(ptr swiftasync %ctx, <vscale x 2 x i64> %foo) {
 ; CHECK-NEXT:    add x29, sp, #8
 ; CHECK-NEXT:    .seh_add_fp 8
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ldr x8, [x22]
 ; CHECK-NEXT:    stur x8, [x29, #-8]
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 8
 ; CHECK-NEXT:    add sp, sp, #32

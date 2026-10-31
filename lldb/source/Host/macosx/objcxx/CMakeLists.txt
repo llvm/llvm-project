@@ -18,6 +18,7 @@ add_lldb_library(lldbHostMacOSXObjCXX NO_PLUGIN_DEPENDENCIES
     lldbUtility
     ${EXTRA_LIBS}
     ${SECURITY_FRAMEWORK}
+  ALLOWED_INTERNAL_DEPENDENCIES lldbUtility
   )
 
 target_compile_options(lldbHostMacOSXObjCXX PRIVATE

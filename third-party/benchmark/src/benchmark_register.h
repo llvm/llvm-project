@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <type_traits>
 #include <vector>
 
 #include "check.h"
@@ -24,7 +25,7 @@ typename std::vector<T>::iterator AddPowers(std::vector<T>* dst, T lo, T hi,
   static const T kmax = std::numeric_limits<T>::max();
 
   // Space out the values in multiples of "mult"
-  for (T i = static_cast<T>(1); i <= hi; i *= static_cast<T>(mult)) {
+  for (T i = static_cast<T>(1); i <= hi; i = static_cast<T>(i * mult)) {
     if (i >= lo) {
       dst->push_back(i);
     }
@@ -52,7 +53,7 @@ void AddNegatedPowers(std::vector<T>* dst, T lo, T hi, int mult) {
 
   const auto it = AddPowers(dst, hi_complement, lo_complement, mult);
 
-  std::for_each(it, dst->end(), [](T& t) { t *= -1; });
+  std::for_each(it, dst->end(), [](T& t) { t = static_cast<T>(t * -1); });
   std::reverse(it, dst->end());
 }
 

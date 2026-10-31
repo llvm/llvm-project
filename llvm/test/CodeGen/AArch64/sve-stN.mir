@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -run-pass=prologepilog -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -start-before=prologepilog -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-OFFSET
+# RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -run-pass=prolog-epilog -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -start-before=prolog-epilog -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-OFFSET
 
 --- |
   define void @testcase_valid_offset() nounwind { entry: unreachable }

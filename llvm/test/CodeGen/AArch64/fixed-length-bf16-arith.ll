@@ -11,7 +11,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x bfloat> @fabs_v4bf16(<4 x bfloat> %a) {
 ; CHECK-LABEL: fabs_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.4h, #128, lsl #8
+; CHECK-NEXT:    fabs v0.4h, v0.4h
 ; CHECK-NEXT:    ret
   %res = call <4 x bfloat> @llvm.fabs.v4bf16(<4 x bfloat> %a)
   ret <4 x bfloat> %res
@@ -20,7 +20,7 @@ define <4 x bfloat> @fabs_v4bf16(<4 x bfloat> %a) {
 define <8 x bfloat> @fabs_v8bf16(<8 x bfloat> %a) {
 ; CHECK-LABEL: fabs_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.8h, #128, lsl #8
+; CHECK-NEXT:    fabs v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %res = call <8 x bfloat> @llvm.fabs.v8bf16(<8 x bfloat> %a)
   ret <8 x bfloat> %res
@@ -795,8 +795,7 @@ define <8 x bfloat> @abs_fmul_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; NOB16B16-NEXT:    bfmlalt v3.4s, v0.8h, v1.8h
 ; NOB16B16-NEXT:    bfcvt z2.h, p0/m, z2.s
 ; NOB16B16-NEXT:    bfcvtnt z2.h, p0/m, z3.s
-; NOB16B16-NEXT:    bic v2.8h, #128, lsl #8
-; NOB16B16-NEXT:    mov v0.16b, v2.16b
+; NOB16B16-NEXT:    fabs v0.8h, v2.8h
 ; NOB16B16-NEXT:    ret
 ;
 ; B16B16-LABEL: abs_fmul_v8bf16:
@@ -805,11 +804,10 @@ define <8 x bfloat> @abs_fmul_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; B16B16-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; B16B16-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; B16B16-NEXT:    bfmul z0.h, p0/m, z0.h, z1.h
-; B16B16-NEXT:    bic v0.8h, #128, lsl #8
-; B16B16-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; B16B16-NEXT:    fabs v0.8h, v0.8h
 ; B16B16-NEXT:    ret
   %mul = fmul <8 x bfloat> %a, %b
-  %res = call <8 x bfloat> @llvm.fabs.v8f16(<8 x bfloat> %mul)
+  %res = call <8 x bfloat> @llvm.fabs.v8bf16(<8 x bfloat> %mul)
   ret <8 x bfloat> %res
 }
 
@@ -820,8 +818,7 @@ define <8 x bfloat> @abs_fmul_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 define <4 x bfloat> @fneg_v4bf16(<4 x bfloat> %a) {
 ; CHECK-LABEL: fneg_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4h, #128, lsl #8
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    fneg v0.4h, v0.4h
 ; CHECK-NEXT:    ret
   %res = fneg <4 x bfloat> %a
   ret <4 x bfloat> %res
@@ -830,8 +827,7 @@ define <4 x bfloat> @fneg_v4bf16(<4 x bfloat> %a) {
 define <8 x bfloat> @fneg_v8bf16(<8 x bfloat> %a) {
 ; CHECK-LABEL: fneg_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.8h, #128, lsl #8
-; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    fneg v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %res = fneg <8 x bfloat> %a
   ret <8 x bfloat> %res

@@ -10,8 +10,8 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X86-SSE-NEXT:    pushl %ebp
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    andl $-16, %esp
-; X86-SSE-NEXT:    subl $272, %esp # imm = 0x110
-; X86-SSE-NEXT:    movl 88(%ebp), %ecx
+; X86-SSE-NEXT:    subl $256, %esp # imm = 0x100
+; X86-SSE-NEXT:    movl 88(%ebp), %eax
 ; X86-SSE-NEXT:    movdqa 72(%ebp), %xmm0
 ; X86-SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
@@ -31,10 +31,9 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X86-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movaps %xmm1, (%esp)
 ; X86-SSE-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    leal (%ecx,%ecx), %eax
-; X86-SSE-NEXT:    andl $31, %eax
-; X86-SSE-NEXT:    movl 128(%esp,%eax,4), %eax
-; X86-SSE-NEXT:    leal 1(%ecx,%ecx), %ecx
+; X86-SSE-NEXT:    leal 1(%eax,%eax), %ecx
+; X86-SSE-NEXT:    andl $15, %eax
+; X86-SSE-NEXT:    movl 128(%esp,%eax,8), %eax
 ; X86-SSE-NEXT:    andl $31, %ecx
 ; X86-SSE-NEXT:    movl (%esp,%ecx,4), %edx
 ; X86-SSE-NEXT:    movl %ebp, %esp
@@ -65,22 +64,21 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X86-AVX-NEXT:    pushl %ebp
 ; X86-AVX-NEXT:    movl %esp, %ebp
 ; X86-AVX-NEXT:    andl $-32, %esp
-; X86-AVX-NEXT:    subl $288, %esp # imm = 0x120
-; X86-AVX-NEXT:    movl 40(%ebp), %ecx
+; X86-AVX-NEXT:    subl $256, %esp # imm = 0x100
+; X86-AVX-NEXT:    movl 40(%ebp), %eax
 ; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X86-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X86-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovaps %ymm1, (%esp)
-; X86-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    leal (%ecx,%ecx), %eax
-; X86-AVX-NEXT:    andl $31, %eax
-; X86-AVX-NEXT:    movl 128(%esp,%eax,4), %eax
-; X86-AVX-NEXT:    leal 1(%ecx,%ecx), %ecx
+; X86-AVX-NEXT:    leal 1(%eax,%eax), %ecx
+; X86-AVX-NEXT:    andl $15, %eax
+; X86-AVX-NEXT:    movl 128(%esp,%eax,8), %eax
 ; X86-AVX-NEXT:    andl $31, %ecx
 ; X86-AVX-NEXT:    movl (%esp,%ecx,4), %edx
 ; X86-AVX-NEXT:    movl %ebp, %esp
@@ -93,7 +91,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X64-AVX-NEXT:    pushq %rbp
 ; X64-AVX-NEXT:    movq %rsp, %rbp
 ; X64-AVX-NEXT:    andq $-32, %rsp
-; X64-AVX-NEXT:    subq $160, %rsp
+; X64-AVX-NEXT:    addq $-128, %rsp
 ; X64-AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm3[3,3,3,3]
 ; X64-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero

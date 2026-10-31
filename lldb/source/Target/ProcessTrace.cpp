@@ -93,8 +93,9 @@ void ProcessTrace::RefreshStateAfterStop() {}
 
 Status ProcessTrace::DoDestroy() { return Status(); }
 
-size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
-                                Status &error) {
+size_t ProcessTrace::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                                size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   if (const ABISP &abi = GetABI())
     addr = abi->FixAnyAddress(addr);
 
@@ -127,8 +128,9 @@ bool ProcessTrace::GetProcessInfo(ProcessInstanceInfo &info) {
   return true;
 }
 
-size_t ProcessTrace::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                  Status &error) {
+size_t ProcessTrace::DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                                  size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   Address resolved_address;
   GetTarget().ResolveLoadAddress(addr, resolved_address);
 

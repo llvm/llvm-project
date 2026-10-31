@@ -22,8 +22,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -75,9 +73,6 @@ class UnixAPIMisuseChecker : public Checker<check::PreCall> {
 public:
   UnixAPIMisuseChecker(const ASTContext &Ctx, const Preprocessor &PP)
       : Val_O_CREAT(getCreateFlagValue(Ctx, PP)) {}
-
-  void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &Mgr,
-                    BugReporter &BR) const;
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
@@ -133,7 +128,7 @@ ProgramStateRef UnixAPIMisuseChecker::EnsurePtrNotNull(
 
   const auto [PtrNotNull, PtrNull] = State->assume(*Ptr);
   if (!PtrNotNull && PtrNull) {
-    if (ExplodedNode *N = C.generateErrorNode(PtrNull)) {
+    if (ExplodedNode *N = C.addSink(PtrNull)) {
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT.value_or(std::cref(BT_ArgumentNull)),
           (PtrDescr + " pointer might be NULL.").str(), N);
@@ -182,7 +177,7 @@ void UnixAPIMisuseChecker::ReportOpenBug(CheckerContext &C,
                                          ProgramStateRef State,
                                          const char *Msg,
                                          SourceRange SR) const {
-  ExplodedNode *N = C.generateErrorNode(State);
+  ExplodedNode *N = C.addSink(State);
   if (!N)
     return;
 
@@ -321,7 +316,7 @@ ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
 
   auto EmitBugReport = [this, &C, SizePtrExpr, LinePtrPtrExpr](
                            ProgramStateRef BugState, StringRef ErrMsg) {
-    if (ExplodedNode *N = C.generateErrorNode(BugState)) {
+    if (ExplodedNode *N = C.addSink(BugState)) {
       auto R = std::make_unique<PathSensitiveBugReport>(BT_getline, ErrMsg, N);
       bugreporter::trackExpressionValue(N, SizePtrExpr, *R);
       bugreporter::trackExpressionValue(N, LinePtrPtrExpr, *R);
@@ -426,7 +421,7 @@ void UnixAPIMisuseChecker::CheckPthreadOnce(CheckerContext &C,
   if (!R || !R->hasMemorySpace<StackSpaceRegion>(state))
     return;
 
-  ExplodedNode *N = C.generateErrorNode(state);
+  ExplodedNode *N = C.addSink(state);
   if (!N)
     return;
 
@@ -476,15 +471,13 @@ bool UnixAPIPortabilityChecker::ReportZeroByteAllocation(
                                                     ProgramStateRef falseState,
                                                     const Expr *arg,
                                                     const char *fn_name) const {
-  ExplodedNode *N = C.generateErrorNode(falseState);
+  ExplodedNode *N = C.addSink(falseState);
   if (!N)
     return false;
 
-  SmallString<256> S;
-  llvm::raw_svector_ostream os(S);
-  os << "Call to '" << fn_name << "' has an allocation size of 0 bytes";
-  auto report =
-      std::make_unique<PathSensitiveBugReport>(BT_mallocZero, os.str(), N);
+  auto report = std::make_unique<PathSensitiveBugReport>(
+      BT_mallocZero,
+      "Call to '" + Twine(fn_name) + "' has an allocation size of 0 bytes", N);
 
   report->addRange(arg->getSourceRange());
   bugreporter::trackExpressionValue(N, arg, *report);

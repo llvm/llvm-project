@@ -14,4 +14,4 @@
 
 #include "src/math/iscanonical.h"
 
-LIST_ISCANONICAL_TESTS(double, LIBC_NAMESPACE::iscanonical)
+LIST_ISCANONICAL_TESTS(Iscanonical, double, LIBC_NAMESPACE::iscanonical)

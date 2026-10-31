@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,8 +27,8 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <tuple>
@@ -57,15 +58,6 @@ STATISTIC(NumIndexCalleeUnhandled, "Number of index callee which are unhandled."
 STATISTIC(NumIndexCalleeMultipleWeak, "Number of index callee non-unique weak.");
 STATISTIC(NumIndexCalleeMultipleExternal, "Number of index callee non-unique external.");
 
-
-static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
-                                             cl::init(20), cl::Hidden);
-
-static cl::opt<bool> StackSafetyPrint("stack-safety-print", cl::init(false),
-                                      cl::Hidden);
-
-static cl::opt<bool> StackSafetyRun("stack-safety-run", cl::init(false),
-                                    cl::Hidden);
 
 namespace {
 
@@ -152,7 +144,7 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
 // in case of confution.
 ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
   const DataLayout &DL = AI.getDataLayout();
-  TypeSize TS = DL.getTypeAllocSize(AI.getAllocatedType());
+  TypeSize TS = AI.getAllocationBaseSize(DL);
   unsigned PointerSize = DL.getPointerTypeSizeInBits(AI.getType());
   // Fallback to empty range for alloca size.
   ConstantRange R = ConstantRange::getEmpty(PointerSize);
@@ -527,7 +519,8 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         // dso_preemptable aliases or aliases with interposable linkage.
         const GlobalValue *Callee =
             dyn_cast<GlobalValue>(CB.getCalledOperand()->stripPointerCasts());
-        if (!Callee || isa<GlobalIFunc>(Callee)) {
+        if (!Callee || isa<GlobalIFunc>(Callee) ||
+            isa<GlobalVariable>(Callee)) {
           US.addRange(I, UnknownRange, /*IsSafe=*/false);
           break;
         }
@@ -587,6 +580,7 @@ template <typename CalleeTy> class StackSafetyDataFlowAnalysis {
 
   FunctionMap Functions;
   const ConstantRange UnknownRange;
+  const int MaxIterations;
 
   // Callee-to-Caller multimap.
   DenseMap<const CalleeTy *, SmallVector<const CalleeTy *, 4>> Callers;
@@ -607,9 +601,11 @@ template <typename CalleeTy> class StackSafetyDataFlowAnalysis {
 #endif
 
 public:
-  StackSafetyDataFlowAnalysis(uint32_t PointerBitWidth, FunctionMap Functions)
+  StackSafetyDataFlowAnalysis(uint32_t PointerBitWidth, FunctionMap Functions,
+                              int MaxIterations)
       : Functions(std::move(Functions)),
-        UnknownRange(ConstantRange::getFull(PointerBitWidth)) {}
+        UnknownRange(ConstantRange::getFull(PointerBitWidth)),
+        MaxIterations(MaxIterations) {}
 
   const FunctionMap &run();
 
@@ -661,7 +657,7 @@ bool StackSafetyDataFlowAnalysis<CalleeTy>::updateOneUse(UseInfo<CalleeTy> &US,
 template <typename CalleeTy>
 void StackSafetyDataFlowAnalysis<CalleeTy>::updateOneNode(
     const CalleeTy *Callee, FunctionInfo<CalleeTy> &FS) {
-  bool UpdateToFullSet = FS.UpdateCount > StackSafetyMaxIterations;
+  bool UpdateToFullSet = FS.UpdateCount > MaxIterations;
   bool Changed = false;
   for (auto &KV : FS.Params)
     Changed |= updateOneUse(KV.second, UpdateToFullSet);
@@ -851,7 +847,10 @@ GVToSSI createGlobalStackSafetyInfo(
 
   uint32_t PointerSize =
       Copy.begin()->first->getDataLayout().getPointerSizeInBits();
-  StackSafetyDataFlowAnalysis<GlobalValue> SSDFA(PointerSize, std::move(Copy));
+  int MaxIterations = getAnalysisOptions(Copy.begin()->first->getContext())
+                          .stack_safety_max_iterations;
+  StackSafetyDataFlowAnalysis<GlobalValue> SSDFA(PointerSize, std::move(Copy),
+                                                 MaxIterations);
 
   for (const auto &F : SSDFA.run()) {
     auto FI = F.second;
@@ -929,7 +928,7 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
       }
     }
 
-    if (StackSafetyPrint)
+    if (getAnalysisOptions(*M).stack_safety_print)
       print(errs());
   }
   return *Info;
@@ -981,7 +980,7 @@ StackSafetyGlobalInfo::StackSafetyGlobalInfo(
     Module *M, std::function<const StackSafetyInfo &(Function &F)> GetSSI,
     const ModuleSummaryIndex *Index)
     : M(M), GetSSI(GetSSI), Index(Index) {
-  if (StackSafetyRun)
+  if (getAnalysisOptions(*M).stack_safety_run)
     getInfo();
 }
 
@@ -1068,14 +1067,17 @@ AnalysisKey StackSafetyGlobalAnalysis::Key;
 
 StackSafetyGlobalInfo
 StackSafetyGlobalAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  // FIXME: Lookup Module Summary.
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  const ModuleSummaryIndex *Index = nullptr;
+  if (auto *IndexPass =
+          AM.getCachedResult<ImmutableModuleSummaryIndexAnalysis>(M))
+    Index = IndexPass->getIndex();
   return {&M,
           [&FAM](Function &F) -> const StackSafetyInfo & {
             return FAM.getResult<StackSafetyAnalysis>(F);
           },
-          nullptr};
+          Index};
 }
 
 PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
@@ -1118,7 +1120,7 @@ bool StackSafetyGlobalInfoWrapperPass::runOnModule(Module &M) {
 }
 
 bool llvm::needsParamAccessSummary(const Module &M) {
-  if (StackSafetyRun)
+  if (getAnalysisOptions(M).stack_safety_run)
     return true;
   for (const auto &F : M.functions())
     if (F.hasFnAttribute(Attribute::SanitizeMemTag))
@@ -1126,7 +1128,9 @@ bool llvm::needsParamAccessSummary(const Module &M) {
   return false;
 }
 
-void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
+void llvm::generateParamAccessSummary(
+    const cl::LibraryOptionsContext *LibraryOptions,
+    ModuleSummaryIndex &Index) {
   if (!Index.hasParamAccess())
     return;
   const ConstantRange FullSet(FunctionSummary::ParamAccess::RangeWidth, true);
@@ -1183,7 +1187,9 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
   }
   NumCombinedDataFlowNodes += Functions.size();
   StackSafetyDataFlowAnalysis<FunctionSummary> SSDFA(
-      FunctionSummary::ParamAccess::RangeWidth, std::move(Functions));
+      FunctionSummary::ParamAccess::RangeWidth, std::move(Functions),
+      cl::LibraryOptionsContext::get<AnalysisOptions>(LibraryOptions)
+          .stack_safety_max_iterations);
   for (const auto &KV : SSDFA.run()) {
     std::vector<FunctionSummary::ParamAccess> NewParams;
     NewParams.reserve(KV.second.Params.size());

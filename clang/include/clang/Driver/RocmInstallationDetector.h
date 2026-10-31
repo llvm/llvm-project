@@ -164,13 +164,6 @@ private:
   bool parseHIPVersionFile(llvm::StringRef V);
   const SmallVectorImpl<Candidate> &getInstallationPathCandidates();
 
-  /// Find the path to a SPACK package under the ROCm candidate installation
-  /// directory if the candidate is a SPACK ROCm candidate. \returns empty
-  /// string if the candidate is not SPACK ROCm candidate or the requested
-  /// package is not found.
-  llvm::SmallString<0> findSPACKPackage(const Candidate &Cand,
-                                        StringRef PackageName);
-
 public:
   RocmInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
                            const llvm::opt::ArgList &Args,
@@ -267,7 +260,7 @@ public:
                          llvm::opt::ArgStringList &CC1Args) const;
 
   void detectDeviceLibrary();
-  void detectHIPRuntime();
+  void detectHIPRuntime(const llvm::Triple &HostTriple);
 
   /// Get the values for --rocm-device-lib-path arguments
   ArrayRef<std::string> getRocmDeviceLibPathArg() const {

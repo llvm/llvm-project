@@ -1,4 +1,4 @@
-; RUN: llc -mtriple riscv64 -verify-machineinstrs -stop-after=prologepilog < %s | FileCheck %s
+; RUN: llc -mtriple riscv64 -verify-machineinstrs -stop-after=prolog-epilog < %s | FileCheck %s
 
 ; Check that STATEPOINT instruction has an early clobber implicit def for LR.
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"

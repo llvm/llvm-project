@@ -55,18 +55,6 @@ public:
 namespace llvm {
 
 template<> struct DenseMapInfo<clang::BaseSubobject> {
-  static clang::BaseSubobject getEmptyKey() {
-    return clang::BaseSubobject(
-      DenseMapInfo<const clang::CXXRecordDecl *>::getEmptyKey(),
-      clang::CharUnits::fromQuantity(DenseMapInfo<int64_t>::getEmptyKey()));
-  }
-
-  static clang::BaseSubobject getTombstoneKey() {
-    return clang::BaseSubobject(
-      DenseMapInfo<const clang::CXXRecordDecl *>::getTombstoneKey(),
-      clang::CharUnits::fromQuantity(DenseMapInfo<int64_t>::getTombstoneKey()));
-  }
-
   static unsigned getHashValue(const clang::BaseSubobject &Base) {
     using PairTy = std::pair<const clang::CXXRecordDecl *, clang::CharUnits>;
 

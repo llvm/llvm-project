@@ -28,7 +28,6 @@ class InputFile;
 class Symbol;
 
 class Defined;
-struct Partition;
 class SyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
@@ -78,11 +77,6 @@ public:
 
   StringRef name;
 
-  // The 1-indexed partition that this section is assigned to by the garbage
-  // collector, or 0 if this section is dead. Normally there is only one
-  // partition, so this will either be 0 or 1.
-  elf::Partition &getPartition(Ctx &) const;
-
   // These corresponds to the fields in Elf_Shdr.
   uint64_t flags;
   uint32_t type;
@@ -92,6 +86,7 @@ public:
   uint32_t entsize;
 
   Kind sectionKind;
+  // 0 (dead) or 1 (live).
   uint8_t partition = 1;
 
   // The next two bit fields are only used by InputSectionBase, but we
@@ -108,6 +103,11 @@ public:
   uint64_t getOffset(uint64_t offset) const;
 
   uint64_t getVA(uint64_t offset = 0) const;
+
+  // Translate an offset in relocations to an address. RelocScan::scanEhSection
+  // has already mapped .eh_frame offsets to the merged output section, so they
+  // must not be translated a second time.
+  uint64_t getRelocVA(uint64_t offset) const;
 
   bool isLive() const { return partition != 0; }
   void markLive() { partition = 1; }
@@ -207,11 +207,6 @@ public:
   void drop_back(unsigned num) {
     assert(bytesDropped + num < 256);
     bytesDropped += num;
-  }
-
-  void push_back(uint64_t num) {
-    assert(bytesDropped >= num);
-    bytesDropped -= num;
   }
 
   mutable const uint8_t *content_;
@@ -377,19 +372,20 @@ private:
 };
 
 struct EhSectionPiece {
-  EhSectionPiece(size_t off, InputSectionBase *sec, uint32_t size,
-                 unsigned firstRelocation)
-      : inputOff(off), sec(sec), size(size), firstRelocation(firstRelocation) {}
+  EhSectionPiece(uint32_t off, uint32_t size, unsigned firstRelocation,
+                 uint32_t cie)
+      : inputOff(off), size(size), firstRelocation(firstRelocation), cie(cie) {}
 
-  ArrayRef<uint8_t> data() const {
-    return {sec->content().data() + this->inputOff, size};
+  ArrayRef<uint8_t> data(const InputSectionBase &sec) const {
+    return {sec.content().data() + inputOff, size};
   }
 
-  size_t inputOff;
-  ssize_t outputOff = -1;
-  InputSectionBase *sec;
+  uint32_t inputOff;
   uint32_t size;
+  ssize_t outputOff = -1;
   unsigned firstRelocation;
+  // For an FDE, the index of its CIE in `cies`.
+  uint32_t cie;
 };
 
 // This corresponds to a .eh_frame section of an input file.
@@ -412,6 +408,9 @@ public:
   // Preprocessed relocations in uniform format to avoid REL/RELA/CREL
   // relocation format handling throughout the codebase.
   SmallVector<Relocation, 0> rels;
+
+  // For each CIE, the output offset of the identical CIE that is emitted.
+  SmallVector<uint32_t, 0> cieOutputOffs;
 };
 
 // This is a section that is added directly to an output section

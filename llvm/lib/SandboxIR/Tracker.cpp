@@ -330,36 +330,69 @@ void CmpSwapOperands::dump() const {
 
 void Tracker::save() {
   State = TrackerState::Record;
+  // Record the last index in `Changes` that we will revert.
+  Snapshots.push_back(Changes.size());
 #if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
-  SnapshotChecker.save();
+  SnapshotChecker.emplace_back(Ctx);
+  SnapshotChecker.back().save();
 #endif
 }
 
-void Tracker::revert() {
+void Tracker::revert(bool RevertAll) {
   assert(State == TrackerState::Record && "Forgot to save()!");
   State = TrackerState::Reverting;
-  for (auto &Change : reverse(Changes))
+  unsigned UntilChangeIdx = RevertAll ? 0 : Snapshots.back();
+  const unsigned ToRevert = Changes.size() - UntilChangeIdx;
+  unsigned CntReverts = 0;
+  for (auto &Change : reverse(Changes)) {
+    // Stop reverting if we reach the index of the last snapshot.
+    if (CntReverts++ == ToRevert)
+      break;
     Change->revert(*this);
-  Changes.clear();
 #if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
-  SnapshotChecker.expectNoDiff();
+    // There may be multiple changes between snapshots, so use the snapshot
+    // checker only if this change has an associated snapshot.
+    unsigned ChangeIdx = Changes.size() - CntReverts;
+    bool ChangeHasSnapshot = ChangeIdx == Snapshots.back();
+    if (ChangeHasSnapshot) {
+      SnapshotChecker.back().expectNoDiff();
+      SnapshotChecker.pop_back();
+    }
 #endif
-  State = TrackerState::Disabled;
+  }
+  Changes.erase(Changes.end() - ToRevert, Changes.end());
+  if (RevertAll)
+    Snapshots.clear();
+  else
+    Snapshots.pop_back();
+  State = Snapshots.empty() ? TrackerState::Disabled : TrackerState::Record;
 }
 
-void Tracker::accept() {
+void Tracker::accept(bool AcceptAll) {
   assert(State == TrackerState::Record && "Forgot to save()!");
+  if (!AcceptAll && Snapshots.size() > 1) {
+    // Just remove the last stacked checkpoint.
+    Snapshots.pop_back();
+    return;
+  }
   State = TrackerState::Disabled;
   for (auto &Change : Changes)
     Change->accept();
   Changes.clear();
+  Snapshots.clear();
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+  SnapshotChecker.clear();
+#endif
 }
 
 #ifndef NDEBUG
 void Tracker::dump(raw_ostream &OS) const {
+  unsigned SnapshotCnt = 0;
   for (auto [Idx, ChangePtr] : enumerate(Changes)) {
     OS << Idx << ". ";
     ChangePtr->dump(OS);
+    if (find(Snapshots, Idx) != Snapshots.end())
+      OS << " [Snapshot " << SnapshotCnt++ << "]";
     OS << "\n";
   }
 }

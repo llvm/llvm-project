@@ -4,7 +4,7 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestFunctionNameWithoutArgs(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_function_name_without_args(self):
         self.build()

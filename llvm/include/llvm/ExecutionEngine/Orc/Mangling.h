@@ -14,24 +14,45 @@
 #define LLVM_EXECUTIONENGINE_ORC_MANGLING_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
 
-namespace llvm {
-namespace orc {
+namespace llvm::orc {
 
 /// Mangles symbol names then uniques them in the context of an
 /// ExecutionSession.
 class MangleAndInterner {
 public:
-  LLVM_ABI MangleAndInterner(ExecutionSession &ES, const DataLayout &DL);
-  LLVM_ABI SymbolStringPtr operator()(StringRef Name);
+  using ManglingMode = Mangler::Mode;
+
+  MangleAndInterner(ExecutionSession &ES, Mangler M)
+      : ES(ES), M(std::move(M)) {}
+  MangleAndInterner(ExecutionSession &ES, ManglingMode Mode)
+      : ES(ES), M(Mode) {}
+  MangleAndInterner(ExecutionSession &ES, StringRef ABIName = "")
+      : ES(ES), M(ES.getTargetTriple(), ABIName) {}
+  MangleAndInterner(ExecutionSession &ES, const DataLayout &DL)
+      : ES(ES), M(DL.getStringRepresentation()) {}
+
+  const Mangler &mangler() const { return M; }
+
+  SymbolStringPtr operator()(const SymbolNameSpec &NameSpec) {
+    return M.withMangledNameDo(
+        [this](StringRef MangledName) { return ES.intern(MangledName); },
+        NameSpec);
+  }
+
+  SymbolStringPtr operator()(StringRef Name) {
+    return (*this)(SymbolNameSpec(Name, SymbolNameKind::IR));
+  }
 
 private:
   ExecutionSession &ES;
-  const DataLayout &DL;
+  Mangler M;
 };
 
 /// Maps IR global values to their linker symbol names / flags.
@@ -57,7 +78,6 @@ public:
       SymbolNameToDefinitionMap *SymbolToDefinition = nullptr);
 };
 
-} // End namespace orc
-} // End namespace llvm
+} // namespace llvm::orc
 
 #endif // LLVM_EXECUTIONENGINE_ORC_MANGLING_H

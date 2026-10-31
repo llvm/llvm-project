@@ -48,6 +48,7 @@
 
 namespace llvm {
 class AAResults;
+struct AnalysisOptions;
 template <typename T> class ArrayRef;
 class Loop;
 class LoopInfo;
@@ -148,10 +149,6 @@ public:
   /// getSameSDLevels - Returns the number of separate SameSD loops surrounding
   /// the source and destination of the dependence.
   virtual unsigned getSameSDLevels() const { return 0; }
-
-  /// getDVEntry - Returns the DV entry associated with a regular or a
-  /// SameSD level
-  DVEntry getDVEntry(unsigned Level, bool IsSameSD) const;
 
   /// getDirection - Returns the direction associated with a particular
   /// common or SameSD level.
@@ -309,8 +306,8 @@ private:
 /// DependenceInfo - This class is the main dependence-analysis driver.
 class DependenceInfo {
 public:
-  DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE, LoopInfo *LI)
-      : AA(AA), SE(SE), LI(LI), F(F) {}
+  LLVM_ABI DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE,
+                          LoopInfo *LI);
 
   /// Handle transitive invalidation when the cached analysis results go away.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -330,6 +327,7 @@ public:
   Function *getFunction() const { return F; }
 
 private:
+  const AnalysisOptions &Opts;
   AAResults *AA;
   ScalarEvolution *SE;
   LoopInfo *LI;
@@ -343,19 +341,15 @@ private:
     const SCEV *Dst;
     enum ClassificationKind { ZIV, SIV, RDIV, MIV, NonLinear } Classification;
     SmallBitVector Loops;
-    SmallBitVector GroupLoops;
-    SmallBitVector Group;
   };
 
   struct CoefficientInfo {
-    const SCEV *Coeff;
-    const SCEV *PosPart;
-    const SCEV *NegPart;
-    const SCEV *Iterations;
+    const SCEV *SrcCoeff;
+    const SCEV *DstCoeff;
+    const SCEV *MaxIterIndex;
   };
 
   struct BoundInfo {
-    const SCEV *Iterations;
     const SCEV *Upper[8];
     const SCEV *Lower[8];
     unsigned char Direction;
@@ -610,11 +604,11 @@ private:
                        FullDependence &Result) const;
 
   /// collectCoeffInfo - Walks through the subscript, collecting each
-  /// coefficient, the associated loop bounds, and recording its positive and
-  /// negative parts for later use.
-  void collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
-                        const SCEV *&Constant,
-                        SmallVectorImpl<CoefficientInfo> &CI) const;
+  /// coefficient and the associated maximum iteration index in the
+  /// widened analysis type. Returns the widened constant term.
+  const SCEV *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
+                               Type *WideType,
+                               MutableArrayRef<CoefficientInfo> CI) const;
 
   /// Given \p Expr of the form
   ///
@@ -628,18 +622,12 @@ private:
   /// in \p RunningGCD. Also, the initial value of \p RunningGCD affects the
   /// result. If we find a term like (c_k * X_k * i_k), where i_k is the
   /// induction variable of \p CurLoop, c_k is stored in \p CurLoopCoeff and not
-  /// included in the GCD computation. Returns false if we fail to find a
+  /// included in the GCD computation. Returns nullptr if we fail to find a
   /// constant coefficient for some loop, e.g., when a term like (X+Y)*i is
-  /// present. Otherwise returns true.
-  bool accumulateCoefficientsGCD(const SCEV *Expr, const Loop *CurLoop,
-                                 const SCEV *&CurLoopCoeff,
-                                 APInt &RunningGCD) const;
-
-  /// getPositivePart - X^+ = max(X, 0).
-  const SCEV *getPositivePart(const SCEV *X) const;
-
-  /// getNegativePart - X^- = min(X, 0).
-  const SCEV *getNegativePart(const SCEV *X) const;
+  /// present. Otherwise returns the remaining constant term C.
+  const SCEV *accumulateCoefficientsGCD(const SCEV *Expr, const Loop *CurLoop,
+                                        const SCEV *&CurLoopCoeff,
+                                        APInt &RunningGCD) const;
 
   /// getLowerBound - Looks through all the bounds info and
   /// computes the lower bound given the current direction settings
@@ -656,34 +644,33 @@ private:
   /// in the DirSet field of Bound. Returns the number of distinct
   /// dependences discovered. If the dependence is disproved,
   /// it will return 0.
-  unsigned exploreDirections(unsigned Level, ArrayRef<CoefficientInfo> A,
-                             ArrayRef<CoefficientInfo> B,
-                             MutableArrayRef<BoundInfo> Bound,
-                             const SmallBitVector &Loops,
-                             unsigned &DepthExpanded, const SCEV *Delta) const;
+  unsigned exploreDirections(unsigned Level, MutableArrayRef<BoundInfo> Bound,
+                             const SmallBitVector &Loops, const SCEV *Delta,
+                             const FullDependence &Result) const;
 
-  /// testBounds - Returns true iff the current bounds are plausible.
+  /// testBounds - Returns true when the current bounds may be feasible
+  /// or their feasibility is unknown.
   bool testBounds(unsigned char DirKind, unsigned Level,
                   MutableArrayRef<BoundInfo> Bound, const SCEV *Delta) const;
 
   /// findBoundsALL - Computes the upper and lower bounds for level K
   /// using the * direction. Records them in Bound.
-  void findBoundsALL(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+  void findBoundsALL(ArrayRef<CoefficientInfo> CI,
                      MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsLT - Computes the upper and lower bounds for level K
   /// using the < direction. Records them in Bound.
-  void findBoundsLT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+  void findBoundsLT(ArrayRef<CoefficientInfo> CI,
                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsGT - Computes the upper and lower bounds for level K
   /// using the > direction. Records them in Bound.
-  void findBoundsGT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+  void findBoundsGT(ArrayRef<CoefficientInfo> CI,
                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// findBoundsEQ - Computes the upper and lower bounds for level K
   /// using the = direction. Records them in Bound.
-  void findBoundsEQ(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
+  void findBoundsEQ(ArrayRef<CoefficientInfo> CI,
                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
   /// Given a linear access function, tries to recover subscripts
@@ -727,13 +714,11 @@ private:
 
 /// Printer pass to dump DA results.
 struct DependenceAnalysisPrinterPass
-    : public PassInfoMixin<DependenceAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<DependenceAnalysisPrinterPass> {
   DependenceAnalysisPrinterPass(raw_ostream &OS, bool NormalizeResults = false)
       : OS(OS), NormalizeResults(NormalizeResults) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-
-  static bool isRequired() { return true; }
 
 private:
   raw_ostream &OS;

@@ -107,7 +107,7 @@ TEST(AnnotationsTest, Nested) {
 }
 
 TEST(AnnotationsTest, Payload) {
-  // // A single unnamed point or range with unspecified payload
+  // A single unnamed point or range with unspecified payload.
   EXPECT_THAT(llvm::Annotations("a$^b").pointWithPayload(), Pair(1u, ""));
   EXPECT_THAT(llvm::Annotations("a$[[b]]cdef").rangeWithPayload(),
               Pair(range(1, 2), ""));
@@ -154,6 +154,73 @@ TEST(AnnotationsTest, Named) {
   EXPECT_EQ(Annotated.point("p2"), 4u);
 }
 
+TEST(AnnotationsTest, CustomMarkers) {
+  // Only point marker customized.
+  auto CustomPoint = llvm::Annotations::Markers().setPoint("~");
+  EXPECT_EQ(
+      llvm::Annotations("foo~bar$nnn[[baz$~[[qux]]]]", CustomPoint).code(),
+      "foobarbazqux");
+
+  // All markers customized.
+  auto AllCustom = llvm::Annotations::Markers()
+                       .setPoint("~")
+                       .setName("@")
+                       .setRangeBegin("{{")
+                       .setRangeEnd("}}");
+
+  // Cleaned code.
+  EXPECT_EQ(llvm::Annotations("foo~bar@nnn{{baz@~{{qux}}}}", AllCustom).code(),
+            "foobarbazqux");
+
+  // A single point.
+  EXPECT_EQ(llvm::Annotations("~ab", AllCustom).point(), 0u);
+  EXPECT_EQ(llvm::Annotations("a~b", AllCustom).point(), 1u);
+
+  // Multiple points.
+  EXPECT_THAT(llvm::Annotations("~a~bc~d~", AllCustom).points(),
+              ElementsAre(0u, 1u, 3u, 4u));
+
+  // A single range.
+  EXPECT_EQ(llvm::Annotations("{{a}}bc", AllCustom).range(), range(0, 1));
+  EXPECT_EQ(llvm::Annotations("a{{bc}}d", AllCustom).range(), range(1, 3));
+
+  // Multiple ranges.
+  EXPECT_THAT(llvm::Annotations("{{a}}{{b}}cd{{ef}}ef", AllCustom).ranges(),
+              ElementsAre(range(0, 1), range(1, 2), range(4, 6)));
+
+  // Named and payloads.
+  EXPECT_EQ(llvm::Annotations("a@foo~b", AllCustom).point("foo"), 1u);
+  EXPECT_THAT(llvm::Annotations("a@name(foo){{b}}cdef", AllCustom)
+                  .rangeWithPayload("name"),
+              Pair(range(1, 2), "foo"));
+
+  // Custom markers with longer tokens.
+  auto Multi = llvm::Annotations::Markers()
+                   .setPoint("-->")
+                   .setName("###")
+                   .setRangeBegin("<<<")
+                   .setRangeEnd(">>>");
+
+  // Cleaned code.
+  EXPECT_EQ(llvm::Annotations("foo-->bar###nnn<<<baz###--><<<qux>>>>>>", Multi)
+                .code(),
+            "foobarbazqux");
+
+  // A single point.
+  EXPECT_EQ(llvm::Annotations("-->ab", Multi).point(), 0u);
+  EXPECT_EQ(llvm::Annotations("a-->b", Multi).point(), 1u);
+
+  // A single range.
+  EXPECT_EQ(llvm::Annotations("<<<a>>>bc", Multi).range(), range(0, 1));
+  EXPECT_EQ(llvm::Annotations("a<<<bc>>>d", Multi).range(), range(1, 3));
+
+  // Named and payloads.
+  EXPECT_EQ(llvm::Annotations("a###foo-->b", Multi).point("foo"), 1u);
+  EXPECT_THAT(llvm::Annotations("a###name(foo)<<<b>>>cdef", Multi)
+                  .rangeWithPayload("name"),
+              Pair(range(1, 2), "foo"));
+}
+
 TEST(AnnotationsTest, Errors) {
   // Annotations use llvm_unreachable, it will only crash in debug mode.
 #ifndef NDEBUG
@@ -179,6 +246,13 @@ TEST(AnnotationsTest, Errors) {
   EXPECT_DEATH(llvm::Annotations("ff$fdsfd"), "unterminated \\$name");
   EXPECT_DEATH(llvm::Annotations("ff$("), "unterminated payload");
   EXPECT_DEATH(llvm::Annotations("ff$name("), "unterminated payload");
+
+  // Parsing failures with custom markers.
+  llvm::Annotations::Markers Custom{"~", "@", "{{", "}}"};
+  EXPECT_DEATH(llvm::Annotations("ff{{fdfd", Custom), "unmatched \\{\\{");
+  EXPECT_DEATH(llvm::Annotations("ff{{fdjs}}xx}}", Custom), "unmatched \\}\\}");
+  EXPECT_DEATH(llvm::Annotations("ff@name^", Custom),
+               "should be followed by ~ or \\{\\{");
 #endif
 }
 } // namespace

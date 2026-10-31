@@ -24,11 +24,6 @@ void constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
                                const InputInfoList &Inputs,
                                const llvm::opt::ArgList &TCArgs, const Tool &T);
 
-// Construct command for creating Object from HIP fatbin.
-void constructGenerateObjFileFromHIPFatBinary(
-    Compilation &C, const InputInfo &Output, const InputInfoList &Inputs,
-    const llvm::opt::ArgList &Args, const JobAction &JA, const Tool &T);
-
 } // namespace HIP
 } // namespace tools
 } // namespace driver

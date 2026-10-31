@@ -47,9 +47,13 @@ class raw_ostream;
   class IndexListEntry : public ilist_node<IndexListEntry> {
     MachineInstr *mi;
     unsigned index;
+    bool erased = false;
 
   public:
     IndexListEntry(MachineInstr *mi, unsigned index) : mi(mi), index(index) {}
+
+    bool isErased() const { return erased; }
+    void setErased() { erased = true; }
 
     MachineInstr* getInstr() const { return mi; }
     void setInstr(MachineInstr *mi) {
@@ -97,6 +101,14 @@ class raw_ostream;
     IndexListEntry* listEntry() const {
       assert(isValid() && "Attempt to compare reserved index.");
       return lie.getPointer();
+    }
+
+    /// For operations that cannot use an erased entry. Comparison still can.
+    IndexListEntry *linkedEntry() const {
+      assert(!listEntry()->isErased() &&
+             "SlotIndex outlived the instruction it pointed at; the analysis "
+             "holding it must retire it when the instruction is erased");
+      return listEntry();
     }
 
     unsigned getIndex() const {
@@ -250,7 +262,7 @@ class raw_ostream;
     SlotIndex getNextSlot() const {
       Slot s = getSlot();
       if (s == Slot_Dead) {
-        return SlotIndex(&*++listEntry()->getIterator(), Slot_Block);
+        return SlotIndex(&*++linkedEntry()->getIterator(), Slot_Block);
       }
       return SlotIndex(listEntry(), s + 1);
     }
@@ -258,7 +270,7 @@ class raw_ostream;
     /// Returns the next index. This is the index corresponding to the this
     /// index's slot, but for the next instruction.
     SlotIndex getNextIndex() const {
-      return SlotIndex(&*++listEntry()->getIterator(), getSlot());
+      return SlotIndex(&*++linkedEntry()->getIterator(), getSlot());
     }
 
     /// Returns the previous slot in the index list. This could be either the
@@ -270,7 +282,7 @@ class raw_ostream;
     SlotIndex getPrevSlot() const {
       Slot s = getSlot();
       if (s == Slot_Block) {
-        return SlotIndex(&*--listEntry()->getIterator(), Slot_Dead);
+        return SlotIndex(&*--linkedEntry()->getIterator(), Slot_Dead);
       }
       return SlotIndex(listEntry(), s - 1);
     }
@@ -278,7 +290,7 @@ class raw_ostream;
     /// Returns the previous index. This is the index corresponding to this
     /// index's slot, but for the previous instruction.
     SlotIndex getPrevIndex() const {
-      return SlotIndex(&*--listEntry()->getIterator(), getSlot());
+      return SlotIndex(&*--linkedEntry()->getIterator(), getSlot());
     }
   };
 
@@ -307,7 +319,7 @@ class raw_ostream;
     using Mi2IndexMap = DenseMap<const MachineInstr *, SlotIndex>;
     Mi2IndexMap mi2iMap;
 
-    /// MBBRanges - Map MBB number to (start, stop) indexes.
+    /// MBBRanges - Map analysis block number to (start, stop) indexes.
     SmallVector<std::pair<SlotIndex, SlotIndex>, 8> MBBRanges;
 
     /// Idx2MBBMap - Sorted list of pairs of index of first instruction
@@ -393,13 +405,27 @@ class raw_ostream;
     /// Returns the instruction for the given index, or null if the given
     /// index has no instruction associated with it.
     MachineInstr* getInstructionFromIndex(SlotIndex index) const {
-      return index.listEntry()->getInstr();
+      return index.linkedEntry()->getInstr();
     }
+
+    /// Returns true if \p Idx refers to an entry created to mark a basic block
+    /// boundary. Such entries never have an instruction attached.
+    LLVM_ABI bool isBlockBoundaryIndex(SlotIndex Idx) const;
+
+    /// Returns true if \p Idx refers to an instruction that has been erased.
+    bool isStaleIndex(SlotIndex Idx) const {
+      return !getInstructionFromIndex(Idx) && !isBlockBoundaryIndex(Idx);
+    }
+
+    /// Returns the register slot of the closest instruction preceding a stale
+    /// \p Idx, or the start index of its basic block if there is none. Returns
+    /// \p Idx unchanged if it is not stale.
+    LLVM_ABI SlotIndex canonicalizeIndex(SlotIndex Idx) const;
 
     /// Returns the next non-null index, if one exists.
     /// Otherwise returns getLastIndex().
     SlotIndex getNextNonNullIndex(SlotIndex Index) {
-      IndexList::iterator I = Index.listEntry()->getIterator();
+      IndexList::iterator I = Index.linkedEntry()->getIterator();
       IndexList::iterator E = indexList.end();
       while (++I != E)
         if (I->getInstr())
@@ -419,6 +445,8 @@ class raw_ostream;
         if (I == B)
           return getMBBStartIdx(MBB);
         --I;
+        if (I->isDebugInstr())
+          continue;
         Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
@@ -436,37 +464,23 @@ class raw_ostream;
         ++I;
         if (I == E)
           return getMBBEndIdx(MBB);
+        if (I->isDebugInstr())
+          continue;
         Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
       }
     }
 
-    /// Return the (start,end) range of the given basic block number.
-    const std::pair<SlotIndex, SlotIndex> &
-    getMBBRange(unsigned Num) const {
-      return MBBRanges[Num];
-    }
-
     /// Return the (start,end) range of the given basic block.
     const std::pair<SlotIndex, SlotIndex> &
     getMBBRange(const MachineBasicBlock *MBB) const {
-      return getMBBRange(MBB->getNumber());
-    }
-
-    /// Returns the first index in the given basic block number.
-    SlotIndex getMBBStartIdx(unsigned Num) const {
-      return getMBBRange(Num).first;
+      return MBBRanges[MBB->getAnalysisNumber()];
     }
 
     /// Returns the first index in the given basic block.
     SlotIndex getMBBStartIdx(const MachineBasicBlock *mbb) const {
       return getMBBRange(mbb).first;
-    }
-
-    /// Returns the index past the last valid index in the given basic block.
-    SlotIndex getMBBEndIdx(unsigned Num) const {
-      return getMBBRange(Num).second;
     }
 
     /// Returns the index past the last valid index in the given basic block.
@@ -621,28 +635,44 @@ class raw_ostream;
       // prevMBB.
       IndexListEntry *startEntry = createEntry(nullptr, 0);
       IndexListEntry *endEntry = getMBBEndIdx(&*prevMBB).listEntry();
+      // Debug and pseudo probe instructions have no index.
+      MachineBasicBlock::iterator FirstIndexed = mbb->getFirstNonDebugInstr();
       IndexListEntry *insEntry =
-          mbb->empty() ? endEntry
-                       : getInstructionIndex(mbb->front()).listEntry();
+          FirstIndexed == mbb->end()
+              ? endEntry
+              : getInstructionIndex(*FirstIndexed).listEntry();
       IndexList::iterator newItr =
           indexList.insert(insEntry->getIterator(), *startEntry);
 
       SlotIndex startIdx(startEntry, SlotIndex::Slot_Block);
       SlotIndex endIdx(endEntry, SlotIndex::Slot_Block);
 
-      MBBRanges[prevMBB->getNumber()].second = startIdx;
+      MBBRanges[prevMBB->getAnalysisNumber()].second = startIdx;
 
-      assert(unsigned(mbb->getNumber()) == MBBRanges.size() &&
+      assert(unsigned(mbb->getAnalysisNumber()) == MBBRanges.size() &&
              "Blocks must be added in order");
       MBBRanges.push_back(std::make_pair(startIdx, endIdx));
-      idx2MBBMap.push_back(IdxMBBPair(startIdx, mbb));
 
       renumberIndexes(newItr);
-      llvm::sort(idx2MBBMap, less_first());
+      auto InsertPt =
+          llvm::partition_point(idx2MBBMap, [=](const IdxMBBPair &IM) {
+            return IM.first < startIdx;
+          });
+      idx2MBBMap.insert(InsertPt, IdxMBBPair(startIdx, mbb));
     }
+
+    /// Inverse of insertMBBInMaps: merge \p MBB's slot range into its layout
+    /// predecessor and drop it from the maps. Call before erasing \p MBB and
+    /// after its instructions have been removed from the maps.
+    LLVM_ABI void removeMBBFromMaps(MachineBasicBlock &MBB);
 
     /// Renumber all indexes using the default instruction distance.
     LLVM_ABI void packIndexes();
+
+    /// Erase index list entries left behind by deleted instructions, then
+    /// renumber. Erased entries are unlinked, so nothing may hold one.
+    /// Returns the number erased.
+    LLVM_ABI unsigned compactIndexes();
   };
 
   // Specialize IntervalMapInfo for half-open slot index intervals.
@@ -659,14 +689,14 @@ class raw_ostream;
     LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
   };
 
-  class SlotIndexesPrinterPass : public PassInfoMixin<SlotIndexesPrinterPass> {
+  class SlotIndexesPrinterPass
+      : public RequiredPassInfoMixin<SlotIndexesPrinterPass> {
     raw_ostream &OS;
 
   public:
     explicit SlotIndexesPrinterPass(raw_ostream &OS) : OS(OS) {}
     LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM);
-    static bool isRequired() { return true; }
   };
 
   class LLVM_ABI SlotIndexesWrapperPass : public MachineFunctionPass {

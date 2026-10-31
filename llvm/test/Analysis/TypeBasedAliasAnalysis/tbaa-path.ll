@@ -13,7 +13,7 @@ define i32 @_Z1gPjP7StructAy(ptr %s, ptr %A, i64 %count) {
 entry:
 ; Access to ptr and &(A->f32).
 ; CHECK: Function
-; CHECK: MayAlias:   store i32 4, ptr %f32, align 4, !tbaa !8 <->   store i32 1, ptr %0, align 4, !tbaa !6
+; CHECK: MayAlias:   store i32 4, ptr %f32, align 4, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %0, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i32 4
@@ -39,7 +39,7 @@ define i32 @_Z2g2PjP7StructAy(ptr %s, ptr %A, i64 %count) {
 entry:
 ; Access to ptr and &(A->f16).
 ; CHECK: Function
-; CHECK: NoAlias:   store i16 4, ptr %1, align 2, !tbaa !8 <->   store i32 1, ptr %0, align 4, !tbaa !6
+; CHECK: NoAlias:   store i16 4, ptr %1, align 2, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %0, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i16 4
@@ -64,7 +64,7 @@ define i32 @_Z2g3P7StructAP7StructBy(ptr %A, ptr %B, i64 %count) {
 entry:
 ; Access to &(A->f32) and &(B->a.f32).
 ; CHECK: Function
-; CHECK: MayAlias:   store i32 4, ptr %f321, align 4, !tbaa !10 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: MayAlias:   store i32 4, ptr %f321, align 4, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i32 4
@@ -93,7 +93,7 @@ define i32 @_Z2g4P7StructAP7StructBy(ptr %A, ptr %B, i64 %count) {
 entry:
 ; Access to &(A->f32) and &(B->a.f16).
 ; CHECK: Function
-; CHECK: NoAlias:   store i16 4, ptr %a, align 2, !tbaa !10 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: NoAlias:   store i16 4, ptr %a, align 2, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i16 4
@@ -121,7 +121,7 @@ define i32 @_Z2g5P7StructAP7StructBy(ptr %A, ptr %B, i64 %count) {
 entry:
 ; Access to &(A->f32) and &(B->f32).
 ; CHECK: Function
-; CHECK: NoAlias:   store i32 4, ptr %f321, align 4, !tbaa !10 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: NoAlias:   store i32 4, ptr %f321, align 4, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i32 4
@@ -149,7 +149,7 @@ define i32 @_Z2g6P7StructAP7StructBy(ptr %A, ptr %B, i64 %count) {
 entry:
 ; Access to &(A->f32) and &(B->a.f32_2).
 ; CHECK: Function
-; CHECK: NoAlias:   store i32 4, ptr %f32_2, align 4, !tbaa !10 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: NoAlias:   store i32 4, ptr %f32_2, align 4, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i32 4
@@ -178,7 +178,7 @@ define i32 @_Z2g7P7StructAP7StructSy(ptr %A, ptr %S, i64 %count) {
 entry:
 ; Access to &(A->f32) and &(S->f32).
 ; CHECK: Function
-; CHECK: NoAlias:   store i32 4, ptr %f321, align 4, !tbaa !10 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: NoAlias:   store i32 4, ptr %f321, align 4, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i32 4
@@ -206,7 +206,7 @@ define i32 @_Z2g8P7StructAP7StructSy(ptr %A, ptr %S, i64 %count) {
 entry:
 ; Access to &(A->f32) and &(S->f16).
 ; CHECK: Function
-; CHECK: NoAlias:   store i16 4, ptr %1, align 2, !tbaa !10 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: NoAlias:   store i16 4, ptr %1, align 2, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i16 4
@@ -233,7 +233,7 @@ define i32 @_Z2g9P7StructSP8StructS2y(ptr %S, ptr %S2, i64 %count) {
 entry:
 ; Access to &(S->f32) and &(S2->f32).
 ; CHECK: Function
-; CHECK: NoAlias:   store i32 4, ptr %f321, align 4, !tbaa !10 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: NoAlias:   store i32 4, ptr %f321, align 4, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i32 4
@@ -261,7 +261,7 @@ define i32 @_Z3g10P7StructSP8StructS2y(ptr %S, ptr %S2, i64 %count) {
 entry:
 ; Access to &(S->f32) and &(S2->f16).
 ; CHECK: Function
-; CHECK: NoAlias:   store i16 4, ptr %1, align 2, !tbaa !10 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: NoAlias:   store i16 4, ptr %1, align 2, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i16 4
@@ -288,7 +288,7 @@ define i32 @_Z3g11P7StructCP7StructDy(ptr %C, ptr %D, i64 %count) {
 entry:
 ; Access to &(C->b.a.f32) and &(D->b.a.f32).
 ; CHECK: Function
-; CHECK: NoAlias:   store i32 4, ptr %f323, align 4, !tbaa !12 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: NoAlias:   store i32 4, ptr %f323, align 4, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i32 4
@@ -322,7 +322,7 @@ define i32 @_Z3g12P7StructCP7StructDy(ptr %C, ptr %D, i64 %count) {
 entry:
 ; Access to &(b1->a.f32) and &(b2->a.f32).
 ; CHECK: Function
-; CHECK: MayAlias:   store i32 4, ptr %f325, align 4, !tbaa !6 <->   store i32 1, ptr %f32, align 4, !tbaa !6
+; CHECK: MayAlias:   store i32 4, ptr %f325, align 4, !tbaa !{{[0-9]+}} <->   store i32 1, ptr %f32, align 4, !tbaa !{{[0-9]+}}
 ; OPT: define
 ; OPT: store i32 1
 ; OPT: store i32 4

@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -26,20 +27,17 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "SparcGenInstrInfo.inc"
 
-static cl::opt<unsigned> BPccDisplacementBits(
-    "sparc-bpcc-offset-bits", cl::Hidden, cl::init(19),
-    cl::desc("Restrict range of BPcc/FBPfcc instructions (DEBUG)"));
-
-static cl::opt<unsigned>
-    BPrDisplacementBits("sparc-bpr-offset-bits", cl::Hidden, cl::init(16),
-                        cl::desc("Restrict range of BPr instructions (DEBUG)"));
-
 // Pin the vtable to this file.
 void SparcInstrInfo::anchor() {}
 
 SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
     : SparcGenInstrInfo(ST, RI, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP),
       RI(ST), Subtarget(ST) {}
+
+const TargetRegisterClass *SparcInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return Subtarget.is64Bit() ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
+}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of
@@ -267,7 +265,8 @@ SparcInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case SP::BPRA:
   case SP::BPRNT:
   case SP::BPRANT:
-      return MI.getOperand(0).getMBB();
+  case SP::CALL_LONGJUMP:
+    return MI.getOperand(0).getMBB();
   }
 }
 
@@ -394,6 +393,74 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
+void SparcInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                          MachineBasicBlock &NewDestBB,
+                                          MachineBasicBlock &RestoreBB,
+                                          const DebugLoc &DL, int64_t BrOffset,
+                                          RegScavenger *RS) const {
+  assert(RS && "RegScavenger required for long branching");
+  assert(MBB.empty() &&
+         "new block should be inserted for expanding unconditional branch");
+  assert(MBB.pred_size() == 1 && "should only have a single predecessor");
+  assert(RestoreBB.empty() &&
+         "restore block should be inserted for restoring clobbered registers");
+
+  MachineFunction *MF = MBB.getParent();
+  SparcMachineFunctionInfo *SMFI = MF->getInfo<SparcMachineFunctionInfo>();
+
+  if (!isInt<32>(BrOffset))
+    report_fatal_error(
+        "Branch offsets outside of the signed 32-bit range not supported");
+  RS->enterBasicBlockEnd(MBB);
+
+  // A SPARC CALL instruction already has signed 32-bit range, so we'll use it
+  // instead of actually emitting an indirect branch.
+  //
+  // Note that using CALLs to do unconditional long-range branch in this manner
+  // should only be done if the target is out of range of a regular BA
+  // instruction, given that CALLS will always clobber %o7 and interfere with
+  // the processor's predictor machinery.
+  bool IsO7Used = RS->isRegUsed(SP::O7);
+  Register ScratchReg = RS->FindUnusedReg(&SP::IntRegsRegClass);
+  int FI = SMFI->getBranchRelaxationSpillFrameIndex();
+  if (IsO7Used) {
+    if (ScratchReg.isValid()) {
+      BuildMI(&MBB, DL, get(SP::ORrr), ScratchReg)
+          .addReg(SP::G0)
+          .addReg(SP::O7, RegState::Kill);
+      RS->setRegUsed(ScratchReg);
+    } else {
+      // In case we run out of usable registers we'll spill it into the stack.
+      if (FI == -1)
+        report_fatal_error("The function size is incorrectly estimated.");
+      const MCRegisterClass &RC =
+          Subtarget.is64Bit() ? SP::I64RegsRegClass : SP::IntRegsRegClass;
+
+      MachineBasicBlock::iterator I = MBB.end();
+      storeRegToStackSlot(MBB, I, SP::O7, true, FI, &RC, Register());
+      TRI.eliminateFrameIndex(std::prev(I), 0, 0, RS);
+    }
+  }
+
+  BuildMI(&MBB, DL, get(SP::CALL_LONGJUMP))
+      .addMBB(IsO7Used ? &RestoreBB : &NewDestBB);
+
+  if (IsO7Used) {
+    if (ScratchReg.isValid()) {
+      BuildMI(&RestoreBB, DL, get(SP::ORrr), SP::O7)
+          .addReg(SP::G0)
+          .addReg(ScratchReg, RegState::Kill);
+    } else {
+      const MCRegisterClass &RC =
+          Subtarget.is64Bit() ? SP::I64RegsRegClass : SP::IntRegsRegClass;
+
+      MachineBasicBlock::iterator I = RestoreBB.begin();
+      loadRegFromStackSlot(RestoreBB, I, SP::O7, FI, &RC, Register());
+      TRI.eliminateFrameIndex(std::prev(I), 0, 1, RS);
+    }
+  }
+}
+
 unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                       int *BytesRemoved) const {
   MachineBasicBlock::iterator I = MBB.end();
@@ -432,6 +499,9 @@ bool SparcInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
                                            int64_t Offset) const {
   assert((Offset & 0b11) == 0 && "Malformed branch offset");
   switch (BranchOpc) {
+  case SP::CALL_LONGJUMP:
+    return isIntN(30, Offset >> 2);
+
   case SP::BA:
   case SP::BCOND:
   case SP::BCONDA:
@@ -453,13 +523,13 @@ bool SparcInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   case SP::BPFCCANT:
   case SP::FBCOND_V9:
   case SP::FBCONDA_V9:
-    return isIntN(BPccDisplacementBits, Offset >> 2);
+    return isIntN(Subtarget.getCLOpts().bpcc_offset_bits, Offset >> 2);
 
   case SP::BPR:
   case SP::BPRA:
   case SP::BPRNT:
   case SP::BPRANT:
-    return isIntN(BPrDisplacementBits, Offset >> 2);
+    return isIntN(Subtarget.getCLOpts().bpr_offset_bits, Offset >> 2);
   }
 
   llvm_unreachable("Unknown branch instruction!");
@@ -651,9 +721,44 @@ Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
 
   DebugLoc dl;
 
-  BuildMI(FirstMBB, MBBI, dl, get(SP::GETPCX), GlobalBaseReg);
+  BuildMI(FirstMBB, MBBI, dl, get(SP::GETPCX), GlobalBaseReg)
+      .setOperandDead(1); // implicit-def $o7
   SparcFI->setGlobalBaseReg(GlobalBaseReg);
   return GlobalBaseReg;
+}
+
+bool SparcInstrInfo::needsUnimp(const MachineInstr &MI,
+                                unsigned &StructSize) const {
+  if (!MI.isCall())
+    return false;
+
+  unsigned StructSizeOpNum = 0;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown call opcode.");
+  case SP::CALL:
+    StructSizeOpNum = 1;
+    break;
+  case SP::CALLrr:
+  case SP::CALLri:
+    StructSizeOpNum = 2;
+    break;
+  case SP::TLS_CALL:
+    return false;
+  case SP::TAIL_CALLri:
+  case SP::TAIL_CALL:
+    return false;
+  }
+
+  const MachineOperand &MO = MI.getOperand(StructSizeOpNum);
+  if (!MO.isImm())
+    return false;
+
+  // A zero-sized return value has nothing for the callee to copy, so GCC emits
+  // no unimp for it and returns to the instruction right after the delay slot.
+  // We replicate this behavior here.
+  StructSize = MO.getImm();
+  return StructSize != 0;
 }
 
 unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
@@ -662,8 +767,11 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (MI.isInlineAsm()) {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
+
+  if (Opcode == TargetOpcode::BUNDLE)
+    return getInstBundleSize(MI);
 
   if (MI.getOpcode() == SP::GETPCX) {
     const TargetMachine &TM = MI.getParent()->getParent()->getTarget();
@@ -684,8 +792,10 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   // If the instruction has a delay slot, be conservative and also include
   // it for sizing purposes. This is done so that the BranchRelaxation pass
   // will not mistakenly mark out-of-range branches as in-range.
-  if (MI.hasDelaySlot())
-    return get(Opcode).getSize() * 2;
+  if (MI.hasDelaySlot()) {
+    unsigned StructSize = 0;
+    return get(Opcode).getSize() * (2 + needsUnimp(MI, StructSize));
+  }
   return get(Opcode).getSize();
 }
 

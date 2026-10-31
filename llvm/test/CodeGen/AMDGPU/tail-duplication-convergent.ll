@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -O2 -tail-dup-size=1000 -tail-dup-placement-threshold=1000 -enable-tail-merge=0 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.01-amd-amdhsa -O2 -tail-dup-size=1000 -tail-dup-placement-threshold=1000 -enable-tail-merge=0 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Need to to trigger tail duplication this during
 ; MachineBlockPlacement, since calls aren't tail duplicated pre-RA.

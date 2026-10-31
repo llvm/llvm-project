@@ -18,6 +18,8 @@
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -144,6 +146,11 @@ public:
 
   template <typename OpTy> OpTy getDefiningOp() const {
     return mlir::dyn_cast_or_null<OpTy>(getDefiningOp());
+  }
+
+  /// Return the underlying alloca for this address, if any.
+  cir::AllocaOp getUnderlyingAllocaOp() const {
+    return cir::getUnderlyingAlloca(getPointer());
   }
 
   /// Whether the pointer is known not to be null.

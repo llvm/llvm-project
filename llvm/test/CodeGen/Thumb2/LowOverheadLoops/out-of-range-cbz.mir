@@ -204,7 +204,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $r1, $r3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   tSTRi killed renamable $r3, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into @e)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.j.us.us.preheader:
@@ -234,7 +234,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.8(0x40000000), %bb.6(0x40000000)
   ; CHECK-NEXT:   liveins: $lr, $r2, $r12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
   ; CHECK-NEXT:   tCBZ renamable $r3, %bb.8
   ; CHECK-NEXT:   t2LE %bb.6
@@ -243,7 +243,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.9(0x40000000), %bb.6(0x40000000)
   ; CHECK-NEXT:   liveins: $lr, $r2, $r12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
   ; CHECK-NEXT:   tCBZ renamable $r3, %bb.9
   ; CHECK-NEXT:   t2LE %bb.6
@@ -252,7 +252,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.10(0x40000000), %bb.6(0x40000000)
   ; CHECK-NEXT:   liveins: $lr, $r2, $r12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
   ; CHECK-NEXT:   tCBZ renamable $r3, %bb.10
   ; CHECK-NEXT:   t2LE %bb.6
@@ -261,7 +261,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.11(0x40000000), %bb.6(0x40000000)
   ; CHECK-NEXT:   liveins: $lr, $r2, $r12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
   ; CHECK-NEXT:   tCBZ renamable $r3, %bb.11
   ; CHECK-NEXT:   t2LE %bb.6
@@ -270,7 +270,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.12(0x40000000), %bb.6(0x40000000)
   ; CHECK-NEXT:   liveins: $lr, $r2, $r12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
   ; CHECK-NEXT:   tCBZ renamable $r3, %bb.12
   ; CHECK-NEXT:   t2LE %bb.6
@@ -279,7 +279,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.13(0x40000000), %bb.6(0x40000000)
   ; CHECK-NEXT:   liveins: $lr, $r2, $r12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
   ; CHECK-NEXT:   tCBZ renamable $r3, %bb.13
   ; CHECK-NEXT:   t2LE %bb.6
@@ -288,13 +288,13 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.14(0x04000000), %bb.6(0x7c000000)
   ; CHECK-NEXT:   liveins: $lr, $r2, $r12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   renamable $r3 = t2LDRi12 renamable $r12, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
   ; CHECK-NEXT:   tCBZ renamable $r3, %bb.14
   ; CHECK-NEXT:   t2LE %bb.6
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.14.if.end.us.us.us.7:
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.15.j.us27.preheader:
@@ -323,7 +323,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $r1, $r3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   tSTRi killed renamable $r3, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into @e)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x30000000), %bb.11(0x50000000)
@@ -370,7 +370,7 @@ body:             |
     liveins: $r1, $r3
 
     tSTRi killed renamable $r3, killed renamable $r1, 0, 14, $noreg :: (store (s32) into @e)
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     tPOP_RET 14, $noreg, def $r7, def $pc
 
   bb.1.j.us.us.preheader:
@@ -400,7 +400,7 @@ body:             |
     successors: %bb.4(0x40000000), %bb.2(0x40000000)
     liveins: $lr, $r2, $r12
 
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     renamable $r3 = t2LDRi12 renamable $r12, 0, 14, $noreg :: (dereferenceable load (s32) from @d)
     tCMPi8 renamable $r3, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 1, killed $cpsr
@@ -409,7 +409,7 @@ body:             |
     successors: %bb.5(0x40000000), %bb.2(0x40000000)
     liveins: $lr, $r2, $r12
 
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     renamable $r3 = t2LDRi12 renamable $r12, 0, 14, $noreg :: (dereferenceable load (s32) from @d)
     tCMPi8 renamable $r3, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 1, killed $cpsr
@@ -418,7 +418,7 @@ body:             |
     successors: %bb.6(0x40000000), %bb.2(0x40000000)
     liveins: $lr, $r2, $r12
 
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     renamable $r3 = t2LDRi12 renamable $r12, 0, 14, $noreg :: (dereferenceable load (s32) from @d)
     tCMPi8 renamable $r3, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 1, killed $cpsr
@@ -427,7 +427,7 @@ body:             |
     successors: %bb.7(0x40000000), %bb.2(0x40000000)
     liveins: $lr, $r2, $r12
 
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     renamable $r3 = t2LDRi12 renamable $r12, 0, 14, $noreg :: (dereferenceable load (s32) from @d)
     tCMPi8 renamable $r3, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 1, killed $cpsr
@@ -436,7 +436,7 @@ body:             |
     successors: %bb.8(0x40000000), %bb.2(0x40000000)
     liveins: $lr, $r2, $r12
 
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     renamable $r3 = t2LDRi12 renamable $r12, 0, 14, $noreg :: (dereferenceable load (s32) from @d)
     tCMPi8 renamable $r3, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 1, killed $cpsr
@@ -445,7 +445,7 @@ body:             |
     successors: %bb.9(0x40000000), %bb.2(0x40000000)
     liveins: $lr, $r2, $r12
 
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     renamable $r3 = t2LDRi12 renamable $r12, 0, 14, $noreg :: (dereferenceable load (s32) from @d)
     tCMPi8 renamable $r3, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 1, killed $cpsr
@@ -454,13 +454,13 @@ body:             |
     successors: %bb.10(0x04000000), %bb.2(0x7c000000)
     liveins: $lr, $r2, $r12
 
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     renamable $r3 = t2LDRi12 renamable $r12, 0, 14, $noreg :: (dereferenceable load (s32) from @d)
     tCMPi8 renamable $r3, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.2, 1, killed $cpsr
 
   bb.10.if.end.us.us.us.7:
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     tPOP_RET 14, $noreg, def $r7, def $pc
 
   bb.15.j.us27.preheader:
@@ -489,7 +489,7 @@ body:             |
     liveins: $r1, $r3
 
     tSTRi killed renamable $r3, killed renamable $r1, 0, 14, $noreg :: (store (s32) into @e)
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     tPOP_RET 14, $noreg, def $r7, def $pc
 
 ...

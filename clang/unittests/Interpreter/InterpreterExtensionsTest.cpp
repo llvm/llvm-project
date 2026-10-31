@@ -13,6 +13,7 @@
 #include "InterpreterTestFixture.h"
 
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/OrcIncrementalExecutorBuilder.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -65,6 +66,7 @@ public:
   }
 };
 
+#ifndef __EMSCRIPTEN__
 class CustomJBInterpreter : public Interpreter {
   using CustomJITBuilderCreatorFunction =
       std::function<llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>()>;
@@ -124,7 +126,7 @@ TEST_F(InterpreterExtensionsTest, CustomCrossJIT) {
     JIT = &J;
     return llvm::Error::success();
   });
-  auto IEB = std::make_unique<IncrementalExecutorBuilder>();
+  auto IEB = std::make_unique<OrcIncrementalExecutorBuilder>();
   IEB->JITBuilder = std::move(JB);
   llvm::Error ErrOut = llvm::Error::success();
   CustomJBInterpreter Interp(std::move(CI), ErrOut, std::move(IEB));
@@ -137,6 +139,8 @@ TEST_F(InterpreterExtensionsTest, CustomCrossJIT) {
   EXPECT_NE(0U, Addr.getValue());
   EXPECT_EQ(1U, Objs.size());
 }
+
+#endif // __EMSCRIPTEN__
 
 TEST_F(InterpreterExtensionsTest, CustomIncrementalExecutor) {
   struct RecordingIncrementalExecutor : public clang::IncrementalExecutor {
@@ -178,7 +182,7 @@ TEST_F(InterpreterExtensionsTest, CustomIncrementalExecutor) {
   };
 
   // Prepare a builder that hands out our recording executor.
-  auto B = std::make_unique<IncrementalExecutorBuilder>();
+  auto B = IncrementalExecutorBuilder::createDefault();
   B->IE = std::make_unique<RecordingIncrementalExecutor>();
 
   IncrementalCompilerBuilder CB;

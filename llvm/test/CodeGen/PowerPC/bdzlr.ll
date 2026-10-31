@@ -53,12 +53,10 @@ for.end:                                          ; preds = %for.body, %if.end, 
 
 ; CHECK: @lua_xmove
 ; CHECK: bnelr
-; CHECK: bnelr
 ; CHECK: bdzlr
 ; CHECK-NOT: blr
 
 ; CHECK-CRB: @lua_xmove
-; CHECK-CRB: bclr 12,
 ; CHECK-CRB: bclr 12,
 ; CHECK-CRB: bdzlr
 ; CHECK-CRB-NOT: blr

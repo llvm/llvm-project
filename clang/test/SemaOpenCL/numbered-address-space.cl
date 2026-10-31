@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -verify -pedantic -fsyntax-only %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu-amd-amdhsa -verify -pedantic -fsyntax-only %s
 
 void test_numeric_as_to_generic_implicit_cast(__attribute__((address_space(3))) int *as3_ptr, float src) {
   generic int* generic_ptr = as3_ptr; // FIXME: This should error

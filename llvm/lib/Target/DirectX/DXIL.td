@@ -59,6 +59,7 @@ def SplitDoubleTy : DXILOpParamType;
 def BinaryWithCarryTy : DXILOpParamType;
 def DimensionsTy : DXILOpParamType;
 def Fouri32s : DXILOpParamType;
+def TwoI32Ty : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -411,6 +412,27 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 //
 // This are sorted by ascending value of the DXIL Opcodes
 
+def LoadInput : DXILOp<4, loadInput> {
+  let Doc = "Loads a scalar value from a shader input register component.";
+  let intrinsics = [IntrinSelect<int_dx_load_input>];
+  // inputSigId, rowIndex, colIndex, gsVertexOrPrimIndex
+  let arguments = [Int32Ty, Int32Ty, Int8Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def StoreOutput : DXILOp<5, storeOutput> {
+  let Doc = "Stores a scalar value to a shader output register component.";
+  let intrinsics = [IntrinSelect<int_dx_store_output>];
+  // outputSigId, rowIndex, colIndex, value
+  let arguments = [Int32Ty, Int32Ty, Int8Ty, OverloadTy];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def Abs : DXILOp<6, unary> {
   let Doc = "Returns the absolute value of the input.";
   let intrinsics = [IntrinSelect<int_fabs>];
@@ -454,6 +476,7 @@ def IsInf : DXILOp<9, isSpecialFloat> {
 
 def IsFinite : DXILOp<10, isSpecialFloat> {
   let Doc = "Determines if the specified value is finite.";
+  let intrinsics = [IntrinSelect<int_dx_isfinite>];
   let arguments = [OverloadTy];
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -800,6 +823,28 @@ def Fma : DXILOp<47, tertiary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def IMul : DXILOp<41, binaryWithTwoOuts> {
+  let Doc = "Signed integer multiply returning the high and low halves of the "
+            "full-width product.";
+  let intrinsics = [IntrinSelect<int_dx_imul>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = TwoI32Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def UMul : DXILOp<42, binaryWithTwoOuts> {
+  let Doc = "Unsigned integer multiply returning the high and low halves of the "
+            "full-width product.";
+  let intrinsics = [IntrinSelect<int_dx_umul>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = TwoI32Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def IMad : DXILOp<48, tertiary> {
   let Doc = "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m "
             "* a + b.";
@@ -880,6 +925,97 @@ def CBufferLoadLegacy : DXILOp<59, cbufferLoadLegacy> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def Sample : DXILOp<60, sample> {
+  let Doc = "samples a texture";
+  // Handle, Sampler, Coord0, Coord1, Coord2, Coord3,
+  // Offset0, Offset1, Offset2, Clamp
+  let arguments = [HandleTy, HandleTy, FloatTy, FloatTy, FloatTy, FloatTy,
+                   Int32Ty, Int32Ty, Int32Ty, FloatTy];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [ResRetHalfTy, ResRetFloatTy]>,
+       Overloads<DXIL1_7,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>,
+                Stages<DXIL1_6, [library, pixel, compute, amplification, mesh,
+                                 node]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def SampleBias : DXILOp<61, sampleBias> {
+  let Doc = "samples a texture after applying the input bias to the mip level";
+  // Handle, Sampler, Coord0, Coord1, Coord2, Coord3,
+  // Offset0, Offset1, Offset2, Bias, Clamp
+  let arguments = [HandleTy, HandleTy, FloatTy, FloatTy, FloatTy, FloatTy,
+                   Int32Ty, Int32Ty, Int32Ty, FloatTy, FloatTy];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [ResRetHalfTy, ResRetFloatTy]>,
+       Overloads<DXIL1_7,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>,
+                Stages<DXIL1_6, [library, pixel, compute, amplification, mesh,
+                                 node]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def SampleLevel : DXILOp<62, sampleLevel> {
+  let Doc = "samples a texture using a mipmap-level offset";
+  // Handle, Sampler, Coord0, Coord1, Coord2, Coord3,
+  // Offset0, Offset1, Offset2, LOD
+  let arguments = [HandleTy, HandleTy, FloatTy, FloatTy, FloatTy, FloatTy,
+                   Int32Ty, Int32Ty, Int32Ty, FloatTy];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [ResRetHalfTy, ResRetFloatTy]>,
+       Overloads<DXIL1_7,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def SampleGrad : DXILOp<63, sampleGrad> {
+  let Doc = "samples a texture using a gradient to influence the way the sample "
+            "location is calculated";
+  // Handle, Sampler, Coord0, Coord1, Coord2, Coord3,
+  // Offset0, Offset1, Offset2, DDX0, DDX1, DDX2, DDY0, DDY1, DDY2, Clamp
+  let arguments = [HandleTy, HandleTy, FloatTy, FloatTy, FloatTy, FloatTy,
+                   Int32Ty, Int32Ty, Int32Ty, FloatTy, FloatTy, FloatTy,
+                   FloatTy, FloatTy, FloatTy, FloatTy];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [ResRetHalfTy, ResRetFloatTy]>,
+       Overloads<DXIL1_7,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def TextureLoad : DXILOp<66, textureLoad> {
+  let Doc = "reads from a texture resource";
+  // Handle, MipLevelOrSampleCount, Coord0, Coord1, Coord2, Offset0, Offset1, Offset2
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, Int32Ty,
+                   Int32Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def TextureStore : DXILOp<67, textureStore> {
+  let Doc = "writes to an RWTexture";
+  // Handle, Coord0, Coord1, Coord2, Val0, Val1, Val2, Val3, Mask
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy,
+    OverloadTy, Int8Ty
+  ];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def BufferLoad : DXILOp<68, bufferLoad> {
   let Doc = "reads from a TypedBuffer";
   // Handle, Coord0, Coord1
@@ -928,9 +1064,39 @@ def GetDimensions : DXILOp<72, getDimensions> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def AtomicBinOp : DXILOp<78, atomicBinOp> {
+  let Doc = "performs an atomic read-modify-write on a UAV resource "
+            "element, returning the original value";
+  // Handle, AtomicBinOpCode, Coord0, Coord1, Coord2, NewValue
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>,
+                   Overloads<DXIL1_6, [Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def AtomicCompareExchange : DXILOp<79, atomicCompareExchange> {
+  let Doc = "performs an atomic compare-exchange on a UAV resource element, "
+            "returning the original value";
+  // Handle, Coord0, Coord1, Coord2, CompareValue, NewValue
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, OverloadTy, OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>,
+                   Overloads<DXIL1_6, [Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsics = [
+    IntrinSelect<int_dx_all_memory_barrier,
+                 [IntrinArgI32<BarrierMode_AllMemoryBarrier>]>,
+    IntrinSelect<int_dx_all_memory_barrier_with_group_sync,
+                 [IntrinArgI32<BarrierMode_AllMemoryBarrierWithGroupSync>]>,
+    IntrinSelect<int_dx_device_memory_barrier,
+                 [IntrinArgI32<BarrierMode_DeviceMemoryBarrier>]>,
+    IntrinSelect<int_dx_device_memory_barrier_with_group_sync,
+                 [IntrinArgI32<BarrierMode_DeviceMemoryBarrierWithGroupSync>]>,
     IntrinSelect<int_dx_group_memory_barrier,
                  [IntrinArgI32<BarrierMode_GroupMemoryBarrier>]>,
     IntrinSelect<int_dx_group_memory_barrier_with_group_sync,
@@ -985,6 +1151,15 @@ def DerivFineY : DXILOp<86, unary> {
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
   let stages = [Stages<DXIL1_0, [library, pixel]>];
+}
+
+def SampleIndex : DXILOp<90, sampleIndex> {
+  let Doc = "returns the sample index in a sample-frequency pixel shader";
+  let intrinsics = [IntrinSelect<int_dx_sample_index>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [pixel]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def ThreadId : DXILOp<93, threadId> {
@@ -1064,6 +1239,15 @@ def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def WaveGetLaneCount : DXILOp<112, waveGetLaneCount> {
+  let Doc = "returns the number of lanes in a wave on this architecture";
+  let intrinsics = [IntrinSelect<int_dx_wave_get_lane_count>];
+  let arguments = [];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
 def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
   let Doc = "returns true if the expression is true in any of the active lanes "
             "in the current wave";
@@ -1103,6 +1287,16 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let Doc = "returns the value from the specified lane";
   let intrinsics = [IntrinSelect<int_dx_wave_readlane>];
   let arguments = [OverloadTy, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<
+      DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def WaveReadLaneFirst : DXILOp<118, waveReadLaneFirst> {
+  let Doc = "returns the value from the first active lane";
+  let intrinsics = [IntrinSelect<int_dx_wave_readlane_first>];
+  let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<
       DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
@@ -1168,7 +1362,7 @@ def WaveActiveBit : DXILOp<120, waveActiveBit> {
   let intrinsics = [
     IntrinSelect<int_dx_wave_reduce_or,
                  [
-                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,                   
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,
                  ]>,
     IntrinSelect<int_dx_wave_reduce_xor,
                  [
@@ -1234,6 +1428,10 @@ def QuadOp : DXILOp<123, quadOp> {
                  [
                    IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossY>
                  ]>,
+    IntrinSelect<int_dx_quad_read_across_diagonal,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<QuadOpKind_ReadAcrossDiagonal>
+                 ]>,
   ];
 
   let arguments = [OverloadTy, Int8Ty];
@@ -1278,6 +1476,16 @@ def WaveAllBitCount : DXILOp<135, waveAllOp> {
   let arguments = [Int1Ty];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def ViewID : DXILOp<138, viewID> {
+  let Doc = "returns the view index";
+  let intrinsics = [IntrinSelect<int_dx_view_id>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_1, [Int32Ty]>];
+  let stages =
+      [Stages<DXIL1_1, [vertex, hull, domain, geometry, pixel, mesh]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def RawBufferLoad : DXILOp<139, rawBufferLoad> {
@@ -1362,5 +1570,47 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
+  let Doc = "create resource handle from heap";
+  let arguments = [Int32Ty, Int1Ty, Int1Ty];
+  let result = HandleTy;
+  let stages = [Stages<DXIL1_6, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def BarrierByMemoryType : DXILOp<244, barrierByMemoryType> {
+  let Doc = "inserts a memory barrier for the specified memory types";
+  let intrinsics = [IntrinSelect<int_dx_barrier_by_memory_type>];
+  let arguments = [Int32Ty, Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_8, [all_stages]>];
+}
+
+def BarrierByMemoryHandle : DXILOp<245, barrierByMemoryHandle> {
+  let Doc = "inserts a memory barrier for the resource identified by a handle";
+  let arguments = [HandleTy, Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_8, [all_stages]>];
+}
+
+def StartVertexLocation : DXILOp<256, startVertexLocation> {
+  let Doc = "returns the BaseVertexLocation from DrawIndexedInstanced or "
+            "StartVertexLocation from DrawInstanced";
+  let intrinsics = [IntrinSelect<int_dx_start_vertex_location>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_8, [Int32Ty]>];
+  let stages = [Stages<DXIL1_8, [vertex]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def StartInstanceLocation : DXILOp<257, startInstanceLocation> {
+  let Doc = "returns the StartInstanceLocation from Draw*Instanced";
+  let intrinsics = [IntrinSelect<int_dx_start_instance_location>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_8, [Int32Ty]>];
+  let stages = [Stages<DXIL1_8, [vertex]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }

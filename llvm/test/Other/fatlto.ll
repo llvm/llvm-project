@@ -4,4 +4,4 @@
 ; CHECK: Running pass: EmbedBitcodePass on [module]
 ; THINLTO: Running analysis: ModuleSummaryIndexAnalysis on [module]
 ; CHECK: Running pass: FatLtoCleanup on [module]
-; CHECK-NEXT: Running pass: LowerTypeTestsPass on [module]
+; CHECK-NEXT: Running pass: DropTypeTestsPass on [module]

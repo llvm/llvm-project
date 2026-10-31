@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -hlsl-entry entry -ast-dump -o - %s | FileCheck %s
 // CHECK: NamespaceDecl {{.*}} implicit referenced hlsl
 // CHECK: TypeAliasTemplateDecl {{.*}} implicit referenced vector
 // CHECK-NEXT: TemplateTypeParmDecl {{.*}} class depth 0 index 0 element
@@ -17,8 +17,9 @@
 // Make sure we got a using directive at the end.
 // CHECK: UsingDirectiveDecl {{.*}} Namespace {{.*}} 'hlsl'
 
+[shader("compute")]
 [numthreads(1,1,1)]
-int entry() {
+void entry() {
   // Verify that the alias is generated inside the hlsl namespace.
   hlsl::vector<float, 2> Vec2 = {1.0, 2.0};
 
@@ -48,5 +49,5 @@ int entry() {
 
   // CHECK: DeclStmt
   // CHECK-NEXT: VarDecl {{.*}} ImpVec4 'vector<>':'vector<float, 4>' cinit
-  return 1;
+  return;
 }

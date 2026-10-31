@@ -6,16 +6,19 @@ add_mlir_upstream_c_api_library(MLIRCAPIIR
   BuiltinTypes.cpp
   Diagnostics.cpp
   DialectHandle.cpp
+  Dominance.cpp
   ExtensibleDialect.cpp
   IntegerSet.cpp
   IR.cpp
   Pass.cpp
+  Remarks.cpp
   Support.cpp
 
   LINK_LIBS PUBLIC
   MLIRBytecodeWriter
   MLIRIR
   MLIRParser
+  MLIRRemarkStreamer
   MLIRSupport
   MLIRPass
 )

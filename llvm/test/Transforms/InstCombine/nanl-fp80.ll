@@ -7,7 +7,7 @@
 
 define x86_fp80 @nanl_empty() {
 ; CHECK-LABEL: define x86_fp80 @nanl_empty() {
-; CHECK-NEXT:    ret x86_fp80 0xK7FFFC000000000000000
+; CHECK-NEXT:    ret x86_fp80 +qnan
 ;
   %res = call x86_fp80 @nanl(ptr @empty)
   ret x86_fp80 %res
@@ -15,7 +15,7 @@ define x86_fp80 @nanl_empty() {
 
 define x86_fp80 @nanl_dec() {
 ; CHECK-LABEL: define x86_fp80 @nanl_dec() {
-; CHECK-NEXT:    ret x86_fp80 0xK7FFFC000000000000001
+; CHECK-NEXT:    ret x86_fp80 +nan(0x1)
 ;
   %res = call x86_fp80 @nanl(ptr @dec)
   ret x86_fp80 %res
@@ -23,7 +23,7 @@ define x86_fp80 @nanl_dec() {
 
 define x86_fp80 @nanl_hex() {
 ; CHECK-LABEL: define x86_fp80 @nanl_hex() {
-; CHECK-NEXT:    ret x86_fp80 0xK7FFFC00000000000000F
+; CHECK-NEXT:    ret x86_fp80 +nan(0xF)
 ;
   %res = call x86_fp80 @nanl(ptr @hex)
   ret x86_fp80 %res

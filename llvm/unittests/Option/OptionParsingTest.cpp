@@ -20,10 +20,6 @@ using namespace llvm::opt;
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -32,13 +28,8 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
+#define OPTTABLE_VALUES_CODE
 #include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_UNION_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_UNION_CODE
 
 enum OptionFlags {
   OptFlag1 = (1 << 4),
@@ -51,25 +42,15 @@ enum OptionVisibility {
   MultiLineVis = (1 << 3),
 };
 
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTION
-};
 
 namespace {
-class TestOptTable : public GenericOptTable {
+class TestOptTable : public OptTable {
 public:
-  TestOptTable(bool IgnoreCase = false)
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                        IgnoreCase) {}
-};
-
-class TestPrecomputedOptTable : public PrecomputedOptTable {
-public:
-  TestPrecomputedOptTable(bool IgnoreCase = false)
-      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                            OptionPrefixesUnion, IgnoreCase) {}
+  TestOptTable(bool IgnoreCase = false) : OptTable(optionTables(), IgnoreCase) {
+    setValuesCodeFn(getOptionValuesCode);
+  }
 };
 }
 
@@ -85,20 +66,8 @@ const char *Args[] = {
   "-Gchuu", "2"
   };
 
-// Test fixture
-template <typename T> class OptTableTest : public ::testing::Test {};
-
-template <typename T> class DISABLED_OptTableTest : public ::testing::Test {};
-
-// Test both precomputed and computed OptTables with the same suite of tests.
-using OptTableTestTypes =
-    ::testing::Types<TestOptTable, TestPrecomputedOptTable>;
-
-TYPED_TEST_SUITE(OptTableTest, OptTableTestTypes, );
-TYPED_TEST_SUITE(DISABLED_OptTableTest, OptTableTestTypes, );
-
-TYPED_TEST(OptTableTest, OptionParsing) {
-  TypeParam T;
+TEST(OptTableTest, OptionParsing) {
+  TestOptTable T;
   unsigned MAI, MAC;
   InputArgList AL = T.ParseArgs(Args, MAI, MAC);
 
@@ -144,8 +113,8 @@ TYPED_TEST(OptTableTest, OptionParsing) {
   EXPECT_EQ("desu", StringRef(ASL[1]));
 }
 
-TYPED_TEST(OptTableTest, ParseWithFlagExclusions) {
-  TypeParam T;
+TEST(OptTableTest, ParseWithFlagExclusions) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   // Exclude flag3 to avoid parsing as OPT_SLASH_C.
@@ -172,8 +141,8 @@ TYPED_TEST(OptTableTest, ParseWithFlagExclusions) {
   EXPECT_EQ("bar", AL.getLastArgValue(OPT_C));
 }
 
-TYPED_TEST(OptTableTest, ParseWithVisibility) {
-  TypeParam T;
+TEST(OptTableTest, ParseWithVisibility) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *STArgs[] = {"-A", "-Q", "-R"};
@@ -209,8 +178,8 @@ TYPED_TEST(OptTableTest, ParseWithVisibility) {
   EXPECT_TRUE(AL.hasArg(OPT_R));
 }
 
-TYPED_TEST(OptTableTest, ParseAliasInGroup) {
-  TypeParam T;
+TEST(OptTableTest, ParseAliasInGroup) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-I" };
@@ -218,8 +187,8 @@ TYPED_TEST(OptTableTest, ParseAliasInGroup) {
   EXPECT_TRUE(AL.hasArg(OPT_H));
 }
 
-TYPED_TEST(OptTableTest, AliasArgs) {
-  TypeParam T;
+TEST(OptTableTest, AliasArgs) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-J", "-Joo" };
@@ -229,8 +198,29 @@ TYPED_TEST(OptTableTest, AliasArgs) {
   EXPECT_EQ("bar", AL.getAllArgValues(OPT_B)[1]);
 }
 
-TYPED_TEST(OptTableTest, IgnoreCase) {
-  TypeParam T(true);
+TEST(OptTableTest, AliasArgsMultiple) {
+  TestOptTable T;
+  unsigned MAI, MAC;
+
+  const char *MyArgs[] = {"-Jmulti"};
+  InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_D));
+  EXPECT_EQ((std::vector<std::string>{"foo", "bar"}),
+            AL.getAllArgValues(OPT_D));
+}
+
+TEST(OptTableTest, SuggestValueCompletions) {
+  TestOptTable T;
+
+  EXPECT_EQ((std::vector<std::string>{"inline1", "inline2"}),
+            T.suggestValueCompletions("-values-inline=", ""));
+  // Values computed by ValuesCode live outside the string table.
+  EXPECT_EQ((std::vector<std::string>{"code1", "code2"}),
+            T.suggestValueCompletions("-values-from-code=", ""));
+}
+
+TEST(OptTableTest, IgnoreCase) {
+  TestOptTable T(true);
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-a", "-joo" };
@@ -245,8 +235,8 @@ TYPED_TEST(OptTableTest, IgnoreCase) {
 #pragma clang diagnostic ignored "-Wself-move"
 #endif
 
-TYPED_TEST(OptTableTest, InputArgListSelfAssign) {
-  TypeParam T;
+TEST(OptTableTest, InputArgListSelfAssign) {
+  TestOptTable T;
   unsigned MAI, MAC;
   InputArgList AL = T.ParseArgs(Args, MAI, MAC,
                                 /*FlagsToInclude=*/0,
@@ -266,8 +256,8 @@ TYPED_TEST(OptTableTest, InputArgListSelfAssign) {
 #pragma clang diagnostic pop
 #endif
 
-TYPED_TEST(OptTableTest, DoNotIgnoreCase) {
-  TypeParam T;
+TEST(OptTableTest, DoNotIgnoreCase) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-a", "-joo" };
@@ -276,8 +266,8 @@ TYPED_TEST(OptTableTest, DoNotIgnoreCase) {
   EXPECT_FALSE(AL.hasArg(OPT_B));
 }
 
-TYPED_TEST(OptTableTest, SlurpEmpty) {
-  TypeParam T;
+TEST(OptTableTest, SlurpEmpty) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-A", "-slurp" };
@@ -287,8 +277,8 @@ TYPED_TEST(OptTableTest, SlurpEmpty) {
   EXPECT_EQ(0U, AL.getAllArgValues(OPT_Slurp).size());
 }
 
-TYPED_TEST(OptTableTest, Slurp) {
-  TypeParam T;
+TEST(OptTableTest, Slurp) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-A", "-slurp", "-B", "--", "foo" };
@@ -303,8 +293,8 @@ TYPED_TEST(OptTableTest, Slurp) {
   EXPECT_EQ("foo", AL.getAllArgValues(OPT_Slurp)[2]);
 }
 
-TYPED_TEST(OptTableTest, SlurpJoinedEmpty) {
-  TypeParam T;
+TEST(OptTableTest, SlurpJoinedEmpty) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-A", "-slurpjoined" };
@@ -314,8 +304,8 @@ TYPED_TEST(OptTableTest, SlurpJoinedEmpty) {
   EXPECT_EQ(AL.getAllArgValues(OPT_SlurpJoined).size(), 0U);
 }
 
-TYPED_TEST(OptTableTest, SlurpJoinedOneJoined) {
-  TypeParam T;
+TEST(OptTableTest, SlurpJoinedOneJoined) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-A", "-slurpjoinedfoo" };
@@ -326,8 +316,8 @@ TYPED_TEST(OptTableTest, SlurpJoinedOneJoined) {
   EXPECT_EQ(AL.getAllArgValues(OPT_SlurpJoined)[0], "foo");
 }
 
-TYPED_TEST(OptTableTest, SlurpJoinedAndSeparate) {
-  TypeParam T;
+TEST(OptTableTest, SlurpJoinedAndSeparate) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-A", "-slurpjoinedfoo", "bar", "baz" };
@@ -340,8 +330,8 @@ TYPED_TEST(OptTableTest, SlurpJoinedAndSeparate) {
   EXPECT_EQ("baz", AL.getAllArgValues(OPT_SlurpJoined)[2]);
 }
 
-TYPED_TEST(OptTableTest, SlurpJoinedButSeparate) {
-  TypeParam T;
+TEST(OptTableTest, SlurpJoinedButSeparate) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   const char *MyArgs[] = { "-A", "-slurpjoined", "foo", "bar", "baz" };
@@ -354,8 +344,8 @@ TYPED_TEST(OptTableTest, SlurpJoinedButSeparate) {
   EXPECT_EQ("baz", AL.getAllArgValues(OPT_SlurpJoined)[2]);
 }
 
-TYPED_TEST(OptTableTest, FlagAliasToJoined) {
-  TypeParam T;
+TEST(OptTableTest, FlagAliasToJoined) {
+  TestOptTable T;
   unsigned MAI, MAC;
 
   // Check that a flag alias provides an empty argument to a joined option.
@@ -367,8 +357,8 @@ TYPED_TEST(OptTableTest, FlagAliasToJoined) {
   EXPECT_EQ("", AL.getAllArgValues(OPT_B)[0]);
 }
 
-TYPED_TEST(OptTableTest, FindNearest) {
-  TypeParam T;
+TEST(OptTableTest, FindNearest) {
+  TestOptTable T;
   std::string Nearest;
 
   // Options that are too short should not be considered
@@ -426,8 +416,8 @@ TYPED_TEST(OptTableTest, FindNearest) {
   EXPECT_EQ(Nearest, "-xyzzy1");
 }
 
-TYPED_TEST(DISABLED_OptTableTest, FindNearestFIXME) {
-  TypeParam T;
+TEST(DISABLED_OptTableTest, FindNearestFIXME) {
+  TestOptTable T;
   std::string Nearest;
 
   // FIXME: Options with joined values should not have those values considered
@@ -437,8 +427,8 @@ TYPED_TEST(DISABLED_OptTableTest, FindNearestFIXME) {
   EXPECT_EQ(Nearest, "--ermghFoo");
 }
 
-TYPED_TEST(OptTableTest, ParseGroupedShortOptions) {
-  TypeParam T;
+TEST(OptTableTest, ParseGroupedShortOptions) {
+  TestOptTable T;
   T.setGroupedShortOptions(true);
   unsigned MAI, MAC;
 
@@ -467,8 +457,8 @@ TYPED_TEST(OptTableTest, ParseGroupedShortOptions) {
   EXPECT_TRUE(AL3.hasArg(OPT_Blorp));
 }
 
-TYPED_TEST(OptTableTest, ParseDashDash) {
-  TypeParam T;
+TEST(OptTableTest, ParseDashDash) {
+  TestOptTable T;
   T.setDashDashParsing(true);
   unsigned MAI, MAC;
 
@@ -500,8 +490,8 @@ TYPED_TEST(OptTableTest, ParseDashDash) {
   EXPECT_EQ("--", Unknown[1]);
 }
 
-TYPED_TEST(OptTableTest, UnknownOptions) {
-  TypeParam T;
+TEST(OptTableTest, UnknownOptions) {
+  TestOptTable T;
   unsigned MAI, MAC;
   const char *Args[] = {"-u", "--long", "0"};
   for (int I = 0; I < 2; ++I) {
@@ -514,8 +504,8 @@ TYPED_TEST(OptTableTest, UnknownOptions) {
   }
 }
 
-TYPED_TEST(OptTableTest, FlagsWithoutValues) {
-  TypeParam T;
+TEST(OptTableTest, FlagsWithoutValues) {
+  TestOptTable T;
   T.setGroupedShortOptions(true);
   unsigned MAI, MAC;
   const char *Args[] = {"-A=1", "-A="};
@@ -526,8 +516,8 @@ TYPED_TEST(OptTableTest, FlagsWithoutValues) {
   EXPECT_EQ("-A=", Unknown[1]);
 }
 
-TYPED_TEST(OptTableTest, UnknownGroupedShortOptions) {
-  TypeParam T;
+TEST(OptTableTest, UnknownGroupedShortOptions) {
+  TestOptTable T;
   T.setGroupedShortOptions(true);
   unsigned MAI, MAC;
   const char *Args[] = {"-AuzK", "-AuzK"};
@@ -540,8 +530,25 @@ TYPED_TEST(OptTableTest, UnknownGroupedShortOptions) {
   EXPECT_EQ("-z", Unknown[3]);
 }
 
-TYPED_TEST(OptTableTest, PrintMultilineHelpText) {
-  TypeParam T;
+TEST(OptTableTest, HelpTextForVariants) {
+  TestOptTable T;
+  EXPECT_EQ("The xyzzy2 option", T.getOptionHelpText(OPT_Xyzzy2));
+  EXPECT_EQ("The xyzzy2 option",
+            T.getOptionHelpText(OPT_Xyzzy2, Visibility(SubtoolVis)));
+  EXPECT_EQ("The xyzzy3 option", T.getOptionHelpText(OPT_Xyzzy3));
+  EXPECT_EQ("The xyzzy3 option",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(DefaultVis)));
+  EXPECT_EQ("The xyzzy3 option for the subtool",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(SubtoolVis)));
+  EXPECT_EQ(
+      "The xyzzy3 option for the subtool",
+      T.getOptionHelpText(OPT_Xyzzy3, Visibility(DefaultVis | SubtoolVis)));
+  EXPECT_EQ("The xyzzy3 option for multiline",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(MultiLineVis)));
+}
+
+TEST(OptTableTest, PrintMultilineHelpText) {
+  TestOptTable T;
   std::string Help;
   raw_string_ostream RSO(Help);
   T.printHelp(RSO, "usage", "title", /*ShowHidden=*/false,

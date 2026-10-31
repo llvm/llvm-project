@@ -225,9 +225,13 @@ ConstantPointerNull *ConstantPointerNull::get(PointerType *Ty) {
   return cast<ConstantPointerNull>(Ty->getContext().getOrCreateConstant(LLVMC));
 }
 
-PointerType *ConstantPointerNull::getType() const {
+Type *ConstantPointerNull::getType() const {
+  return Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getType());
+}
+
+PointerType *ConstantPointerNull::getPointerType() const {
   return cast<PointerType>(
-      Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getType()));
+      Ctx.getType(cast<llvm::ConstantPointerNull>(Val)->getPointerType()));
 }
 
 UndefValue *UndefValue::get(Type *T) {
@@ -461,6 +465,24 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 BlockAddress *BlockAddress::get(BasicBlock *BB) {
   auto *LLVMC = llvm::BlockAddress::get(cast<llvm::BasicBlock>(BB->Val));
   return cast<BlockAddress>(BB->getContext().getOrCreateConstant(LLVMC));
+}
+
+Constant *ConstantExpr::getPtrToInt(Constant *C, Type *Ty) {
+  auto *LLVMC =
+      llvm::ConstantExpr::getPtrToInt(cast<llvm::Constant>(C->Val), Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+Constant *ConstantExpr::getIntToPtr(Constant *C, Type *Ty) {
+  auto *LLVMC =
+      llvm::ConstantExpr::getIntToPtr(cast<llvm::Constant>(C->Val), Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
+}
+
+Constant *ConstantExpr::getBitCast(Constant *C, Type *Ty) {
+  auto *LLVMC =
+      llvm::ConstantExpr::getBitCast(cast<llvm::Constant>(C->Val), Ty->LLVMTy);
+  return Ty->getContext().getOrCreateConstant(LLVMC);
 }
 
 BlockAddress *BlockAddress::lookup(const BasicBlock *BB) {

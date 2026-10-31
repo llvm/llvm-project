@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu-- -verify -S -o - %s
 
 void test_builtin_amdgcn_cvt_off_f32_i4(int n) {
     struct A{ unsigned x; } a;

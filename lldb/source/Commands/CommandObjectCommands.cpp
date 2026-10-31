@@ -16,6 +16,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/Interfaces/ScriptedCommandInterface.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueString.h"
@@ -115,7 +116,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one executable filename argument.\n",
+          "'%s' takes exactly one executable filename argument",
           GetCommandName().str().c_str());
       return;
     }
@@ -425,7 +426,7 @@ protected:
     // Verify that the command is alias-able.
     if (m_interpreter.CommandExists(alias_command)) {
       result.AppendErrorWithFormat(
-          "'%s' is a permanent debugger command and cannot be redefined.\n",
+          "'%s' is a permanent debugger command and cannot be redefined",
           args[0].c_str());
       return;
     }
@@ -433,7 +434,7 @@ protected:
     if (m_interpreter.UserMultiwordCommandExists(alias_command)) {
       result.AppendErrorWithFormat(
           "'%s' is a user container command and cannot be overwritten.\n"
-          "Delete it first with 'command container delete'\n",
+          "Delete it first with 'command container delete'",
           args[0].c_str());
       return;
     }
@@ -448,7 +449,7 @@ protected:
     if (!cmd_obj) {
       result.AppendErrorWithFormat("invalid command given to 'command alias'. "
                                    "'%s' does not begin with a valid command."
-                                   "  No alias created.",
+                                   "  No alias created",
                                    original_raw_command_string.str().c_str());
     } else if (!cmd_obj->WantsRawCommandString()) {
       // Note that args was initialized with the original command, and has not
@@ -518,7 +519,7 @@ protected:
 
     if (m_interpreter.CommandExists(alias_command)) {
       result.AppendErrorWithFormat(
-          "'%s' is a permanent debugger command and cannot be redefined.\n",
+          "'%s' is a permanent debugger command and cannot be redefined",
           alias_command.c_str());
       return false;
     }
@@ -536,7 +537,7 @@ protected:
     CommandObjectSP subcommand_obj_sp;
     bool use_subcommand = false;
     if (!command_obj_sp) {
-      result.AppendErrorWithFormat("'%s' is not an existing command.\n",
+      result.AppendErrorWithFormat("'%s' is not an existing command",
                                    actual_command.c_str());
       return false;
     }
@@ -552,7 +553,7 @@ protected:
       if (!subcommand_obj_sp) {
         result.AppendErrorWithFormat(
             "'%s' is not a valid sub-command of '%s'.  "
-            "Unable to create alias.\n",
+            "Unable to create alias",
             args[0].c_str(), actual_command.c_str());
         return false;
       }
@@ -627,7 +628,6 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    CommandObject::CommandMap::iterator pos;
     CommandObject *cmd_obj;
 
     if (args.empty()) {
@@ -640,7 +640,7 @@ protected:
     if (!cmd_obj) {
       result.AppendErrorWithFormat(
           "'%s' is not a known command.\nTry 'help' to see a "
-          "current list of commands.\n",
+          "current list of commands",
           args[0].c_str());
       return;
     }
@@ -649,11 +649,11 @@ protected:
       if (cmd_obj->IsRemovable()) {
         result.AppendErrorWithFormat(
             "'%s' is not an alias, it is a debugger command which can be "
-            "removed using the 'command delete' command.\n",
+            "removed using the 'command delete' command",
             args[0].c_str());
       } else {
         result.AppendErrorWithFormat(
-            "'%s' is a permanent debugger command and cannot be removed.\n",
+            "'%s' is a permanent debugger command and cannot be removed",
             args[0].c_str());
       }
       return;
@@ -662,10 +662,9 @@ protected:
     if (!m_interpreter.RemoveAlias(command_name)) {
       if (m_interpreter.AliasExists(command_name))
         result.AppendErrorWithFormat(
-            "Error occurred while attempting to unalias '%s'.\n",
-            args[0].c_str());
+            "Error occurred while attempting to unalias '%s'", args[0].c_str());
       else
-        result.AppendErrorWithFormat("'%s' is not an existing alias.\n",
+        result.AppendErrorWithFormat("'%s' is not an existing alias",
                                      args[0].c_str());
       return;
     }
@@ -703,8 +702,6 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    CommandObject::CommandMap::iterator pos;
-
     if (args.empty()) {
       result.AppendErrorWithFormat("must call '%s' with one or more valid user "
                                    "defined regular expression command names",
@@ -726,7 +723,7 @@ protected:
 
     if (!m_interpreter.RemoveCommand(command_name)) {
       result.AppendErrorWithFormat(
-          "'%s' is a permanent debugger command and cannot be removed.\n",
+          "'%s' is a permanent debugger command and cannot be removed",
           args[0].c_str());
       return;
     }
@@ -869,6 +866,7 @@ protected:
 
       if (error.Success()) {
         AddRegexCommandToInterpreter();
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     }
     if (error.Fail()) {
@@ -1122,19 +1120,19 @@ private:
 /// substitution).
 class CommandObjectScriptingObjectRaw : public CommandObjectRaw {
 public:
-  CommandObjectScriptingObjectRaw(CommandInterpreter &interpreter,
-                                  std::string name,
-                                  StructuredData::GenericSP cmd_obj_sp,
-                                  ScriptedCommandSynchronicity synch,
-                                  CompletionType completion_type)
-      : CommandObjectRaw(interpreter, name), m_cmd_obj_sp(cmd_obj_sp),
-        m_synchro(synch), m_fetched_help_short(false),
-        m_fetched_help_long(false), m_completion_type(completion_type) {
+  CommandObjectScriptingObjectRaw(
+      CommandInterpreter &interpreter, std::string name,
+      lldb::ScriptedCommandInterfaceSP cmd_interface_sp,
+      ScriptedCommandSynchronicity synch, CompletionType completion_type)
+      : CommandObjectRaw(interpreter, name),
+        m_cmd_interface_sp(cmd_interface_sp), m_synchro(synch),
+        m_fetched_help_short(false), m_fetched_help_long(false),
+        m_completion_type(completion_type) {
     StreamString stream;
     stream.Printf("For more information run 'help %s'", name.c_str());
     SetHelp(stream.GetString());
-    if (ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter())
-      GetFlags().Set(scripter->GetFlagsForCommandObject(cmd_obj_sp));
+    if (m_cmd_interface_sp)
+      GetFlags().Set(m_cmd_interface_sp->GetFlags());
   }
 
   ~CommandObjectScriptingObjectRaw() override = default;
@@ -1154,22 +1152,19 @@ public:
 
   std::optional<std::string> GetRepeatCommand(Args &args,
                                               uint32_t index) override {
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-    if (!scripter)
+    if (!m_cmd_interface_sp)
       return std::nullopt;
 
-    return scripter->GetRepeatCommandForScriptedCommand(m_cmd_obj_sp, args);
+    return m_cmd_interface_sp->GetRepeatCommand(args);
   }
 
   llvm::StringRef GetHelp() override {
     if (m_fetched_help_short)
       return CommandObjectRaw::GetHelp();
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-    if (!scripter)
+    if (!m_cmd_interface_sp)
       return CommandObjectRaw::GetHelp();
     std::string docstring;
-    m_fetched_help_short =
-        scripter->GetShortHelpForCommandObject(m_cmd_obj_sp, docstring);
+    m_fetched_help_short = m_cmd_interface_sp->GetShortHelp(docstring);
     if (!docstring.empty())
       SetHelp(docstring);
 
@@ -1180,13 +1175,11 @@ public:
     if (m_fetched_help_long)
       return CommandObjectRaw::GetHelpLong();
 
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-    if (!scripter)
+    if (!m_cmd_interface_sp)
       return CommandObjectRaw::GetHelpLong();
 
     std::string docstring;
-    m_fetched_help_long =
-        scripter->GetLongHelpForCommandObject(m_cmd_obj_sp, docstring);
+    m_fetched_help_long = m_cmd_interface_sp->GetLongHelp(docstring);
     if (!docstring.empty())
       SetHelpLong(docstring);
     return CommandObjectRaw::GetHelpLong();
@@ -1195,15 +1188,13 @@ public:
 protected:
   void DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-
     Status error;
 
     result.SetStatus(eReturnStatusInvalid);
 
-    if (!scripter ||
-        !scripter->RunScriptBasedCommand(m_cmd_obj_sp, raw_command_line,
-                                         m_synchro, result, error, m_exe_ctx)) {
+    if (!m_cmd_interface_sp ||
+        !m_cmd_interface_sp->RunRawCommand(raw_command_line, m_synchro, result,
+                                           error, m_exe_ctx)) {
       result.AppendError(error.AsCString());
     } else {
       // Don't change the status if the command already set it...
@@ -1217,7 +1208,7 @@ protected:
   }
 
 private:
-  StructuredData::GenericSP m_cmd_obj_sp;
+  lldb::ScriptedCommandInterfaceSP m_cmd_interface_sp;
   ScriptedCommandSynchronicity m_synchro;
   bool m_fetched_help_short : 1;
   bool m_fetched_help_long : 1;
@@ -1241,23 +1232,15 @@ class CommandObjectScriptingObjectParsed : public CommandObjectParsed {
 private: 
   class CommandOptions : public Options {
   public:
-    CommandOptions(CommandInterpreter &interpreter, 
-        StructuredData::GenericSP cmd_obj_sp) : m_interpreter(interpreter), 
-            m_cmd_obj_sp(cmd_obj_sp) {}
+    CommandOptions(lldb::ScriptedCommandInterfaceSP cmd_interface_sp)
+        : m_cmd_interface_sp(cmd_interface_sp) {}
 
     ~CommandOptions() override = default;
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override {
       Status error;
-      ScriptInterpreter *scripter = 
-        m_interpreter.GetDebugger().GetScriptInterpreter();
-      if (!scripter) {
-        return Status::FromErrorString(
-            "No script interpreter for SetOptionValue.");
-        return error;
-      }
-      if (!m_cmd_obj_sp) {
+      if (!m_cmd_interface_sp) {
         return Status::FromErrorString(
             "SetOptionValue called with empty cmd_obj.");
         return error;
@@ -1271,10 +1254,10 @@ private:
       // Pass the long option, since you aren't actually required to have a
       // short_option, and for those options the index or short option character
       // aren't meaningful on the python side.
-      const char * long_option = 
-        m_options_definition_up.get()[option_idx].long_option;
-      bool success = scripter->SetOptionValueForCommandObject(m_cmd_obj_sp, 
-        execution_context, long_option, option_arg);
+      const char *long_option =
+          m_options_definition_up.get()[option_idx].long_option;
+      bool success = m_cmd_interface_sp->SetOptionValue(
+          execution_context, long_option, option_arg);
       if (!success)
         return Status::FromErrorStringWithFormatv(
             "Error setting option: {0} to {1}", long_option, option_arg);
@@ -1282,12 +1265,10 @@ private:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
-      ScriptInterpreter *scripter = 
-        m_interpreter.GetDebugger().GetScriptInterpreter();
-      if (!scripter || !m_cmd_obj_sp)
+      if (!m_cmd_interface_sp)
         return;
 
-      scripter->OptionParsingStartedForCommandObject(m_cmd_obj_sp);
+      m_cmd_interface_sp->OptionParsingStarted();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1295,7 +1276,7 @@ private:
         return {};
       return llvm::ArrayRef(m_options_definition_up.get(), m_num_options);
     }
-    
+
     static Status ParseUsageMaskFromArray(StructuredData::ObjectSP obj_sp, 
         size_t counter, uint32_t &usage_mask) {
       // If the usage entry is not provided, we use LLDB_OPT_SET_ALL.
@@ -1729,10 +1710,7 @@ private:
                                    OptionElementVector &option_vec,
                                    int opt_element_index,
                                    CommandInterpreter &interpreter) override {
-      ScriptInterpreter *scripter =
-          interpreter.GetDebugger().GetScriptInterpreter();
-
-      if (!scripter)
+      if (!m_cmd_interface_sp)
         return;
 
       ExecutionContext exe_ctx = interpreter.GetExecutionContext();
@@ -1749,9 +1727,8 @@ private:
       // regular option completer handle that:
       StructuredData::DictionarySP completion_dict_sp;
       if (!is_enum)
-        completion_dict_sp =
-            scripter->HandleOptionArgumentCompletionForScriptedCommand(
-                m_cmd_obj_sp, option_name, request.GetCursorCharPos());
+        completion_dict_sp = m_cmd_interface_sp->HandleOptionArgumentCompletion(
+            option_name, request.GetCursorCharPos());
 
       if (!completion_dict_sp) {
         Options::HandleOptionArgumentCompletion(request, option_vec,
@@ -1812,19 +1789,17 @@ private:
     std::vector<std::vector<EnumValueStorage>> m_enum_storage;
     std::vector<std::vector<OptionEnumValueElement>> m_enum_vector;
     std::vector<std::string> m_usage_container;
-    CommandInterpreter &m_interpreter;
-    StructuredData::GenericSP m_cmd_obj_sp;
+    lldb::ScriptedCommandInterfaceSP m_cmd_interface_sp;
     static std::unordered_set<std::string> g_string_storer;
   };
 
 public:
-  static CommandObjectSP Create(CommandInterpreter &interpreter, 
-                std::string name,
-                StructuredData::GenericSP cmd_obj_sp,
-                ScriptedCommandSynchronicity synch, 
-                CommandReturnObject &result) {
+  static CommandObjectSP
+  Create(CommandInterpreter &interpreter, std::string name,
+         lldb::ScriptedCommandInterfaceSP cmd_interface_sp,
+         ScriptedCommandSynchronicity synch, CommandReturnObject &result) {
     CommandObjectSP new_cmd_sp(new CommandObjectScriptingObjectParsed(
-        interpreter, name, cmd_obj_sp, synch));
+        interpreter, name, cmd_interface_sp, synch));
 
     CommandObjectScriptingObjectParsed *parsed_cmd 
         = static_cast<CommandObjectScriptingObjectParsed *>(new_cmd_sp.get());
@@ -1846,34 +1821,33 @@ public:
     return new_cmd_sp;
   }
 
-  CommandObjectScriptingObjectParsed(CommandInterpreter &interpreter,
-                               std::string name,
-                               StructuredData::GenericSP cmd_obj_sp,
-                               ScriptedCommandSynchronicity synch)
-      : CommandObjectParsed(interpreter, name.c_str()), 
-        m_cmd_obj_sp(cmd_obj_sp), m_synchro(synch), 
-        m_options(interpreter, cmd_obj_sp), m_fetched_help_short(false), 
+  CommandObjectScriptingObjectParsed(
+      CommandInterpreter &interpreter, std::string name,
+      lldb::ScriptedCommandInterfaceSP cmd_interface_sp,
+      ScriptedCommandSynchronicity synch)
+      : CommandObjectParsed(interpreter, name.c_str()),
+        m_cmd_interface_sp(cmd_interface_sp), m_synchro(synch),
+        m_options(cmd_interface_sp), m_fetched_help_short(false),
         m_fetched_help_long(false) {
     StreamString stream;
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-    if (!scripter) {
+    if (!m_cmd_interface_sp) {
       m_options_error = Status::FromErrorString("No script interpreter");
       return;
     }
 
     // Set the flags:
-    GetFlags().Set(scripter->GetFlagsForCommandObject(cmd_obj_sp));
+    GetFlags().Set(m_cmd_interface_sp->GetFlags());
 
     // Now set up the options definitions from the options:
-    StructuredData::ObjectSP options_object_sp 
-        = scripter->GetOptionsForCommandObject(cmd_obj_sp);
+    StructuredData::ObjectSP options_object_sp =
+        m_cmd_interface_sp->GetOptionsDefinition();
     // It's okay not to have an options dict.
     if (options_object_sp) {
       // The options come as a dictionary of dictionaries.  The key of the
       // outer dict is the long option name (since that's required).  The
       // value holds all the other option specification bits.
-      StructuredData::Dictionary *options_dict 
-          = options_object_sp->GetAsDictionary();
+      StructuredData::Dictionary *options_dict =
+          options_object_sp->GetAsDictionary();
       // but if it exists, it has to be an array.
       if (options_dict) {
         m_options_error = m_options.SetOptionsFromArray(*(options_dict));
@@ -1887,8 +1861,8 @@ public:
     }
     // Then fetch the args.  Since the arguments can have usage masks you need
     // an array of arrays.
-    StructuredData::ObjectSP args_object_sp 
-      = scripter->GetArgumentsForCommandObject(cmd_obj_sp);
+    StructuredData::ObjectSP args_object_sp =
+        m_cmd_interface_sp->GetArgumentsDefinition();
     if (args_object_sp) {
       StructuredData::Array *args_array = args_object_sp->GetAsArray();        
       if (!args_array) {
@@ -1916,9 +1890,8 @@ public:
           auto report_error = [this, elem_counter,
                                counter](const char *err_txt) -> bool {
             m_args_error = Status::FromErrorStringWithFormatv(
-                "Element {0} of arguments "
-                "list element {1}: %s.",
-                elem_counter, counter, err_txt);
+                "element {} of arguments list element {}: {}", elem_counter,
+                counter, err_txt);
             return false;
           };
 
@@ -1976,6 +1949,7 @@ public:
               Status::FromErrorStringWithFormatv("Argument definition element "
                                                  "{0} is not an array",
                                                  counter);
+          return false;
         }
         
         args_array->ForEach(args_adder);
@@ -2021,9 +1995,7 @@ private:
 public:
   void HandleArgumentCompletion(CompletionRequest &request,
                                 OptionElementVector &option_vec) override {
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-
-    if (!scripter)
+    if (!m_cmd_interface_sp)
       return;
 
     // Set up the options values on the scripted side:
@@ -2048,7 +2020,7 @@ public:
         option_slots.insert(elem.opt_arg_pos);
     }
 
-    std::vector<llvm::StringRef> args_vec;
+    std::vector<std::string> args_vec;
     Args &args = request.GetParsedLine();
     size_t num_args = args.GetArgumentCount();
     size_t cursor_idx = request.GetCursorIndex();
@@ -2056,13 +2028,13 @@ public:
 
     for (size_t idx = 0; idx < num_args; idx++) {
       if (option_slots.count(idx) == 0)
-        args_vec.push_back(args[idx].ref());
+        args_vec.push_back(args[idx].ref().str());
       else if (idx < cursor_idx)
         args_elem_pos--;
     }
     StructuredData::DictionarySP completion_dict_sp =
-        scripter->HandleArgumentCompletionForScriptedCommand(
-            m_cmd_obj_sp, args_vec, args_elem_pos, request.GetCursorCharPos());
+        m_cmd_interface_sp->HandleArgumentCompletion(
+            args_vec, args_elem_pos, request.GetCursorCharPos());
 
     if (!completion_dict_sp) {
       CommandObject::HandleArgumentCompletion(request, option_vec);
@@ -2078,22 +2050,19 @@ public:
 
   std::optional<std::string> GetRepeatCommand(Args &args,
                                               uint32_t index) override {
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-    if (!scripter)
+    if (!m_cmd_interface_sp)
       return std::nullopt;
 
-    return scripter->GetRepeatCommandForScriptedCommand(m_cmd_obj_sp, args);
+    return m_cmd_interface_sp->GetRepeatCommand(args);
   }
 
   llvm::StringRef GetHelp() override {
     if (m_fetched_help_short)
       return CommandObjectParsed::GetHelp();
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-    if (!scripter)
+    if (!m_cmd_interface_sp)
       return CommandObjectParsed::GetHelp();
     std::string docstring;
-    m_fetched_help_short =
-        scripter->GetShortHelpForCommandObject(m_cmd_obj_sp, docstring);
+    m_fetched_help_short = m_cmd_interface_sp->GetShortHelp(docstring);
     if (!docstring.empty())
       SetHelp(docstring);
 
@@ -2104,13 +2073,11 @@ public:
     if (m_fetched_help_long)
       return CommandObjectParsed::GetHelpLong();
 
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-    if (!scripter)
+    if (!m_cmd_interface_sp)
       return CommandObjectParsed::GetHelpLong();
 
     std::string docstring;
-    m_fetched_help_long =
-        scripter->GetLongHelpForCommandObject(m_cmd_obj_sp, docstring);
+    m_fetched_help_long = m_cmd_interface_sp->GetLongHelp(docstring);
     if (!docstring.empty())
       SetHelpLong(docstring);
     return CommandObjectParsed::GetHelpLong();
@@ -2125,17 +2092,13 @@ public:
   }
 
 protected:
-  void DoExecute(Args &args,
-                 CommandReturnObject &result) override {
-    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
-
+  void DoExecute(Args &args, CommandReturnObject &result) override {
     Status error;
 
     result.SetStatus(eReturnStatusInvalid);
-    
-    if (!scripter ||
-        !scripter->RunScriptBasedParsedCommand(m_cmd_obj_sp, args,
-                                         m_synchro, result, error, m_exe_ctx)) {
+
+    if (!m_cmd_interface_sp || !m_cmd_interface_sp->RunParsedCommand(
+                                   args, m_synchro, result, error, m_exe_ctx)) {
       result.AppendError(error.AsCString());
     } else {
       // Don't change the status if the command already set it...
@@ -2149,7 +2112,7 @@ protected:
   }
 
 private:
-  StructuredData::GenericSP m_cmd_obj_sp;
+  lldb::ScriptedCommandInterfaceSP m_cmd_interface_sp;
   ScriptedCommandSynchronicity m_synchro;
   CommandOptions m_options;
   Status m_options_error;
@@ -2500,6 +2463,8 @@ protected:
     if (m_options.m_class_name.empty() && m_options.m_funct_name.empty()) {
       m_interpreter.GetPythonCommandsFromIOHandler("     ", // Prompt
                                                    *this);  // IOHandlerDelegate
+      // Still gathering input; the IOHandler will set the final status.
+      result.SetStatus(eReturnStatusStarted);
       return;
     }
 
@@ -2515,22 +2480,32 @@ protected:
         return;
       }
 
-      auto cmd_obj_sp = interpreter->CreateScriptCommandObject(
-          m_options.m_class_name.c_str());
-      if (!cmd_obj_sp) {
-        result.AppendErrorWithFormatv("cannot create helper object for: "
-                                      "'{0}'", m_options.m_class_name);
+      lldb::ScriptedCommandInterfaceSP cmd_interface_sp =
+          interpreter->CreateScriptedCommandInterface();
+      if (!cmd_interface_sp) {
+        result.AppendError("cannot create ScriptedCommandInterface");
         return;
       }
-      
+
+      auto obj_or_err = cmd_interface_sp->CreatePluginObject(
+          m_options.m_class_name, GetDebugger().shared_from_this());
+      if (!obj_or_err) {
+        result.AppendErrorWithFormatv("cannot create helper object for: "
+                                      "'{0}': {1}",
+                                      m_options.m_class_name,
+                                      llvm::toString(obj_or_err.takeError()));
+        return;
+      }
+
       if (m_options.m_parsed_command) {
-        new_cmd_sp = CommandObjectScriptingObjectParsed::Create(m_interpreter, 
-            m_cmd_name, cmd_obj_sp, m_synchronicity, result);
+        new_cmd_sp = CommandObjectScriptingObjectParsed::Create(
+            m_interpreter, m_cmd_name, cmd_interface_sp, m_synchronicity,
+            result);
         if (!result.Succeeded())
           return;
       } else
         new_cmd_sp = std::make_shared<CommandObjectScriptingObjectRaw>(
-            m_interpreter, m_cmd_name, cmd_obj_sp, m_synchronicity,
+            m_interpreter, m_cmd_name, cmd_interface_sp, m_synchronicity,
             m_completion_type);
     }
     
@@ -2638,12 +2613,12 @@ protected:
 
     CommandObjectSP cmd_sp = m_interpreter.GetCommandSPExact(root_cmd);
     if (!cmd_sp) {
-      result.AppendErrorWithFormat("command '%s' not found.",
+      result.AppendErrorWithFormat("command '%s' not found",
                                    command[0].c_str());
       return;
     }
     if (!cmd_sp->IsUserCommand()) {
-      result.AppendErrorWithFormat("command '%s' is not a user command.",
+      result.AppendErrorWithFormat("command '%s' is not a user command",
                                    command[0].c_str());
       return;
     }
@@ -2900,7 +2875,7 @@ protected:
       CommandInterpreter &interp = GetCommandInterpreter();
       CommandObjectSP cmd_sp = interp.GetCommandSPExact(cmd_name);
       if (!cmd_sp) {
-        result.AppendErrorWithFormat("container command %s doesn't exist.",
+        result.AppendErrorWithFormat("container command %s doesn't exist",
                                      cmd_name);
         return;
       }
@@ -2917,7 +2892,7 @@ protected:
 
       bool did_remove = GetCommandInterpreter().RemoveUserMultiword(cmd_name);
       if (!did_remove) {
-        result.AppendErrorWithFormat("error removing command %s.", cmd_name);
+        result.AppendErrorWithFormat("error removing command %s", cmd_name);
         return;
       }
 

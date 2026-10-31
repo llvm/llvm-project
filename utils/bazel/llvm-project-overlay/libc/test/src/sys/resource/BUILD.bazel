@@ -17,8 +17,11 @@ libc_test(
         "//libc:__support_cpp_string_view",
         "//libc:close",
         "//libc:getrlimit",
+        "//libc:hdr_sys_resource_macros",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:setrlimit",
+        "//libc:types_struct_rlimit",
         "//libc:unlink",
     ],
 )

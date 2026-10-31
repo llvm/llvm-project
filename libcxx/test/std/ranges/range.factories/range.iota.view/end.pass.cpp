@@ -8,11 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include "test_macros.h"
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-sign-compare
 
-TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
-TEST_MSVC_DIAGNOSTIC_IGNORED(4018 4389) // various "signed/unsigned mismatch"
+// various "signed/unsigned mismatch"
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4018 /wd4389
 
 // constexpr auto end() const;
 // constexpr iterator end() const requires same_as<W, Bound>;
@@ -21,6 +20,7 @@ TEST_MSVC_DIAGNOSTIC_IGNORED(4018 4389) // various "signed/unsigned mismatch"
 #include <ranges>
 #include <utility>
 
+#include "test_macros.h"
 #include "types.h"
 
 template<class T, class U>
@@ -61,6 +61,14 @@ constexpr void testType(U u) {
 constexpr bool test() {
   testType<SomeInt>(SomeInt(10));
   testType<SomeInt>(IntComparableWith(SomeInt(10)));
+#ifndef TEST_HAS_NO_INT128
+  testType<__int128_t>(__int128_t(10));
+  testType<__uint128_t>(__uint128_t(10));
+#endif
+  testType<signed long long>(10LL);
+  testType<unsigned long long>(10ULL);
+  testType<signed long long>(IntComparableWith<signed long long>(10));
+  testType<unsigned long long>(IntComparableWith<unsigned long long>(10));
   testType<signed long>(IntComparableWith<signed long>(10));
   testType<unsigned long>(IntComparableWith<unsigned long>(10));
   testType<int>(IntComparableWith<int>(10));

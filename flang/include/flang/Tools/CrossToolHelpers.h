@@ -20,7 +20,6 @@
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -47,6 +46,18 @@ public:
     FIROptLastEPCallbacks.push_back(C);
   }
 
+  void registerHLFIROptEarlyEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptEarlyEPCallbacks.push_back(C);
+  }
+
+  void registerHLFIROptLastEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptLastEPCallbacks.push_back(C);
+  }
+
   void invokeFIROptEarlyEPCallbacks(
       mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
     for (auto &C : FIROptEarlyEPCallbacks)
@@ -65,6 +76,18 @@ public:
       C(pm, optLevel);
   };
 
+  void invokeHLFIROptEarlyEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptEarlyEPCallbacks)
+      C(pm, optLevel);
+  };
+
+  void invokeHLFIROptLastEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptLastEPCallbacks)
+      C(pm, optLevel);
+  };
+
 private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
@@ -77,21 +100,30 @@ private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
       FIROptLastEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptEarlyEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptLastEPCallbacks;
 };
 
 /// Configuriation for the MLIR to LLVM pass pipeline.
 struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
-  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
-    OptLevel = level;
-  }
+  explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level)
+      : OptLevel(level),
+        optimizeArrayExpression(level != llvm::OptimizationLevel::O0) {}
   explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level,
       const Fortran::frontend::CodeGenOptions &opts,
-      const Fortran::common::MathOptionsBase &mathOpts) {
-    OptLevel = level;
+      const Fortran::common::MathOptionsBase &mathOpts)
+      : MLIRToLLVMPassPipelineConfig(level) {
     StackArrays = opts.StackArrays;
     EnableSafeTrampoline = opts.EnableSafeTrampoline;
     Underscoring = opts.Underscoring;
     LoopVersioning = opts.LoopVersioning;
+    LoopTripCountVersioning = opts.LoopTripCountVersioning;
     DebugInfo = opts.getDebugInfo();
     AliasAnalysis = opts.AliasAnalysis;
     FramePointerKind = opts.getFramePointer();
@@ -107,21 +139,26 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     Reciprocals = opts.Reciprocals;
     PreferVectorWidth = opts.PreferVectorWidth;
     UseSampleProfile = !opts.SampleProfileFile.empty();
+    UniqueInternalLinkageNames = opts.UniqueInternalLinkageNames;
     DebugInfoForProfiling = opts.DebugInfoForProfiling;
     if (opts.InstrumentFunctions) {
       InstrumentFunctionEntry = "__cyg_profile_func_enter";
       InstrumentFunctionExit = "__cyg_profile_func_exit";
     }
+    DisableTailCalls = opts.DisableTailCalls;
     DwarfVersion = opts.DwarfVersion;
     SplitDwarfFile = opts.SplitDwarfFile;
     DwarfDebugFlags = opts.DwarfDebugFlags;
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
+  /// Enable HLFIR optimizations; expensive ones still require O3.
+  bool optimizeArrayExpression;
   bool StackArrays = false; ///< convert memory allocations to alloca.
   bool EnableSafeTrampoline{false}; ///< Use runtime trampoline pool (W^X).
   bool Underscoring = true; ///< add underscores to function names.
   bool LoopVersioning = false; ///< Run the version loop pass.
+  bool LoopTripCountVersioning = false; ///< Run the trip-count versioning pass.
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR.
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
@@ -140,9 +177,13 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   std::string PreferVectorWidth = ""; ///< Set prefer-vector-width attribute for
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
+  bool EnableOpenACC = false; ///< Enable OpenACC lowering.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
   bool UseSampleProfile = false; ///< Enable sample based profiling
+  bool UniqueInternalLinkageNames = false; ///< Append MD5 hash suffix to
+                                           ///< internal linkage symbol names.
   bool DebugInfoForProfiling = false; ///< Enable extra debugging info
+  bool DisableTailCalls = false; ///< Disable tail call optimization
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
   bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.
   std::string InstrumentFunctionEntry =

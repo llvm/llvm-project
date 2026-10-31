@@ -139,3 +139,12 @@ DWARFASTParser::GetAccessTypeFromDWARF(uint32_t dwarf_accessibility) {
   }
   return eAccessNone;
 }
+
+DWARFDIE DWARFASTParser::GetAnnotation(const DWARFDIE &die,
+                                       llvm::StringRef name) {
+  for (DWARFDIE child : die.children())
+    if (child.Tag() == DW_TAG_LLVM_annotation &&
+        llvm::StringRef(child.GetName()) == name)
+      return child;
+  return {};
+}

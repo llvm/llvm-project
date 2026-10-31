@@ -242,6 +242,11 @@ struct InlineParams {
 
   /// Indicate whether we allow inlining for recursive call.
   std::optional<bool> AllowRecursiveCall = false;
+
+  /// Indicate whether to ignore profile information. If set, the inline cost
+  /// analysis is performed without the profile summary and block frequency
+  /// info.
+  std::optional<bool> IgnoreProfile = false;
 };
 
 LLVM_ABI std::optional<int> getStringFnAttrAsInt(CallBase &CB,
@@ -351,13 +356,12 @@ LLVM_ABI InlineResult isInlineViable(Function &Callee);
 // debugging and analysis. The main purpose of the pass is to see and test
 // inliner's decisions when creating new optimizations to InlineCost.
 struct InlineCostAnnotationPrinterPass
-    : PassInfoMixin<InlineCostAnnotationPrinterPass> {
+    : RequiredPassInfoMixin<InlineCostAnnotationPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit InlineCostAnnotationPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-  static bool isRequired() { return true; }
 };
 } // namespace llvm
 

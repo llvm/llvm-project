@@ -119,11 +119,13 @@ public:
   /// @param MinDistancePtr If not nullptr, the minimal dependence distance will
   ///                       be returned at the address of that pointer
   ///
-  /// @return Returns true, if executing parallel the outermost dimension of
-  ///         @p Schedule is valid according to the dependences @p Deps.
-  bool isParallel(__isl_keep isl_union_map *Schedule,
-                  __isl_take isl_union_map *Deps,
-                  __isl_give isl_pw_aff **MinDistancePtr = nullptr) const;
+  /// @return isl::boolean::true if executing parallel the outermost dimension
+  ///         of @p Schedule is valid according to the dependences @p Deps,
+  ///         isl::boolean::false if it is not, and isl::boolean::error() if the
+  ///         result could not be computed (e.g. the ISL operation quota was
+  ///         exhausted during AST generation).
+  isl::boolean isKnownParallel(isl::union_map Schedule, isl::union_map Deps,
+                               isl::pw_aff *MinDistancePtr = nullptr) const;
 
   /// Check if a new schedule is valid.
   ///

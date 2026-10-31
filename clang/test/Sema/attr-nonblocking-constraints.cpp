@@ -5,6 +5,8 @@
 // This diagnostic is re-enabled and exercised in isolation later in this file.
 #pragma clang diagnostic ignored "-Wperf-constraint-implies-noexcept"
 
+typedef __SIZE_TYPE__ size_t;
+
 // --- CONSTRAINTS ---
 
 void nb1() [[clang::nonblocking]]
@@ -318,9 +320,23 @@ void nb19() [[clang::nonblocking]] {
 	__builtin_assume(1);
 	void *ptr = __builtin_malloc(1); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_malloc'}}
 	__builtin_free(ptr); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_free'}}
-	
+
 	void *p2 = __builtin_operator_new(1); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_operator_new'}}
 	__builtin_operator_delete(p2); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_operator_delete'}}
+}
+
+// Fortified builtins, as used by _FORTIFY_SOURCE wrappers
+void nb19a(char *dst, const char *src, __SIZE_TYPE__ n, __builtin_va_list ap) [[clang::nonblocking]] {
+	__builtin___memcpy_chk(dst, src, n, __builtin_object_size(dst, 0));
+	__builtin___memset_chk(dst, 0, n, __builtin_object_size(dst, 0));
+	__builtin___strlcpy_chk(dst, src, n, __builtin_object_size(dst, 0));
+
+	__builtin___printf_chk(0, "%s", src); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___printf_chk'}}
+	__builtin___vprintf_chk(0, "%s", ap); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___vprintf_chk'}}
+	__builtin___snprintf_chk(dst, n, 0, __builtin_object_size(dst, 0), "%s", src); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___snprintf_chk'}}
+	__builtin___sprintf_chk(dst, 0, __builtin_object_size(dst, 0), "%s", src); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___sprintf_chk'}}
+	__builtin___vsnprintf_chk(dst, n, 0, __builtin_object_size(dst, 0), "%s", ap); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___vsnprintf_chk'}}
+	__builtin___vsprintf_chk(dst, 0, __builtin_object_size(dst, 0), "%s", ap); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin___vsprintf_chk'}}
 }
 
 // Function try-block
@@ -429,6 +445,44 @@ struct DerivedFromUnsafe : public Unsafe {
 struct HasDtor {
 	~HasDtor() {}
 };
+
+struct SafeDeleteUnsafeDestroy {
+	static unsigned char storage[256];
+
+	void* operator new(size_t) { return storage; }
+	void operator delete(void* ptr) {}
+
+	void* operator new[](size_t sz) { return storage; }
+	void operator delete[](void* ptr) {}
+
+	SafeDeleteUnsafeDestroy(); // expected-note 2 {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+	~SafeDeleteUnsafeDestroy(); // expected-note 2 {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+};
+
+void testSafeDeleteUnsafeDestroy() [[clang::nonblocking]]
+{
+	auto *ptr = new SafeDeleteUnsafeDestroy; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' constructor 'SafeDeleteUnsafeDestroy::SafeDeleteUnsafeDestroy'}}
+	delete ptr; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' destructor 'SafeDeleteUnsafeDestroy::~SafeDeleteUnsafeDestroy'}}
+
+	auto *arr = new SafeDeleteUnsafeDestroy[2]; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' constructor 'SafeDeleteUnsafeDestroy::SafeDeleteUnsafeDestroy'}}
+	delete[] arr; // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' destructor 'SafeDeleteUnsafeDestroy::~SafeDeleteUnsafeDestroy'}}
+}
+
+namespace std {
+struct destroying_delete_t { explicit destroying_delete_t() = default; };
+inline constexpr destroying_delete_t destroying_delete{};
+}
+
+struct DestroyingDelete {
+    ~DestroyingDelete();
+    void operator delete(DestroyingDelete*, std::destroying_delete_t) {
+        // do nothing
+    }
+};
+
+void testDestroyingDelete(DestroyingDelete* d) [[clang::nonblocking]] {
+    delete d;
+}
 
 template <typename T>
 struct Optional {

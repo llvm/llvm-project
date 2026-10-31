@@ -23,101 +23,101 @@ static FileSpec WindowsSpec(llvm::StringRef path) {
 TEST(FileSpecTest, FileAndDirectoryComponents) {
   FileSpec fs_posix("/foo/bar", FileSpec::Style::posix);
   EXPECT_STREQ("/foo/bar", fs_posix.GetPath().c_str());
-  EXPECT_STREQ("/foo", fs_posix.GetDirectory().GetCString());
-  EXPECT_STREQ("bar", fs_posix.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("/foo"), fs_posix.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("bar"), fs_posix.GetFilename());
 
   FileSpec fs_windows("F:\\bar", FileSpec::Style::windows);
   EXPECT_STREQ("F:\\bar", fs_windows.GetPath().c_str());
   // EXPECT_STREQ("F:\\", fs_windows.GetDirectory().GetPath().c_str()); // It returns
   // "F:/"
-  EXPECT_STREQ("bar", fs_windows.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("bar"), fs_windows.GetFilename());
 
   FileSpec fs_posix_root("/", FileSpec::Style::posix);
   EXPECT_STREQ("/", fs_posix_root.GetPath().c_str());
-  EXPECT_EQ(nullptr, fs_posix_root.GetDirectory().GetCString());
-  EXPECT_STREQ("/", fs_posix_root.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef(), fs_posix_root.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("/"), fs_posix_root.GetFilename());
 
   FileSpec fs_net_drive("//net", FileSpec::Style::posix);
   EXPECT_STREQ("//net", fs_net_drive.GetPath().c_str());
-  EXPECT_EQ(nullptr, fs_net_drive.GetDirectory().GetCString());
-  EXPECT_STREQ("//net", fs_net_drive.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef(), fs_net_drive.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("//net"), fs_net_drive.GetFilename());
 
   FileSpec fs_net_root("//net/", FileSpec::Style::posix);
   EXPECT_STREQ("//net/", fs_net_root.GetPath().c_str());
-  EXPECT_STREQ("//net", fs_net_root.GetDirectory().GetCString());
-  EXPECT_STREQ("/", fs_net_root.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("//net"), fs_net_root.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("/"), fs_net_root.GetFilename());
 
   FileSpec fs_windows_drive("F:", FileSpec::Style::windows);
   EXPECT_STREQ("F:", fs_windows_drive.GetPath().c_str());
-  EXPECT_EQ(nullptr, fs_windows_drive.GetDirectory().GetCString());
-  EXPECT_STREQ("F:", fs_windows_drive.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef(), fs_windows_drive.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("F:"), fs_windows_drive.GetFilename());
 
   FileSpec fs_windows_root("F:\\", FileSpec::Style::windows);
   EXPECT_STREQ("F:\\", fs_windows_root.GetPath().c_str());
-  EXPECT_STREQ("F:", fs_windows_root.GetDirectory().GetCString());
+  EXPECT_EQ(llvm::StringRef("F:"), fs_windows_root.GetDirectory());
   // EXPECT_STREQ("\\", fs_windows_root.GetFilename().GetCString()); // It
   // returns "/"
 
   FileSpec fs_posix_long("/foo/bar/baz", FileSpec::Style::posix);
   EXPECT_STREQ("/foo/bar/baz", fs_posix_long.GetPath().c_str());
-  EXPECT_STREQ("/foo/bar", fs_posix_long.GetDirectory().GetCString());
-  EXPECT_STREQ("baz", fs_posix_long.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("/foo/bar"), fs_posix_long.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("baz"), fs_posix_long.GetFilename());
 
   FileSpec fs_windows_long("F:\\bar\\baz", FileSpec::Style::windows);
   EXPECT_STREQ("F:\\bar\\baz", fs_windows_long.GetPath().c_str());
   // EXPECT_STREQ("F:\\bar", fs_windows_long.GetDirectory().GetCString()); // It
   // returns "F:/bar"
-  EXPECT_STREQ("baz", fs_windows_long.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("baz"), fs_windows_long.GetFilename());
 
   FileSpec fs_posix_trailing_slash("/foo/bar/", FileSpec::Style::posix);
   EXPECT_STREQ("/foo/bar", fs_posix_trailing_slash.GetPath().c_str());
-  EXPECT_STREQ("/foo", fs_posix_trailing_slash.GetDirectory().GetCString());
-  EXPECT_STREQ("bar", fs_posix_trailing_slash.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("/foo"), fs_posix_trailing_slash.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("bar"), fs_posix_trailing_slash.GetFilename());
 
   FileSpec fs_windows_trailing_slash("F:\\bar\\", FileSpec::Style::windows);
   EXPECT_STREQ("F:\\bar", fs_windows_trailing_slash.GetPath().c_str());
-  EXPECT_STREQ("bar", fs_windows_trailing_slash.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("bar"), fs_windows_trailing_slash.GetFilename());
 }
 
 TEST(FileSpecTest, AppendPathComponent) {
   FileSpec fs_posix("/foo", FileSpec::Style::posix);
   fs_posix.AppendPathComponent("bar");
   EXPECT_STREQ("/foo/bar", fs_posix.GetPath().c_str());
-  EXPECT_STREQ("/foo", fs_posix.GetDirectory().GetCString());
-  EXPECT_STREQ("bar", fs_posix.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("/foo"), fs_posix.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("bar"), fs_posix.GetFilename());
 
   FileSpec fs_posix_2("/foo", FileSpec::Style::posix);
   fs_posix_2.AppendPathComponent("//bar/baz");
   EXPECT_STREQ("/foo/bar/baz", fs_posix_2.GetPath().c_str());
-  EXPECT_STREQ("/foo/bar", fs_posix_2.GetDirectory().GetCString());
-  EXPECT_STREQ("baz", fs_posix_2.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("/foo/bar"), fs_posix_2.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("baz"), fs_posix_2.GetFilename());
 
   FileSpec fs_windows("F:\\bar", FileSpec::Style::windows);
   fs_windows.AppendPathComponent("baz");
   EXPECT_STREQ("F:\\bar\\baz", fs_windows.GetPath().c_str());
   // EXPECT_STREQ("F:\\bar", fs_windows.GetDirectory().GetCString()); // It
   // returns "F:/bar"
-  EXPECT_STREQ("baz", fs_windows.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("baz"), fs_windows.GetFilename());
 
   FileSpec fs_posix_root("/", FileSpec::Style::posix);
   fs_posix_root.AppendPathComponent("bar");
   EXPECT_STREQ("/bar", fs_posix_root.GetPath().c_str());
-  EXPECT_STREQ("/", fs_posix_root.GetDirectory().GetCString());
-  EXPECT_STREQ("bar", fs_posix_root.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("/"), fs_posix_root.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("bar"), fs_posix_root.GetFilename());
 
   FileSpec fs_windows_root("F:\\", FileSpec::Style::windows);
   fs_windows_root.AppendPathComponent("bar");
   EXPECT_STREQ("F:\\bar", fs_windows_root.GetPath().c_str());
   // EXPECT_STREQ("F:\\", fs_windows_root.GetDirectory().GetCString()); // It
   // returns "F:/"
-  EXPECT_STREQ("bar", fs_windows_root.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("bar"), fs_windows_root.GetFilename());
 }
 
 TEST(FileSpecTest, CopyByAppendingPathComponent) {
   FileSpec fs = PosixSpec("/foo").CopyByAppendingPathComponent("bar");
   EXPECT_STREQ("/foo/bar", fs.GetPath().c_str());
-  EXPECT_STREQ("/foo", fs.GetDirectory().GetCString());
-  EXPECT_STREQ("bar", fs.GetFilename().GetCString());
+  EXPECT_EQ(llvm::StringRef("/foo"), fs.GetDirectory());
+  EXPECT_EQ(llvm::StringRef("bar"), fs.GetFilename());
 }
 
 TEST(FileSpecTest, PrependPathComponent) {

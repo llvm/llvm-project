@@ -75,11 +75,6 @@ extern volatile int GoogleModuleAnchorSource;
 [[maybe_unused]] static int GoogleModuleAnchorDestination =
     GoogleModuleAnchorSource;
 
-// This anchor is used to force the linker to link the HICPPModule.
-extern volatile int HICPPModuleAnchorSource;
-[[maybe_unused]] static int HICPPModuleAnchorDestination =
-    HICPPModuleAnchorSource;
-
 // This anchor is used to force the linker to link the LinuxKernelModule.
 extern volatile int LinuxKernelModuleAnchorSource;
 [[maybe_unused]] static int LinuxKernelModuleAnchorDestination =
@@ -136,11 +131,6 @@ extern volatile int PortabilityModuleAnchorSource;
 extern volatile int ReadabilityModuleAnchorSource;
 [[maybe_unused]] static int ReadabilityModuleAnchorDestination =
     ReadabilityModuleAnchorSource;
-
-// This anchor is used to force the linker to link the ZirconModule.
-extern volatile int ZirconModuleAnchorSource;
-[[maybe_unused]] static int ZirconModuleAnchorDestination =
-    ZirconModuleAnchorSource;
 
 } // namespace clang::tidy
 

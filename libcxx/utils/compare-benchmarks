@@ -2,39 +2,37 @@
 
 import argparse
 import functools
+import math
 import pathlib
 import re
 import statistics
 import sys
 import tempfile
+import warnings
 
 import numpy
 import pandas
 import plotly.express
+import scipy.stats
 import tabulate
 
-def parse_lnt(lines, aggregate=statistics.median):
+def parse_lnt(lines):
     """
     Parse lines in LNT format and return a list of dictionnaries of the form:
 
         [
             {
                 'benchmark': <benchmark1>,
-                <metric1>: float,
-                <metric2>: float,
-                ...
-            },
-            {
-                'benchmark': <benchmark2>,
-                <metric1>: float,
-                <metric2>: float,
+                <metric1>: [float, ...],
+                <metric2>: [float, ...],
                 ...
             },
             ...
         ]
 
-    If a metric has multiple values associated to it, they are aggregated into a single
-    value using the provided aggregation function.
+    Each metric maps to the list of its raw samples (a metric can appear more than once for
+    a benchmark, e.g. when several runs are present in the same file). Aggregation is done
+    separately.
     """
     results = {}
     for line in lines:
@@ -52,29 +50,99 @@ def parse_lnt(lines, aggregate=statistics.median):
             entry[metric] = []
         entry[metric].append(float(value))
 
-    for (bm, entry) in results.items():
-        for metric in entry:
-            if isinstance(entry[metric], list):
-                entry[metric] = aggregate(entry[metric])
-
     return list(results.values())
+
+def aggregate_metrics(entry, aggregate=statistics.median):
+    """
+    Return a copy of a parsed entry where each metric's list of samples is reduced to a
+    single value using `aggregate` (the median by default). This produces the scalar values
+    shown in the comparison; statistics that need the raw samples are computed separately.
+    """
+    return {key: (aggregate(value) if isinstance(value, list) else value)
+            for (key, value) in entry.items()}
+
+def samples_matrix(entries, metric, benchmarks):
+    """
+    Build a 2D array of raw samples for `metric`, with one row per benchmark in `benchmarks`
+    (in that order) and one column per sample. Rows are padded with NaN so benchmarks with
+    fewer samples (or none at all) still line up. This is the shape scipy expects.
+    """
+    samples = {entry['benchmark']: entry[metric] for entry in entries if metric in entry}
+    rows = [samples.get(benchmark, []) for benchmark in benchmarks]
+    width = max((len(row) for row in rows), default=0)
+    matrix = numpy.full((len(rows), max(width, 1)), numpy.nan)
+    for (i, row) in enumerate(rows):
+        matrix[i, :len(row)] = row
+    return matrix
+
+def confidence_interval(baseline, candidate, confidence=0.95):
+    """
+    Compute a two-sided Welch T confidence interval on the relative difference of the means,
+    `(candidate - baseline) / baseline`, for each benchmark. `baseline` and `candidate` are 2D
+    arrays of raw samples (one row per benchmark). Returns two arrays (low, high) expressed as
+    fractions of the baseline mean, with NaN where the interval is undefined (e.g. fewer than
+    two samples on a side).
+
+    We deliberately use the mean rather than the aggregated median: a T interval is defined
+    around the mean. With only a handful of samples per benchmark, this is the only estimator
+    with any statistical power, which is why the interval is reported as an explicit
+    `[low, high]` range that is not generally centered on the median-based difference shown
+    next to it.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore') # empty/tiny per-row samples make scipy chatty
+        test = scipy.stats.ttest_ind(candidate, baseline, axis=1, equal_var=False, nan_policy='omit')
+        (low, high) = test.confidence_interval(confidence)
+        baseline_mean = numpy.nanmean(baseline, axis=1)
+        return (numpy.ma.filled(low, numpy.nan) / baseline_mean,
+                numpy.ma.filled(high, numpy.nan) / baseline_mean)
 
 def plain_text_comparison(data, metric, baseline_name=None, candidate_name=None):
     """
     Create a tabulated comparison of the baseline and the candidate for the given metric.
     """
-    data = data.replace(numpy.nan, None) # avoid NaNs in tabulate output
-    headers = ['Benchmark', baseline_name, candidate_name, 'Difference', '% Difference']
-    fmt = (None, '.2f', '.2f', '.2f', '.2%')
-    table = data[['benchmark', f'{metric}_0', f'{metric}_1', 'difference', 'percent']]
+    # Show a confidence interval on the % difference, but only when the inputs contain more
+    # than one sample per benchmark (otherwise there's no dispersion to estimate it from).
+    # This flags statistically significant rows without altering the common single-sample output.
+    show_ci = max(data['samples_0'].max(), data['samples_1'].max()) > 1
 
-    # Compute the geomean and report on their difference
+    # Compute the geomean and report on their difference (before NaNs are replaced below)
     geomean_0 = statistics.geometric_mean(data[f'{metric}_0'].dropna())
     geomean_1 = statistics.geometric_mean(data[f'{metric}_1'].dropna())
+
+    headers = ['Benchmark', baseline_name, candidate_name, 'Difference', '% Difference']
+    fmt = [None, '.2f', '.2f', '.2f', '.2%']
+    columns = ['benchmark', f'{metric}_0', f'{metric}_1', 'difference', 'percent']
     geomean_row = ['Geomean', geomean_0, geomean_1, (geomean_1 - geomean_0), (geomean_1 - geomean_0) / geomean_0]
+    colalign = None
+    if show_ci:
+        # Render the interval as an explicit [low, high] range, and mark rows whose interval
+        # excludes zero: those are statistically significant changes we can be confident are real.
+        def render(row):
+            (low, high) = (row['ci_low'], row['ci_high'])
+            if any(x is None or not math.isfinite(x) for x in (low, high)):
+                return ('', '')
+            significant = not (low < 0 < high) # the confidence interval excludes zero
+            return (f'[{low:+.1%}, {high:+.1%}]', 'x' if significant else '')
+        rendered = data.apply(render, axis=1, result_type='expand')
+        data = data.assign(ci_range=rendered[0], ci_flag=rendered[1])
+        headers += ['Significant?', '95% C.I. of %diff']
+        fmt += [None, None]
+        columns += ['ci_flag', 'ci_range']
+        geomean_row += ['', '']
+        # Center the significance marker; keep the benchmark name and interval left-aligned
+        # and every numeric column right-aligned (matching `numalign` above).
+        def alignment(column):
+            if column == 'ci_flag':
+                return 'center'
+            return 'left' if column in ('benchmark', 'ci_range') else 'right'
+        colalign = [alignment(column) for column in columns]
+
+    data = data.replace(numpy.nan, None) # avoid NaNs in tabulate output
+    table = data[columns]
     table.loc[table.index.max() + 1] = geomean_row
 
-    return tabulate.tabulate(table.set_index('benchmark'), headers=headers, floatfmt=fmt, numalign='right')
+    return tabulate.tabulate(table.set_index('benchmark'), headers=headers, floatfmt=fmt, numalign='right', colalign=colalign)
 
 def create_chart(data, metric, subtitle=None, series_names=None):
     """
@@ -215,10 +283,17 @@ def main(argv):
         if len(args.series_names) != len(args.files):
             parser.error(f'Passed incorrect number of series names: got {len(args.series_names)} series names but {len(args.files)} inputs to compare')
 
-    # Parse the raw LNT data and store each input in a dataframe
+    # Parse the raw LNT data (keeping the individual samples) and store each input as a
+    # dataframe of aggregated (median) values for display.
     lnt_inputs = [parse_lnt(file.readlines()) for file in args.files]
     series = [f'{args.metric}_{i}' for (i, _) in enumerate(lnt_inputs)]
-    inputs = [pandas.DataFrame(lnt).rename(columns={args.metric: s}) for (s, lnt) in zip(series, lnt_inputs)]
+    inputs = []
+    for (s, lnt) in zip(series, lnt_inputs):
+        aggregated = [aggregate_metrics(entry) for entry in lnt]
+        frame = pandas.DataFrame(aggregated).rename(columns={args.metric: s})
+        # Keep only the selected metric; other metrics in the file are not part of this
+        # comparison and would otherwise collide when the inputs are merged below.
+        inputs.append(frame[['benchmark', s]])
 
     # Join the inputs into a single dataframe
     data = functools.reduce(lambda a, b: a.merge(b, how='outer', on='benchmark'), inputs)
@@ -227,6 +302,16 @@ def main(argv):
     if len(lnt_inputs) == 2:
         data['difference'] = data[f'{args.metric}_1'] - data[f'{args.metric}_0']
         data['percent'] = data['difference'] / data[f'{args.metric}_0']
+
+        # Attach a confidence interval computed from the raw samples. We line the samples up
+        # into one row per benchmark (matching the merged frame) and let scipy compute every
+        # benchmark's interval.
+        benchmarks = data['benchmark'].tolist()
+        baseline = samples_matrix(lnt_inputs[0], args.metric, benchmarks)
+        candidate = samples_matrix(lnt_inputs[1], args.metric, benchmarks)
+        (data['ci_low'], data['ci_high']) = confidence_interval(baseline, candidate)
+        data['samples_0'] = numpy.count_nonzero(~numpy.isnan(baseline), axis=1)
+        data['samples_1'] = numpy.count_nonzero(~numpy.isnan(candidate), axis=1)
 
     if args.filter is not None:
         keeplist = [b for b in data['benchmark'] if re.search(args.filter, b) is not None]

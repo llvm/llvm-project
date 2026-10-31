@@ -76,6 +76,9 @@ public:
     if (!(RD = RD->getDefinition()))
       return;
 
+    if (RD->isInvalidDecl())
+      return;
+
     // This is the simplest correct case: a class with no fields and one base
     // class. Other cases are more complicated because of how the base classes
     // & fields might interact, so we don't bother dealing with them.
@@ -175,6 +178,17 @@ public:
       QualType Ty = FD->getType();
       if (Ty->isIncompleteArrayType())
         return true;
+
+      // Defensive backstop: a lambda closure type can be left non-dependent due
+      // to a bug, leaving the closure with a field of a bare dependent type
+      // whose layout cannot be computed. This workaround is temporary and
+      // should be removed together with the related FIXME in
+      // Sema::ActOnLambdaExpressionAfterIntroducer once the bug is fixed. See:
+      // * https://github.com/llvm/llvm-project/issues/232874
+      // * https://github.com/llvm/llvm-project/issues/233102
+      if (Ty->isDependentType())
+        return true;
+
       return false;
     };
 

@@ -14,14 +14,11 @@
 #define LLVM_CLANG_LIB_INTERPRETER_INCREMENTALPARSER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 
 #include <list>
 #include <memory>
-
-namespace llvm {
-class Module;
-}
 
 namespace clang {
 class ASTConsumer;
@@ -72,6 +69,10 @@ public:
 
 private:
   llvm::Expected<TranslationUnitDecl *> ParseOrWrapTopLevelDecl();
+
+  /// Rebuild the translation unit redeclaration chain without \p MostRecentTU,
+  /// making its predecessor the current unit again.
+  void withdrawMostRecentTU(TranslationUnitDecl *MostRecentTU);
 };
 } // end namespace clang
 

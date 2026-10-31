@@ -16,6 +16,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <string>
+
+namespace mlir {
+class SymbolTableCollection;
+} // namespace mlir
 
 namespace fir {
 
@@ -25,6 +30,7 @@ struct NameUniquer;
 
 #define GEN_PASS_DECL_FIRTOLLVMLOWERING
 #define GEN_PASS_DECL_CODEGENREWRITE
+#define GEN_PASS_DECL_REMATERIALIZEFIRBOXOPSPASS
 #define GEN_PASS_DECL_TARGETREWRITEPASS
 #define GEN_PASS_DECL_BOXEDPROCEDUREPASS
 #define GEN_PASS_DECL_LOWERREPACKARRAYSPASS
@@ -60,10 +66,27 @@ struct FIRToLLVMPassOptions {
   // type's descriptor.
   bool typeDescriptorsRenamedForAssembly = false;
 
+  // Name of the function to call when allocating CUDA Fortran descriptors
+  // during FIR-to-LLVM lowering. Must have the same signature as
+  // CUFAllocDescriptor. Empty defaults to CUFAllocDescriptor.
+  std::string cudaDescriptorAllocFunction;
+
+  // Name of the function to call when freeing CUDA Fortran descriptors
+  // allocated with cudaDescriptorAllocFunction during FIR-to-LLVM lowering.
+  // Must have the same signature as CUFFreeDescriptor. Empty defaults to
+  // CUFFreeDescriptor.
+  std::string cudaDescriptorFreeFunction;
+
   // Specify the calculation method for complex number division used by the
   // Conversion pass of the MLIR complex dialect.
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
       Fortran::frontend::CodeGenOptions::ComplexRangeKind::CX_Full;
+
+  // Suffix appended to the libc allocator name (malloc, free, aligned_alloc,
+  // posix_memalign) for allocations marked with a heap allocation mode, e.g.
+  // malloc -> malloc_unified. Lets a runtime name its entry points otherwise.
+  std::string unifiedHeapAllocSuffix = "_unified";
+  std::string managedHeapAllocSuffix = "_managed";
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.
@@ -77,14 +100,21 @@ using LLVMIRLoweringPrinter =
 
 /// Convert the LLVM IR dialect to LLVM-IR proper
 std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
-    llvm::raw_ostream &output,
-    LLVMIRLoweringPrinter printer =
-        [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
+    llvm::raw_ostream &output, LLVMIRLoweringPrinter printer =
+                                   [](llvm::Module &m, llvm::raw_ostream &out) {
+                                     m.renumberMetadataForAssembly();
+                                     m.print(out, nullptr);
+                                   });
 
 /// Populate the given list with patterns that convert from FIR to LLVM.
+/// With \p symbolTables, the patterns resolve symbols through the collection
+/// instead of walking the module, and keep it current; the caller must have
+/// built the tables with fir::buildSymbolTables (FIROpPatterns.h) before
+/// applying the conversion.
 void populateFIRToLLVMConversionPatterns(
     const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
-    fir::FIRToLLVMPassOptions &options);
+    fir::FIRToLLVMPassOptions &options,
+    mlir::SymbolTableCollection *symbolTables = nullptr);
 
 /// Populate the pattern set with the PreCGRewrite patterns.
 void populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,

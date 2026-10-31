@@ -58,14 +58,16 @@ constexpr std::size_t ssmall = S<std::size_t>(100)[42];
 
 // We can allocate this array but we hikt the number of steps
 constexpr std::size_t s4 = S<std::size_t>(1024)[42]; // expected-error {{constexpr variable 's4' must be initialized by a constant expression}} \
-                                   // expected-note@#construct {{constexpr evaluation hit maximum step limit; possible infinite loop?}} \
+                                   // expected-note@#construct {{constexpr evaluation hit maximum step limit of 1024; possible infinite loop?}} \
+                                   // expected-note@#construct {{use -fconstexpr-steps}} \
                                    // expected-note@#construct_call {{in call}} \
                                    // expected-note {{in call}}
 
 
 
 constexpr std::size_t s5 = S<std::size_t>(1025)[42]; // expected-error{{constexpr variable 's5' must be initialized by a constant expression}} \
-                                   // expected-note@#alloc {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024); use '-fconstexpr-steps' to increase this limit}} \
+                                   // expected-note@#alloc {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}} \
+                                   // expected-note@#alloc {{use -fconstexpr-steps}} \
                                    // expected-note@#call {{in call to 'this->alloc.allocate(1025)'}} \
                                    // expected-note {{in call}}
 
@@ -75,7 +77,8 @@ constexpr std::size_t s5 = S<std::size_t>(1025)[42]; // expected-error{{constexp
 
 template <auto N>
 constexpr int stack_array() {
-    [[maybe_unused]] char BIG[N] = {1};  // expected-note  3{{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024); use '-fconstexpr-steps' to increase this limit}}
+    [[maybe_unused]] char BIG[N] = {1};  // expected-note  3{{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}} \
+                                         // expected-note 3{{use -fconstexpr-steps}}
     return BIG[N-1];
 }
 

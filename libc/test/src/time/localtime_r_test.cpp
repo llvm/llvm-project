@@ -6,19 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/time/localtime_r.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
-  struct tm input = {.tm_sec = 0,
-                     .tm_min = 0,
-                     .tm_hour = 0,
-                     .tm_mday = 0,
-                     .tm_mon = 0,
-                     .tm_year = 0,
-                     .tm_wday = 0,
-                     .tm_yday = 0,
-                     .tm_isdst = 0};
+  struct tm input = {};
   const time_t timer = 0;
 
   struct tm *result = LIBC_NAMESPACE::localtime_r(&timer, &input);
@@ -34,9 +27,15 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
   ASSERT_EQ(0, result->tm_isdst);
 }
 
-TEST(LlvmLibcLocaltime, NullPtr) {
+TEST(LlvmLibcLocaltimeR, NullPtr) {
+  struct tm input;
+  time_t timer = 0;
   EXPECT_DEATH([] { LIBC_NAMESPACE::localtime_r(nullptr, nullptr); },
-               WITH_SIGNAL(4));
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::localtime_r(nullptr, &input); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::localtime_r(&timer, nullptr); },
+               WITH_SIGNAL(-1));
 }
 
 // TODO(zimirza): These tests does not expect the correct output of localtime as
@@ -45,15 +44,7 @@ TEST(LlvmLibcLocaltime, NullPtr) {
 // This will be resolved a new pull request.
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp) {
-  struct tm input = {.tm_sec = 0,
-                     .tm_min = 0,
-                     .tm_hour = 0,
-                     .tm_mday = 0,
-                     .tm_mon = 0,
-                     .tm_year = 0,
-                     .tm_wday = 0,
-                     .tm_yday = 0,
-                     .tm_isdst = 0};
+  struct tm input = {};
   const time_t timer = 1756595338;
   struct tm *result = LIBC_NAMESPACE::localtime_r(&timer, &input);
 
@@ -69,15 +60,7 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp) {
 }
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestampNegative) {
-  struct tm input = {.tm_sec = 0,
-                     .tm_min = 0,
-                     .tm_hour = 0,
-                     .tm_mday = 0,
-                     .tm_mon = 0,
-                     .tm_year = 0,
-                     .tm_wday = 0,
-                     .tm_yday = 0,
-                     .tm_isdst = 0};
+  struct tm input = {};
   const time_t timer = -1756595338;
   struct tm *result = LIBC_NAMESPACE::localtime_r(&timer, &input);
 

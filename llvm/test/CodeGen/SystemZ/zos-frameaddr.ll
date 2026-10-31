@@ -17,7 +17,10 @@ entry:
 define ptr @fp0f() nounwind {
 ; CHECK-LABEL: fp0f DS 0H
 ; CHECK:         stmg 6,7,1904(4)
+; CHECK-NEXT:    L#stack_update0 DS 0H
 ; CHECK-NEXT:    aghi 4,-160
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:    L#end_of_prologue0 DS 0H
 ; CHECK-NEXT:    la 3,2048(4)
 ; CHECK-NEXT:    lg 7,2072(4)
 ; CHECK-NEXT:    aghi 4,160
@@ -31,7 +34,11 @@ entry:
 ; Check the caller's frame address.
 define ptr @fpcaller() nounwind "backchain" {
 ; CHECK-LABEL: fpcaller DS 0H
-; CHECK:         stmg 4,7,2048(4)
+; CHECK:         stmg 4,7,1920(4)
+; CHECK-NEXT:    L#stack_update1 DS 0H
+; CHECK-NEXT:    aghi 4,-128
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:    L#end_of_prologue1 DS 0H
 ; CHECK-NEXT:    lg 3,2048(4)
 ; CHECK-NEXT:    lmg 4,7,2048(4)
 ; CHECK-NEXT:    b 2(7)
@@ -43,7 +50,11 @@ entry:
 ; Check the caller's frame address.
 define ptr @fpcallercaller() nounwind "backchain" {
 ; CHECK-LABEL: fpcallercaller DS 0H
-; CHECK:         stmg 4,7,2048(4)
+; CHECK:         stmg 4,7,1920(4)
+; CHECK-NEXT:    L#stack_update2 DS 0H
+; CHECK-NEXT:    aghi 4,-128
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:    L#end_of_prologue2 DS 0H
 ; CHECK-NEXT:    lg 1,2048(4)
 ; CHECK-NEXT:    lg 3,0(1)
 ; CHECK-NEXT:    lmg 4,7,2048(4)

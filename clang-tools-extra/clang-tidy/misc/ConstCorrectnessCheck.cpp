@@ -16,13 +16,12 @@
 #include <cassert>
 
 using namespace clang::ast_matchers;
+using namespace clang::ast_matchers::internal;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::misc {
 
 namespace {
-// FIXME: This matcher exists in some other code-review as well.
-// It should probably move to ASTMatchers.
-AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
 // FIXME: The matcher 'hasName(Name)' asserts that its argument 'Name' is
 // nonempty. Perhaps remove that assertion and replace 'isUnnamed()' with
 // 'hasName("")'.
@@ -39,6 +38,11 @@ AST_MATCHER(ReferenceType, isSpelledAsLValue) {
   return Node.isSpelledAsLValue();
 }
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
+AST_MATCHER(AutoType, isDecltypeAuto) { return Node.isDecltypeAuto(); }
+
+AST_MATCHER(TypeLoc, hasContainedAutoType) {
+  return !Node.getContainedAutoTypeLoc().isNull();
+}
 
 AST_MATCHER(FunctionDecl, isTemplate) {
   return Node.getDescribedFunctionTemplate() != nullptr;
@@ -55,6 +59,8 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
       AnalyzePointers(Options.get("AnalyzePointers", true)),
       AnalyzeReferences(Options.get("AnalyzeReferences", true)),
       AnalyzeValues(Options.get("AnalyzeValues", true)),
+      AnalyzeAutoVariables(Options.get("AnalyzeAutoVariables", true)),
+      AnalyzeLambdas(Options.get("AnalyzeLambdas", true)),
       AnalyzeParameters(Options.get("AnalyzeParameters", true)),
 
       WarnPointersAsPointers(Options.get("WarnPointersAsPointers", true)),
@@ -75,12 +81,19 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
         "The check 'misc-const-correctness' will not "
         "perform any analysis because 'AnalyzeValues', "
         "'AnalyzeReferences' and 'AnalyzePointers' are false.");
+
+  if (AnalyzeLambdas && !AnalyzeAutoVariables)
+    this->configurationDiag("The check 'misc-const-correctness' will not "
+                            "analyze lambdas because 'AnalyzeLambdas' has no "
+                            "effect while 'AnalyzeAutoVariables' is false.");
 }
 
 void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AnalyzePointers", AnalyzePointers);
   Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+  Options.store(Opts, "AnalyzeAutoVariables", AnalyzeAutoVariables);
+  Options.store(Opts, "AnalyzeLambdas", AnalyzeLambdas);
   Options.store(Opts, "AnalyzeParameters", AnalyzeParameters);
 
   Options.store(Opts, "WarnPointersAsPointers", WarnPointersAsPointers);
@@ -114,7 +127,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
-  auto AllowedTypeDecl = namedDecl(anyOf(
+  const auto AllowedTypeDecl = namedDecl(anyOf(
       matchers::matchesAnyListedRegexName(AllowedTypes), usingShadowDecl()));
 
   const auto AllowedType = hasType(qualType(
@@ -128,6 +141,10 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto FunctionPointerRef =
       hasType(hasCanonicalType(referenceType(pointee(functionType()))));
 
+  // 'const' cannot be combined with 'decltype(auto)'.
+  const auto DecltypeAutoType =
+      hasType(ignoringParens(autoType(isDecltypeAuto())));
+
   const auto CommonExcludeTypes =
       anyOf(ConstType, ConstReference, RValueReference, TemplateType,
             FunctionPointerRef, hasType(cxxRecordDecl(isLambda())),
@@ -135,9 +152,18 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
   // Match local variables which could be 'const' if not modified later.
   // Example: `int i = 10` would match `int i`.
-  const auto LocalValDecl =
-      varDecl(isLocal(), hasInitializer(unless(isInstantiationDependent())),
-              unless(CommonExcludeTypes));
+  const auto LocalValDecl = varDecl(
+      isLocalVarDecl(), hasInitializer(anything()),
+      unless(anyOf(ConstType, ConstReference, TemplateType,
+                   hasInitializer(isInstantiationDependent()), RValueReference,
+                   FunctionPointerRef, isImplicit(), AllowedType,
+                   DecltypeAutoType)),
+      AnalyzeLambdas
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),
+      AnalyzeAutoVariables
+          ? Matcher<VarDecl>(anything())
+          : Matcher<VarDecl>(unless(hasTypeLoc(hasContainedAutoType()))));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
@@ -163,17 +189,37 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
     const auto FunctionWithParams =
         functionDecl(
             hasBody(stmt().bind("scope")), has(typeLoc(forEach(ParamMatcher))),
-            unless(cxxMethodDecl()), unless(isFunctionTemplateSpecialization()),
-            unless(isTemplate()))
+            unless(cxxMethodDecl()), unless(isMain()),
+            unless(isFunctionTemplateSpecialization()), unless(isTemplate()))
             .bind("function-decl");
 
     Finder->addMatcher(FunctionWithParams, this);
   }
 }
 
-static void addConstFixits(DiagnosticBuilder &Diag, const VarDecl *Variable,
-                           const FunctionDecl *Function, ASTContext &Context,
-                           Qualifiers::TQ Qualifier,
+static bool isStdMoveOperandInTemplate(const VarDecl *Variable,
+                                       const FunctionDecl *Func,
+                                       ASTContext &Context) {
+  if (Func->isTemplateInstantiation())
+    if (const Stmt *Body = Func->getBody()) {
+      // Match on the instantiated body where `std::move` is resolved to a
+      // concrete function and the argument references the instantiated
+      // variable.
+      const auto Moves =
+          match(stmt(forEachDescendant(
+                    callExpr(callee(functionDecl(hasName("std::move"))),
+                             hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                                to(equalsNode(Variable)))))))),
+                *Body, Context);
+      return !Moves.empty();
+    }
+  return false;
+}
+
+static void addConstFixits(const DiagnosticBuilder &Diag,
+                           const VarDecl *Variable,
+                           const FunctionDecl *Function,
+                           const ASTContext &Context, Qualifiers::TQ Qualifier,
                            utils::fixit::QualifierTarget Target,
                            utils::fixit::QualifierPolicy Policy) {
   // If this is a parameter, also add fixits for corresponding parameters in
@@ -226,29 +272,33 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   /// dependent. Variables like 'int x = 42;' in a template that can become
   /// const emit multiple warnings otherwise.
   bool IsNormalVariableInTemplate = Function->isTemplateInstantiation();
+
+  VariableCategory VC = VariableCategory::Value;
+  const QualType VT = Variable->getType();
+  if (VT->isReferenceType())
+    VC = VariableCategory::Reference;
+  else if (VT->isPointerType())
+    VC = VariableCategory::Pointer;
+  else if (const auto *ArrayT = dyn_cast<ArrayType>(VT);
+           ArrayT && ArrayT->getElementType()->isPointerType())
+    VC = VariableCategory::Pointer;
+
+  if (IsNormalVariableInTemplate && VC != VariableCategory::Pointer &&
+      isStdMoveOperandInTemplate(Variable, Function, *Result.Context))
+    return;
+
   if (IsNormalVariableInTemplate &&
       TemplateDiagnosticsCache.contains(Variable->getBeginLoc()))
     return;
 
-  VariableCategory VC = VariableCategory::Value;
-  const QualType VT = Variable->getType();
-  if (VT->isReferenceType()) {
-    VC = VariableCategory::Reference;
-  } else if (VT->isPointerType()) {
-    VC = VariableCategory::Pointer;
-  } else if (const auto *ArrayT = dyn_cast<ArrayType>(VT)) {
-    if (ArrayT->getElementType()->isPointerType())
-      VC = VariableCategory::Pointer;
-  }
-
-  auto CheckValue = [&]() {
+  const auto CheckValue = [&]() {
     // Offload const-analysis to utility function.
     if (isMutated(Variable, LocalScope, Function, Result.Context))
       return;
 
-    auto Diag = diag(Variable->getBeginLoc(),
-                     "variable %0 of type %1 can be declared 'const'")
-                << Variable << VT;
+    const auto Diag = diag(Variable->getBeginLoc(),
+                           "variable %0 of type %1 can be declared 'const'")
+                      << Variable << VT;
     if (IsNormalVariableInTemplate)
       TemplateDiagnosticsCache.insert(Variable->getBeginLoc());
     if (!CanBeFixIt)
@@ -279,12 +329,12 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     }
   };
 
-  auto CheckPointee = [&]() {
+  const auto CheckPointee = [&]() {
     assert(VC == VariableCategory::Pointer);
     registerScope(LocalScope, Result.Context);
     if (ScopesCache[LocalScope]->isPointeeMutated(Variable))
       return;
-    auto Diag =
+    const auto Diag =
         diag(Variable->getBeginLoc(),
              "pointee of variable %0 of type %1 can be declared 'const'")
         << Variable << VT;
@@ -316,11 +366,11 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (WarnPointersAsValues && !VT.isConstQualified())
       CheckValue();
     if (WarnPointersAsPointers) {
-      if (const auto *PT = dyn_cast<PointerType>(VT)) {
-        if (!PT->getPointeeType().isConstQualified() &&
-            !PT->getPointeeType()->isFunctionType())
-          CheckPointee();
-      }
+      if (const auto *PT = dyn_cast<PointerType>(VT);
+          PT && !PT->getPointeeType().isConstQualified() &&
+          !PT->getPointeeType()->isFunctionType())
+        CheckPointee();
+
       if (const auto *AT = dyn_cast<ArrayType>(VT)) {
         assert(AT->getElementType()->isPointerType());
         if (!AT->getElementType()->getPointeeType().isConstQualified())

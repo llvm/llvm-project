@@ -1,5 +1,5 @@
 // RUN: fir-opt --constant-argument-globalisation-opt  < %s | FileCheck %s
-// RUN: %flang_fc1 -emit-llvm -flang-deprecated-no-hlfir -O2 -o - %s | FileCheck --check-prefix=DISABLE %s
+// RUN: %flang_fc1 -emit-llvm -O2 -o - %s | FileCheck --check-prefix=DISABLE %s
 module {
   func.func @sub1(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "y"}) {
     %0 = fir.alloca i32 {adapt.valuebyref}
@@ -8,8 +8,8 @@ module {
     %c1_i32 = arith.constant 1 : i32
     %cst = arith.constant 1.000000e+00 : f64
     %cst_0 = arith.constant 0.000000e+00 : f64
-    %3 = fir.declare %arg0 {uniq_name = "_QFsub1Ex"} : (!fir.ref<i32>) -> !fir.ref<i32>
-    %4 = fir.declare %arg1 {uniq_name = "_QFsub1Ey"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %3 = fir.declare %arg0 uniq_name("_QFsub1Ex") : (!fir.ref<i32>) -> !fir.ref<i32>
+    %4 = fir.declare %arg1 uniq_name("_QFsub1Ey") : (!fir.ref<i32>) -> !fir.ref<i32>
     fir.store %cst_0 to %2 : !fir.ref<f64>
     %false = arith.constant false
     fir.store %cst to %1 : !fir.ref<f64>

@@ -61,8 +61,8 @@ func.func @conv(
     // Note the fastmath attributes that allow operations to be recombined into
     //   %0 = math.fma %in, %f, %b : f32
     // later on and to reorder reductions.
-    %m1 = arith.mulf %in, %f  {fastmath = #arith.fastmath<fast>} : f32
-    %0 = arith.addf %b, %m1  {fastmath = #arith.fastmath<fast>} : f32
+    %m1 = arith.mulf %in, %f fastmath<fast> : f32
+    %0 = arith.addf %b, %m1 fastmath<fast> : f32
     linalg.yield %0 : f32
   } -> !toutput
 
@@ -316,9 +316,8 @@ module attributes { transform.with_named_sequence } {
     // --pass-pipeline expressions with operations. Note that we apply the
     // pipeline to functions rather than entire module to avoid running it
     // on the transform IR that is contained in the module.
-    %arg1 = transform.bufferization.one_shot_bufferize %arg0 {
-      bufferize_function_boundaries = true,
-      function_boundary_type_conversion = 1 : i32 }
+    %arg1 = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap}
+      %arg0 <{bufferize_function_boundaries = true}>
       : (!transform.any_op) -> !transform.any_op
     %f = transform.structured.match ops{["func.func"]} in %arg1
       : (!transform.any_op) -> !transform.any_op

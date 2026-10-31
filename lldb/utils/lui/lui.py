@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##===-- lui.py -----------------------------------------------*- Python -*-===##
 ##
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -47,7 +47,7 @@ def handle_args(driver, argv):
             pid = int(options.pid)
             driver.attachProcess(ui, pid)
         except ValueError:
-            print("Error: expecting integer PID, got '%s'" % options.pid)
+            print(f"Error: expecting integer PID, got '{options.pid}'")
     elif options.core is not None:
         if not os.path.exists(options.core):
             raise Exception("Specified core file '%s' does not exist." % options.core)
@@ -64,7 +64,7 @@ def handle_args(driver, argv):
 
 def sigint_handler(signal, frame):
     global debugger
-    debugger.terminate()
+    debugger.Terminate()
 
 
 class LLDBUI(cui.CursesUI):

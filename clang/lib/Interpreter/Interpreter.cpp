@@ -20,7 +20,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeVisitor.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
@@ -30,26 +32,35 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
+#include "clang/Lex/Pragma.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h" // for CloneModule
 
 #define DEBUG_TYPE "clang-repl"
@@ -66,18 +77,76 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
   // We expect to get back exactly one Command job, if we didn't something
   // failed. Extract that job from the Compilation.
   const driver::JobList &Jobs = Compilation->getJobs();
-  if (!Jobs.size() || !isa<driver::Command>(*Jobs.begin()))
+  if (!Jobs.size())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Driver initialization failed. "
                                    "Unable to create a driver job");
 
+  // The driver creates one device compile job per architecture (for example if
+  // --offload-arch=native finds several GPUs). Only one can be used.
+  unsigned NumDeviceJobs = llvm::count_if(Jobs, [](const driver::Command &C) {
+    return llvm::StringRef(C.getCreator().getName()) == "clang" &&
+           llvm::is_contained(C.getArguments(),
+                              llvm::StringRef("-fcuda-is-device"));
+  });
+  if (NumDeviceJobs > 1)
+    return llvm::createStringError(
+        llvm::errc::not_supported,
+        "Multiple device architectures are not supported. Pass a single "
+        "--offload-arch");
+
   // The one job we find should be to invoke clang again.
-  const driver::Command *Cmd = cast<driver::Command>(&(*Jobs.begin()));
+  const driver::Command *Cmd = &*Jobs.begin();
   if (llvm::StringRef(Cmd->getCreator().getName()) != "clang")
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Driver initialization failed");
 
   return &Cmd->getArguments();
+}
+
+// ASTReaderListener that captures the PIC level stored in a serialized AST
+// file (PCH or PCM) so the interpreter can compare it against its own.
+class PICLevelReader : public ASTReaderListener {
+  unsigned &PICLevel;
+
+public:
+  PICLevelReader(unsigned &PICLevel) : PICLevel(PICLevel) {}
+
+  bool ReadLanguageOptions(const LangOptions &LangOpts,
+                           StringRef ModuleFilename, bool Complain,
+                           bool AllowCompatibleDifferences) override {
+    PICLevel = LangOpts.PICLevel;
+    return false;
+  }
+};
+
+// clang-repl always compiles position-independent code (it injects -fPIC), so a
+// PCH/PCM that was built with a different PIC level is incompatible: mixing the
+// two leads to relocations that may be out of range once the JIT maps code more
+// than 2GB away. PICLevel is a "compatible" language option, so the ASTReader
+// would otherwise accept the mismatch silently. Reject it up front.
+//
+// The file is probed with its own FileManager and ModuleCache (sharing only the
+// VFS) so this read leaves the CompilerInstance's state untouched for the real
+// load performed later by ExecuteAction().
+static llvm::Error checkASTFilePICLevel(CompilerInstance &Clang,
+                                        StringRef Filename) {
+  llvm::IntrusiveRefCntPtr<FileManager> FileMgr(new FileManager(
+      Clang.getFileSystemOpts(), Clang.getVirtualFileSystemPtr()));
+  std::shared_ptr<ModuleCache> ModCache = createCrossProcessModuleCache();
+  unsigned ASTPICLevel = 0;
+  PICLevelReader Reader(ASTPICLevel);
+  if (!ASTReader::readASTFileControlBlock(
+          Filename, *FileMgr, *ModCache, Clang.getPCHContainerReader(),
+          /*FindModuleFileExtensions=*/false, Reader,
+          /*ValidateDiagnosticOptions=*/false) &&
+      ASTPICLevel != Clang.getLangOpts().PICLevel)
+    return llvm::createStringError(
+        llvm::errc::not_supported,
+        "AST file '%s' was built with PIC level %u, which is incompatible "
+        "with clang-repl's PIC level %u",
+        Filename.str().c_str(), ASTPICLevel, Clang.getLangOpts().PICLevel);
+  return llvm::Error::success();
 }
 
 static llvm::Expected<std::unique_ptr<CompilerInstance>>
@@ -135,8 +204,100 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
   Clang->getFrontendOpts().DisableFree = false;
   Clang->getCodeGenOpts().DisableFree = false;
+
+  // Reject any precompiled input (PCH or PCM) built with a PIC level that
+  // differs from clang-repl's own, before any Interpreter/FrontendAction is
+  // constructed. See checkASTFilePICLevel for the rationale.
+  StringRef PCHInclude = Clang->getPreprocessorOpts().ImplicitPCHInclude;
+  if (!PCHInclude.empty())
+    if (llvm::Error Err = checkASTFilePICLevel(*Clang, PCHInclude))
+      return std::move(Err);
+
+  // Explicitly loaded modules: -fmodule-file=<path> and
+  // -fmodule-file=<name>=<path>.
+  for (StringRef ModuleFile : Clang->getFrontendOpts().ModuleFiles)
+    if (llvm::Error Err = checkASTFilePICLevel(*Clang, ModuleFile))
+      return std::move(Err);
+  for (const auto &NameAndFile :
+       Clang->getHeaderSearchOpts().PrebuiltModuleFiles)
+    if (llvm::Error Err = checkASTFilePICLevel(*Clang, NameAndFile.second))
+      return std::move(Err);
+
   return std::move(Clang);
 }
+
+static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
+                                            IncrementalAction &Act) {
+  if (!CI.ExecuteAction(Act) || CI.getDiagnostics().hasErrorOccurred()) {
+    return llvm::createStringError(llvm::errc::not_supported,
+                                   "Failed to execute incremental action");
+  }
+  return llvm::Error::success();
+}
+
+// '#pragma clang repl optimize(<opt>)' sets the optimization level and size
+// used to emit modules for input parsed after the pragma. <opt> is an -O flag
+// spelled without the leading dash: O0, O1, O2, O3, Os or Oz.
+struct PragmaReplHandler : public PragmaHandler {
+  Interpreter &Interp;
+
+  PragmaReplHandler(Interpreter &Interp)
+      : PragmaHandler("repl"), Interp(Interp) {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override {
+    Token Tok;
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::identifier) ||
+        !Tok.getIdentifierInfo()->isStr("optimize")) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << "clang repl";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
+          << "clang repl optimize";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    std::string Opt = PP.getSpelling(Tok);
+    // The OptimizationLevel and OptimizeSize that each -O flag sets.
+    std::optional<std::pair<unsigned, unsigned>> Level =
+        llvm::StringSwitch<std::optional<std::pair<unsigned, unsigned>>>(Opt)
+            .Case("O0", std::pair(0U, 0U))
+            .Case("O1", std::pair(1U, 0U))
+            .Case("O2", std::pair(2U, 0U))
+            .Case("O3", std::pair(3U, 0U))
+            .Case("Os", std::pair(2U, 1U))
+            .Case("Oz", std::pair(2U, 2U))
+            .Default(std::nullopt);
+    if (!Level) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+          << Opt << "clang repl optimize" << /*Expected=*/true
+          << "'O0', 'O1', 'O2', 'O3', 'Os' or 'Oz'";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
+          << "clang repl optimize";
+      return;
+    }
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::eod)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+          << "clang repl optimize";
+      return;
+    }
+
+    Interp.setOptLevel(Level->first, Level->second);
+  }
+};
 
 } // anonymous namespace
 
@@ -152,6 +313,22 @@ IncrementalCompilerBuilder::create(std::string TT,
       llvm::sys::fs::getMainExecutable(nullptr, nullptr);
 
   ClangArgv.insert(ClangArgv.begin(), MainExecutableName.c_str());
+
+  // Compile as position-independent code. This prevents the frontend from
+  // marking external symbols (e.g. C++ type-info such as _ZTIPKc used for
+  // exception handling) as dso_local and emitting direct PC-relative
+  // references. JITLink can place the GOT entry near the JIT'd code, keeping
+  // the relocation in range. Without -fPIC, a direct Delta32 relocation to a
+  // host symbol may be out of range when the JIT memory is mapped more than
+  // 2GB away (as on FreeBSD), breaking tests such as
+  // Interpreter/simple-exception.cpp. Insert before user arguments so it can
+  // still be overridden. On Windows (excluding Cygwin/MinGW) an explicit
+  // -fPIC is an unsupported driver option that would drop non-x86_64 targets
+  // to PIC level 0; PIC is already the forced default there where relevant,
+  // so don't inject it.
+  llvm::Triple TargetTriple(TT);
+  if (!TargetTriple.isOSWindows() || TargetTriple.isOSCygMing())
+    ClangArgv.insert(ClangArgv.begin() + 1, "-fPIC");
 
   // Prepending -c to force the driver to do something if no action was
   // specified. By prepending we allow users to override the default
@@ -194,34 +371,37 @@ IncrementalCompilerBuilder::create(std::string TT,
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::CreateCpp() {
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+
   std::vector<const char *> Argv;
   Argv.reserve(5 + 1 + UserArgs.size());
   Argv.push_back("-xc++");
 #ifdef __EMSCRIPTEN__
   Argv.push_back("-target");
-  Argv.push_back("wasm32-unknown-emscripten");
+  Argv.push_back(TT.c_str());
   Argv.push_back("-fvisibility=default");
 #endif
   llvm::append_range(Argv, UserArgs);
 
-  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::createCuda(bool device) {
+IncrementalCompilerBuilder::createOffload(bool device, OffloadType Type) {
+  if (Type == OffloadType::Detect)
+    return llvm::make_error<llvm::StringError>(
+        "Detecting the device vendor is not supported yet.",
+        llvm::inconvertibleErrorCode());
+
+  const bool HipEnabled = Type == OffloadType::HIP;
   std::vector<const char *> Argv;
   Argv.reserve(5 + 4 + UserArgs.size());
+  Argv.push_back(HipEnabled ? "-xhip" : "-xcuda");
+  Argv.push_back(device ? "--cuda-device-only" : "--cuda-host-only");
 
-  Argv.push_back("-xcuda");
-  if (device)
-    Argv.push_back("--cuda-device-only");
-  else
-    Argv.push_back("--cuda-host-only");
-
-  std::string SDKPathArg = "--cuda-path=";
-  if (!CudaSDKPath.empty()) {
-    SDKPathArg += CudaSDKPath;
+  std::string SDKPathArg = HipEnabled ? "--rocm-path=" : "--cuda-path=";
+  if (!DeviceSDKPath.empty()) {
+    SDKPathArg += DeviceSDKPath;
     Argv.push_back(SDKPathArg.c_str());
   }
 
@@ -231,6 +411,12 @@ IncrementalCompilerBuilder::createCuda(bool device) {
     Argv.push_back(ArchArg.c_str());
   }
 
+  if (OffloadCUID.empty())
+    OffloadCUID = llvm::utohexstr(llvm::sys::Process::GetRandomNumber(),
+                                  /*LowerCase=*/true);
+  std::string CUIDArg = "-cuid=" + OffloadCUID;
+  Argv.push_back(CUIDArg.c_str());
+
   llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
@@ -238,13 +424,13 @@ IncrementalCompilerBuilder::createCuda(bool device) {
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCudaDevice() {
-  return IncrementalCompilerBuilder::createCuda(true);
+IncrementalCompilerBuilder::CreateDevice(OffloadType Type) {
+  return IncrementalCompilerBuilder::createOffload(/*device=*/true, Type);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCudaHost() {
-  return IncrementalCompilerBuilder::createCuda(false);
+IncrementalCompilerBuilder::CreateHost(OffloadType Type) {
+  return IncrementalCompilerBuilder::createOffload(/*device=*/false, Type);
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
@@ -257,6 +443,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
 
+  // Honor -mllvm options
+  CI->parseLLVMArgs();
+
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
                                                std::move(Consumer));
@@ -264,13 +453,19 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 
   if (ErrOut)
     return;
-  CI->ExecuteAction(*Act);
+
+  if (llvm::Error E = ExecuteIncrementalAction(*CI, *Act)) {
+    ErrOut = joinErrors(std::move(ErrOut), std::move(E));
+    return;
+  }
 
   IncrParser =
       std::make_unique<IncrementalParser>(*CI, Act.get(), ErrOut, PTUs);
 
   if (ErrOut)
     return;
+
+  CI->getPreprocessor().AddPragmaHandler("clang", new PragmaReplHandler(*this));
 
   if (Act->getCodeGen()) {
     Act->CacheCodeGenModule();
@@ -375,8 +570,14 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
 }
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
-                            std::unique_ptr<CompilerInstance> DCI) {
+Interpreter::createWithDevice(std::unique_ptr<CompilerInstance> CI,
+                              std::unique_ptr<CompilerInstance> DCI,
+                              OffloadType Type) {
+  if (Type == OffloadType::Detect)
+    return llvm::make_error<llvm::StringError>(
+        "Detecting the device vendor is not supported yet.",
+        llvm::inconvertibleErrorCode());
+
   // avoid writing fat binary to disk using an in-memory virtual file system
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> IMVFS =
       std::make_unique<llvm::vfs::InMemoryFileSystem>();
@@ -405,13 +606,23 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   Interp->DeviceAct = std::move(DeviceAct);
 
-  DCI->ExecuteAction(*Interp->DeviceAct);
+  if (llvm::Error E = ExecuteIncrementalAction(*DCI, *Interp->DeviceAct))
+    return std::move(E);
+
+  // Set the finalized initial device module aside, as the host path does.
+  Interp->DeviceAct->CacheCodeGenModule();
 
   Interp->DeviceCI = std::move(DCI);
 
-  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      *Interp->DeviceCI, *Interp->getCompilerInstance(),
-      Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  std::unique_ptr<IncrementalDeviceParser> DeviceParser;
+  if (Type == OffloadType::HIP)
+    DeviceParser = std::make_unique<IncrementalHIPDeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  else
+    DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
   if (Err)
     return std::move(Err);
@@ -432,6 +643,14 @@ llvm::Expected<IncrementalExecutor &> Interpreter::getExecutionEngine() {
   }
 
   return *IncrExecutor.get();
+}
+
+void Interpreter::setOptLevel(unsigned OptLevel, unsigned OptSize) {
+  CodeGenOptions &CGO = getCompilerInstance()->getCodeGenOpts();
+  CGO.OptimizationLevel = OptLevel;
+  CGO.OptimizeSize = OptSize;
+  CGO.setInlining(OptLevel ? CodeGenOptions::NormalInlining
+                           : CodeGenOptions::OnlyAlwaysInlining);
 }
 
 ASTContext &Interpreter::getASTContext() {
@@ -461,13 +680,14 @@ Interpreter::Parse(llvm::StringRef Code) {
     if (auto E = DeviceTU.takeError())
       return std::move(E);
 
-    DeviceParser->RegisterPTU(*DeviceTU);
+    PartialTranslationUnit &DevicePTU = DeviceParser->RegisterPTU(*DeviceTU);
 
-    llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
-    if (!PTX)
-      return PTX.takeError();
+    // Under -emit-llvm, print the device module IR before it is lowered.
+    if (DevicePTU.TheModule &&
+        DeviceCI->getFrontendOpts().ProgramAction == frontend::EmitLLVM)
+      DevicePTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
-    llvm::Error Err = DeviceParser->GenerateFatbinary();
+    llvm::Error Err = DeviceParser->GenerateOffloadBinary();
     if (Err)
       return std::move(Err);
   }
@@ -483,6 +703,12 @@ Interpreter::Parse(llvm::StringRef Code) {
 
   PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
 
+  // Under -emit-llvm, print the module IR.
+  if (InitPTUSize && LastPTU.TheModule &&
+      getCompilerInstance()->getFrontendOpts().ProgramAction ==
+          frontend::EmitLLVM)
+    LastPTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
+
   return LastPTU;
 }
 
@@ -497,7 +723,11 @@ llvm::Error Interpreter::CreateExecutor() {
                                                std::error_code());
 
   if (!IncrExecutorBuilder)
-    IncrExecutorBuilder = std::make_unique<IncrementalExecutorBuilder>();
+    IncrExecutorBuilder = IncrementalExecutorBuilder::createDefault();
+
+  // Propagate mllvm args so the wasm executor can restore them after each
+  // lldMain invocation (which resets all cl options for test isolation).
+  IncrExecutorBuilder->LLVMArgs = CI->getFrontendOpts().LLVMArgs;
 
   auto ExecutorOrErr = IncrExecutorBuilder->create(*TSCtx, CI->getTarget());
   if (ExecutorOrErr)

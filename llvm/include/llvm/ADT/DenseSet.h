@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
-#include <cstddef>
 #include <initializer_list>
 #include <iterator>
 #include <utility>
@@ -50,10 +49,8 @@ public:
 ///   DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
 ///            detail::DenseSetPair<ValueT>>
 ///
-/// or the equivalent SmallDenseMap type.  ValueInfoT must implement the
-/// DenseMapInfo "concept".
-template <typename ValueT, typename MapTy, typename ValueInfoT>
-class DenseSetImpl {
+/// or the equivalent SmallDenseMap type.
+template <typename ValueT, typename MapTy> class DenseSetImpl {
   static_assert(sizeof(typename MapTy::value_type) == sizeof(ValueT),
                 "DenseMap buckets unexpectedly large!");
   MapTy TheMap;
@@ -98,6 +95,16 @@ public:
   void clear() { TheMap.clear(); }
 
   bool erase(const ValueT &V) { return TheMap.erase(V); }
+
+  /// Remove all elements for which \p Pred returns true.  This is the safe
+  /// replacement for erase-while-iterating; see DenseMap::remove_if.  The
+  /// predicate must not access the set being modified.  Returns whether
+  /// anything was removed; if so, all iterators are invalidated.
+  template <typename Predicate> bool remove_if(Predicate Pred) {
+    return TheMap.remove_if([&](const typename MapTy::value_type &KV) {
+      return Pred(KV.getFirst());
+    });
+  }
 
   void swap(DenseSetImpl &RHS) { TheMap.swap(RHS.TheMap); }
 
@@ -236,10 +243,9 @@ public:
 /// of RHS, and that RHS contains no additional values.
 /// Equivalent to N calls to RHS.count. Amortized complexity is linear, worst
 /// case is O(N^2) (if every hash collides).
-template <typename ValueT, typename MapTy, typename ValueInfoT>
-[[nodiscard]] bool
-operator==(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
-           const DenseSetImpl<ValueT, MapTy, ValueInfoT> &RHS) {
+template <typename ValueT, typename MapTy>
+[[nodiscard]] bool operator==(const DenseSetImpl<ValueT, MapTy> &LHS,
+                              const DenseSetImpl<ValueT, MapTy> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
 
@@ -253,24 +259,20 @@ operator==(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
 /// Inequality comparison for DenseSet.
 ///
 /// Equivalent to !(LHS == RHS). See operator== for performance notes.
-template <typename ValueT, typename MapTy, typename ValueInfoT>
-[[nodiscard]] bool
-operator!=(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
-           const DenseSetImpl<ValueT, MapTy, ValueInfoT> &RHS) {
+template <typename ValueT, typename MapTy>
+[[nodiscard]] bool operator!=(const DenseSetImpl<ValueT, MapTy> &LHS,
+                              const DenseSetImpl<ValueT, MapTy> &RHS) {
   return !(LHS == RHS);
 }
 
 template <typename ValueT, typename ValueInfoT>
 using DenseSet = DenseSetImpl<
-    ValueT, DenseMap<ValueT, DenseSetEmpty, ValueInfoT, DenseSetPair<ValueT>>,
-    ValueInfoT>;
+    ValueT, DenseMap<ValueT, DenseSetEmpty, ValueInfoT, DenseSetPair<ValueT>>>;
 
 template <typename ValueT, unsigned InlineBuckets, typename ValueInfoT>
 using SmallDenseSet =
-    DenseSetImpl<ValueT,
-                 SmallDenseMap<ValueT, DenseSetEmpty, InlineBuckets, ValueInfoT,
-                               DenseSetPair<ValueT>>,
-                 ValueInfoT>;
+    DenseSetImpl<ValueT, SmallDenseMap<ValueT, DenseSetEmpty, InlineBuckets,
+                                       ValueInfoT, DenseSetPair<ValueT>>>;
 
 } // end namespace detail
 

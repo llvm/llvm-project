@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -O0 -mtriple=x86_64-linux-gnu < %s -dwarf-sections-as-references=Enable -dwarf-inlined-strings=Enable -no-dwarf-ranges-section -dwarf-version 2 -debugger-tune=gdb | FileCheck %s
+; RUN: llc -filetype=asm -O0 -mtriple=x86_64-linux-gnu < %s -dwarf-sections-as-references=Enable -dwarf-inlined-strings=Enable -no-dwarf-ranges-section -dwarf-version 3 -debugger-tune=gdb | FileCheck %s
 
 ; CHECK:      .file
 
@@ -10,7 +10,7 @@
 
 ; CHECK:      .section .debug_info
 ; CHECK-NOT:  .L
-; CHECK:      .short 2             # DWARF version number
+; CHECK:      .short 3             # DWARF version number
 ; CHECK-NOT:  .L
 ; CHECK:      .long .debug_abbrev  # Offset Into Abbrev. Section
 ; CHECK-NOT:  .L
@@ -20,7 +20,7 @@
 ; CHECK-NOT:  .L
 ; CHECK:      .long .debug_line    # DW_AT_stmt_list
 ; CHECK-NOT:  .L
-; CHECK:      .quad .debug_info+{{[0-9]+}} # DW_AT_type
+; CHECK:      .long .debug_info+{{[0-9]+}} # DW_AT_type
 ; CHECK-NOT:  .L
 ; CHECK:      .byte 0              # End Of Children Mark
 ; CHECK-NOT:  .L
@@ -49,6 +49,6 @@ source_filename = "test/DebugInfo/X86/sections_as_references.ll"
 !11 = !{!0}
 !12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !8, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !10, globals: !13, imports: !5, nameTableKind: None)
 !13 = !{!6}
-!14 = !{i32 2, !"Dwarf Version", i32 2}
+!14 = !{i32 2, !"Dwarf Version", i32 3}
 !15 = !{i32 1, !"Debug Info Version", i32 3}
 

@@ -32,11 +32,6 @@
 class LinkGraphLinkingLayerTests;
 
 namespace llvm {
-
-namespace jitlink {
-class EHFrameRegistrar;
-} // namespace jitlink
-
 namespace orc {
 
 /// LinkGraphLinkingLayer links LinkGraphs into the Executor using JITLink.
@@ -75,11 +70,7 @@ public:
                                              ResourceKey SrcKey) = 0;
   };
 
-  /// Construct a LinkGraphLinkingLayer using the ExecutorProcessControl
-  /// instance's memory manager.
-  LinkGraphLinkingLayer(ExecutionSession &ES);
-
-  /// Construct a LinkGraphLinkingLayer using a custom memory manager.
+  /// Construct a LinkGraphLinkingLayer.
   LinkGraphLinkingLayer(ExecutionSession &ES,
                         jitlink::JITLinkMemoryManager &MemMgr);
 

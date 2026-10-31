@@ -12,6 +12,10 @@ void test_lambdas() {
   (void) [] () -> volatile void { // expected-warning {{volatile-qualified return type 'volatile void' is deprecated}}
     return {1, 2}; // expected-error {{void lambda should not return a value}}
   };
+
+  (void) [] () -> void { return ({}); };
+  (void) [] () -> void { return void{}; };
+  (void) [] () -> void { return void(); };
 }
 
 void test_blocks() {

@@ -40,8 +40,8 @@ public:
   checkRegionChanges(ProgramStateRef State,
                      const InvalidatedSymbols *Invalidated,
                      ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
-                     const LocationContext *LCtx, const CallEvent *Call) const;
+                     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+                     const CallEvent *Call) const;
 
   /// Indicates if a read (load) of \c errno is allowed in a non-condition part
   /// of \c if, \c switch, loop and conditional statements when the errno
@@ -148,7 +148,7 @@ void ErrnoChecker::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
     case MustNotBeChecked:
       // Read of 'errno' when it may have undefined value.
       if (!AllowErrnoReadOutsideConditions || isInCondition(S, C)) {
-        if (ExplodedNode *N = C.generateErrorNode()) {
+        if (ExplodedNode *N = C.addSink()) {
           auto BR = std::make_unique<PathSensitiveBugReport>(
               BT_InvalidErrnoRead,
               "An undefined value may be read from 'errno'", N);
@@ -217,7 +217,7 @@ void ErrnoChecker::checkPreCall(const CallEvent &Call,
 ProgramStateRef ErrnoChecker::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Invalidated,
     ArrayRef<const MemRegion *> ExplicitRegions,
-    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
+    ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
     const CallEvent *Call) const {
   std::optional<ento::Loc> ErrnoLoc = getErrnoLoc(State);
   if (!ErrnoLoc)

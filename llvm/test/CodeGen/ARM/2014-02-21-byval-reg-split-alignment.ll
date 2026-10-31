@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm-linux-gnueabihf < %s | FileCheck %s
+; RUN: llc -mtriple=arm-linux-gnueabi < %s | FileCheck %s
 
 %struct4bytes = type { i32 }
 %struct8bytes8align = type { i64 }

@@ -15,8 +15,8 @@
 
 using namespace llvm;
 
-TEST(AMDGPU, TestCSEForRegisterClassOrBankAndLLT) {
-  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx1100", "");
+TEST_F(AMDGPUTestBase, TestCSEForRegisterClassOrBankAndLLT) {
+  auto TM = createAMDGPUTargetMachine(Triple("amdgpu11.00-amd-"), "", "");
   if (!TM)
     GTEST_SKIP();
 
@@ -25,7 +25,7 @@ TEST(AMDGPU, TestCSEForRegisterClassOrBankAndLLT) {
 
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
-  Mod.setDataLayout(TM->createDataLayout());
+  Mod.setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   auto *Type = FunctionType::get(Type::getVoidTy(Ctx), false);
   auto *F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &Mod);

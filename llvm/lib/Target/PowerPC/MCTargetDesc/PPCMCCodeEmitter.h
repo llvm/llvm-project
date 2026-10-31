@@ -30,7 +30,7 @@ class PPCMCCodeEmitter : public MCCodeEmitter {
 public:
   PPCMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
       : MCII(mcii), CTX(ctx),
-        IsLittleEndian(ctx.getAsmInfo()->isLittleEndian()) {}
+        IsLittleEndian(ctx.getAsmInfo().isLittleEndian()) {}
   PPCMCCodeEmitter(const PPCMCCodeEmitter &) = delete;
   void operator=(const PPCMCCodeEmitter &) = delete;
   ~PPCMCCodeEmitter() override = default;

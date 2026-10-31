@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-any-address-space-out-arguments -amdgpu-rewrite-out-arguments < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -amdgpu-any-address-space-out-arguments -amdgpu-rewrite-out-arguments < %s | FileCheck %s
 
 ; CHECK: %void_one_out_non_private_arg_i32_1_use = type { i32 }
 ; CHECK: %bitcast_pointer_as1 = type { <4 x i32> }

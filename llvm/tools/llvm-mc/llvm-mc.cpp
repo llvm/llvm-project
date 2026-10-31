@@ -36,6 +36,7 @@
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -335,13 +336,15 @@ static int fillCommandLineSymbols(MCAsmParser &Parser) {
     auto Val = Pair.second;
 
     if (Sym.empty() || Val.empty()) {
-      WithColor::error() << "defsym must be of the form: sym=value: " << I
-                         << "\n";
+      Parser.getSourceManager().PrintMessage(
+          SMLoc(), SourceMgr::DK_Error,
+          "defsym must be of the form: sym=value: " + I);
       return 1;
     }
     int64_t Value;
     if (Val.getAsInteger(0, Value)) {
-      WithColor::error() << "value is not an integer: " << Val << "\n";
+      Parser.getSourceManager().PrintMessage(SMLoc(), SourceMgr::DK_Error,
+                                             "value is not an integer: " + Val);
       return 1;
     }
     Parser.getContext().setSymbolValue(Parser.getStreamer(), Sym, Value);
@@ -349,18 +352,18 @@ static int fillCommandLineSymbols(MCAsmParser &Parser) {
   return 0;
 }
 
-static int AssembleInput(const char *ProgName, const Target *TheTarget,
-                         SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
-                         MCAsmInfo &MAI, MCSubtargetInfo &STI,
-                         MCInstrInfo &MCII, MCTargetOptions const &MCOptions) {
+static int AssembleInput(const Target *TheTarget, SourceMgr &SrcMgr,
+                         MCContext &Ctx, MCStreamer &Str, MCAsmInfo &MAI,
+                         MCSubtargetInfo &STI, MCInstrInfo &MCII,
+                         MCTargetOptions const &MCOptions) {
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
+      TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
   if (!TAP) {
-    WithColor::error(errs(), ProgName)
-        << "this target does not support assembly parsing.\n";
+    SrcMgr.PrintMessage(SMLoc(), SourceMgr::DK_Error,
+                        "this target does not support assembly parsing.");
     return 1;
   }
 
@@ -391,7 +394,9 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::HideUnrelatedOptions({&MCCategory, &getColorCategory()});
-  cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+                              "llvm machine code playground\n");
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
@@ -407,6 +412,7 @@ int main(int argc, char **argv) {
   });
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCOptions.LibraryOptions = &LibraryOptions;
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
   MCOptions.AsmVerbose = true;
@@ -491,7 +497,7 @@ int main(int argc, char **argv) {
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext Ctx(TheTriple, *MAI, *MRI, *STI, &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
   Ctx.setObjectFileInfo(MOFI.get());
@@ -661,8 +667,8 @@ int main(int argc, char **argv) {
     Res = AsLexInput(SrcMgr, *MAI, Out->os());
     break;
   case AC_Assemble:
-    Res = AssembleInput(ProgName, TheTarget, SrcMgr, Ctx, *Str, *MAI, *STI,
-                        *MCII, MCOptions);
+    Res = AssembleInput(TheTarget, SrcMgr, Ctx, *Str, *MAI, *STI, *MCII,
+                        MCOptions);
     break;
   case AC_MDisassemble:
   case AC_CDisassemble:
@@ -672,7 +678,7 @@ int main(int argc, char **argv) {
   }
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, *STI, *Str, *Buffer, SrcMgr,
-                                    Ctx, MCOptions, HexBytes, NumBenchmarkRuns);
+                                    Ctx, HexBytes, NumBenchmarkRuns);
 
   // Keep output if no errors.
   if (Res == 0) {

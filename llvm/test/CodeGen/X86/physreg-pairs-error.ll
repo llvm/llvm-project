@@ -1,6 +1,6 @@
 ; RUN: not llc -mtriple=i386-unknown-linux-gnu -o - %s 2>&1 | FileCheck %s
 
-; CHECK: error: couldn't allocate input reg for constraint '{esp}'
+; CHECK: error: could not allocate input reg for constraint '{esp}'
 define dso_local i64 @test_esp(i64 %in) local_unnamed_addr nounwind {
 entry:
   %0 = tail call i64 asm sideeffect "mov $1, $0", "=r,{esp},~{dirflag},~{fpsr},~{flags}"(i64 81985529216486895)

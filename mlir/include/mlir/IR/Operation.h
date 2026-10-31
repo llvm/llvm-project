@@ -18,7 +18,6 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Region.h"
-#include "llvm/ADT/Twine.h"
 #include <optional>
 
 namespace mlir {
@@ -300,12 +299,12 @@ public:
   }
 
   /// Replace uses of results of this operation with the provided `values` if
-  /// the given callback returns true.
+  /// the given callback returns true. Returns whether any uses were replaced.
   template <typename ValuesT>
-  void replaceUsesWithIf(ValuesT &&values,
+  bool replaceUsesWithIf(ValuesT &&values,
                          function_ref<bool(OpOperand &)> shouldReplace) {
-    getResults().replaceUsesWithIf(std::forward<ValuesT>(values),
-                                   shouldReplace);
+    return getResults().replaceUsesWithIf(std::forward<ValuesT>(values),
+                                          shouldReplace);
   }
 
   /// Destroys this operation and its subclass data.
@@ -346,7 +345,9 @@ public:
 
   void print(raw_ostream &os, const OpPrintingFlags &flags = {});
   void print(raw_ostream &os, AsmState &state);
-  void dump();
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump();
+#endif
 
   // Dump pretty printed IR. This method is helpful for better readability if
   // the Operation is not verified because it won't disable custom printers to
@@ -468,6 +469,13 @@ public:
   /// to use Properties instead.
   std::optional<Attribute> getInherentAttr(StringRef name);
 
+  /// Access an inherent attribute by name and cast it to `AttrClass`.
+  template <typename AttrClass>
+  AttrClass getInherentAttrOfType(StringRef name) {
+    return llvm::dyn_cast_or_null<AttrClass>(
+        getInherentAttr(name).value_or(Attribute{}));
+  }
+
   /// Set an inherent attribute by name.
   ///
   /// This method is available as a transient facility in the migration process
@@ -481,6 +489,26 @@ public:
   /// Access a discardable attribute by name, returns a null Attribute if the
   /// discardable attribute does not exist.
   Attribute getDiscardableAttr(StringAttr name) { return attrs.get(name); }
+
+  /// Access a discardable attribute by name and cast it to `AttrClass`.
+  template <typename AttrClass>
+  AttrClass getDiscardableAttrOfType(StringRef name) {
+    return llvm::dyn_cast_or_null<AttrClass>(getDiscardableAttr(name));
+  }
+  template <typename AttrClass>
+  AttrClass getDiscardableAttrOfType(StringAttr name) {
+    return llvm::dyn_cast_or_null<AttrClass>(getDiscardableAttr(name));
+  }
+
+  /// Return true if this operation has a discardable attribute with the
+  /// provided name.
+  bool hasDiscardableAttr(StringRef name) { return bool(attrs.get(name)); }
+  bool hasDiscardableAttr(StringAttr name) { return bool(attrs.get(name)); }
+  template <typename AttrClass, typename NameT>
+  bool hasDiscardableAttrOfType(NameT &&name) {
+    return static_cast<bool>(
+        getDiscardableAttrOfType<AttrClass>(std::forward<NameT>(name)));
+  }
 
   /// Set a discardable attribute by name.
   void setDiscardableAttr(StringAttr name, Attribute value) {
@@ -661,16 +689,16 @@ public:
 
   /// Return a range corresponding to the dialect attributes for this operation.
   dialect_attr_range getDialectAttrs() {
-    auto attrs = getAttrs();
+    ArrayRef<NamedAttribute> attrs = getRawDictionaryAttrs().getValue();
     return {dialect_attr_iterator(attrs.begin(), attrs.end()),
             dialect_attr_iterator(attrs.end(), attrs.end())};
   }
   dialect_attr_iterator dialect_attr_begin() {
-    auto attrs = getAttrs();
+    ArrayRef<NamedAttribute> attrs = getRawDictionaryAttrs().getValue();
     return dialect_attr_iterator(attrs.begin(), attrs.end());
   }
   dialect_attr_iterator dialect_attr_end() {
-    auto attrs = getAttrs();
+    ArrayRef<NamedAttribute> attrs = getRawDictionaryAttrs().getValue();
     return dialect_attr_iterator(attrs.end(), attrs.end());
   }
 

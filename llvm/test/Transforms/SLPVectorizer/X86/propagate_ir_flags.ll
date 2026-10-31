@@ -330,7 +330,7 @@ define void @only_arcp(ptr %x) {
 define void @addsub_all_nsw(ptr %x) {
 ; CHECK-LABEL: @addsub_all_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <4 x i32> [[TMP2]], <i32 -1, i32 1, i32 -1, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP2]], <i32 1, i32 -1, i32 1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -359,7 +359,7 @@ define void @addsub_all_nsw(ptr %x) {
 define void @addsub_some_nsw(ptr %x) {
 ; CHECK-LABEL: @addsub_some_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i32> [[TMP2]], <i32 -1, i32 1, i32 -1, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 -1, i32 1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -388,7 +388,7 @@ define void @addsub_some_nsw(ptr %x) {
 define void @addsub_no_nsw(ptr %x) {
 ; CHECK-LABEL: @addsub_no_nsw(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i32> [[TMP2]], <i32 -1, i32 1, i32 -1, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 -1, i32 1, i32 -1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -570,6 +570,339 @@ define void @call_no_fast(ptr %x) {
 
   store double %call1, ptr %x, align 8
   store double %call2, ptr %idx2, align 8
+
+  ret void
+}
+
+; All lanes have 'nnan', so the vectorized select must keep it.
+define void @select_nnan(ptr %d, <4 x i1> %m, <4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @select_nnan(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[D:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[M:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %e1 = extractelement <4 x i1> %m, i32 0
+  %x1 = extractelement <4 x float> %x, i32 0
+  %y1 = extractelement <4 x float> %y, i32 0
+  %s1 = select nnan i1 %e1, float %x1, float %y1
+  %p1 = getelementptr float, ptr %d, i32 0
+  store float %s1, ptr %p1, align 4
+  %e2 = extractelement <4 x i1> %m, i32 1
+  %x2 = extractelement <4 x float> %x, i32 1
+  %y2 = extractelement <4 x float> %y, i32 1
+  %s2 = select nnan i1 %e2, float %x2, float %y2
+  %p2 = getelementptr float, ptr %d, i32 1
+  store float %s2, ptr %p2, align 4
+  %e3 = extractelement <4 x i1> %m, i32 2
+  %x3 = extractelement <4 x float> %x, i32 2
+  %y3 = extractelement <4 x float> %y, i32 2
+  %s3 = select nnan i1 %e3, float %x3, float %y3
+  %p3 = getelementptr float, ptr %d, i32 2
+  store float %s3, ptr %p3, align 4
+  %e4 = extractelement <4 x i1> %m, i32 3
+  %x4 = extractelement <4 x float> %x, i32 3
+  %y4 = extractelement <4 x float> %y, i32 3
+  %s4 = select nnan i1 %e4, float %x4, float %y4
+  %p4 = getelementptr float, ptr %d, i32 3
+  store float %s4, ptr %p4, align 4
+  ret void
+}
+
+; One lane lacks 'nnan', so the vectorized select must NOT have it.
+define void @select_not_all_nnan(ptr %d, <4 x i1> %m, <4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @select_not_all_nnan(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[D:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[M:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %e1 = extractelement <4 x i1> %m, i32 0
+  %x1 = extractelement <4 x float> %x, i32 0
+  %y1 = extractelement <4 x float> %y, i32 0
+  %s1 = select nnan i1 %e1, float %x1, float %y1
+  %p1 = getelementptr float, ptr %d, i32 0
+  store float %s1, ptr %p1, align 4
+  %e2 = extractelement <4 x i1> %m, i32 1
+  %x2 = extractelement <4 x float> %x, i32 1
+  %y2 = extractelement <4 x float> %y, i32 1
+  %s2 = select nnan i1 %e2, float %x2, float %y2
+  %p2 = getelementptr float, ptr %d, i32 1
+  store float %s2, ptr %p2, align 4
+  %e3 = extractelement <4 x i1> %m, i32 2
+  %x3 = extractelement <4 x float> %x, i32 2
+  %y3 = extractelement <4 x float> %y, i32 2
+  %s3 = select nnan i1 %e3, float %x3, float %y3
+  %p3 = getelementptr float, ptr %d, i32 2
+  store float %s3, ptr %p3, align 4
+  %e4 = extractelement <4 x i1> %m, i32 3
+  %x4 = extractelement <4 x float> %x, i32 3
+  %y4 = extractelement <4 x float> %y, i32 3
+  %s4 = select i1 %e4, float %x4, float %y4
+  %p4 = getelementptr float, ptr %d, i32 3
+  store float %s4, ptr %p4, align 4
+  ret void
+}
+
+define void @fptrunc_fast(ptr %x, ptr %y) {
+; CHECK-LABEL: @fptrunc_fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[X:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <4 x double> [[TMP1]] to <4 x float>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %idx2 = getelementptr inbounds double, ptr %x, i64 1
+  %idx3 = getelementptr inbounds double, ptr %x, i64 2
+  %idx4 = getelementptr inbounds double, ptr %x, i64 3
+  %out2 = getelementptr inbounds float, ptr %y, i64 1
+  %out3 = getelementptr inbounds float, ptr %y, i64 2
+  %out4 = getelementptr inbounds float, ptr %y, i64 3
+
+  %load1 = load double, ptr %x, align 8
+  %load2 = load double, ptr %idx2, align 8
+  %load3 = load double, ptr %idx3, align 8
+  %load4 = load double, ptr %idx4, align 8
+
+  %op1 = fptrunc fast double %load1 to float
+  %op2 = fptrunc fast double %load2 to float
+  %op3 = fptrunc fast double %load3 to float
+  %op4 = fptrunc fast double %load4 to float
+
+  store float %op1, ptr %y, align 4
+  store float %op2, ptr %out2, align 4
+  store float %op3, ptr %out3, align 4
+  store float %op4, ptr %out4, align 4
+
+  ret void
+}
+
+define void @fpext_only_nnan(ptr %x, ptr %y) {
+; CHECK-LABEL: @fpext_only_nnan(
+; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i64 2
+; CHECK-NEXT:    [[OUT3:%.*]] = getelementptr inbounds double, ptr [[Y:%.*]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[IDX3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x float> [[TMP3]] to <2 x double>
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[Y]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[OUT3]], align 8
+; CHECK-NEXT:    ret void
+;
+  %idx2 = getelementptr inbounds float, ptr %x, i64 1
+  %idx3 = getelementptr inbounds float, ptr %x, i64 2
+  %idx4 = getelementptr inbounds float, ptr %x, i64 3
+  %out2 = getelementptr inbounds double, ptr %y, i64 1
+  %out3 = getelementptr inbounds double, ptr %y, i64 2
+  %out4 = getelementptr inbounds double, ptr %y, i64 3
+
+  %load1 = load float, ptr %x, align 4
+  %load2 = load float, ptr %idx2, align 4
+  %load3 = load float, ptr %idx3, align 4
+  %load4 = load float, ptr %idx4, align 4
+
+  %op1 = fpext fast float %load1 to double
+  %op2 = fpext nnan float %load2 to double
+  %op3 = fpext nnan ninf float %load3 to double
+  %op4 = fpext nnan float %load4 to double
+
+  store double %op1, ptr %y, align 8
+  store double %op2, ptr %out2, align 8
+  store double %op3, ptr %out3, align 8
+  store double %op4, ptr %out4, align 8
+
+  ret void
+}
+
+define void @sitofp_fast(ptr %x, ptr %y) {
+; CHECK-LABEL: @sitofp_fast(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <4 x i32> [[TMP1]] to <4 x float>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %idx2 = getelementptr inbounds i32, ptr %x, i64 1
+  %idx3 = getelementptr inbounds i32, ptr %x, i64 2
+  %idx4 = getelementptr inbounds i32, ptr %x, i64 3
+  %out2 = getelementptr inbounds float, ptr %y, i64 1
+  %out3 = getelementptr inbounds float, ptr %y, i64 2
+  %out4 = getelementptr inbounds float, ptr %y, i64 3
+
+  %load1 = load i32, ptr %x, align 4
+  %load2 = load i32, ptr %idx2, align 4
+  %load3 = load i32, ptr %idx3, align 4
+  %load4 = load i32, ptr %idx4, align 4
+
+  %op1 = sitofp fast i32 %load1 to float
+  %op2 = sitofp fast i32 %load2 to float
+  %op3 = sitofp fast i32 %load3 to float
+  %op4 = sitofp fast i32 %load4 to float
+
+  store float %op1, ptr %y, align 4
+  store float %op2, ptr %out2, align 4
+  store float %op3, ptr %out3, align 4
+  store float %op4, ptr %out4, align 4
+
+  ret void
+}
+
+define void @uitofp_nneg(ptr %x, ptr %y) {
+; CHECK-LABEL: @uitofp_nneg(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <4 x i32> [[TMP1]] to <4 x float>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %idx2 = getelementptr inbounds i32, ptr %x, i64 1
+  %idx3 = getelementptr inbounds i32, ptr %x, i64 2
+  %idx4 = getelementptr inbounds i32, ptr %x, i64 3
+  %out2 = getelementptr inbounds float, ptr %y, i64 1
+  %out3 = getelementptr inbounds float, ptr %y, i64 2
+  %out4 = getelementptr inbounds float, ptr %y, i64 3
+
+  %load1 = load i32, ptr %x, align 4
+  %load2 = load i32, ptr %idx2, align 4
+  %load3 = load i32, ptr %idx3, align 4
+  %load4 = load i32, ptr %idx4, align 4
+
+  %op1 = uitofp nneg i32 %load1 to float
+  %op2 = uitofp nneg i32 %load2 to float
+  %op3 = uitofp nneg i32 %load3 to float
+  %op4 = uitofp nneg i32 %load4 to float
+
+  store float %op1, ptr %y, align 4
+  store float %op2, ptr %out2, align 4
+  store float %op3, ptr %out3, align 4
+  store float %op4, ptr %out4, align 4
+
+  ret void
+}
+
+define void @zext_nneg(ptr %x, ptr %y) {
+; CHECK-LABEL: @zext_nneg(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[X:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %idx2 = getelementptr inbounds i16, ptr %x, i64 1
+  %idx3 = getelementptr inbounds i16, ptr %x, i64 2
+  %idx4 = getelementptr inbounds i16, ptr %x, i64 3
+  %out2 = getelementptr inbounds i32, ptr %y, i64 1
+  %out3 = getelementptr inbounds i32, ptr %y, i64 2
+  %out4 = getelementptr inbounds i32, ptr %y, i64 3
+
+  %load1 = load i16, ptr %x, align 2
+  %load2 = load i16, ptr %idx2, align 2
+  %load3 = load i16, ptr %idx3, align 2
+  %load4 = load i16, ptr %idx4, align 2
+
+  %op1 = zext nneg i16 %load1 to i32
+  %op2 = zext nneg i16 %load2 to i32
+  %op3 = zext nneg i16 %load3 to i32
+  %op4 = zext nneg i16 %load4 to i32
+
+  store i32 %op1, ptr %y, align 4
+  store i32 %op2, ptr %out2, align 4
+  store i32 %op3, ptr %out3, align 4
+  store i32 %op4, ptr %out4, align 4
+
+  ret void
+}
+
+define void @zext_nneg_copyable_const(ptr %y, i8 %a, i8 %b, i8 %c, i32 %x) #1 {
+; CHECK-LABEL: @zext_nneg_copyable_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> <i8 poison, i8 poison, i8 poison, i8 100>, i8 [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[C:%.*]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %out2 = getelementptr inbounds i32, ptr %y, i64 1
+  %out3 = getelementptr inbounds i32, ptr %y, i64 2
+  %out4 = getelementptr inbounds i32, ptr %y, i64 3
+
+  %ext1 = zext nneg i8 %a to i32
+  %ext2 = zext nneg i8 %b to i32
+  %ext3 = zext nneg i8 %c to i32
+
+  %op1 = mul i32 %ext1, %x
+  %op2 = mul i32 %ext2, %x
+  %op3 = mul i32 %ext3, %x
+  %op4 = mul i32 100, %x
+
+  store i32 %op1, ptr %y, align 4
+  store i32 %op2, ptr %out2, align 4
+  store i32 %op3, ptr %out3, align 4
+  store i32 %op4, ptr %out4, align 4
+
+  ret void
+}
+
+define void @zext_nneg_copyable_const_sign_bit(ptr %y, i8 %a, i8 %b, i8 %c, i32 %x) #1 {
+; CHECK-LABEL: @zext_nneg_copyable_const_sign_bit(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> <i8 poison, i8 poison, i8 poison, i8 -56>, i8 [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[C:%.*]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %out2 = getelementptr inbounds i32, ptr %y, i64 1
+  %out3 = getelementptr inbounds i32, ptr %y, i64 2
+  %out4 = getelementptr inbounds i32, ptr %y, i64 3
+
+  %ext1 = zext nneg i8 %a to i32
+  %ext2 = zext nneg i8 %b to i32
+  %ext3 = zext nneg i8 %c to i32
+
+  %op1 = mul i32 %ext1, %x
+  %op2 = mul i32 %ext2, %x
+  %op3 = mul i32 %ext3, %x
+  %op4 = mul i32 200, %x
+
+  store i32 %op1, ptr %y, align 4
+  store i32 %op2, ptr %out2, align 4
+  store i32 %op3, ptr %out3, align 4
+  store i32 %op4, ptr %out4, align 4
+
+  ret void
+}
+
+define void @trunc_nuw_nsw(ptr %x, ptr %y) {
+; CHECK-LABEL: @trunc_nuw_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[Y:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+  %idx2 = getelementptr inbounds i32, ptr %x, i64 1
+  %idx3 = getelementptr inbounds i32, ptr %x, i64 2
+  %idx4 = getelementptr inbounds i32, ptr %x, i64 3
+  %out2 = getelementptr inbounds i16, ptr %y, i64 1
+  %out3 = getelementptr inbounds i16, ptr %y, i64 2
+  %out4 = getelementptr inbounds i16, ptr %y, i64 3
+
+  %load1 = load i32, ptr %x, align 4
+  %load2 = load i32, ptr %idx2, align 4
+  %load3 = load i32, ptr %idx3, align 4
+  %load4 = load i32, ptr %idx4, align 4
+
+  %op1 = trunc nuw nsw i32 %load1 to i16
+  %op2 = trunc nuw nsw i32 %load2 to i16
+  %op3 = trunc nuw nsw i32 %load3 to i16
+  %op4 = trunc nuw nsw i32 %load4 to i16
+
+  store i16 %op1, ptr %y, align 2
+  store i16 %op2, ptr %out2, align 2
+  store i16 %op3, ptr %out3, align 2
+  store i16 %op4, ptr %out4, align 2
 
   ret void
 }

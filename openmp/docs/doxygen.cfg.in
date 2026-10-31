@@ -390,6 +390,8 @@ LOOKUP_CACHE_SIZE      = 3
 # Build related configuration options
 #---------------------------------------------------------------------------
 
+NUM_PROC_THREADS       = @DOXYGEN_NUM_PROC_THREADS@
+
 # If the EXTRACT_ALL tag is set to YES doxygen will assume all entities in
 # documentation are documented, even if no documentation was available. Private
 # class members and static file members will be hidden unless the

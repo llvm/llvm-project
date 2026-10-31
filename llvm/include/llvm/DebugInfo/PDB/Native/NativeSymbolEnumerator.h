@@ -21,7 +21,7 @@ namespace pdb {
 class NativeSession;
 class NativeTypeEnum;
 
-class NativeSymbolEnumerator : public NativeRawSymbol {
+class LLVM_ABI NativeSymbolEnumerator : public NativeRawSymbol {
 public:
   NativeSymbolEnumerator(NativeSession &Session, SymIndexId Id,
                          const NativeTypeEnum &Parent,

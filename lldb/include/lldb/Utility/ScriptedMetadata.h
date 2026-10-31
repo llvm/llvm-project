@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_SCRIPTEDMETADATA_H
 #define LLDB_UTILITY_SCRIPTEDMETADATA_H
 
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
@@ -19,23 +20,29 @@ class ScriptedMetadata {
 public:
   ScriptedMetadata(llvm::StringRef class_name,
                    StructuredData::DictionarySP dict_sp)
-      : m_class_name(class_name.data()), m_args_sp(dict_sp) {}
+      : m_class_name(class_name.str()), m_args_sp(dict_sp) {}
 
   ScriptedMetadata(const ProcessInfo &process_info) {
     lldb::ScriptedMetadataSP metadata_sp = process_info.GetScriptedMetadata();
     if (metadata_sp) {
       m_class_name = metadata_sp->GetClassName();
       m_args_sp = metadata_sp->GetArgsSP();
+      m_source_path = metadata_sp->GetSourcePath();
     }
   }
 
-  ScriptedMetadata(const ScriptedMetadata &other)
-      : m_class_name(other.m_class_name), m_args_sp(other.m_args_sp) {}
+  ScriptedMetadata(const ScriptedMetadata &other) = default;
+  ScriptedMetadata &operator=(const ScriptedMetadata &other) = default;
 
   explicit operator bool() const { return !m_class_name.empty(); }
 
   llvm::StringRef GetClassName() const { return m_class_name; }
   StructuredData::DictionarySP GetArgsSP() const { return m_args_sp; }
+
+  const FileSpec &GetSourcePath() const { return m_source_path; }
+  void SetSourcePath(const FileSpec &source_path) {
+    m_source_path = source_path;
+  }
 
   /// Get a unique identifier for this metadata based on its contents.
   /// The ID is computed from the class name and arguments dictionary,
@@ -62,6 +69,7 @@ public:
 private:
   std::string m_class_name;
   StructuredData::DictionarySP m_args_sp;
+  FileSpec m_source_path;
 };
 } // namespace lldb_private
 

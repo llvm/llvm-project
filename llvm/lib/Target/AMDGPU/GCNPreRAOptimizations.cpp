@@ -32,16 +32,26 @@
 
 #include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
+#include "GCNPreRAAntiHints.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-pre-ra-optimizations"
+
+static cl::opt<bool>
+    EnableAntiHints("amdgpu-anti-hints", cl::Hidden,
+                    cl::desc("Enable register allocation anti-hints."),
+                    cl::init(true));
 
 namespace {
 
@@ -51,8 +61,11 @@ private:
   const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
+  TargetSchedModel SchedModel;
 
   bool processReg(Register Reg);
+  void hintTrue16Copy(const MachineInstr &MI);
+  bool optimizeBVHStack(MachineInstr &MI);
 
 public:
   GCNPreRAOptimizationsImpl(LiveIntervals *LS) : LIS(LS) {}
@@ -88,10 +101,6 @@ INITIALIZE_PASS_END(GCNPreRAOptimizationsLegacy, DEBUG_TYPE,
 char GCNPreRAOptimizationsLegacy::ID = 0;
 
 char &llvm::GCNPreRAOptimizationsID = GCNPreRAOptimizationsLegacy::ID;
-
-FunctionPass *llvm::createGCNPreRAOptimizationsLegacyPass() {
-  return new GCNPreRAOptimizationsLegacy();
-}
 
 bool GCNPreRAOptimizationsImpl::processReg(Register Reg) {
   MachineInstr *Def0 = nullptr;
@@ -238,11 +247,78 @@ GCNPreRAOptimizationsPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
+void GCNPreRAOptimizationsImpl::hintTrue16Copy(const MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  const TargetRegisterClass *DstRC = TRI->getRegClassForReg(*MRI, Dst);
+  bool IsDst16Bit = AMDGPU::VGPR_16RegClass.hasSubClassEq(DstRC);
+  if (Dst.isVirtual() && IsDst16Bit && Src.isPhysical() &&
+      TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
+    MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
+  if (Src.isVirtual() && MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
+      Dst.isPhysical() && DstRC == &AMDGPU::VGPR_32RegClass)
+    MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
+  if (!Dst.isVirtual() || !Src.isVirtual())
+    return;
+  if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_32RegClass &&
+      MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass) {
+    MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
+    MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
+  }
+  if (IsDst16Bit && MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
+    MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
+}
+
+bool GCNPreRAOptimizationsImpl::optimizeBVHStack(MachineInstr &MI) {
+  SmallVector<Register, 2> UseRegs;
+
+  // Find BVH sources for this DS_BVH_STACK instruction.
+  auto CheckUse = [&](MachineOperand &Use) {
+    Register Reg = Use.getReg();
+    for (const MachineInstr &Src : MRI->def_instructions(Reg)) {
+      if (!SIInstrInfo::isImage(Src))
+        continue;
+      const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Src.getOpcode());
+      const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+          AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+      if (!BaseInfo->BVH)
+        continue;
+      UseRegs.push_back(Reg);
+      break;
+    }
+  };
+  CheckUse(*TII->getNamedOperand(MI, AMDGPU::OpName::data0));
+  CheckUse(*TII->getNamedOperand(MI, AMDGPU::OpName::data1));
+
+  if (UseRegs.empty())
+    return false;
+
+  // Add implicit uses for entire BVH source registers.
+  // This avoids partial reallocation of register which could
+  // introduce a premature s_wait_bvhcnt.
+  for (Register Reg : UseRegs) {
+    MI.addOperand(MachineOperand::CreateReg(Reg, false, true));
+    LIS->removeInterval(Reg);
+    LIS->createAndComputeVirtRegInterval(Reg);
+  }
+  LLVM_DEBUG(dbgs() << "Added implicit uses to: " << MI);
+
+  return true;
+}
+
 bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
+
+  // Anti-hints only steer register allocation, so they do not count as a
+  // modification of the function.
+  if (EnableAntiHints) {
+    SchedModel.init(&ST);
+    AMDGPU::HazardContext HCtx{TII, TRI, MRI, LIS, &ST, &SchedModel};
+    AMDGPU::applyAntiHintRules(MF, HCtx);
+  }
 
   bool Changed = false;
 
@@ -251,41 +327,34 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     if (!LIS->hasInterval(Reg))
       continue;
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-    if ((RC->MC->getSizeInBits() != 64 || !TRI->isSGPRClass(RC)) &&
+    if ((RC->getSizeInBits() != 64 || !TRI->isSGPRClass(RC)) &&
         (ST.hasGFX90AInsts() || !TRI->isAGPRClass(RC)))
       continue;
 
     Changed |= processReg(Reg);
   }
 
-  if (!ST.useRealTrue16Insts())
+  const bool HasBVHStack = ST.hasBVHDualAndBVH8Insts();
+  const bool HasRealTrue16 = ST.useRealTrue16Insts();
+
+  if (!HasRealTrue16 && !HasBVHStack)
     return Changed;
 
-  // Add RA hints to improve True16 COPY elimination.
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineInstr &MI : MBB) {
-      if (MI.getOpcode() != AMDGPU::COPY)
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      // Add RA hints to improve True16 COPY elimination.
+      if (HasRealTrue16 && MI.getOpcode() == AMDGPU::COPY) {
+        hintTrue16Copy(MI);
         continue;
-      Register Dst = MI.getOperand(0).getReg();
-      Register Src = MI.getOperand(1).getReg();
-      const TargetRegisterClass *DstRC = TRI->getRegClassForReg(*MRI, Dst);
-      bool IsDst16Bit = AMDGPU::VGPR_16RegClass.hasSubClassEq(DstRC);
-      if (Dst.isVirtual() && IsDst16Bit && Src.isPhysical() &&
-          TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
-      if (Src.isVirtual() &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
-          Dst.isPhysical() && DstRC == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
-      if (!Dst.isVirtual() || !Src.isVirtual())
-        continue;
-      if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_32RegClass &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass) {
-        MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
-        MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
       }
-      if (IsDst16Bit && MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
-        MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
+      // Add implicit uses to avoid early wait on intersect ray instructions.
+      if (HasBVHStack &&
+          (MI.getOpcode() == AMDGPU::DS_BVH_STACK_RTN_B32 ||
+           MI.getOpcode() == AMDGPU::DS_BVH_STACK_PUSH8_POP1_RTN_B32 ||
+           MI.getOpcode() == AMDGPU::DS_BVH_STACK_PUSH8_POP2_RTN_B64)) {
+        Changed |= optimizeBVHStack(MI);
+        continue;
+      }
     }
   }
 

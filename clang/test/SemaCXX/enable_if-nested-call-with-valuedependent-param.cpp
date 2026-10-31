@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only %s -std=c++14
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++14 -fexperimental-new-constant-interpreter
 
 // Checks that Clang doesn't crash/assert on the nested call to "kaboom"
 // in "bar()".

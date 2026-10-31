@@ -261,6 +261,8 @@ static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
 }
 
 mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
+  FullExprCleanupScope cleanups(*this, &s);
+
   // Assemble the final asm string.
   std::string asmString = s.generateAsmString(getContext());
   SourceLocation srcLoc = s.getAsmLoc();
@@ -537,8 +539,9 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   if (resultRegTypes.size() == 1)
     resultType = resultRegTypes[0];
   else if (resultRegTypes.size() > 1)
-    resultType = builder.getAnonRecordTy(resultRegTypes, /*packed=*/false,
-                                         /*padded=*/false);
+    resultType = builder.getAnonRecordTy(
+        resultRegTypes, /*packed=*/false,
+        cir::RecordType::getAllDataKinds(resultRegTypes));
 
   bool hasSideEffect = s.isVolatile() || s.getNumOutputs() == 0;
 
@@ -560,10 +563,9 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
 
     llvm::SmallVector<mlir::Attribute> operandAttrs;
 
-    int i = 0;
-    for (auto typ : argElemTypes) {
+    for (auto [idx, typ] : llvm::enumerate(argElemTypes)) {
       if (typ) {
-        [[maybe_unused]] mlir::Value op = args[i++];
+        [[maybe_unused]] mlir::Value op = args[idx];
         assert(mlir::isa<cir::PointerType>(op.getType()) &&
                "pointer type expected");
         assert(cast<cir::PointerType>(op.getType()).getPointee() == typ &&
@@ -574,7 +576,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
         // We need to add an attribute for every arg since later, during
         // the lowering to LLVM IR the attributes will be assigned to the
         // CallInsn argument by index, i.e. we can't skip null type here
-        operandAttrs.push_back(mlir::Attribute());
+        operandAttrs.push_back(mlir::DictionaryAttr::get(&getMLIRContext()));
       }
     }
     assert(args.size() == operandAttrs.size() &&
@@ -592,7 +594,9 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       builder.createStore(loc, result, addr);
 
       for (unsigned i = 0, e = resultRegTypes.size(); i != e; ++i) {
-        cir::PointerType typ = builder.getPointerTo(resultRegTypes[i]);
+        cir::PointerType typ = builder.getPointerTo(
+            resultRegTypes[i],
+            mlir::cast<cir::PointerType>(dest.getType()).getAddrSpace());
         cir::GetMemberOp ptr = builder.createGetMember(loc, typ, dest, "", i);
         cir::LoadOp tmp = builder.createLoad(loc, Address(ptr, alignment));
         regResults.push_back(tmp);

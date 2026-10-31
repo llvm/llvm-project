@@ -19,7 +19,7 @@ using namespace mlir::dataflow;
 static void printAnalysisResults(DataFlowSolver &solver, Operation *op,
                                  raw_ostream &os) {
   op->walk([&](Operation *op) {
-    auto tag = op->getAttrOfType<StringAttr>("tag");
+    auto tag = op->getDiscardableAttrOfType<StringAttr>("tag");
     if (!tag)
       return;
     os << tag.getValue() << ":\n";
@@ -67,6 +67,8 @@ namespace {
 /// This is a simple analysis that implements a transfer function for constant
 /// operations.
 struct ConstantAnalysis : public DataFlowAnalysis {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConstantAnalysis)
+
   using DataFlowAnalysis::DataFlowAnalysis;
 
   LogicalResult initialize(Operation *top) override {

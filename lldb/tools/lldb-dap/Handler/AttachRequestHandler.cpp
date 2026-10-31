@@ -38,8 +38,10 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
     return err;
 
   dap.SetConfiguration(args.configuration, /*is_attach=*/true);
-  if (!args.coreFile.empty())
+  if (!args.coreFile.empty()) {
     dap.stop_at_entry = true;
+    dap.is_live_session = false;
+  }
 
   PrintWelcomeMessage();
 
@@ -69,7 +71,9 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
               .c_str());
     }
   } else {
-    target = dap.CreateTarget(error);
+    // Attach by name passes a process name as program, so this can fail.
+    lldb::SBError create_error;
+    target = dap.CreateTarget(create_error);
   }
 
   if (target.IsValid())
@@ -101,12 +105,21 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
         return err;
 
-      dap.target = dap.debugger.GetSelectedTarget();
+      dap.SetTarget(dap.debugger.GetSelectedTarget());
 
       // Validate the attachCommand results.
       if (!dap.target.GetProcess().IsValid())
         return make_error<DAPError>(
             "attachCommands failed to attach to a process");
+
+      // If the attach commands produced a non-live session (e.g. a core file
+      // loaded via `target create --core`), report the session's stop reason
+      // instead of trying to resume it, matching the behavior of the
+      // `coreFile` attach key.
+      if (!dap.target.GetProcess().IsLiveDebugSession()) {
+        dap.stop_at_entry = true;
+        dap.is_live_session = false;
+      }
     } else if (!args.coreFile.empty()) {
       dap.target.LoadCore(args.coreFile.data(), error);
     } else if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {

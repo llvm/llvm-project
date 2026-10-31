@@ -4,8 +4,7 @@
 define i16 @test() {
 ; CHECK-LABEL: define i16 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i16 [[OP_RDX]], 0
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i16 0, 0
 ; CHECK-NEXT:    ret i16 [[OP_RDX1]]
 ;
 entry:

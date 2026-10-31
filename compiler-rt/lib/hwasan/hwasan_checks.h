@@ -36,7 +36,7 @@ constexpr unsigned SigTrapEncoding(ErrorAction EA, AccessType AT) {
 }
 
 template <ErrorAction EA, AccessType AT, size_t LogSize>
-__attribute__((always_inline)) static void SigTrap(uptr p) {
+__attribute__((always_inline)) void SigTrap(uptr p) {
   // Other platforms like linux can use signals for intercepting an exception
   // and dispatching to HandleTagMismatch. The fuchsias implementation doesn't
   // use signals so we can call it here directly instead.
@@ -86,7 +86,7 @@ __attribute__((always_inline)) static void SigTrap(uptr p) {
 
 // Version with access size which is not power of 2
 template <ErrorAction EA, AccessType AT>
-__attribute__((always_inline)) static void SigTrap(uptr p, uptr size) {
+__attribute__((always_inline)) void SigTrap(uptr p, uptr size) {
   // Other platforms like linux can use signals for intercepting an exception
   // and dispatching to HandleTagMismatch. The fuchsias implementation doesn't
   // use signals so we can call it here directly instead.
@@ -151,7 +151,7 @@ PossiblyShortTagMatches(tag_t mem_tag, uptr ptr, uptr sz) {
 }
 
 template <ErrorAction EA, AccessType AT, unsigned LogSize>
-__attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
+__attribute__((always_inline, nodebug)) void CheckAddress(uptr p) {
   if (!InTaggableRegion(p))
     return;
   uptr ptr_raw = p & ~kAddressTagMask;
@@ -164,8 +164,8 @@ __attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
 }
 
 template <ErrorAction EA, AccessType AT>
-__attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
-                                                                      uptr sz) {
+__attribute__((always_inline, nodebug)) void CheckAddressSized(uptr p,
+                                                               uptr sz) {
   if (sz == 0 || !InTaggableRegion(p))
     return;
   tag_t ptr_tag = GetTagFromPointer(p);

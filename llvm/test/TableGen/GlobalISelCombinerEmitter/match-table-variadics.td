@@ -96,17 +96,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:     // Label 4: @{{[0-9]+}}
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     // Label 1: @{{[0-9]+}}
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 1 //
-// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
-// CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// CHECK-NEXT:       // MIs[0] a
-// CHECK-NEXT:       // No operand predicates
-// CHECK-NEXT:       // MIs[0] b
-// CHECK-NEXT:       // No operand predicates
-// CHECK-NEXT:       // Combiner Rule #1: InstTest1
-// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
-// CHECK-NEXT:     // Label 5: @{{[0-9]+}}
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 4 //
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 4 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule4Enabled),
 // CHECK-NEXT:       GIM_CheckNumOperandsGE, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:       GIM_CheckNumOperandsLE, /*MI*/0, /*Expected*/5,
@@ -116,6 +106,16 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // Combiner Rule #4: VariadicTypeTestCxx
 // CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner1),
+// CHECK-NEXT:     // Label 5: @{{[0-9]+}}
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 1 //
+// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
+// CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// CHECK-NEXT:       // MIs[0] a
+// CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // MIs[0] b
+// CHECK-NEXT:       // No operand predicates
+// CHECK-NEXT:       // Combiner Rule #1: InstTest1
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:     // Label 6: @{{[0-9]+}}
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 5 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule5Enabled),

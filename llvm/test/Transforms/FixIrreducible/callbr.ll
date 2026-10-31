@@ -23,7 +23,7 @@
 ; CYCLES-BEFORE-NEXT:     depth=1: entries(indirect1 indirect fallthrough)
 ; CYCLES-BEFORE-NEXT:         depth=2: entries(indirect fallthrough)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: callbr_entry_multiple_indirect_targets1
-; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) indirect1 indirect fallthrough irr.guard1 irr.guard2
+; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) indirect1 indirect fallthrough irr.guard2 irr.guard1
 ; CYCLES-AFTER-NEXT:          depth=2: entries(irr.guard2) indirect fallthrough
 
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: callbr_header_no_indirect
@@ -66,7 +66,7 @@
 ; CYCLES-BEFORE-NEXT:     depth=1: entries(callbr_header) callbr_regular mid
 ; CYCLES-BEFORE-NEXT:         depth=2: entries(callbr_regular mid)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: callbr_header_and_regular
-; CYCLES-AFTER-NEXT:      depth=1: entries(callbr_header) callbr_regular mid callbr_header.target.mid callbr_header.target.callbr_regular irr.guard
+; CYCLES-AFTER-NEXT:      depth=1: entries(callbr_header) callbr_regular mid irr.guard callbr_header.target.mid callbr_header.target.callbr_regular
 ; CYCLES-AFTER-NEXT:          depth=2: entries(irr.guard) callbr_regular mid
 
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: callbr_only
@@ -78,7 +78,7 @@
 ; CYCLES-BEFORE-NEXT:     depth=1: entries(cb2 block block1)
 ; CYCLES-BEFORE-NEXT:         depth=2: entries(block block1)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: entry_multiple_callbr
-; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) cb2 block block1 irr.guard1 cb2.target.block1 cb2.target.block irr.guard2
+; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) cb2 block block1 irr.guard2 irr.guard1 cb2.target.block1 cb2.target.block
 ; CYCLES-AFTER-NEXT:          depth=2: entries(irr.guard2) block block1
 
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: callbr_exit_with_separate_entries
@@ -97,21 +97,21 @@
 ; CYCLES-BEFORE-NEXT:     depth=1: entries(cb3 cb1 cb2)
 ; CYCLES-BEFORE-NEXT:         depth=2: entries(cb1 cb2)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: callbr_only_multiple
-; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) cb3 cb1 cb2 cb2.target.cb3 cb1.target.cb3 irr.guard1 cb2.target.cb1 cb3.target.cb1 irr.guard2
+; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) cb3 cb1 cb2 cb2.target.cb1 irr.guard2 cb2.target.cb3 cb1.target.cb3 irr.guard1 cb3.target.cb1
 ; CYCLES-AFTER-NEXT:          depth=2: entries(irr.guard2) cb1 cb2 cb2.target.cb1
 
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: callbr_bypass
 ; CYCLES-BEFORE-NEXT:     depth=1: entries(l1 cb) l2
 ; CYCLES-BEFORE-NEXT:         depth=2: entries(cb l2)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: callbr_bypass
-; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) l1 cb l2 cb.target.l1 irr.guard1
+; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) l1 cb l2 irr.guard1 cb.target.l1
 ; CYCLES-AFTER-NEXT:          depth=2: entries(irr.guard1) cb l2
 
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: callbr_multiple_with_exit
 ; CYCLES-BEFORE-NEXT:     depth=1: entries(l3 l1 l2)
 ; CYCLES-BEFORE-NEXT:         depth=2: entries(l1 l2)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: callbr_multiple_with_exit
-; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) l3 l1 l2 irr.guard1 irr.guard2
+; CYCLES-AFTER-NEXT:      depth=1: entries(irr.guard) l3 l1 l2 irr.guard2 irr.guard1
 ; CYCLES-AFTER-NEXT:          depth=2: entries(irr.guard2) l1 l2
 
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: callbr_nested

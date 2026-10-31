@@ -18,11 +18,13 @@
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -91,12 +93,21 @@ getSupportedMetadataImpl(llvm::LLVMContext &llvmContext) {
       llvm::LLVMContext::MD_alias_scope,
       llvm::LLVMContext::MD_dereferenceable,
       llvm::LLVMContext::MD_dereferenceable_or_null,
+      llvm::LLVMContext::MD_range,
       llvm::LLVMContext::MD_mmra,
       llvmContext.getMDKindID(vecTypeHintMDName),
       llvmContext.getMDKindID(workGroupSizeHintMDName),
       llvmContext.getMDKindID(reqdWorkGroupSizeMDName),
       llvmContext.getMDKindID(intelReqdSubGroupSizeMDName)};
   return convertibleMetadata;
+}
+
+/// Extracts an LLVM metadata constant as an unsigned 64-bit integer.
+static std::optional<uint64_t> getUInt64Metadata(llvm::Metadata *metadata) {
+  auto *constant = llvm::mdconst::dyn_extract<llvm::ConstantInt>(metadata);
+  if (!constant)
+    return std::nullopt;
+  return constant->getValue().tryZExtValue();
 }
 
 /// Converts the given profiling metadata `node` to an MLIR profiling attribute
@@ -112,27 +123,38 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
   auto *name = dyn_cast<llvm::MDString>(node->getOperand(0));
   if (!name)
     return failure();
+  StringRef profName = name->getString();
 
   // Handle function entry count metadata.
-  if (name->getString() == llvm::MDProfLabels::FunctionEntryCount) {
-
-    // TODO support function entry count metadata with GUID fields.
-    if (node->getNumOperands() != 2)
+  if (profName == llvm::MDProfLabels::FunctionEntryCount) {
+    if (node->getNumOperands() < 2)
       return failure();
 
-    llvm::ConstantInt *entryCount =
-        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(1));
-    if (!entryCount)
+    std::optional<uint64_t> entryCountValue =
+        getUInt64Metadata(node->getOperand(1));
+    if (!entryCountValue)
       return failure();
+
+    SmallVector<uint64_t> importGUIDValues;
+    importGUIDValues.reserve(node->getNumOperands() - 2);
+    for (unsigned idx = 2, e = node->getNumOperands(); idx < e; ++idx) {
+      std::optional<uint64_t> guidValue =
+          getUInt64Metadata(node->getOperand(idx));
+      if (!guidValue)
+        return failure();
+      importGUIDValues.push_back(*guidValue);
+    }
+
     if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
-      funcOp.setFunctionEntryCount(entryCount->getZExtValue());
+      funcOp.setFunctionEntryCountAttr(FunctionEntryCountAttr::get(
+          builder.getContext(), *entryCountValue, importGUIDValues));
       return success();
     }
     return op->emitWarning()
            << "expected function_entry_count to be attached to a function";
   }
 
-  if (name->getString() != llvm::MDProfLabels::BranchWeights)
+  if (profName != llvm::MDProfLabels::BranchWeights)
     return failure();
   // The branch_weights metadata must have at least 2 operands.
   if (node->getNumOperands() < 2)
@@ -229,6 +251,18 @@ static LogicalResult setDereferenceableAttr(const llvm::MDNode *node,
   return success();
 }
 
+/// Multi-range metadata is imported as the union of its ranges.
+static LogicalResult setRangeAttr(const llvm::MDNode *node, Operation *op) {
+  auto iface = dyn_cast<RangeOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  llvm::ConstantRange range = llvm::getConstantRangeFromMetadata(*node);
+  iface.setRange(ConstantRangeAttr::get(op->getContext(), range.getLower(),
+                                        range.getUpper()));
+  return success();
+}
+
 /// Convert the given MMRA metadata (either an MMRA tag or an array of them)
 /// into corresponding MLIR attributes and set them on the given operation as a
 /// discardable `llvm.mmra` attribute.
@@ -258,7 +292,7 @@ static LogicalResult setMmraAttr(llvm::MDNode *node, Operation *op,
     }
     mlirMmra = ArrayAttr::get(ctx, tags);
   }
-  op->setAttr(LLVMDialect::getMmraAttrName(), mlirMmra);
+  op->setDiscardableAttr(LLVMDialect::getMmraAttrName(), mlirMmra);
   return success();
 }
 
@@ -482,6 +516,8 @@ public:
       return setDereferenceableAttr(
           node, llvm::LLVMContext::MD_dereferenceable_or_null, op,
           moduleImport);
+    if (kind == llvm::LLVMContext::MD_range)
+      return setRangeAttr(node, op);
     if (kind == llvm::LLVMContext::MD_mmra)
       return setMmraAttr(node, op, moduleImport);
     llvm::LLVMContext &context = node->getContext();

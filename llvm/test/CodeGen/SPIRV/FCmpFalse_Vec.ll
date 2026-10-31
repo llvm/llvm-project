@@ -3,9 +3,8 @@
 
 ; CHECK: %[[#BoolTy:]] = OpTypeBool
 ; CHECK: %[[#VecTy:]] = OpTypeVector %[[#BoolTy]] 4
-; CHECK: %[[#False:]] = OpConstantFalse %[[#BoolTy]]
-; CHECK: %[[#Composite:]] = OpConstantComposite %[[#VecTy]] %[[#False]] %[[#False]] %[[#False]] %[[#False]]
-; CHECK: OpReturnValue %[[#Composite]]
+; CHECK: %[[#NullVec:]] = OpConstantNull %[[#VecTy]]
+; CHECK: OpReturnValue %[[#NullVec]]
 
 define spir_func <4 x i1> @test(<4 x float> %a) {
  %compare = fcmp false <4 x float> %a, %a

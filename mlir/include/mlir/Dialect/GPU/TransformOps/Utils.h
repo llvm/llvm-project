@@ -17,7 +17,6 @@
 
 namespace mlir {
 namespace gpu {
-class GPUOp;
 class LaunchOp;
 enum class MappingId : uint64_t;
 } // namespace gpu

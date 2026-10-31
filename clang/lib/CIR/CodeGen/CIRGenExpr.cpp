@@ -19,17 +19,22 @@
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include <optional>
 
 using namespace clang;
@@ -68,14 +73,18 @@ Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
                                                const FieldDecl *field,
                                                llvm::StringRef fieldName,
                                                unsigned fieldIndex) {
-  if (isEmptyFieldForLayout(getContext(), field))
-    return emitAddrOfZeroSizeField(*this, base, field);
-
-  mlir::Location loc = getLoc(field->getLocation());
-
   // Retrieve layout information for both type resolution and alignment.
   const RecordDecl *rec = field->getParent();
   const CIRGenRecordLayout &layout = cgm.getTypes().getCIRGenRecordLayout(rec);
+
+  bool addressedByFieldIndex =
+      field->isPotentiallyOverlapping()
+          ? layout.hasCIRField(field)
+          : !CodeGenUtils::isEmptyFieldForLayout(getContext(), field);
+  if (!addressedByFieldIndex)
+    return emitAddrOfZeroSizeField(*this, base, field);
+
+  mlir::Location loc = getLoc(field->getLocation());
   unsigned idx = layout.getCIRFieldNo(field);
 
   // For potentially-overlapping fields (e.g. [[no_unique_address]]), the
@@ -86,12 +95,14 @@ Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
   // For unions, all fields map to index 0, so we use the field's declared type
   // directly instead of looking up the member type from the layout.
   mlir::Type fieldType = convertType(field->getType());
-  auto fieldPtr = cir::PointerType::get(fieldType);
+  // A member lives in the same address space as its record.
+  mlir::ptr::MemorySpaceAttrInterface addrSpace = base.getAddressSpace();
+  auto fieldPtr = cir::PointerType::get(fieldType, addrSpace);
   bool needsBitcast = false;
 
   if (!rec->isUnion() && field->isPotentiallyOverlapping()) {
     mlir::Type memberType = layout.getCIRType().getMembers()[idx];
-    fieldPtr = cir::PointerType::get(memberType);
+    fieldPtr = cir::PointerType::get(memberType, addrSpace);
     needsBitcast = true;
   }
 
@@ -165,7 +176,9 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
             convertTypeForMem(expr->getType()->getPointeeType());
         addr = getBuilder().createElementBitCast(getLoc(expr->getSourceRange()),
                                                  addr, eltTy);
-        assert(!cir::MissingFeatures::addressSpace());
+        if (ce->getCastKind() == CK_AddressSpaceConversion)
+          addr = addr.withPointer(performAddrSpaceCast(
+              addr.getPointer(), convertType(expr->getType())));
 
         return addr;
       }
@@ -203,6 +216,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_NullToMemberPointer:
     case CK_NullToPointer:
     case CK_ReinterpretMemberPointer:
+    case CK_UserDefinedConversion:
       // Common pointer conversions, nothing to do here.
       // TODO: Is there any reason to treat base-to-derived conversions
       // specially?
@@ -254,10 +268,16 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_PointerToIntegral:
     case CK_ToUnion:
     case CK_ToVoid:
-    case CK_UserDefinedConversion:
     case CK_VectorSplat:
     case CK_ZeroToOCLOpaqueType:
-      llvm_unreachable("unexpected cast for emitPointerWithAlignment");
+      // Classic codegen has a default that does nothing. In CIR, we are issuing
+      // a diagnostic so we can examine casts that are reached here to be sure
+      // no action is needed. If nothing is needed, the cast can be moved to the
+      // group above that does nothing.
+      cgm.errorNYI(ce->getSourceRange(),
+                   "unexpected cast for emitPointerWithAlignment: ",
+                   ce->getCastKindName());
+      break;
     }
   }
 
@@ -296,6 +316,92 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
       /*forPointeeType=*/true, baseInfo);
 }
 
+void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
+                                                              LValue dst) {
+  auto getScalarSizeInBits = [&](mlir::Type ty) -> unsigned {
+    mlir::Type scalarTy = mlir::isa<cir::VectorType>(ty)
+                              ? mlir::cast<cir::VectorType>(ty).getElementType()
+                              : ty;
+    const cir::CIRDataLayout &dl = cgm.getDataLayout();
+    return dl.getTypeSizeInBits(scalarTy).getFixedValue();
+  };
+
+  mlir::Value srcVal = src.getValue();
+  Address dstAddr = dst.getExtVectorAddress();
+  if (getScalarSizeInBits(dstAddr.getElementType()) >
+      getScalarSizeInBits(srcVal.getType())) {
+    cgm.errorNYI(
+        dst.getPointer().getLoc(),
+        "emitStoreThroughExtVectorComponentLValue: dstTySize > srcTysize");
+    return;
+  }
+
+  if (getLangOpts().HLSL) {
+    cgm.errorNYI(dst.getPointer().getLoc(),
+                 "emitStoreThroughExtVectorComponentLValue: HLSL");
+    return;
+  }
+
+  // This access turns into a read/modify/write of the vector.  Load the input
+  // value now.
+  mlir::Location loc = dst.getExtVectorPointer().getLoc();
+
+  mlir::ArrayAttr elts = dst.getExtVectorElts();
+
+  mlir::Value vec = builder.createLoad(loc, dstAddr, dst.isVolatile());
+  if (const auto *vecTy = dst.getType()->getAs<clang::VectorType>()) {
+    unsigned numSrcElts = vecTy->getNumElements();
+    unsigned numDstElts = cast<cir::VectorType>(vec.getType()).getFixedSize();
+    if (numDstElts == numSrcElts) {
+      // Use shuffle vector is the src and destination are the same number of
+      // elements and restore the vector mask since it is on the side it will be
+      // stored.
+      SmallVector<int64_t> mask(numDstElts);
+      for (unsigned i = 0; i != numDstElts; ++i)
+        mask[getAccessedFieldNo(i, elts)] = i;
+
+      vec = builder.createVecShuffle(loc, srcVal, mask);
+    } else if (numDstElts > numSrcElts) {
+      // Extended the source vector to the same length and then shuffle it
+      // into the destination.
+      // FIXME: since we're shuffling with undef, can we just use the indices
+      //        into that?  This could be simpler.
+      SmallVector<int64_t> extMask(numDstElts, -1);
+      std::iota(extMask.begin(), extMask.begin() + numSrcElts, 0);
+
+      mlir::Value extSrcVal = builder.createVecShuffle(loc, srcVal, extMask);
+
+      // build identity
+      SmallVector<int64_t> mask(numDstElts);
+      std::iota(mask.begin(), mask.begin() + numDstElts, 0);
+
+      // When the vector size is odd and .odd or .hi is used, the last element
+      // of the Elts constant array will be one past the size of the vector.
+      // Ignore the last element here, if it is greater than the mask size.
+      if ((unsigned)getAccessedFieldNo(numSrcElts - 1, elts) == mask.size())
+        numSrcElts--;
+
+      // modify when what gets shuffled in
+      for (unsigned i = 0; i != numSrcElts; ++i)
+        mask[getAccessedFieldNo(i, elts)] = i + numDstElts;
+
+      vec = builder.createVecShuffle(loc, vec, extSrcVal, mask);
+    } else {
+      // We should never shorten the vector
+      llvm_unreachable("unexpected shorten vector length");
+    }
+  } else {
+    // If the Src is a scalar (not a vector), and the target is a vector it
+    // must be updating one element.
+    unsigned inIdx = getAccessedFieldNo(0, elts);
+    cir::ConstantOp elt = builder.getSInt64(inIdx, loc);
+    vec = cir::VecInsertOp::create(builder, loc, vec, srcVal, elt);
+  }
+
+  builder.createStore(loc, vec, dst.getExtVectorAddress(),
+                      dst.isVolatileQualified());
+}
+
 void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
                                             bool isInit) {
   if (!dst.isSimple()) {
@@ -310,15 +416,37 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       return;
     }
 
+    if (dst.isExtVectorElt())
+      return emitStoreThroughExtVectorComponentLValue(src, dst);
+
+    if (dst.isMatrixElt()) {
+      // Read/modify/write the matrix, inserting the new element.
+      const mlir::Location loc = dst.getPointer().getLoc();
+
+      // In Opt-level >1, we emit an assume here.
+      assert(!MissingFeatures::matrixTypeIndexAssumption());
+
+      const mlir::Value matrix =
+          builder.createLoad(loc, dst.getMatrixAddress());
+      const mlir::Value newMatrix = builder.createMatrixInsert(
+          loc, src.getValue(), matrix, dst.getMatrixRowIdx(),
+          dst.getMatrixColumnIdx());
+      builder.createStore(loc, newMatrix, dst.getMatrixAddress(),
+                          dst.isVolatileQualified());
+      return;
+    }
+
+    if (dst.isMatrixRow()) {
+      cgm.errorNYI("emitStoreThroughLValue: !dst.isSimple() && isMatrixRow");
+      return;
+    }
+
     assert(dst.isBitField() && "Unknown LValue type");
     emitStoreThroughBitfieldLValue(src, dst);
     return;
-
-    cgm.errorNYI(dst.getPointer().getLoc(),
-                 "emitStoreThroughLValue: non-simple lvalue");
-    return;
   }
 
+  assert(!cir::MissingFeatures::objCLifetime());
   assert(!cir::MissingFeatures::opLoadStoreObjC());
 
   assert(src.isScalar() && "Can't emit an aggregate store with this method");
@@ -329,10 +457,9 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                       const VarDecl *vd) {
   QualType t = e->getType();
 
-  // If it's thread_local, emit a call to its wrapper function instead.
-  if (vd->getTLSKind() == VarDecl::TLS_Dynamic)
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "emitGlobalVarDeclLValue: thread_local variable");
+  // In classic codegen, thread-locals get a wrapper function here. Rather than
+  // doing that, we instead treat this as a normal 'global', and leave it to
+  // lowerng-prepare to correctly generate the wrapper/etc.
 
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
@@ -367,18 +494,10 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isNontemporal) {
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
-    // Boolean vectors use `iN` as storage type.
-    if (clangVecTy->isExtVectorBoolType())
-      cgm.errorNYI(addr.getPointer().getLoc(),
-                   "emitStoreOfScalar ExtVectorBoolType");
-
     // Handle vectors of size 3 like size 4 for better performance.
-    const mlir::Type elementType = addr.getElementType();
-    const auto vecTy = cast<cir::VectorType>(elementType);
-
     // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
     assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
+    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type)
       cgm.errorNYI(addr.getPointer().getLoc(),
                    "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
   }
@@ -395,7 +514,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
 
   // Update the alloca with more info on initialization.
   assert(addr.getPointer() && "expected pointer to exist");
-  auto srcAlloca = addr.getDefiningOp<cir::AllocaOp>();
+  cir::AllocaOp srcAlloca = addr.getUnderlyingAllocaOp();
   if (currVarDecl && srcAlloca) {
     const VarDecl *vd = currVarDecl;
     assert(vd && "VarDecl expected");
@@ -404,20 +523,10 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr, isVolatile);
-
-  if (isNontemporal) {
-    cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar nontemporal");
-    return;
-  }
+  builder.createStore(getLoc(*currSrcLoc), value, addr, isVolatile,
+                      isNontemporal);
 
   assert(!cir::MissingFeatures::opTBAA());
-}
-
-// TODO: Replace this with a proper TargetInfo function call.
-/// Helper method to check if the underlying ABI is AAPCS
-static bool isAAPCS(const TargetInfo &targetInfo) {
-  return targetInfo.getABI().starts_with("aapcs");
 }
 
 mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
@@ -427,13 +536,13 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
   mlir::Type resLTy = convertTypeForMem(dst.getType());
   Address ptr = dst.getBitFieldAddress();
 
-  bool useVoaltile = cgm.getCodeGenOpts().AAPCSBitfieldWidth &&
-                     dst.isVolatileQualified() &&
-                     info.volatileStorageSize != 0 && isAAPCS(cgm.getTarget());
+  bool useVoaltile =
+      cgm.getCodeGenOpts().AAPCSBitfieldWidth && dst.isVolatileQualified() &&
+      info.volatileStorageSize != 0 && CodeGenUtils::isAAPCS(cgm.getTarget());
 
   assert(currSrcLoc && "must pass in source location");
 
-  return builder.createSetBitfield(*currSrcLoc, resLTy, ptr,
+  return builder.createSetBitfield(getLoc(*currSrcLoc), resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
                                    dst.isVolatileQualified(), useVoaltile);
 }
@@ -446,7 +555,7 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
   Address ptr = lv.getBitFieldAddress();
 
   bool useVoaltile = lv.isVolatileQualified() && info.volatileOffset != 0 &&
-                     isAAPCS(cgm.getTarget());
+                     CodeGenUtils::isAAPCS(cgm.getTarget());
 
   mlir::Value field =
       builder.createGetBitfield(getLoc(loc), resLTy, ptr, ptr.getElementType(),
@@ -460,11 +569,12 @@ Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
                                                  mlir::Type fieldType,
                                                  unsigned index) {
   mlir::Location loc = getLoc(field->getLocation());
-  cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
+  cir::PointerType fieldPtr =
+      cir::PointerType::get(fieldType, base.getAddress().getAddressSpace());
   auto rec = cast<cir::RecordType>(base.getAddress().getElementType());
   cir::GetMemberOp sea = getBuilder().createGetMember(
       loc, fieldPtr, base.getPointer(), field->getName(),
-      rec.isUnion() ? field->getFieldIndex() : index);
+      mlir::isa<cir::UnionType>(rec) ? field->getFieldIndex() : index);
   CharUnits offset = CharUnits::fromQuantity(
       rec.getElementOffset(cgm.getDataLayout().layout, index));
   return Address(sea, base.getAlignment().alignmentAtOffset(offset));
@@ -522,9 +632,13 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   if (cgm.lambdaFieldToName.count(field))
     fieldName = cgm.lambdaFieldToName[field];
 
-  // Empty fields don't have entries in the record layout, so handle them
-  // separately. They just use the base address directly with the right type.
-  if (!rec->isUnion() && isEmptyFieldForLayout(getContext(), field)) {
+  // Fields with no CIR field index (e.g. a [[no_unique_address]] field that
+  // is empty for both layout and the ABI) aren't in the record layout, so
+  // handle them separately: use the base address directly with the right
+  // type instead of get_member.
+  const CIRGenRecordLayout &layout =
+      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  if (!rec->isUnion() && !layout.hasCIRField(field)) {
     addr = emitAddrOfZeroSizeField(*this, addr, field);
     LValue lv = makeAddrLValue(addr, fieldType, fieldBaseInfo);
     lv.getQuals().addCVRQualifiers(recordCVR);
@@ -533,11 +647,8 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
 
   if (rec->isUnion())
     fieldIndex = field->getFieldIndex();
-  else {
-    const CIRGenRecordLayout &layout =
-        cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  else
     fieldIndex = layout.getCIRFieldNo(field);
-  }
 
   addr = emitAddrOfFieldStorage(addr, field, fieldName, fieldIndex);
   assert(!cir::MissingFeatures::preservedAccessIndexRegion());
@@ -582,11 +693,11 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
     return emitLValueForField(base, field);
 
   Address v = base.getAddress();
-  if (isEmptyFieldForLayout(getContext(), field)) {
+  const CIRGenRecordLayout &layout =
+      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  if (!layout.hasCIRField(field)) {
     v = emitAddrOfZeroSizeField(*this, v, field);
   } else {
-    const CIRGenRecordLayout &layout =
-        cgm.getTypes().getCIRGenRecordLayout(field->getParent());
     unsigned fieldIndex = layout.getCIRFieldNo(field);
     v = emitAddrOfFieldStorage(v, field, fieldName, fieldIndex);
   }
@@ -611,13 +722,13 @@ mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
   if (auto *atomicTy = ty->getAs<AtomicType>())
     ty = atomicTy->getValueType();
 
-  if (ty->isExtVectorBoolType()) {
-    cgm.errorNYI("emitToMemory: extVectorBoolType");
+  if (ty->isConstantMatrixBoolType()) {
+    cgm.errorNYI("emitToMemory: ConstantMatrixBoolType");
+    return {};
   }
 
   // Unlike in classic codegen CIR, bools are kept as `cir.bool` and BitInts are
   // kept as `cir.int<N>` until further lowering
-
   return value;
 }
 
@@ -634,34 +745,22 @@ mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
 
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
                                        bool isInit) {
-  if (lvalue.getType()->isConstantMatrixType()) {
-    assert(0 && "NYI: emitStoreOfScalar constant matrix type");
-    return;
-  }
-
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(), isInit,
-                    /*isNontemporal=*/false);
+                    lvalue.isNontemporal());
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                                              QualType ty, SourceLocation loc,
-                                             LValueBaseInfo baseInfo) {
+                                             LValueBaseInfo baseInfo,
+                                             bool isNontemporal) {
   // Traditional LLVM codegen handles thread local separately, CIR handles
   // as part of getAddrOfGlobalVar (GetGlobalOp).
   mlir::Type eltTy = addr.getElementType();
-
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
-    if (clangVecTy->isExtVectorBoolType()) {
-      cgm.errorNYI(loc, "emitLoadOfScalar: ExtVectorBoolType");
-      return nullptr;
-    }
-
-    const auto vecTy = cast<cir::VectorType>(eltTy);
-
     // Handle vectors of size 3 like size 4 for better performance.
     assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
+    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type)
       cgm.errorNYI(addr.getPointer().getLoc(),
                    "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
   }
@@ -669,26 +768,42 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
   if (ty->isAtomicType() || isLValueSuitableForInlineAtomic(atomicLValue))
-    cgm.errorNYI("emitLoadOfScalar: load atomic");
+    return emitAtomicLoad(atomicLValue, loc).getValue();
 
   if (mlir::isa<cir::VoidType>(eltTy))
     cgm.errorNYI(loc, "emitLoadOfScalar: void type");
 
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
 
-  mlir::Value loadOp = builder.createLoad(getLoc(loc), addr, isVolatile);
-  if (!ty->isBooleanType() && ty->hasBooleanRepresentation())
-    cgm.errorNYI("emitLoadOfScalar: boolean type with boolean representation");
+  mlir::Value loadOp =
+      builder.createLoad(getLoc(loc), addr, isVolatile, isNontemporal);
 
+  // Types with a boolean representation that are not the builtin bool (an enum
+  // whose underlying type is bool, or a _BitInt(1)) need no register/memory
+  // conversion here: like bool and _BitInt(N), CIR keeps them in their literal
+  // type until LowerToLLVM widens them to the in-memory integer type (see
+  // emitToMemory).
   return loadOp;
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                                              SourceLocation loc) {
-  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return emitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
-                          lvalue.getType(), loc, lvalue.getBaseInfo());
+                          lvalue.getType(), loc, lvalue.getBaseInfo(),
+                          lvalue.isNontemporal());
+}
+
+static RValue emitLoadOfMatrixLValue(LValue lv, SourceLocation loc,
+                                     CIRGenFunction &cgf) {
+  if (cgf.getLangOpts().HLSL &&
+      lv.getType().getAddressSpace() == LangAS::hlsl_constant) {
+    cgf.cgm.errorNYI(
+        loc, "emitLoadOfMatrixLValue: HLSL & hlsl_constant address space");
+    return {};
+  }
+
+  return RValue::get(cgf.emitLoadOfScalar(lv, loc));
 }
 
 /// Given an expression that represents a value lvalue, this
@@ -696,13 +811,16 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
 /// returning the rvalue.
 RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   assert(!lv.getType()->isFunctionType());
-  assert(!(lv.getType()->isConstantMatrixType()) && "not implemented");
 
   if (lv.isBitField())
     return emitLoadOfBitfieldLValue(lv, loc);
 
-  if (lv.isSimple())
+  if (lv.isSimple()) {
+    if (lv.getType()->isConstantMatrixType())
+      return emitLoadOfMatrixLValue(lv, loc, *this);
+
     return RValue::get(emitLoadOfScalar(lv, loc));
+  }
 
   if (lv.isVectorElt()) {
     const mlir::Value load =
@@ -713,6 +831,16 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
 
   if (lv.isExtVectorElt())
     return emitLoadOfExtVectorElementLValue(lv);
+
+  if (lv.isMatrixElt()) {
+    // In Opt-level >1, we emit an assume here.
+    assert(!MissingFeatures::matrixTypeIndexAssumption());
+    const mlir::Location mlirLoc = getLoc(loc);
+    const mlir::Value matrix =
+        builder.createLoad(mlirLoc, lv.getMatrixAddress(), lv.isVolatile());
+    return RValue::get(builder.createMatrixExtract(
+        mlirLoc, matrix, lv.getMatrixRowIdx(), lv.getMatrixColumnIdx()));
+  }
 
   cgm.errorNYI(loc, "emitLoadOfLValue");
   return RValue::get(nullptr);
@@ -826,17 +954,41 @@ static LValue emitCapturedFieldLValue(CIRGenFunction &cgf, const FieldDecl *fd,
 LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field,
                                                 mlir::Value thisValue) {
   bool hasExplicitObjectParameter = false;
-  const auto *methD = dyn_cast_if_present<CXXMethodDecl>(curCodeDecl);
+  const auto *md = dyn_cast_if_present<CXXMethodDecl>(curCodeDecl);
   LValue lambdaLV;
-  if (methD) {
-    hasExplicitObjectParameter = methD->isExplicitObjectMemberFunction();
-    assert(methD->getParent()->isLambda());
-    assert(methD->getParent() == field->getParent());
+  if (md) {
+    hasExplicitObjectParameter = md->isExplicitObjectMemberFunction();
+    assert(md->getParent()->isLambda());
+    assert(md->getParent() == field->getParent());
   }
+
   if (hasExplicitObjectParameter) {
-    cgm.errorNYI(field->getSourceRange(), "ExplicitObjectMemberFunction");
+    const VarDecl *d = cast<CXXMethodDecl>(curCodeDecl)->getParamDecl(0);
+    auto it = localDeclMap.find(d);
+    assert(it != localDeclMap.end() && "explicit parameter not loaded?");
+    Address addrOfExplicitObject = it->second;
+    if (d->getType()->isReferenceType())
+      lambdaLV = emitLoadOfReferenceLValue(addrOfExplicitObject,
+                                           getLoc(field->getSourceRange()),
+                                           d->getType(), AlignmentSource::Decl);
+    else
+      lambdaLV = makeAddrLValue(addrOfExplicitObject,
+                                d->getType().getNonReferenceType());
+
+    // Make sure we have an lvalue to the lambda itself and not a derived class.
+    auto *thisTy = d->getType().getNonReferenceType()->getAsCXXRecordDecl();
+    auto *lambdaTy = cast<CXXRecordDecl>(field->getParent());
+    if (thisTy != lambdaTy) {
+      const CXXCastPath &basePathArray = getContext().LambdaCastPaths.at(md);
+      Address base = getAddressOfBaseClass(
+          lambdaLV.getAddress(), thisTy,
+          llvm::make_range(basePathArray.begin(), basePathArray.end()),
+          /*nullCheckValue=*/false, SourceLocation());
+      CanQualType t = getContext().getCanonicalTagType(lambdaTy);
+      lambdaLV = makeAddrLValue(base, t);
+    }
   } else {
-    QualType lambdaTagType =
+    CanQualType lambdaTagType =
         getContext().getCanonicalTagType(field->getParent());
     lambdaLV = makeNaturalAlignAddrLValue(thisValue, lambdaTagType);
   }
@@ -858,8 +1010,26 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   mlir::Type fnTy = funcOp.getFunctionType();
   mlir::Type ptrTy = cir::PointerType::get(fnTy);
-  mlir::Value addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
-                                              funcOp.getSymName());
+  mlir::Value addr;
+
+  // On the HIP host, a reference to a __global__ kernel must resolve to the
+  // address of the kernel handle registered with the offload runtime, not
+  // the device stub's own address. CUDA uses the device stub itself as the
+  // kernel handle.
+  if (cgf.cgm.getLangOpts().HIP && !cgf.cgm.getLangOpts().CUDAIsDevice &&
+      fd->hasAttr<CUDAGlobalAttr>()) {
+    auto handle = mlir::cast<cir::GlobalOp>(
+        cgf.cgm.getCUDARuntime().getKernelHandle(funcOp, gd));
+    cir::PointerType handlePtrTy = cir::PointerType::get(handle.getSymType());
+    mlir::Value handleAddr = cir::GetGlobalOp::create(
+        cgf.getBuilder(), loc, handlePtrTy, handle.getSymName());
+    addr = cir::CastOp::create(cgf.getBuilder(), loc, ptrTy,
+                               cir::CastKind::bitcast, handleAddr);
+  }
+
+  if (!addr)
+    addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
+                                    funcOp.getSymName());
 
   if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
     fnTy = cgf.convertType(fd->getType());
@@ -912,7 +1082,7 @@ static bool canEmitSpuriousReferenceToVariable(CIRGenFunction &cgf,
   // We can emit a spurious reference only if the linkage implies that we'll
   // be emitting a non-interposable symbol that will be retained until link
   // time.
-  switch (cgf.cgm.getCIRLinkageVarDefinition(vd, /*IsConstant=*/false)) {
+  switch (cgf.cgm.getCIRLinkageVarDefinition(vd)) {
   case cir::GlobalLinkageKind::ExternalLinkage:
   case cir::GlobalLinkageKind::LinkOnceODRLinkage:
   case cir::GlobalLinkageKind::WeakODRLinkage:
@@ -982,6 +1152,16 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     }
   }
 
+  // FIXME: We should be able to assert this for FunctionDecls as well!
+  // FIXME: We should be able to assert this for all DeclRefExprs, not just
+  // those with a valid source location.
+  assert((nd->isUsed(false) || !isa<VarDecl>(nd) || e->isNonOdrUse() ||
+          !e->getLocation().isValid()) &&
+         "Should not use decl without marking it used!");
+
+  if (nd->hasAttr<WeakRefAttr>())
+    cgm.errorNYI(nd->getSourceRange(), "emitGlobal: WeakRefAttr");
+
   if (const auto *vd = dyn_cast<VarDecl>(nd)) {
     // Checks for omitted feature handling
     assert(!cir::MissingFeatures::opAllocaStaticLocal());
@@ -1001,10 +1181,21 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     auto iter = localDeclMap.find(vd);
     if (iter != localDeclMap.end()) {
       addr = iter->second;
-    } else {
+
+    } else if (vd->isStaticLocal()) {
       // Otherwise, it might be static local we haven't emitted yet for some
       // reason; most likely, because it's in an outer function.
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: static local");
+      cir::GlobalOp var =
+          cgm.getOrCreateStaticVarDecl(*vd, cgm.getCIRLinkageVarDefinition(vd));
+      mlir::Value getGlobVal = builder.createGetGlobal(var);
+      auto getGlob = getGlobVal.getDefiningOp<cir::GetGlobalOp>();
+      getGlob.setStaticLocal(var.getDynamicInitGuard().has_value());
+      getGlob.setTls(vd->getTLSKind() != VarDecl::TLS_None);
+      addr = Address(cgm.castGlobalToDeclAddrSpace(getGlob, *vd),
+                     convertTypeForMem(vd->getType()),
+                     getContext().getDeclAlign(vd));
+    } else {
+      llvm_unreachable("DeclRefExpr for Decl not entered in localDeclMap?");
     }
 
     // Drill into reference types.
@@ -1024,9 +1215,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
   if (const auto *bd = dyn_cast<BindingDecl>(nd)) {
     if (e->refersToEnclosingVariableOrCapture()) {
-      assert(!cir::MissingFeatures::lambdaCaptures());
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: lambda captures");
-      return LValue();
+      FieldDecl *fd = lambdaCaptureFields.lookup(bd);
+      return emitCapturedFieldLValue(*this, fd, cxxabiThisValue);
     }
     return emitLValue(bd->getBinding());
   }
@@ -1040,9 +1230,23 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
     return lv;
   }
+  if (isa<MSGuidDecl>(nd))
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitDeclRefLValue: unhandled MS Guid Decl");
 
-  cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
-  return LValue();
+  if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(nd)) {
+    CharUnits alignment = cgm.getNaturalTypeAlignment(tpo->getType());
+    cir::GetGlobalOp atpo =
+        builder.createGetGlobal(cgm.getAddrOfTemplateParamObject(tpo));
+    assert(!MissingFeatures::addressSpace() &&
+           "Do an address space conversion if necessary");
+
+    return makeAddrLValue(
+        Address(atpo, convertTypeForMem(tpo->getType()), alignment), ty,
+        AlignmentSource::Decl);
+  }
+
+  llvm_unreachable("Unhandled DeclRefExpr");
 }
 
 mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
@@ -1180,15 +1384,6 @@ static CharUnits getArrayElementAlign(CharUnits arrayAlign, mlir::Value idx,
   return arrayAlign.alignmentOfArrayElement(eltSize);
 }
 
-static QualType getFixedSizeElementType(const ASTContext &astContext,
-                                        const VariableArrayType *vla) {
-  QualType eltType;
-  do {
-    eltType = vla->getElementType();
-  } while ((vla = astContext.getAsVariableArrayType(eltType)));
-  return eltType;
-}
-
 static mlir::Value emitArraySubscriptPtr(CIRGenFunction &cgf,
                                          mlir::Location beginLoc,
                                          mlir::Location endLoc, mlir::Value ptr,
@@ -1212,7 +1407,7 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
   // the thing that the indices are expressed in terms of.
   if (const VariableArrayType *vla =
           cgf.getContext().getAsVariableArrayType(eltType)) {
-    eltType = getFixedSizeElementType(cgf.getContext(), vla);
+    eltType = CodeGenUtils::getFixedSizeElementType(cgf.getContext(), vla);
   }
 
   // We can use that to compute the best alignment of the element.
@@ -1237,26 +1432,49 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
 
   // The index must always be an integer, which is not an aggregate.  Emit it
   // in lexical order (this complexity is, sadly, required by C++17).
-  assert((e->getIdx() == e->getLHS() || e->getIdx() == e->getRHS()) &&
-         "index was neither LHS nor RHS");
+  mlir::Value idxPre = (e->getLHS() == e->getIdx())
+                           ? emitScalarExpr(e->getIdx())
+                           : mlir::Value();
 
-  auto emitIdxAfterBase = [&](bool promote) -> mlir::Value {
-    const mlir::Value idx = emitScalarExpr(e->getIdx());
+  auto emitIdxAfterBase = [&, idxPre](bool promote) -> mlir::Value {
+    mlir::Value idx = idxPre;
+    if (e->getLHS() != e->getIdx()) {
+      assert(e->getRHS() == e->getIdx() && "index was neither LHS nor RHS");
+      idx = emitScalarExpr(e->getIdx());
+    }
 
-    // Extend or truncate the index type to 32 or 64-bits.
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(idx.getType());
-    if (promote && ptrTy && ptrTy.isPtrTo<cir::IntType>())
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitArraySubscriptExpr: index type cast");
+    assert(!cir::MissingFeatures::sanitizers());
+
+    // Extend or truncate the index type to pointer-sized integer.
+    if (promote) {
+      // Choose the type we extend or truncate to based on the signedness of the
+      // index type.
+      mlir::Type desiredIdxTy =
+          e->getIdx()->getType()->isSignedIntegerOrEnumerationType()
+              ? ptrDiffTy
+              : uIntPtrTy;
+
+      if (idx.getType() != desiredIdxTy) {
+        cir::CastKind kind = mlir::isa<cir::BoolType>(idx.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral;
+        idx = builder.createOrFold<cir::CastOp>(idx.getLoc(), desiredIdxTy,
+                                                kind, idx);
+      }
+    }
+
     return idx;
   };
+  // This is captured by value above, using it after this is an error, so clear
+  // it to make sure no one is depending on it (mirrors classic codegen).
+  idxPre = mlir::Value();
 
   // If the base is a vector type, then we are forming a vector element
   // with this subscript.
   if (e->getBase()->getType()->isSubscriptableVectorType() &&
       !isa<ExtVectorElementExpr>(e->getBase())) {
-    const mlir::Value idx = emitIdxAfterBase(/*promote=*/false);
     const LValue lv = emitLValue(e->getBase());
+    const mlir::Value idx = emitIdxAfterBase(/*promote=*/false);
     return LValue::makeVectorElt(lv.getAddress(), idx, e->getBase()->getType(),
                                  lv.getBaseInfo());
   }
@@ -1268,11 +1486,10 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     return {};
   }
 
-  mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
-
   // Handle the extvector case we ignored above.
   if (isa<ExtVectorElementExpr>(e->getBase())) {
     const LValue lv = emitLValue(e->getBase());
+    const mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
     Address addr = emitExtVectorElementLValue(lv, cgm.getLoc(e->getExprLoc()));
 
     QualType elementType = lv.getType()->castAs<VectorType>()->getElementType();
@@ -1290,6 +1507,7 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     // it.  It needs to be emitted first in case it's what captures
     // the VLA bounds.
     Address addr = emitPointerWithAlignment(e->getBase());
+    mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
 
     // The element count here is the total number of non-VLA elements.
     mlir::Value numElements = getVLASize(vla).numElts;
@@ -1319,6 +1537,7 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
       arrayLV = emitArraySubscriptExpr(ase);
     else
       arrayLV = emitLValue(array);
+    mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
 
     // Propagate the alignment from the array itself to the result.
     const Address addr = emitArraySubscriptPtr(
@@ -1341,6 +1560,7 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
 
   LValueBaseInfo eltBaseInfo;
   const Address ptrAddr = emitPointerWithAlignment(e->getBase(), &eltBaseInfo);
+  const mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
   // Propagate the alignment from the array itself to the result.
   const Address addxr = emitArraySubscriptPtr(
       *this, cgm.getLoc(e->getBeginLoc()), cgm.getLoc(e->getEndLoc()), ptrAddr,
@@ -1354,6 +1574,21 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   }
 
   return lv;
+}
+
+LValue CIRGenFunction::emitMatrixSubscriptExpr(const MatrixSubscriptExpr *e) {
+  assert(!e->isIncomplete() &&
+         "incomplete matrix subscript expressions should be rejected in Sema");
+  LValue base = emitLValue(e->getBase());
+  mlir::Value rowIdx = emitScalarExpr(e->getRowIdx());
+  mlir::Value colIdx = emitScalarExpr(e->getColumnIdx());
+
+  if (isMatrixRowMajor(getLangOpts(), e->getBase()->getType()))
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitMatrixSubscriptExpr: row-major matrix");
+
+  return LValue::makeMatrixElt(base.getAddress(), rowIdx, colIdx,
+                               e->getBase()->getType(), base.getBaseInfo());
 }
 
 LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
@@ -1407,9 +1642,19 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
                                     base.getBaseInfo());
   }
 
-  cgm.errorNYI(e->getSourceRange(),
-               "emitExtVectorElementExpr: isSimple is false");
-  return {};
+  if (base.isMatrixRow()) {
+    cgm.errorNYI(e->getSourceRange(), "emitExtVectorElementExpr: isMatrixRow");
+    return {};
+  }
+
+  assert(base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
+  mlir::ArrayAttr baseElts = base.getExtVectorElts();
+  SmallVector<int64_t> elts;
+  for (unsigned idx : indices)
+    elts.push_back(getAccessedFieldNo(idx, baseElts));
+  mlir::ArrayAttr cv = builder.getI64ArrayAttr(elts);
+  return LValue::makeExtVectorElt(base.getAddress(), cv, type,
+                                  base.getBaseInfo());
 }
 
 LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,
@@ -1419,6 +1664,11 @@ LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,
   unsigned align = *(globalOp.getAlignment());
   mlir::Value addr =
       builder.createGetGlobal(getLoc(e->getSourceRange()), globalOp);
+  mlir::ptr::MemorySpaceAttrInterface destAS =
+      cgm.getTypes().getPointerAddressSpace(e->getType());
+  if (mlir::cast<cir::PointerType>(addr.getType()).getAddrSpace() != destAS)
+    addr = performAddrSpaceCast(
+        addr, builder.getPointerTo(globalOp.getSymType(), destAS));
   return makeAddrLValue(
       Address(addr, globalOp.getSymType(), CharUnits::fromQuantity(align)),
       e->getType(), AlignmentSource::Decl);
@@ -1501,15 +1751,17 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_ToUnion:
     return emitAggExprToLValue(e);
 
-  case CK_NonAtomicToAtomic:
-  case CK_AtomicToNonAtomic:
-  case CK_ObjCObjectLValueCast:
-  case CK_VectorSplat:
   case CK_ConstructorConversion:
   case CK_UserDefinedConversion:
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
-  case CK_LValueToRValue: {
+  case CK_LValueToRValue:
+    return emitLValue(e->getSubExpr());
+
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
+  case CK_ObjCObjectLValueCast:
+  case CK_VectorSplat: {
     cgm.errorNYI(e->getSourceRange(),
                  std::string("emitCastLValue for unhandled cast kind: ") +
                      e->getCastKindName());
@@ -1520,16 +1772,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AddressSpaceConversion: {
     LValue lv = emitLValue(e->getSubExpr());
     QualType destTy = getContext().getPointerType(e->getType());
-
-    clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
-    mlir::ptr::MemorySpaceAttrInterface srcAS;
-    if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
-    else
-      cgm.errorNYI(
-          e->getSourceRange(),
-          "emitCastLValue: address space conversion from unknown address "
-          "space");
 
     mlir::Value v = performAddrSpaceCast(lv.getPointer(), convertType(destTy));
 
@@ -1561,9 +1803,21 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
       Address v = lv.getAddress();
       if (v.isValid()) {
         mlir::Type ty = convertTypeForMem(e->getType());
-        if (v.getElementType() != ty)
-          cgm.errorNYI(e->getSourceRange(),
-                       "emitCastLValue: NoOp needs bitcast");
+        if (v.getElementType() != ty) {
+          // We have only inspected/reproduced this with complete to incomplete
+          // array types, so we do an NYI for other cases, so we can make sure
+          // we're doing a conversion we want to be making.
+          auto fromTy = dyn_cast<cir::ArrayType>(v.getElementType());
+          auto toTy = dyn_cast<cir::ArrayType>(ty);
+          if (!fromTy || !toTy ||
+              fromTy.getElementType() != toTy.getElementType() ||
+              toTy.getSize() != 0)
+            cgm.errorNYI(e->getSourceRange(),
+                         "emitCastLValue NoOp not array-shrink case");
+
+          lv = makeAddrLValue(v.withElementType(builder, ty), e->getType(),
+                              lv.getBaseInfo());
+        }
       }
     }
     return lv;
@@ -1652,7 +1906,9 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
       // If the member was explicitly marked as nontemporal, mark it as
       // nontemporal. If the base lvalue is marked as nontemporal, mark access
       // to children as nontemporal too.
-      cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: OpenMP");
+      assert(!cir::MissingFeatures::openMPNontemporalDecl());
+      if (baseLV.isNontemporal())
+        lv.setNontemporal(true);
     }
     return lv;
   }
@@ -1710,11 +1966,19 @@ static Address createReferenceTemporary(CIRGenFunction &cgf,
     if (const ValueDecl *extDecl = m->getExtendingDecl()) {
       auto extDeclAddrIter = cgf.localDeclMap.find(extDecl);
       if (extDeclAddrIter != cgf.localDeclMap.end())
-        extDeclAlloca = extDeclAddrIter->second.getDefiningOp<cir::AllocaOp>();
+        extDeclAlloca = extDeclAddrIter->second.getUnderlyingAllocaOp();
     }
     mlir::OpBuilder::InsertPoint ip;
-    if (extDeclAlloca)
+    if (extDeclAlloca) {
       ip = {extDeclAlloca->getBlock(), extDeclAlloca->getIterator()};
+    } else if (cgf.isInConditionalBranch() &&
+               m->getStorageDuration() == SD_FullExpression) {
+      // Place in the function entry block so the alloca dominates both
+      // regions of any enclosing cir.cleanup.scope.  The default path
+      // would use curLexScope which may be a ternary branch.
+      ip = cgf.getBuilder().getBestAllocaInsertPoint(
+          cgf.getCurFunctionEntryBlock());
+    }
     return cgf.createMemTemp(ty, cgf.getLoc(m->getSourceRange()),
                              cgf.getCounterRefTmpAsString(), /*alloca=*/nullptr,
                              ip);
@@ -1766,8 +2030,32 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     if (!referenceTemporaryDtor)
       return;
 
-    cgf.cgm.errorNYI(e->getSourceRange(), "pushTemporaryCleanup: static/thread "
-                                          "storage duration with destructors");
+    CIRGenModule &cgm = cgf.cgm;
+    auto globalOp =
+        mlir::cast<cir::GlobalOp>(cgm.getAddrOfGlobalTemporary(m, e));
+
+    CIRGenBuilderTy &builder = cgm.getBuilder();
+    mlir::Location loc = cgm.getLoc(m->getSourceRange());
+    auto registerOp = cir::RegisterExitDtorOp::create(
+        builder, loc, globalOp.getSymNameAttr().getValue());
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(
+        builder.createBlock(&registerOp.getBody()));
+
+    mlir::Value tempAddr = builder.createGetGlobal(globalOp);
+    if (e->getType()->isArrayType()) {
+      Address addr{tempAddr, cgf.convertTypeForMem(e->getType()),
+                   referenceTemporary.getAlignment()};
+      cgf.emitDestroy(addr, e->getType(), CIRGenFunction::destroyCXXObject);
+    } else {
+      GlobalDecl gd(referenceTemporaryDtor, Dtor_Complete);
+      cir::FuncOp dtorFn = cgm.getAddrAndTypeOfCXXStructor(gd).second;
+      // Make sure the call and the callee agree on calling convention.
+      builder.createCallOp(loc, dtorFn, mlir::ValueRange{tempAddr},
+                           /*attrs=*/{}, /*argAttrs=*/{}, /*resAttrs=*/{},
+                           dtorFn.getCallingConv());
+    }
+    cir::YieldOp::create(builder, loc);
     break;
   }
 
@@ -1779,7 +2067,8 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
   case SD_Automatic:
     cgf.pushLifetimeExtendedDestroy(
         NormalAndEHCleanup, referenceTemporary, e->getType(),
-        CIRGenFunction::destroyCXXObject, cgf.getLangOpts().Exceptions);
+        CIRGenFunction::destroyCXXObject, cgf.getLangOpts().Exceptions,
+        m->getExtendingDecl());
     break;
 
   case SD_Dynamic:
@@ -1820,11 +2109,17 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
 
   // Create and initialize the reference temporary.
   Address object = createReferenceTemporary(*this, m, e);
+  cir::GlobalOp var = nullptr;
+  if (auto getGlobalOp = object.getPointer().getDefiningOp<cir::GetGlobalOp>())
+    var = mlir::dyn_cast_or_null<cir::GlobalOp>(
+        cgm.getGlobalValue(getGlobalOp.getName()));
 
-  if (auto var = object.getPointer().getDefiningOp<cir::GlobalOp>()) {
-    // TODO(cir): add something akin to stripPointerCasts() to ptr above
-    cgm.errorNYI(e->getSourceRange(), "emitMaterializeTemporaryExpr: GlobalOp");
-    return {};
+  if (var) {
+    if (!var.getInitialValue().has_value()) {
+      var.setInitialValueAttr(builder.getZeroInitAttr(var.getSymType()));
+      assert(!cir::MissingFeatures::pointerAuthentication());
+      emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
+    }
   } else {
     assert(!cir::MissingFeatures::emitLifetimeMarkers());
     emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
@@ -1834,10 +2129,29 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
   // Perform derived-to-base casts and/or field accesses, to get from the
   // temporary object we created (and, potentially, for which we extended
   // the lifetime) to the subobject we're binding the reference to.
-  if (!adjustments.empty()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitMaterializeTemporaryExpr: Adjustments");
-    return {};
+  for (SubobjectAdjustment &adjustment : llvm::reverse(adjustments)) {
+    switch (adjustment.Kind) {
+    case SubobjectAdjustment::DerivedToBaseAdjustment:
+      object =
+          getAddressOfBaseClass(object, adjustment.DerivedToBase.DerivedClass,
+                                adjustment.DerivedToBase.BasePath->path(),
+                                /*nullCheckValue=*/false, e->getExprLoc());
+      break;
+    case SubobjectAdjustment::FieldAdjustment: {
+      LValue lv = makeAddrLValue(object, e->getType(), AlignmentSource::Decl);
+      lv = emitLValueForField(lv, adjustment.Field);
+      assert(lv.isSimple() &&
+             "materialized temporary field is not a simple lvalue");
+      object = lv.getAddress();
+      break;
+    }
+    case SubobjectAdjustment::MemberPointerAdjustment: {
+      mlir::Value ptr = emitScalarExpr(adjustment.Ptr.RHS);
+      object = emitCXXMemberDataPointerAddress(
+          e, object, ptr, adjustment.Ptr.MPT, /*baseInfo=*/nullptr);
+      break;
+    }
+    }
   }
 
   return makeAddrLValue(object, m->getType(), AlignmentSource::Decl);
@@ -1909,6 +2223,24 @@ LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
   return makeNaturalAlignPointeeAddrLValue(rv.getValue(), e->getType());
 }
 
+LValue
+CIRGenFunction::emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e) {
+  AggValueSlot slot =
+      createAggTemp(e->getType(), getLoc(e->getSourceRange()), "temp.lvalue");
+  slot.setExternallyDestructed();
+  emitAggExpr(e->getSubExpr(), slot);
+  emitCXXTemporary(e->getTemporary(), e->getType(), slot.getAddress());
+  return makeAddrLValue(slot.getAddress(), e->getType(), AlignmentSource::Decl);
+}
+
+LValue CIRGenFunction::emitCXXConstructLValue(const CXXConstructExpr *e) {
+  assert(e->getType()->getAsCXXRecordDecl()->hasTrivialDestructor() &&
+         "binding l-value to type which needs a temporary");
+  AggValueSlot slot = createAggTemp(e->getType(), getLoc(e->getSourceRange()));
+  emitCXXConstructExpr(e, slot);
+  return makeAddrLValue(slot.getAddress(), e->getType(), AlignmentSource::Decl);
+}
+
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (e->getOpcode() == BO_Comma) {
@@ -1936,16 +2268,13 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     RValue rv = emitAnyExpr(e->getRHS());
     LValue lv = emitLValue(e->getLHS());
 
-    SourceLocRAIIObject loc{*this, getLoc(e->getSourceRange())};
+    SourceLocRAIIObject loc{*this, e->getSourceRange()};
     if (lv.isBitField())
       emitStoreThroughBitfieldLValue(rv, lv);
     else
       emitStoreThroughLValue(rv, lv);
 
-    if (getLangOpts().OpenMP) {
-      cgm.errorNYI(e->getSourceRange(), "openmp");
-      return {};
-    }
+    assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
     return lv;
   }
@@ -1981,14 +2310,16 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot,
   llvm_unreachable("bad evaluation kind");
 }
 
-// Detect the unusual situation where an inline version is shadowed by a
-// non-inline version. In that case we should pick the external one
-// everywhere. That's GCC behavior too.
-static bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *fd) {
-  for (const FunctionDecl *pd = fd; pd; pd = pd->getPreviousDecl())
-    if (!pd->isInlineBuiltinDeclaration())
-      return false;
-  return true;
+// Returns whether \p fn disables the builtin \p name with no_builtin. An empty
+// list disables all builtins.
+static bool hasNoBuiltinAttr(cir::FuncOp fn, StringRef name) {
+  auto noBuiltins = fn->getAttrOfType<mlir::ArrayAttr>(
+      cir::CIRDialect::getNoBuiltinsAttrName());
+  if (!noBuiltins)
+    return false;
+  return noBuiltins.empty() ||
+         llvm::is_contained(noBuiltins,
+                            mlir::StringAttr::get(fn.getContext(), name));
 }
 
 CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
@@ -2000,18 +2331,13 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
     bool isPredefinedLibFunction =
         cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
-    // TODO: Read no-builtin function attribute and set this accordingly.
-    // Using false here matches OGCG's default behavior - builtins are called
-    // as builtins unless explicitly disabled. The previous value of true was
-    // overly conservative and caused functions to be marked as no_inline when
-    // they shouldn't be.
-    bool hasAttributeNoBuiltin = false;
-    assert(!cir::MissingFeatures::attributeNoBuiltin());
+    auto fn = dyn_cast<cir::FuncOp>(curFn);
+    bool hasAttributeNoBuiltin = fn && hasNoBuiltinAttr(fn, fd->getName());
 
-    // When directing calling an inline builtin, call it through it's mangled
+    // When directly calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
-    auto fn = cast<cir::FuncOp>(curFn);
-    if (fn.getName() != fdInlineName && onlyHasInlineBuiltinDeclaration(fd)) {
+    if ((!fn || fn.getName() != fdInlineName) &&
+        CodeGenUtils::onlyHasInlineBuiltinDeclaration(fd)) {
       cir::FuncOp clone =
           mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
 
@@ -2024,6 +2350,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
         clone = cir::FuncOp::create(builder, calleeFunc.getLoc(), fdInlineName,
                                     calleeFunc.getFunctionType());
+        cgm.insertGlobalSymbol(clone);
         clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
             &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
         clone.setSymVisibility("private");
@@ -2054,12 +2381,38 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   return CIRGenCallee::forDirect(callee, gd);
 }
 
+mlir::Value CIRGenFunction::getUndefConstant(mlir::Location loc,
+                                             mlir::Type cirTy) {
+  return builder.getConstant(loc, cir::UndefAttr::get(cirTy));
+}
+
 RValue CIRGenFunction::getUndefRValue(QualType ty) {
   if (ty->isVoidType())
     return RValue::get(nullptr);
 
-  cgm.errorNYI("unsupported type for undef rvalue");
-  return RValue::get(nullptr);
+  mlir::Location loc = builder.getUnknownLoc();
+
+  switch (getEvaluationKind(ty)) {
+  case cir::TEK_Complex: {
+    QualType elemTy = ty->castAs<ComplexType>()->getElementType();
+    mlir::Type elemCirTy = convertType(elemTy);
+    mlir::Value undefElem = getUndefConstant(loc, elemCirTy);
+    mlir::Value v = builder.createComplexCreate(loc, undefElem, undefElem);
+    return RValue::getComplex(v);
+  }
+
+  // If this is a use of an undefined aggregate type, the aggregate must have
+  // an identifiable address.  Just because the contents of the value are
+  // undefined doesn't mean that the address can't be taken and compared.
+  case cir::TEK_Aggregate: {
+    Address destPtr = createMemTempWithoutCast(ty, loc, "undef.agg.tmp");
+    return RValue::getAggregate(destPtr);
+  }
+
+  case cir::TEK_Scalar:
+    return RValue::get(getUndefConstant(loc, convertType(ty)));
+  }
+  llvm_unreachable("bad evaluation kind");
 }
 
 RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
@@ -2084,10 +2437,25 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   assert(!cir::MissingFeatures::sanitizers());
 
   CallArgList args;
-  assert(!cir::MissingFeatures::opCallArgEvaluationOrder());
+  EvaluationOrder order = CodeGenUtils::getCallArgEvaluationOrder(e);
 
-  emitCallArgs(args, dyn_cast<FunctionProtoType>(fnType), e->arguments(),
-               e->getDirectCallee());
+  // C++23 static-member operators (`static operator()` /
+  // `static operator[]`) produce a CXXOperatorCallExpr whose first argument
+  // is the object expression even though the operator is static.  Emit the
+  // object for its side effects and drop it before walking the parameter
+  // arguments.
+  auto arguments = e->arguments();
+  if (const auto *oce = dyn_cast<CXXOperatorCallExpr>(e)) {
+    if (const auto *md =
+            dyn_cast_if_present<CXXMethodDecl>(oce->getCalleeDecl());
+        md && md->isStatic()) {
+      emitIgnoredExpr(e->getArg(0));
+      arguments = llvm::drop_begin(arguments, 1);
+    }
+  }
+
+  emitCallArgs(args, dyn_cast<FunctionProtoType>(fnType), arguments,
+               e->getDirectCallee(), /*paramsToSkip=*/0, order);
 
   const CIRGenFunctionInfo &funcInfo =
       cgm.getTypes().arrangeFreeFunctionCall(args, fnType);
@@ -2131,12 +2499,28 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   }
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
-  assert(!cir::MissingFeatures::hip());
-  assert(!cir::MissingFeatures::opCallMustTail());
+
+  // HIP function pointer contains kernel handle when it is used in triple
+  // chevron. The kernel stub needs to be loaded from kernel handle and used
+  // as callee.
+  const clang::Decl *targetDecl =
+      origCallee.getAbstractInfo().getCalleeDecl().getDecl();
+  if (getLangOpts().HIP && !getLangOpts().CUDAIsDevice &&
+      isa<CUDAKernelCallExpr>(e) &&
+      (!targetDecl || !isa<FunctionDecl>(targetDecl))) {
+    mlir::Value handleAddr = callee.getFunctionPointer()->getResult(0);
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto handlePtrTy = mlir::cast<cir::PointerType>(handleAddr.getType());
+    mlir::Value handleAddrAddr =
+        builder.createBitcast(handleAddr, cir::PointerType::get(handlePtrTy));
+    cir::LoadOp stub = builder.createLoad(
+        loc, Address(handleAddrAddr, handlePtrTy, getPointerAlign()));
+    callee.setFunctionPointer(stub.getOperation());
+  }
 
   cir::CIRCallOpInterface callOp;
   RValue callResult = emitCall(funcInfo, callee, returnValue, args, &callOp,
-                               getLoc(e->getExprLoc()));
+                               e == mustTailCall, e->getSourceRange());
 
   assert(!cir::MissingFeatures::generateDebugInfo());
 
@@ -2152,15 +2536,16 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
         implicitCast->getCastKind() == CK_BuiltinFnToFnPtr) {
       return emitCallee(implicitCast->getSubExpr());
     }
-    // When performing an indirect call through a function pointer lvalue, the
-    // function pointer lvalue is implicitly converted to an rvalue through an
-    // lvalue-to-rvalue conversion.
-    assert(implicitCast->getCastKind() == CK_LValueToRValue &&
-           "unexpected implicit cast on function pointers");
+    // Classic codegen has some handling here for ptr-auth (as a part of the
+    // large ptr-auth-qualifier PR (#100830)). In the meantime, other cast kinds
+    // can fall-through and be handled by the indirect call work below,
+    // including L-to-R value conversions and atomic conversions.
+    assert(!MissingFeatures::pointerAuthentication());
+
   } else if (const auto *declRef = dyn_cast<DeclRefExpr>(e)) {
     // Resolve direct calls.
-    const auto *funcDecl = cast<FunctionDecl>(declRef->getDecl());
-    return emitDirectCallee(funcDecl);
+    if (const auto *funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()))
+      return emitDirectCallee(funcDecl);
   } else if (auto me = dyn_cast<MemberExpr>(e)) {
     if (const auto *fd = dyn_cast<FunctionDecl>(me->getMemberDecl())) {
       emitIgnoredExpr(me->getBase());
@@ -2203,15 +2588,16 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
   if (const auto *cudaKernelCallExpr = dyn_cast<CUDAKernelCallExpr>(e))
     return emitCUDAKernelCallExpr(cudaKernelCallExpr, returnValue);
 
+  // A CXXOperatorCallExpr is created even for explicit-object methods or
+  // static member operators (C++23 `static operator()` / `static
+  // operator[]`), but those should be treated like ordinary static function
+  // calls.  Only route through the member-call path for ordinary instance
+  // operators.
   if (const auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(e)) {
-    // If the callee decl is a CXXMethodDecl, we need to emit this as a C++
-    // operator member call.
-    if (const CXXMethodDecl *md =
-            dyn_cast_or_null<CXXMethodDecl>(operatorCall->getCalleeDecl()))
+    if (const auto *md =
+            dyn_cast_if_present<CXXMethodDecl>(operatorCall->getCalleeDecl());
+        md && md->isImplicitObjectMemberFunction())
       return emitCXXOperatorMemberCallExpr(operatorCall, md, returnValue);
-    // A CXXOperatorCallExpr is created even for explicit object methods, but
-    // these should be treated like static function calls. Fall through to do
-    // that.
   }
 
   CIRGenCallee callee = emitCallee(e->getCallee());
@@ -2247,19 +2633,14 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e,
   LValue lv = emitLValue(e);
   Address addr = lv.getAddress();
 
-  // If the array type was an incomplete type, we need to make sure
-  // the decay ends up being the right type.
-  auto lvalueAddrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
-
   if (e->getType()->isVariableArrayType())
     return addr;
 
-  [[maybe_unused]] auto pointeeTy =
-      mlir::cast<cir::ArrayType>(lvalueAddrTy.getPointee());
-
-  [[maybe_unused]] mlir::Type arrayTy = convertType(e->getType());
+  // If the array type was an incomplete type, we need to make sure
+  // the decay ends up being the right type.
+  mlir::Type arrayTy = convertType(e->getType());
   assert(mlir::isa<cir::ArrayType>(arrayTy) && "expected array");
-  assert(pointeeTy == arrayTy);
+  addr = addr.withElementType(builder, arrayTy);
 
   // The result of this decay conversion points to an array element within the
   // base lvalue. However, since TBAA currently does not support representing
@@ -2336,6 +2717,14 @@ cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
 
   // Emit the code with the fully general case.
   mlir::Value condV = emitOpOnBoolExpr(loc, cond);
+  return emitIfOnBoolValue(condV, loc, thenBuilder, thenLoc, elseBuilder,
+                           elseLoc);
+}
+
+cir::IfOp CIRGenFunction::emitIfOnBoolValue(
+    mlir::Value condV, mlir::Location loc, BuilderCallbackRef thenBuilder,
+    mlir::Location thenLoc, BuilderCallbackRef elseBuilder,
+    std::optional<mlir::Location> elseLoc) {
   cir::IfOp ifOp = cir::IfOp::create(builder, loc, condV, elseLoc.has_value(),
                                      /*thenBuilder=*/thenBuilder,
                                      /*elseBuilder=*/elseBuilder);
@@ -2434,8 +2823,8 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(ip);
-    addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
-                                /*var type*/ ty, name, alignIntAttr, arraySize);
+    addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy, name,
+                                alignIntAttr, arraySize);
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
@@ -2531,6 +2920,13 @@ mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
 // CIR builder helpers
 //===----------------------------------------------------------------------===//
 
+Address CIRGenFunction::createMemTempWithoutCast(QualType ty,
+                                                 mlir::Location loc,
+                                                 const Twine &name) {
+  return createTempAllocaWithoutCast(
+      convertTypeForMem(ty), getContext().getTypeAlignInChars(ty), loc, name);
+}
+
 Address CIRGenFunction::createMemTemp(QualType ty, mlir::Location loc,
                                       const Twine &name, Address *alloca,
                                       mlir::OpBuilder::InsertPoint ip) {
@@ -2543,12 +2939,15 @@ Address CIRGenFunction::createMemTemp(QualType ty, CharUnits align,
                                       mlir::Location loc, const Twine &name,
                                       Address *alloca,
                                       mlir::OpBuilder::InsertPoint ip) {
-  Address result = createTempAlloca(convertTypeForMem(ty), align, loc, name,
-                                    /*ArraySize=*/nullptr, alloca, ip);
+  Address result =
+      createTempAlloca(convertTypeForMem(ty), /*destAddrSpace=*/{}, align, loc,
+                       name, /*arraySize=*/nullptr, alloca, ip);
   if (ty->isConstantMatrixType()) {
     assert(!cir::MissingFeatures::matrixType());
-    cgm.errorNYI(loc, "temporary matrix value");
+    cgm.errorNYI(loc, "createMemTemp constant matrix type");
+    return Address::invalid();
   }
+
   return result;
 }
 
@@ -2564,33 +2963,66 @@ Address CIRGenFunction::createTempAllocaWithoutCast(
   return Address(alloca, ty, align);
 }
 
-/// This creates a alloca and inserts it into the entry block. The alloca is
-/// casted to default address space if necessary.
-// TODO(cir): Implement address space casting to match classic codegen's
-// CreateTempAlloca behavior with DestLangAS parameter
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
                                          mlir::Location loc, const Twine &name,
                                          mlir::Value arraySize,
                                          Address *allocaAddr,
                                          mlir::OpBuilder::InsertPoint ip) {
-  Address alloca =
-      createTempAllocaWithoutCast(ty, align, loc, name, arraySize, ip);
-  if (allocaAddr)
-    *allocaAddr = alloca;
-  mlir::Value v = alloca.getPointer();
+  return createTempAlloca(ty, /*destAddrSpace=*/{}, align, loc, name, arraySize,
+                          allocaAddr, ip);
+}
+
+Address CIRGenFunction::maybeCastStackAddressSpace(
+    Address alloca, mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+    mlir::Value arraySize) {
+  if (!destAddrSpace)
+    destAddrSpace = cir::toCIRAddressSpaceAttr(
+        getMLIRContext(), cgm.getLangTempAllocaAddressSpace());
+
+  // Resolve the default address space through getTargetAddressSpace, as
+  // classic CodeGen does and as CIRGenTypes::getPointerAddressSpace does for
+  // default pointer types. This is only non-zero for targets where the default
+  // address space is not 0 (e.g. generic for SYCL device code).
+  if (!cir::normalizeDefaultAddressSpace(destAddrSpace))
+    if (unsigned targetAS = getContext().getTargetAddressSpace(LangAS::Default))
+      destAddrSpace =
+          cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
+
+  mlir::ptr::MemorySpaceAttrInterface srcAddrSpace = getCIRAllocaAddressSpace();
   // Alloca always returns a pointer in alloca address space, which may
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
+  if (srcAddrSpace == destAddrSpace)
+    return alloca;
 
-  cir::PointerType dstTy;
-  if (getCIRAllocaAddressSpace())
-    dstTy = builder.getPointerTo(ty, getCIRAllocaAddressSpace());
-  else
-    dstTy = builder.getPointerTo(ty, clang::LangAS::Default);
-  v = performAddrSpaceCast(v, dstTy);
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  if (cir::AllocaOp allocaOp = alloca.getUnderlyingAllocaOp()) {
+    builder.setInsertionPointAfter(allocaOp);
+  } else if (!arraySize) {
+    mlir::Block *entryBlock = getCurFunctionEntryBlock();
+    builder.restoreInsertionPoint(builder.getBestAllocaInsertPoint(entryBlock));
+  }
 
-  return Address(v, ty, align);
+  mlir::Type destPtrTy =
+      builder.getPointerTo(alloca.getElementType(), destAddrSpace);
+  mlir::Value casted = performAddrSpaceCast(alloca.getPointer(), destPtrTy);
+  return Address(casted, alloca.getElementType(), alloca.getAlignment(),
+                 /*isKnownNonNull=*/true);
+}
+
+/// This creates a alloca and inserts it into the entry block. The alloca is
+/// casted to the requested language address space if necessary.
+Address CIRGenFunction::createTempAlloca(
+    mlir::Type ty, mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+    CharUnits align, mlir::Location loc, const Twine &name,
+    mlir::Value arraySize, Address *allocaAddr,
+    mlir::OpBuilder::InsertPoint ip) {
+  Address alloca =
+      createTempAllocaWithoutCast(ty, align, loc, name, arraySize, ip);
+  if (allocaAddr)
+    *allocaAddr = alloca;
+  return maybeCastStackAddressSpace(alloca, destAddrSpace, arraySize);
 }
 
 /// This creates an alloca and inserts it into the entry block if \p ArraySize
@@ -2631,35 +3063,69 @@ Address CIRGenFunction::createDefaultAlignTempAlloca(mlir::Type ty,
 }
 
 /// Try to emit a reference to the given value without producing it as
-/// an l-value.  For many cases, this is just an optimization, but it avoids
-/// us needing to emit global copies of variables if they're named without
-/// triggering a formal use in a context where we can't emit a direct
-/// reference to them, for instance if a block or lambda or a member of a
-/// local class uses a const int variable or constexpr variable from an
-/// enclosing function.
-///
-/// For named members of enums, this is the only way they are emitted.
+/// an l-value.  This is just an optimization, but it avoids us needing
+/// to emit global copies of variables if they're named without triggering
+/// a formal use in a context where we can't emit a direct reference to them,
+/// for instance if a block or lambda or a member of a local class uses a
+/// const int variable or constexpr variable from an enclosing function.
 CIRGenFunction::ConstantEmission
 CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
   const ValueDecl *value = refExpr->getDecl();
 
-  // There is a lot more to do here, but for now only EnumConstantDecl is
-  // supported.
-  assert(!cir::MissingFeatures::tryEmitAsConstant());
-
   // The value needs to be an enum constant or a constant variable.
-  if (!isa<EnumConstantDecl>(value))
+  CodeGenUtils::ConstantEmissionKind cek;
+  if (isa<ParmVarDecl>(value))
+    cek = CodeGenUtils::CEK_None;
+  else if (const auto *var = dyn_cast<VarDecl>(value))
+    cek = CodeGenUtils::checkVarTypeForConstantEmission(var->getType());
+  else if (isa<EnumConstantDecl>(value))
+    cek = CodeGenUtils::CEK_AsValueOnly;
+  else
+    cek = CodeGenUtils::CEK_None;
+  if (cek == CodeGenUtils::CEK_None)
     return ConstantEmission();
 
   Expr::EvalResult result;
-  if (!refExpr->EvaluateAsRValue(result, getContext()))
+  bool resultIsReference;
+  QualType resultType;
+
+  // It's best to evaluate all the way as an r-value if that's permitted.
+  if (cek != CodeGenUtils::CEK_AsReferenceOnly &&
+      refExpr->EvaluateAsRValue(result, getContext())) {
+    resultIsReference = false;
+    resultType = refExpr->getType().getUnqualifiedType();
+  } else if (cek != CodeGenUtils::CEK_AsValueOnly &&
+             refExpr->EvaluateAsLValue(result, getContext())) {
+    resultIsReference = true;
+    resultType = value->getType();
+  } else {
+    return ConstantEmission();
+  }
+
+  // In any case, if the initializer has side-effects, abandon ship.
+  if (result.HasSideEffects)
     return ConstantEmission();
 
-  QualType resultType = refExpr->getType();
-
-  // As long as we're only handling EnumConstantDecl, there should be no
-  // side-effects.
-  assert(!result.HasSideEffects);
+  // In CUDA/HIP device compilation, a lambda may capture a reference variable
+  // referencing a global host variable by copy. In this case the lambda should
+  // make a copy of the value of the global host variable. The DRE of the
+  // captured reference variable cannot be emitted as load from the host
+  // global variable as compile time constant, since the host variable is not
+  // accessible on device. The DRE of the captured reference variable has to be
+  // loaded from captures.
+  if (cgm.getLangOpts().CUDAIsDevice && result.Val.isLValue() &&
+      refExpr->refersToEnclosingVariableOrCapture()) {
+    auto *md = dyn_cast_or_null<CXXMethodDecl>(curCodeDecl);
+    if (isLambdaMethod(md) && md->getOverloadedOperator() == OO_Call) {
+      const APValue::LValueBase &base = result.Val.getLValueBase();
+      if (const ValueDecl *d = base.dyn_cast<const ValueDecl *>()) {
+        if (const auto *vd = dyn_cast<const VarDecl>(d)) {
+          if (!vd->hasAttr<CUDADeviceAttr>())
+            return ConstantEmission();
+        }
+      }
+    }
+  }
 
   // Emit as a constant.
   // FIXME(cir): have emitAbstract build a TypedAttr instead (this requires
@@ -2667,9 +3133,15 @@ CIRGenFunction::tryEmitAsConstant(const DeclRefExpr *refExpr) {
   mlir::Attribute c = ConstantEmitter(*this).emitAbstract(
       refExpr->getLocation(), result.Val, resultType);
   mlir::TypedAttr cstToEmit = mlir::dyn_cast_if_present<mlir::TypedAttr>(c);
-  assert(cstToEmit && "expected a typed attribute");
+  if (!cstToEmit)
+    return ConstantEmission();
 
+  // Make sure we emit a debug reference to the global variable.
   assert(!cir::MissingFeatures::generateDebugInfo());
+
+  // If we emitted a reference constant, we need to dereference that.
+  if (resultIsReference)
+    return ConstantEmission::forReference(cstToEmit);
 
   return ConstantEmission::forValue(cstToEmit);
 }
@@ -2684,10 +3156,10 @@ CIRGenFunction::tryEmitAsConstant(const MemberExpr *me) {
 mlir::Value CIRGenFunction::emitScalarConstant(
     const CIRGenFunction::ConstantEmission &constant, Expr *e) {
   assert(constant && "not a constant");
-  if (constant.isReference()) {
-    cgm.errorNYI(e->getSourceRange(), "emitScalarConstant: reference");
-    return {};
-  }
+  if (constant.isReference())
+    return emitLoadOfLValue(constant.getReferenceLValue(*this, e),
+                            e->getExprLoc())
+        .getValue();
   return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
 }
 
@@ -2768,72 +3240,54 @@ CIRGenFunction::ConditionalInfo
 CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
                                       const FuncTy &branchGenFunc) {
   ConditionalInfo info;
-  ConditionalEvaluation eval(*this);
   mlir::Location loc = getLoc(e->getSourceRange());
   CIRGenBuilderTy &builder = getBuilder();
 
   mlir::Value condV = emitOpOnBoolExpr(loc, e->getCond());
-  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
-  mlir::Type yieldTy{};
+
+  ConditionalEvaluation eval(*this, loc);
 
   auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc,
                         const Expr *expr, std::optional<LValue> &resultLV) {
     CIRGenFunction::LexicalScope lexScope{*this, loc, b.getInsertionBlock()};
     curLexScope->setAsTernary();
 
-    assert(!cir::MissingFeatures::incrementProfileCounter());
-    eval.beginEvaluation();
-    resultLV = branchGenFunc(*this, expr);
-    mlir::Value resultPtr = resultLV ? resultLV->getPointer() : mlir::Value();
-    eval.endEvaluation();
-
-    if (resultPtr) {
-      yieldTy = resultPtr.getType();
-      cir::YieldOp::create(b, loc, resultPtr);
-    } else {
-      // If LHS or RHS is a void expression we need
-      // to patch arms as to properly match yield types.
-      // If the current block's terminator is an UnreachableOp (from a throw),
-      // we don't need a yield
-      if (builder.getInsertionBlock()->mightHaveTerminator()) {
-        mlir::Operation *terminator =
-            builder.getInsertionBlock()->getTerminator();
-        if (isa_and_nonnull<cir::UnreachableOp>(terminator))
-          insertPoints.push_back(b.saveInsertionPoint());
-      }
+    mlir::Value resultPtr;
+    {
+      // Emit any cleanups that were needed on this branch so we can spill
+      // and reload the return value.
+      CIRGenFunction::RunCleanupsScope branchCleanups(*this);
+      assert(!cir::MissingFeatures::incrementProfileCounter());
+      eval.beginEvaluation();
+      resultLV = branchGenFunc(*this, expr);
+      resultPtr = resultLV ? resultLV->getPointer() : mlir::Value();
+      eval.endEvaluation();
+      branchCleanups.forceCleanup({&resultPtr});
     }
+
+    // A branch that produced no result is a throw-expression; its region is
+    // already terminated by cir.unreachable and needs no yield.
+    if (resultPtr)
+      cir::YieldOp::create(b, loc, resultPtr);
   };
 
-  info.result = cir::TernaryOp::create(
-                    builder, loc, condV,
-                    /*trueBuilder=*/
-                    [&](mlir::OpBuilder &b, mlir::Location loc) {
-                      emitBranch(b, loc, e->getTrueExpr(), info.lhs);
-                    },
-                    /*falseBuilder=*/
-                    [&](mlir::OpBuilder &b, mlir::Location loc) {
-                      emitBranch(b, loc, e->getFalseExpr(), info.rhs);
-                    })
-                    .getResult();
+  cir::TernaryOp ternary = cir::TernaryOp::create(
+      builder, loc, condV,
+      /*trueBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, e->getTrueExpr(), info.lhs);
+      },
+      /*falseBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, e->getFalseExpr(), info.rhs);
+      });
 
-  // If both arms are void, so be it.
-  if (!yieldTy)
-    yieldTy = voidTy;
+  // Arms end with a yield or cir.unreachable (throw); this is a backstop
+  // for error (NYI) paths that leave a region open.
+  terminateStructuredRegionBody(ternary.getTrueRegion(), loc);
+  terminateStructuredRegionBody(ternary.getFalseRegion(), loc);
 
-  // Insert required yields.
-  for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(toInsert);
-
-    // Block does not return: build empty yield.
-    if (!yieldTy) {
-      cir::YieldOp::create(builder, loc);
-    } else { // Block returns: set null yield value.
-      mlir::Value op0 = builder.getNullValue(yieldTy, loc);
-      cir::YieldOp::create(builder, loc, op0);
-    }
-  }
-
+  info.result = ternary.getResult();
   return info;
 }
 
@@ -2877,7 +3331,15 @@ LValue CIRGenFunction::emitConditionalOperatorLValue(
 
   assert((info.lhs || info.rhs) &&
          "both operands of glvalue conditional are throw-expressions?");
-  return info.lhs ? *info.lhs : *info.rhs;
+
+  // One arm threw; the surviving arm's pointer is local to the ternary's
+  // region, so address the result through the ternary's result value.
+  const LValue &survivingLV = info.lhs ? *info.lhs : *info.rhs;
+  Address survivingAddr = survivingLV.getAddress();
+  Address result(info.result, survivingAddr.getElementType(),
+                 survivingAddr.getAlignment());
+  assert(!cir::MissingFeatures::opTBAA());
+  return makeAddrLValue(result, expr->getType(), survivingLV.getBaseInfo());
 }
 
 /// An LValue is a candidate for having its loads and stores be made atomic if

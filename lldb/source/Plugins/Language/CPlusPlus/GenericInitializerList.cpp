@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/ErrorExtras.h"
 #include <cstddef>
@@ -88,9 +87,9 @@ public:
     offset = offset + m_start->GetValueAsUnsigned(0);
     StreamString name;
     name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-    return CreateValueObjectFromAddress(name.GetString(), offset,
-                                        m_backend.GetExecutionContextRef(),
-                                        m_element_type);
+    return CreateChildValueObjectFromAddress(name.GetString(), offset,
+                                             m_backend.GetExecutionContextRef(),
+                                             m_element_type);
   }
 
   lldb::ChildCacheState Update() override {
@@ -113,11 +112,12 @@ public:
     return lldb::ChildCacheState::eRefetch;
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     if (!m_start) {
       return llvm::createStringErrorV("type has no child named '{0}'", name);
     }
-    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+    auto optional_idx = formatters::ExtractIndexFromString(name);
     if (!optional_idx) {
       return llvm::createStringErrorV("type has no child named '{0}'", name);
     }

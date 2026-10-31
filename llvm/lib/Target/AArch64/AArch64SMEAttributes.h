@@ -189,23 +189,24 @@ public:
            !callee().isSMEABIRoutine();
   }
 
+  bool requiresNonLazySaveZA() const {
+    return caller().hasZAState() && callee().hasSharedZAInterface() &&
+           !callee().sharesZA();
+  }
+
   bool requiresPreservingZT0() const {
     return caller().hasZT0State() && !callee().sharesZT0() &&
            !callee().hasAgnosticZAInterface();
   }
 
-  bool requiresDisablingZABeforeCall() const {
-    return caller().hasZT0State() && !caller().hasZAState() &&
-           callee().hasPrivateZAInterface() && !callee().isSMEABIRoutine();
-  }
-
-  bool requiresEnablingZAAfterCall() const {
-    return requiresDisablingZABeforeCall();
-  }
-
   bool requiresPreservingAllZAState() const {
     return caller().hasAgnosticZAInterface() &&
            !callee().hasAgnosticZAInterface() && !callee().isSMEABIRoutine();
+  }
+
+  bool requiresZASave() const {
+    return requiresLazySave() || requiresNonLazySaveZA() ||
+           requiresPreservingAllZAState();
   }
 };
 

@@ -1,7 +1,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -S -o - < %s | FileCheck %s
+; RUN:   -tail-folding-policy=dont-fold-tail -S -o - < %s | FileCheck %s
 ; RUN: opt -mattr=+sve -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -S -o - < %s | FileCheck %s
+; RUN:   -tail-folding-policy=dont-fold-tail -S -o - < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -37,7 +37,7 @@ while.body:
   %i = phi i64 [ 1023, %entry ], [ %i.next, %if.end ]
   %arrayidx = getelementptr inbounds i32, ptr %data1, i64 %i
   %ld = load i32, ptr %arrayidx, align 4
-  %cmp = icmp sgt i32 %ld, %ld
+  %cmp = icmp sgt i32 %ld, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:

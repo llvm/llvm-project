@@ -4,7 +4,7 @@
 // RUN: %clang --target=aarch64 -mlittle-endian -mcpu=generic -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC %s
 // RUN: %clang --target=aarch64_be -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC %s
 // RUN: %clang --target=aarch64_be -mlittle-endian -mcpu=generic -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC %s
-// GENERIC: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic"
+// GENERIC: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "generic"
 
 // RUN: %clang --target=arm64 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-GENERIC %s
 // RUN: %clang --target=arm64 -mcpu=generic -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-GENERIC %s
@@ -72,6 +72,8 @@
 // NEOVERSE-V3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v3"
 // RUN: %clang --target=aarch64 -mcpu=neoverse-v3ae  -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V3AE %s
 // NEOVERSE-V3AE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v3ae"
+// RUN: %clang --target=aarch64 -mcpu=armagicpu  -### -c %s 2>&1 | FileCheck -check-prefix=ARMAGICPU %s
+// ARMAGICPU: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v3ae"
 // RUN: %clang --target=aarch64 -mcpu=neoverse-n1 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N1 %s
 // NEOVERSE-N1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n1"
 // RUN: %clang --target=aarch64 -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N2 %s
@@ -92,6 +94,10 @@
 // C1-PREMIUM: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-premium"
 // RUN: %clang --target=aarch64 -mcpu=c1-ultra -### -c %s 2>&1 | FileCheck -check-prefix=C1-ULTRA %s
 // C1-ULTRA: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-ultra"
+// RUN: %clang --target=aarch64 -mcpu=c2-pro -### -c %s 2>&1 | FileCheck -check-prefix=C2-PRO %s
+// C2-PRO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-pro"
+// RUN: %clang --target=aarch64 -mcpu=c2-ultra -### -c %s 2>&1 | FileCheck -check-prefix=C2-ULTRA %s
+// C2-ULTRA: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c2-ultra"
 
 // RUN: %clang --target=aarch64 -mcpu=cortex-r82  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXR82 %s
 // CORTEXR82: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-r82"

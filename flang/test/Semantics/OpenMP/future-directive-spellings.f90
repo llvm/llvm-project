@@ -1,4 +1,4 @@
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52 -Werror
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52 -Werror -Wno-experimental-option
 
 ! The directives to check:
 !   cancellation_point
@@ -41,6 +41,7 @@ subroutine f02
 end
 
 subroutine f03
+!WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
 !WARNING: Directive spelling 'DECLARE_SIMD' is introduced in a later OpenMP version, try -fopenmp-version=60
   !$omp declare_simd
 end

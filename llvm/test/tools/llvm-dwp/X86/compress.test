@@ -1,17 +1,81 @@
 # REQUIRES: zlib
-# RUN: yaml2obj -DCLASS=32 -DENDIAN=LSB -DINFO_CHDR=010000005600000001000000 %s -o %t.o
+
+## INFO_DATA / STR_OFFSETS / LINE in the DEFINE lines below are reproduced by
+## this snippet.
+##
+##   import struct, zlib
+##   for end in ('<', '>'):
+##       # .debug_info.dwo DIE stream. Each abbrev code selects an entry in
+##       # .debug_abbrev.dwo below; that entry dictates which DW_AT_* values
+##       # follow and in what order.
+##       die  = b'\x01'                                   # .debug_abbrev code (DW_TAG_compile_unit)
+##       die += b'\x00'                                   # DW_AT_producer="clang version 3.9.0 ..."
+##       die += struct.pack(end+'H', 4)                   # DW_AT_language=DW_LANG_C_plus_plus
+##       die += b'\x01'                                   # DW_AT_name="a.cpp"
+##       die += struct.pack(end+'Q', 0x5d2ca3800efeebd9)  # DW_AT_GNU_dwo_id
+##       die += b'\x02'                                   # .debug_abbrev code (DW_TAG_subprogram)
+##       die += b'\x00'                                   # DW_AT_low_pc (addr idx)
+##       die += struct.pack(end+'I', 0x12)                # DW_AT_high_pc
+##       die += b'\x01\x56'                               # DW_AT_frame_base (exprloc: DW_OP_reg6)
+##       die += b'\x02'                                   # DW_AT_linkage_name="_Z1fiiii"
+##       die += b'\x03'                                   # DW_AT_name="f"
+##       die += b'\x01'                                   # DW_AT_decl_file
+##       die += b'\x01'                                   # DW_AT_decl_line
+##       for name, off in [(4, 0x7c), (6, 0x78), (7, 0x74), (8, 0x70)]:  # params a,b,c,d
+##           die += b'\x03'                               # .debug_abbrev code (DW_TAG_formal_parameter)
+##           die += b'\x02\x91' + bytes([off])            # DW_AT_location (exprloc: DW_OP_breg6, sleb)
+##           die += bytes([name])                         # DW_AT_name="a"/"b"/"c"/"d"
+##           die += b'\x01'                               # DW_AT_decl_file
+##           die += b'\x01'                               # DW_AT_decl_line
+##           die += struct.pack(end+'I', 0x51)            # DW_AT_type (ref4)
+##       die += b'\x00'                                   # end of DW_TAG_subprogram children
+##       die += b'\x04'                                   # .debug_abbrev code (DW_TAG_base_type)
+##       die += b'\x05'                                   # DW_AT_name="int"
+##       die += b'\x05'                                   # DW_AT_encoding=DW_ATE_signed
+##       die += b'\x04'                                   # DW_AT_byte_size
+##       die += b'\x00'                                   # end of DW_TAG_compile_unit children
+##       # CU header (unit_length excludes itself) + DIE stream, zlib-compressed
+##       info  = struct.pack(end+'IHIB',
+##                           7 + len(die),                # unit_length
+##                           4,                           # version
+##                           0,                           # debug_abbrev_offset
+##                           8)                           # address_size
+##       info += die
+##       print(end, 'INFO_DATA  ', zlib.compress(info).hex())
+##       # .debug_str_offsets.dwo: u32 offsets into .debug_str.dwo
+##       str_off = b''
+##       for o in (0, 0x37, 0x3D, 0x46, 0x48, 0x4A, 0x4E, 0x50, 0x52):
+##           str_off += struct.pack(end+'I', o)
+##       print(end, 'STR_OFFSETS', str_off.hex())
+##       # .debug_line.dwo: minimal v2 line-table header, empty dirs + files
+##       line  = struct.pack(end+'IHIBBbBB',
+##                           13,                          # unit_length
+##                           2,                           # version
+##                           7,                           # header_length
+##                           1,                           # minimum_instruction_length
+##                           1,                           # default_is_stmt
+##                           -5,                          # line_base
+##                           14,                          # line_range
+##                           1)                           # opcode_base
+##       line += b'\x00\x00'                              # empty include_directories, file_names
+##       print(end, 'LINE       ', line.hex())
+
+# DEFINE: %{LE_OPTS} = -DINFO_DATA=789c0b626060606100010e462083f1e6eb7f7c0d8b756299188480628c614ccc8c8ccc4c136b5818190381024066051b9c59c20e67167040980c2cacac2c0c00109a0afa -DSTR_OFFSETS=00000000370000003D00000046000000480000004A0000004E0000005000000052000000 -DLINE=0D0000000200070000000101FB0E010000
+# DEFINE: %{BE_OPTS} = -DINFO_DATA=789c6360600862606100020e46060616c6589dc50d7cff5edf6402090931863131333232334dac6161044a33040299156c7066093b9c59c0016132b0b0b2b230000003dc0afa -DSTR_OFFSETS=00000000000000370000003D00000046000000480000004A0000004E0000005000000052 -DLINE=0000000D0002000000070101FB0E010000
+
+# RUN: yaml2obj -DCLASS=32 -DENDIAN=LSB -DINFO_CHDR=010000005600000001000000 %{LE_OPTS} %s -o %t.o
 # RUN: llvm-dwp %t.o -o %t
 # RUN: llvm-dwarfdump -v %t | FileCheck %s
 
-# RUN: yaml2obj -DCLASS=32 -DENDIAN=MSB -DINFO_CHDR=000000010000005600000001 %s -o %t.o
+# RUN: yaml2obj -DCLASS=32 -DENDIAN=MSB -DINFO_CHDR=000000010000005600000001 %{BE_OPTS} %s -o %t.o
 # RUN: llvm-dwp %t.o -o %t
 # RUN: llvm-dwarfdump -v %t | FileCheck %s
 
-# RUN: yaml2obj -DCLASS=64 -DENDIAN=LSB -DINFO_CHDR=01000000fd7f000056000000000000000100000000000000 %s -o %t.o
+# RUN: yaml2obj -DCLASS=64 -DENDIAN=LSB -DINFO_CHDR=01000000fd7f000056000000000000000100000000000000 %{LE_OPTS} %s -o %t.o
 # RUN: llvm-dwp %t.o -o %t
 # RUN: llvm-dwarfdump -v %t | FileCheck %s
 
-# RUN: yaml2obj -DCLASS=64 -DENDIAN=MSB -DINFO_CHDR=0000000100007ffd00000000000000560000000000000001 %s -o %t.o
+# RUN: yaml2obj -DCLASS=64 -DENDIAN=MSB -DINFO_CHDR=0000000100007ffd00000000000000560000000000000001 %{BE_OPTS} %s -o %t.o
 # RUN: llvm-dwp %t.o -o %t
 # RUN: llvm-dwarfdump -v %t | FileCheck %s
 
@@ -49,12 +113,12 @@ Sections:
   - Name:            .debug_str_offsets.dwo
     Type:            SHT_PROGBITS
     AddressAlign:    0x1
-    Content:         00000000370000003D00000046000000480000004A0000004E0000005000000052000000
+    Content:         [[STR_OFFSETS]]
   - Name:            .debug_info.dwo
     Type:            SHT_PROGBITS
     Flags:           [ SHF_COMPRESSED ]
     AddressAlign:    0x8
-    Content:         [[INFO_CHDR]]789c0b626060606100010e462083f1e6eb7f7c0d8b756299188480628c614ccc8c8ccc4c136b5818190381024066051b9c59c20e67167040980c2cacac2c0c00109a0afa
+    Content:         [[INFO_CHDR]][[INFO_DATA]]
   - Name:            .debug_abbrev.dwo
     Type:            SHT_PROGBITS
     AddressAlign:    0x1
@@ -62,4 +126,4 @@ Sections:
   - Name:            .debug_line.dwo
     Type:            SHT_PROGBITS
     AddressAlign:    0x1
-    Content:         0D0000000200070000000101FB0E010000
+    Content:         [[LINE]]

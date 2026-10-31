@@ -1,10 +1,10 @@
-# RUN: llc -mtriple=s390x-linux-gnu -start-before=prologepilog %s -o - -print-after=prologepilog \
+# RUN: llc -mtriple=s390x-linux-gnu -start-before=prolog-epilog %s -o - -print-after=prolog-epilog \
 # RUN:  -verify-machineinstrs 2>&1 | FileCheck %s
 #
 # Test that R6 when used for an argument is modelled as being live throughout
 # the function when not saved in the prologue..
 
-# CHECK:      # *** IR Dump After Prologue/Epilogue Insertion & Frame Finalization (prologepilog) ***:
+# CHECK:      # *** IR Dump After Prologue/Epilogue Insertion & Frame Finalization (prolog-epilog) ***:
 # CHECK-NEXT: # Machine code for function fun0:
 # CHECK-LABEL: bb.0:
 # CHECK: liveins:{{.*}} $r6d

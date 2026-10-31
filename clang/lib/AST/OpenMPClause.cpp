@@ -31,6 +31,17 @@ using namespace clang;
 using namespace llvm;
 using namespace omp;
 
+OMPAdjustArgsDescriptor *OMPAdjustArgsDescriptor::Create(
+    const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
+    OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+    ArrayRef<OMPAdjustArgsItem> Items) {
+  void *Mem = C.Allocate(totalSizeToAlloc<OMPAdjustArgsItem>(Items.size()));
+  auto *Desc = new (Mem)
+      OMPAdjustArgsDescriptor(AdjustOp, NeedDevicePtrModifier, Items.size());
+  llvm::copy(Items, Desc->getTrailingObjects());
+  return Desc;
+}
+
 OMPClause::child_range OMPClause::children() {
   switch (getClauseKind()) {
   default:
@@ -409,36 +420,26 @@ const Expr *OMPOrderedClause::getLoopCounter(unsigned NumLoop) const {
   return getTrailingObjects()[NumberOfLoops + NumLoop];
 }
 
-OMPUpdateClause *OMPUpdateClause::Create(const ASTContext &C,
-                                         SourceLocation StartLoc,
-                                         SourceLocation EndLoc) {
-  return new (C) OMPUpdateClause(StartLoc, EndLoc, /*IsExtended=*/false);
-}
-
-OMPUpdateClause *
-OMPUpdateClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                        SourceLocation LParenLoc, SourceLocation ArgumentLoc,
-                        OpenMPDependClauseKind DK, SourceLocation EndLoc) {
+OMPUpdateDependObjectsClause *OMPUpdateDependObjectsClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation ArgumentLoc, OpenMPDependClauseKind DK,
+    SourceLocation EndLoc) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<SourceLocation, OpenMPDependClauseKind>(2, 1),
-                 alignof(OMPUpdateClause));
-  auto *Clause =
-      new (Mem) OMPUpdateClause(StartLoc, EndLoc, /*IsExtended=*/true);
+                 alignof(OMPUpdateDependObjectsClause));
+  auto *Clause = new (Mem) OMPUpdateDependObjectsClause(StartLoc, EndLoc);
   Clause->setLParenLoc(LParenLoc);
   Clause->setArgumentLoc(ArgumentLoc);
   Clause->setDependencyKind(DK);
   return Clause;
 }
 
-OMPUpdateClause *OMPUpdateClause::CreateEmpty(const ASTContext &C,
-                                              bool IsExtended) {
-  if (!IsExtended)
-    return new (C) OMPUpdateClause(/*IsExtended=*/false);
+OMPUpdateDependObjectsClause *
+OMPUpdateDependObjectsClause::CreateEmpty(const ASTContext &C) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<SourceLocation, OpenMPDependClauseKind>(2, 1),
-                 alignof(OMPUpdateClause));
-  auto *Clause = new (Mem) OMPUpdateClause(/*IsExtended=*/true);
-  Clause->IsExtended = true;
+                 alignof(OMPUpdateDependObjectsClause));
+  auto *Clause = new (Mem) OMPUpdateDependObjectsClause();
   return Clause;
 }
 
@@ -662,13 +663,6 @@ OMPAlignedClause *OMPAlignedClause::CreateEmpty(const ASTContext &C,
                                                 unsigned NumVars) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumVars + 1));
   return new (Mem) OMPAlignedClause(NumVars);
-}
-
-OMPAlignClause *OMPAlignClause::Create(const ASTContext &C, Expr *A,
-                                       SourceLocation StartLoc,
-                                       SourceLocation LParenLoc,
-                                       SourceLocation EndLoc) {
-  return new (C) OMPAlignClause(A, StartLoc, LParenLoc, EndLoc);
 }
 
 void OMPCopyinClause::setSourceExprs(ArrayRef<Expr *> SrcExprs) {
@@ -1027,56 +1021,6 @@ OMPPermutationClause *OMPPermutationClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPPermutationClause(NumLoops);
 }
 
-OMPFullClause *OMPFullClause::Create(const ASTContext &C,
-                                     SourceLocation StartLoc,
-                                     SourceLocation EndLoc) {
-  OMPFullClause *Clause = CreateEmpty(C);
-  Clause->setLocStart(StartLoc);
-  Clause->setLocEnd(EndLoc);
-  return Clause;
-}
-
-OMPFullClause *OMPFullClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPFullClause();
-}
-
-OMPPartialClause *OMPPartialClause::Create(const ASTContext &C,
-                                           SourceLocation StartLoc,
-                                           SourceLocation LParenLoc,
-                                           SourceLocation EndLoc,
-                                           Expr *Factor) {
-  OMPPartialClause *Clause = CreateEmpty(C);
-  Clause->setLocStart(StartLoc);
-  Clause->setLParenLoc(LParenLoc);
-  Clause->setLocEnd(EndLoc);
-  Clause->setFactor(Factor);
-  return Clause;
-}
-
-OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPPartialClause();
-}
-
-OMPLoopRangeClause *
-OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                           SourceLocation LParenLoc, SourceLocation FirstLoc,
-                           SourceLocation CountLoc, SourceLocation EndLoc,
-                           Expr *First, Expr *Count) {
-  OMPLoopRangeClause *Clause = CreateEmpty(C);
-  Clause->setLocStart(StartLoc);
-  Clause->setLParenLoc(LParenLoc);
-  Clause->setFirstLoc(FirstLoc);
-  Clause->setCountLoc(CountLoc);
-  Clause->setLocEnd(EndLoc);
-  Clause->setFirst(First);
-  Clause->setCount(Count);
-  return Clause;
-}
-
-OMPLoopRangeClause *OMPLoopRangeClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPLoopRangeClause();
-}
-
 OMPAllocateClause *OMPAllocateClause::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
     Expr *Allocator, Expr *Alignment, SourceLocation ColonLoc,
@@ -1115,20 +1059,6 @@ OMPFlushClause *OMPFlushClause::Create(const ASTContext &C,
 OMPFlushClause *OMPFlushClause::CreateEmpty(const ASTContext &C, unsigned N) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
   return new (Mem) OMPFlushClause(N);
-}
-
-OMPDepobjClause *OMPDepobjClause::Create(const ASTContext &C,
-                                         SourceLocation StartLoc,
-                                         SourceLocation LParenLoc,
-                                         SourceLocation RParenLoc,
-                                         Expr *Depobj) {
-  auto *Clause = new (C) OMPDepobjClause(StartLoc, LParenLoc, RParenLoc);
-  Clause->setDepobj(Depobj);
-  return Clause;
-}
-
-OMPDepobjClause *OMPDepobjClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPDepobjClause();
 }
 
 OMPDependClause *
@@ -1805,30 +1735,59 @@ OMPInitClause *OMPInitClause::Create(const ASTContext &C, Expr *InteropVar,
                                      SourceLocation VarLoc,
                                      SourceLocation EndLoc) {
 
-  void *Mem =
-      C.Allocate(totalSizeToAlloc<Expr *>(InteropInfo.PreferTypes.size() + 1));
-  auto *Clause = new (Mem) OMPInitClause(
-      InteropInfo.IsTarget, InteropInfo.IsTargetSync, StartLoc, LParenLoc,
-      VarLoc, EndLoc, InteropInfo.PreferTypes.size() + 1);
-  Clause->setInteropVar(InteropVar);
-  llvm::copy(InteropInfo.PreferTypes, Clause->getTrailingObjects() + 1);
+  unsigned NumPrefs = InteropInfo.Prefs.size();
+  unsigned NumAttrs = 0;
+  for (const OMPInteropPref &P : InteropInfo.Prefs)
+    NumAttrs += P.Attrs.size();
+
+  // Trailing layout: Expr*[1 + NumPrefs + NumAttrs], unsigned[NumPrefs].
+  void *Mem = C.Allocate(
+      totalSizeToAlloc<Expr *, unsigned>(1 + NumPrefs + NumAttrs, NumPrefs));
+  auto *Clause = new (Mem)
+      OMPInitClause(InteropInfo.IsTarget, InteropInfo.IsTargetSync, StartLoc,
+                    LParenLoc, VarLoc, EndLoc, /*VarListN=*/1 + NumPrefs);
+  Clause->NumAttrs = NumAttrs;
+  Clause->HasPreferAttrs = InteropInfo.HasPreferAttrs;
+
+  Expr **E = Clause->getTrailingObjects<Expr *>();
+  E[0] = InteropVar;
+  for (unsigned I = 0; I < NumPrefs; ++I)
+    E[1 + I] = InteropInfo.Prefs[I].Fr;
+  unsigned *AttrEnds = Clause->getTrailingObjects<unsigned>();
+  unsigned AttrBase = 1 + NumPrefs;
+  unsigned AttrPos = AttrBase;
+  for (unsigned I = 0; I < NumPrefs; ++I) {
+    for (Expr *A : InteropInfo.Prefs[I].Attrs)
+      E[AttrPos++] = A;
+    AttrEnds[I] = AttrPos - AttrBase;
+  }
   return Clause;
 }
 
-OMPInitClause *OMPInitClause::CreateEmpty(const ASTContext &C, unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
-  return new (Mem) OMPInitClause(N);
+OMPInitClause *OMPInitClause::CreateEmpty(const ASTContext &C,
+                                          unsigned NumPrefs,
+                                          unsigned NumAttrs) {
+  void *Mem = C.Allocate(
+      totalSizeToAlloc<Expr *, unsigned>(1 + NumPrefs + NumAttrs, NumPrefs));
+  auto *Clause = new (Mem) OMPInitClause(/*VarListN=*/1 + NumPrefs);
+  Clause->NumAttrs = NumAttrs;
+  return Clause;
 }
 
-OMPBindClause *
-OMPBindClause::Create(const ASTContext &C, OpenMPBindClauseKind K,
-                      SourceLocation KLoc, SourceLocation StartLoc,
-                      SourceLocation LParenLoc, SourceLocation EndLoc) {
-  return new (C) OMPBindClause(K, KLoc, StartLoc, LParenLoc, EndLoc);
-}
-
-OMPBindClause *OMPBindClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPBindClause();
+void OMPInitClause::setAttrs(ArrayRef<unsigned> Counts,
+                             ArrayRef<Expr *> Attrs) {
+  assert(Counts.size() == getNumPrefs() &&
+         "attr-count vector size must match number of pref-specs");
+  assert(Attrs.size() == NumAttrs &&
+         "attr-expr count must match preallocated NumAttrs");
+  // Store inclusive cumulative counts (end offsets)
+  unsigned *AttrEnds = getTrailingObjects<unsigned>();
+  unsigned Run = 0;
+  for (unsigned I = 0, E = Counts.size(); I < E; ++I) {
+    Run += Counts[I];
+    AttrEnds[I] = Run;
+  }
+  llvm::copy(Attrs, getTrailingObjects<Expr *>() + varlist_size());
 }
 
 OMPDoacrossClause *
@@ -1914,37 +1873,78 @@ OMPContainsClause *OMPContainsClause::CreateEmpty(const ASTContext &C,
 OMPNumTeamsClause *OMPNumTeamsClause::Create(
     const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
-    ArrayRef<Expr *> VL, Stmt *PreInit) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+    ArrayRef<Expr *> VL, OpenMPNumTeamsClauseModifier Modifier,
+    Expr *ModifierExpr, SourceLocation ModifierLoc, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
   OMPNumTeamsClause *Clause =
       new (Mem) OMPNumTeamsClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
+  Clause->setModifier(Modifier);
+  Clause->setModifierExpr(ModifierExpr);
+  Clause->setModifierLoc(ModifierLoc);
   Clause->setPreInitStmt(PreInit, CaptureRegion);
   return Clause;
 }
 
 OMPNumTeamsClause *OMPNumTeamsClause::CreateEmpty(const ASTContext &C,
                                                   unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
   return new (Mem) OMPNumTeamsClause(N);
 }
 
 OMPThreadLimitClause *OMPThreadLimitClause::Create(
     const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
-    ArrayRef<Expr *> VL, Stmt *PreInit) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+    ArrayRef<Expr *> VL, OpenMPThreadLimitClauseModifier Modifier,
+    Expr *ModifierExpr, SourceLocation ModifierLoc, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
   OMPThreadLimitClause *Clause =
       new (Mem) OMPThreadLimitClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
+  Clause->setModifier(Modifier);
+  Clause->setModifierExpr(ModifierExpr);
+  Clause->setModifierLoc(ModifierLoc);
   Clause->setPreInitStmt(PreInit, CaptureRegion);
   return Clause;
 }
 
 OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
                                                         unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
   return new (Mem) OMPThreadLimitClause(N);
+}
+
+OMPNumThreadsClause *OMPNumThreadsClause::Create(
+    const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
+    ArrayRef<Expr *> VL,
+    OpenMPNumThreadsClauseModifier PrescriptivenessModifier,
+    OpenMPNumThreadsClauseModifier DimsModifier,
+    SourceLocation PrescriptivenessModifierLoc, SourceLocation DimsModifierLoc,
+    Expr *DimsModifierExpr, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
+  OMPNumThreadsClause *Clause =
+      new (Mem) OMPNumThreadsClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
+  Clause->setVarRefs(VL);
+  Clause->setPrescriptivenessModifier(PrescriptivenessModifier);
+  Clause->setPrescriptivenessModifierLoc(PrescriptivenessModifierLoc);
+  Clause->setDimsModifier(DimsModifier);
+  Clause->setDimsModifierExpr(DimsModifierExpr);
+  Clause->setDimsModifierLoc(DimsModifierLoc);
+  Clause->setPreInitStmt(PreInit, CaptureRegion);
+  return Clause;
+}
+
+OMPNumThreadsClause *OMPNumThreadsClause::CreateEmpty(const ASTContext &C,
+                                                      unsigned N) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
+  return new (Mem) OMPNumThreadsClause(N);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1966,14 +1966,30 @@ void OMPClausePrinter::VisitOMPFinalClause(OMPFinalClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPNumThreadsClause(OMPNumThreadsClause *Node) {
-  OS << "num_threads(";
-  OpenMPNumThreadsClauseModifier Modifier = Node->getModifier();
-  if (Modifier != OMPC_NUMTHREADS_unknown) {
-    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(), Modifier)
-       << ": ";
+  if (!Node->varlist_empty()) {
+    OS << "num_threads";
+    bool HasPrescriptiveness =
+        Node->getPrescriptivenessModifier() != OMPC_NUMTHREADS_unknown;
+    bool HasDims = Node->getDimsModifier() != OMPC_NUMTHREADS_unknown;
+    if (HasPrescriptiveness || HasDims) {
+      OS << "(";
+      if (HasPrescriptiveness)
+        OS << getOpenMPSimpleClauseTypeName(
+            Node->getClauseKind(), Node->getPrescriptivenessModifier());
+      if (HasPrescriptiveness && HasDims)
+        OS << ",";
+      if (HasDims) {
+        OS << "dims(";
+        Node->getDimsModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+        OS << ")";
+      }
+      OS << ":";
+      VisitOMPClauseList(Node, ' ');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
+    OS << ")";
   }
-  Node->getNumThreads()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPAlignClause(OMPAlignClause *Node) {
@@ -2028,6 +2044,15 @@ void OMPClausePrinter::VisitOMPPermutationClause(OMPPermutationClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPFullClause(OMPFullClause *Node) { OS << "full"; }
+
+void OMPClausePrinter::VisitOMPDepthClause(OMPDepthClause *Node) {
+  OS << "depth";
+  if (Expr *Depth = Node->getDepth()) {
+    OS << '(';
+    Depth->printPretty(OS, nullptr, Policy, 0);
+    OS << ')';
+  }
+}
 
 void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
   OS << "partial";
@@ -2209,14 +2234,16 @@ void OMPClausePrinter::VisitOMPReadClause(OMPReadClause *) { OS << "read"; }
 
 void OMPClausePrinter::VisitOMPWriteClause(OMPWriteClause *) { OS << "write"; }
 
-void OMPClausePrinter::VisitOMPUpdateClause(OMPUpdateClause *Node) {
+void OMPClausePrinter::VisitOMPUpdateClause(OMPUpdateClause *) {
   OS << "update";
-  if (Node->isExtended()) {
-    OS << "(";
-    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
-                                        Node->getDependencyKind());
-    OS << ")";
-  }
+}
+
+void OMPClausePrinter::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *Node) {
+  OS << "update(";
+  OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                                      Node->getDependencyKind());
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPCaptureClause(OMPCaptureClause *) {
@@ -2326,19 +2353,17 @@ void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
 
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
   if (!Node->varlist_empty()) {
-    OS << "num_teams(";
-    // Handle lower-bound:upper-bound syntax when there are exactly 2
-    // expressions
-    if (Node->varlist_size() == 2) {
-      llvm::interleave(
-          Node->varlist(), OS,
-          [&](const auto *Expr) { Expr->printPretty(OS, nullptr, Policy, 0); },
-          ":");
+    OS << "num_teams";
+    if (Node->getModifier() != OMPC_NUMTEAMS_unknown) {
+      OS << "(";
+      if (Node->getModifier() == OMPC_NUMTEAMS_dims)
+        OS << "dims(";
+      Node->getModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+      if (Node->getModifier() == OMPC_NUMTEAMS_dims)
+        OS << ")";
+      VisitOMPClauseList(Node, ':');
     } else {
-      // For single expression or other cases, use comma-separated list
-      llvm::interleaveComma(Node->varlist(), OS, [&](const auto *Expr) {
-        Expr->printPretty(OS, nullptr, Policy, 0);
-      });
+      VisitOMPClauseList(Node, '(');
     }
     OS << ")";
   }
@@ -2347,7 +2372,14 @@ void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
 void OMPClausePrinter::VisitOMPThreadLimitClause(OMPThreadLimitClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "thread_limit";
-    VisitOMPClauseList(Node, '(');
+    if (Node->getModifier() == OMPC_THREADLIMIT_dims) {
+      OS << "(dims(";
+      Node->getModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+      OS << ")";
+      VisitOMPClauseList(Node, ':');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
     OS << ")";
   }
 }
@@ -2388,17 +2420,39 @@ void OMPClausePrinter::VisitOMPHintClause(OMPHintClause *Node) {
 
 void OMPClausePrinter::VisitOMPInitClause(OMPInitClause *Node) {
   OS << "init(";
-  bool First = true;
-  for (const Expr *E : Node->prefs()) {
-    if (First)
-      OS << "prefer_type(";
-    else
-      OS << ",";
-    E->printPretty(OS, nullptr, Policy);
-    First = false;
-  }
-  if (!First)
+  if (!Node->prefs().empty()) {
+    OS << "prefer_type(";
+    if (Node->hasPreferAttrs()) {
+      // OMP 6.0 brace-grouped form
+      llvm::interleaveComma(Node->prefs(), OS, [&](OMPInitClause::PrefView P) {
+        OS << "{";
+        if (P.Fr) {
+          OS << "fr(";
+          P.Fr->printPretty(OS, nullptr, Policy);
+          OS << ")";
+          if (!P.Attrs.empty())
+            OS << ", ";
+        }
+        if (!P.Attrs.empty()) {
+          OS << "attr(";
+          llvm::interleaveComma(P.Attrs, OS, [&](const Expr *A) {
+            A->printPretty(OS, nullptr, Policy);
+          });
+          OS << ")";
+        }
+        OS << "}";
+      });
+    } else {
+      llvm::interleave(
+          Node->prefs(), OS,
+          [&](OMPInitClause::PrefView P) {
+            if (P.Fr)
+              P.Fr->printPretty(OS, nullptr, Policy);
+          },
+          ",");
+    }
     OS << "), ";
+  }
   if (Node->getIsTarget())
     OS << "target";
   if (Node->getIsTargetSync()) {
@@ -3196,5 +3250,98 @@ bool TargetOMPContext::matchesISATrait(StringRef RawString) const {
     return It->second;
   if (!FeatureValidityCheck(RawString))
     DiagUnknownTrait(RawString);
+  return false;
+}
+
+/// Evaluate one bound of an 'adjust_args' parameter range: either an
+/// 'omp_num_args [+- logical_offset]' expression, or a plain constant integer
+/// expression. An omitted bound leaves Result unchanged. Returns false if the
+/// bound is dependent or not constant.
+static bool evalOMPAdjustArgsBound(const OMPAdjustArgsItem::Bound &Bound,
+                                   unsigned NumArgs, const ASTContext &Ctx,
+                                   int64_t &Result) {
+  if (Bound.Kind == OMPAdjustArgsItem::Bound::Omitted)
+    return true;
+  if (Bound.Kind == OMPAdjustArgsItem::Bound::NumArgs) {
+    int64_t Offset = 0;
+    if (const Expr *OffsetExpr = Bound.E) {
+      if (OffsetExpr->isValueDependent())
+        return false;
+      std::optional<llvm::APSInt> Val = OffsetExpr->getIntegerConstantExpr(Ctx);
+      if (!Val)
+        return false;
+      Offset = Val->getLimitedValue(INT32_MAX);
+    }
+    Result = static_cast<int64_t>(NumArgs) +
+             (Bound.IsSubtraction ? -Offset : Offset);
+    return true;
+  }
+  if (Bound.Kind != OMPAdjustArgsItem::Bound::Expression || !Bound.E)
+    return false;
+  const Expr *E = Bound.E->IgnoreParenImpCasts();
+  if (E->isValueDependent())
+    return false;
+  std::optional<llvm::APSInt> Val = E->getIntegerConstantExpr(Ctx);
+  if (!Val)
+    return false;
+  Result = Val->getLimitedValue(INT32_MAX);
+  return true;
+}
+
+bool clang::resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
+                                     const FunctionDecl *FD, unsigned NumArgs,
+                                     const ASTContext &Ctx,
+                                     SmallVectorImpl<unsigned> &Positions) {
+  auto AppendIfInRange = [&](int64_t Pos) {
+    if (Pos >= 1 && Pos <= static_cast<int64_t>(NumArgs))
+      Positions.push_back(static_cast<unsigned>(Pos));
+  };
+
+  // A parameter range 'lb:ub'. An omitted lb defaults to 1, an omitted ub to
+  // 'NumArgs' (OpenMP 6.0 [5.2.1]).
+  if (Item.Kind == OMPAdjustArgsItem::Range) {
+    int64_t Lower = 1;
+    int64_t Upper = NumArgs;
+    if (!evalOMPAdjustArgsBound(Item.Lower, NumArgs, Ctx, Lower) ||
+        !evalOMPAdjustArgsBound(Item.Upper, NumArgs, Ctx, Upper))
+      return false;
+    // An out-of-range literal bound must not turn this into an
+    // unbounded loop.
+    Lower = std::max<int64_t>(Lower, 1);
+    Upper = std::min<int64_t>(Upper, NumArgs);
+    if (Lower > Upper)
+      return true;
+    for (int64_t Pos : llvm::seq_inclusive<int64_t>(Lower, Upper))
+      AppendIfInRange(Pos);
+    return true;
+  }
+
+  if (!Item.E)
+    return false;
+  const Expr *E = Item.E->IgnoreParenImpCasts();
+
+  // A named parameter list item.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
+      unsigned Index = PVD->getFunctionScopeIndex();
+      if (FD->getNumParams() > Index &&
+          FD->getParamDecl(Index)->getCanonicalDecl() ==
+              PVD->getCanonicalDecl())
+        AppendIfInRange(static_cast<int64_t>(Index) + 1);
+      return true;
+    }
+  }
+
+  // The position of a parameter, given as a constant integer expression.
+  if (E->getType()->isIntegerType()) {
+    if (E->isValueDependent())
+      return false;
+    std::optional<llvm::APSInt> Val = E->getIntegerConstantExpr(Ctx);
+    if (!Val)
+      return false;
+    AppendIfInRange(Val->getLimitedValue(INT32_MAX));
+    return true;
+  }
+
   return false;
 }

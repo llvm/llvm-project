@@ -23,11 +23,13 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class AssumptionCache;
 class DataLayout;
 class DominatorTree;
 class Function;
 class GEPOperator;
+struct KnownBits;
 class PHINode;
 class SelectInst;
 class TargetLibraryInfo;
@@ -40,6 +42,7 @@ class Value;
 /// to preserve information from query to query. However it does retain handles
 /// to various other analyses and must be recomputed when those analyses are.
 class BasicAAResult : public AAResultBase {
+  const AnalysisOptions &Opts;
   const DataLayout &DL;
   const Function &F;
   const TargetLibraryInfo &TLI;
@@ -53,17 +56,16 @@ class BasicAAResult : public AAResultBase {
   }
 
 public:
-  BasicAAResult(const DataLayout &DL, const Function &F,
-                const TargetLibraryInfo &TLI, AssumptionCache &AC,
-                DominatorTree *DT = nullptr)
-      : DL(DL), F(F), TLI(TLI), AC(AC), DT_(DT) {}
+  LLVM_ABI BasicAAResult(const DataLayout &DL, const Function &F,
+                         const TargetLibraryInfo &TLI, AssumptionCache &AC,
+                         DominatorTree *DT = nullptr);
 
   BasicAAResult(const BasicAAResult &Arg)
-      : AAResultBase(Arg), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI), AC(Arg.AC),
-        DT_(Arg.DT_) {}
-  BasicAAResult(BasicAAResult &&Arg)
-      : AAResultBase(std::move(Arg)), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI),
+      : AAResultBase(Arg), Opts(Arg.Opts), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI),
         AC(Arg.AC), DT_(Arg.DT_) {}
+  BasicAAResult(BasicAAResult &&Arg)
+      : AAResultBase(std::move(Arg)), Opts(Arg.Opts), DL(Arg.DL), F(Arg.F),
+        TLI(Arg.TLI), AC(Arg.AC), DT_(Arg.DT_) {}
 
   /// Handle invalidation events in the new pass manager.
   LLVM_ABI bool invalidate(Function &Fn, const PreservedAnalyses &PA,
@@ -73,8 +75,10 @@ public:
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI);
 
-  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
+  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc,
+                                  const Instruction *CtxI);
 
+  using AAResultBase::getModRefInfo;
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);
@@ -106,6 +110,7 @@ public:
 
 private:
   struct DecomposedGEP;
+  struct VariableGEPOffsetInfo;
 
   /// Tracks instructions visited by pointsToConstantMemory.
   SmallPtrSet<const Value *, 16> Visited;
@@ -113,6 +118,20 @@ private:
   static DecomposedGEP
   DecomposeGEPExpression(const Value *V, const DataLayout &DL,
                          AssumptionCache *AC, DominatorTree *DT);
+
+  /// Analyze the variable indices of a decomposed GEP, computing the GCD
+  /// that each Scale*V term is a multiple of, and an approximate range of
+  /// possible total offsets.
+  VariableGEPOffsetInfo analyzeVariableOffsets(const DecomposedGEP &GEP,
+                                               DominatorTree *DT);
+
+  /// Try to determine the range of values for VarIndex such that
+  /// VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex, thus
+  /// establishing a minimum absolute value of the variable offset.
+  std::optional<APInt> computeMinAbsVarOffset(const DecomposedGEP &GEP,
+                                              ArrayRef<KnownBits> VIKnownBits,
+                                              DominatorTree *DT,
+                                              const AAQueryInfo &AAQI);
 
   /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
@@ -122,9 +141,10 @@ private:
   /// will therefore conservatively refuse to decompose these expressions.
   /// However, we know that, for all %x, zext(%x) != zext(%x + 1), even if
   /// the addition overflows.
-  bool constantOffsetHeuristic(const DecomposedGEP &GEP, LocationSize V1Size,
-                               LocationSize V2Size, AssumptionCache *AC,
-                               DominatorTree *DT, const AAQueryInfo &AAQI);
+  bool computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
+                                      LocationSize V1Size, LocationSize V2Size,
+                                      AssumptionCache *AC, DominatorTree *DT,
+                                      const AAQueryInfo &AAQI);
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2,
                                      const AAQueryInfo &AAQI);

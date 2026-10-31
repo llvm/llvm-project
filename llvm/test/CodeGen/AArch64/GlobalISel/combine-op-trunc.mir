@@ -12,16 +12,16 @@ body:             |
     ; CHECK-LABEL: name: and_trunc
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %4:_(s16) = G_AND %2, %3
-    %5:_(s32) = G_ANYEXT %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(i16) = G_TRUNC %0
+    %3:_(i16) = G_TRUNC %1
+    %4:_(i16) = G_AND %2, %3
+    %5:_(i32) = G_ANYEXT %4
     $w0 = COPY %5
 ...
 ---
@@ -32,16 +32,16 @@ body:             |
     ; CHECK-LABEL: name: and_trunc_vector
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<4 x s32>) = G_AND [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[AND]](<4 x s32>)
-    ; CHECK-NEXT: $x0 = COPY [[TRUNC]](<4 x s16>)
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(<4 x s32>) = COPY $q1
-    %2:_(<4 x s16>) = G_TRUNC %0
-    %3:_(<4 x s16>) = G_TRUNC %1
-    %4:_(<4 x s16>) = G_AND %2, %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<4 x i32>) = G_AND [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x i16>) = G_TRUNC [[AND]](<4 x i32>)
+    ; CHECK-NEXT: $x0 = COPY [[TRUNC]](<4 x i16>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(<4 x i32>) = COPY $q1
+    %2:_(<4 x i16>) = G_TRUNC %0
+    %3:_(<4 x i16>) = G_TRUNC %1
+    %4:_(<4 x i16>) = G_AND %2, %3
     $x0 = COPY %4
 ...
 
@@ -54,16 +54,16 @@ body:             |
     ; CHECK-LABEL: name: or_trunc
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $w0 = COPY [[OR]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %4:_(s16) = G_OR %2, %3
-    %5:_(s32) = G_ANYEXT %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[OR]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(i16) = G_TRUNC %0
+    %3:_(i16) = G_TRUNC %1
+    %4:_(i16) = G_OR %2, %3
+    %5:_(i32) = G_ANYEXT %4
     $w0 = COPY %5
 ...
 ---
@@ -74,16 +74,16 @@ body:             |
     ; CHECK-LABEL: name: or_trunc_vector
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<4 x s32>) = G_OR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[OR]](<4 x s32>)
-    ; CHECK-NEXT: $x0 = COPY [[TRUNC]](<4 x s16>)
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(<4 x s32>) = COPY $q1
-    %2:_(<4 x s16>) = G_TRUNC %0
-    %3:_(<4 x s16>) = G_TRUNC %1
-    %4:_(<4 x s16>) = G_OR %2, %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<4 x i32>) = G_OR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x i16>) = G_TRUNC [[OR]](<4 x i32>)
+    ; CHECK-NEXT: $x0 = COPY [[TRUNC]](<4 x i16>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(<4 x i32>) = COPY $q1
+    %2:_(<4 x i16>) = G_TRUNC %0
+    %3:_(<4 x i16>) = G_TRUNC %1
+    %4:_(<4 x i16>) = G_OR %2, %3
     $x0 = COPY %4
 ...
 
@@ -96,16 +96,16 @@ body:             |
     ; CHECK-LABEL: name: xor_trunc
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $w0 = COPY [[XOR]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %4:_(s16) = G_XOR %2, %3
-    %5:_(s32) = G_ANYEXT %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[XOR]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(i16) = G_TRUNC %0
+    %3:_(i16) = G_TRUNC %1
+    %4:_(i16) = G_XOR %2, %3
+    %5:_(i32) = G_ANYEXT %4
     $w0 = COPY %5
 ...
 ---
@@ -116,16 +116,16 @@ body:             |
     ; CHECK-LABEL: name: xor_trunc_vector
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<4 x s32>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[XOR]](<4 x s32>)
-    ; CHECK-NEXT: $x0 = COPY [[TRUNC]](<4 x s16>)
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(<4 x s32>) = COPY $q1
-    %2:_(<4 x s16>) = G_TRUNC %0
-    %3:_(<4 x s16>) = G_TRUNC %1
-    %4:_(<4 x s16>) = G_XOR %2, %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<4 x i32>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x i16>) = G_TRUNC [[XOR]](<4 x i32>)
+    ; CHECK-NEXT: $x0 = COPY [[TRUNC]](<4 x i16>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(<4 x i32>) = COPY $q1
+    %2:_(<4 x i16>) = G_TRUNC %0
+    %3:_(<4 x i16>) = G_TRUNC %1
+    %4:_(<4 x i16>) = G_XOR %2, %3
     $x0 = COPY %4
 ...
 
@@ -138,23 +138,23 @@ body:             |
     ; CHECK-LABEL: name: or_trunc_multiuse_1
     ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-    ; CHECK-NEXT: G_STORE [[TRUNC]](s16), [[COPY2]](p0) :: (store (s16))
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](i32)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](i16), [[COPY2]](p0) :: (store (i16))
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i16) = G_OR [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[OR]](i16)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
     %5:_(p0) = COPY $x2
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    G_STORE %2, %5 :: (store (s16))
-    %4:_(s16) = G_OR %2, %3
-    %6:_(s32) = G_ANYEXT %4
+    %2:_(i16) = G_TRUNC %0
+    %3:_(i16) = G_TRUNC %1
+    G_STORE %2, %5 :: (store (i16))
+    %4:_(i16) = G_OR %2, %3
+    %6:_(i32) = G_ANYEXT %4
     $w0 = COPY %6
 ...
 ---
@@ -165,23 +165,23 @@ body:             |
     ; CHECK-LABEL: name: and_trunc_multiuse_2
     ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-    ; CHECK-NEXT: G_STORE [[TRUNC]](s16), [[COPY2]](p0) :: (store (s16))
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s16)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](i32)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](i16), [[COPY2]](p0) :: (store (i16))
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i16) = G_AND [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[AND]](i16)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
     %5:_(p0) = COPY $x2
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    G_STORE %2, %5 :: (store (s16))
-    %4:_(s16) = G_AND %2, %3
-    %6:_(s32) = G_ANYEXT %4
+    %2:_(i16) = G_TRUNC %0
+    %3:_(i16) = G_TRUNC %1
+    G_STORE %2, %5 :: (store (i16))
+    %4:_(i16) = G_AND %2, %3
+    %6:_(i32) = G_ANYEXT %4
     $w0 = COPY %6
 ...
 ---
@@ -192,21 +192,21 @@ body:             |
     ; CHECK-LABEL: name: xor_trunc_vector_multiuse
     ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY $x2
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[COPY]](<4 x s32>)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[COPY1]](<4 x s32>)
-    ; CHECK-NEXT: G_STORE [[TRUNC]](<4 x s16>), [[COPY2]](p0) :: (store (<4 x s16>))
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<4 x s16>) = G_XOR [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: $x0 = COPY [[XOR]](<4 x s16>)
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x i16>) = G_TRUNC [[COPY]](<4 x i32>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<4 x i16>) = G_TRUNC [[COPY1]](<4 x i32>)
+    ; CHECK-NEXT: G_STORE [[TRUNC]](<4 x i16>), [[COPY2]](p0) :: (store (<4 x i16>))
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<4 x i16>) = G_XOR [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: $x0 = COPY [[XOR]](<4 x i16>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(<4 x i32>) = COPY $q1
     %5:_(p0) = COPY $x2
-    %2:_(<4 x s16>) = G_TRUNC %0
-    %3:_(<4 x s16>) = G_TRUNC %1
-    G_STORE %2, %5 :: (store (<4 x s16>))
-    %4:_(<4 x s16>) = G_XOR %2, %3
+    %2:_(<4 x i16>) = G_TRUNC %0
+    %3:_(<4 x i16>) = G_TRUNC %1
+    G_STORE %2, %5 :: (store (<4 x i16>))
+    %4:_(<4 x i16>) = G_XOR %2, %3
     $x0 = COPY %4
 ...
 
@@ -224,18 +224,18 @@ body:             |
     ; CHECK-LABEL: name: and_trunc_freeze
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[FREEZE]], [[COPY1]]
-    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %6:_(s16) = G_FREEZE %2
-    %4:_(s16) = G_AND %6, %3
-    %5:_(s32) = G_ANYEXT %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(i32) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[FREEZE]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(i16) = G_TRUNC %0
+    %3:_(i16) = G_TRUNC %1
+    %6:_(i16) = G_FREEZE %2
+    %4:_(i16) = G_AND %6, %3
+    %5:_(i32) = G_ANYEXT %4
     $w0 = COPY %5
 ...
 
@@ -248,20 +248,20 @@ body:             |
     ; CHECK-LABEL: name: and_trunc_freeze_both
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(s32) = G_FREEZE [[COPY1]]
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[FREEZE]], [[FREEZE1]]
-    ; CHECK-NEXT: $w0 = COPY [[AND]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %6:_(s16) = G_FREEZE %2
-    %7:_(s16) = G_FREEZE %3
-    %4:_(s16) = G_AND %6, %7
-    %5:_(s32) = G_ANYEXT %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(i32) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(i32) = G_FREEZE [[COPY1]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[FREEZE]], [[FREEZE1]]
+    ; CHECK-NEXT: $w0 = COPY [[AND]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(i16) = G_TRUNC %0
+    %3:_(i16) = G_TRUNC %1
+    %6:_(i16) = G_FREEZE %2
+    %7:_(i16) = G_FREEZE %3
+    %4:_(i16) = G_AND %6, %7
+    %5:_(i32) = G_ANYEXT %4
     $w0 = COPY %5
 ...
 
@@ -275,18 +275,18 @@ body:             |
     ; CHECK-LABEL: name: or_trunc_freeze
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[FREEZE]], [[COPY1]]
-    ; CHECK-NEXT: $w0 = COPY [[OR]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %6:_(s16) = G_FREEZE %2
-    %4:_(s16) = G_OR %6, %3
-    %5:_(s32) = G_ANYEXT %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(i32) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[FREEZE]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = COPY [[OR]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(i16) = G_TRUNC %0
+    %3:_(i16) = G_TRUNC %1
+    %6:_(i16) = G_FREEZE %2
+    %4:_(i16) = G_OR %6, %3
+    %5:_(i32) = G_ANYEXT %4
     $w0 = COPY %5
 ...
 ---
@@ -297,19 +297,19 @@ body:             |
     ; CHECK-LABEL: name: xor_trunc_freeze_both
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(s32) = G_FREEZE [[COPY1]]
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FREEZE]], [[FREEZE1]]
-    ; CHECK-NEXT: $w0 = COPY [[XOR]](s32)
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = COPY $w1
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %6:_(s16) = G_FREEZE %2
-    %7:_(s16) = G_FREEZE %3
-    %4:_(s16) = G_XOR %6, %7
-    %5:_(s32) = G_ANYEXT %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(i32) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:_(i32) = G_FREEZE [[COPY1]]
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[FREEZE]], [[FREEZE1]]
+    ; CHECK-NEXT: $w0 = COPY [[XOR]](i32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(i16) = G_TRUNC %0
+    %3:_(i16) = G_TRUNC %1
+    %6:_(i16) = G_FREEZE %2
+    %7:_(i16) = G_FREEZE %3
+    %4:_(i16) = G_XOR %6, %7
+    %5:_(i32) = G_ANYEXT %4
     $w0 = COPY %5
 ...

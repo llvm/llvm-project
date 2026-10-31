@@ -1,15 +1,15 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.01-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.01-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.03-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.03-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu9.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu10.10-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu10.10-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,NOLOOP %s
 
 ; GCN-LABEL: {{^}}gws_sema_br_offset0:
 ; NOLOOP-DAG: s_load_{{dword|b32}} [[BAR_NUM:s[0-9]+]]

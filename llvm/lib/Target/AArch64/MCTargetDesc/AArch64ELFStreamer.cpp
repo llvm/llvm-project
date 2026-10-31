@@ -108,6 +108,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void emitARM64WinCFINop() override { OS << "\t.seh_nop\n"; }
   void emitARM64WinCFISaveNext() override { OS << "\t.seh_save_next\n"; }
   void emitARM64WinCFIPrologEnd() override { OS << "\t.seh_endprologue\n"; }
+  void emitARM64WinCFIEndC() override { OS << "\t.seh_end_c\n"; }
   void emitARM64WinCFIEpilogStart() override { OS << "\t.seh_startepilogue\n"; }
   void emitARM64WinCFIEpilogEnd() override { OS << "\t.seh_endepilogue\n"; }
   void emitARM64WinCFITrapFrame() override { OS << "\t.seh_trap_frame\n"; }
@@ -316,8 +317,7 @@ public:
       : MCELFStreamer(Context, std::move(TAB), std::move(OW),
                       std::move(Emitter)),
         LastEMS(EMS_None) {
-    auto *TO = getContext().getTargetOptions();
-    ImplicitMapSyms = TO && TO->ImplicitMapSyms;
+    ImplicitMapSyms = getContext().getTargetOptions().ImplicitMapSyms;
   }
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override {

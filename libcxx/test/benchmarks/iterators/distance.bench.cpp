@@ -16,6 +16,7 @@
 #include <vector>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_distance = [](auto first, auto last) { return std::distance(first, last); };
@@ -25,7 +26,7 @@ int main(int argc, char** argv) {
     auto bm = [](std::string name, auto distance) {
       benchmark::RegisterBenchmark(
           name,
-          [distance](auto& st) {
+          [distance](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             std::deque<int> c(size, 1);
 
@@ -48,7 +49,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto distance, std::size_t seg_size) {
       benchmark::RegisterBenchmark(
           name,
-          [distance, seg_size](auto& st) {
+          [distance, seg_size](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size     = st.range(0);
             std::size_t const segments = (size + seg_size - 1) / seg_size;
             Container c(segments);

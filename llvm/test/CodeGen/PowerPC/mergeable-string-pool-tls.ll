@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small \
 ; RUN:     -ppc-asm-full-reg-names < %s | FileCheck %s \
 ; RUN:     --check-prefix=CHECK64
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff \

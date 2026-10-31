@@ -365,15 +365,15 @@ public:
   }
 
   /// Add a dynamic relocation at the given /p Offset.
-  void addDynamicRelocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type,
-                            uint64_t Addend, uint64_t Value = 0) {
-    addDynamicRelocation(Relocation{Offset, Symbol, Type, Addend, Value});
+  void addDynamicRelocation(
+      uint64_t Offset, MCSymbol *Symbol, uint32_t Type, uint64_t Addend,
+      uint64_t Value = 0, bool IsRELR = false,
+      uint32_t JmpRelocationIndex = Relocation::NoJmpRelocationIndex) {
+    addDynamicRelocation(Relocation{Offset, Symbol, Type, Addend, Value, IsRELR,
+                                    JmpRelocationIndex});
   }
 
-  void addDynamicRelocation(const Relocation &Reloc) {
-    assert(Reloc.Offset < getSize() && "offset not within section bounds");
-    DynamicRelocations.emplace(Reloc);
-  }
+  void addDynamicRelocation(const Relocation &Reloc);
 
   /// Add relocation against the original contents of this section.
   void addPendingRelocation(const Relocation &Rel) {
@@ -478,7 +478,7 @@ public:
 
   /// Flush all pending relocations to patch original contents of sections
   /// that were not emitted via MCStreamer.
-  void flushPendingRelocations(raw_pwrite_stream &OS,
+  void flushPendingRelocations(raw_fd_ostream &OS,
                                SymbolResolverFuncTy Resolver);
 
   /// Change contents of the section. Unless the section has a valid SectionID,

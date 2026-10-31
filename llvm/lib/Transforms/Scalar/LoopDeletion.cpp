@@ -14,10 +14,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -36,11 +38,6 @@ using namespace llvm;
 STATISTIC(NumDeleted, "Number of loops deleted");
 STATISTIC(NumBackedgesBroken,
           "Number of loops for which we managed to break the backedge");
-
-static cl::opt<bool> EnableSymbolicExecution(
-    "loop-deletion-enable-symbolic-execution", cl::Hidden, cl::init(true),
-    cl::desc("Break backedge through symbolic execution of 1st iteration "
-             "attempting to prove that the backedge is never taken"));
 
 enum class LoopDeletionResult {
   Unmodified,
@@ -109,36 +106,8 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
         }))
       return false;
 
-  // The loop or any of its sub-loops looping infinitely is legal. The loop can
-  // only be considered dead if either
-  // a. the function is mustprogress.
-  // b. all (sub-)loops are mustprogress or have a known trip-count.
-  if (L->getHeader()->getParent()->mustProgress())
-    return true;
-
-  LoopBlocksRPO RPOT(L);
-  RPOT.perform(&LI);
-  // If the loop contains an irreducible cycle, it may loop infinitely.
-  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
-    return false;
-
-  SmallVector<Loop *, 8> WorkList;
-  WorkList.push_back(L);
-  while (!WorkList.empty()) {
-    Loop *Current = WorkList.pop_back_val();
-    if (hasMustProgress(Current))
-      continue;
-
-    const SCEV *S = SE.getConstantMaxBackedgeTakenCount(Current);
-    if (isa<SCEVCouldNotCompute>(S)) {
-      LLVM_DEBUG(
-          dbgs() << "Could not compute SCEV MaxBackedgeTakenCount and was "
-                    "not required to make progress.\n");
-      return false;
-    }
-    WorkList.append(Current->begin(), Current->end());
-  }
-  return true;
+  // Calls that may not return were rejected above.
+  return isLoopNestFinite(L, SE, LI);
 }
 
 /// This function returns true if there is no viable path from the
@@ -216,7 +185,7 @@ getValueOnFirstIteration(Value *V, DenseMap<Value *, Value *> &FirstIterValue,
 static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
                                          LoopInfo &LI) {
   // Disabled by option.
-  if (!EnableSymbolicExecution)
+  if (!getScalarOptions(*L).loop_deletion_enable_symbolic_execution)
     return false;
 
   BasicBlock *Predecessor = L->getLoopPredecessor();
@@ -488,7 +457,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   // the situation of needing to be able to solve statically which exit block
   // will be branched to, or trying to preserve the branching logic in a loop
   // invariant manner.
-  if (!ExitBlock && !L->hasNoExitBlocks()) {
+  if (!ExitBlock && !LI.hasNoExitBlocks(*L)) {
     LLVM_DEBUG(dbgs() << "Deletion requires at most one exit block.\n");
     return LoopDeletionResult::Unmodified;
   }

@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Ensure that functions marked as signal frames are reported as such.
+// Ensure that functions marked as signal frames are reported as such, and that
+// the flag doesn't leak into the frames above them.
 
 // Older clang versions had a bug: .cfi_signal_frame can't be encoded in compact
 // unwind.
-// XFAIL: apple-clang-17
+// XFAIL: apple-clang-21
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
@@ -31,7 +32,7 @@
 #include <stdlib.h>
 #include <libunwind.h>
 
-void test() {
+__attribute__((noinline)) void test() {
   asm(".cfi_signal_frame");
   unw_cursor_t cursor;
   unw_context_t uc;
@@ -39,9 +40,16 @@ void test() {
   unw_init_local(&cursor, &uc);
   assert(unw_step(&cursor) > 0);
   assert(unw_is_signal_frame(&cursor));
+  assert(unw_step(&cursor) > 0);
+  assert(!unw_is_signal_frame(&cursor));
 }
 
-int main(int, char**) {
+__attribute__((noinline)) void caller() {
   test();
+  asm volatile(""); // Prevent a tail call.
+}
+
+int main(int, char **) {
+  caller();
   return 0;
 }

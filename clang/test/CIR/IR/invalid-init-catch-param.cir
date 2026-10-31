@@ -1,0 +1,258 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+cir.func @ref_to_ptr_not_a_reference(%exn: !cir.ptr<!void>) {
+  %0 = cir.alloca "p" align(4) : !cir.ptr<!s32i>
+  // expected-error @below {{'cir.init_catch_param' op 'reference_to_pointer' requires 'param_addr' to be the address of a reference to a pointer}}
+  cir.init_catch_param reference_to_pointer %exn to %0 : !cir.ptr<!void>, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+cir.func @ref_to_record_ptr_not_a_pointer(%exn: !cir.ptr<!void>) {
+  %0 = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  // expected-error @below {{'cir.init_catch_param' op 'reference_to_record_pointer' requires 'param_addr' to be the address of a reference to a pointer}}
+  cir.init_catch_param reference_to_record_pointer %exn to %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!s32i>>
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+cir.func @ref_to_ptr_without_construct() {
+  cir.scope {
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      // expected-error @below {{'cir.init_catch_param' op 'reference_to_pointer' requires a preceding 'cir.construct_catch_param' of the same kind on the same parameter}}
+      cir.init_catch_param reference_to_pointer %exn_ptr to %p
+        : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+cir.func @construct_kind_mismatch() {
+  cir.scope {
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.construct_catch_param reference_to_pointer %eh_token to %p using
+        : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      // expected-error @below {{'cir.init_catch_param' op kind 'reference' does not match the kind 'reference_to_pointer' of the preceding 'cir.construct_catch_param'}}
+      cir.init_catch_param reference %exn_ptr to %p
+        : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.struct<"E" {pad !u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+cir.func @non_trivial_copy_without_construct() {
+  cir.scope {
+    %e = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      // expected-error @below {{'cir.init_catch_param' op 'non_trivial_copy' requires a preceding 'cir.construct_catch_param' of the same kind on the same parameter}}
+      cir.init_catch_param non_trivial_copy %exn_ptr to %e
+        : !cir.ptr<!void>, !cir.ptr<!rec_E>
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+cir.func @same_kind_different_param() {
+  cir.scope {
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+    %q = cir.alloca "q" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.construct_catch_param reference_to_pointer %eh_token to %q using
+        : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      // expected-error @below {{'cir.init_catch_param' op 'reference_to_pointer' requires a preceding 'cir.construct_catch_param' of the same kind on the same parameter}}
+      cir.init_catch_param reference_to_pointer %exn_ptr to %p
+        : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+cir.func @construct_kind_mismatch_needs_construct() {
+  cir.scope {
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using
+        : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      // expected-error @below {{'cir.init_catch_param' op kind 'reference_to_pointer' does not match the kind 'non_trivial_copy' of the preceding 'cir.construct_catch_param'}}
+      cir.init_catch_param reference_to_pointer %exn_ptr to %p
+        : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+cir.func @init_operand_count() {
+  cir.scope {
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.construct_catch_param reference_to_pointer %eh_token to %p using
+        : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      // expected-error @below {{'cir.init_catch_param' op expected 2 operands, but found 1}}
+      "cir.init_catch_param"(%exn_ptr) <{kind = #cir.init_catch<reference_to_pointer>}>
+        : (!cir.ptr<!void>) -> ()
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+cir.func @construct_kind_mismatch_in_lifetime_scope() {
+  cir.scope {
+    %p = cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.lifetime.start %p : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+      cir.cleanup.scope {
+        cir.construct_catch_param reference_to_pointer %eh_token to %p using
+          : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+        %catch_token, %exn_ptr = cir.begin_catch %eh_token
+          : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+        // expected-error @below {{'cir.init_catch_param' op kind 'reference' does not match the kind 'reference_to_pointer' of the preceding 'cir.construct_catch_param'}}
+        cir.init_catch_param reference %exn_ptr to %p
+          : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      } cleanup all {
+        cir.lifetime.end %p : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}

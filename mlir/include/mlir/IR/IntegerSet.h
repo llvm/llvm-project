@@ -103,7 +103,9 @@ public:
   void walkExprs(function_ref<void(AffineExpr)> callback) const;
 
   void print(raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   friend ::llvm::hash_code hash_value(IntegerSet arg);
 
@@ -131,14 +133,6 @@ namespace llvm {
 // IntegerSet hash just like pointers.
 template <>
 struct DenseMapInfo<mlir::IntegerSet> {
-  static mlir::IntegerSet getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::IntegerSet(static_cast<mlir::IntegerSet::ImplType *>(pointer));
-  }
-  static mlir::IntegerSet getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::IntegerSet(static_cast<mlir::IntegerSet::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::IntegerSet val) {
     return mlir::hash_value(val);
   }

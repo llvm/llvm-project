@@ -126,7 +126,7 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     return MVT::i32;
 
   if (isTypeLegal(MVT::f16)) {
-    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+    if (VT.isVectorOf(MVT::bf16))
       return getRegisterTypeForCallingConv(
           Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -165,8 +165,7 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       return 3;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     return getNumRegistersForCallingConv(
         Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -177,8 +176,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
   // Break wide or odd vXi1 vectors into scalars to match avx2 behavior.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
-      Subtarget.hasAVX512() &&
+  if (VT.isVectorOf(MVT::i1) && Subtarget.hasAVX512() &&
       (!isPowerOf2_32(VT.getVectorNumElements()) ||
        (VT.getVectorNumElements() == 64 && !Subtarget.hasBWI()) ||
        VT.getVectorNumElements() > 64)) {
@@ -198,8 +196,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   }
 
   // Split vNbf16 vectors according to vNf16.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     VT = VT.changeVectorElementType(Context, MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
@@ -324,7 +321,8 @@ EVT X86TargetLowering::getOptimalMemOpType(
       if (Subtarget.hasSSE1() && (Subtarget.is64Bit() || Subtarget.hasX87()) &&
           (Subtarget.getPreferVectorWidth() >= 128))
         return MVT::v4f32;
-    } else if (((Op.isMemcpy() && !Op.isMemcpyStrSrc()) || Op.isZeroMemset()) &&
+    } else if (((Op.isMemcpyOrMemmove() && !Op.isMemcpyStrSrc()) ||
+                Op.isZeroMemset()) &&
                Op.size() >= 8 && !Subtarget.is64Bit() && Subtarget.hasSSE2()) {
       // Do not use f64 to lower memcpy if source is string constant. It's
       // better to use i32 to avoid the loads.
@@ -571,7 +569,7 @@ X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB,
     if (Subtarget.isTargetFuchsia())
       return SegmentOffset(IRB, 0x10, AddressSpace);
 
-    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+    Module *M = IRB.getModule();
     // Specially, some users may customize the base reg and offset.
     int Offset = M->getStackProtectorGuardOffset();
     // If we don't set -stack-protector-guard-offset value:
@@ -673,6 +671,43 @@ bool X86TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
     const Type *RetTy) const {
+  // Mingw64 GCC returns f128 via sret, and LLVM matches it for compatibility.
+  // This logic exists for libcalls, a frontend should explicitly use sret
+  // rather than rely on the sret demotion here.
+  //
+  // Using sret is a reasonable implementation of the Windows x64 calling
+  // convention:
+  //
+  // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170#return-values
+  //
+  // > Otherwise, the caller must allocate memory for the return value and pass
+  // > a pointer to it as the first argument.
+  //
+  // Although it is not the only reasonable interpretation:
+  //
+  // > Nonscalar types including floats, doubles, and vector types such as
+  // > __m128, __m128i, __m128d are returned in XMM0.
+  //
+  // For now, we prefer compatibility with GCC. If official guidelines are ever
+  // published, this can be revisited.
+  //
+  // Return false, which will perform sret demotion.
+  auto IsWin64F128StackCC = [this](CallingConv::ID CC) -> bool {
+    switch (CC) {
+    case CallingConv::Win64:
+      return true;
+    case CallingConv::C:
+      return Subtarget.isOSWindowsOrUEFI();
+    default:
+      return false;
+    }
+  };
+
+  if (IsWin64F128StackCC(CallConv) &&
+      llvm::any_of(
+          Outs, [](const ISD::OutputArg &Out) { return Out.VT == MVT::f128; }))
+    return false;
+
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_X86);
@@ -785,7 +820,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     else if (VA.getLocInfo() == CCValAssign::ZExt)
       ValToCopy = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), ValToCopy);
     else if (VA.getLocInfo() == CCValAssign::AExt) {
-      if (ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1)
+      if (ValVT.isVectorOf(MVT::i1))
         ValToCopy = lowerMasksToReg(ValToCopy, VA.getLocVT(), dl, DAG);
       else
         ValToCopy = DAG.getNode(ISD::ANY_EXTEND, dl, VA.getLocVT(), ValToCopy);
@@ -1125,8 +1160,7 @@ SDValue X86TargetLowering::LowerCallResult(
   CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
 
   // Copy all of the result registers out of their specified physreg.
-  for (unsigned I = 0, InsIndex = 0, E = RVLocs.size(); I != E;
-       ++I, ++InsIndex) {
+  for (unsigned I = 0, E = RVLocs.size(); I != E; ++I) {
     CCValAssign &VA = RVLocs[I];
     EVT CopyVT = VA.getLocVT();
 
@@ -1242,11 +1276,11 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getIntPtrConstant(Flags.getByValSize(), dl);
-
-  return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
-      /*isVolatile*/ false, /*AlwaysInline=*/true,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  Align Alignment = Flags.getNonZeroByValAlign();
+  return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile*/ false, /*AlwaysInline=*/true,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -2115,23 +2149,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CCInfo.AnalyzeArgumentsSecondPass(Outs, CC_X86);
   }
 
-  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  bool IsSibcall = false;
+  // We cannot guarantee TCO for mismatched calling conventions.
   if (isTailCall && ShouldGuaranteeTCO) {
-    // If we need to guarantee TCO for a non-musttail call, we just need to make
-    // sure the conventions match. If a tail call uses one of the supported TCO
-    // conventions and the caller and callee match, we can tail call any
-    // function prototype.
     CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
     isTailCall = (CallConv == CallerCC);
-    IsSibcall = IsMustTail;
-  } else if (isTailCall) {
-    // Check if this tail call is a "sibling" call, which is loosely defined to
-    // be a tail call that doesn't require heroics like moving the return
-    // address or swapping byval arguments. We treat some musttail calls as
-    // sibling calls to avoid unnecessary argument copies.
+  }
+
+  // Check if this tail call is a "sibling" call, which is loosely defined to
+  // be a tail call that doesn't require heroics like moving the return
+  // address or swapping byval arguments. We treat some musttail calls as
+  // sibling calls to avoid unnecessary argument copies.
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  bool IsSibcall = false;
+  if (isTailCall) {
     IsSibcall = isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs);
-    isTailCall = IsSibcall || IsMustTail;
+    isTailCall = IsSibcall || IsMustTail || ShouldGuaranteeTCO;
   }
 
   if (isTailCall)
@@ -2151,7 +2183,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // own caller's stack.
     NumBytes = 0;
   else if (ShouldGuaranteeTCO && canGuaranteeTCO(CallConv))
-    NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
+    // The callee pops this amount, so compute it as LowerFormalArguments does.
+    NumBytes = GetAlignedArgumentStackSize(CCInfo.getStackSize(), DAG);
 
   // A sibcall is ABI-compatible and does not need to adjust the stack pointer.
   int FPDiff = 0;
@@ -2397,12 +2430,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (Subtarget.isPICStyleGOT()) {
     // ELF / PIC requires GOT in the EBX register before function calls via PLT
-    // GOT pointer (except regcall).
+    // GOT pointer.
     if (!isTailCall) {
-      // Indirect call with RegCall calling convertion may use up all the
-      // general registers, so it is not suitable to bind EBX reister for
-      // GOT address, just let register allocator handle it.
-      if (CallConv != CallingConv::X86_RegCall)
+      // Only PLT calls (GlobalAddress or ExternalSymbol) require the GOT in
+      // EBX. Indirect calls through a register or an absolute address do not
+      // go through the PLT and do not need EBX to hold the GOT base.
+      if ((Callee->getOpcode() == ISD::GlobalAddress ||
+           Callee->getOpcode() == ISD::ExternalSymbol))
         RegsToPass.push_back(std::make_pair(
           Register(X86::EBX), DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(),
                                           getPointerTy(DAG.getDataLayout()))));
@@ -2899,35 +2933,28 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   return Bytes == MFI.getObjectSize(FI);
 }
 
-static bool
-mayBeSRetTailCallCompatible(const TargetLowering::CallLoweringInfo &CLI,
-                            Register CallerSRetReg) {
-  const auto &Outs = CLI.Outs;
-  const auto &OutVals = CLI.OutVals;
-
-  // We know the caller has a sret pointer argument (CallerSRetReg). Locate the
-  // operand index within the callee that may have a sret pointer too.
-  unsigned Pos = 0;
-  for (unsigned E = Outs.size(); Pos != E; ++Pos)
-    if (Outs[Pos].Flags.isSRet())
-      break;
-  // Bail out if the callee has not any sret argument.
-  if (Pos == Outs.size())
+/// Return true if the call forwards the caller's own sret pointer to the callee
+/// as its sret argument. We prove this in IR, since SelectionDAG is built per
+/// basic block and the caller's sret pointer is only visible as a function
+/// argument in the entry block.
+static bool isCallerSRetForwarded(const CallBase *CB, const Function &CallerF) {
+  if (!CB)
     return false;
 
-  // At this point, either the caller is forwarding its sret argument to the
-  // callee, or the callee is being passed a different sret pointer. We now look
-  // for a CopyToReg, where the callee sret argument is written into a new vreg
-  // (which should later be %rax/%eax, if this is returned).
-  SDValue SRetArgVal = OutVals[Pos];
-  for (SDNode *User : SRetArgVal->users()) {
-    if (User->getOpcode() != ISD::CopyToReg)
-      continue;
-    Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
-    if (Reg == CallerSRetReg && User->getOperand(2) == SRetArgVal)
-      return true;
-  }
+  // The verifier allows at most one sret parameter. A caller with a sret return
+  // register but no sret Argument has an implicit sret from a demoted return,
+  // which cannot be forwarded from IR.
+  const Argument *CallerSRet =
+      llvm::find_if(CallerF.args(),
+                    [](const Argument &Arg) { return Arg.hasStructRetAttr(); });
+  if (CallerSRet == CallerF.arg_end())
+    return false;
 
+  // Check that the callee receives it as its sret argument.
+  for (const Use &U : CB->args())
+    if (U.get() == CallerSRet &&
+        CB->paramHasAttr(CB->getArgOperandNo(&U), Attribute::StructRet))
+      return true;
   return false;
 }
 
@@ -2974,6 +3001,11 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
   if (IsCalleeWin64 != IsCallerWin64)
     return false;
 
+  // Do not optimize vararg calls with 6 arguments for LFI since LFI reserves
+  // %r11, meaning there will not be enough registers available.
+  if (Subtarget.isLFI() && ArgLocs.size() > 5)
+    return false;
+
   // If we are using a GOT, don't generate sibling calls to non-local,
   // default-visibility symbols. Tail calling such a symbol requires using a GOT
   // relocation, which forces early binding of the symbol. This breaks code that
@@ -3001,11 +3033,11 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
   // Avoid sibcall optimization if we are an sret return function and the callee
   // is incompatible, unless such premises are proven wrong. See comment in
   // LowerReturn about why hasStructRetAttr is insufficient.
-  if (Register SRetReg = FuncInfo->getSRetReturnReg()) {
+  if (FuncInfo->getSRetReturnReg()) {
     // For a compatible tail call the callee must return our sret pointer. So it
     // needs to be (a) an sret function itself and (b) we pass our sret as its
-    // sret. Condition #b is harder to determine.
-    if (!mayBeSRetTailCallCompatible(CLI, SRetReg))
+    // sret.
+    if (!isCallerSRetForwarded(CLI.CB, CallerF))
       return false;
   } else if (hasCalleePopSRet(Outs, ArgLocs, Subtarget))
     // The callee pops an sret, so we cannot tail-call, as our caller doesn't

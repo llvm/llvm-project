@@ -117,7 +117,7 @@ private:
   DiagHandlerTy DiagHandler;
 
   /// The MCAsmInfo for this target.
-  const MCAsmInfo *MAI = nullptr;
+  const MCAsmInfo &MAI;
 
   /// The MCRegisterInfo for this target.
   const MCRegisterInfo *MRI = nullptr;
@@ -175,7 +175,7 @@ private:
   unsigned GetInstance(unsigned LocalLabelVal);
 
   /// SHT_LLVM_BB_ADDR_MAP version to emit.
-  uint8_t BBAddrMapVersion = 5;
+  uint8_t BBAddrMapVersion = 6;
 
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
@@ -321,7 +321,9 @@ private:
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
   StringMap<bool> RelSecNames;
 
-  SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
+  /// Copies of MCSubtargetInfo created by getSubtargetCopy(). These must live
+  /// as long as the context since fragments reference them.
+  SmallVector<std::unique_ptr<MCSubtargetInfo>, 0> SubtargetCopies;
 
   /// Do automatic reset in destructor
   bool AutoReset;
@@ -376,9 +378,9 @@ private:
   DenseSet<StringRef> ELFSeenGenericMergeableSections;
 
 public:
-  LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo *MAI,
-                              const MCRegisterInfo *MRI,
-                              const MCSubtargetInfo *MSTI,
+  LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo &MAI,
+                              const MCRegisterInfo &MRI,
+                              const MCSubtargetInfo &MSTI,
                               const SourceMgr *Mgr = nullptr,
                               bool DoAutoReset = true,
                               StringRef Swift5ReflSegmentName = {});
@@ -406,7 +408,7 @@ public:
 
   void setObjectFileInfo(const MCObjectFileInfo *Mofi) { MOFI = Mofi; }
 
-  const MCAsmInfo *getAsmInfo() const { return MAI; }
+  const MCAsmInfo &getAsmInfo() const { return MAI; }
 
   const MCRegisterInfo *getRegisterInfo() const { return MRI; }
 
@@ -414,7 +416,7 @@ public:
 
   const MCSubtargetInfo *getSubtargetInfo() const { return MSTI; }
 
-  LLVM_ABI const MCTargetOptions *getTargetOptions() const;
+  LLVM_ABI const MCTargetOptions &getTargetOptions() const;
 
   LLVM_ABI CodeViewContext &getCVContext();
 
@@ -457,8 +459,8 @@ public:
 
   /// Get or create a symbol for a basic block. For non-always-emit symbols,
   /// this behaves like createTempSymbol, except that it uses the
-  /// PrivateLabelPrefix instead of the InternalSymbolPrefix. When AlwaysEmit is
-  /// true, behaves like getOrCreateSymbol, prefixed with PrivateLabelPrefix.
+  /// InternalSymbolPrefix. When AlwaysEmit is true, behaves like
+  /// getOrCreateSymbol, prefixed with InternalSymbolPrefix.
   LLVM_ABI MCSymbol *createBlockSymbol(const Twine &Name,
                                        bool AlwaysEmit = false);
 

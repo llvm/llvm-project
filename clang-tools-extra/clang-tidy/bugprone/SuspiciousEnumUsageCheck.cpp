@@ -74,7 +74,7 @@ static bool isNonPowerOf2NorNullLiteral(const EnumConstantDecl *EnumConst) {
 }
 
 static bool isMaxValAllBitSetLiteral(const EnumDecl *EnumDec) {
-  auto EnumConst = std::max_element(
+  const auto EnumConst = std::max_element(
       EnumDec->enumerator_begin(), EnumDec->enumerator_end(),
       [](const EnumConstantDecl *E1, const EnumConstantDecl *E2) {
         return E1->getInitVal() < E2->getInitVal();

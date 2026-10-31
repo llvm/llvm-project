@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-target-supports-scalable-vectors=true -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-target-supports-scalable-vectors=true -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -94,8 +94,8 @@ attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-f
 !0 = !{!0, !1, !5}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}
 !2 = !{!2, !1, !3}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i32 1}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 !4 = !{!4, !1, !5}
-!5 = !{!"llvm.loop.vectorize.scalable.enable", i32 0}
+!5 = !{!"llvm.loop.vectorize.scalable.disable"}
 !6 = !{!6, !7}
 !7 = !{!"llvm.loop.vectorize.width", i32 8}

@@ -1,5 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-unknown %s -o - | FileCheck %s --check-prefixes=SPV
 ; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-unknown %s --spirv-ext=+SPV_KHR_float_controls -o - | FileCheck %s --check-prefixes=SPVEXT
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.3-unknown-unknown %s --spirv-ext=+SPV_KHR_float_controls -o - -filetype=obj | spirv-val %}
 
 define dso_local dllexport spir_kernel void @k_float_controls_0(i32 %ibuf, i32 %obuf) local_unnamed_addr {
 entry:

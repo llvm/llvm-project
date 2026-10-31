@@ -589,7 +589,9 @@ int main(int argc, char *argv[]) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::sys::SetInterruptFunction(&clang::clangd::requestShutdown);
 
-  if (!llvm::sys::path::is_absolute(IndexRoot)) {
+  if (!llvm::sys::path::is_absolute(IndexRoot, llvm::sys::path::Style::posix) &&
+      !llvm::sys::path::is_absolute(IndexRoot,
+                                    llvm::sys::path::Style::windows)) {
     llvm::errs() << "Index root should be an absolute path.\n";
     return -1;
   }

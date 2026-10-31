@@ -33,8 +33,8 @@ struct CodeSignatureInfo {
   // For each block, a SHA256 hash (256 bits, 32 bytes) is written to
   // the CodeSignature section.
   static constexpr size_t HashSize = 256 / 8;
-  static constexpr size_t BlobHeadersSize = llvm::alignTo<8>(
-      sizeof(llvm::MachO::CS_SuperBlob) + sizeof(llvm::MachO::CS_BlobIndex));
+  static constexpr size_t BlobHeadersSize = llvm::alignToPowerOf2(
+      sizeof(llvm::MachO::CS_SuperBlob) + sizeof(llvm::MachO::CS_BlobIndex), 8);
   // The size of the entire header depends upon the filename the binary is being
   // written to, but the rest of the header is fixed in size.
   static constexpr uint32_t FixedHeadersSize =

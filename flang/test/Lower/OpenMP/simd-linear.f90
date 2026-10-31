@@ -4,62 +4,62 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=60 %s -o - 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=45 %s -o - 2>&1 | FileCheck %s --check-prefix=IMPLICIT
 
-!CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsimple_linearEx"}
-!CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFsimple_linearEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsimple_linearEx"}>
+!CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] uniq_name("_QFsimple_linearEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 
-!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_linearEi"}
+!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_linearEi"}>
 !IMPLICIT: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOCA]] {{.*}} 
-!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsimple_linearEx"}
-!IMPLICIT: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFsimple_linearEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsimple_linearEx"}>
+!IMPLICIT: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] uniq_name("_QFsimple_linearEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !IMPLICIT: %[[const:.*]] = arith.constant 1 : i32
 subroutine simple_linear
     implicit none
     integer :: x, y, i
-    !CHECK: omp.simd linear(val(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
+    !CHECK: omp.simd linear(val(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32, %[[I]]#0 : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
+    !IMPLICIT: omp.simd linear(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[const]] : i32, @{{[^ ]+}} %[[I]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
     !$omp simd linear(x)
     do i = 1, 10
     end do
-    !CHECK: } {linear_var_types = [i32]}
-    !IMPLICIT: } {linear_var_types = [i32, i32]}
+    !CHECK: }
+    !IMPLICIT: }
 end subroutine
 
 
-!CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_stepEx"}
-!CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_stepEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_stepEx"}>
+!CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] uniq_name("_QFlinear_stepEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlinear_stepEi"}
+!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFlinear_stepEi"}>
 !IMPLICIT: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOCA]] {{.*}} 
-!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_stepEx"}
-!IMPLICIT: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_stepEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_stepEx"}>
+!IMPLICIT: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] uniq_name("_QFlinear_stepEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !IMPLICIT: %[[const:.*]] = arith.constant 4 : i32
 subroutine linear_step
     implicit none
     integer :: x, y, i
     !CHECK: %[[const:.*]] = arith.constant 4 : i32
-    !CHECK: omp.simd linear(val(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
+    !CHECK: omp.simd linear(val(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[const]] : i32)) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32, %[[I]]#0 : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
+    !IMPLICIT: omp.simd linear(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[const]] : i32, @{{[^ ]+}} %[[I]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
     !$omp simd linear(x:4)
     do i = 1, 10
     end do
-    !CHECK: } {linear_var_types = [i32]}
-    !IMPLICIT: } {linear_var_types = [i32, i32]}
+    !CHECK: }
+    !IMPLICIT: }
 end subroutine
 
-!CHECK: %[[A_alloca:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFlinear_exprEa"}
-!CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_alloca]] {uniq_name = "_QFlinear_exprEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_exprEx"}
-!CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_exprEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[A_alloca:.*]] = fir.alloca i32 <{bindc_name = "a", uniq_name = "_QFlinear_exprEa"}>
+!CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_alloca]] uniq_name("_QFlinear_exprEa") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_exprEx"}>
+!CHECK: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] uniq_name("_QFlinear_exprEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-!IMPLICIT: %[[A_alloca:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFlinear_exprEa"}
-!IMPLICIT: %[[A:.*]]:2 = hlfir.declare %[[A_alloca]] {uniq_name = "_QFlinear_exprEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlinear_exprEi"}
-!IMPLICIT: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOCA]] {uniq_name = "_QFlinear_exprEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFlinear_exprEx"}
-!IMPLICIT: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] {uniq_name = "_QFlinear_exprEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!IMPLICIT: %[[A_alloca:.*]] = fir.alloca i32 <{bindc_name = "a", uniq_name = "_QFlinear_exprEa"}>
+!IMPLICIT: %[[A:.*]]:2 = hlfir.declare %[[A_alloca]] uniq_name("_QFlinear_exprEa") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!IMPLICIT: %[[I_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFlinear_exprEi"}>
+!IMPLICIT: %[[I:.*]]:2 = hlfir.declare %[[I_ALLOCA]] uniq_name("_QFlinear_exprEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!IMPLICIT: %[[X_alloca:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlinear_exprEx"}>
+!IMPLICIT: %[[X:.*]]:2 = hlfir.declare %[[X_alloca]] uniq_name("_QFlinear_exprEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine linear_expr
     implicit none
     integer :: x, y, i, a
@@ -71,37 +71,64 @@ subroutine linear_expr
     !IMPLICIT: %[[const:.*]] = arith.constant 4 : i32
     !IMPLICIT: %[[LINEAR_EXPR:.*]] = arith.addi %[[LOAD_A]], %[[const]] : i32
 
-    !CHECK: omp.simd linear(val(%[[X]]#0 : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32)) {{.*}}
+    !CHECK: omp.simd linear(val(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32)) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32, %[[I]]#0 : !fir.ref<i32> = {{.*}} : i32) {{.*}}
+    !IMPLICIT: omp.simd linear(@{{[^ ]+}} %[[X]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32, @{{[^ ]+}} %[[I]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = {{.*}} : i32) {{.*}}
     !$omp simd linear(x:a+4)
     do i = 1, 10
     end do
-    !CHECK: } {linear_var_types = [i32]}
-    !IMPLICIT: } {linear_var_types = [i32, i32]}
+    !CHECK: }
+    !IMPLICIT: }
 end subroutine
 
 
 subroutine non_i32_type
-!CHECK: %[[I_DECLARE:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFnon_i32_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[J_DECLARE:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFnon_i32_typeEj"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+!CHECK: %[[I_DECLARE:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFnon_i32_typeEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[J_DECLARE:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFnon_i32_typeEj") : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i64
 
 
-!IMPLICIT: %[[I_DECLARE:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFnon_i32_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!IMPLICIT: %[[J_DECLARE:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFnon_i32_typeEj"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+!IMPLICIT: %[[I_DECLARE:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFnon_i32_typeEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!IMPLICIT: %[[J_DECLARE:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFnon_i32_typeEj") : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 !IMPLICIT: %[[CONST:.*]] = arith.constant 1 : i64
 !IMPLICIT: {{.*}} = arith.constant 1 : i32
 !IMPLICIT: {{.*}} = arith.constant 10 : i32
 !IMPLICIT: %[[STEP_VAR_CONST:.*]] = arith.constant 1 : i32
     integer(kind=8)::j=0
 
-    !CHECK: omp.simd linear(val(%[[J_DECLARE]]#0 : !fir.ref<i64> = %[[CONST]] : i64)) {{.*}}
-    !IMPLICIT: omp.simd linear(%[[J_DECLARE]]#0 : !fir.ref<i64> = %[[CONST]] : i64, %[[I_DECLARE]]#0 : !fir.ref<i32> = %[[STEP_VAR_CONST]] : i32)
+    !CHECK: omp.simd linear(val(@{{[^ ]+}} %[[J_DECLARE]]#0 -> %{{[^ ]+}} : !fir.ref<i64> = %[[CONST]] : i64)) {{.*}}
+    !IMPLICIT: omp.simd linear(@{{[^ ]+}} %[[J_DECLARE]]#0 -> %{{[^ ]+}} : !fir.ref<i64> = %[[CONST]] : i64, @{{[^ ]+}} %[[I_DECLARE]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[STEP_VAR_CONST]] : i32)
     !$omp simd linear(j:1_8)
     do i = 1,10
     end do
     !$omp end simd
-    !CHECK: } {linear_var_types = [i64]}
-    !IMPLICIT: } {linear_var_types = [i64, i32]}
+    !CHECK: }
+    !IMPLICIT: }
+end subroutine
+
+!CHECK-LABEL: func.func @_QPmultiple_items
+!CHECK: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFmultiple_itemsEa")
+!CHECK: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFmultiple_itemsEb")
+!CHECK: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFmultiple_itemsEc")
+!CHECK: %[[TWO_A:.*]] = arith.constant 2 : i32
+!CHECK: %[[TWO_B:.*]] = arith.constant 2 : i32
+!CHECK: %[[THREE:.*]] = arith.constant 3 : i32
+!CHECK: omp.simd linear(val(@{{[^ ]+}} %[[A]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[TWO_A]] : i32), val(@{{[^ ]+}} %[[B]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[TWO_B]] : i32), val(@{{[^ ]+}} %[[C]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[THREE]] : i32)) linear_var_types([i32, i32, i32])
+
+!IMPLICIT-LABEL: func.func @_QPmultiple_items
+!IMPLICIT: %[[I:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFmultiple_itemsEi")
+!IMPLICIT: %[[TWO_A:.*]] = arith.constant 2 : i32
+!IMPLICIT: %[[TWO_B:.*]] = arith.constant 2 : i32
+!IMPLICIT: %[[THREE:.*]] = arith.constant 3 : i32
+!IMPLICIT: %{{.*}} = arith.constant 1 : i32
+!IMPLICIT: %{{.*}} = arith.constant 4 : i32
+!IMPLICIT: %[[STEP:.*]] = arith.constant 1 : i32
+!IMPLICIT: omp.simd linear({{.*}} = %[[TWO_A]] : i32, {{.*}} = %[[TWO_B]] : i32, {{.*}} = %[[THREE]] : i32, @{{[^ ]+}} %[[I]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[STEP]] : i32)
+subroutine multiple_items
+    implicit none
+    integer :: a, b, c, i
+    !$omp simd linear(a,b:2) linear(c:3)
+    do i = 1, 4
+    end do
+    !$omp end simd
 end subroutine

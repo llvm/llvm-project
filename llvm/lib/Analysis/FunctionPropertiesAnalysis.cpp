@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -30,35 +31,20 @@ using namespace llvm;
 #define DEBUG_TYPE "func-properties-stats"
 
 #define FUNCTION_PROPERTY(Name, Description)                                   \
-  STATISTIC(Num##Name##PreOptimization,                                        \
-            Description " (before optimizations)");                            \
-  STATISTIC(Num##Name, Description);
+  STATISTIC(Num##Name, Description);                                           \
+  STATISTIC(Num##Name##PreOptimization, Description " (before "                \
+                                                    "optimizations)");
 #define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
-  STATISTIC(Num##Name##PreOptimization,                                        \
-            Description " (before optimizations)");                            \
-  STATISTIC(Num##Name, Description);
+  STATISTIC(Num##Name, Description);                                           \
+  STATISTIC(Num##Name##PreOptimization, Description " (before "                \
+                                                    "optimizations)");
 #include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
 LLVM_ABI cl::opt<bool> EnableDetailedFunctionProperties(
     "enable-detailed-function-properties", cl::Hidden, cl::init(false),
     cl::desc("Whether or not to compute detailed function properties."));
-
-static cl::opt<unsigned> BigBasicBlockInstructionThreshold(
-    "big-basic-block-instruction-threshold", cl::Hidden, cl::init(500),
-    cl::desc("The minimum number of instructions a basic block should contain "
-             "before being considered big."));
-
-static cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
-    "medium-basic-block-instruction-threshold", cl::Hidden, cl::init(15),
-    cl::desc("The minimum number of instructions a basic block should contain "
-             "before being considered medium-sized."));
 } // namespace llvm
-
-static cl::opt<unsigned> CallWithManyArgumentsThreshold(
-    "call-with-many-arguments-threshold", cl::Hidden, cl::init(4),
-    cl::desc("The minimum number of arguments a function call must have before "
-             "it is considered having many arguments."));
 
 namespace {
 int64_t getNumBlocksFromCond(const BasicBlock &BB) {
@@ -101,6 +87,7 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
   TotalInstructionCount += Direction * BB.size();
 
   if (EnableDetailedFunctionProperties) {
+    const AnalysisOptions &Opts = getAnalysisOptions(BB.getContext());
     unsigned SuccessorCount = succ_size(&BB);
     if (SuccessorCount == 1)
       BasicBlocksWithSingleSuccessor += Direction;
@@ -109,17 +96,17 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     else if (SuccessorCount > 2)
       BasicBlocksWithMoreThanTwoSuccessors += Direction;
 
-    unsigned PredecessorCount = pred_size(&BB);
-    if (PredecessorCount == 1)
+    if (BB.hasNPredecessors(1))
       BasicBlocksWithSinglePredecessor += Direction;
-    else if (PredecessorCount == 2)
+    else if (BB.hasNPredecessors(2))
       BasicBlocksWithTwoPredecessors += Direction;
-    else if (PredecessorCount > 2)
+    else if (BB.hasNPredecessorsOrMore(3))
       BasicBlocksWithMoreThanTwoPredecessors += Direction;
 
-    if (TotalInstructionCount > BigBasicBlockInstructionThreshold)
+    if (TotalInstructionCount > Opts.big_basic_block_instruction_threshold)
       BigBasicBlocks += Direction;
-    else if (TotalInstructionCount > MediumBasicBlockInstructionThreshold)
+    else if (TotalInstructionCount >
+             Opts.medium_basic_block_instruction_threshold)
       MediumBasicBlocks += Direction;
     else
       SmallBasicBlocks += Direction;
@@ -129,7 +116,7 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     // predecessors, which represent critical edges.
     if (SuccessorCount > 1) {
       for (const auto *Successor : successors(&BB)) {
-        if (pred_size(Successor) > 1)
+        if (Successor->hasNPredecessorsOrMore(2))
           CriticalEdgeCount += Direction;
       }
     }
@@ -163,6 +150,9 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
         ++IntrinsicCount;
 
       if (const auto *Call = dyn_cast<CallInst>(&I)) {
+        if (Call->doesNotReturn())
+          NoReturnCallCount += Direction;
+
         if (Call->isIndirectCall())
           IndirectCallCount += Direction;
         else
@@ -183,7 +173,7 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
             CallReturnsVectorPointerCount += Direction;
         }
 
-        if (Call->arg_size() > CallWithManyArgumentsThreshold)
+        if (Call->arg_size() > Opts.call_with_many_arguments_threshold)
           CallWithManyArgumentsCount += Direction;
 
         for (const auto &Arg : Call->args()) {
@@ -325,6 +315,7 @@ bool FunctionPropertiesInfo::operator==(
       ControlFlowEdgeCount != FPI.ControlFlowEdgeCount ||
       UnconditionalBranchCount != FPI.UnconditionalBranchCount ||
       IntrinsicCount != FPI.IntrinsicCount ||
+      NoReturnCallCount != FPI.NoReturnCallCount ||
       DirectCallCount != FPI.DirectCallCount ||
       IndirectCallCount != FPI.IndirectCallCount ||
       CallReturnsIntegerCount != FPI.CallReturnsIntegerCount ||
@@ -399,7 +390,6 @@ FunctionPropertiesStatisticsPass::run(Function &F,
 #undef FUNCTION_PROPERTY
 #undef DETAILED_FUNCTION_PROPERTY
   }
-
   return PreservedAnalyses::all();
 }
 

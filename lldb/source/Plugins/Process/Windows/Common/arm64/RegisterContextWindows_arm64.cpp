@@ -32,16 +32,14 @@ using namespace lldb_private;
 #define DBG_OFFSET_NAME(reg) 0
 
 #define DEFINE_DBG(reg, i)                                                     \
-  #reg, NULL,                                                                  \
-      0, DBG_OFFSET_NAME(reg[i]), eEncodingUint, eFormatHex,                   \
-                              {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
-                               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
-                               LLDB_INVALID_REGNUM },                          \
-                               NULL, NULL, NULL
+  #reg, nullptr, 0, DBG_OFFSET_NAME(reg[i]), eEncodingUint, eFormatHex,        \
+      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
+       LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},                              \
+      nullptr, nullptr, nullptr
 
 // Include RegisterInfos_arm64 to declare our g_register_infos_arm64 structure.
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_arm64.h"
+#include "Register/Arch/RegisterInfos_arm64.h"
 #undef DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
 static size_t k_num_register_infos = std::size(g_register_infos_arm64_le);
@@ -102,7 +100,7 @@ const RegisterInfo *
 RegisterContextWindows_arm64::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < k_num_register_infos)
     return &g_register_infos_arm64_le[reg];
-  return NULL;
+  return nullptr;
 }
 
 size_t RegisterContextWindows_arm64::GetRegisterSetCount() {

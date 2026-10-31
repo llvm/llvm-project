@@ -435,6 +435,53 @@ private:
   int dimension_{0}; // zero-based
 };
 
+// Represents the extraction of a single scalar element from a rank-1
+// integer array expression used as an explicit-shape array bound (F2023).
+// The inner expression is rank-1; this node is scalar (Rank() == 0).
+// dimension_ is zero-based.
+class RankOneBoundElement {
+public:
+  using Result = SubscriptInteger;
+  CLASS_BOILERPLATE(RankOneBoundElement)
+  RankOneBoundElement(
+      common::CopyableIndirection<Expr<SubscriptInteger>> &&e, int dim)
+      : base_{std::move(e)}, dimension_{dim} {}
+  RankOneBoundElement(Expr<SubscriptInteger> &&e, int dim)
+      : base_{std::move(e)}, dimension_{dim} {}
+
+  const Expr<SubscriptInteger> &base() const { return base_.value(); }
+  Expr<SubscriptInteger> &base() { return base_.value(); }
+  int dimension() const { return dimension_; }
+
+  // Optional provenance.  When this element was produced by folding an
+  // UBOUND()/LBOUND() inquiry of an explicit-shape array whose shape came from
+  // a rank-1 array bound, record the originating array and bound side so the
+  // mod-file writer can serialize it as the real ubound(a,dim)/lbound(a,dim)
+  // intrinsic instead of the synthetic %ROBE spelling.
+  // Declaration-time elements carry no provenance.  Provenance is metadata for
+  // serialization only: it is excluded from operator== and hashing so that the
+  // builtin reuse/deduplication optimizations are unaffected.
+  const std::optional<NamedEntity> &originatingArray() const {
+    return originatingArray_;
+  }
+  bool isUpperBound() const { return isUpperBound_; }
+  void set_provenance(const NamedEntity &array, bool isUpper) {
+    originatingArray_ = array;
+    isUpperBound_ = isUpper;
+  }
+
+  static constexpr int Rank() { return 0; } // always scalar
+  static constexpr int Corank() { return 0; }
+  bool operator==(const RankOneBoundElement &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+
+private:
+  common::CopyableIndirection<Expr<SubscriptInteger>> base_;
+  int dimension_{0}; // zero-based
+  std::optional<NamedEntity> originatingArray_;
+  bool isUpperBound_{false};
+};
+
 #define INSTANTIATE_VARIABLE_TEMPLATES \
   FOR_EACH_SPECIFIC_TYPE(template class Designator, )
 } // namespace Fortran::evaluate

@@ -121,3 +121,31 @@ define void @test_abs3(i32 %x) {
   call void @use(i1 %c2)
   ret void
 }
+
+declare void @use.i64(i64)
+
+define void @smax_clamp_removed_at_unguarded_def(i64 %x) {
+; CHECK-LABEL: @smax_clamp_removed_at_unguarded_def(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MN:%.*]] = call i64 @llvm.smin.i64(i64 [[X:%.*]], i64 1)
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp sgt i64 [[X]], -3
+; CHECK-NEXT:    br i1 [[GUARD]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @use.i64(i64 [[MN]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mx = call i64 @llvm.smax.i64(i64 %x, i64 -2)
+  %mn = call i64 @llvm.smin.i64(i64 %mx, i64 1)
+  %guard = icmp sgt i64 %x, -3
+  br i1 %guard, label %then, label %exit
+
+then:
+  call void @use.i64(i64 %mn)
+  br label %exit
+
+exit:
+  ret void
+}

@@ -14,6 +14,7 @@
 #include "hdr/types/sigset_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_sigaction.h"
+#include "src/__support/OSUtil/linux/sigmask.h"
 #include "src/__support/OSUtil/linux/vdso.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
@@ -71,57 +72,6 @@ struct KernelSigaction {
   sigset_t sa_mask;
 };
 
-static constexpr size_t BITS_PER_SIGWORD = sizeof(unsigned long) * 8;
-
-LIBC_INLINE constexpr sigset_t full_set() { return sigset_t{{-1UL}}; }
-
-LIBC_INLINE constexpr sigset_t empty_set() { return sigset_t{{0}}; }
-
-// Set the bit corresponding to |signal| in |set|. Return true on success
-// and false on failure. The function will fail if |signal| is greater than
-// NSIG or negative.
-LIBC_INLINE constexpr bool add_signal(sigset_t &set, int signal) {
-  if (signal > NSIG || signal <= 0)
-    return false;
-  size_t n = size_t(signal) - 1;
-  size_t word = n / BITS_PER_SIGWORD;
-  size_t bit = n % BITS_PER_SIGWORD;
-  set.__signals[word] |= (1UL << bit);
-  return true;
-}
-
-// Reset the bit corresponding to |signal| in |set|. Return true on success
-// and false on failure. The function will fail if |signal| is greater than
-// NSIG or negative.
-LIBC_INLINE constexpr bool delete_signal(sigset_t &set, int signal) {
-  if (signal > NSIG || signal <= 0)
-    return false;
-  size_t n = size_t(signal) - 1;
-  size_t word = n / BITS_PER_SIGWORD;
-  size_t bit = n % BITS_PER_SIGWORD;
-  set.__signals[word] &= ~(1UL << bit);
-  return true;
-}
-
-LIBC_INLINE int block_all_signals(sigset_t &set) {
-  sigset_t full = full_set();
-  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full,
-                                           &set, sizeof(sigset_t));
-}
-
-LIBC_INLINE int restore_signals(const sigset_t &set) {
-  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK,
-                                           &set, nullptr, sizeof(sigset_t));
-}
-
-LIBC_INLINE int unblock_signal(int signal) {
-  sigset_t set = empty_set();
-  if (!add_signal(set, signal))
-    return -EINVAL;
-  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_UNBLOCK,
-                                           &set, nullptr, sizeof(sigset_t));
-}
-
 // This guard is used to:
 // 1. temporarily block the all signal, avoid post fork invalid state to be
 //    exposed to async signal handlers.
@@ -144,13 +94,13 @@ public:
 
     // This uses a valid sigset_t size and internal storage. A failure here
     // would indicate a kernel ABI mismatch, which is not actionable here.
-    block_all_signals(old_mask);
+    (void)signals::block_all(&old_mask);
   }
 
   LIBC_INLINE ~SigAbortGuard() {
     // This restores a previously saved mask from internal storage. A failure
     // here would likewise be a non-recoverable kernel ABI issue.
-    restore_signals(old_mask);
+    (void)signals::set_mask(old_mask);
     (void)abort_lock.unlock();
   }
 };

@@ -12,7 +12,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <signal.h>
+#include "hdr/signal_macros.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;

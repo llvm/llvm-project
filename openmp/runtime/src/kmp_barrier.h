@@ -58,7 +58,7 @@ static inline void *KMP_ALIGNED_ALLOCATE(size_t size, size_t alignment) {
 
 class distributedBarrier {
   struct flags_s {
-    kmp_uint32 volatile KMP_FOURLINE_ALIGN_CACHE stillNeed;
+    std::atomic<kmp_uint32> KMP_FOURLINE_ALIGN_CACHE stillNeed;
   };
 
   struct go_s {

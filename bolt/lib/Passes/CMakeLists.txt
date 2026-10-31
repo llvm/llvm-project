@@ -4,6 +4,7 @@ add_llvm_library(LLVMBOLTPasses
   AllocCombiner.cpp
   AsmDump.cpp
   BinaryPasses.cpp
+  BranchLivenessUtils.cpp
   CMOVConversion.cpp
   CacheMetrics.cpp
   DataflowAnalysis.cpp
@@ -32,6 +33,7 @@ add_llvm_library(LLVMBOLTPasses
   ProfileQualityStats.cpp
   RegAnalysis.cpp
   RegReAssign.cpp
+  RISCVLongJmpPass.cpp
   ReorderAlgorithm.cpp
   ReorderFunctions.cpp
   ReorderData.cpp

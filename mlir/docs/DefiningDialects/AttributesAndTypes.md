@@ -887,6 +887,12 @@ assembly format of `` `<` struct(params) `>` `` will result in:
 The order in which the parameters are printed is the order in which they are
 declared in the attribute's or type's `parameter` list.
 
+An `EnumAttrParameter`, `OptionalEnumAttrParameter`, or
+`DefaultValuedEnumAttrParameter` captured by `struct` uses the underlying enum
+syntax. This omits the enum attribute's mnemonic and assembly-format
+delimiters. For example, an enum attribute whose standalone syntax is
+`#my_dialect.enum<case>` is printed as `kind = case` in a `struct`.
+
 Passing `custom<Foo>($variable)` allows providing a custom printer and parser
 for the encapsulated variable. Check the
 [custom and ref directive](#custom-and-ref-directive) section for more
@@ -989,6 +995,13 @@ are the "immortal" objects that get uniqued within an MLIRContext and get
 wrapped by the `Attribute` and `Type` classes. Every Attribute or Type class has
 a corresponding storage class, that can be accessed via the protected
 `getImpl()` method.
+
+Note: While storage instances are generally immortal and live as long as the
+`MLIRContext`, the context also supports *transient scopes*
+(`MLIRContext::TransientScope` RAII guard, or `beginTransientScope`/`endTransientScope`).
+Storage instances allocated while in a transient scope are reclaimed when the
+scope ends, allowing temporary types and attributes to be discarded in $O(1)$
+without tearing down loaded dialects.
 
 In most cases the storage class is auto generated, but if necessary it can be
 manually defined by setting the `genStorageClass` field to 0. The name and

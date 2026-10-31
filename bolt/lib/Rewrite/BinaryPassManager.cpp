@@ -29,6 +29,7 @@
 #include "bolt/Passes/PointerAuthCFIAnalyzer.h"
 #include "bolt/Passes/PointerAuthCFIFixup.h"
 #include "bolt/Passes/ProfileQualityStats.h"
+#include "bolt/Passes/RISCVLongJmpPass.h"
 #include "bolt/Passes/RegReAssign.h"
 #include "bolt/Passes/ReorderData.h"
 #include "bolt/Passes/ReorderFunctions.h"
@@ -61,10 +62,9 @@ extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
                llvm::bolt::DeprecatedICFNumericOptionParser>
     ICF;
 
-static cl::opt<bool>
-DynoStatsAll("dyno-stats-all",
-  cl::desc("print dyno stats after each stage"),
-  cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+static cl::opt<bool> DynoStatsAll("dyno-stats-all",
+                                  cl::desc("print dyno stats after each stage"),
+                                  cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
     EliminateUnreachable("eliminate-unreachable",
@@ -241,18 +241,19 @@ static cl::opt<bool> SimplifyConditionalTailCalls(
     cl::desc("simplify conditional tail calls by removing unnecessary jumps"),
     cl::init(true), cl::cat(BoltOptCategory));
 
-static cl::opt<bool> SimplifyRODataLoads(
+cl::opt<bool> SimplifyRODataLoads(
     "simplify-rodata-loads",
     cl::desc("simplify loads from read-only sections by replacing the memory "
              "operand with the constant found in the corresponding section"),
-    cl::cat(BoltOptCategory));
+    cl::init(false), cl::cat(BoltOptCategory));
 
-static cl::list<std::string>
-SpecializeMemcpy1("memcpy1-spec",
-  cl::desc("list of functions with call sites for which to specialize memcpy() "
-           "for size 1"),
-  cl::value_desc("func1,func2:cs1:cs2,func3:cs1,..."),
-  cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::list<std::string> SpecializeMemcpy1(
+    "memcpy1-spec",
+    cl::desc(
+        "list of functions with call sites for which to specialize memcpy() "
+        "for size 1"),
+    cl::value_desc("func1,func2:cs1:cs2,func3:cs1,..."),
+    cl::cat(BoltOptCategory));
 
 static cl::opt<bool> Stoke("stoke", cl::desc("turn on the stoke analysis"),
                            cl::cat(BoltOptCategory));
@@ -442,9 +443,11 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
       std::make_unique<JTFootprintReduction>(PrintJTFootprintReduction),
       opts::JTFootprintReductionFlag);
 
-  Manager.registerPass(
-      std::make_unique<SimplifyRODataLoads>(PrintSimplifyROLoads),
-      opts::SimplifyRODataLoads);
+  if (!BC.isRISCV()) {
+    Manager.registerPass(
+        std::make_unique<SimplifyRODataLoads>(PrintSimplifyROLoads),
+        opts::SimplifyRODataLoads);
+  }
 
   Manager.registerPass(std::make_unique<RegReAssign>(PrintRegReAssign),
                        opts::RegReAssign);
@@ -518,15 +521,24 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<Peepholes>(PrintPeepholes));
 
+  // Assign each function an output section before AlignerPass and LongJmpPass,
+  // so those passes can attribute per-section code alignment and tentative
+  // layout to the final .text / .text.cold sections.
+  Manager.registerPass(std::make_unique<AssignSections>());
+
   Manager.registerPass(std::make_unique<AlignerPass>());
 
   // Perform reordering on data contained in one or more sections using
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
-  // Patch original function entries
-  if (BC.HasRelocations)
+  // Patch original function entries. Skip it when the original code will
+  // be overwritten by new code, as the patches would be lost.
+  if (BC.HasRelocations && !opts::UseOldText)
     Manager.registerPass(std::make_unique<PatchEntries>());
+
+  // Assign each function an output section.
+  Manager.registerPass(std::make_unique<AssignSections>());
 
   if (BC.isAArch64()) {
     Manager.registerPass(
@@ -541,6 +553,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
         std::make_unique<PointerAuthCFIFixup>(PrintPAuthCFIFixup));
   }
 
+  if (BC.isRISCV())
+    Manager.registerPass(std::make_unique<RISCVLongJmpPass>(PrintLongJmp));
+
   // This pass should always run last.*
   Manager.registerPass(std::make_unique<FinalizeFunctions>(PrintFinalized));
 
@@ -554,9 +569,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(
       std::make_unique<RetpolineInsertion>(PrintRetpolineInsertion));
-
-  // Assign each function an output section.
-  Manager.registerPass(std::make_unique<AssignSections>());
 
   // This pass turns tail calls into jumps which makes them invisible to
   // function reordering. It's unsafe to use any CFG or instruction analysis

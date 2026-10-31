@@ -13,6 +13,7 @@
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <cmath>
 #include <vector>
 
 #define DEBUG_TYPE "exegesis-sched-class-resolution"

@@ -66,14 +66,13 @@ void g(A a, B b, C c) { f(a, b, c); }
 // CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    store [2 x float] [[A_COERCE:%.*]], ptr [[COERCE_DIVE]], align 4
 // CHECK-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_B]], ptr [[B]], i32 0, i32 0
-// CHECK-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[B_COERCE:%.*]] to i48
-// CHECK-NEXT:    store i48 [[COERCE_VAL_II]], ptr [[COERCE_DIVE1]], align 1
+// CHECK-NEXT:    store i48 {{.*}}, ptr [[COERCE_DIVE1]], align 1
 // CHECK-NEXT:    [[COERCE_DIVE2:%.*]] = getelementptr inbounds nuw [[STRUCT_C]], ptr [[C]], i32 0, i32 0
 // CHECK-NEXT:    store [4 x float] [[C_COERCE:%.*]], ptr [[COERCE_DIVE2]], align 4
 // CHECK-NEXT:    [[COERCE_DIVE3:%.*]] = getelementptr inbounds nuw [[STRUCT_A]], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[COERCE_DIVE3]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[BYVAL_TEMP]], ptr align 1 [[B]], i64 6, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[BYVAL_TEMP4]], ptr align 4 [[C]], i64 16, i1 false)
-// CHECK-NEXT:    call void (i64, ...) @f(i64 [[TMP0]], ptr noundef dead_on_return [[BYVAL_TEMP]], ptr noundef dead_on_return [[BYVAL_TEMP4]])
+// CHECK-NEXT:    call void (i64, ...) @f(i64 [[TMP0]], ptr nofreeobj noundef align 1 dead_on_return dereferenceable(6) [[BYVAL_TEMP]], ptr nofreeobj noundef align 4 dead_on_return dereferenceable(16) [[BYVAL_TEMP4]])
 // CHECK-NEXT:    ret void
 //

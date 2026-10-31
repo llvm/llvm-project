@@ -16,7 +16,7 @@
 #include "lldb/Utility/StreamBuffer.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 
 using namespace lldb;
@@ -36,7 +36,7 @@ CheckValidProgramTranslation(llvm::StringRef fpo_program,
 
   // print dwarf expression to comparable textual representation
   llvm::DataExtractor extractor({stream.GetData(), stream.GetSize()},
-                                /*IsLittleEndian=*/true, /*AddressSize=*/4);
+                                /*IsLittleEndian=*/true);
 
   std::string result;
   llvm::raw_string_ostream os(result);

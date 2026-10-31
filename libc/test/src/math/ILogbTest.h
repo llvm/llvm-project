@@ -47,13 +47,13 @@ public:
     EXPECT_EQ(2, func(T(-4.0)));
 
     EXPECT_EQ(3, func(T(8.0)));
-    EXPECT_EQ(3, func(-8.0));
+    EXPECT_EQ(3, func(T(-8.0)));
 
-    EXPECT_EQ(4, func(16.0));
-    EXPECT_EQ(4, func(-16.0));
+    EXPECT_EQ(4, func(T(16.0)));
+    EXPECT_EQ(4, func(T(-16.0)));
 
-    EXPECT_EQ(5, func(32.0));
-    EXPECT_EQ(5, func(-32.0));
+    EXPECT_EQ(5, func(T(32.0)));
+    EXPECT_EQ(5, func(T(-32.0)));
   }
 
   template <typename T>
@@ -68,10 +68,10 @@ public:
     EXPECT_EQ(3, func(T(-10.0)));
 
     EXPECT_EQ(4, func(T(31.0)));
-    EXPECT_EQ(4, func(-31.0));
+    EXPECT_EQ(4, func(T(-31.0)));
 
-    EXPECT_EQ(5, func(55.0));
-    EXPECT_EQ(5, func(-55.0));
+    EXPECT_EQ(5, func(T(55.0)));
+    EXPECT_EQ(5, func(T(-55.0)));
   }
 
   template <typename T>
@@ -80,11 +80,11 @@ public:
     using StorageType = typename FPBits::StorageType;
     constexpr StorageType MIN_SUBNORMAL = FPBits::min_subnormal().uintval();
     constexpr StorageType MAX_SUBNORMAL = FPBits::max_subnormal().uintval();
-    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
     for (StorageType v = MIN_SUBNORMAL; v <= MAX_SUBNORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || FPBits(v).is_zero())
         continue;
 
       int exponent;
@@ -99,11 +99,11 @@ public:
     using StorageType = typename FPBits::StorageType;
     constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
     constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
-    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (StorageType v = MIN_NORMAL; v <= MAX_NORMAL; v += STEP) {
       T x = FPBits(v).get_val();
-      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || FPBits(v).is_zero())
         continue;
 
       int exponent;

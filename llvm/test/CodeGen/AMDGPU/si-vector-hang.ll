@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=verde | FileCheck %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu6.01 | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu8.02 -mattr=-flat-for-global | FileCheck %s
 
 ; CHECK: {{^}}test_8_min_char:
 ; CHECK: buffer_store_byte

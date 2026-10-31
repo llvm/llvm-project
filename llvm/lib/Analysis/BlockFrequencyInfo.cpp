@@ -11,11 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
@@ -77,9 +78,6 @@ cl::opt<PGOViewCountsType> PGOViewCounts(
     cl::values(clEnumValN(PGOVCT_None, "none", "do not show."),
                clEnumValN(PGOVCT_Graph, "graph", "show a graph."),
                clEnumValN(PGOVCT_Text, "text", "show in text.")));
-
-static cl::opt<bool> PrintBFI("print-bfi", cl::init(false), cl::Hidden,
-                              cl::desc("Print the block frequency info."));
 
 cl::opt<std::string>
     PrintBFIFuncName("print-bfi-func-name", cl::Hidden,
@@ -153,8 +151,8 @@ BlockFrequencyInfo::BlockFrequencyInfo() = default;
 
 BlockFrequencyInfo::BlockFrequencyInfo(const Function &F,
                                        const BranchProbabilityInfo &BPI,
-                                       const LoopInfo &LI) {
-  calculate(F, BPI, LI);
+                                       const CycleInfo &CI) {
+  calculate(F, BPI, CI);
 }
 
 BlockFrequencyInfo::BlockFrequencyInfo(BlockFrequencyInfo &&Arg)
@@ -183,15 +181,15 @@ bool BlockFrequencyInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 
 void BlockFrequencyInfo::calculate(const Function &F,
                                    const BranchProbabilityInfo &BPI,
-                                   const LoopInfo &LI) {
+                                   const CycleInfo &CI) {
   if (!BFI)
     BFI.reset(new ImplType);
-  BFI->calculate(F, BPI, LI);
+  BFI->calculate(F, BPI, CI);
   if (ViewBlockFreqPropagationDAG != GVDT_None &&
       (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
     view();
   }
-  if (PrintBFI &&
+  if (getAnalysisOptions(F).print_bfi &&
       (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
     print(dbgs());
   }
@@ -202,12 +200,11 @@ BlockFrequency BlockFrequencyInfo::getBlockFreq(const BasicBlock *BB) const {
 }
 
 std::optional<uint64_t>
-BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
-                                         bool AllowSynthetic) const {
+BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB) const {
   if (!BFI)
     return std::nullopt;
 
-  return BFI->getBlockProfileCount(*getFunction(), BB, AllowSynthetic);
+  return BFI->getBlockProfileCount(*getFunction(), BB);
 }
 
 std::optional<uint64_t>
@@ -295,7 +292,7 @@ Printable llvm::printBlockFreq(const BlockFrequencyInfo &BFI,
 INITIALIZE_PASS_BEGIN(BlockFrequencyInfoWrapperPass, "block-freq",
                       "Block Frequency Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_END(BlockFrequencyInfoWrapperPass, "block-freq",
                     "Block Frequency Analysis", true, true)
 
@@ -313,7 +310,7 @@ void BlockFrequencyInfoWrapperPass::print(raw_ostream &OS,
 
 void BlockFrequencyInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<BranchProbabilityInfoWrapperPass>();
-  AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequired<CycleInfoWrapperPass>();
   AU.setPreservesAll();
 }
 
@@ -322,7 +319,7 @@ void BlockFrequencyInfoWrapperPass::releaseMemory() { BFI.releaseMemory(); }
 bool BlockFrequencyInfoWrapperPass::runOnFunction(Function &F) {
   BranchProbabilityInfo &BPI =
       getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  CycleInfo &LI = getAnalysis<CycleInfoWrapperPass>().getResult();
   BFI.calculate(F, BPI, LI);
   return false;
 }
@@ -331,7 +328,7 @@ AnalysisKey BlockFrequencyAnalysis::Key;
 BlockFrequencyInfo BlockFrequencyAnalysis::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   auto &BP = AM.getResult<BranchProbabilityAnalysis>(F);
-  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &LI = AM.getResult<CycleAnalysis>(F);
   BlockFrequencyInfo BFI;
   BFI.calculate(F, BP, LI);
   return BFI;

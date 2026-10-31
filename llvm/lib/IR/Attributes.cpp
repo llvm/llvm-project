@@ -99,24 +99,21 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
          "Not an enum or int attribute");
 
   LLVMContextImpl *pImpl = Context.pImpl;
-  FoldingSetNodeID ID;
-  ID.AddInteger(Kind);
-  if (IsIntAttr)
-    ID.AddInteger(Val);
-  else
+  if (!IsIntAttr) {
     assert(Val == 0 && "Value must be zero for enum attributes");
+    EnumAttributeImpl *&PA = pImpl->EnumAttrs[Kind - Attribute::FirstEnumAttr];
+    if (!PA)
+      PA = new (pImpl->Alloc) EnumAttributeImpl(Kind);
+    return Attribute(PA);
+  }
 
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
-
+  FoldingSetInsertToken Token;
+  IntAttributeImpl *PA = pImpl->IntAttrs.lookup({Kind, Val}, Token);
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
-    if (!IsIntAttr)
-      PA = new (pImpl->Alloc) EnumAttributeImpl(Kind);
-    else
-      PA = new (pImpl->Alloc) IntAttributeImpl(Kind, Val);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    PA = new (pImpl->Alloc) IntAttributeImpl(Kind, Val);
+    pImpl->IntAttrs.insert(PA, Token);
   }
 
   // Return the Attribute that we found or created.
@@ -125,13 +122,8 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
 
 Attribute Attribute::get(LLVMContext &Context, StringRef Kind, StringRef Val) {
   LLVMContextImpl *pImpl = Context.pImpl;
-  FoldingSetNodeID ID;
-  ID.AddString(Kind);
-  if (!Val.empty()) ID.AddString(Val);
-
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
-
+  FoldingSetInsertToken Token;
+  StringAttributeImpl *PA = pImpl->StringAttrs.lookup({Kind, Val}, Token);
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
@@ -139,7 +131,7 @@ Attribute Attribute::get(LLVMContext &Context, StringRef Kind, StringRef Val) {
         pImpl->Alloc.Allocate(StringAttributeImpl::totalSizeToAlloc(Kind, Val),
                               alignof(StringAttributeImpl));
     PA = new (Mem) StringAttributeImpl(Kind, Val);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->StringAttrs.insert(PA, Token);
   }
 
   // Return the Attribute that we found or created.
@@ -150,18 +142,13 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
                          Type *Ty) {
   assert(Attribute::isTypeAttrKind(Kind) && "Not a type attribute");
   LLVMContextImpl *pImpl = Context.pImpl;
-  FoldingSetNodeID ID;
-  ID.AddInteger(Kind);
-  ID.AddPointer(Ty);
-
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
-
+  FoldingSetInsertToken Token;
+  TypeAttributeImpl *PA = pImpl->TypeAttrs.lookup({Kind, Ty}, Token);
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
     PA = new (pImpl->Alloc) TypeAttributeImpl(Kind, Ty);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->TypeAttrs.insert(PA, Token);
   }
 
   // Return the Attribute that we found or created.
@@ -179,15 +166,15 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   CR.getLower().Profile(ID);
   CR.getUpper().Profile(ID);
 
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+  FoldingSetInsertToken Token;
+  AttributeImpl *PA = pImpl->AttrsSet.lookup(ID, Token);
 
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
     PA = new (pImpl->ConstantRangeAttributeAlloc.Allocate())
         ConstantRangeAttributeImpl(Kind, CR);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->AttrsSet.insert(PA, Token);
   }
 
   // Return the Attribute that we found or created.
@@ -207,8 +194,8 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
     CR.getUpper().Profile(ID);
   }
 
-  void *InsertPoint;
-  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+  FoldingSetInsertToken Token;
+  AttributeImpl *PA = pImpl->AttrsSet.lookup(ID, Token);
 
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
@@ -222,7 +209,7 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
         ConstantRangeListAttributeImpl::totalSizeToAlloc(Val),
         alignof(ConstantRangeListAttributeImpl));
     PA = new (Mem) ConstantRangeListAttributeImpl(Kind, Val);
-    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->AttrsSet.insert(PA, Token);
     pImpl->ConstantRangeListAttributes.push_back(
         reinterpret_cast<ConstantRangeListAttributeImpl *>(PA));
   }
@@ -336,14 +323,6 @@ StringRef Attribute::getNameFromAttrKind(Attribute::AttrKind AttrKind) {
   default:
     llvm_unreachable("invalid Kind");
   }
-}
-
-bool Attribute::isExistingAttribute(StringRef Name) {
-  return StringSwitch<bool>(Name)
-#define GET_ATTR_NAMES
-#define ATTRIBUTE_ALL(ENUM_NAME, DISPLAY_NAME) .Case(#DISPLAY_NAME, true)
-#include "llvm/IR/Attributes.inc"
-      .Default(false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -778,10 +757,24 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
 bool Attribute::hasParentContext(LLVMContext &C) const {
   assert(isValid() && "invalid Attribute doesn't refer to any context");
+  LLVMContextImpl *pI = C.pImpl;
+  FoldingSetInsertToken Token;
+  if (pImpl->isEnumAttribute())
+    return pI->EnumAttrs[pImpl->getKindAsEnum() - FirstEnumAttr] == pImpl;
+  if (pImpl->isIntAttribute())
+    return pI->IntAttrs.lookup({pImpl->getKindAsEnum(), pImpl->getValueAsInt()},
+                               Token) == pImpl;
+  if (pImpl->isStringAttribute())
+    return pI->StringAttrs.lookup(
+               {pImpl->getKindAsString(), pImpl->getValueAsString()}, Token) ==
+           pImpl;
+  if (pImpl->isTypeAttribute())
+    return pI->TypeAttrs.lookup(
+               {pImpl->getKindAsEnum(), pImpl->getValueAsType()}, Token) ==
+           pImpl;
   FoldingSetNodeID ID;
   pImpl->Profile(ID);
-  void *Unused;
-  return C.pImpl->AttrsSet.FindNodeOrInsertPos(ID, Unused) == pImpl;
+  return pI->AttrsSet.lookup(ID, Token) == pImpl;
 }
 
 int Attribute::cmpKind(Attribute A) const {
@@ -801,10 +794,6 @@ bool Attribute::operator<(Attribute A) const {
   return *pImpl < *A.pImpl;
 }
 
-void Attribute::Profile(FoldingSetNodeID &ID) const {
-  ID.AddPointer(pImpl);
-}
-
 enum AttributeProperty {
   FnAttr = (1 << 0),
   ParamAttr = (1 << 1),
@@ -814,6 +803,7 @@ enum AttributeProperty {
   IntersectMin = (2 << 3),
   IntersectCustom = (3 << 3),
   IntersectPropertyMask = (3 << 3),
+  ABIAttr = (1 << 5),
 };
 
 #define GET_ATTR_PROP_TABLE
@@ -840,6 +830,10 @@ bool Attribute::canUseAsParamAttr(AttrKind Kind) {
 
 bool Attribute::canUseAsRetAttr(AttrKind Kind) {
   return hasAttributeProperty(Kind, AttributeProperty::RetAttr);
+}
+
+bool Attribute::isABIAttr(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::ABIAttr);
 }
 
 static bool hasIntersectProperty(Attribute::AttrKind Kind,
@@ -1277,10 +1271,8 @@ std::string AttributeSet::getAsString(bool InAttrGrp) const {
 
 bool AttributeSet::hasParentContext(LLVMContext &C) const {
   assert(hasAttributes() && "empty AttributeSet doesn't refer to any context");
-  FoldingSetNodeID ID;
-  SetNode->Profile(ID);
-  void *Unused;
-  return C.pImpl->AttrsSetNodes.FindNodeOrInsertPos(ID, Unused) == SetNode;
+  FoldingSetInsertToken Token;
+  return C.pImpl->AttrsSetNodes.lookup(SetNode->getKey(), Token) == SetNode;
 }
 
 AttributeSet::iterator AttributeSet::begin() const {
@@ -1323,22 +1315,53 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
   return getSorted(C, SortedAttrs);
 }
 
+/// Attribute comparator that only compares attribute keys. Enum attributes are
+/// sorted before string attributes.
+struct AttributeComparator {
+  bool operator()(Attribute A0, Attribute A1) const {
+    bool A0IsString = A0.isStringAttribute();
+    bool A1IsString = A1.isStringAttribute();
+    if (A0IsString) {
+      if (A1IsString)
+        return A0.getKindAsString() < A1.getKindAsString();
+      else
+        return false;
+    }
+    if (A1IsString)
+      return true;
+    return A0.getKindAsEnum() < A1.getKindAsEnum();
+  }
+  bool operator()(Attribute A0, Attribute::AttrKind Kind) const {
+    if (A0.isStringAttribute())
+      return false;
+    return A0.getKindAsEnum() < Kind;
+  }
+  bool operator()(Attribute A0, StringRef Kind) const {
+    if (A0.isStringAttribute())
+      return A0.getKindAsString() < Kind;
+    return true;
+  }
+};
+
+#ifndef NDEBUG
+/// Return true if \p Attrs is known sorted with no duplicate entries.
+static bool isSortedAndUnique(ArrayRef<Attribute> Attrs) {
+  return adjacent_find(Attrs, [](Attribute A0, Attribute A1) {
+           return !AttributeComparator()(A0, A1);
+         }) == Attrs.end();
+}
+#endif
+
 AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
                                               ArrayRef<Attribute> SortedAttrs) {
   if (SortedAttrs.empty())
     return nullptr;
 
-  // Build a key to look up the existing attributes.
-  LLVMContextImpl *pImpl = C.pImpl;
-  FoldingSetNodeID ID;
+  assert(isSortedAndUnique(SortedAttrs) &&
+         "expected sorted and unique attributes!");
 
-  assert(llvm::is_sorted(SortedAttrs) && "Expected sorted attributes!");
-  for (const auto &Attr : SortedAttrs)
-    Attr.Profile(ID);
-
-  void *InsertPoint;
-  AttributeSetNode *PA =
-    pImpl->AttrsSetNodes.FindNodeOrInsertPos(ID, InsertPoint);
+  FoldingSetInsertToken Token;
+  AttributeSetNode *PA = C.pImpl->AttrsSetNodes.lookup(SortedAttrs, Token);
 
   // If we didn't find any existing attributes of the same shape then create a
   // new one and insert it.
@@ -1346,7 +1369,7 @@ AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
     // Coallocate entries after the AttributeSetNode itself.
     void *Mem = ::operator new(totalSizeToAlloc<Attribute>(SortedAttrs.size()));
     PA = new (Mem) AttributeSetNode(SortedAttrs);
-    pImpl->AttrsSetNodes.InsertNode(PA, InsertPoint);
+    C.pImpl->AttrsSetNodes.insert(PA, Token);
   }
 
   // Return the AttributeSetNode that we found or created.
@@ -1512,16 +1535,6 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
         AvailableSomewhereAttrs.addAttribute(I.getKindAsEnum());
 }
 
-void AttributeListImpl::Profile(FoldingSetNodeID &ID) const {
-  Profile(ID, ArrayRef(begin(), end()));
-}
-
-void AttributeListImpl::Profile(FoldingSetNodeID &ID,
-                                ArrayRef<AttributeSet> Sets) {
-  for (const auto &Set : Sets)
-    ID.AddPointer(Set.SetNode);
-}
-
 bool AttributeListImpl::hasAttrSomewhere(Attribute::AttrKind Kind,
                                         unsigned *Index) const {
   if (!AvailableSomewhereAttrs.hasAttribute(Kind))
@@ -1555,12 +1568,8 @@ AttributeList AttributeList::getImpl(LLVMContext &C,
   assert(!AttrSets.empty() && "pointless AttributeListImpl");
 
   LLVMContextImpl *pImpl = C.pImpl;
-  FoldingSetNodeID ID;
-  AttributeListImpl::Profile(ID, AttrSets);
-
-  void *InsertPoint;
-  AttributeListImpl *PA =
-      pImpl->AttrsLists.FindNodeOrInsertPos(ID, InsertPoint);
+  FoldingSetInsertToken Token;
+  AttributeListImpl *PA = pImpl->AttrsLists.lookup(AttrSets, Token);
 
   // If we didn't find any existing attributes of the same shape then
   // create a new one and insert it.
@@ -1570,7 +1579,7 @@ AttributeList AttributeList::getImpl(LLVMContext &C,
         AttributeListImpl::totalSizeToAlloc<AttributeSet>(AttrSets.size()),
         alignof(AttributeListImpl));
     PA = new (Mem) AttributeListImpl(AttrSets);
-    pImpl->AttrsLists.InsertNode(PA, InsertPoint);
+    pImpl->AttrsLists.insert(PA, Token);
   }
 
   // Return the AttributesList that we found or created.
@@ -1803,6 +1812,15 @@ AttributeList AttributeList::addAttributesAtIndex(LLVMContext &C,
   AttrBuilder Merged(C, getAttributes(Index));
   Merged.merge(B);
   return setAttributesAtIndex(C, Index, AttributeSet::get(C, Merged));
+}
+
+AttributeList
+AttributeList::addSortedAttributesAtIndex(LLVMContext &C, unsigned Index,
+                                          ArrayRef<Attribute> Attrs) const {
+  if (Attrs.empty())
+    return *this;
+  return setAttributesAtIndex(
+      C, Index, getAttributes(Index).addSortedAttributes(C, Attrs));
 }
 
 AttributeList AttributeList::addParamAttribute(LLVMContext &C,
@@ -2085,10 +2103,8 @@ AttributeSet AttributeList::getAttributes(unsigned Index) const {
 
 bool AttributeList::hasParentContext(LLVMContext &C) const {
   assert(!isEmpty() && "an empty attribute list has no parent context");
-  FoldingSetNodeID ID;
-  pImpl->Profile(ID);
-  void *Unused;
-  return C.pImpl->AttrsLists.FindNodeOrInsertPos(ID, Unused) == pImpl;
+  FoldingSetInsertToken Token;
+  return C.pImpl->AttrsLists.lookup(pImpl->getKey(), Token) == pImpl;
 }
 
 AttributeList::iterator AttributeList::begin() const {
@@ -2144,34 +2160,6 @@ AttrBuilder::AttrBuilder(LLVMContext &Ctx, AttributeSet AS) : Ctx(Ctx) {
 }
 
 void AttrBuilder::clear() { Attrs.clear(); }
-
-/// Attribute comparator that only compares attribute keys. Enum attributes are
-/// sorted before string attributes.
-struct AttributeComparator {
-  bool operator()(Attribute A0, Attribute A1) const {
-    bool A0IsString = A0.isStringAttribute();
-    bool A1IsString = A1.isStringAttribute();
-    if (A0IsString) {
-      if (A1IsString)
-        return A0.getKindAsString() < A1.getKindAsString();
-      else
-        return false;
-    }
-    if (A1IsString)
-      return true;
-    return A0.getKindAsEnum() < A1.getKindAsEnum();
-  }
-  bool operator()(Attribute A0, Attribute::AttrKind Kind) const {
-    if (A0.isStringAttribute())
-      return false;
-    return A0.getKindAsEnum() < Kind;
-  }
-  bool operator()(Attribute A0, StringRef Kind) const {
-    if (A0.isStringAttribute())
-      return A0.getKindAsString() < Kind;
-    return true;
-  }
-};
 
 template <typename K>
 static void addAttributeImpl(SmallVectorImpl<Attribute> &Attrs, K Kind,
@@ -2418,12 +2406,55 @@ AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
   return *this;
 }
 
-AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
-  // TODO: Could make this O(n) as we're merging two sorted lists.
-  for (const auto &I : B.attrs())
-    addAttribute(I);
+/// Merge \p B into \p A, both sorted by kind, into \p Merged. An attribute
+/// in \p B replaces the attribute of the same kind in \p A.
+static void mergeSortedAttrs(ArrayRef<Attribute> A, ArrayRef<Attribute> B,
+                             SmallVectorImpl<Attribute> &Merged) {
+  Merged.reserve(A.size() + B.size());
+  AttributeComparator Less;
+  auto *I = A.begin(), *E = A.end();
 
+  for (Attribute BAttr : B) {
+    while (I != E && Less(*I, BAttr))
+      Merged.push_back(*I++);
+
+    if (I != E && !Less(BAttr, *I))
+      ++I;
+
+    Merged.push_back(BAttr);
+  }
+
+  Merged.append(I, E);
+}
+
+AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
+  if (B.Attrs.empty())
+    return *this;
+
+  if (Attrs.empty()) {
+    Attrs = B.Attrs;
+    return *this;
+  }
+
+  // Both lists are already sorted by kind.
+  SmallVector<Attribute, 8> Merged;
+  mergeSortedAttrs(Attrs, B.Attrs, Merged);
+  Attrs = std::move(Merged);
   return *this;
+}
+
+AttributeSet
+AttributeSet::addSortedAttributes(LLVMContext &C,
+                                  ArrayRef<Attribute> Attrs) const {
+  if (Attrs.empty())
+    return *this;
+
+  assert(isSortedAndUnique(Attrs) &&
+         "Expected sorted attributes with distinct kinds!");
+
+  SmallVector<Attribute, 32> Merged;
+  mergeSortedAttrs(ArrayRef(begin(), end()), Attrs, Merged);
+  return AttributeSet(AttributeSetNode::getSorted(C, Merged));
 }
 
 AttrBuilder &AttrBuilder::remove(const AttributeMask &AM) {
@@ -2520,7 +2551,9 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
           .addAttribute(Attribute::DeadOnUnwind)
           .addAttribute(Attribute::Initializes)
           .addAttribute(Attribute::Captures)
-          .addAttribute(Attribute::DeadOnReturn);
+          .addAttribute(Attribute::DeadOnReturn)
+          .addAttribute(Attribute::NoFree)
+          .addAttribute(Attribute::NoFreeObj);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Nest)
           .addAttribute(Attribute::SwiftError)
@@ -2558,6 +2591,15 @@ AttributeMask AttributeFuncs::getUBImplyingAttributes() {
   AM.addAttribute(Attribute::NoUndef);
   AM.addAttribute(Attribute::Dereferenceable);
   AM.addAttribute(Attribute::DereferenceableOrNull);
+  return AM;
+}
+
+AttributeMask AttributeFuncs::getPoisonGeneratingAttributes() {
+  AttributeMask AM;
+  AM.addAttribute(Attribute::Range);
+  AM.addAttribute(Attribute::Alignment);
+  AM.addAttribute(Attribute::NonNull);
+  AM.addAttribute(Attribute::NoFPClass);
   return AM;
 }
 
@@ -2783,6 +2825,11 @@ struct StrBoolAttr {
 bool AttributeFuncs::areInlineCompatible(const Function &Caller,
                                          const Function &Callee) {
   return hasCompatibleFnAttrs(Caller, Callee);
+}
+
+bool AttributeFuncs::isStrictFPInlineCompatible(const Function &Caller,
+                                                const Function &Callee) {
+  return checkStrictFP(Caller, Callee);
 }
 
 bool AttributeFuncs::areOutlineCompatible(const Function &A,

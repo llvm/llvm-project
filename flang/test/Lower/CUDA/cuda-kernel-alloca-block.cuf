@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -fcuda %s -o - | FileCheck %s
 
 module char1
 
@@ -25,5 +25,5 @@ end program
 
 ! CHECK-LABEL: func.func @_QQmain()
 ! CHECK: cuf.kernel
-! CHECK-COUNT-2: %{{.*}} = fir.alloca !fir.char<1> {bindc_name = ".tmp"}
+! CHECK-COUNT-2: %{{.*}} = fir.alloca !fir.char<1> <{bindc_name = ".tmp"}>
 

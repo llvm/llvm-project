@@ -319,8 +319,12 @@ static inline RT_API_ATTRS void DoBesselYnX0(Descriptor &result, int32_t n1,
   // Y(n, 0.0) = -Inf, when n >= 0
   for (int j{1}; j <= n2 - n1 + 1; ++j) {
     at[0] = j;
+    // numeric_limits may not be specialized for the REAL(16) type
+    // (e.g. __float128), in which case infinity() is 0.0. A double infinity
+    // converts exactly to every floating-point type.
     *result.Element<CppTypeFor<CAT, KIND>>(at) =
-        -std::numeric_limits<CppTypeFor<CAT, KIND>>::infinity();
+        static_cast<CppTypeFor<CAT, KIND>>(
+            -common::numeric_limits<double>::infinity());
   }
 }
 
@@ -583,7 +587,7 @@ void RTDEF(CshiftVector)(Descriptor &result, const Descriptor &source,
   }
 }
 
-static void CheckBoundaryType(const Descriptor &array,
+static RT_API_ATTRS void CheckBoundaryType(const Descriptor &array,
     const Descriptor &boundary, Terminator &terminator) {
   if (const auto *boundaryAddendum{boundary.Addendum()}) {
     if (const auto *boundaryDT{boundaryAddendum->derivedType()}) {

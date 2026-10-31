@@ -17,11 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <functional>
-#include <iterator>
 #include <string>
-#include <utility>
-#include <vector>
 
 #define DEBUG_TYPE "spirv-commandline"
 
@@ -99,6 +95,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_KHR_shader_draw_parameters",
      SPIRV::Extension::Extension::SPV_KHR_shader_draw_parameters},
     {"SPV_KHR_ray_tracing", SPIRV::Extension::Extension::SPV_KHR_ray_tracing},
+    {"SPV_KHR_storage_buffer_storage_class",
+     SPIRV::Extension::Extension::SPV_KHR_storage_buffer_storage_class},
     {"SPV_KHR_uniform_group_instructions",
      SPIRV::Extension::Extension::SPV_KHR_uniform_group_instructions},
     {"SPV_KHR_no_integer_wrap_decoration",
@@ -132,6 +130,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
     {"SPV_KHR_non_semantic_info",
      SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction},
     {"SPV_KHR_ray_query", SPIRV::Extension::Extension::SPV_KHR_ray_query},
     {"SPV_EXT_shader_image_int64",
      SPIRV::Extension::Extension::SPV_EXT_shader_image_int64},
@@ -170,13 +170,19 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_INTEL_kernel_attributes},
     {"SPV_ALTERA_blocking_pipes",
      SPIRV::Extension::Extension::SPV_ALTERA_blocking_pipes},
-    {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
     {"SPV_ALTERA_arbitrary_precision_fixed_point",
      SPIRV::Extension::Extension::SPV_ALTERA_arbitrary_precision_fixed_point},
     {"SPV_EXT_image_raw10_raw12",
      SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12},
     {"SPV_INTEL_unstructured_loop_controls",
-     SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls}};
+     SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls},
+    {"SPV_AMD_weak_linkage", SPIRV::Extension::Extension::SPV_AMD_weak_linkage},
+    {"SPV_KHR_abort", SPIRV::Extension::Extension::SPV_KHR_abort},
+    {"SPV_KHR_poison_freeze",
+     SPIRV::Extension::Extension::SPV_KHR_poison_freeze},
+    {"SPV_KHR_untyped_pointers",
+     SPIRV::Extension::Extension::SPV_KHR_untyped_pointers},
+    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue, ExtensionSet &Vals) {
@@ -196,7 +202,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
     auto NameValuePair = SPIRVExtensionMap.find(ExtensionName);
 
     if (NameValuePair == SPIRVExtensionMap.end())
-      return O.error("Unknown SPIR-V extension: " + Token.str());
+      return O.error("Unknown SPIR-V extension: " + Token);
 
     EnabledExtensions.insert(NameValuePair->second);
   }
@@ -218,7 +224,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
     auto NameValuePair = SPIRVExtensionMap.find(Token.substr(1));
 
     if (NameValuePair == SPIRVExtensionMap.end())
-      return O.error("Unknown SPIR-V extension: " + Token.str());
+      return O.error("Unknown SPIR-V extension: " + Token);
     if (EnabledExtensions.count(NameValuePair->second))
       return O.error(
           "Extension cannot be allowed and disallowed at the same time: " +
@@ -233,7 +239,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
 }
 
 StringRef
-SPIRVExtensionsParser::checkExtensions(const std::vector<std::string> &ExtNames,
+SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
                                        ExtensionSet &AllowedExtensions) {
   for (const auto &Ext : ExtNames) {
     if (Ext == "all") {

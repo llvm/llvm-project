@@ -80,6 +80,6 @@ const char * Test(void)
 // CHECK-DWARF: define{{.*}} ptr @Test()
 // CHECK-DWARF: ret ptr @e
 
-// CHECK-MSVC: @e = dso_local global [2 x i8] c"i\00", align 1
+// CHECK-MSVC: @e = dso_local global [2 x i8] c"i\00", align 4
 // CHECK-MINGW: @e = dso_local global [2 x i8] c"i\00", align 1
 // CHECK-ELF: @e = global [2 x i8] c"i\00", align 1

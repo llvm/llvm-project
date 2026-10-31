@@ -189,7 +189,7 @@ define <2 x i32> @test10(<8 x i32> %v) {
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
 ; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, %rcx
+; AVX512-NEXT:    vmovd %xmm0, %ecx
 ; AVX512-NEXT:    vmovd %eax, %xmm0
 ; AVX512-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper

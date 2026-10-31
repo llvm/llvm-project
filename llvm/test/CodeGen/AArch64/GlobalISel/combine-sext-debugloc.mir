@@ -40,11 +40,11 @@ body:             |
   bb.1.entry:
     liveins: $w0
   
-    %1:_(s32) = COPY $w0
-    %0:_(s8) = G_TRUNC %1(s32)
-    %2:_(s16) = G_ZEXT %0(s8), debug-location !8
-    %3:_(s64) = G_SEXT %2(s16), debug-location !9
-    $x0 = COPY %3(s64)
+    %1:_(i32) = COPY $w0
+    %0:_(i8) = G_TRUNC %1(i32)
+    %2:_(i16) = G_ZEXT %0(i8), debug-location !8
+    %3:_(i64) = G_SEXT %2(i16), debug-location !9
+    $x0 = COPY %3(i64)
     RET_ReallyLR implicit $x0
 
 ...

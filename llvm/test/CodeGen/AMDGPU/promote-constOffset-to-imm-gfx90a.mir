@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgpu9.0a -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX9 %s
 
 # GFX9-LABEL: name: diffoporder_add
 
@@ -53,7 +53,7 @@ body:             |
 # GFX9-LABEL: name: LowestInMiddle
 # GFX9: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11200
 # GFX9: [[BASE_LO:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_5:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 %{{[0-9]+}}, [[S_MOV_B32_1]]
-# GFX9: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_64_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, killed [[V_ADD_CO_U32_e64_5]]
+# GFX9: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_64_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, [[V_ADD_CO_U32_e64_5]]
 # GFX9: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[BASE_LO]], %subreg.sub0, [[BASE_HI]], %subreg.sub1
 # GFX9: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], -3200, 0
 #
@@ -111,7 +111,7 @@ body:             |
 # GFX9-LABEL: name: NegativeDistance
 # GFX9: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 10240
 # GFX9: [[V_ADD_CO_U32_e64_4:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_5:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 %{{[0-9]+}}, [[S_MOV_B32_1]]
-# GFX9: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_64_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, killed [[V_ADD_CO_U32_e64_5]]
+# GFX9: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_64_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, [[V_ADD_CO_U32_e64_5]]
 # GFX9: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_ADD_CO_U32_e64_4]], %subreg.sub0, [[BASE_HI]], %subreg.sub1
 # GFX9: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], -4096, 0
 # GFX9: [[GLOBAL_LOAD_DWORDX2_1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], -2048, 0

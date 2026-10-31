@@ -39,22 +39,36 @@ class BranchProbability {
 
   // Construct a BranchProbability with only numerator assuming the denominator
   // is 1<<31. For internal use only.
-  explicit BranchProbability(uint32_t n) : N(n) {}
+  explicit constexpr BranchProbability(uint32_t n) : N(n) {}
 
 public:
-  BranchProbability() : N(UnknownN) {}
-  LLVM_ABI BranchProbability(uint32_t Numerator, uint32_t Denominator);
+  constexpr BranchProbability() : N(UnknownN) {}
+  constexpr BranchProbability(uint32_t Numerator, uint32_t Denominator)
+      : N(Numerator) {
+    assert(Denominator > 0 && "Denominator cannot be 0!");
+    assert(Numerator <= Denominator && "Probability cannot be bigger than 1!");
+    if (Denominator != D) {
+      uint64_t Prob64 =
+          (Numerator * static_cast<uint64_t>(D) + Denominator / 2) /
+          Denominator;
+      N = static_cast<uint32_t>(Prob64);
+    }
+  }
 
   bool isZero() const { return N == 0; }
   bool isOne() const { return N == D; }
   bool isUnknown() const { return N == UnknownN; }
 
-  static BranchProbability getZero() { return BranchProbability(0); }
-  static BranchProbability getOne() { return BranchProbability(D); }
-  static BranchProbability getUnknown() { return BranchProbability(UnknownN); }
+  static constexpr BranchProbability getZero() { return BranchProbability(0); }
+  static constexpr BranchProbability getOne() { return BranchProbability(D); }
+  static constexpr BranchProbability getUnknown() {
+    return BranchProbability(UnknownN);
+  }
   // Create a BranchProbability object with the given numerator and 1<<31
   // as denominator.
-  static BranchProbability getRaw(uint32_t N) { return BranchProbability(N); }
+  static constexpr BranchProbability getRaw(uint32_t N) {
+    return BranchProbability(N);
+  }
   // Create a BranchProbability object from 64-bit integers.
   LLVM_ABI static BranchProbability getBranchProbability(uint64_t Numerator,
                                                          uint64_t Denominator);

@@ -25,7 +25,7 @@ define float @fool(float %X) #0 {
 ; PWR9-NEXT:    blr
 entry:
   %conv = fptosi float %X to i64
-  %conv1 = sitofp i64 %conv to float
+  %conv1 = sitofp nsz i64 %conv to float
   ret float %conv1
 
 
@@ -50,7 +50,7 @@ define double @foodl(double %X) #0 {
 ; PWR9-NEXT:    blr
 entry:
   %conv = fptosi double %X to i64
-  %conv1 = sitofp i64 %conv to double
+  %conv1 = sitofp nsz i64 %conv to double
   ret double %conv1
 
 
@@ -132,7 +132,7 @@ define float @fooul(float %X) #0 {
 ; PWR9-NEXT:    blr
 entry:
   %conv = fptoui float %X to i64
-  %conv1 = uitofp i64 %conv to float
+  %conv1 = uitofp nsz i64 %conv to float
   ret float %conv1
 
 }
@@ -188,7 +188,7 @@ define double @fooudl(double %X) #0 {
 ; PWR9-NEXT:    blr
 entry:
   %conv = fptoui double %X to i64
-  %conv1 = uitofp i64 %conv to double
+  %conv1 = uitofp nsz i64 %conv to double
   ret double %conv1
 
 }
@@ -288,7 +288,7 @@ define double @si1_to_f64(i1 %X) #0 {
 ; PWR9-NEXT:    xscvsxddp 1, 0
 ; PWR9-NEXT:    blr
 entry:
-  %conv = sitofp i1 %X to double
+  %conv = sitofp nsz i1 %X to double
   ret double %conv
 
 }
@@ -319,9 +319,8 @@ define double @ui1_to_f64(i1 %X) #0 {
 ; PWR9-NEXT:    xscvsxddp 1, 0
 ; PWR9-NEXT:    blr
 entry:
-  %conv = uitofp i1 %X to double
+  %conv = uitofp nsz i1 %X to double
   ret double %conv
 
 }
-attributes #0 = { nounwind readnone "no-signed-zeros-fp-math"="true" }
 

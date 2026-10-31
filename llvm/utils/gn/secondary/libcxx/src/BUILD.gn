@@ -50,7 +50,7 @@ config("cxx_config") {
     "-Wno-nullability-completeness",
   ]
   cflags_cc = [
-    "-std=c++23",
+    "-std=c++26",
     "-nostdinc++",
   ]
   defines = [
@@ -87,9 +87,6 @@ config("cxx_config") {
       "_CRT_STDIO_ISO_WIDE_SPECIFIERS",
     ]
   }
-  if (!libcxx_enable_new_delete_definitions) {
-    defines += [ "_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS" ]
-  }
   if (libcxx_enable_exceptions) {
     if (current_os == "win") {
       cflags_cc += [ "/EHsc" ]
@@ -124,6 +121,12 @@ cxx_sources = [
   "chrono.cpp",
   "condition_variable.cpp",
   "condition_variable_destructor.cpp",
+  "debugging.cpp",
+  "debugging/aix.ipp",
+  "debugging/bsd_like.ipp",
+  "debugging/default.ipp",
+  "debugging/linux.ipp",
+  "debugging/windows.ipp",
   "error_category.cpp",
   "exception.cpp",
   "expected.cpp",
@@ -131,7 +134,6 @@ cxx_sources = [
   "functional.cpp",
   "future.cpp",
   "hash.cpp",
-  "include/apple_availability.h",
   "include/atomic_support.h",
   "include/config_elast.h",
   "include/from_chars_floating_point.h",
@@ -184,6 +186,7 @@ cxx_sources = [
   "support/runtime/stdexcept_default.ipp",
   "support/runtime/stdexcept_vcruntime.ipp",
   "system_error.cpp",
+  "text_encoding.cpp",
   "thread.cpp",
   "typeinfo.cpp",
   "valarray.cpp",
@@ -227,6 +230,9 @@ if (libcxx_enable_filesystem) {
 # FIXME: Put this behind an arg, or enable it by default on macOS.
 if (false) {
   cxx_sources += [ "pstl/libdispatch.cpp" ]
+}
+if (false) {
+  cxx_sources += [ "pstl/statpart.cpp" ]
 }
 
 if (libcxx_enable_shared) {

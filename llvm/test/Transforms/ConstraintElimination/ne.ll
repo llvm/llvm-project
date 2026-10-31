@@ -371,7 +371,6 @@ define i1 @assume_2b(i64 %a, i64 %b) {
   ret i1 %ret
 }
 
-; TODO: extend to support signed comparisons
 define i1 @assume_3a(i64 %a, i64 %b) {
 ; CHECK-LABEL: @assume_3a(
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne i64 [[A:%.*]], [[B:%.*]]
@@ -422,4 +421,20 @@ define i1 @assume_4b(i64 %a, i64 %b) {
   tail call void @llvm.assume(i1 %ne)
   %ret = icmp sle i64 %a, %b
   ret i1 %ret
+}
+
+define i1 @assume_a_lt_b_and_b_lt_c_signed(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @assume_a_lt_b_and_b_lt_c_signed(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[B]], [[C:%.*]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    ret i1 true
+;
+  %1 = icmp slt i64 %a, %b
+  tail call void @llvm.assume(i1 %1)
+  %2 = icmp slt i64 %b, %c
+  tail call void @llvm.assume(i1 %2)
+  %3 = icmp ne i64 %a, %c
+  ret i1 %3
 }

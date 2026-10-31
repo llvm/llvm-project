@@ -1,9 +1,9 @@
-add_custom_target(libc_wctype_unittests)
+add_libc_testsuite(libc-wctype-tests)
 
 add_libc_test(
   iswalpha_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswalpha_test.cpp
   DEPENDS
@@ -14,7 +14,7 @@ add_libc_test(
 add_libc_test(
   iswdigit_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswdigit_test.cpp
   DEPENDS
@@ -25,7 +25,7 @@ add_libc_test(
 add_libc_test(
   iswcntrl_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswcntrl_test.cpp
   DEPENDS
@@ -35,17 +35,17 @@ add_libc_test(
 add_libc_test(
   iswgraph_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswgraph_test.cpp
   DEPENDS
     libc.src.wctype.iswgraph
 )
 
-add_libc_test(  
+add_libc_test(
   iswlower_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswlower_test.cpp
   DEPENDS
@@ -55,7 +55,7 @@ add_libc_test(
 add_libc_test(
   iswspace_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswspace_test.cpp
   DEPENDS
@@ -65,7 +65,7 @@ add_libc_test(
 add_libc_test(
   iswblank_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswblank_test.cpp
   DEPENDS
@@ -75,7 +75,7 @@ add_libc_test(
 add_libc_test(
   iswxdigit_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswxdigit_test.cpp
   DEPENDS
@@ -85,7 +85,7 @@ add_libc_test(
 add_libc_test(
   iswalnum_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswalnum_test.cpp
   DEPENDS
@@ -95,7 +95,7 @@ add_libc_test(
 add_libc_test(
   iswupper_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswupper_test.cpp
   DEPENDS
@@ -105,7 +105,7 @@ add_libc_test(
 add_libc_test(
   iswpunct_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswpunct_test.cpp
   DEPENDS
@@ -115,9 +115,54 @@ add_libc_test(
 add_libc_test(
   iswprint_test
   SUITE
-    libc_wctype_unittests
+    libc-wctype-tests
   SRCS
     iswprint_test.cpp
   DEPENDS
     libc.src.wctype.iswprint
+)
+
+add_libc_test(
+  iswctype_test
+  SUITE
+    libc-wctype-tests
+  SRCS
+    iswctype_test.cpp
+  DEPENDS
+    libc.src.wctype.iswctype
+    libc.src.wctype.wctype
+)
+
+add_libc_test(
+  wctype_test
+  SUITE
+    libc-wctype-tests
+  SRCS
+    wctype_test.cpp
+  DEPENDS
+    libc.src.wctype.wctype
+)
+
+add_libc_test(
+  towlower_test
+  SUITE
+    libc-wctype-tests
+  SRCS
+    towlower_test.cpp
+  DEPENDS
+    libc.hdr.wchar_macros
+    libc.src.wctype.towlower
+    libc.src.__support.wctype_utils
+)
+
+add_libc_test(
+  towupper_test
+  SUITE
+    libc-wctype-tests
+  SRCS
+    towupper_test.cpp
+  DEPENDS
+    libc.hdr.wchar_macros
+    libc.src.wctype.towupper
+    libc.src.__support.wctype_utils
 )

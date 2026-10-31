@@ -1,12 +1,20 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -triple %itanium_abi_triple -Wweak-vtables
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 %t/warn-weak-vtables.cpp -fsyntax-only -verify -triple %itanium_abi_triple -Wweak-vtables
 //
 // Check that this warning is disabled on MS ABI targets which don't have key
 // functions.
-// RUN: %clang_cc1 %s -fsyntax-only -triple %ms_abi_triple -Werror -Wweak-vtables
+// RUN: %clang_cc1 %t/warn-weak-vtables.cpp -fsyntax-only -triple %ms_abi_triple -Werror -Wweak-vtables
 //
 // -Wweak-template-vtables is deprecated but we still parse it.
-// RUN: %clang_cc1 %s -fsyntax-only -Werror -Wweak-template-vtables
+// RUN: %clang_cc1 %t/warn-weak-vtables.cpp -fsyntax-only -Werror -Wweak-template-vtables
+//
+// Test that -Wweak-vtables is not emitted for classes in named module units.
+// RUN: %clang_cc1 -std=c++20 -verify -triple %itanium_abi_triple -Wweak-vtables -emit-module-interface %t/module-weak-vtable.cpp -o %t/m.pcm
 
+//--- warn-weak-vtables.cpp
 struct A { // expected-warning {{'A' has no out-of-line virtual method definitions; its vtable will be emitted in every translation unit}}
   virtual void f() { } 
 };
@@ -80,3 +88,28 @@ void uses_templ() {
   TemplVirt<bool> b;
   TemplVirt<long> l;
 }
+
+namespace GH195110 {
+// Check that no warning is emitted on a template instantiation.
+template <class> struct basic_streambuf {
+  __attribute__((__exclude_from_explicit_instantiation__)) virtual void
+  overflow();
+
+  virtual ~basic_streambuf() {}
+};
+extern template class basic_streambuf<char>;
+
+basic_streambuf<char> b;
+}
+
+//--- module-weak-vtable.cpp
+// expected-no-diagnostics
+export module m;
+
+struct s {
+    virtual void f() {}
+};
+
+export struct t {
+    virtual void g() {}
+};

@@ -24,6 +24,7 @@ class StringRef;
 /// MSP430TargetMachine
 ///
 class MSP430TargetMachine : public CodeGenTargetMachineImpl {
+  const MSP430Options &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   MSP430Subtarget Subtarget;
 
@@ -34,6 +35,8 @@ public:
                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                       bool JIT);
   ~MSP430TargetMachine() override;
+
+  const MSP430Options &getCLOpts() const { return CLOpts; }
 
   const MSP430Subtarget *getSubtargetImpl(const Function &F) const override {
     return &Subtarget;
@@ -47,6 +50,16 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
+
+  bool shouldDefaultToNewPM() const override { return true; }
 }; // MSP430TargetMachine.
 
 } // end namespace llvm

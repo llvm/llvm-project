@@ -10,8 +10,47 @@ declare void @other_work()
 
 define i1 @test(ptr dereferenceable(2) %arg, ptr dereferenceable(2) %arg1) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:  "if+entry":
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @other_work()
+; CHECK-NEXT:    [[ARG_OFF:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 1
+; CHECK-NEXT:    [[ARG1_OFF:%.*]] = getelementptr inbounds i8, ptr [[ARG1:%.*]], i64 1
+; CHECK-NEXT:    [[ARG_OFF_VAL:%.*]] = load i8, ptr [[ARG_OFF]], align 1
+; CHECK-NEXT:    [[ARG1_OFF_VAL:%.*]] = load i8, ptr [[ARG1_OFF]], align 1
+; CHECK-NEXT:    [[CMP_OFF:%.*]] = icmp eq i8 [[ARG_OFF_VAL]], [[ARG1_OFF_VAL]]
+; CHECK-NEXT:    br i1 [[CMP_OFF]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[ARG_VAL:%.*]] = load i8, ptr [[ARG]], align 1
+; CHECK-NEXT:    [[ARG1_VAL:%.*]] = load i8, ptr [[ARG1]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ARG_VAL]], [[ARG1_VAL]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[CMP]], [[IF]] ]
+; CHECK-NEXT:    ret i1 [[PHI]]
+;
+entry:
+  call void @other_work()
+  %arg.off = getelementptr inbounds i8, ptr %arg, i64 1
+  %arg1.off = getelementptr inbounds i8, ptr %arg1, i64 1
+  %arg.off.val = load i8, ptr %arg.off
+  %arg1.off.val = load i8, ptr %arg1.off
+  %cmp.off = icmp eq i8 %arg.off.val, %arg1.off.val
+  br i1 %cmp.off, label %if, label %join
+
+if:
+  %arg.val = load i8, ptr %arg
+  %arg1.val = load i8, ptr %arg1
+  %cmp = icmp eq i8 %arg.val, %arg1.val
+  br label %join
+
+join:
+  %phi = phi i1 [ false, %entry ], [ %cmp, %if ]
+  ret i1 %phi
+}
+
+define i1 @test_nofree(ptr dereferenceable(2) %arg, ptr dereferenceable(2) %arg1) {
+; CHECK-LABEL: @test_nofree(
+; CHECK-NEXT:  "if+entry":
+; CHECK-NEXT:    call void @other_work() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[ARG:%.*]], ptr [[ARG1:%.*]], i64 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
@@ -19,7 +58,7 @@ define i1 @test(ptr dereferenceable(2) %arg, ptr dereferenceable(2) %arg1) {
 ; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
-  call void @other_work()
+  call void @other_work() nofree
   %arg.off = getelementptr inbounds i8, ptr %arg, i64 1
   %arg1.off = getelementptr inbounds i8, ptr %arg1, i64 1
   %arg.off.val = load i8, ptr %arg.off

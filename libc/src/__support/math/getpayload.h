@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE double getpayload(const double *x) {
+LIBC_INLINE constexpr double getpayload(const double *x) {
   return fputil::getpayload(*x);
 }
 

@@ -22,10 +22,14 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#include <set>
 
 using namespace clang;
 
@@ -146,6 +150,55 @@ TEST_F(InterpreterTest, DeclsAndStatements) {
   EXPECT_TRUE(!!R2);
 }
 
+TEST_F(InterpreterTest, TranslationUnitRedeclChainAcrossManyPTUs) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  // One partial translation unit per input, as an interop layer doing a
+  // type-probe per lookup would produce.
+  for (unsigned I = 0; I != 200; ++I)
+    cantFail(Interp->Parse("using probe_" + std::to_string(I) + " = int;"));
+
+  TranslationUnitDecl *TU = Interp->getASTContext().getTranslationUnitDecl();
+
+  unsigned Nodes = 0, Decls = 0;
+  for (auto *R : TU->redecls()) {
+    ++Nodes;
+    for (auto *D : cast<DeclContext>(R)->decls()) {
+      ++Decls;
+      // Walking up from the decl is what faults in a long-lived session.
+      EXPECT_EQ(&D->getASTContext(), &Interp->getASTContext());
+      if (auto *ND = dyn_cast<NamedDecl>(D))
+        (void)ND->getQualifiedNameAsString();
+    }
+  }
+  EXPECT_GT(Nodes, 1u);
+  EXPECT_GT(Decls, 200u);
+}
+
+TEST_F(InterpreterTest, UndoLeavesDeclsInTranslationUnitChain) {
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Undo is not supported for Emscripten builds";
+#endif
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  cantFail(Interp->Parse("struct Kept {};"));
+  cantFail(Interp->Parse("struct Withdrawn {};"));
+  cantFail(Interp->Undo());
+
+  // A partial translation unit gets its own TranslationUnitDecl, so collect
+  // names across the whole redeclaration chain.
+  std::set<std::string> Names;
+  TranslationUnitDecl *TU = Interp->getASTContext().getTranslationUnitDecl();
+  for (auto *R : TU->redecls())
+    for (auto *D : cast<DeclContext>(R)->decls())
+      if (auto *ND = dyn_cast<NamedDecl>(D))
+        Names.insert(ND->getNameAsString());
+
+  EXPECT_TRUE(Names.count("Kept"));
+  // Undo withdrew this input, so its declaration should not still be reachable.
+  EXPECT_FALSE(Names.count("Withdrawn"));
+}
+
 TEST_F(InterpreterTest, UndoCommand) {
 // FIXME : This test doesn't current work for Emscripten builds.
 // It should be possible to make it work.For details on how it fails and
@@ -237,7 +290,7 @@ TEST_F(InterpreterTest, FindMangledNameSymbol) {
 
   // FIXME: Re-enable when we investigate the way we handle dllimports on Win.
 #ifndef _WIN32
-  EXPECT_EQ((uintptr_t)&printf, Addr->getValue());
+  EXPECT_EQ(llvm::orc::ExecutorAddr::fromPtr(&printf), *Addr);
 #endif // _WIN32
 }
 
@@ -421,6 +474,183 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_STREQ(prettyPrint.c_str(), "(D) (One) : unsigned int 1\n");
 }
 
+TEST_F(InterpreterTest, ValueOfVoidCallExecutesTheCall) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("int calls = 0; void bump() { ++calls; }"));
+  Value V;
+  llvm::cantFail(Interp->ParseAndExecute("bump()", &V));
+  EXPECT_TRUE(V.isValid());
+  EXPECT_EQ(V.getKind(), Value::K_Void);
+
+  Value Calls;
+  llvm::cantFail(Interp->ParseAndExecute("calls", &Calls));
+  EXPECT_EQ(Calls.getInt(), 1);
+}
+
+// Regression: Value::setRawBits's NBytes parameter must be interpreted as a
+// byte count end-to-end. Before this was fixed, the parameter was named
+// NBits and the memcpy divided by 8, so a caller passing sizeof(T) (the
+// natural byte count) ended up copying only sizeof(T)/8 bytes -- leaving
+// the upper bytes uninitialised. The only in-tree caller compensated by
+// multiplying by 8, hiding the bug.
+TEST_F(InterpreterTest, ValueSetRawBitsCopiesByteCount) {
+  std::vector<const char *> Args;
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  // Explicit byte count: writing sizeof(long long) bytes must round-trip
+  // every byte. Pre-fix this copied 1 byte (8 / 8) and left the upper 7
+  // bytes stale.
+  Value V;
+  llvm::cantFail(Interp->ParseAndExecute("long long x = 0; x", &V));
+  ASSERT_EQ(V.getKind(), Value::K_LongLong);
+  long long Src = 0x0123456789ABCDEFLL;
+  V.setRawBits(&Src, sizeof(Src));
+  EXPECT_EQ(V.getLongLong(), Src);
+
+  // Default NBytes argument copies sizeof(Storage). Pre-fix this copied
+  // sizeof(Storage) / 8 bytes, dropping the high half of an 8-byte payload.
+  Value V2;
+  llvm::cantFail(Interp->ParseAndExecute("long long y = 0; y", &V2));
+  ASSERT_EQ(V2.getKind(), Value::K_LongLong);
+  unsigned char Buf[sizeof(long double)] = {};
+  std::memcpy(Buf, &Src, sizeof(Src));
+  V2.setRawBits(Buf);
+  EXPECT_EQ(V2.getLongLong(), Src);
+}
+
+// Regression: Value's move ctor and move-assign must transfer ownership of
+// the manually-allocated storage without changing the storage refcount.
+// Earlier the move ctor called Release() on the just-moved-into storage,
+// double-releasing on the next read.
+TEST_F(InterpreterTest, ValueMoveSemantics) {
+  // FIXME: Emscripten cannot resolve MoveT's destructor symbol
+  // `_ZN5MoveTD2Ev` from the incrementally loaded Wasm side module.
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Unresolved destructor symbol: _ZN5MoveTD2Ev";
+#endif
+  std::vector<const char *> Args = {"-fno-sized-deallocation"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("struct MoveT { int v = 7; ~MoveT() {} };"));
+
+  // Move-construct: source becomes empty, destination owns the storage.
+  Value Src;
+  llvm::cantFail(Interp->ParseAndExecute("MoveT{}", &Src));
+  ASSERT_EQ(Src.getKind(), Value::K_PtrOrObj);
+  ASSERT_TRUE(Src.isManuallyAlloc());
+  void *Payload = Src.getPtr();
+
+  Value Moved(std::move(Src));
+  EXPECT_EQ(Moved.getKind(), Value::K_PtrOrObj);
+  EXPECT_TRUE(Moved.isManuallyAlloc());
+  EXPECT_EQ(Moved.getPtr(), Payload);
+  EXPECT_EQ(Src.getKind(), Value::K_Unspecified);
+  EXPECT_FALSE(Src.isManuallyAlloc());
+
+  // Move-assign over a populated Value: previous storage released, new
+  // storage adopted with refcount unchanged.
+  Value Other;
+  llvm::cantFail(Interp->ParseAndExecute("MoveT{}", &Other));
+  Other = std::move(Moved);
+  EXPECT_EQ(Other.getKind(), Value::K_PtrOrObj);
+  EXPECT_EQ(Other.getPtr(), Payload);
+  EXPECT_EQ(Moved.getKind(), Value::K_Unspecified);
+
+  // Copy-construct still works (Retain bumps refcount; both share storage).
+  Value Copy(Other);
+  EXPECT_EQ(Copy.getKind(), Value::K_PtrOrObj);
+  EXPECT_EQ(Copy.getPtr(), Payload);
+  EXPECT_EQ(Other.getPtr(), Payload);
+
+  // Force destruction order Copy -> Other -> Interp inside the test body so
+  // any latent corruption from a buggy move surfaces here. Pre-fix the move
+  // ctor leaves Other holding a dangling pointer; the subsequent Release in
+  // ~Copy / ~Other reads or asserts on freed memory. Without explicit
+  // teardown the abort happened during global cleanup, after gtest already
+  // recorded the test as OK.
+  Copy.clear();
+  Other.clear();
+  Interp.reset();
+}
+
+TEST_F(InterpreterTest, SetOptLevel) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  // -O0 emits functions with the 'optnone' attribute.
+  auto &PTU0 = cantFail(Interp->Parse("extern \"C\" int f0() { return 0; }"));
+  llvm::Function *F0 = PTU0.TheModule->getFunction("f0");
+  ASSERT_NE(F0, nullptr);
+  EXPECT_TRUE(F0->hasFnAttribute(llvm::Attribute::OptimizeNone));
+
+  // A change only takes effect on the next parsed module.
+  Interp->setOptLevel(2);
+
+  auto &PTU1 = cantFail(Interp->Parse("extern \"C\" int f1() { return 1; }"));
+  llvm::Function *F1 = PTU1.TheModule->getFunction("f1");
+  ASSERT_NE(F1, nullptr);
+  EXPECT_FALSE(F1->hasFnAttribute(llvm::Attribute::OptimizeNone));
+  EXPECT_FALSE(F1->hasFnAttribute(llvm::Attribute::NoInline));
+
+  // -Oz is level 2, size 2.
+  Interp->setOptLevel(2, 2);
+
+  auto &PTU2 = cantFail(Interp->Parse("extern \"C\" int f2() { return 2; }"));
+  llvm::Function *F2 = PTU2.TheModule->getFunction("f2");
+  ASSERT_NE(F2, nullptr);
+  EXPECT_TRUE(F2->hasFnAttribute(llvm::Attribute::OptimizeForSize));
+  EXPECT_TRUE(F2->hasFnAttribute(llvm::Attribute::MinSize));
+}
+
+TEST_F(InterpreterTest, PragmaOptimizeLevel) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  auto HasAttr = [](PartialTranslationUnit &PTU, const char *Name,
+                    llvm::Attribute::AttrKind Kind) {
+    llvm::Function *F = PTU.TheModule->getFunction(Name);
+    EXPECT_NE(F, nullptr);
+    return F && F->hasFnAttribute(Kind);
+  };
+
+  // Default -O0: 'optnone' present.
+  auto &PTU0 = cantFail(Interp->Parse("extern \"C\" int f0() { return 0; }"));
+  EXPECT_TRUE(HasAttr(PTU0, "f0", llvm::Attribute::OptimizeNone));
+
+  // The pragma applies to the code that follows it; f1 is emitted at -O2.
+  auto &PTU1 = cantFail(Interp->Parse("#pragma clang repl optimize(O2)\n"
+                                      "extern \"C\" int f1() { return 1; }"));
+  EXPECT_FALSE(HasAttr(PTU1, "f1", llvm::Attribute::OptimizeNone));
+  EXPECT_FALSE(HasAttr(PTU1, "f1", llvm::Attribute::NoInline));
+
+  // The level is sticky across inputs.
+  auto &PTU2 = cantFail(Interp->Parse("extern \"C\" int f2() { return 2; }"));
+  EXPECT_FALSE(HasAttr(PTU2, "f2", llvm::Attribute::OptimizeNone));
+
+  // -Os sets 'optsize' only; -Oz additionally sets 'minsize'.
+  auto &PTU3 = cantFail(Interp->Parse("#pragma clang repl optimize(Os)\n"
+                                      "extern \"C\" int f3() { return 3; }"));
+  EXPECT_TRUE(HasAttr(PTU3, "f3", llvm::Attribute::OptimizeForSize));
+  EXPECT_FALSE(HasAttr(PTU3, "f3", llvm::Attribute::MinSize));
+
+  auto &PTU4 = cantFail(Interp->Parse("#pragma clang repl optimize(Oz)\n"
+                                      "extern \"C\" int f4() { return 4; }"));
+  EXPECT_TRUE(HasAttr(PTU4, "f4", llvm::Attribute::MinSize));
+
+  // A lower level can be selected again, not just a higher one.
+  auto &PTU5 = cantFail(Interp->Parse("#pragma clang repl optimize(O0)\n"
+                                      "extern \"C\" int f5() { return 5; }"));
+  EXPECT_TRUE(HasAttr(PTU5, "f5", llvm::Attribute::OptimizeNone));
+  EXPECT_FALSE(HasAttr(PTU5, "f5", llvm::Attribute::OptimizeForSize));
+
+  // Code parsed ahead of the pragma stays in the module of its input.
+  auto &PTU6 = cantFail(Interp->Parse("extern \"C\" int f6() { return 6; }\n"
+                                      "extern \"C\" int f7() { return 7; }\n"
+                                      "#pragma clang repl optimize(O2)\n"));
+  EXPECT_TRUE(HasAttr(PTU6, "f6", llvm::Attribute::OptimizeNone));
+}
+
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
   std::vector<const char *> Args;
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
@@ -441,6 +671,21 @@ TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
 
   EXPECT_EQ(TU,
             sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+}
+
+TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
+#ifndef __EMSCRIPTEN__
+  GTEST_SKIP() << "This test only applies to Emscripten builds.";
+#endif
+
+  using Args = std::vector<const char *>;
+  Args ExtraArgs = {"-std=c++23", "-v", "-fwasm-exceptions", "-mllvm",
+                    "-wasm-enable-sjlj"};
+
+  std::unique_ptr<Interpreter> Interp = createInterpreter(ExtraArgs);
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("try { throw 1; } catch (...) { 0; }"));
 }
 
 } // end anonymous namespace

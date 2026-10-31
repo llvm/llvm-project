@@ -28,7 +28,7 @@ class DebuggerControllerBase(object, metaclass=abc.ABCMeta):
         # Fetch command line options, if any.
         the_cmdline = []
         commands = self.step_collection.commands
-        if "DexCommandLine" in commands:
+        if commands and "DexCommandLine" in commands:
             cmd_line_objs = commands["DexCommandLine"]
             assert len(cmd_line_objs) == 1
             cmd_line_obj = cmd_line_objs[0]

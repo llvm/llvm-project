@@ -67,10 +67,10 @@ public:
 
   /// Deletes all formatters registered with the string `name`, in all
   /// subcontainers.
-  bool Delete(ConstString name) {
+  bool Delete(llvm::StringRef name) {
     bool success = false;
     for (auto sc : m_subcontainers)
-      success = sc->Delete(name) || success;
+      success = sc->Delete(name.str()) || success;
     return success;
   }
 
@@ -128,7 +128,7 @@ public:
     MapValueType retval;
     if (type_specifier_sp) {
       m_subcontainers[type_specifier_sp->GetMatchType()]->GetExact(
-          ConstString(type_specifier_sp->GetName()), retval);
+          llvm::StringRef(type_specifier_sp->GetName()).str(), retval);
     }
     return retval;
   }
@@ -189,7 +189,7 @@ public:
         callback;
   };
 
-  TypeCategoryImpl(IFormatChangeListener *clist, ConstString name);
+  TypeCategoryImpl(IFormatChangeListener *clist, std::string name);
 
   void ForEach(ForEachCallback<TypeFormatImpl> callback) {
     m_format_cont.ForEach(callback.callback);
@@ -332,11 +332,11 @@ public:
 
   void Clear(FormatCategoryItems items = ALL_ITEM_TYPES);
 
-  bool Delete(ConstString name, FormatCategoryItems items = ALL_ITEM_TYPES);
+  bool Delete(llvm::StringRef name, FormatCategoryItems items = ALL_ITEM_TYPES);
 
   uint32_t GetCount(FormatCategoryItems items = ALL_ITEM_TYPES);
 
-  const char *GetName() { return m_name.GetCString(); }
+  const char *GetName() { return m_name.c_str(); }
 
   size_t GetNumLanguages();
 
@@ -347,10 +347,7 @@ public:
   std::string GetDescription();
 
   bool AnyMatches(const FormattersMatchCandidate &candidate_type,
-                  FormatCategoryItems items = ALL_ITEM_TYPES,
-                  bool only_enabled = true,
-                  const char **matching_category = nullptr,
-                  FormatCategoryItems *matching_type = nullptr);
+                  FormatCategoryItems items = ALL_ITEM_TYPES);
 
   void AutoComplete(CompletionRequest &request, FormatCategoryItems items);
 
@@ -368,7 +365,7 @@ private:
 
   std::recursive_mutex m_mutex;
 
-  ConstString m_name;
+  std::string m_name;
 
   std::vector<lldb::LanguageType> m_languages;
 

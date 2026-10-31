@@ -16,8 +16,8 @@
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterFlagsDetector_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Register/Common/RegisterInfo_arm64.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 
 // clang-format off
 #include <sys/param.h>
@@ -33,16 +33,16 @@ using namespace lldb_private::process_freebsd;
 // will contain the same fields. Therefore this mutex prevents each instance
 // competing with the other, and subsequent instances from having to detect the
 // fields all over again.
-static std::mutex g_register_flags_detector_mutex;
-static Arm64RegisterFlagsDetector g_register_flags_detector;
+static std::mutex g_register_type_detector_mutex;
+static Arm64RegisterTypeDetector g_register_type_detector;
 
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread) {
-  std::lock_guard<std::mutex> lock(g_register_flags_detector_mutex);
-  if (!g_register_flags_detector.HasDetected()) {
+  std::lock_guard<std::mutex> lock(g_register_type_detector_mutex);
+  if (!g_register_type_detector.HasDetected()) {
     NativeProcessFreeBSD &process = native_thread.GetProcess();
-    g_register_flags_detector.DetectFields(
+    g_register_type_detector.DetectTypes(
         process.GetAuxValue(AuxVector::AUXV_FREEBSD_AT_HWCAP).value_or(0),
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0),
         /*hwcap3=*/0);
@@ -54,19 +54,16 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_arm64(target_arch, 0)),
+          native_thread, new RegisterInfo_arm64(target_arch, 0)),
       m_read_dbreg(false) {
-  g_register_flags_detector.UpdateRegisterInfo(
+  g_register_type_detector.UpdateRegisterInfo(
       GetRegisterInfoInterface().GetRegisterInfo(),
       GetRegisterInfoInterface().GetRegisterCount());
-
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 }
 
-RegisterInfoPOSIX_arm64 &
+RegisterInfo_arm64 &
 NativeRegisterContextFreeBSD_arm64::GetRegisterInfo() const {
-  return static_cast<RegisterInfoPOSIX_arm64 &>(*m_register_info_interface_up);
+  return static_cast<RegisterInfo_arm64 &>(*m_register_info_interface_up);
 }
 
 uint32_t NativeRegisterContextFreeBSD_arm64::GetRegisterSetCount() const {
@@ -87,26 +84,26 @@ uint32_t NativeRegisterContextFreeBSD_arm64::GetUserRegisterCount() const {
 
 Status NativeRegisterContextFreeBSD_arm64::ReadRegisterSet(uint32_t set) {
   switch (set) {
-  case RegisterInfoPOSIX_arm64::GPRegSet:
+  case RegisterInfo_arm64::GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_GETREGS, m_thread.GetID(),
                                                m_reg_data.data());
-  case RegisterInfoPOSIX_arm64::FPRegSet:
+  case RegisterInfo_arm64::FPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(
         PT_GETFPREGS, m_thread.GetID(),
-        m_reg_data.data() + sizeof(RegisterInfoPOSIX_arm64::GPR));
+        m_reg_data.data() + sizeof(RegisterInfo_arm64::GPR));
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_arm64::ReadRegisterSet");
 }
 
 Status NativeRegisterContextFreeBSD_arm64::WriteRegisterSet(uint32_t set) {
   switch (set) {
-  case RegisterInfoPOSIX_arm64::GPRegSet:
+  case RegisterInfo_arm64::GPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(PT_SETREGS, m_thread.GetID(),
                                                m_reg_data.data());
-  case RegisterInfoPOSIX_arm64::FPRegSet:
+  case RegisterInfo_arm64::FPRegSet:
     return NativeProcessFreeBSD::PtraceWrapper(
         PT_SETFPREGS, m_thread.GetID(),
-        m_reg_data.data() + sizeof(RegisterInfoPOSIX_arm64::GPR));
+        m_reg_data.data() + sizeof(RegisterInfo_arm64::GPR));
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_arm64::WriteRegisterSet");
 }
@@ -167,11 +164,11 @@ Status NativeRegisterContextFreeBSD_arm64::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
-  error = ReadRegisterSet(RegisterInfoPOSIX_arm64::GPRegSet);
+  error = ReadRegisterSet(RegisterInfo_arm64::GPRegSet);
   if (error.Fail())
     return error;
 
-  error = ReadRegisterSet(RegisterInfoPOSIX_arm64::FPRegSet);
+  error = ReadRegisterSet(RegisterInfo_arm64::FPRegSet);
   if (error.Fail())
     return error;
 
@@ -212,11 +209,11 @@ Status NativeRegisterContextFreeBSD_arm64::WriteAllRegisterValues(
   }
   ::memcpy(m_reg_data.data(), src, m_reg_data.size());
 
-  error = WriteRegisterSet(RegisterInfoPOSIX_arm64::GPRegSet);
+  error = WriteRegisterSet(RegisterInfo_arm64::GPRegSet);
   if (error.Fail())
     return error;
 
-  return WriteRegisterSet(RegisterInfoPOSIX_arm64::FPRegSet);
+  return WriteRegisterSet(RegisterInfo_arm64::FPRegSet);
 }
 
 llvm::Error NativeRegisterContextFreeBSD_arm64::CopyHardwareWatchpointsFrom(

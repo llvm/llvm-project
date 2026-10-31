@@ -30,7 +30,7 @@ public:
   // Emit the sframe section.
   //
   // \param Streamer - Emit into this stream.
-  static void emit(MCObjectStreamer &Streamer);
+  LLVM_ABI static void emit(MCObjectStreamer &Streamer);
 
   // Encode the FRE's function offset.
   //
@@ -38,8 +38,9 @@ public:
   // \param Offset - Offset to encode.
   // \param Out - Destination of the encoding.
   // \param FDEFrag - Frag that specifies the encoding format.
-  static void encodeFuncOffset(MCContext &C, uint64_t Offset,
-                               SmallVectorImpl<char> &Out, MCFragment *FDEFrag);
+  LLVM_ABI static void encodeFuncOffset(MCContext &C, uint64_t Offset,
+                                        SmallVectorImpl<char> &Out,
+                                        MCFragment *FDEFrag);
 };
 
 } // end namespace llvm

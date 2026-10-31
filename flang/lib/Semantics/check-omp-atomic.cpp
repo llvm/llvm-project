@@ -419,6 +419,22 @@ static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
   return HasStorageOverlap(assign.lhs, assign.rhs) == nullptr;
 }
 
+// Determine whether two designators refer to the same atomic variable.
+// The comparison tolerates OpenMP host-association: a shared variable
+// referenced inside a parallel region may be designated through a
+// host-associated symbol in one statement and through its ultimate symbol
+// in another, even though both denote the same storage. Comparing the
+// (ultimate) symbol vectors together with the source form distinguishes
+// different variables and different constant subscripts (e.g. a(1) vs a(2))
+// while treating host-associated and ultimate references as equal.
+static bool IsSameAtomicVariable(const SomeExpr &x, const SomeExpr &y) {
+  if (x == y) {
+    return true;
+  }
+  return evaluate::GetSymbolVector(x) == evaluate::GetSymbolVector(y) &&
+      x.AsFortran() == y.AsFortran();
+}
+
 static void SetExpr(parser::TypedExpr &expr, MaybeExpr value) {
   if (value) {
     expr.Reset(new evaluate::GenericExprWrapper(std::move(value)),
@@ -612,10 +628,12 @@ void OmpStructureChecker::CheckAtomicVariable(
 
 void OmpStructureChecker::CheckStorageOverlap(const SomeExpr &base,
     llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>> exprs,
-    parser::CharBlock source) {
+    parser::CharBlock source, bool isError) {
   if (auto *expr{HasStorageOverlap(base, exprs)}) {
     context_.Say(source,
-        "Within atomic operation %s and %s access the same storage"_warn_en_US,
+        isError
+            ? "Within atomic operation %s and %s access the same storage"_err_en_US
+            : "Within atomic operation %s and %s access the same storage"_warn_en_US,
         base.AsFortran(), expr->AsFortran());
   }
 }
@@ -822,9 +840,13 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
     CheckAtomicVariable(
         atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(capture));
     // This part should have been checked prior to calling this function.
-    assert(*GetConvertInput(capture.rhs) == atom &&
+    assert(GetConvertInput(capture.rhs) &&
+        IsSameAtomicVariable(*GetConvertInput(capture.rhs), atom) &&
         "This cannot be a capture assignment");
-    CheckStorageOverlap(atom, {cap}, source);
+    // [6.0:194:32-33]
+    // None of v, x, d, r, expr, and expr-list (as applicable) may access the
+    // same storage location as any other symbol in the list.
+    CheckStorageOverlap(atom, {cap}, source, /*isError=*/true);
   }
 }
 
@@ -841,7 +863,10 @@ void OmpStructureChecker::CheckAtomicReadAssignment(
     } else {
       CheckAtomicVariable(
           atom, rsrc, /*checkTypeOnPointer=*/!IsPointerAssignment(read));
-      CheckStorageOverlap(atom, {read.lhs}, source);
+      // [6.0:194:32-33]
+      // None of v, x, d, r, expr, and expr-list (as applicable) may access the
+      // same storage location as any other symbol in the list.
+      CheckStorageOverlap(atom, {read.lhs}, source, /*isError=*/true);
     }
   } else {
     ErrorShouldBeVariable(read.rhs, rsrc);
@@ -1388,6 +1413,15 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
     const SomeExpr &atom{maybeWrite->lhs};
     CheckAtomicWriteAssignment(*maybeWrite, update.ift.source);
     if (auto maybeCapture{GetEvaluateAssignment(capture.stmt())}) {
+      // [6.0:192:26-28], [6.0:193:9-14]
+      // The capture statement has the form v = x or v => x.
+      if (auto rhs{GetConvertInput(maybeCapture->rhs)};
+          !rhs || !IsSameAtomicVariable(*rhs, atom)) {
+        context_.Say(capture.source,
+            "In ATOMIC UPDATE COMPARE CAPTURE the right-hand side of the capture assignment should read %s"_err_en_US,
+            atom.AsFortran());
+        return;
+      }
       CheckAtomicCaptureAssignment(*maybeCapture, atom, capture.source);
 
       if (IsPointerAssignment(*maybeWrite) !=
@@ -1395,6 +1429,26 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
         context_.Say(capture.source,
             "The update and capture assignments should both be pointer-assignments or both be non-pointer-assignments"_err_en_US);
         return;
+      }
+
+      // [6.0:195:1-2] (since OpenMP 5.2)
+      // In forms that capture the original value of x in v, v may not access
+      // the same storage location as e.
+      llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+      if (version >= 52 && captureFirst && captureAlways) {
+        auto top{GetTopLevelOperationIgnoreResizing(update.cond)};
+        if (top.first == operation::Operator::Eq ||
+            top.first == operation::Operator::Eqv) {
+          const SomeExpr &expected{IsSameOrConvertOf(top.second[0], atom)
+                  ? top.second[1]
+                  : top.second[0]};
+          if (HasStorageOverlap(maybeCapture->lhs, {expected})) {
+            context_.Say(capture.source,
+                "The capture variable %s and the expected value %s should not access the same storage when the original value of %s is captured"_err_en_US,
+                maybeCapture->lhs.AsFortran(), expected.AsFortran(),
+                atom.AsFortran());
+          }
+        }
       }
     } else {
       if (!IsAssignment(capture.stmt())) {
@@ -1537,6 +1591,67 @@ void OmpStructureChecker::CheckAtomicUpdate(
   }
 }
 
+static void checkIncompatibleMemoryOrderClause(SemanticsContext &context,
+    const parser::OpenMPAtomicConstruct &x,
+    const std::array<llvm::omp::Clause, 3> atomic,
+    const std::array<llvm::omp::Clause, 5> memoryOrder) {
+
+  // Check for incompatible memory orderings on specific atomic operations.
+  // Per OpenMP 5.0:
+  //   - atomic read: release and acq_rel are not allowed
+  //   - atomic write: acquire and acq_rel are not allowed
+  //   - atomic update (without capture): acquire and acq_rel are not allowed
+  // Per OpenMP 5.1+:
+  //   - atomic read: release is not allowed
+  //   - atomic write: acquire is not allowed
+  //   (no restrictions on update)
+  llvm::omp::Clause kind{x.GetKind()};
+  const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
+
+  llvm::omp::Version version{context.langOptions().getOpenMPVersion()};
+  if (version < 50)
+    return;
+
+  const parser::OmpClause *memOrderClause{nullptr};
+  for (const parser::OmpClause &clause : dirSpec.Clauses().v) {
+    if (llvm::is_contained(memoryOrder, clause.Id())) {
+      memOrderClause = &clause;
+      break;
+    }
+  }
+  if (!memOrderClause)
+    return;
+
+  llvm::omp::Clause memOrd{memOrderClause->Id()};
+  bool isCapture{x.IsCapture()};
+  if (kind == llvm::omp::Clause::OMPC_read) {
+    if (memOrd == llvm::omp::Clause::OMPC_release) {
+      context.Say(memOrderClause->source,
+          "An ATOMIC READ operation must not have RELEASE as the memory order, using RELAXED"_warn_en_US);
+    } else if (version < 51 && memOrd == llvm::omp::Clause::OMPC_acq_rel) {
+      context.Say(memOrderClause->source,
+          "An ATOMIC READ operation must not have ACQ_REL as the memory order, using ACQUIRE"_warn_en_US);
+    }
+  } else if (kind == llvm::omp::Clause::OMPC_write && !isCapture) {
+    if (memOrd == llvm::omp::Clause::OMPC_acquire) {
+      context.Say(memOrderClause->source,
+          "An ATOMIC WRITE operation must not have ACQUIRE as the memory order, using RELAXED"_warn_en_US);
+    } else if (version < 51 && memOrd == llvm::omp::Clause::OMPC_acq_rel) {
+      context.Say(memOrderClause->source,
+          "An ATOMIC WRITE operation must not have ACQ_REL as the memory order, using RELEASE"_warn_en_US);
+    }
+  } else if (version == 50 && kind == llvm::omp::Clause::OMPC_update &&
+      !isCapture) {
+    if (memOrd == llvm::omp::Clause::OMPC_acquire) {
+      context.Say(memOrderClause->source,
+          "An ATOMIC UPDATE operation must not have ACQUIRE as the memory order, using RELAXED"_warn_en_US);
+    } else if (memOrd == llvm::omp::Clause::OMPC_acq_rel) {
+      context.Say(memOrderClause->source,
+          "An ATOMIC UPDATE operation must not have ACQ_REL as the memory order, using RELEASE"_warn_en_US);
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
   if (visitedAtomicSource_.empty())
     visitedAtomicSource_ = x.source;
@@ -1551,41 +1666,25 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
       llvm::omp::Clause::OMPC_acquire, llvm::omp::Clause::OMPC_relaxed,
       llvm::omp::Clause::OMPC_release, llvm::omp::Clause::OMPC_seq_cst};
 
-  auto checkExclusive{[&](llvm::ArrayRef<llvm::omp::Clause> group,
-                          std::string_view name,
-                          const parser::OmpClauseList &clauses) {
-    const parser::OmpClause *present{nullptr};
-    for (const parser::OmpClause &clause : clauses.v) {
-      llvm::omp::Clause id{clause.Id()};
-      if (!llvm::is_contained(group, id)) {
-        continue;
-      }
-      if (present == nullptr) {
-        present = &clause;
-        continue;
-      } else if (id == present->Id()) {
-        // Ignore repetitions of the same clause, those will be diagnosed
-        // separately.
-        continue;
-      }
-      parser::MessageFormattedText txt(
-          "At most one clause from the '%s' group is allowed on ATOMIC construct"_err_en_US,
-          name.data());
-      parser::Message message(clause.source, txt);
-      message.Attach(present->source,
-          "Previous clause from this group provided here"_en_US);
-      context_.Say(std::move(message));
-      return;
-    }
-  }};
-
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
-  auto &dir{std::get<parser::OmpDirectiveName>(dirSpec.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_atomic);
   llvm::omp::Clause kind{x.GetKind()};
 
-  checkExclusive(atomic, "atomic", dirSpec.Clauses());
-  checkExclusive(memoryOrder, "memory-order", dirSpec.Clauses());
+  checkIncompatibleMemoryOrderClause(context_, x, atomic, memoryOrder);
+
+  // OpenMP 5.2 [15.8.3] extended-atomic Clauses: acq_rel and release cannot
+  // be specified as arguments to the fail clause, so its memory order argument
+  // must be SEQ_CST, ACQUIRE, or RELAXED.
+  for (const parser::OmpClause &clause : dirSpec.Clauses().v) {
+    if (const auto *fail{std::get_if<parser::OmpClause::Fail>(&clause.u)}) {
+      common::OmpMemoryOrderType ord{fail->v.v};
+      if (ord != common::OmpMemoryOrderType::Seq_Cst &&
+          ord != common::OmpMemoryOrderType::Acquire &&
+          ord != common::OmpMemoryOrderType::Relaxed) {
+        context_.Say(clause.source,
+            "The argument of the FAIL clause must be SEQ_CST, ACQUIRE, or RELAXED"_err_en_US);
+      }
+    }
+  }
 
   switch (kind) {
   case llvm::omp::Clause::OMPC_read:
@@ -1600,10 +1699,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
   default:
     break;
   }
-}
-
-void OmpStructureChecker::Leave(const parser::OpenMPAtomicConstruct &) {
-  dirContext_.pop_back();
 }
 
 // Rewrite min/max:

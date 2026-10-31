@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
 ; RUN: %s | FileCheck %s
 
 $_ZNK8CallableclEPi = comdat any

@@ -42,7 +42,7 @@ class TargetLibraryInfo;
 class TypeSize;
 class Value;
 
-class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
+class MemCpyOptPass : public OptionalPassInfoMixin<MemCpyOptPass> {
   TargetLibraryInfo *TLI = nullptr;
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;

@@ -130,8 +130,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
   }
 
   if (PhysReg) {
-    const TargetRegisterClass *RC =
-        TRI->getMinimalPhysRegClass(Reg, Def->getSimpleValueType(ResNo));
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     Cost = RC->expensiveOrImpossibleToCopy() ? -1 : RC->getCopyCost();
   }
 }
@@ -466,11 +465,18 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
     for (SDNode *N = SU.getNode(); N; N = N->getGluedNode()) {
       if (N->isMachineOpcode() &&
           !TII->get(N->getMachineOpcode()).implicit_defs().empty()) {
+        const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
         SU.hasPhysRegClobbers = true;
+        // Results beyond the explicit defs are physical register defs, unless
+        // the target models variadic results as virtual registers. This must
+        // match InstrEmitter::EmitMachineNode.
+        bool HasVRegVariadicDefs = !MF.getTarget().usesPhysRegsForValues() &&
+                                   MCID.isVariadic() &&
+                                   MCID.variadicOpsAreDefs();
         unsigned NumUsed = InstrEmitter::CountResults(N);
         while (NumUsed != 0 && !N->hasAnyUseOfValue(NumUsed - 1))
           --NumUsed;    // Skip over unused values at the end.
-        if (NumUsed > TII->get(N->getMachineOpcode()).getNumDefs())
+        if (!HasVRegVariadicDefs && NumUsed > MCID.getNumDefs())
           SU.hasPhysRegDefs = true;
       }
 
@@ -813,8 +819,7 @@ EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
       continue; // ignore chain preds
     if (Pred.getSUnit()->CopyDstRC) {
       // Copy to physical register.
-      DenseMap<SUnit *, Register>::iterator VRI =
-          VRBaseMap.find(Pred.getSUnit());
+      auto VRI = VRBaseMap.find(Pred.getSUnit());
       assert(VRI != VRBaseMap.end() && "Node emitted out of order - late");
       // Find the destination physical register.
       Register Reg;
@@ -839,6 +844,25 @@ EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
           .addReg(Pred.getReg());
     }
     break;
+  }
+}
+
+/// Mark physreg defs dead on \p MI, emitted for a cloned node \p SU. All copies
+/// share one SDNode, so InstrEmitter can't tell which copy lost its users. A
+/// live def of an expensive-to-copy physreg is carried on a scheduler edge by
+/// some copy, so it is dead if \p SU has no such edge.
+static void markClonedNodeDeadDefs(const SUnit &SU, MachineInstr &MI,
+                                   const TargetRegisterInfo *TRI) {
+  for (MachineOperand &MO : MI.implicit_operands()) {
+    if (!MO.isReg() || !MO.isDef() || MO.isDead())
+      continue;
+    Register Reg = MO.getReg();
+    if (!TRI->getMinimalPhysRegClass(Reg)->expensiveOrImpossibleToCopy())
+      continue;
+    if (none_of(SU.Succs, [=](const SDep &Succ) {
+          return Succ.isAssignedRegDep() && Succ.getReg() == Reg;
+        }))
+      MO.setIsDead();
   }
 }
 
@@ -971,6 +995,9 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       if (NewInsn && NewInsn->isCall())
         NewInsn->setHeapAllocMarker(MF, MD);
     }
+
+    if (NewInsn && SU->OrigNode->isCloned)
+      markClonedNodeDeadDefs(*SU, *NewInsn, TRI);
   }
 
   // Insert all the dbg_values which have not already been inserted in source

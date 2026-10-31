@@ -63,11 +63,6 @@ def LLVMUseDefaultVisibilityPass
 	   )}]>,
   ];
 }
-
-def NVVMOptimizeForTargetPass : Pass<"llvm-optimize-for-nvvm-target"> {
-  let summary = "Optimize NVVM IR";
-}
-
 def DIScopeForLLVMFuncOpPass : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir::ModuleOp"> {
   let summary = "Materialize LLVM debug info subprogram attribute on every LLVMFuncOp";
   let description = [{

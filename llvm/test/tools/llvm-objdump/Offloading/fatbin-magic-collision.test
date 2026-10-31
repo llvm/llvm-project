@@ -1,0 +1,35 @@
+## Regression test for a magic-byte collision in the compressed offload bundle
+## (CCOB) reader used by --offloading (llvm::object::extractOffloadBundle).
+##
+## The reader used to find the boundary between concatenated bundles by scanning
+## for the literal 4-byte magic "CCOB". Those bytes can appear by chance inside a
+## compressed payload, which truncated a valid single bundle so it failed to
+## decompress. The .hip_fatbin below is a single compressed bundle whose
+## compressed region embeds the bytes "CCOB" inside a zstd skippable frame
+## (ignored by the decompressor); a reader that advances by the header's FileSize
+## handles it correctly. Regenerate the bundle with
+## clang/test/Driver/Inputs/clang-offload-bundler-magic-collision.py.
+
+# REQUIRES: zstd
+# RUN: yaml2obj %s -o %t.elf
+# RUN: llvm-objdump --offloading %t.elf | FileCheck %s
+# RUN: FileCheck %s --check-prefix=DEV1 \
+# RUN:   --input-file=%t.elf.0.hip-amdgcn-amd-amdhsa--gfx906
+
+# CHECK: Extracting offload bundle: {{.*}}.elf.0.hip-amdgcn-amd-amdhsa--gfx906
+# CHECK: Extracting offload bundle: {{.*}}.elf.0.hip-amdgcn-amd-amdhsa--gfx908
+# DEV1: Content of device file 1
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .hip_fatbin
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x1000
+    Content:         43434F42030001009D00000000000000BC00000000000000C4C20F3D5905B03E502A4D180400000043434F4228B52FFD20BC45030024055F5F434C414E475F4F46464C4F41445F42554E444C455F5F02008A0019001D006869702D616D6467636E6873612D2D676678393036A338436F6E74656E74206F66206465766963652066696C6520310A320A0800F2AC07B03ADAED52591D600C0606033B8031
+...

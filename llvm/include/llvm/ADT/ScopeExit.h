@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the make_scope_exit function, which executes user-defined
+/// This file defines the scope_exit class, which executes user-defined
 /// cleanup logic at scope exit.
 ///
 //===----------------------------------------------------------------------===//
@@ -15,7 +15,6 @@
 #ifndef LLVM_ADT_SCOPEEXIT_H
 #define LLVM_ADT_SCOPEEXIT_H
 
-#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -45,19 +44,6 @@ public:
 };
 
 template <typename Callable> scope_exit(Callable) -> scope_exit<Callable>;
-
-// Keeps the callable object that is passed in, and execute it at the
-// destruction of the returned object (usually at the scope exit where the
-// returned object is kept).
-//
-// Interface is specified by p0052r2.
-template <typename Callable>
-[[nodiscard]]
-LLVM_DEPRECATED("Prefer calling the constructor of llvm::scope_exit directly.",
-                "scope_exit") auto make_scope_exit(Callable &&F) {
-  // TODO(LLVM 24): Remove this function.
-  return scope_exit(std::forward<Callable>(F));
-}
 
 } // end namespace llvm
 

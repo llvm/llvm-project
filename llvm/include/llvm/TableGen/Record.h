@@ -16,12 +16,14 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -36,6 +38,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -58,7 +61,7 @@ class TGTimer;
 //  Type Classes
 //===----------------------------------------------------------------------===//
 
-class RecTy {
+class alignas(8) RecTy {
 public:
   /// Subclass discriminator (for dyn_cast<> et al.)
   enum RecTyKind {
@@ -256,7 +259,7 @@ public:
                                 ArrayRef<const Record *> Classes);
   static const RecordRecTy *get(const Record *Class);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  ArrayRef<const Record *> getKey() const { return getClasses(); }
 
   ArrayRef<const Record *> getClasses() const {
     return getTrailingObjects(NumClasses);
@@ -334,6 +337,9 @@ private:
 protected:
   uint8_t Opc; // Used by UnOpInit, BinOpInit, and TernOpInit
 
+  /// Set if resolveReferences returns this value unchanged with any resolver.
+  bool TriviallyResolved;
+
 private:
   virtual void anchor();
 
@@ -341,11 +347,22 @@ public:
   /// Get the kind (type) of the value.
   InitKind getKind() const { return Kind; }
 
+  /// Return true if \p K is a value kind that cannot contain references.
+  static bool isLeafKind(InitKind K) {
+    return K == IK_BitInit || K == IK_DefInit || K == IK_IntInit ||
+           K == IK_StringInit || K == IK_UnsetInit;
+  }
+
+  /// Return true if resolveReferences returns this value unchanged with any
+  /// resolver. This is a cheap, conservative subset of isConcrete().
+  bool isTriviallyResolved() const { return TriviallyResolved; }
+
   /// Get the record keeper that initialized this Init.
   RecordKeeper &getRecordKeeper() const;
 
 protected:
-  explicit Init(InitKind K, uint8_t Opc = 0) : Kind(K), Opc(Opc) {}
+  explicit Init(InitKind K, uint8_t Opc = 0)
+      : Kind(K), Opc(Opc), TriviallyResolved(isLeafKind(K)) {}
 
 public:
   Init(const Init &) = delete;
@@ -501,7 +518,9 @@ private:
 
 protected:
   explicit ArgumentInit(const Init *Value, ArgAuxType Aux)
-      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {}
+      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {
+    TriviallyResolved = Value->isTriviallyResolved();
+  }
 
 public:
   ArgumentInit(const ArgumentInit &) = delete;
@@ -529,7 +548,7 @@ public:
     return get(Value, Aux);
   }
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const Init *, ArgAuxType> getKey() const { return {Value, Aux}; }
 
   const Init *resolveReferences(Resolver &R) const override;
   std::string getAsString() const override {
@@ -607,7 +626,7 @@ public:
 
   static BitsInit *get(RecordKeeper &RK, ArrayRef<const Init *> Range);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  ArrayRef<const Init *> getKey() const { return getBits(); }
 
   unsigned getNumBits() const { return NumBits; }
 
@@ -770,16 +789,15 @@ public:
   }
   static const ListInit *get(ArrayRef<const Init *> Range, const RecTy *EltTy);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   ArrayRef<const Init *> getElements() const {
     return ArrayRef(getTrailingObjects(), NumElements);
   }
 
-  LLVM_DEPRECATED("Use getElements instead", "getElements")
-  ArrayRef<const Init *> getValues() const { return getElements(); }
-
   const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
+
+  std::pair<ArrayRef<const Init *>, const RecTy *> getKey() const {
+    return {getElements(), getElementType()};
+  }
 
   const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
@@ -867,10 +885,12 @@ public:
 
   static const UnOpInit *get(UnaryOp opc, const Init *lhs, const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   const Init *getOperand() const { return LHS; }
+
+  std::tuple<UnaryOp, const Init *, const RecTy *> getKey() const {
+    return {getOpcode(), LHS, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -936,11 +956,14 @@ public:
   static const Init *getStrConcat(const Init *lhs, const Init *rhs);
   static const Init *getListConcat(const TypedInit *lhs, const Init *rhs);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
   const Init *getRHS() const { return RHS; }
+
+  std::tuple<BinaryOp, const Init *, const Init *, const RecTy *>
+  getKey() const {
+    return {getOpcode(), LHS, RHS, getType()};
+  }
 
   std::optional<bool> CompareInit(unsigned Opc, const Init *LHS,
                                   const Init *RHS) const;
@@ -968,6 +991,7 @@ public:
     FIND,
     SETDAGARG,
     SETDAGNAME,
+    SORT,
   };
 
 private:
@@ -988,12 +1012,15 @@ public:
   static const TernOpInit *get(TernaryOp opc, const Init *lhs, const Init *mhs,
                                const Init *rhs, const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   TernaryOp getOpcode() const { return (TernaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
   const Init *getMHS() const { return MHS; }
   const Init *getRHS() const { return RHS; }
+
+  std::tuple<TernaryOp, const Init *, const Init *, const Init *, const RecTy *>
+  getKey() const {
+    return {getOpcode(), LHS, MHS, RHS, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1033,7 +1060,10 @@ public:
                                ArrayRef<const Init *> Values,
                                const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const RecTy *, ArrayRef<const Init *>, ArrayRef<const Init *>>
+  getKey() const {
+    return {ValType, getConds(), getVals()};
+  }
 
   const RecTy *getValType() const { return ValType; }
 
@@ -1099,7 +1129,11 @@ public:
                                const Init *A, const Init *B, const Init *Expr,
                                const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const Init *, const Init *, const Init *, const Init *,
+             const Init *, const RecTy *>
+  getKey() const {
+    return {Start, List, A, B, Expr, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1132,7 +1166,9 @@ public:
 
   static const IsAOpInit *get(const RecTy *CheckType, const Init *Expr);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {CheckType, Expr};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1166,7 +1202,9 @@ public:
 
   static const ExistsOpInit *get(const RecTy *CheckType, const Init *Expr);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {CheckType, Expr};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1203,7 +1241,9 @@ public:
 
   static const InstancesOpInit *get(const RecTy *Type, const Init *Regex);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {Type, Regex};
+  }
 
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
@@ -1211,7 +1251,9 @@ public:
 
   const Init *resolveReferences(Resolver &R) const override;
 
-  const Init *getBit(unsigned Bit) const override;
+  const Init *getBit(unsigned Bit) const override {
+    llvm_unreachable("Illegal bit reference off !instances");
+  }
 
   std::string getAsString() const override;
 };
@@ -1350,7 +1392,9 @@ public:
   static const VarDefInit *get(SMLoc Loc, const Record *Class,
                                ArrayRef<const ArgumentInit *> Args);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const Record *, ArrayRef<const ArgumentInit *>> getKey() const {
+    return {Class, args()};
+  }
 
   const Init *resolveReferences(Resolver &R) const override;
   const Init *Fold() const;
@@ -1464,7 +1508,11 @@ public:
     return DagInit::get(V, nullptr, ArgAndNames);
   }
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const Init *, const StringInit *, ArrayRef<const Init *>,
+             ArrayRef<const StringInit *>>
+  getKey() const {
+    return {Val, ValName, getArgs(), getArgNames()};
+  }
 
   const Init *getOperator() const { return Val; }
   const Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;
@@ -1551,12 +1599,16 @@ public:
 private:
   const Init *Name;
   SMLoc Loc; // Source location of definition of name.
-  PointerIntPair<const RecTy *, 2, FieldKind> TyAndKind;
+  // The low two bits of the flags are the FieldKind, and bit 2 is set if the
+  // value is used.
+  PointerIntPair<const RecTy *, 3, unsigned> TyAndFlags;
+  static constexpr unsigned KindMask = 3;
+  static constexpr unsigned UsedBit = 4;
   const Init *Value;
-  bool IsUsed = false;
 
-  /// Reference locations to this record value.
-  SmallVector<SMRange, 0> ReferenceLocs;
+  FieldKind getKind() const {
+    return FieldKind(TyAndFlags.getInt() & KindMask);
+  }
 
 public:
   RecordVal(const Init *N, const RecTy *T, FieldKind K);
@@ -1580,22 +1632,19 @@ public:
   SMLoc getLoc() const { return Loc; }
 
   /// Is this a field where nonconcrete values are okay?
-  bool isNonconcreteOK() const {
-    return TyAndKind.getInt() == FK_NonconcreteOK;
-  }
+  bool isNonconcreteOK() const { return getKind() == FK_NonconcreteOK; }
 
   /// Is this a template argument?
-  bool isTemplateArg() const {
-    return TyAndKind.getInt() == FK_TemplateArg;
-  }
+  bool isTemplateArg() const { return getKind() == FK_TemplateArg; }
 
   /// Get the type of the field value as a RecTy.
-  const RecTy *getType() const { return TyAndKind.getPointer(); }
+  const RecTy *getType() const { return TyAndFlags.getPointer(); }
 
   /// Get the type of the field for printing purposes.
   std::string getPrintType() const;
 
-  /// Get the value of the field as an Init.
+  /// Get the value of the field as an Init. This is never null: a field that
+  /// has not been given a value has an UnsetInit.
   const Init *getValue() const { return Value; }
 
   /// Set the value of the field from an Init.
@@ -1604,16 +1653,13 @@ public:
   /// Set the value and source location of the field.
   bool setValue(const Init *V, SMLoc NewLoc);
 
-  /// Add a reference to this record value.
-  void addReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
-
-  /// Return the references of this record value.
-  ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
-
   /// Whether this value is used. Useful for reporting warnings, for example
   /// when a template argument is unused.
-  void setUsed(bool Used) { IsUsed = Used; }
-  bool isUsed() const { return IsUsed; }
+  void setUsed(bool Used) {
+    unsigned Flags = TyAndFlags.getInt() & ~UsedBit;
+    TyAndFlags.setInt(Used ? Flags | UsedBit : Flags);
+  }
+  bool isUsed() const { return TyAndFlags.getInt() & UsedBit; }
 
   void dump() const;
 
@@ -1658,7 +1704,10 @@ private:
   SmallVector<SMLoc, 4> Locs;
   SmallVector<SMLoc, 0> ForwardDeclarationLocs;
   mutable SmallVector<SMRange, 0> ReferenceLocs;
-  SmallVector<const Init *, 0> TemplateArgs;
+  mutable DenseMap<const Init *, SmallVector<SMRange, 0>> ValueReferenceLocs;
+  // Template arguments, in order.
+  SmallVector<RecordVal, 0> TemplateArgs;
+  // Fields, including the ones inherited from superclasses.
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
   SmallVector<DumpInfo, 0> Dumps;
@@ -1697,8 +1746,9 @@ public:
   // ID number. Don't copy CorrespondingDefInit either, since it's owned by the
   // original record. All other fields can be copied normally.
   Record(const Record &O)
-      : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
-        Values(O.Values), Assertions(O.Assertions),
+      : Name(O.Name), Locs(O.Locs), ValueReferenceLocs(O.ValueReferenceLocs),
+        TemplateArgs(O.TemplateArgs), Values(O.Values),
+        Assertions(O.Assertions), Dumps(O.Dumps),
         DirectSuperClasses(O.DirectSuperClasses),
         TrackedRecords(O.TrackedRecords), ID(getNewUID(O.getRecords())),
         Kind(O.Kind) {}
@@ -1730,6 +1780,26 @@ public:
   /// Return the references of this record value.
   ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
 
+  /// Add a reference to the value named \p Name.
+  void appendValueReferenceLoc(const Init *Name, SMRange Loc) const {
+    ValueReferenceLocs[Name].push_back(Loc);
+  }
+
+  /// Add the references to the value named \p Name in \p From.
+  void appendValueReferenceLocs(const Record &From, const Init *Name) const {
+    auto It = From.ValueReferenceLocs.find(Name);
+    if (It != From.ValueReferenceLocs.end())
+      llvm::append_range(ValueReferenceLocs[Name], It->second);
+  }
+
+  /// Return the references to the value named \p Name.
+  ArrayRef<SMRange> getValueReferenceLocs(const Init *Name) const {
+    auto It = ValueReferenceLocs.find(Name);
+    if (It == ValueReferenceLocs.end())
+      return {};
+    return It->second;
+  }
+
   // Update a class location when encountering a (re-)definition.
   void updateClassLoc(SMLoc Loc);
 
@@ -1745,8 +1815,10 @@ public:
 
   bool isAnonymous() const { return Kind == RK_AnonymousDef; }
 
-  ArrayRef<const Init *> getTemplateArgs() const { return TemplateArgs; }
+  /// Return the template arguments of this class or multiclass.
+  ArrayRef<RecordVal> getTemplateArgs() const { return TemplateArgs; }
 
+  /// Return the fields of this record.
   ArrayRef<RecordVal> getValues() const { return Values; }
 
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
@@ -1777,10 +1849,22 @@ public:
     return DirectSuperClasses;
   }
 
-  bool isTemplateArg(const Init *Name) const {
-    return llvm::is_contained(TemplateArgs, Name);
+  /// Return the template argument with the given name, or null if there is
+  /// none.
+  const RecordVal *getTemplateArg(const Init *Name) const {
+    for (const RecordVal &Arg : TemplateArgs)
+      if (Arg.Name == Name)
+        return &Arg;
+    return nullptr;
   }
 
+  RecordVal *getTemplateArg(const Init *Name) {
+    return const_cast<RecordVal *>(
+        static_cast<const Record *>(this)->getTemplateArg(Name));
+  }
+
+  /// Return the field with the given name, or null if there is none. Use
+  /// getTemplateArg() to look up template arguments.
   const RecordVal *getValue(const Init *Name) const {
     for (const RecordVal &Val : Values)
       if (Val.Name == Name) return &Val;
@@ -1801,12 +1885,18 @@ public:
         static_cast<const Record *>(this)->getValue(Name));
   }
 
-  void addTemplateArg(const Init *Name) {
-    assert(!isTemplateArg(Name) && "Template arg already defined!");
-    TemplateArgs.push_back(Name);
+  /// Add a template argument. Return false, without adding it, if there is
+  /// already a template argument with the same name.
+  bool addTemplateArg(const RecordVal &Arg) {
+    assert(Arg.isTemplateArg() && "Not a template argument!");
+    if (getTemplateArg(Arg.getNameInit()))
+      return false;
+    TemplateArgs.push_back(Arg);
+    return true;
   }
 
   void addValue(const RecordVal &RV) {
+    assert(!RV.isTemplateArg() && "Use addTemplateArg for template arguments");
     assert(getValue(RV.getNameInit()) == nullptr && "Value already added!");
     Values.push_back(RV);
   }
@@ -1975,7 +2065,7 @@ public:
 raw_ostream &operator<<(raw_ostream &OS, const Record &R);
 
 class RecordKeeper {
-  using RecordMap = std::map<std::string, std::unique_ptr<Record>, std::less<>>;
+  using RecordMap = StringMap<std::unique_ptr<Record>>;
   using GlobalMap = std::map<std::string, const Init *, std::less<>>;
 
 public:
@@ -1988,25 +2078,25 @@ public:
   /// Get the main TableGen input file's name.
   StringRef getInputFilename() const { return InputFilename; }
 
-  /// Get the map of classes.
-  const RecordMap &getClasses() const { return Classes; }
+  /// Get all classes, sorted by name.
+  ArrayRef<const Record *> getClasses() const;
 
-  /// Get the map of records (defs).
-  const RecordMap &getDefs() const { return Defs; }
+  /// Get all records (defs), sorted by name.
+  ArrayRef<const Record *> getDefs() const;
 
   /// Get the map of global variables.
   const GlobalMap &getGlobals() const { return ExtraGlobals; }
 
   /// Get the class with the specified name.
   const Record *getClass(StringRef Name) const {
-    auto I = Classes.find(Name);
-    return I == Classes.end() ? nullptr : I->second.get();
+    auto It = Classes.find(Name);
+    return It == Classes.end() ? nullptr : It->second.get();
   }
 
   /// Get the concrete record with the specified name.
   const Record *getDef(StringRef Name) const {
-    auto I = Defs.find(Name);
-    return I == Defs.end() ? nullptr : I->second.get();
+    auto It = Defs.find(Name);
+    return It == Defs.end() ? nullptr : It->second.get();
   }
 
   /// Get the \p Init value of the specified global variable.
@@ -2022,14 +2112,15 @@ public:
   }
 
   void addClass(std::unique_ptr<Record> R) {
-    bool Ins =
-        Classes.try_emplace(std::string(R->getName()), std::move(R)).second;
+    bool Ins = Classes.try_emplace(R->getName(), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Class already exists");
   }
 
   void addDef(std::unique_ptr<Record> R) {
-    bool Ins = Defs.try_emplace(std::string(R->getName()), std::move(R)).second;
+    for (const Record *SC : make_first_range(R->getDirectSuperClasses()))
+      DefsByDirectSuperClass[SC].push_back(R.get());
+    bool Ins = Defs.try_emplace(R->getName(), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
     // Clear cache
@@ -2077,7 +2168,12 @@ private:
 
   std::string InputFilename;
   RecordMap Classes, Defs;
+  // Classes and Defs sorted by name, built on demand.
+  mutable std::vector<const Record *> SortedClasses, SortedDefs;
   mutable std::map<std::string, std::vector<const Record *>> Cache;
+  // The defs that each class is a direct superclass of.
+  DenseMap<const Record *, SmallVector<const Record *, 0>>
+      DefsByDirectSuperClass;
   GlobalMap ExtraGlobals;
 
   /// The internal uniquer implementation of the RecordKeeper.
@@ -2220,7 +2316,27 @@ public:
   // should only happen when this is true.
   bool isFinal() const { return IsFinal; }
 
-  void setFinal(bool Final) { IsFinal = Final; }
+  void setFinal(bool Final) {
+    IsFinal = Final;
+    clearCachedResults();
+  }
+
+  /// Return the cached result of resolving \p I, or nullptr. \p FoundUnresolved
+  /// is set if the result has unresolved references.
+  virtual const Init *getCachedResult(const Init *I,
+                                      bool &FoundUnresolved) const {
+    return nullptr;
+  }
+
+  /// Cache the result of resolving \p I.
+  virtual void cacheResult(const Init *I, const Init *Result,
+                           bool FoundUnresolved) {}
+
+  /// Called when a cached result has unresolved references.
+  virtual void noteUnresolved() {}
+
+protected:
+  virtual void clearCachedResults() {}
 };
 
 /// Resolve arbitrary mappings.
@@ -2234,11 +2350,19 @@ class MapResolver final : public Resolver {
   };
 
   DenseMap<const Init *, MappedValue> Map;
+  DenseMap<const Init *, std::pair<const Init *, bool>> ResultCache;
+  // Number of mapped values being resolved. Each is removed from Map while it
+  // is resolved to prevent infinite recursion, so results computed meanwhile
+  // may be incomplete and are not cached.
+  unsigned NumInProgress = 0;
 
 public:
   explicit MapResolver(const Record *CurRec = nullptr) : Resolver(CurRec) {}
 
-  void set(const Init *Key, const Init *Value) { Map[Key] = {Value, false}; }
+  void set(const Init *Key, const Init *Value) {
+    Map[Key] = {Value, false};
+    clearCachedResults();
+  }
 
   bool isComplete(Init *VarName) const {
     auto It = Map.find(VarName);
@@ -2247,22 +2371,64 @@ public:
   }
 
   const Init *resolve(const Init *VarName) override;
+
+  const Init *getCachedResult(const Init *I,
+                              bool &FoundUnresolved) const override {
+    if (NumInProgress)
+      return nullptr;
+    auto [Result, Unresolved] = ResultCache.lookup(I);
+    FoundUnresolved = Unresolved;
+    return Result;
+  }
+
+  void cacheResult(const Init *I, const Init *Result,
+                   bool FoundUnresolved) override {
+    if (!NumInProgress)
+      ResultCache[I] = {Result, FoundUnresolved};
+  }
+
+protected:
+  void clearCachedResults() override { ResultCache.clear(); }
 };
 
 /// Resolve all variables from a record except for unset variables.
 class RecordResolver final : public Resolver {
   DenseMap<const Init *, const Init *> Cache;
+  DenseMap<const Init *, std::pair<const Init *, bool>> ResultCache;
   SmallVector<const Init *, 4> Stack;
   const Init *Name = nullptr;
 
 public:
   explicit RecordResolver(const Record &R) : Resolver(&R) {}
 
-  void setName(const Init *NewName) { Name = NewName; }
+  void setName(const Init *NewName) {
+    Name = NewName;
+    clearCachedResults();
+  }
 
   const Init *resolve(const Init *VarName) override;
 
   bool keepUnsetBits() const override { return true; }
+
+  // Variables on the stack resolve to nullptr to prevent infinite recursion,
+  // so results computed meanwhile may be incomplete and are not cached.
+  const Init *getCachedResult(const Init *I,
+                              bool &FoundUnresolved) const override {
+    if (!Stack.empty())
+      return nullptr;
+    auto [Result, Unresolved] = ResultCache.lookup(I);
+    FoundUnresolved = Unresolved;
+    return Result;
+  }
+
+  void cacheResult(const Init *I, const Init *Result,
+                   bool FoundUnresolved) override {
+    if (Stack.empty())
+      ResultCache[I] = {Result, FoundUnresolved};
+  }
+
+protected:
+  void clearCachedResults() override { ResultCache.clear(); }
 };
 
 /// Delegate resolving to a sub-resolver, but shadow some variable names.
@@ -2298,6 +2464,23 @@ public:
   bool foundUnresolved() const { return FoundUnresolved; }
 
   const Init *resolve(const Init *VarName) override;
+
+  // Tracking doesn't change results, so share the underlying resolver's cache.
+  const Init *getCachedResult(const Init *I, bool &Unresolved) const override {
+    return R ? R->getCachedResult(I, Unresolved) : nullptr;
+  }
+
+  void cacheResult(const Init *I, const Init *Result,
+                   bool Unresolved) override {
+    if (R)
+      R->cacheResult(I, Result, Unresolved);
+  }
+
+  void noteUnresolved() override {
+    FoundUnresolved = true;
+    if (R)
+      R->noteUnresolved();
+  }
 };
 
 /// Do not resolve anything, but keep track of whether a given variable was

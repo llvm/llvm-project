@@ -37,7 +37,8 @@ def StageWithSortSparseOpInterface : OpInterface<"StageWithSortSparseOp"> {
     /*args=*/(ins "::mlir::PatternRewriter &":$rewriter,
                   "Value &":$tmpBuf),
     /*methodBody=*/[{
-        return detail::stageWithSortImpl($_op, rewriter, tmpBuf);
+        return detail::stageWithSortImpl(
+            ::mlir::cast<StageWithSortSparseOp>(*$_raw_op), rewriter, tmpBuf);
     }]>,
   ];
 }

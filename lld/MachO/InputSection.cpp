@@ -89,7 +89,7 @@ uint64_t InputSection::getVA(uint64_t off) const {
   return parent->addr + getOffset(off);
 }
 
-static uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
+uint64_t macho::resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
                                       int64_t offset) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(type);
   uint64_t symVA;
@@ -100,10 +100,11 @@ static uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
     // function's layout, which an interposed replacement wouldn't preserve.
     // There's no meaningful way to "interpose" an interior offset.
     symVA = (offset != 0) ? sym->getVA() : sym->resolveBranchVA();
-  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    symVA = sym->resolveGotVA();
-  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
-    symVA = sym->resolveTlvVA();
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT) ||
+             relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+    // Both kinds read the symbol's single non-lazy pointer slot; for a
+    // thread-local that slot holds the address of its TLV descriptor.
+    symVA = sym->resolveNonLazyPtrVA();
   } else {
     symVA = sym->getVA();
   }
@@ -204,16 +205,20 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy,
   for (auto &copySym : copy->symbols)
     copySym->identicalCodeFoldingKind = foldKind;
 
-  symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
-  copy->symbols.clear();
-
-  // Remove duplicate compact unwind info for symbols at the same address.
-  if (symbols.empty())
+  if (copy->symbols.empty())
     return;
-  for (auto it = symbols.begin() + 1; it != symbols.end(); ++it) {
+  auto *it = copy->symbols.begin();
+  // The first symbol in the merged section (symbols.front()) must keep its
+  // unwind entry. If this section is empty, the copy's first symbol becomes the
+  // new front, so we skip clearing it.
+  if (symbols.empty())
+    ++it;
+  for (; it != copy->symbols.end(); ++it) {
     assert((*it)->value == 0);
     (*it)->originalUnwindEntry = nullptr;
   }
+  symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
+  copy->symbols.clear();
 }
 
 void ConcatInputSection::writeTo(uint8_t *buf) {
@@ -235,15 +240,15 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       const Symbol *fromSym = cast<Symbol *>(r.referent);
       const Relocation &minuend = relocs[++i];
       uint64_t minuendVA;
-      if (const Symbol *toSym = minuend.referent.dyn_cast<Symbol *>())
-        minuendVA = toSym->getVA() + minuend.addend;
+      if (const Symbol *toSym = dyn_cast<Symbol *>(minuend.referent))
+        minuendVA = toSym->getVA() + minuend.getAddend();
       else {
         auto *referentIsec = cast<InputSection *>(minuend.referent);
         assert(!::shouldOmitFromOutput(referentIsec));
-        minuendVA = referentIsec->getVA(minuend.addend);
+        minuendVA = referentIsec->getVA(minuend.getAddend());
       }
       referentVA = minuendVA - fromSym->getVA();
-    } else if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
+    } else if (auto *referentSym = dyn_cast_if_present<Symbol *>(r.referent)) {
       if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
@@ -253,7 +258,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
       }
-      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.addend);
+      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
 
       if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
         // References from thread-local variable sections are treated as offsets
@@ -262,12 +267,13 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         // contiguous).
         referentVA -= firstTLVDataSection->addr;
       } else if (needsFixup) {
-        writeChainedFixup(loc, referentSym, r.addend);
+        writeChainedFixup(loc, referentSym, r.getAddend());
         continue;
       }
-    } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+    } else if (auto *referentIsec =
+                   dyn_cast_if_present<InputSection *>(r.referent)) {
       assert(!::shouldOmitFromOutput(referentIsec));
-      referentVA = referentIsec->getVA(r.addend);
+      referentVA = referentIsec->getVA(r.getAddend());
 
       if (needsFixup) {
         writeChainedRebase(loc, referentVA);

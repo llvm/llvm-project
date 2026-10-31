@@ -59,7 +59,7 @@ extern void f1(void) __attribute((alias("f0")));
 static inline int foo1() { return 0; }
 // CHECKBASIC-LABEL: define internal i32 @foo1()
 int foo() __attribute__((alias("foo1")));
-int bar() __attribute__((alias("bar1")));
+extern int bar __attribute__((alias("bar1")));
 
 extern int test6();
 void test7() { test6(); }  // test6 is emitted as extern.

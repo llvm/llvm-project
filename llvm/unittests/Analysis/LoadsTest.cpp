@@ -67,12 +67,41 @@ entry:
   ASSERT_TRUE(CI->equalsInt(42));
 }
 
+// Test the load and store pointers reach the same base value through different
+// address spaces with different index widths (here AS=0 has 64-bit pointers and
+// AS=5 has 32-bit pointers)
+TEST(LoadsTest, FindAvailableLoadedValueMixedAddrSpaceNullAA) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+target datalayout = "e-p:64:64-p5:32:32-i64:64-n32:64-S32-A5"
+
+define ptr @f() {
+entry:
+  %a = alloca [16 x i8], align 8, addrspace(5)
+  %ac = addrspacecast ptr addrspace(5) %a to ptr
+  store ptr null, ptr %ac, align 8
+  %q = getelementptr inbounds i8, ptr addrspace(5) %a, i32 8
+  store i64 42, ptr addrspace(5) %q, align 8
+  %v = load ptr, ptr %ac, align 8
+  ret ptr %v
+}
+)IR");
+  auto *F = cast<Function>(M->getNamedValue("f"));
+  ASSERT_TRUE(F);
+  auto *LI = cast<LoadInst>(&*++F->front().rbegin());
+  ASSERT_TRUE(LI);
+  BasicBlock::iterator BBI(LI);
+  Value *Loaded =
+      FindAvailableLoadedValue(LI, LI->getParent(), BBI, 0, nullptr, nullptr);
+  EXPECT_EQ(Loaded, nullptr);
+}
+
 TEST(LoadsTest, CanReplacePointersIfEqual) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"IR(
-@y = common global [1 x i32] zeroinitializer, align 4
-@x = common global [1 x i32] zeroinitializer, align 4
+@y = constant [1 x i32] zeroinitializer, align 4
+@x = constant [1 x i32] zeroinitializer, align 4
 declare void @use(ptr)
 
 define void @f(ptr %p1, ptr %p2, i64 %i, ptr addrspace(1) %p1as1) {
@@ -180,13 +209,43 @@ loop.end:
   %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
   ret i64 %retval
 }
+
+define i64 @f3() {
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  call void @llvm.pseudoprobe(i64 5116412291814990879, i64 1, i32 0, i64 -1)
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+declare void @llvm.pseudoprobe(i64, i64, i32, i64)
 )IR");
   auto *GV1 = M->getNamedValue("f1");
   auto *GV2 = M->getNamedValue("f2");
-  ASSERT_TRUE(GV1 && GV2);
+  auto *GV3 = M->getNamedValue("f3");
+  ASSERT_TRUE(GV1 && GV2 && GV3);
   auto *F1 = dyn_cast<Function>(GV1);
   auto *F2 = dyn_cast<Function>(GV2);
-  ASSERT_TRUE(F1 && F2);
+  auto *F3 = dyn_cast<Function>(GV3);
+  ASSERT_TRUE(F1 && F2 && F3);
 
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
@@ -213,4 +272,28 @@ loop.end:
   ASSERT_TRUE(IsReadOnlyLoop(F2, NonDerefLoads));
   ASSERT_TRUE((NonDerefLoads.size() == 1) &&
               (NonDerefLoads[0]->getName() == "ld1"));
+
+  // A pseudo probe is modelled as accessing inaccessible memory, but it does
+  // not make the loop non-read-only.
+  NonDerefLoads.clear();
+  ASSERT_TRUE(IsReadOnlyLoop(F3, NonDerefLoads));
+  ASSERT_TRUE(NonDerefLoads.empty());
+}
+
+// Constant indices narrower than the index type are sign-extended.
+TEST(LoadsTest, DecomposeLinearExpressionNarrowConstantIndex) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define ptr @f(ptr %p) {
+  %g = getelementptr i32, ptr %p, i32 -1
+  ret ptr %g
+}
+)IR");
+  auto *F = cast<Function>(M->getNamedValue("f"));
+  auto *GEP = cast<GetElementPtrInst>(&F->front().front());
+  LinearExpression Expr = decomposeLinearExpression(M->getDataLayout(), GEP);
+  EXPECT_EQ(Expr.BasePtr, F->getArg(0));
+  EXPECT_EQ(Expr.Index, nullptr);
+  EXPECT_EQ(Expr.Offset.getBitWidth(), 64u);
+  EXPECT_EQ(Expr.Offset.getSExtValue(), -4);
 }

@@ -34,19 +34,21 @@ using namespace llvm;
 #define PASS_NAME "RISC-V CodeGenPrepare"
 
 namespace {
-class RISCVCodeGenPrepare : public InstVisitor<RISCVCodeGenPrepare, bool> {
+class RISCVCodeGenPrepareImpl
+    : public InstVisitor<RISCVCodeGenPrepareImpl, bool> {
   Function &F;
   const DataLayout *DL;
   const DominatorTree *DT;
   const RISCVSubtarget *ST;
 
 public:
-  RISCVCodeGenPrepare(Function &F, const DominatorTree *DT,
-                      const RISCVSubtarget *ST)
+  RISCVCodeGenPrepareImpl(Function &F, const DominatorTree *DT,
+                          const RISCVSubtarget *ST)
       : F(F), DL(&F.getDataLayout()), DT(DT), ST(ST) {}
   bool run();
   bool visitInstruction(Instruction &I) { return false; }
   bool visitAnd(BinaryOperator &BO);
+  bool visitMul(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
   bool expandMulReduction(IntrinsicInst &I);
@@ -56,11 +58,11 @@ public:
 } // namespace
 
 namespace {
-class RISCVCodeGenPrepareLegacyPass : public FunctionPass {
+class RISCVCodeGenPrepareLegacy : public FunctionPass {
 public:
   static char ID;
 
-  RISCVCodeGenPrepareLegacyPass() : FunctionPass(ID) {}
+  RISCVCodeGenPrepareLegacy() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override { return PASS_NAME; }
@@ -76,7 +78,7 @@ public:
 // Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
 // but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill
 // the upper 32 bits with ones.
-bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
+bool RISCVCodeGenPrepareImpl::visitAnd(BinaryOperator &BO) {
   if (!ST->is64Bit())
     return false;
 
@@ -114,6 +116,79 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   return true;
 }
 
+// Look for (mul (zext X), (splat Y)) where zext is doubling the
+// element size and Y is known to be zero extended. Replace with
+// (mul (zext X), (zext (splat (trunc Y)))) to encourage the use of
+// widening multiply. Only do this if the splat isn't already in the same
+// basic block as the mul. We put the zext with the mul and the new
+// splat and trunc in the basic block with the original splat.
+// We only need to do this when sinkSplatOperands() is false, otherwise
+// CodeGenPrepare will just sink the splat and SelectionDAG can sort it out.
+// TODO: Extend to sign extend or mismatched extends.
+bool RISCVCodeGenPrepareImpl::visitMul(BinaryOperator &BO) {
+  using namespace PatternMatch;
+
+  if (!ST->hasVInstructions() || ST->sinkSplatOperands())
+    return false;
+
+  Value *LHS = BO.getOperand(0);
+  Value *RHS = BO.getOperand(1);
+
+  // Canonicalize zext to the LHS.
+  if (isa<ZExtInst>(RHS))
+    std::swap(LHS, RHS);
+
+  // LHS should be a zext.
+  Value *ZExtSrc;
+  if (!match(LHS, m_ZExt(m_Value(ZExtSrc))))
+    return false;
+
+  // RHS should be a splat shuffle.
+  Value *SplatVal;
+  Instruction *RHSI;
+  if (!match(RHS, m_Instruction(RHSI, m_OneUse(m_Splat(m_Value(SplatVal))))))
+    return false;
+
+  // zext should be in the same basic block as the mul.
+  if (cast<Instruction>(LHS)->getParent() != BO.getParent())
+    return false;
+
+  // The extend should be doubling.
+  unsigned Size = BO.getType()->getScalarSizeInBits();
+  unsigned SrcSize = ZExtSrc->getType()->getScalarSizeInBits();
+  if (Size != SrcSize * 2)
+    return false;
+
+  // Types should be legal.
+  if (Size != 64 && Size != 32 && Size != 16)
+    return false;
+  if (Size == 64 && !ST->hasVInstructionsI64())
+    return false;
+
+  // Splat should be in another basic block.
+  if (RHSI->getParent() == BO.getParent())
+    return false;
+
+  // Make sure we can freely truncate the value.
+  KnownBits Known = computeKnownBits(SplatVal, *DL);
+  if (Known.countMaxActiveBits() > SrcSize)
+    return false;
+
+  VectorType *VecTy = cast<VectorType>(ZExtSrc->getType());
+  Type *ScalarTy = VecTy->getElementType();
+  IRBuilder<> Builder(RHSI);
+  Value *Splat = Builder.CreateVectorSplat(
+      VecTy->getElementCount(), Builder.CreateTrunc(SplatVal, ScalarTy));
+
+  Builder.SetInsertPoint(&BO);
+  Value *NewZExt = Builder.CreateZExt(Splat, BO.getType());
+
+  RHSI->replaceAllUsesWith(NewZExt);
+  RHSI->eraseFromParent();
+
+  return true;
+}
+
 // With EVL tail folding, an AnyOf reduction will generate an i1 vp.merge like
 // follows:
 //
@@ -145,19 +220,19 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 //
 // The trunc will normally be sunk outside of the loop, but even if there are
 // users inside the loop it is still profitable.
-bool RISCVCodeGenPrepare::widenVPMerge(Instruction *Root) {
+bool RISCVCodeGenPrepareImpl::widenVPMerge(Instruction *Root) {
   if (!Root->getType()->getScalarType()->isIntegerTy(1))
     return false;
 
-  Value *Mask, *True, *PhiV, *EVL;
+  Value *Mask, *True, *EVL;
+  PHINode *Phi;
   using namespace PatternMatch;
   auto m_VPMerge = m_Intrinsic<Intrinsic::vp_merge>(
-      m_Value(Mask), m_Value(True), m_Value(PhiV), m_Value(EVL));
+      m_Value(Mask), m_Value(True), m_Phi(Phi), m_Value(EVL));
   if (!match(Root, m_CombineOr(m_VPMerge, m_Freeze(m_VPMerge))))
     return false;
 
-  auto *Phi = dyn_cast<PHINode>(PhiV);
-  if (!Phi || !Phi->hasOneUse() || Phi->getNumIncomingValues() != 2 ||
+  if (!Phi->hasOneUse() || Phi->getNumIncomingValues() != 2 ||
       !match(Phi->getIncomingValue(0), m_Zero()) ||
       Phi->getIncomingValue(1) != Root)
     return false;
@@ -188,7 +263,7 @@ bool RISCVCodeGenPrepare::widenVPMerge(Instruction *Root) {
   return true;
 }
 
-bool RISCVCodeGenPrepare::visitFreezeInst(FreezeInst &I) {
+bool RISCVCodeGenPrepareImpl::visitFreezeInst(FreezeInst &I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I.getOperand(0)))
     if (II->getIntrinsicID() == Intrinsic::vp_merge)
       return widenVPMerge(&I);
@@ -226,7 +301,7 @@ bool RISCVCodeGenPrepare::visitFreezeInst(FreezeInst &I) {
 //
 // Which eliminates the scalar -> vector -> scalar crossing during instruction
 // selection.
-bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
+bool RISCVCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandVPStrideLoad(I))
     return true;
 
@@ -264,10 +339,32 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   return true;
 }
 
-// Partially expand a vector_reduce_mul wider than M1 to reduce the
-// number of vsetvlis required when VLEN is exactly known, and
-// reducing register pressure in all cases.
-bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
+// Extract pieces of size PieceEC from Vec, then build a binary tree of
+// element-wise multiplies reducing to a single piece.
+static Value *buildMulTree(IRBuilder<> &Builder, ElementCount PieceEC,
+                           Value *Vec) {
+  auto *VecTy = cast<VectorType>(Vec->getType());
+  auto *PieceTy = VectorType::get(VecTy->getElementType(), PieceEC);
+  unsigned PieceElts = PieceEC.getKnownMinValue();
+  unsigned NumPieces = VecTy->getElementCount().getKnownMinValue() / PieceElts;
+  assert(isPowerOf2_32(NumPieces));
+
+  SmallVector<Value *, 8> Pieces(NumPieces);
+  for (unsigned i = 0; i < NumPieces; i++)
+    Pieces[i] = Builder.CreateExtractVector(PieceTy, Vec, i * PieceElts);
+
+  while (Pieces.size() > 1) {
+    for (unsigned i = 0; i < Pieces.size() / 2; i++)
+      Pieces[i] =
+          Builder.CreateMul(Pieces[i * 2], Pieces[i * 2 + 1], "bin.rdx");
+    Pieces.truncate(Pieces.size() / 2);
+  }
+  return Pieces[0];
+}
+
+// Partially expand a vector_reduce_mul wider than M1 to reduce
+// register pressure and the number of vsetvlis required.
+bool RISCVCodeGenPrepareImpl::expandMulReduction(IntrinsicInst &II) {
   if (II.getIntrinsicID() != Intrinsic::vector_reduce_mul)
     return false;
 
@@ -275,12 +372,44 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
     return false;
 
   Value *TmpVec = II.getArgOperand(0);
-  auto *VecTy = dyn_cast<FixedVectorType>(TmpVec->getType());
-  if (!VecTy)
-    return false;
-
+  auto *VecTy = cast<VectorType>(TmpVec->getType());
   unsigned EltSize = VecTy->getScalarSizeInBits();
-  unsigned VF = VecTy->getNumElements();
+
+  if (auto *ScalTy = dyn_cast<ScalableVectorType>(VecTy)) {
+    unsigned MinElts = ScalTy->getMinNumElements();
+
+    if (auto VLen = ST->getRealVLen()) {
+      // If VLEN is exactly known, convert to a fixed vector reduction and
+      // recurse to let the fixed path handle it (shuffle reduction instead
+      // of a scalar loop).
+      unsigned VScale = *VLen / RISCV::RVVBitsPerBlock;
+      auto *FixedTy =
+          FixedVectorType::get(VecTy->getElementType(), MinElts * VScale);
+      IRBuilder<> Builder(&II);
+      Value *Fixed = Builder.CreateExtractVector(FixedTy, TmpVec, (uint64_t)0);
+      auto *FixedRdx = cast<IntrinsicInst>(Builder.CreateIntrinsic(
+          Intrinsic::vector_reduce_mul, {FixedTy}, {Fixed}));
+      II.replaceAllUsesWith(FixedRdx);
+      II.eraseFromParent();
+      expandMulReduction(*FixedRdx);
+      return true;
+    }
+
+    unsigned M1MinElts = RISCV::RVVBitsPerBlock / EltSize;
+    if (MinElts <= M1MinElts || !isPowerOf2_32(MinElts / M1MinElts))
+      return false;
+
+    IRBuilder<> Builder(&II);
+    auto M1EC = ElementCount::getScalable(M1MinElts);
+    Value *Reduced = buildMulTree(Builder, M1EC, TmpVec);
+    Value *Rdx = Builder.CreateIntrinsic(Intrinsic::vector_reduce_mul,
+                                         {Reduced->getType()}, {Reduced});
+    II.replaceAllUsesWith(Rdx);
+    II.eraseFromParent();
+    return true;
+  }
+
+  unsigned VF = cast<FixedVectorType>(VecTy)->getNumElements();
   unsigned MinVLen = ST->getRealMinVLen();
   unsigned M1VF = MinVLen / EltSize;
 
@@ -288,25 +417,35 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
     return false;
 
   IRBuilder<> Builder(&II);
+  auto M1EC = ElementCount::getFixed(M1VF);
+  auto *M1Ty = VectorType::get(VecTy->getElementType(), M1EC);
 
-  // Shuffle-reduce at the original vector width.  This just duplicates the
-  // default lowering down to m1.
-  SmallVector<int, 32> ShuffleMask(VF);
-  for (unsigned LiveElts = VF; LiveElts > M1VF; LiveElts /= 2) {
-    unsigned Half = LiveElts / 2;
-    std::iota(ShuffleMask.begin(), ShuffleMask.begin() + Half, Half);
-    std::fill(ShuffleMask.begin() + Half, ShuffleMask.end(), -1);
-    Value *Shuf = Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
-    TmpVec = Builder.CreateMul(TmpVec, Shuf, "bin.rdx");
+  // When VLEN is exactly known, extract m1 pieces and build a mul tree.
+  // This greatly reduces register pressure during the reduction, and
+  // avoids all but one vsetvli (the one from original LMUL to m1).
+  // TODO: Generalize to handle the splitting case.
+  if (MinVLen == ST->getRealMaxVLen() && VF <= 8 * M1VF) {
+    TmpVec = buildMulTree(Builder, M1EC, TmpVec);
+  } else {
+    // For non-exact VLEN, shuffle-reduce at the original vector width down to
+    // m1, then extract.  This prioritizes reducing the number of vsetvli
+    // over maximal reduction of LMUL for the intermediate states.
+    SmallVector<int, 32> ShuffleMask(VF);
+    for (unsigned LiveElts = VF; LiveElts > M1VF; LiveElts /= 2) {
+      unsigned Half = LiveElts / 2;
+      std::iota(ShuffleMask.begin(), ShuffleMask.begin() + Half, Half);
+      std::fill(ShuffleMask.begin() + Half, ShuffleMask.end(), -1);
+      Value *Shuf =
+          Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
+      TmpVec = Builder.CreateMul(TmpVec, Shuf, "bin.rdx");
+    }
+    // Extract the M1-sized subvector and emit the final reduction intrinsic.
+    // This is the reason we're here - to force a vsetvli toggle once at m1.
+    TmpVec = Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)0, "rdx.sub");
   }
 
-  // Extract the M1-sized subvector and emit the final reduction intrinsic.
-  // This is the reason we're here - to force a vsetvli toggle once at m1.
-  auto *M1Ty = FixedVectorType::get(VecTy->getElementType(), M1VF);
-  Value *Sub =
-      Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)0, "rdx.sub");
   Value *Rdx =
-      Builder.CreateIntrinsic(Intrinsic::vector_reduce_mul, {M1Ty}, {Sub});
+      Builder.CreateIntrinsic(Intrinsic::vector_reduce_mul, {M1Ty}, {TmpVec});
   II.replaceAllUsesWith(Rdx);
   II.eraseFromParent();
   return true;
@@ -315,7 +454,7 @@ bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
 // Always expand zero strided loads so we match more .vx splat patterns, even if
 // we have +optimized-zero-stride-loads. RISCVDAGToDAGISel::Select will convert
 // it back to a strided load if it's optimized.
-bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
+bool RISCVCodeGenPrepareImpl::expandVPStrideLoad(IntrinsicInst &II) {
   Value *BasePtr, *VL;
 
   using namespace PatternMatch;
@@ -346,7 +485,7 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
   return true;
 }
 
-bool RISCVCodeGenPrepare::run() {
+bool RISCVCodeGenPrepareImpl::run() {
   bool MadeChange = false;
   for (auto &BB : F)
     for (Instruction &I : llvm::make_early_inc_range(BB))
@@ -355,7 +494,7 @@ bool RISCVCodeGenPrepare::run() {
   return MadeChange;
 }
 
-bool RISCVCodeGenPrepareLegacyPass::runOnFunction(Function &F) {
+bool RISCVCodeGenPrepareLegacy::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
@@ -364,27 +503,27 @@ bool RISCVCodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   auto ST = &TM.getSubtarget<RISCVSubtarget>(F);
   auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
-  RISCVCodeGenPrepare RVCGP(F, DT, ST);
+  RISCVCodeGenPrepareImpl RVCGP(F, DT, ST);
   return RVCGP.run();
 }
 
-INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME,
-                      false, false)
+INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME, false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME, false,
+INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME, false,
                     false)
 
-char RISCVCodeGenPrepareLegacyPass::ID = 0;
+char RISCVCodeGenPrepareLegacy::ID = 0;
 
 FunctionPass *llvm::createRISCVCodeGenPrepareLegacyPass() {
-  return new RISCVCodeGenPrepareLegacyPass();
+  return new RISCVCodeGenPrepareLegacy();
 }
 
 PreservedAnalyses RISCVCodeGenPreparePass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
   DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
   auto ST = &TM->getSubtarget<RISCVSubtarget>(F);
-  bool Changed = RISCVCodeGenPrepare(F, DT, ST).run();
+  bool Changed = RISCVCodeGenPrepareImpl(F, DT, ST).run();
   if (!Changed)
     return PreservedAnalyses::all();
 

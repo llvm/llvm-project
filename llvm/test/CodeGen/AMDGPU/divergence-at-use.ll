@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00 - < %s | FileCheck %s
 
 @local = addrspace(3) global i32 poison
 

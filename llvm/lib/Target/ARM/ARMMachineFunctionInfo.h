@@ -15,6 +15,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -107,6 +109,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex = 0;
 
+  /// ForwardedMustTailRegParms - A list of virtual and physical registers that
+  /// must be forwarded to every musttail call.
+  SmallVector<ForwardedRegister, 4> ForwardedMustTailRegParms;
+
   /// HasITBlocks - True if IT blocks have been inserted.
   bool HasITBlocks = false;
 
@@ -154,6 +160,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// True if BTI instructions should be placed at potential indirect jump
   /// destinations.
   bool BranchTargetEnforcement = false;
+
+  /// The result of EstimateFunctionSizeInBytes, if that was run during frame
+  /// lowering. Used to check later that the estimate was conservative.
+  std::optional<unsigned> EstimatedFunctionSizeInBytes;
 
 public:
   ARMFunctionInfo() = default;
@@ -225,6 +235,13 @@ public:
   unsigned getArgumentStackToRestore() const { return ArgumentStackToRestore; }
   void setArgumentStackToRestore(unsigned v) { ArgumentStackToRestore = v; }
 
+  std::optional<unsigned> getEstimatedFunctionSizeInBytes() const {
+    return EstimatedFunctionSizeInBytes;
+  }
+  void setEstimatedFunctionSizeInBytes(unsigned v) {
+    EstimatedFunctionSizeInBytes = v;
+  }
+
   void initPICLabelUId(unsigned UId) {
     PICLabelUId = UId;
   }
@@ -240,6 +257,10 @@ public:
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
 
+  SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
+    return ForwardedMustTailRegParms;
+  }
+
   bool hasITBlocks() const { return HasITBlocks; }
   void setHasITBlocks(bool h) { HasITBlocks = h; }
 
@@ -252,7 +273,7 @@ public:
   }
 
   unsigned getOriginalCPIdx(unsigned CloneIdx) const {
-    DenseMap<unsigned, unsigned>::const_iterator I = CPEClones.find(CloneIdx);
+    auto I = CPEClones.find(CloneIdx);
     if (I != CPEClones.end())
       return I->second;
     else

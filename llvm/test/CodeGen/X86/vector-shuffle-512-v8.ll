@@ -1485,6 +1485,16 @@ define <8 x double> @shuffle_v8f64_0zzzzzzz(<8 x double> %a) {
   ret <8 x double> %shuffle
 }
 
+; Float-domain rotate matching __builtin_ia32_alignq512(A, B, 2) lowering.
+define <8 x double> @shuffle_v8f64_23456789(<8 x double> %a, <8 x double> %b) {
+; ALL-LABEL: shuffle_v8f64_23456789:
+; ALL:       # %bb.0:
+; ALL-NEXT:    valignq {{.*#+}} zmm0 = zmm1[2,3,4,5,6,7],zmm0[0,1]
+; ALL-NEXT:    ret{{[l|q]}}
+  %shuffle = shufflevector <8 x double> %b, <8 x double> %a, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9>
+  ret <8 x double> %shuffle
+}
+
 define <8 x i64> @shuffle_v8i64_12345678(<8 x i64> %a, <8 x i64> %b) {
 ; ALL-LABEL: shuffle_v8i64_12345678:
 ; ALL:       # %bb.0:

@@ -21,7 +21,6 @@ end program
 ! CHECK-NEXT: 'fir.global' Pipeline
 ! CHECK-NEXT:   CharacterConversion
 ! CHECK-NEXT: 'func.func' Pipeline
-! CHECK-NEXT:   ArrayValueCopy
 ! CHECK-NEXT:   CharacterConversion
 ! CHECK-NEXT: 'omp.declare_mapper' Pipeline
 ! CHECK-NEXT:   CharacterConversion
@@ -39,6 +38,7 @@ end program
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! CHECK-NEXT: 'func.func' Pipeline
+! CHECK-NEXT:   CudaHeapAllocPromotion
 ! CHECK-NEXT:   MemoryAllocationOpt
 
 ! CHECK-NEXT: Inliner
@@ -47,7 +47,12 @@ end program
 ! CHECK-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
+! CHECK-NEXT: 'func.func' Pipeline
+! CHECK-NEXT:   LoopInvariantCodeMotion
+
 ! CHECK-NEXT: PolymorphicOpConversion
+! CHECK-NEXT: 'func.func' Pipeline
+! CHECK-NEXT: SelectOpsConversion
 ! CHECK-NEXT: AssumedRankOpConversion
 ! CHECK-NEXT: 'func.func' Pipeline
 ! CHECK-NEXT:   OptimizeArrayRepacking

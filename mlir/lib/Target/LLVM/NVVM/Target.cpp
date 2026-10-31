@@ -15,7 +15,7 @@
 
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
@@ -587,7 +587,8 @@ NVPTXSerializer::compileToBinaryNVPTX(StringRef ptxCode) {
   std::string optLevel = std::to_string(this->optLevel);
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> cmdOpts =
       targetOptions.tokenizeCmdOptions();
-  cmdOpts.second.append(
+  cmdOpts.second.insert(
+      cmdOpts.second.begin(),
       {"-arch", getTarget().getChip().data(), "--opt-level", optLevel.c_str()});
 
   // Set optional command line arguments

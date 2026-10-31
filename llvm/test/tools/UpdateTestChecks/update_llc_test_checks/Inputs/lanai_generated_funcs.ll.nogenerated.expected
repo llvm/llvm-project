@@ -18,7 +18,7 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    st %r0, -16[%fp]
 ; CHECK-NEXT:    beq .LBB0_1
 ; CHECK-NEXT:    mov 0x1, %r3
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:  ! %bb.2:
 ; CHECK-NEXT:    bt .LBB0_3
 ; CHECK-NEXT:    st %r3, -24[%fp]
 ; CHECK-NEXT:  .LBB0_1:
@@ -34,7 +34,7 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    sub.f %r3, 0x0, %r0
 ; CHECK-NEXT:    beq .LBB0_4
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:  .LBB0_5:
+; CHECK-NEXT:  ! %bb.5:
 ; CHECK-NEXT:    mov 0x1, %r3
 ; CHECK-NEXT:    bt .LBB0_6
 ; CHECK-NEXT:    st %r3, -24[%fp]

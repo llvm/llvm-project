@@ -24,30 +24,128 @@
 #define __has_attribute(x) 0
 #endif
 
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(x) 0
+#endif
+
 #define LIBC_INLINE inline
 #define LIBC_INLINE_VAR inline
 #define LIBC_INLINE_ASM __asm__ __volatile__
-#define LIBC_UNUSED __attribute__((unused))
+#define LIBC_UNUSED [[maybe_unused]]
+
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__linux__)
+#define LIBC_VECTOR_PCS __attribute__((aarch64_vector_pcs))
+#else
+#define LIBC_VECTOR_PCS
+#endif
+
+#if __has_attribute(always_inline)
+#define LIBC_ALWAYS_INLINE LIBC_INLINE __attribute__((always_inline))
+#elif defined(LIBC_COMPILER_IS_MSVC) || defined(_MSC_VER)
+#define LIBC_ALWAYS_INLINE __forceinline
+#else
+#define LIBC_ALWAYS_INLINE LIBC_INLINE
+#endif // __has_attribute(always_inline)
+
+#if __has_attribute(noinline)
+#define LIBC_NOINLINE __attribute__((noinline))
+#elif defined(LIBC_COMPILER_IS_MSVC) || defined(_MSC_VER)
+#define LIBC_NOINLINE __declspec(noinline)
+#else
+#define LIBC_NOINLINE
+#endif // __has_attribute(noinline)
+
+#if __has_attribute(cold)
+#define LIBC_COLD __attribute__((cold))
+#else
+#define LIBC_COLD
+#endif // __has_attribute(cold)
+
+#if __has_attribute(flatten)
+#define LIBC_FLATTEN __attribute__((flatten))
+#else
+#define LIBC_FLATTEN
+#endif // __has_attribute(flatten)
+
+#if __has_attribute(may_alias)
+#define LIBC_MAY_ALIAS __attribute__((may_alias))
+#else
+#define LIBC_MAY_ALIAS
+#endif // __has_attribute(may_alias)
 
 #ifndef LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+#if (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||       \
+    (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 900)
+#define LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED 1
+#else
 #define LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED                                 \
   (__has_builtin(__builtin_is_constant_evaluated))
+#endif // (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||
+       // (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG
 #endif // LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+
+#ifndef LIBC_HAS_BUILTIN_BIT_CAST
+#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC)
+#define LIBC_HAS_BUILTIN_BIT_CAST 1
+#else
+#define LIBC_HAS_BUILTIN_BIT_CAST 0
+#endif // has_builtin(__builtin_bit_cast)
+#endif // LIBC_HAS_BUILTIN_BIT_CAST
+
+#if LIBC_HAS_BUILTIN_BIT_CAST
+#define LIBC_BIT_CAST_CONSTEXPR constexpr
+#define LIBC_BIT_CAST_CONSTEXPR_VAR constexpr
+#else
+#define LIBC_BIT_CAST_CONSTEXPR
+#define LIBC_BIT_CAST_CONSTEXPR_VAR const
+#endif // LIBC_HAS_BUILTIN_BIT_CAST
+
+#ifndef LIBC_HAS_CONSTANT_EVALUATION
+#define LIBC_HAS_CONSTANT_EVALUATION                                           \
+  (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED && LIBC_HAS_BUILTIN_BIT_CAST)
+#endif // LIBC_HAS_CONSTANT_EVALUATION
+
+#if LIBC_HAS_CONSTANT_EVALUATION
+#define LIBC_CONSTEXPR_DEFAULT constexpr
+#define LIBC_CONSTEXPR_VAR_DEFAULT constexpr
+#else
+#define LIBC_CONSTEXPR_DEFAULT
+#define LIBC_CONSTEXPR_VAR_DEFAULT const
+#endif // LIBC_HAS_CONSTANT_EVALUATION
 
 // TODO: Remove the macro once Clang/LLVM bump their minimum compilers' version.
 // The reason for indirection is GCC is known to fail with constexpr qualified
-// functions that doesn't produce constant expression. This avoids it by using
-// LIBC_ENABLE_CONSTEXPR as a flag to control whether the function should be
-// constexpr qualified or not.
-#if LIBC_ENABLE_CONSTEXPR &&                                                   \
-    (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED ||                                 \
-     (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||      \
-     (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 1100))
-#define LIBC_HAS_CONSTANT_EVALUATION
+// functions that doesn't produce constant expression.
+// Also, there are some circular dependency in the generic functions without
+// __builtin_func for the following functions:
+//   fputil::fma
+//   fputil::sqrt
+#if LIBC_ENABLE_CONSTEXPR && LIBC_HAS_CONSTANT_EVALUATION
+#define LIBC_USE_CONSTEXPR
 #define LIBC_CONSTEXPR constexpr
+#define LIBC_CONSTEXPR_VAR constexpr
 #else
 #define LIBC_CONSTEXPR
+#define LIBC_CONSTEXPR_VAR const
+#endif // LIBC_USE_CONSTEXPR
+
+#ifndef LIBC_HAS_BUILTIN_IS_ASSIGNABLE
+#if (__has_builtin(__is_assignable) ||                                         \
+     (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 800)))
+#define LIBC_HAS_BUILTIN_IS_ASSIGNABLE 1
+#else
+#define LIBC_HAS_BUILTIN_IS_ASSIGNABLE 0
 #endif
+#endif // LIBC_HAS_BUILTIN_IS_ASSIGNABLE
+
+#ifndef LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE
+#if (__has_builtin(__is_constructible) ||                                      \
+     (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 800)))
+#define LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE 1
+#else
+#define LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE 0
+#endif
+#endif // LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE
 
 // Uses the platform specific specialization
 #define LIBC_THREAD_MODE_PLATFORM 0
@@ -92,6 +190,18 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_PREFERED_TYPE(TYPE) [[clang::preferred_type(TYPE)]]
 #else
 #define LIBC_PREFERED_TYPE(TYPE)
+#endif
+
+#if __has_cpp_attribute(no_unique_address)
+#define LIBC_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#define LIBC_NO_UNIQUE_ADDRESS
+#endif
+
+#if __has_attribute(trivial_abi)
+#define LIBC_TRIVIAL_ABI [[clang::trivial_abi]]
+#else
+#define LIBC_TRIVIAL_ABI
 #endif
 
 #if __has_attribute(ext_vector_type) &&                                        \

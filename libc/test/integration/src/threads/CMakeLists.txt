@@ -1,4 +1,4 @@
-add_libc_integration_test_suite(libc-threads-integration-tests)
+add_libc_testsuite(libc-threads-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   mtx_test
@@ -8,10 +8,10 @@ add_integration_test(
     mtx_test.cpp
   DEPENDS
     libc.include.threads
-    libc.src.errno.errno
     libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
+    libc.src.threads.mtx_trylock
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
@@ -43,7 +43,6 @@ add_integration_test(
     thrd_test.cpp
   DEPENDS
     libc.include.threads
-    libc.src.errno.errno
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
 )
@@ -59,6 +58,7 @@ add_integration_test(
     libc.src.threads.thrd_create
     libc.src.threads.thrd_exit
     libc.src.threads.thrd_join
+    libc.src.stdlib.__cxa_thread_atexit_impl
 )
 
 add_integration_test(
@@ -104,11 +104,14 @@ add_integration_test(
     cnd_test.cpp
   DEPENDS
     libc.include.threads
+    libc.include.time
+    libc.src.__support.CPP.atomic
     libc.src.threads.cnd_init
     libc.src.threads.cnd_broadcast
     libc.src.threads.cnd_signal
     libc.src.threads.cnd_destroy
     libc.src.threads.cnd_wait
+    libc.src.threads.cnd_timedwait
     libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
@@ -116,4 +119,29 @@ add_integration_test(
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
     libc.src.threads.linux.threads_utils
+    libc.src.time.timespec_get
+)
+
+add_integration_test(
+  thrd_sleep_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    thrd_sleep_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_timespec
+    libc.src.threads.thrd_sleep
+)
+
+add_integration_test(
+  thrd_yield_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    thrd_yield_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+    libc.src.threads.thrd_yield
 )

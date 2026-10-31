@@ -276,20 +276,21 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   // Both updateSSA() and LiveRangeUpdater benefit from ordered blocks, but
   // neither require it. Skip the sorting overhead for small updates.
   if (WorkList.size() > 4)
-    array_pod_sort(WorkList.begin(), WorkList.end());
+    llvm::sort(WorkList, std::less<>());
 
   // If a unique reaching def was found, blit in the live ranges immediately.
   if (UniqueVNI) {
     assert(TheVNI != nullptr && TheVNI != &UndefVNI);
     LiveRangeUpdater Updater(&LR);
     for (unsigned BN : WorkList) {
+      MachineBasicBlock *MBB = MF->getBlockNumbered(BN);
       SlotIndex Start, End;
-      std::tie(Start, End) = Indexes->getMBBRange(BN);
+      std::tie(Start, End) = Indexes->getMBBRange(MBB);
       // Trim the live range in UseMBB.
       if (BN == UseMBBNum && Use.isValid())
         End = Use;
       else
-        Map[MF->getBlockNumbered(BN)] = LiveOutPair(TheVNI, nullptr);
+        Map[MBB] = LiveOutPair(TheVNI, nullptr);
       Updater.add(Start, End, TheVNI);
     }
     return true;

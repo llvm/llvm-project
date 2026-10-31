@@ -2,7 +2,7 @@ if(NOT LIBC_COMPILER_HAS_FIXED_POINT)
   return()
 endif()
 
-add_custom_target(libc-stdfix-tests)
+add_libc_testsuite(libc-stdfix-tests)
 
 foreach(suffix IN ITEMS hr r lr hk k lk)
   add_libc_test(
@@ -13,8 +13,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk)
       AbsTest.h
     SRCS
       abs${suffix}_test.cpp
-    COMPILE_OPTIONS
-      ${libc_opt_high_flag}
     DEPENDS
       libc.src.stdfix.abs${suffix}
       libc.src.__support.fixed_point.fx_bits
@@ -30,8 +28,6 @@ foreach(suffix IN ITEMS uhr ur ulr uhk uk)
       SqrtTest.h
     SRCS
       sqrt${suffix}_test.cpp
-    COMPILE_OPTIONS
-      ${libc_opt_high_flag}
     DEPENDS
       libc.src.stdfix.sqrt${suffix}
       libc.src.__support.CPP.bit
@@ -51,8 +47,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       RoundTest.h
     SRCS
       round${suffix}_test.cpp
-    COMPILE_OPTIONS
-      ${libc_opt_high_flag}
     DEPENDS
       libc.src.stdfix.round${suffix}
       libc.src.__support.fixed_point.fx_bits
@@ -66,8 +60,6 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
       FxBitsTest.h
     SRCS
       ${suffix}bits_test.cpp
-    COMPILE_OPTIONS
-      ${libc_opt_high_flag}
     DEPENDS
       libc.src.stdfix.${suffix}bits
       libc.src.__support.CPP.bit
@@ -121,7 +113,7 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
     SUITE
       libc-stdfix-tests
     HDRS
-      IdivTest.h
+      IdivFxTest.h
     SRCS
       idiv${suffix}_test.cpp
     DEPENDS
@@ -131,17 +123,34 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   )
 endforeach()
 
-foreach(suffix IN ITEMS r)
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   add_libc_test(
     ${suffix}divi_test
     SUITE
       libc-stdfix-tests
     HDRS
-      DivITest.h
+      FxDiviTest.h
     SRCS
       ${suffix}divi_test.cpp
     DEPENDS
       libc.src.stdfix.${suffix}divi
+      libc.src.__support.fixed_point.fx_bits
+      libc.hdr.signal_macros
+  )
+endforeach()
+
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
+  add_libc_test(
+    divi${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      DiviFxTest.h
+    SRCS
+      divi${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.divi${suffix}
+      libc.src.__support.fixed_point.fx_rep
       libc.src.__support.fixed_point.fx_bits
       libc.hdr.signal_macros
   )
@@ -155,8 +164,6 @@ add_libc_test(
     ISqrtTest.h
   SRCS
     uhksqrtus_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.stdfix.uhksqrtus
     libc.src.__support.CPP.bit
@@ -174,8 +181,6 @@ add_libc_test(
     ISqrtTest.h
   SRCS
     uksqrtui_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.stdfix.uksqrtui
     libc.src.__support.CPP.bit
@@ -193,8 +198,6 @@ add_libc_test(
     ExpTest.h
   SRCS
     exphk_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.stdfix.exphk
     libc.src.math.exp
@@ -211,8 +214,6 @@ add_libc_test(
     ExpTest.h
   SRCS
     expk_test.cpp
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
   DEPENDS
     libc.src.stdfix.expk
     libc.src.math.exp
@@ -241,4 +242,3 @@ add_libc_test(
     libc.include.stdfix
     ${macros_depends}
 )
-

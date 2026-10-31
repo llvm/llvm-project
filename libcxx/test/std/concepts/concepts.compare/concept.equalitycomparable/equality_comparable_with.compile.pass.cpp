@@ -1136,7 +1136,7 @@ static_assert(
 static_assert(check_equality_comparable_with<move_only_equality_with_int, int>());
 static_assert(check_equality_comparable_with<std::unique_ptr<int>, std::nullptr_t>());
 // TODO: Clang is broken, see https://llvm.org/PR171438
-#if defined(TEST_COMPILER_CLANG) && !defined(TEST_COMPILER_APPLE_CLANG)
+#if defined(TEST_COMPILER_CLANG)
 static_assert(check_equality_comparable_with<nonmovable_equality_with_int, int>());
 #else
 static_assert(!check_equality_comparable_with<nonmovable_equality_with_int, int>());

@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_RAW_OSTREAM_H
 #define LLVM_SUPPORT_RAW_OSTREAM_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -31,7 +32,6 @@ namespace llvm {
 
 class Duration;
 class formatv_object_base;
-class format_object_base;
 class FormattedString;
 class FormattedNumber;
 class FormattedBytes;
@@ -305,7 +305,7 @@ public:
   raw_ostream &write(const char *Ptr, size_t Size);
 
   // Formatted output, see the format() function in Support/Format.h.
-  raw_ostream &operator<<(const format_object_base &Fmt);
+  raw_ostream &operator<<(function_ref<int(char *, size_t)> Snprint);
 
   // Formatted output, see the leftJustify() function in Support/Format.h.
   raw_ostream &operator<<(const FormattedString &);
@@ -332,6 +332,8 @@ public:
   /// @param Bold bold/brighter text, default false
   /// @param BG if true change the background, default: change foreground
   /// @returns itself so it can be used within << invocations
+  ///
+  /// FIXME: If Color == SAVEDCOLOR, Bold == false is currently ignored.
   virtual raw_ostream &changeColor(enum Colors Color, bool Bold = false,
                                    bool BG = false);
 
@@ -497,13 +499,13 @@ protected:
   /// Set the flag indicating that an output error has been encountered.
   void error_detected(std::error_code EC) { this->EC = EC; }
 
-  /// Return the file descriptor.
-  int get_fd() const { return FD; }
-
   // Update the file position by increasing \p Delta.
   void inc_pos(uint64_t Delta) { pos += Delta; }
 
 public:
+  /// Return the file descriptor.
+  int get_fd() const { return FD; }
+
   /// Open the specified file for writing. If an error occurs, information
   /// about the error is put into EC, and the stream should be immediately
   /// destroyed;

@@ -47,6 +47,10 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
 
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
+  AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+
   bool getHasAlu32() const { return HasAlu32; }
   bool getHasJmp32() const { return HasJmp32; }
   bool getHasJmpExt() const { return HasJmpExt; }
@@ -54,9 +58,22 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
+  // Exception handling support.
+  Register getExceptionPointerRegister(ExceptionHandling EH,
+                                       const Constant *) const override {
+    return BPF::R0;
+  }
+  Register getExceptionSelectorRegister(ExceptionHandling EH,
+                                        const Constant *) const override {
+    return BPF::R0;
+  }
+
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
 
   unsigned getJumpTableEncoding() const override;
+
+  /// The entries are addresses of blocks, also in position independent code.
+  bool isJumpTableRelative() const override { return false; }
 
 private:
   // Control Instruction Selection Features
@@ -64,6 +81,7 @@ private:
   bool HasJmp32;
   bool HasJmpExt;
   bool HasMovsx;
+  bool HasLoadAcqStoreRel;
 
   // Allows Misalignment
   bool AllowsMisalignedMemAccess;
@@ -74,11 +92,13 @@ private:
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
@@ -89,9 +109,6 @@ private:
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &DL, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
-
-  // Maximum number of arguments to a call
-  static const size_t MaxArgs;
 
   // Lower a call into CALLSEQ_START - BPFISD:CALL - CALLSEQ_END chain
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
@@ -111,11 +128,6 @@ private:
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
-
-  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
-                          const AttributeList &FuncAttributes) const override {
-    return Op.size() >= 8 ? MVT::i64 : MVT::i32;
-  }
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override {
     return false;

@@ -18,10 +18,12 @@
 #include <sycl/__impl/detail/config.hpp>
 
 #include <cassert>
+#include <cstddef>
+#include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -29,9 +31,9 @@ namespace detail {
 
 // SYCL interface classes are required to contain an `impl` data member
 // which points to the corresponding implementation object. The data
-// member is required to be accessible by the `ImpUtils` class. SYCL
+// member is required to be accessible by the `ImplUtils` class. SYCL
 // interface classes that declare the data member private or protected
-// are required to befriend the `ImpUtils` class.
+// are required to befriend the `ImplUtils` class.
 struct ImplUtils {
   // Helper function to access an implementation object from a SYCL interface
   // object.
@@ -57,6 +59,26 @@ template <typename SyclObject>
 auto getSyclObjImpl(const SyclObject &Obj)
     -> decltype(ImplUtils::getSyclObjImpl(Obj)) {
   return ImplUtils::getSyclObjImpl(Obj);
+}
+
+template <typename SyclObject>
+auto getSyclObjImpls(const std::vector<SyclObject> &Objs) {
+  std::vector<std::remove_const_t<
+      std::remove_reference_t<decltype(getSyclObjImpl(Objs[0]))>>>
+      Result;
+  Result.reserve(Objs.size());
+  for (const SyclObject &Obj : Objs)
+    Result.push_back(getSyclObjImpl(Obj));
+  return Result;
+}
+
+template <typename SyclObjectImpl>
+auto getSyclObjHandles(const std::vector<SyclObjectImpl> &Impls) {
+  std::vector<decltype(Impls[0]->getHandle())> Result;
+  Result.reserve(Impls.size());
+  for (const SyclObjectImpl &Impl : Impls)
+    Result.push_back(Impl->getHandle());
+  return Result;
 }
 
 template <typename SyclObject, typename Impl>

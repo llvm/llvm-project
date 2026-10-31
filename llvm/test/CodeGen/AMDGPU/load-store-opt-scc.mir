@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -passes=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a -run-pass=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a -passes=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
 
 # The purpose of this test is to make sure we are combining relevant memory
 # operations correctly with/without SCC bit.
@@ -33,7 +33,7 @@
   }
 ...
 
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
 ---
 name: test1
 liveins:
@@ -125,7 +125,7 @@ body: |
     S_ENDPGM 0
 ...
 
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 16, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 16, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
 ---
 name: test4
 liveins:

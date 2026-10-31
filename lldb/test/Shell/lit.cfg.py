@@ -14,22 +14,14 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+sys.path.append(os.path.join(config.lldb_src_root, "test"))
 site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain
 
 # name: The name of this test suite.
 config.name = "lldb-shell"
 
-# testFormat: The test format to use to interpret tests.
-# We prefer the lit internal shell which provides a better user experience on
-# failures and is faster unless the user explicitly disables it with
-# LIT_USE_INTERNAL_SHELL=0 env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
-config.test_format = toolchain.ShTestLldb(not use_lit_shell)
+config.test_format = toolchain.ShTestLldb()
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
@@ -60,7 +52,13 @@ llvm_config.with_system_environment(
 # Enable sanitizer runtime flags.
 if config.llvm_use_sanitizer:
     config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-    config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+    tsan_suppressions = os.path.join(
+        os.path.dirname(config.test_source_root), "tsan-suppressions.txt"
+    )
+    tsan_options = "halt_on_error=1:suppressions=" + tsan_suppressions
+    if config.lldb_test_extra_tsan_options:
+        tsan_options += ":" + config.lldb_test_extra_tsan_options
+    config.environment["TSAN_OPTIONS"] = tsan_options
     config.environment["MallocNanoZone"] = "0"
 
 if config.lldb_platform_url and config.cmake_sysroot and config.enable_remote:
@@ -86,6 +84,10 @@ if re.match(r".*-(windows-msvc)$", config.target_triple):
 if re.match(r".*-(windows-gnu|mingw32)$", config.target_triple):
     config.available_features.add("windows-gnu")
 
+if config.targets_to_build:
+    for arch in config.targets_to_build.split(";"):
+        if arch:
+            config.available_features.add(arch.lower() + "-registered-target")
 
 def calculate_arch_features(arch_string):
     # This will add a feature such as x86, arm, mips, etc for each built
@@ -120,7 +122,7 @@ for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
 # lit complains if the value is set but it is not supported.
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
-    lit_config.maxIndividualTestTime = 600
+    config.maxIndividualTestTime = 600
 else:
     lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 
@@ -150,9 +152,6 @@ if getattr(config, "lldb_enable_mte", False):
 if config.lldb_enable_lua:
     config.available_features.add("lua")
 
-if config.lldb_enable_lzma:
-    config.available_features.add("lzma")
-
 if shutil.which("xz") is not None:
     config.available_features.add("xz")
 
@@ -175,6 +174,15 @@ if config.objc_gnustep_dir:
 
 if config.have_dia_sdk:
     config.available_features.add("diasdk")
+
+if platform.system() == "Windows":
+    config.environment["LLDB_USE_LLDB_SERVER"] = (
+        "1" if getattr(config, "lldb_use_lldb_server", False) else "0"
+    )
+    # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
+    # escape sequences into the output stream, which breaks tests that check
+    # for specific stdout/stderr content.
+    config.environment["LLDB_LAUNCH_FLAG_USE_PIPES"] = "1"
 
 # NetBSD permits setting dbregs either if one is root
 # or if user_set_dbregs is enabled
@@ -212,6 +220,13 @@ if platform.system() == "Darwin":
             config.available_features.add("ld_new-bug")
     except:
         pass
+
+    # Prevent tests from accidentally invoking the real dsymForUUID, which can
+    # make slow network requests. Tests that need a working dsymForUUID mock
+    # should override this.
+    config.environment["LLDB_APPLE_DSYMFORUUID_EXECUTABLE"] = os.path.join(
+        os.path.dirname(config.test_source_root), "Utils", "fake-dsymForUUID.sh"
+    )
 
 # Some shell tests dynamically link with python.dll and need to know the
 # location of the Python libraries. This ensures that we use the same

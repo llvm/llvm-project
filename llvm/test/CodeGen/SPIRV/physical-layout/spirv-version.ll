@@ -7,6 +7,7 @@
 ; RUN: llc -O0 -mtriple=spirv64v1.5-unknown-unknown %s -o - --filetype=obj | spirv-dis | FileCheck %s --check-prefix=CHECK-SPIRV15
 ; RUN: llc -O0 -mtriple=spirv64v1.6-unknown-unknown %s -o - --filetype=obj | spirv-dis | FileCheck %s --check-prefix=CHECK-SPIRV16
 ; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - --filetype=obj | spirv-dis | FileCheck %s --check-prefix=AMDGCNSPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.0-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV10: Version: 1.0
 ; CHECK-SPIRV11: Version: 1.1

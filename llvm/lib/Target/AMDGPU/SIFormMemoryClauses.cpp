@@ -92,10 +92,6 @@ char SIFormMemoryClausesLegacy::ID = 0;
 
 char &llvm::SIFormMemoryClausesID = SIFormMemoryClausesLegacy::ID;
 
-FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
-  return new SIFormMemoryClausesLegacy();
-}
-
 static bool isVMEMClauseInst(const MachineInstr &MI) {
   return SIInstrInfo::isVMEM(MI);
 }
@@ -189,11 +185,12 @@ bool SIFormMemoryClausesImpl::canBundle(const MachineInstr &MI,
 // bundled into a memory clause.
 bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
                                             GCNDownwardRPTracker &RPT) {
-  // NB: skip advanceBeforeNext() call. Since all defs will be marked
-  // early-clobber they will all stay alive at least to the end of the
-  // clause. Therefor we should not decrease pressure even if load
-  // pointer becomes dead and could otherwise be reused for destination.
-  RPT.advanceToNext();
+  // NB: do not retire the uses of MI. Since all defs will be marked
+  // early-clobber they will all stay alive at least to the end of the clause.
+  // Therefore we should not decrease pressure even if load pointer becomes
+  // dead and could otherwise be reused for destination. The tracker is reset
+  // after the clause is formed, so its position does not need to be updated.
+  RPT.addDefs(MI);
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
   unsigned Occupancy = MaxPressure.getOccupancy(
       *ST,
@@ -290,7 +287,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         continue;
 
       if (!RPT.getNext().isValid())
-        RPT.reset(MI);
+        RPT.reset(MI, MBB.end());
       else { // Advance the state to the current MI.
         RPT.advance(MachineBasicBlock::const_iterator(MI));
         RPT.advanceBeforeNext();
@@ -299,7 +296,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
       const GCNRPTracker::LiveRegSet LiveRegsCopy(RPT.getLiveRegs());
       RegUse Defs, Uses;
       if (!processRegUses(MI, Defs, Uses, RPT)) {
-        RPT.reset(MI, &LiveRegsCopy);
+        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
         continue;
       }
 
@@ -323,7 +320,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         ++Length;
       }
       if (Length < 2) {
-        RPT.reset(MI, &LiveRegsCopy);
+        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
         continue;
       }
 
@@ -352,8 +349,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
 
         if (!LI.hasSubRanges()) {
           if (!LI.liveAt(ClauseLiveOutIdx)) {
-            KillOps.emplace_back(R.second.first | RegState::Kill,
-                                 AMDGPU::NoSubRegister);
+            KillOps.emplace_back(R.second.first, AMDGPU::NoSubRegister);
           }
         } else {
           LaneBitmask KilledMask;
@@ -371,7 +367,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
           (void)Success;
           assert(Success && "Failed to find subregister mask to cover lanes");
           for (unsigned SubReg : KilledIndexes) {
-            KillOps.emplace_back(R.second.first | RegState::Kill, SubReg);
+            KillOps.emplace_back(R.second.first, SubReg);
           }
         }
 
@@ -385,13 +381,13 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         // bundle.
         Kill = BuildMI(*MI.getParent(), std::next(LastClauseInst),
                        DebugLoc(), TII->get(AMDGPU::KILL));
-        for (auto &Op : KillOps)
-          Kill.addUse(Reg, std::get<0>(Op), std::get<1>(Op));
+        for (auto [State, SubReg] : KillOps)
+          Kill.addUse(Reg, State, SubReg);
         Ind->insertMachineInstrInMaps(*Kill);
       }
 
       // Restore the state after processing the end of the bundle.
-      RPT.reset(MI, &LiveRegsCopy);
+      RPT.reset(MI, MBB.end(), &LiveRegsCopy);
 
       if (!Kill)
         continue;

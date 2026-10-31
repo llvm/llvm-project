@@ -17,12 +17,15 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
+
+#include <tuple>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOFUNCS
@@ -128,8 +131,9 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
     for (Value input : op->getOperands())
       operands.push_back(
           vector::ExtractOp::create(rewriter, loc, input, positions));
-    Value scalarOp =
-        Op::create(rewriter, loc, vecType.getElementType(), operands);
+    Value scalarOp = Op::create(
+        rewriter, loc, TypeRange{vecType.getElementType()}, operands,
+        op.getProperties(), op->getDiscardableAttrDictionary().getValue());
     result =
         vector::InsertOp::create(rewriter, loc, scalarOp, result, positions);
   }
@@ -150,7 +154,7 @@ static FunctionType getElementalFuncTypeForOp(Operation *op) {
 }
 
 /// Create linkonce_odr function to implement the power function with
-/// the given \p elementType type inside \p module. The \p elementType
+/// the given \p elementType type inside \p symbolTable. The \p elementType
 /// must be IntegerType, an the created function has
 /// 'IntegerType (*)(IntegerType, IntegerType)' function type.
 ///
@@ -159,8 +163,6 @@ static FunctionType getElementalFuncTypeForOp(Operation *op) {
 ///   if (p == T(0))
 ///     return T(1);
 ///   if (p < T(0)) {
-///     if (b == T(0))
-///       return T(1) / T(0); // trigger div-by-zero
 ///     if (b == T(1))
 ///       return T(1);
 ///     if (b == T(-1)) {
@@ -168,7 +170,7 @@ static FunctionType getElementalFuncTypeForOp(Operation *op) {
 ///         return T(-1);
 ///       return T(1);
 ///     }
-///     return T(0);
+///     return T(0); // |b| > 1 or b == 0
 ///   }
 ///   T result = T(1);
 ///   while (true) {
@@ -180,12 +182,14 @@ static FunctionType getElementalFuncTypeForOp(Operation *op) {
 ///     b *= b;
 ///   }
 /// }
-static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
+static func::FuncOp createElementIPowIFunc(Operation *symbolTable,
+                                           Type elementType,
+                                           bool setLLVMLinkage) {
   assert(isa<IntegerType>(elementType) &&
          "non-integer element type for IPowIOp");
 
-  ImplicitLocOpBuilder builder =
-      ImplicitLocOpBuilder::atBlockEnd(module->getLoc(), module->getBody());
+  ImplicitLocOpBuilder builder = ImplicitLocOpBuilder::atBlockEnd(
+      symbolTable->getLoc(), &symbolTable->getRegion(0).front());
 
   std::string funcName("__mlir_math_ipowi");
   llvm::raw_string_ostream nameOS(funcName);
@@ -194,10 +198,12 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   FunctionType funcType = FunctionType::get(
       builder.getContext(), {elementType, elementType}, elementType);
   auto funcOp = func::FuncOp::create(builder, funcName, funcType);
-  LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
-  Attribute linkage =
-      LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  if (setLLVMLinkage) {
+    LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
+    Attribute linkage =
+        LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
+    funcOp->setDiscardableAttr("llvm.linkage", linkage);
+  }
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -231,22 +237,8 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   builder.setInsertionPointToEnd(fallthroughBlock);
   auto pIsNeg = arith::CmpIOp::create(builder, arith::CmpIPredicate::sle, pArg,
                                       zeroValue);
-  //   if (b == T(0))
-  builder.createBlock(funcBody);
-  auto bIsZero =
-      arith::CmpIOp::create(builder, arith::CmpIPredicate::eq, bArg, zeroValue);
-  //     return T(1) / T(0);
-  thenBlock = builder.createBlock(funcBody);
-  func::ReturnOp::create(
-      builder,
-      arith::DivSIOp::create(builder, oneValue, zeroValue).getResult());
-  fallthroughBlock = builder.createBlock(funcBody);
-  // Set up conditional branch for (b == T(0)).
-  builder.setInsertionPointToEnd(bIsZero->getBlock());
-  cf::CondBranchOp::create(builder, bIsZero, thenBlock, fallthroughBlock);
-
   //   if (b == T(1))
-  builder.setInsertionPointToEnd(fallthroughBlock);
+  builder.createBlock(funcBody);
   auto bIsOne =
       arith::CmpIOp::create(builder, arith::CmpIPredicate::eq, bArg, oneValue);
   //    return T(1);
@@ -294,7 +286,7 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   // Set up conditional branch for (p < T(0)).
   builder.setInsertionPointToEnd(pIsNeg->getBlock());
   // Set initial values of 'result', 'b' and 'p' for the loop.
-  cf::CondBranchOp::create(builder, pIsNeg, bIsZero->getBlock(), loopHeader,
+  cf::CondBranchOp::create(builder, pIsNeg, bIsOne->getBlock(), loopHeader,
                            ValueRange{oneValue, bArg, pArg});
 
   // T result = T(1);
@@ -377,7 +369,7 @@ IPowIOpLowering::matchAndRewrite(math::IPowIOp op,
 }
 
 /// Create linkonce_odr function to implement the power function with
-/// the given \p funcType type inside \p module. The \p funcType must be
+/// the given \p funcType type inside \p symbolTable. The \p funcType must be
 /// 'FloatType (*)(FloatType, IntegerType)' function type.
 ///
 /// template <typename T>
@@ -409,22 +401,25 @@ IPowIOpLowering::matchAndRewrite(math::IPowIOp op,
 ///   }
 ///   return result;
 /// }
-static func::FuncOp createElementFPowIFunc(ModuleOp *module,
-                                           FunctionType funcType) {
+static func::FuncOp createElementFPowIFunc(Operation *symbolTable,
+                                           FunctionType funcType,
+                                           bool setLLVMLinkage) {
   auto baseType = cast<FloatType>(funcType.getInput(0));
   auto powType = cast<IntegerType>(funcType.getInput(1));
-  ImplicitLocOpBuilder builder =
-      ImplicitLocOpBuilder::atBlockEnd(module->getLoc(), module->getBody());
+  ImplicitLocOpBuilder builder = ImplicitLocOpBuilder::atBlockEnd(
+      symbolTable->getLoc(), &symbolTable->getRegion(0).front());
 
   std::string funcName("__mlir_math_fpowi");
   llvm::raw_string_ostream nameOS(funcName);
   nameOS << '_' << baseType;
   nameOS << '_' << powType;
   auto funcOp = func::FuncOp::create(builder, funcName, funcType);
-  LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
-  Attribute linkage =
-      LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  if (setLLVMLinkage) {
+    LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
+    Attribute linkage =
+        LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
+    funcOp->setDiscardableAttr("llvm.linkage", linkage);
+  }
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -604,8 +599,8 @@ FPowIOpLowering::matchAndRewrite(math::FPowIOp op,
 }
 
 /// Create function to implement the ctlz function the given \p elementType type
-/// inside \p module. The \p elementType must be IntegerType, an the created
-/// function has 'IntegerType (*)(IntegerType)' function type.
+/// inside \p symbolTable. The \p elementType must be IntegerType, an the
+/// created function has 'IntegerType (*)(IntegerType)' function type.
 ///
 /// template <typename T>
 /// T __mlir_math_ctlz_*(T x) {
@@ -650,7 +645,8 @@ FPowIOpLowering::matchAndRewrite(math::FPowIOp op,
 ///   }
 ///   return %out: i32
 /// }
-static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
+static func::FuncOp createCtlzFunc(Operation *symbolTable, Type elementType,
+                                   bool setLLVMLinkage) {
   if (!isa<IntegerType>(elementType)) {
     LDBG() << "non-integer element type for CtlzFunc; type was: "
            << elementType;
@@ -658,9 +654,9 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   }
   int64_t bitWidth = elementType.getIntOrFloatBitWidth();
 
-  Location loc = module->getLoc();
+  Location loc = symbolTable->getLoc();
   ImplicitLocOpBuilder builder =
-      ImplicitLocOpBuilder::atBlockEnd(loc, module->getBody());
+      ImplicitLocOpBuilder::atBlockEnd(loc, &symbolTable->getRegion(0).front());
 
   std::string funcName("__mlir_math_ctlz");
   llvm::raw_string_ostream nameOS(funcName);
@@ -671,10 +667,12 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
 
   // LinkonceODR ensures that there is only one implementation of this function
   // across all math.ctlz functions that are lowered in this way.
-  LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
-  Attribute linkage =
-      LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  if (setLLVMLinkage) {
+    LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
+    Attribute linkage =
+        LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
+    funcOp->setDiscardableAttr("llvm.linkage", linkage);
+  }
   funcOp.setPrivate();
 
   // set the insertion point to the start of the function
@@ -790,10 +788,10 @@ private:
   // and store them in funcImpls map.
   void generateOpImplementations();
 
-  // A map between pairs of (operation, type) deduced from operations that this
-  // pass will convert, and the corresponding outlined software implementations
-  // of these operations for the given type.
-  DenseMap<std::pair<OperationName, Type>, func::FuncOp> funcImpls;
+  // A map between tuples of (operation, type, symbol table) and the
+  // corresponding outlined software implementations.
+  DenseMap<std::tuple<OperationName, Type, Operation *>, func::FuncOp>
+      funcImpls;
 };
 } // namespace
 
@@ -819,10 +817,12 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
 
           // Generate the software implementation of this operation,
           // if it has not been generated yet.
-          auto key = std::pair(op->getName(), resultType);
+          Operation *symbolTable = SymbolTable::getNearestSymbolTable(op);
+          auto key = std::make_tuple(op->getName(), resultType, symbolTable);
           auto entry = funcImpls.try_emplace(key, func::FuncOp{});
           if (entry.second)
-            entry.first->second = createCtlzFunc(&module, resultType);
+            entry.first->second =
+                createCtlzFunc(symbolTable, resultType, setLLVMLinkage);
         })
         .Case([&](math::IPowIOp op) {
           if (!isConvertible(op))
@@ -832,10 +832,12 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
 
           // Generate the software implementation of this operation,
           // if it has not been generated yet.
-          auto key = std::pair(op->getName(), resultType);
+          Operation *symbolTable = SymbolTable::getNearestSymbolTable(op);
+          auto key = std::make_tuple(op->getName(), resultType, symbolTable);
           auto entry = funcImpls.try_emplace(key, func::FuncOp{});
           if (entry.second)
-            entry.first->second = createElementIPowIFunc(&module, resultType);
+            entry.first->second =
+                createElementIPowIFunc(symbolTable, resultType, setLLVMLinkage);
         })
         .Case([&](math::FPowIOp op) {
           if (!isFPowIConvertible(op))
@@ -847,10 +849,12 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           // if it has not been generated yet.
           // FPowI implementations are mapped via the FunctionType
           // created from the operation's result and operands.
-          auto key = std::pair(op->getName(), funcType);
+          Operation *symbolTable = SymbolTable::getNearestSymbolTable(op);
+          auto key = std::make_tuple(op->getName(), funcType, symbolTable);
           auto entry = funcImpls.try_emplace(key, func::FuncOp{});
           if (entry.second)
-            entry.first->second = createElementFPowIFunc(&module, funcType);
+            entry.first->second =
+                createElementFPowIFunc(symbolTable, funcType, setLLVMLinkage);
         });
   });
 }
@@ -868,7 +872,9 @@ void ConvertMathToFuncsPass::runOnOperation() {
 
   // For the given Type Returns FuncOp stored in funcImpls map.
   auto getFuncOpByType = [&](Operation *op, Type type) -> func::FuncOp {
-    auto it = funcImpls.find(std::pair(op->getName(), type));
+    auto key = std::make_tuple(op->getName(), type,
+                               SymbolTable::getNearestSymbolTable(op));
+    auto it = funcImpls.find(key);
     if (it == funcImpls.end())
       return {};
 

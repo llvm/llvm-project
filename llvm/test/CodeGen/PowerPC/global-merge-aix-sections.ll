@@ -1,9 +1,9 @@
 ; RUN: rm -rf %t
 ; RUN: mkdir -p %t
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr8 < %s | FileCheck %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 --filetype=obj -o %t/global-merge-aix-sections.o < %s
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr8 --filetype=obj -o %t/global-merge-aix-sections.o < %s
 ; RUN: llvm-objdump --syms %t/global-merge-aix-sections.o | FileCheck %s --check-prefix=DATA
 
 %struct.Example = type { i32, i8 }

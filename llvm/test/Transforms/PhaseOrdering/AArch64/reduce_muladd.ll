@@ -8,7 +8,7 @@ target triple = "aarch64"
 
 define dso_local nofpclass(nan inf) float @vmlaq(ptr noundef %0, ptr noundef %1) {
 ; CHECK-LABEL: define dso_local nofpclass(nan inf) float @vmlaq
-; CHECK-SAME: (ptr noundef readonly captures(none) [[TMP0:%.*]], ptr noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef readonly captures(none) [[TMP0:%.*]], ptr nofree noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x float>, ptr [[TMP0]], align 4, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x float>, ptr [[TMP1]], align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <16 x float> [[TMP4]], [[TMP3]]

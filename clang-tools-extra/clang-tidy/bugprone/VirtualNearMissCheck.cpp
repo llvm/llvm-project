@@ -7,22 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "VirtualNearMissCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::bugprone {
-
-namespace {
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-
-AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
-  return Node.isOverloadedOperator();
-}
-} // namespace
 
 /// Finds out if the given method overrides some method.
 static bool isOverrideMethod(const CXXMethodDecl *MD) {
@@ -193,7 +187,7 @@ bool VirtualNearMissCheck::isPossibleToBeOverridden(
 bool VirtualNearMissCheck::isOverriddenByDerivedClass(
     const CXXMethodDecl *BaseMD, const CXXRecordDecl *DerivedRD) {
   const std::pair Key(BaseMD, DerivedRD);
-  auto Iter = OverriddenMap.find(Key);
+  const auto Iter = OverriddenMap.find(Key);
   if (Iter != OverriddenMap.end())
     return Iter->second;
 
@@ -241,23 +235,22 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
 
         const unsigned EditDistance = BaseMD->getName().edit_distance(
             DerivedMD->getName(), EditDistanceThreshold);
-        if (EditDistance > 0 && EditDistance <= EditDistanceThreshold) {
-          if (checkOverrideWithoutName(Context, BaseMD, DerivedMD)) {
-            // A "virtual near miss" is found.
-            auto Range = CharSourceRange::getTokenRange(
-                SourceRange(DerivedMD->getLocation()));
+        if (EditDistance > 0 && EditDistance <= EditDistanceThreshold &&
+            checkOverrideWithoutName(Context, BaseMD, DerivedMD)) {
+          // A "virtual near miss" is found.
+          const auto Range = CharSourceRange::getTokenRange(
+              SourceRange(DerivedMD->getLocation()));
 
-            const bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
-                                  !DerivedMD->isTemplateInstantiation();
-            auto Diag =
-                diag(DerivedMD->getBeginLoc(),
-                     "method '%0' has a similar name and the same signature as "
-                     "virtual method '%1'; did you mean to override it?")
-                << DerivedMD->getQualifiedNameAsString()
-                << BaseMD->getQualifiedNameAsString();
-            if (ApplyFix)
-              Diag << FixItHint::CreateReplacement(Range, BaseMD->getName());
-          }
+          const bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
+                                !DerivedMD->isTemplateInstantiation();
+          const auto Diag =
+              diag(DerivedMD->getBeginLoc(),
+                   "method '%0' has a similar name and the same signature as "
+                   "virtual method '%1'; did you mean to override it?")
+              << DerivedMD->getQualifiedNameAsString()
+              << BaseMD->getQualifiedNameAsString();
+          if (ApplyFix)
+            Diag << FixItHint::CreateReplacement(Range, BaseMD->getName());
         }
       }
     }

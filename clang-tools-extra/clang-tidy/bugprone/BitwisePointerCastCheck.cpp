@@ -15,7 +15,7 @@ namespace clang::tidy::bugprone {
 
 void BitwisePointerCastCheck::registerMatchers(MatchFinder *Finder) {
   if (getLangOpts().CPlusPlus20) {
-    auto IsPointerType = refersToType(qualType(isAnyPointer()));
+    const auto IsPointerType = refersToType(qualType(isAnyPointer()));
     Finder->addMatcher(callExpr(hasDeclaration(functionDecl(allOf(
                                     hasName("::std::bit_cast"),
                                     hasTemplateArgument(0, IsPointerType),
@@ -24,7 +24,7 @@ void BitwisePointerCastCheck::registerMatchers(MatchFinder *Finder) {
                        this);
   }
 
-  auto IsDoublePointerType =
+  const auto IsDoublePointerType =
       hasType(qualType(pointsTo(qualType(isAnyPointer()))));
   Finder->addMatcher(callExpr(hasArgument(0, IsDoublePointerType),
                               hasArgument(1, IsDoublePointerType),

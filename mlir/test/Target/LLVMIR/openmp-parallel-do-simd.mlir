@@ -12,7 +12,7 @@
 // CHECK-NEXT:   br label %omp_loop.header, !llvm.loop ![[LOOP_ATTR:.*]]
 // CHECK: ![[LOOP_ATTR]] = distinct !{![[LOOP_ATTR]], ![[LPAR:.*]], ![[LVEC:.*]]}
 // CHECK: ![[LPAR]] = !{!"llvm.loop.parallel_accesses", ![[PAR_ACC:.*]]}
-// CHECK: ![[LVEC]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: ![[LVEC]] = !{!"llvm.loop.vectorize.enable"}
 
 llvm.func @test_parallel_do_simd() {
   %0 = llvm.mlir.constant(1 : i64) : i64

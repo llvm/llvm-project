@@ -15,7 +15,6 @@
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -24,6 +23,8 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -74,6 +75,11 @@ public:
     Register Val0, Val1, Val2;
   };
 
+  struct MinMaxToMinMax3MatchInfo {
+    unsigned Opc;
+    Register Val0, Val1, Val2;
+  };
+
   MinMaxMedOpc getMinMaxPair(unsigned Opc) const;
 
   template <class m_Cst, typename CstTy>
@@ -90,14 +96,22 @@ public:
   void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
 
   bool combineD16Load(MachineInstr &MI) const;
-  bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
-                    MachineInstr *SmallLoad, Register ToOverwriteD16) const;
+  void applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
+                    MachineInstr *SmallLoad, Register ToOverwriteD16,
+                    MachineInstr &InsertPt) const;
+
+  bool matchMinMaxToMinMax3(MachineInstr &MI,
+                            MinMaxToMinMax3MatchInfo &MatchInfo) const;
+  void applyMinMaxToMinMax3(MachineInstr &MI,
+                            MinMaxToMinMax3MatchInfo &MatchInfo) const;
 
 private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
   bool getDX10Clamp() const;
   bool isFminnumIeee(const MachineInstr &MI) const;
+  bool isFminnum(const MachineInstr &MI) const;
+  bool isFminnumLike(const MachineInstr &MI) const;
   bool isFCst(MachineInstr *MI) const;
   bool isClampZeroToOne(MachineInstr *K0, MachineInstr *K1) const;
 
@@ -241,6 +255,10 @@ bool AMDGPURegBankCombinerImpl::matchIntMinMaxToMed3(
 bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
     MachineInstr &MI, Med3MatchInfo &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
+  // Perform combine only when the destination is a VGPR.
+  if (!isVgprRegBank(Dst))
+    return false;
+
   LLT Ty = MRI.getType(Dst);
 
   // med3 for f16 is only available on gfx9+, and not available for v2f16.
@@ -265,7 +283,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
   // nodes(max/min) have same behavior when one input is NaN and other isn't.
   // Don't consider max(min(SNaN, K1), K0) since there is no isKnownNeverQNaN,
   // also post-legalizer inputs to min/max are fcanonicalized (never SNaN).
-  if ((getIEEE() && isFminnumIeee(MI)) || VT->isKnownNeverNaN(Dst)) {
+  if ((getIEEE() && isFminnumLike(MI)) || VT->isKnownNeverNaN(Dst)) {
     // Don't fold single use constant that can't be inlined.
     if ((!MRI.hasOneNonDBGUse(K0->VReg) || TII.isInlineConstant(K0->Value)) &&
         (!MRI.hasOneNonDBGUse(K1->VReg) || TII.isInlineConstant(K1->Value))) {
@@ -279,6 +297,10 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
 
 bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
                                                      Register &Reg) const {
+  // Perform combine only when the destination is a VGPR.
+  if (!isVgprRegBank(MI.getOperand(0).getReg()))
+    return false;
+
   // Clamp is available on all types after regbankselect (f16, f32, f64, v2f16).
   auto OpcodeTriple = getMinMaxPair(MI.getOpcode());
   Register Val;
@@ -287,14 +309,14 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   if (!matchMed<GFCstOrSplatGFCstMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
 
-  if (!K0->Value.isExactlyValue(0.0) || !K1->Value.isExactlyValue(1.0))
+  if (!K0->Value.isPosZero() || !K1->Value.isOne())
     return false;
 
   // For IEEE=false perform combine only when it's safe to assume that there are
   // no NaN inputs. Most often MI is marked with nnan fast math flag.
   // For IEEE=true consider NaN inputs. Only min(max(QNaN, 0.0), 1.0) evaluates
   // to 0.0 requires dx10_clamp = true.
-  if ((getIEEE() && getDX10Clamp() && isFminnumIeee(MI) &&
+  if ((getIEEE() && getDX10Clamp() && isFminnumLike(MI) &&
        VT->isKnownNeverSNaN(Val)) ||
       VT->isKnownNeverNaN(MI.getOperand(0).getReg())) {
     Reg = Val;
@@ -315,6 +337,10 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
 // min(min(0.0, 1.0), NaN) = min(0.0, NaN) = 0.0
 bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
                                                    Register &Reg) const {
+  // Perform combine only when the destination is a VGPR.
+  if (!isVgprRegBank(MI.getOperand(0).getReg()))
+    return false;
+
   // In llvm-ir, clamp is often represented as an intrinsic call to
   // @llvm.amdgcn.fmed3.f32(%Val, 0.0, 1.0). Check for other operand orders.
   MachineInstr *Src0 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
@@ -335,7 +361,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
   auto isOp3Zero = [&]() {
     MachineInstr *Op3 = getDefIgnoringCopies(MI.getOperand(3).getReg(), MRI);
     if (Op3->getOpcode() == TargetOpcode::G_FCONSTANT)
-      return Op3->getOperand(1).getFPImm()->isExactlyValue(0.0);
+      return Op3->getOperand(1).getFPImm()->isPosZero();
     return false;
   };
   // For IEEE=false perform combine only when it's safe to assume that there are
@@ -398,68 +424,88 @@ void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
 
 bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
   Register Dst;
-  MachineInstr *Load, *SextLoad;
+  MachineInstr *Load;
+  GSExtLoad *SextLoad;
+  GZExtLoad *ZextLoad;
+  const MachineMemOperand *MMO;
   const int64_t CleanLo16 = 0xFFFFFFFFFFFF0000;
   const int64_t CleanHi16 = 0x000000000000FFFF;
 
+  auto TryApplyD16Load = [&](unsigned D16Opc, GAnyLoad *SmallLoad) {
+    MachineInstr *DstDef = MRI.getVRegDef(Dst);
+    MachineInstr *InsertPt = SmallLoad;
+    if (SmallLoad->isSimple() && isObviouslySafeToFold(*SmallLoad, MI))
+      InsertPt = &MI;
+    else if (!Helper.dominates(*DstDef, *SmallLoad))
+      return false;
+
+    applyD16Load(D16Opc, MI, SmallLoad, Dst, *InsertPt);
+    return true;
+  };
+
   // Load lo
   if (mi_match(MI.getOperand(1).getReg(), MRI,
-               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
-                            m_Copy(m_SpecificICst(CleanLo16))),
-                     m_MInstr(Load)))) {
-
-    if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
-      const MachineMemOperand *MMO = *Load->memoperands_begin();
+               m_OneNonDBGUse(m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
+                                           m_Copy(m_SpecificICst(CleanLo16))),
+                                    m_OneNonDBGUse(m_MInstr(Load)))))) {
+    if (mi_match(Load, MRI, m_GZExtLoad(ZextLoad, m_MMO(MMO)))) {
       unsigned LoadSize = MMO->getSizeInBits().getValue();
       if (LoadSize == 8)
-        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_U8, MI, Load, Dst);
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_U8, ZextLoad);
       if (LoadSize == 16)
-        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO, MI, Load, Dst);
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO, ZextLoad);
+
       return false;
     }
 
+    // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
+    // fake16: and  (sextload i8 -> s32), 0xFFFF
+    // true16: zext (sextload i8 -> s16) -> s32
     if (mi_match(
             Load, MRI,
-            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
-      if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
-        return false;
-
-      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
-      if (MMO->getSizeInBits().getValue() != 8)
-        return false;
-
-      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, MI, SextLoad, Dst);
+            m_any_of(m_GAnd(m_OneNonDBGUse(m_GSExtLoad(SextLoad, m_MMO(MMO))),
+                            m_Copy(m_SpecificICst(CleanHi16))),
+                     m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
+                                      m_OneNonDBGUse(m_GSExtLoad(
+                                          SextLoad, m_MMO(MMO)))))))) {
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, SextLoad);
     }
 
     return false;
   }
 
   // Load hi
-  if (mi_match(MI.getOperand(1).getReg(), MRI,
-               m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
-                            m_Copy(m_SpecificICst(CleanHi16))),
-                     m_GShl(m_MInstr(Load), m_Copy(m_SpecificICst(16)))))) {
-
-    if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
-      const MachineMemOperand *MMO = *Load->memoperands_begin();
+  if (mi_match(
+          MI.getOperand(1).getReg(), MRI,
+          m_OneNonDBGUse(m_GOr(
+              m_GAnd(m_GBitcast(m_Reg(Dst)), m_Copy(m_SpecificICst(CleanHi16))),
+              m_OneNonDBGUse(m_GShl(m_OneNonDBGUse(m_MInstr(Load)),
+                                    m_Copy(m_SpecificICst(16)))))))) {
+    if (mi_match(Load, MRI, m_GZExtLoad(ZextLoad, m_MMO(MMO)))) {
       unsigned LoadSize = MMO->getSizeInBits().getValue();
       if (LoadSize == 8)
-        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_U8, MI, Load, Dst);
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_U8, ZextLoad);
       if (LoadSize == 16)
-        return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI, MI, Load, Dst);
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI, ZextLoad);
+
       return false;
     }
 
+    // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
+    // fake16: and  (sextload i8 -> s32), 0xFFFF
+    // true16: zext (sextload i8 -> s16) -> s32
     if (mi_match(
             Load, MRI,
-            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
-      if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
-        return false;
-      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
-      if (MMO->getSizeInBits().getValue() != 8)
-        return false;
-
-      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, MI, SextLoad, Dst);
+            m_any_of(m_GAnd(m_OneNonDBGUse(m_GSExtLoad(SextLoad, m_MMO(MMO))),
+                            m_Copy(m_SpecificICst(CleanHi16))),
+                     m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
+                                      m_OneNonDBGUse(m_GSExtLoad(
+                                          SextLoad, m_MMO(MMO)))))))) {
+      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      if (LoadSize == 8)
+        return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, SextLoad);
     }
 
     return false;
@@ -468,14 +514,107 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
   return false;
 }
 
-bool AMDGPURegBankCombinerImpl::applyD16Load(
-    unsigned D16Opc, MachineInstr &DstMI, MachineInstr *SmallLoad,
-    Register SrcReg32ToOverwriteD16) const {
-  B.buildInstr(D16Opc, {DstMI.getOperand(0).getReg()},
+void AMDGPURegBankCombinerImpl::applyMinMaxToMinMax3(
+    MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
+  B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
+               {MatchInfo.Val0, MatchInfo.Val1, MatchInfo.Val2}, MI.getFlags());
+  MI.eraseFromParent();
+  return;
+}
+
+// min(min(a, b), c) == min(a, min(b, c)) == min3(a, b, c)
+// supported scalar type: S32 S16 U32 U16 F32 F16
+bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
+    MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src1 = MI.getOperand(1).getReg();
+  Register Src2 = MI.getOperand(2).getReg();
+  // If the register is SGPR, don't optimize it.
+  if (!(isVgprRegBank(Dst) && isVgprRegBank(Src1) && isVgprRegBank(Src2))) {
+    return false;
+  }
+
+  LLT Ty = MRI.getType(Dst);
+  unsigned Opc = MI.getOpcode();
+  if (!(Ty == LLT::scalar(32) ||
+        (Ty == LLT::scalar(16) && STI.hasMin3Max3_16())))
+    return false;
+
+  Register R0, R1, R2;
+  if (!mi_match(MI, MRI,
+                m_CommutativeBinOp(
+                    Opc, m_OneNonDBGUse(m_BinOp(Opc, m_Reg(R0), m_Reg(R1))),
+                    m_Reg(R2)))) {
+    return false;
+  }
+
+  unsigned AMDGPUOpc = 0;
+  switch (Opc) {
+  case AMDGPU::G_SMAX:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_SMAX3;
+    break;
+  case AMDGPU::G_SMIN:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_SMIN3;
+    break;
+  case AMDGPU::G_UMAX:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_UMAX3;
+    break;
+  case AMDGPU::G_UMIN:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_UMIN3;
+    break;
+  case AMDGPU::G_FMAXNUM:
+  case AMDGPU::G_FMAXNUM_IEEE:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMAX3;
+    break;
+  case AMDGPU::G_FMINNUM:
+  case AMDGPU::G_FMINNUM_IEEE:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMIN3;
+    break;
+  case AMDGPU::G_FMAXIMUM:
+  case AMDGPU::G_FMAXIMUMNUM:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMAXIMUM3;
+    break;
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMINIMUMNUM:
+    AMDGPUOpc = AMDGPU::G_AMDGPU_FMINIMUM3;
+    break;
+  default:
+    return false;
+  }
+
+  MatchInfo = {AMDGPUOpc, R0, R1, R2};
+  return true;
+}
+
+void AMDGPURegBankCombinerImpl::applyD16Load(unsigned D16Opc,
+                                             MachineInstr &DstMI,
+                                             MachineInstr *SmallLoad,
+                                             Register SrcReg32ToOverwriteD16,
+                                             MachineInstr &InsertPt) const {
+  Register DstReg = DstMI.getOperand(0).getReg();
+  LLT SrcTy = MRI.getType(SrcReg32ToOverwriteD16);
+
+  // Dst and Src for D16 load need to have same type.
+  Register D16Dst =
+      SrcTy == MRI.getType(DstReg)
+          ? DstReg
+          : MRI.createVirtualRegister({MRI.getRegBank(DstReg), SrcTy});
+
+  B.setInstrAndDebugLoc(InsertPt);
+  B.setDebugLoc(SmallLoad->getDebugLoc());
+  B.buildInstr(D16Opc, {D16Dst},
                {SmallLoad->getOperand(1).getReg(), SrcReg32ToOverwriteD16})
       .setMemRefs(SmallLoad->memoperands());
-  DstMI.eraseFromParent();
-  return true;
+
+  if (D16Dst != DstReg)
+    B.buildBitcast(DstReg, D16Dst);
+
+  // Recursive cleanup may erase SmallLoad.
+  Register LoadDst = SmallLoad->getOperand(0).getReg();
+  eraseInstr(DstMI, MRI);
+  // Volatile and ordered atomic loads are not trivially dead.
+  if (MachineInstr *OldLoad = MRI.getVRegDef(LoadDst))
+    eraseInstr(*OldLoad, MRI);
 }
 
 SIModeRegisterDefaults AMDGPURegBankCombinerImpl::getMode() const {
@@ -492,6 +631,14 @@ bool AMDGPURegBankCombinerImpl::isFminnumIeee(const MachineInstr &MI) const {
   return MI.getOpcode() == AMDGPU::G_FMINNUM_IEEE;
 }
 
+bool AMDGPURegBankCombinerImpl::isFminnum(const MachineInstr &MI) const {
+  return MI.getOpcode() == AMDGPU::G_FMINNUM;
+}
+
+bool AMDGPURegBankCombinerImpl::isFminnumLike(const MachineInstr &MI) const {
+  return isFminnumIeee(MI) || isFminnum(MI);
+}
+
 bool AMDGPURegBankCombinerImpl::isFCst(MachineInstr *MI) const {
   return MI->getOpcode() == AMDGPU::G_FCONSTANT;
 }
@@ -501,20 +648,52 @@ bool AMDGPURegBankCombinerImpl::isClampZeroToOne(MachineInstr *K0,
   if (isFCst(K0) && isFCst(K1)) {
     const ConstantFP *KO_FPImm = K0->getOperand(1).getFPImm();
     const ConstantFP *K1_FPImm = K1->getOperand(1).getFPImm();
-    return (KO_FPImm->isExactlyValue(0.0) && K1_FPImm->isExactlyValue(1.0)) ||
-           (KO_FPImm->isExactlyValue(1.0) && K1_FPImm->isExactlyValue(0.0));
+    return (KO_FPImm->isPosZero() && K1_FPImm->isOne()) ||
+           (KO_FPImm->isOne() && K1_FPImm->isPosZero());
   }
   return false;
+}
+
+static bool runCombiner(MachineFunction &MF,
+                        function_ref<GISelValueTracking *()> GetVT,
+                        function_ref<MachineDominatorTree *()> GetMDT,
+                        bool EnableOpt) {
+  AMDGPURegBankCombinerImplRuleConfig RuleConfig;
+  if (!RuleConfig.parseCommandLineOption())
+    reportFatalUsageError("Invalid rule identifier");
+
+  if (MF.getProperties().hasFailedISel())
+    return false;
+
+  const Function &F = MF.getFunction();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const auto *LI = ST.getLegalizerInfo();
+
+  CombinerInfo CInfo(/*AllowIllegalOps=*/false, /*ShouldLegalizeIllegal=*/true,
+                     LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // RegBankSelect seems not to leave dead instructions, so a full DCE pass is
+  // unnecessary.
+  CInfo.EnableFullDCE = false;
+
+  GISelValueTracking *VT = GetVT();
+  MachineDominatorTree *MDT = GetMDT();
+  AMDGPURegBankCombinerImpl Impl(MF, CInfo, *VT, /*CSEInfo=*/nullptr,
+                                 RuleConfig, ST, MDT, LI);
+  return Impl.combineMachineInstrs();
 }
 
 // Pass boilerplate
 // ================
 
-class AMDGPURegBankCombiner : public MachineFunctionPass {
+class AMDGPURegBankCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPURegBankCombiner(bool IsOptNone = false);
+  AMDGPURegBankCombinerLegacy(bool IsOptLevelNone = false)
+      : MachineFunctionPass(ID), IsOptLevelNone(IsOptLevelNone) {}
 
   StringRef getPassName() const override { return "AMDGPURegBankCombiner"; }
 
@@ -523,67 +702,74 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  bool IsOptNone;
-  AMDGPURegBankCombinerImplRuleConfig RuleConfig;
+  bool IsOptLevelNone;
 };
 } // end anonymous namespace
 
-void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void AMDGPURegBankCombinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
-  if (!IsOptNone) {
+  if (!IsOptLevelNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-AMDGPURegBankCombiner::AMDGPURegBankCombiner(bool IsOptNone)
-    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
-}
-
-bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasFailedISel())
-    return false;
+bool AMDGPURegBankCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
 
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
-
-  const auto *LI = ST.getLegalizerInfo();
-  MachineDominatorTree *MDT =
-      IsOptNone ? nullptr
-                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-
-  CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
-                     LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
-  // Disable fixed-point iteration to reduce compile-time
-  CInfo.MaxIterations = 1;
-  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
-  // RegBankSelect seems not to leave dead instructions, so a full DCE pass is
-  // unnecessary.
-  CInfo.EnableFullDCE = false;
-  AMDGPURegBankCombinerImpl Impl(MF, CInfo, *VT, /*CSEInfo*/ nullptr,
-                                 RuleConfig, ST, MDT, LI);
-  return Impl.combineMachineInstrs();
+  return runCombiner(
+      MF,
+      [&]() {
+        return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+      },
+      [&]() -> MachineDominatorTree * {
+        return IsOptLevelNone ? nullptr
+                              : &getAnalysis<MachineDominatorTreeWrapperPass>()
+                                     .getDomTree();
+      },
+      EnableOpt);
 }
 
-char AMDGPURegBankCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(AMDGPURegBankCombiner, DEBUG_TYPE,
+char AMDGPURegBankCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(AMDGPURegBankCombinerLegacy, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after regbankselect",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
-INITIALIZE_PASS_END(AMDGPURegBankCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPURegBankCombinerLegacy, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after regbankselect", false,
                     false)
 
-FunctionPass *llvm::createAMDGPURegBankCombiner(bool IsOptNone) {
-  return new AMDGPURegBankCombiner(IsOptNone);
+FunctionPass *llvm::createAMDGPURegBankCombinerLegacy(bool IsOptLevelNone) {
+  return new AMDGPURegBankCombinerLegacy(IsOptLevelNone);
+}
+
+AMDGPURegBankCombinerPass::AMDGPURegBankCombinerPass(bool IsOptLevelNone)
+    : IsOptLevelNone(IsOptLevelNone) {}
+
+PreservedAnalyses
+AMDGPURegBankCombinerPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  const Function &F = MF.getFunction();
+  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None &&
+                   !F.hasOptNone() && !shouldSkipOptimizationForOptBisect(F);
+
+  if (!runCombiner(
+          MF, [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
+          [&]() -> MachineDominatorTree * {
+            return IsOptLevelNone
+                       ? nullptr
+                       : &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+          },
+          EnableOpt))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<GISelValueTrackingAnalysis>();
+  return PA;
 }

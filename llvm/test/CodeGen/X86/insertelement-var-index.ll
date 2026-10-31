@@ -862,7 +862,7 @@ define <16 x i8> @arg_i8_v16i8(<16 x i8> %v, i8 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $32, %esp
+; X86AVX2-NEXT:    subl $16, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $15, %eax
 ; X86AVX2-NEXT:    movzbl 8(%ebp), %ecx
@@ -916,7 +916,7 @@ define <8 x i16> @arg_i16_v8i16(<8 x i16> %v, i16 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $32, %esp
+; X86AVX2-NEXT:    subl $16, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $7, %eax
 ; X86AVX2-NEXT:    movzwl 8(%ebp), %ecx
@@ -961,7 +961,7 @@ define <4 x i32> @arg_i32_v4i32(<4 x i32> %v, i32 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $32, %esp
+; X86AVX2-NEXT:    subl $16, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $3, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
@@ -1008,20 +1008,18 @@ define <2 x i64> @arg_i64_v2i64(<2 x i64> %v, i64 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    pushl %esi
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $48, %esp
-; X86AVX2-NEXT:    movl 8(%ebp), %edx
-; X86AVX2-NEXT:    movl 12(%ebp), %eax
-; X86AVX2-NEXT:    movl 16(%ebp), %ecx
+; X86AVX2-NEXT:    subl $32, %esp
+; X86AVX2-NEXT:    movl 16(%ebp), %eax
+; X86AVX2-NEXT:    movl 8(%ebp), %ecx
+; X86AVX2-NEXT:    movl 12(%ebp), %edx
 ; X86AVX2-NEXT:    vmovaps %xmm0, (%esp)
-; X86AVX2-NEXT:    addl %ecx, %ecx
-; X86AVX2-NEXT:    movl %ecx, %esi
-; X86AVX2-NEXT:    andl $3, %esi
-; X86AVX2-NEXT:    movl %edx, (%esp,%esi,4)
+; X86AVX2-NEXT:    leal 1(%eax,%eax), %esi
+; X86AVX2-NEXT:    andl $1, %eax
+; X86AVX2-NEXT:    movl %ecx, (%esp,%eax,8)
 ; X86AVX2-NEXT:    vmovaps (%esp), %xmm0
 ; X86AVX2-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
-; X86AVX2-NEXT:    incl %ecx
-; X86AVX2-NEXT:    andl $3, %ecx
-; X86AVX2-NEXT:    movl %eax, 16(%esp,%ecx,4)
+; X86AVX2-NEXT:    andl $3, %esi
+; X86AVX2-NEXT:    movl %edx, 16(%esp,%esi,4)
 ; X86AVX2-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
 ; X86AVX2-NEXT:    leal -4(%ebp), %esp
 ; X86AVX2-NEXT:    popl %esi
@@ -1141,7 +1139,7 @@ define <2 x double> @arg_f64_v2f64(<2 x double> %v, double %x, i32 %y) nounwind 
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $32, %esp
+; X86AVX2-NEXT:    subl $16, %esp
 ; X86AVX2-NEXT:    movl 16(%ebp), %eax
 ; X86AVX2-NEXT:    andl $1, %eax
 ; X86AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
@@ -1198,7 +1196,7 @@ define <16 x i8> @load_i8_v16i8(<16 x i8> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $32, %esp
+; X86AVX2-NEXT:    subl $16, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $15, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
@@ -1257,7 +1255,7 @@ define <8 x i16> @load_i16_v8i16(<8 x i16> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $32, %esp
+; X86AVX2-NEXT:    subl $16, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $7, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
@@ -1306,7 +1304,7 @@ define <4 x i32> @load_i32_v4i32(<4 x i32> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $32, %esp
+; X86AVX2-NEXT:    subl $16, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $3, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
@@ -1357,21 +1355,19 @@ define <2 x i64> @load_i64_v2i64(<2 x i64> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    pushl %esi
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $48, %esp
+; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
 ; X86AVX2-NEXT:    movl (%ecx), %edx
 ; X86AVX2-NEXT:    movl 4(%ecx), %ecx
 ; X86AVX2-NEXT:    vmovaps %xmm0, (%esp)
-; X86AVX2-NEXT:    addl %eax, %eax
-; X86AVX2-NEXT:    movl %eax, %esi
-; X86AVX2-NEXT:    andl $3, %esi
-; X86AVX2-NEXT:    movl %edx, (%esp,%esi,4)
+; X86AVX2-NEXT:    leal 1(%eax,%eax), %esi
+; X86AVX2-NEXT:    andl $1, %eax
+; X86AVX2-NEXT:    movl %edx, (%esp,%eax,8)
 ; X86AVX2-NEXT:    vmovaps (%esp), %xmm0
 ; X86AVX2-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
-; X86AVX2-NEXT:    incl %eax
-; X86AVX2-NEXT:    andl $3, %eax
-; X86AVX2-NEXT:    movl %ecx, 16(%esp,%eax,4)
+; X86AVX2-NEXT:    andl $3, %esi
+; X86AVX2-NEXT:    movl %ecx, 16(%esp,%esi,4)
 ; X86AVX2-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
 ; X86AVX2-NEXT:    leal -4(%ebp), %esp
 ; X86AVX2-NEXT:    popl %esi
@@ -1497,7 +1493,7 @@ define <2 x double> @load_f64_v2f64(<2 x double> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-16, %esp
-; X86AVX2-NEXT:    subl $32, %esp
+; X86AVX2-NEXT:    subl $16, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $1, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
@@ -1530,7 +1526,7 @@ define <32 x i8> @arg_i8_v32i8(<32 x i8> %v, i8 %x, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
+; AVX1OR2-NEXT:    subq $32, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX1OR2-NEXT:    andl $31, %esi
@@ -1545,7 +1541,7 @@ define <32 x i8> @arg_i8_v32i8(<32 x i8> %v, i8 %x, i32 %y) nounwind {
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
-; AVX512F-NEXT:    subq $64, %rsp
+; AVX512F-NEXT:    subq $32, %rsp
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512F-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512F-NEXT:    andl $31, %esi
@@ -1567,7 +1563,7 @@ define <32 x i8> @arg_i8_v32i8(<32 x i8> %v, i8 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $64, %esp
+; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $31, %eax
 ; X86AVX2-NEXT:    movzbl 8(%ebp), %ecx
@@ -1598,7 +1594,7 @@ define <16 x i16> @arg_i16_v16i16(<16 x i16> %v, i16 %x, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
+; AVX1OR2-NEXT:    subq $32, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX1OR2-NEXT:    andl $15, %esi
@@ -1613,7 +1609,7 @@ define <16 x i16> @arg_i16_v16i16(<16 x i16> %v, i16 %x, i32 %y) nounwind {
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
-; AVX512F-NEXT:    subq $64, %rsp
+; AVX512F-NEXT:    subq $32, %rsp
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512F-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512F-NEXT:    andl $15, %esi
@@ -1635,7 +1631,7 @@ define <16 x i16> @arg_i16_v16i16(<16 x i16> %v, i16 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $64, %esp
+; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $15, %eax
 ; X86AVX2-NEXT:    movzwl 8(%ebp), %ecx
@@ -1666,7 +1662,7 @@ define <8 x i32> @arg_i32_v8i32(<8 x i32> %v, i32 %x, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
+; AVX1OR2-NEXT:    subq $32, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX1OR2-NEXT:    andl $7, %esi
@@ -1688,7 +1684,7 @@ define <8 x i32> @arg_i32_v8i32(<8 x i32> %v, i32 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $64, %esp
+; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $7, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
@@ -1719,7 +1715,7 @@ define <4 x i64> @arg_i64_v4i64(<4 x i64> %v, i64 %x, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
+; AVX1OR2-NEXT:    subq $32, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX1OR2-NEXT:    andl $3, %esi
@@ -1743,20 +1739,18 @@ define <4 x i64> @arg_i64_v4i64(<4 x i64> %v, i64 %x, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    pushl %esi
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $96, %esp
-; X86AVX2-NEXT:    movl 8(%ebp), %edx
-; X86AVX2-NEXT:    movl 12(%ebp), %eax
-; X86AVX2-NEXT:    movl 16(%ebp), %ecx
+; X86AVX2-NEXT:    subl $64, %esp
+; X86AVX2-NEXT:    movl 16(%ebp), %eax
+; X86AVX2-NEXT:    movl 8(%ebp), %ecx
+; X86AVX2-NEXT:    movl 12(%ebp), %edx
 ; X86AVX2-NEXT:    vmovaps %ymm0, (%esp)
-; X86AVX2-NEXT:    addl %ecx, %ecx
-; X86AVX2-NEXT:    movl %ecx, %esi
-; X86AVX2-NEXT:    andl $7, %esi
-; X86AVX2-NEXT:    movl %edx, (%esp,%esi,4)
+; X86AVX2-NEXT:    leal 1(%eax,%eax), %esi
+; X86AVX2-NEXT:    andl $3, %eax
+; X86AVX2-NEXT:    movl %ecx, (%esp,%eax,8)
 ; X86AVX2-NEXT:    vmovaps (%esp), %ymm0
 ; X86AVX2-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X86AVX2-NEXT:    incl %ecx
-; X86AVX2-NEXT:    andl $7, %ecx
-; X86AVX2-NEXT:    movl %eax, 32(%esp,%ecx,4)
+; X86AVX2-NEXT:    andl $7, %esi
+; X86AVX2-NEXT:    movl %edx, 32(%esp,%esi,4)
 ; X86AVX2-NEXT:    vmovaps {{[0-9]+}}(%esp), %ymm0
 ; X86AVX2-NEXT:    leal -4(%ebp), %esp
 ; X86AVX2-NEXT:    popl %esi
@@ -1865,7 +1859,7 @@ define <4 x double> @arg_f64_v4f64(<4 x double> %v, double %x, i32 %y) nounwind 
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $64, %esp
+; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 16(%ebp), %eax
 ; X86AVX2-NEXT:    andl $3, %eax
 ; X86AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
@@ -1897,7 +1891,7 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, ptr %p, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
+; AVX1OR2-NEXT:    subq $32, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1OR2-NEXT:    movzbl (%rdi), %eax
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
@@ -1913,7 +1907,7 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, ptr %p, i32 %y) nounwind {
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
-; AVX512F-NEXT:    subq $64, %rsp
+; AVX512F-NEXT:    subq $32, %rsp
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512F-NEXT:    movzbl (%rdi), %eax
 ; AVX512F-NEXT:    vmovaps %ymm0, (%rsp)
@@ -1936,7 +1930,7 @@ define <32 x i8> @load_i8_v32i8(<32 x i8> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $64, %esp
+; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $31, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
@@ -1970,7 +1964,7 @@ define <16 x i16> @load_i16_v16i16(<16 x i16> %v, ptr %p, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
+; AVX1OR2-NEXT:    subq $32, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1OR2-NEXT:    movzwl (%rdi), %eax
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
@@ -1986,7 +1980,7 @@ define <16 x i16> @load_i16_v16i16(<16 x i16> %v, ptr %p, i32 %y) nounwind {
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
-; AVX512F-NEXT:    subq $64, %rsp
+; AVX512F-NEXT:    subq $32, %rsp
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512F-NEXT:    movzwl (%rdi), %eax
 ; AVX512F-NEXT:    vmovaps %ymm0, (%rsp)
@@ -2009,7 +2003,7 @@ define <16 x i16> @load_i16_v16i16(<16 x i16> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $64, %esp
+; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $15, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
@@ -2043,7 +2037,7 @@ define <8 x i32> @load_i32_v8i32(<8 x i32> %v, ptr %p, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
+; AVX1OR2-NEXT:    subq $32, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1OR2-NEXT:    movl (%rdi), %eax
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
@@ -2066,7 +2060,7 @@ define <8 x i32> @load_i32_v8i32(<8 x i32> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $64, %esp
+; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $7, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
@@ -2100,7 +2094,7 @@ define <4 x i64> @load_i64_v4i64(<4 x i64> %v, ptr %p, i32 %y) nounwind {
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $64, %rsp
+; AVX1OR2-NEXT:    subq $32, %rsp
 ; AVX1OR2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1OR2-NEXT:    movq (%rdi), %rax
 ; AVX1OR2-NEXT:    vmovaps %ymm0, (%rsp)
@@ -2125,21 +2119,19 @@ define <4 x i64> @load_i64_v4i64(<4 x i64> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    pushl %esi
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $96, %esp
+; X86AVX2-NEXT:    subl $64, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx
 ; X86AVX2-NEXT:    movl (%ecx), %edx
 ; X86AVX2-NEXT:    movl 4(%ecx), %ecx
 ; X86AVX2-NEXT:    vmovaps %ymm0, (%esp)
-; X86AVX2-NEXT:    addl %eax, %eax
-; X86AVX2-NEXT:    movl %eax, %esi
-; X86AVX2-NEXT:    andl $7, %esi
-; X86AVX2-NEXT:    movl %edx, (%esp,%esi,4)
+; X86AVX2-NEXT:    leal 1(%eax,%eax), %esi
+; X86AVX2-NEXT:    andl $3, %eax
+; X86AVX2-NEXT:    movl %edx, (%esp,%eax,8)
 ; X86AVX2-NEXT:    vmovaps (%esp), %ymm0
 ; X86AVX2-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; X86AVX2-NEXT:    incl %eax
-; X86AVX2-NEXT:    andl $7, %eax
-; X86AVX2-NEXT:    movl %ecx, 32(%esp,%eax,4)
+; X86AVX2-NEXT:    andl $7, %esi
+; X86AVX2-NEXT:    movl %ecx, 32(%esp,%esi,4)
 ; X86AVX2-NEXT:    vmovaps {{[0-9]+}}(%esp), %ymm0
 ; X86AVX2-NEXT:    leal -4(%ebp), %esp
 ; X86AVX2-NEXT:    popl %esi
@@ -2251,7 +2243,7 @@ define <4 x double> @load_f64_v4f64(<4 x double> %v, ptr %p, i32 %y) nounwind {
 ; X86AVX2-NEXT:    pushl %ebp
 ; X86AVX2-NEXT:    movl %esp, %ebp
 ; X86AVX2-NEXT:    andl $-32, %esp
-; X86AVX2-NEXT:    subl $64, %esp
+; X86AVX2-NEXT:    subl $32, %esp
 ; X86AVX2-NEXT:    movl 12(%ebp), %eax
 ; X86AVX2-NEXT:    andl $3, %eax
 ; X86AVX2-NEXT:    movl 8(%ebp), %ecx

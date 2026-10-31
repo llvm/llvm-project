@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -hlsl-entry entry -fsyntax-only -verify %s
 
 typedef float float2x1 __attribute__((matrix_type(2,1)));
 typedef float float2x2 __attribute__((matrix_type(2,2)));
@@ -7,6 +7,7 @@ typedef float float2 __attribute__((ext_vector_type(2)));
 struct S { float f; };
 struct S2 { float2 f;};
 
+[shader("compute")]
 [numthreads(1,1,1)]
 void entry() {
  float2x1 LilMat = float2x1(1.0, 2.0);

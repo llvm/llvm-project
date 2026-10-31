@@ -241,8 +241,20 @@ void populateVectorScanLoweringPatterns(RewritePatternSet &patterns,
 /// Populate the pattern set with the following patterns:
 ///
 /// [StepToArithConstantOp]
-/// Convert vector.step op into arith ops if not using scalable vectors
+/// Convert a non-scalable `vector.step` into an `arith.constant`. `index`-typed
+/// steps are materialized using `indexBitwidth` as the index bitwidth;
+/// an `indexBitwidth` of 0 leaves them untouched. `indexBitwidth` must not
+/// exceed `IndexType::kInternalStorageBitWidth`.
+///
+/// NOTE: `indexBitwidth` defaults to 64 for backwards compatibility - this
+/// coincides with the index type bitwidth that this pattern used to assume
+/// unconditionally before the parameter was introduced. The index type is not
+/// always 64-bit wide though (e.g. it can be lowered to 32-bit on some
+/// targets), so this default is merely a safe historical choice. In the future
+/// this default should be removed and callers should pass the appropriate index
+/// bitwidth explicitly.
 void populateVectorStepLoweringPatterns(RewritePatternSet &patterns,
+                                        unsigned indexBitwidth = 64,
                                         PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
@@ -289,6 +301,9 @@ void populateVectorInterleaveLoweringPatterns(RewritePatternSet &patterns,
 
 void populateVectorInterleaveToShufflePatterns(RewritePatternSet &patterns,
                                                PatternBenefit benefit = 1);
+
+void populateVectorDeinterleaveToShufflePatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit = 1);
 
 /// Populates the pattern set with the following patterns:
 ///

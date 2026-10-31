@@ -501,281 +501,161 @@ define i1 @cmn_large_imm(i32 %a) {
 }
 
 define i1 @almost_immediate_neg_slt(i32 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_slt:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn w0, #4079, lsl #12 // =16707584
-; CHECK-SD-NEXT:    cset w0, le
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_slt:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #4097 // =0x1001
-; CHECK-GI-NEXT:    movk w8, #65281, lsl #16
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    cset w0, lt
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_slt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, le
+; CHECK-NEXT:    ret
   %cmp = icmp slt i32 %x, -16707583
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_slt_64(i64 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_slt_64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn x0, #4079, lsl #12 // =16707584
-; CHECK-SD-NEXT:    cset w0, le
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_slt_64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-61439 // =0xffffffffffff1001
-; CHECK-GI-NEXT:    movk x8, #65281, lsl #16
-; CHECK-GI-NEXT:    cmp x0, x8
-; CHECK-GI-NEXT:    cset w0, lt
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_slt_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, le
+; CHECK-NEXT:    ret
   %cmp = icmp slt i64 %x, -16707583
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_sge(i32 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_sge:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn w0, #4079, lsl #12 // =16707584
-; CHECK-SD-NEXT:    cset w0, gt
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_sge:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #4097 // =0x1001
-; CHECK-GI-NEXT:    movk w8, #65281, lsl #16
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    cset w0, ge
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_sge:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
   %cmp = icmp sge i32 %x, -16707583
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_sge_64(i64 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_sge_64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn x0, #4079, lsl #12 // =16707584
-; CHECK-SD-NEXT:    cset w0, gt
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_sge_64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-61439 // =0xffffffffffff1001
-; CHECK-GI-NEXT:    movk x8, #65281, lsl #16
-; CHECK-GI-NEXT:    cmp x0, x8
-; CHECK-GI-NEXT:    cset w0, ge
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_sge_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
   %cmp = icmp sge i64 %x, -16707583
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_uge(i32 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_uge:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn w0, #4079, lsl #12 // =16707584
-; CHECK-SD-NEXT:    cset w0, hi
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_uge:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #4097 // =0x1001
-; CHECK-GI-NEXT:    movk w8, #65281, lsl #16
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    cset w0, hs
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_uge:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    ret
   %cmp = icmp uge i32 %x, -16707583
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_uge_64(i64 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_uge_64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn x0, #4079, lsl #12 // =16707584
-; CHECK-SD-NEXT:    cset w0, hi
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_uge_64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-61439 // =0xffffffffffff1001
-; CHECK-GI-NEXT:    movk x8, #65281, lsl #16
-; CHECK-GI-NEXT:    cmp x0, x8
-; CHECK-GI-NEXT:    cset w0, hs
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_uge_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    ret
   %cmp = icmp uge i64 %x, -16707583
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_ult(i32 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_ult:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn w0, #4079, lsl #12 // =16707584
-; CHECK-SD-NEXT:    cset w0, ls
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_ult:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #4097 // =0x1001
-; CHECK-GI-NEXT:    movk w8, #65281, lsl #16
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    cset w0, lo
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_ult:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, ls
+; CHECK-NEXT:    ret
   %cmp = icmp ult i32 %x, -16707583
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_ult_64(i64 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_ult_64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn x0, #4079, lsl #12 // =16707584
-; CHECK-SD-NEXT:    cset w0, ls
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_ult_64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-61439 // =0xffffffffffff1001
-; CHECK-GI-NEXT:    movk x8, #65281, lsl #16
-; CHECK-GI-NEXT:    cmp x0, x8
-; CHECK-GI-NEXT:    cset w0, lo
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_ult_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4079, lsl #12 // =16707584
+; CHECK-NEXT:    cset w0, ls
+; CHECK-NEXT:    ret
   %cmp = icmp ult i64 %x, -16707583
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_sle(i32 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_sle:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn w0, #4095, lsl #12 // =16773120
-; CHECK-SD-NEXT:    cset w0, lt
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_sle:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #-16773121 // =0xff000fff
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    cset w0, le
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_sle:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
   %cmp = icmp sle i32 %x, -16773121
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_sle_64(i64 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_sle_64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn x0, #4095, lsl #12 // =16773120
-; CHECK-SD-NEXT:    cset w0, lt
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_sle_64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-16773121 // =0xffffffffff000fff
-; CHECK-GI-NEXT:    cmp x0, x8
-; CHECK-GI-NEXT:    cset w0, le
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_sle_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
   %cmp = icmp sle i64 %x, -16773121
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_sgt(i32 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_sgt:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn w0, #4095, lsl #12 // =16773120
-; CHECK-SD-NEXT:    cset w0, ge
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_sgt:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #-16773121 // =0xff000fff
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    cset w0, gt
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_sgt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, ge
+; CHECK-NEXT:    ret
   %cmp = icmp sgt i32 %x, -16773121
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_sgt_64(i64 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_sgt_64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn x0, #4095, lsl #12 // =16773120
-; CHECK-SD-NEXT:    cset w0, ge
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_sgt_64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-16773121 // =0xffffffffff000fff
-; CHECK-GI-NEXT:    cmp x0, x8
-; CHECK-GI-NEXT:    cset w0, gt
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_sgt_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, ge
+; CHECK-NEXT:    ret
   %cmp = icmp sgt i64 %x, -16773121
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_ule(i32 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_ule:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn w0, #4095, lsl #12 // =16773120
-; CHECK-SD-NEXT:    cset w0, lo
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_ule:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #-16773121 // =0xff000fff
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    cset w0, ls
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_ule:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
   %cmp = icmp ule i32 %x, -16773121
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_ule_64(i64 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_ule_64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn x0, #4095, lsl #12 // =16773120
-; CHECK-SD-NEXT:    cset w0, lo
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_ule_64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-16773121 // =0xffffffffff000fff
-; CHECK-GI-NEXT:    cmp x0, x8
-; CHECK-GI-NEXT:    cset w0, ls
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_ule_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
   %cmp = icmp ule i64 %x, -16773121
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_ugt(i32 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_ugt:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn w0, #4095, lsl #12 // =16773120
-; CHECK-SD-NEXT:    cset w0, hs
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_ugt:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #-16773121 // =0xff000fff
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    cset w0, hi
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_ugt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, hs
+; CHECK-NEXT:    ret
   %cmp = icmp ugt i32 %x, -16773121
   ret i1 %cmp
 }
 
 define i1 @almost_immediate_neg_ugt_64(i64 %x) {
-; CHECK-SD-LABEL: almost_immediate_neg_ugt_64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmn x0, #4095, lsl #12 // =16773120
-; CHECK-SD-NEXT:    cset w0, hs
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: almost_immediate_neg_ugt_64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-16773121 // =0xffffffffff000fff
-; CHECK-GI-NEXT:    cmp x0, x8
-; CHECK-GI-NEXT:    cset w0, hi
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: almost_immediate_neg_ugt_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, #4095, lsl #12 // =16773120
+; CHECK-NEXT:    cset w0, hs
+; CHECK-NEXT:    ret
   %cmp = icmp ugt i64 %x, -16773121
   ret i1 %cmp
 }

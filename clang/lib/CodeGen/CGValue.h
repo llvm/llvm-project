@@ -59,7 +59,7 @@ class RValue {
   unsigned Flavor : 2;
 
 public:
-  RValue() : Vals{nullptr, nullptr}, Flavor(Scalar) {}
+  RValue() : Vals{nullptr, nullptr}, IsVolatile(false), Flavor(Scalar) {}
 
   bool isScalar() const { return Flavor == Scalar; }
   bool isComplex() const { return Flavor == Complex; }
@@ -681,8 +681,6 @@ public:
   NeedsGCBarriers_t requiresGCollection() const {
     return NeedsGCBarriers_t(ObjCGCFlag);
   }
-
-  llvm::Value *getPointer(QualType PointeeTy, CodeGenFunction &CGF) const;
 
   llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
     return Addr.isValid() ? Addr.emitRawPointer(CGF) : nullptr;

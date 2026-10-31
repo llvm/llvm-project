@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -run-pass=pipeliner -debug-only=pipeliner -aarch64-enable-pipeliner -pipeliner-mve-cg %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=pipeliner -debug-only=pipeliner -enable-pipeliner -pipeliner-mve-cg %s -o /dev/null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # Test a case where fenv is enabled, there are instructions that may raise a
@@ -23,7 +23,7 @@
 --- |
   @x = dso_local global i32 0, align 4
 
-  define dso_local void @f(ptr nocapture noundef writeonly %a, float noundef %y, i32 noundef %n) {
+  define dso_local void @f(ptr nocapture noundef writeonly %a, float noundef %y, i32 noundef %n) #2 {
   entry:
     %cmp6 = icmp sgt i32 %n, 0
     br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup

@@ -19,9 +19,9 @@
 #endif // defined(LIBC_FULL_BUILD) || !defined(LIBC_TARGET_OS_IS_LINUX)
 
 #include "hdr/stdint_proxy.h"                // uint8_t
+#include "hdr/sys_mman_macros.h"             // mmap, munmap
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include <stddef.h>                          // size_t
-#include <sys/mman.h>                        // mmap, munmap
 #include <unistd.h>                          // sysconf, _SC_PAGESIZE
 
 // Returns mmap page size.

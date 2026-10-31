@@ -10,4 +10,4 @@
 
 #include "src/math/fmod.h"
 
-LIST_FMOD_TESTS(double, LIBC_NAMESPACE::fmod)
+LIST_FMOD_TESTS(Fmod, double, LIBC_NAMESPACE::fmod)

@@ -14,6 +14,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -212,8 +213,7 @@ public:
     if (auto *F = CE->getDirectCallee()) {
       // Skip the first argument for overloaded member operators (e. g. lambda
       // or std::function call operator).
-      unsigned ArgIdx =
-          isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
+      unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa<CXXMethodDecl>(F);
 
       for (auto P = F->param_begin();
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx)
@@ -227,12 +227,8 @@ public:
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
-    if (auto *F = CE->getConstructor()) {
-      // Skip the first argument for overloaded member operators (e. g. lambda
-      // or std::function call operator).
-      unsigned ArgIdx =
-          isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
-
+    if (const CXXMethodDecl *F = CE->getConstructor()) {
+      unsigned ArgIdx = 0;
       for (auto P = F->param_begin();
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx)
         visitCallArg(CE->getArg(ArgIdx), *P, DeclWithIssue);

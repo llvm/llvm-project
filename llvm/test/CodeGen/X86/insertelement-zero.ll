@@ -570,7 +570,7 @@ define i64 @fold_insertelement_to_and(i32 noundef %arg) {
 ; AVX2-NEXT:    vpaddq %xmm0, %xmm0, %xmm1
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    retq
   %i = shufflevector <8 x i64> zeroinitializer, <8 x i64> splat (i64 77), <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 8, i32 6, i32 10>
   %i1 = insertelement <8 x i64> %i, i64 0, i64 0

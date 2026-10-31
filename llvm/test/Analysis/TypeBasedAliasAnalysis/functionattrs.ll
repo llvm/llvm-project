@@ -15,7 +15,7 @@ define void @test0_yes(ptr %p) nounwind willreturn {
   ret void
 }
 
-; CHECK: define void @test0_no(ptr writeonly captures(none) initializes((0, 4)) %p) #1 {
+; CHECK: define void @test0_no(ptr nofree writeonly captures(none) initializes((0, 4)) %p) #1 {
 define void @test0_no(ptr %p) nounwind willreturn {
   store i32 0, ptr %p, !tbaa !2
   ret void
@@ -49,7 +49,7 @@ define void @test2_yes(ptr %p, ptr %q, i64 %n) nounwind willreturn {
   ret void
 }
 
-; CHECK: define void @test2_no(ptr writeonly captures(none) %p, ptr readonly captures(none) %q, i64 %n) #4 {
+; CHECK: define void @test2_no(ptr nofree writeonly captures(none) %p, ptr nofree readonly captures(none) %q, i64 %n) #4 {
 define void @test2_no(ptr %p, ptr %q, i64 %n) nounwind willreturn {
   call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %q, i64 %n, i1 false), !tbaa !2
   ret void
@@ -57,13 +57,13 @@ define void @test2_no(ptr %p, ptr %q, i64 %n) nounwind willreturn {
 
 ; Similar to the others, va_arg only accesses memory through its operand.
 
-; CHECK: define i32 @test3_yes(ptr captures(none) %p) #0 {
+; CHECK: define i32 @test3_yes(ptr nofree captures(none) %p) #0 {
 define i32 @test3_yes(ptr %p) nounwind willreturn {
   %t = va_arg ptr %p, i32, !tbaa !1
   ret i32 %t
 }
 
-; CHECK: define i32 @test3_no(ptr captures(none) %p) #4 {
+; CHECK: define i32 @test3_no(ptr nofree captures(none) %p) #4 {
 define i32 @test3_no(ptr %p) nounwind willreturn {
   %t = va_arg ptr %p, i32, !tbaa !2
   ret i32 %t
@@ -78,7 +78,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1) nounwind willreturn
 ; CHECK: attributes #3 = { mustprogress nounwind willreturn }
 ; CHECK: attributes #4 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #5 = { nounwind willreturn }
-; CHECK: attributes #6 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #6 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 ; Root note.
 !0 = !{ }

@@ -1,134 +1,155 @@
-# This file defines a workflow that runs the libc++ benchmarks when a comment is added to the PR.
-#
-# The comment is of the form:
-#
-#   /libcxx-bot benchmark <path-to-benchmarks-to-run>
-#
-# That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
-# their results to be compared.
+# This file defines a reusable workflow that runs the libc++ benchmarks at the given commit, using the
+# given machine setup, and uploads the resulting LNT report as an artifact.
 
-name: Benchmark libc++
+name: "[libc++] Run benchmarks"
 
 permissions:
   contents: read
 
 on:
-  issue_comment:
-    types:
-      - created
-      - edited
-
-env:
-  CC: clang-22
-  CXX: clang++-22
+  workflow_call:
+    inputs:
+      commit:
+        description: 'The libc++ commit to benchmark'
+        required: true
+        type: string
+      lnt-machine:
+        description: 'The name of the LNT machine to report the results as'
+        required: true
+        type: string
+      setup:
+        description: 'The setup of the machine to benchmark on, as a JSON object (see libcxx/utils/ci/lnt/README.md)'
+        required: true
+        type: string
+      filter:
+        description: 'An optional filter to determine which benchmarks to run'
+        required: false
+        type: string
+      artifact-name:
+        description: 'The name of the artifact to upload the LNT report as'
+        required: true
+        type: string
 
 jobs:
   run-benchmarks:
-    permissions:
-      pull-requests: write
-
-    if: >-
-      github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/libcxx-bot benchmark')
-
-    runs-on: llvm-premerge-libcxx-next-runners # TODO: This should run on a dedicated set of machines
+    name: Run benchmarks on ${{ inputs.lnt-machine }}
+    runs-on: ${{ fromJSON(inputs.setup).runner }}
+    container: ${{ fromJSON(inputs.setup).container || null }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      BENCHMARK_SUITE_VERSION: ${{ fromJSON(inputs.setup).benchmark-suite-version }}
+      CMAKE_CACHE: ${{ fromJSON(inputs.setup).cmake-cache }}
+      COMPILER: ${{ fromJSON(inputs.setup).cxx }}
+      LIT_PARAMS: ${{ join(fromJSON(inputs.setup).lit-params, ' ') }}
+      LNT_MACHINE: ${{ inputs.lnt-machine }}
+      TEST_CONFIG: ${{ fromJSON(inputs.setup).test-config }}
+      XCODE_VERSION: ${{ fromJSON(inputs.setup).xcode-version }}
+      # Where we install the library. This lives inside the workspace so that actions/checkout
+      # cleans it up between runs on self-hosted runners.
+      INSTALL_DIR: ${{ github.workspace }}/install
     steps:
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
-        with:
-          python-version: '3.14'
-
-      - name: Setup virtual environment
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python -m pip install pygithub==2.8.1
-
-      - name: Extract information from the PR
-        id: vars
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
-        run: |
-          source .venv/bin/activate
-          cat <<EOF | python >> ${GITHUB_OUTPUT}
-          import github
-          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
-          pr = repo.get_pull(${{ github.event.issue.number }})
-          print(f"pr_base={pr.base.sha}")
-          print(f"pr_head={pr.head.sha}")
-          EOF
-          BENCHMARKS=$(echo "$COMMENT_BODY" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
-          echo "benchmarks=${BENCHMARKS}" >> ${GITHUB_OUTPUT}
-
-      - name: Update comment with link to the job
-        run: |
-          source .venv/bin/activate
-          cat <<EOF | python
-          import github
-          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
-          pr = repo.get_pull(${{ github.event.issue.number }})
-          comment = pr.get_issue_comment(${{ github.event.comment.id }})
-          add_text = "> _Running benchmarks in ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}_"
-          comment.edit('\n\n'.join([comment.body, add_text]))
-          EOF
-
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Checkout the LLVM monorepo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ steps.vars.outputs.pr_head }}
+          # We benchmark arbitrary historical commits, which requires the full history to be available.
           fetch-depth: 0
-          fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
-          path: repo # Avoid nuking the workspace, where we have the Python virtualenv
-
-      - name: Build and run baseline
+          fetch-tags: true
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
         env:
-          BENCHMARKS: ${{ steps.vars.outputs.benchmarks }}
-        run: |
-          source .venv/bin/activate && cd repo
-          python -m pip install -r libcxx/utils/requirements.txt
-          baseline_commit=$(git merge-base ${{ steps.vars.outputs.pr_base }} ${{ steps.vars.outputs.pr_head }})
-          ./libcxx/utils/build-at-commit --commit ${baseline_commit} --install-dir install/baseline -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee baseline.lnt
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
-      - name: Build and run candidate
+      - name: Select Xcode
+        if: runner.os == 'macOS'
+        run: echo "DEVELOPER_DIR=/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer" >> "${GITHUB_ENV}"
+
+      - name: Install dependencies via Homebrew
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install ninja cmake python@3.14
+          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
+
+      - name: Diagnose tools in use
+        run: |
+          cmake --version
+          ninja --version
+          "${COMPILER}" --version
+          python3 --version
+
+      # Build the library.
+      #
+      # A build failure is tolerated on purpose, since the library doesn't build at every historical commit.
+      # We still produce an empty report for such commits.
+      - name: Build libc++ at ${{ inputs.commit }}
+        id: build
+        continue-on-error: true
         env:
-          BENCHMARKS: ${{ steps.vars.outputs.benchmarks }}
+          COMMIT: ${{ inputs.commit }}
         run: |
-          source .venv/bin/activate && cd repo
-          ./libcxx/utils/build-at-commit --commit ${{ steps.vars.outputs.pr_head }} --install-dir install/candidate -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee candidate.lnt
+          # Clean up any stale install directory
+          rm -rf "${INSTALL_DIR}"
 
-      - name: Compare baseline and candidate runs
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
+
+      - name: Run the benchmarks
+        env:
+          CI_JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
+          COMMIT: ${{ inputs.commit }}
+          FILTER: ${{ inputs.filter }}
+          LIBRARY_BUILD: ${{ steps.build.outcome }}
         run: |
-          source .venv/bin/activate && cd repo
-          ./libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt | tee results.txt
+          # TODO(#226230): Remove this once the underlying issue with K8s has been resolved.
+          (while sleep 60; do echo "Still running the benchmarks..."; done) &
+          keepalive=$!
+          trap 'kill ${keepalive}' EXIT
 
-      - name: Update comment with results
-        run: |
-          source .venv/bin/activate && cd repo
-          cat <<EOF | python
-          import github
-          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
-          pr = repo.get_pull(${{ github.event.issue.number }})
-          comment = pr.get_issue_comment(${{ github.event.comment.id }})
-          with open('results.txt', 'r') as f:
-            benchmark_results = f.read()
+          filter_arg=()
+          if [ -n "${FILTER}" ]; then
+            filter_arg=(--filter "${FILTER}")
+          fi
 
-          new_comment_text = f"""
-          {comment.body}
+          read -ra configured_params <<< "${LIT_PARAMS}"
+          lit_params=()
+          for param in "${configured_params[@]}"; do
+            lit_params+=(--param "${param}")
+          done
 
-          <details>
-          <summary>
-          Benchmark results:
-          </summary>
+          # If the library build failed, still create an install directory so we
+          # run the benchmarks. The benchmarks will fail, producing an empty report.
+          if [ "${LIBRARY_BUILD}" != "success" ]; then
+            echo "::warning::libc++ failed to build at ${COMMIT}, producing an empty report"
+            mkdir -p "${INSTALL_DIR}"
+          fi
 
-          \`\`\`
-          {benchmark_results}
-          \`\`\`
+          libcxx/utils/ci/lnt/run-benchmarks                            \
+            --verbose                                                   \
+            --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
+            --machine "${LNT_MACHINE}"                                  \
+            --compiler "${COMPILER}"                                    \
+            --benchmark-commit "${COMMIT}"                              \
+            --test-config "${TEST_CONFIG}"                              \
+            --run-parameter "library_build=${LIBRARY_BUILD}"            \
+            --run-parameter "ci_job=${CI_JOB_URL}"                      \
+            "${filter_arg[@]}"                                          \
+            --output "${COMMIT}.json"                                   \
+            -- "${lit_params[@]}" --param "libcxx_installation=${INSTALL_DIR}"
 
-          </details>
-          """
+          cat "${COMMIT}.json"
 
-          comment.edit(new_comment_text)
-          EOF
+      - name: Upload the LNT report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.commit }}.json
+          if-no-files-found: error

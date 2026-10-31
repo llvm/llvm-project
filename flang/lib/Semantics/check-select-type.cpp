@@ -8,8 +8,6 @@
 
 #include "check-select-type.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/reference.h"
-#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
@@ -100,8 +98,16 @@ private:
                       "LEN type parameter as assumed"_err_en_US);
                   typeSpecRetVal = false;
                 }
+              } else if (const DerivedTypeSpec *derived{spec->AsDerived()};
+                  IsEnumerationType(derived->typeSymbol())) {
+                // An enumeration type extends nothing (F2023 C1167).
+                typeSpecRetVal = true;
+                if (!selectorType_.IsUnlimitedPolymorphic()) {
+                  context_.Say(stmt.source,
+                      "If selector is not unlimited polymorphic, an enumeration type specification must not be specified in the type guard statement"_err_en_US);
+                  typeSpecRetVal = false;
+                }
               } else {
-                const DerivedTypeSpec *derived{spec->AsDerived()};
                 typeSpecRetVal = PassesDerivedTypeChecks(
                     *derived, parser::FindSourceLocation(typeSpec));
               }
@@ -110,6 +116,11 @@ private:
             [&](const parser::DerivedTypeSpec &x) {
               CHECK(x.derivedTypeSpec);
               const semantics::DerivedTypeSpec *derived{x.derivedTypeSpec};
+              if (IsEnumerationType(derived->typeSymbol())) { // R1156
+                context_.Say(parser::FindSourceLocation(x),
+                    "An enumeration type may not appear in a CLASS IS type guard statement"_err_en_US);
+                return false;
+              }
               return PassesDerivedTypeChecks(
                   *derived, parser::FindSourceLocation(x));
             },

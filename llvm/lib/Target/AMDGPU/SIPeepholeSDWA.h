@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class SIPeepholeSDWAPass : public PassInfoMixin<SIPeepholeSDWAPass> {
+class SIPeepholeSDWAPass : public OptionalPassInfoMixin<SIPeepholeSDWAPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

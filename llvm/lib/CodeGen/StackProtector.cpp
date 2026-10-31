@@ -134,7 +134,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   }
 
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+  const ModuleLibcallLoweringInfo *LibcallLowering =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
 
   if (!LibcallLowering) {
@@ -146,7 +146,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
   const TargetLowering *TLI = STI->getTargetLowering();
   const LibcallLoweringInfo &Libcalls =
-      LibcallLowering->getLibcallLowering(*STI);
+      getLibcallLowering(*LibcallLowering, *STI);
 
   ++NumFunProtected;
   bool Changed = InsertStackProtectors(*TLI, Libcalls, &F, DT ? &DTU : nullptr,
@@ -322,7 +322,7 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
       // Ignore intrinsics that do not become real instructions.
       // TODO: Narrow this to intrinsics that have store-like effects.
       const auto *CI = cast<CallInst>(I);
-      if (!CI->isDebugOrPseudoInst() && !CI->isLifetimeStartOrEnd())
+      if (!isa<PseudoProbeInst>(CI) && !CI->isLifetimeStartOrEnd())
         return true;
       break;
     }
@@ -610,7 +610,7 @@ bool InsertStackProtectors(const TargetLowering &TLI,
   // impossible to emit the check in IR, so the target *must* support stack
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
-      TLI.useStackGuardXorFP() ||
+      TLI.useStackGuardMixFP() ||
       (EnableSelectionDAGSP && !TLI.getTargetMachine().Options.EnableFastISel);
   AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
   BasicBlock *FailBB = nullptr;

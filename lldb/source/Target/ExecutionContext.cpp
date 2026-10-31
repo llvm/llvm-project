@@ -145,8 +145,8 @@ lldb_private::GetStoppedExecutionContext(
     return llvm::createStringError(
         "StoppedExecutionContext created with a null target");
 
-  auto api_lock =
-      std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+  auto api_mutex = target_sp->GetAPIMutex();
+  std::unique_lock<TargetAPIMutex> api_locker(api_mutex);
 
   auto process_sp = exe_ctx_ref_ptr->GetProcessSP();
   if (!process_sp)
@@ -170,13 +170,15 @@ lldb_private::GetStoppedExecutionContext(
   }
 
   return StoppedExecutionContext(target_sp, process_sp, thread_sp, frame_sp,
-                                 std::move(api_lock), std::move(stop_locker));
+                                 std::move(api_mutex), std::move(api_locker),
+                                 std::move(stop_locker));
 }
 
-std::unique_lock<std::recursive_mutex> StoppedExecutionContext::AllowResume() {
+TargetAPIMutex StoppedExecutionContext::AllowResume() {
   Clear();
   m_stop_locker = ProcessRunLock::ProcessRunLocker();
-  return std::move(m_api_lock);
+  m_api_locker.release();
+  return std::move(m_api_mutex);
 }
 
 ExecutionContext::ExecutionContext(ExecutionContextScope *exe_scope_ptr)

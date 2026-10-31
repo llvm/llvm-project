@@ -239,6 +239,16 @@ void PyFloat8E8M0FNUType::bindDerived(ClassTy &c) {
       nb::arg("context") = nb::none(), "Create a float8_e8m0fnu type.");
 }
 
+void PyFloat8E5M3FNUType::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](DefaultingPyMlirContext context) {
+        MlirType t = mlirFloat8E5M3FNUTypeGet(context->get());
+        return PyFloat8E5M3FNUType(context->getRef(), t);
+      },
+      nb::arg("context") = nb::none(), "Create a float8_e5m3fnu type.");
+}
+
 void PyBF16Type::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
@@ -936,6 +946,7 @@ void populateIRTypes(nb::module_ &m) {
   PyFloat8E5M2FNUZType::bind(m);
   PyFloat8E3M4Type::bind(m);
   PyFloat8E8M0FNUType::bind(m);
+  PyFloat8E5M3FNUType::bind(m);
   PyBF16Type::bind(m);
   PyF16Type::bind(m);
   PyTF32Type::bind(m);

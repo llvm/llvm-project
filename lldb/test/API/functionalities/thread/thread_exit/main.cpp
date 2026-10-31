@@ -1,5 +1,6 @@
 // This test verifies the correct handling of child thread exits.
 
+#include "mach_thread.h"
 #include "pseudo_barrier.h"
 #include <thread>
 
@@ -7,59 +8,58 @@ pseudo_barrier_t g_barrier1;
 pseudo_barrier_t g_barrier2;
 pseudo_barrier_t g_barrier3;
 
-void *
-thread1 ()
-{
-    // Synchronize with the main thread.
-    pseudo_barrier_wait(g_barrier1);
+void *thread1() {
+  // Synchronize with the main thread.
+  pseudo_barrier_wait(g_barrier1);
 
-    // Synchronize with the main thread and thread2.
-    pseudo_barrier_wait(g_barrier2);
+  // Synchronize with the main thread and thread2.
+  pseudo_barrier_wait(g_barrier2);
 
-    // Return
-    return NULL;                                      // Set second breakpoint here
+  // Return
+  return NULL; // Set second breakpoint here
 }
 
-void *
-thread2 ()
-{
-    // Synchronize with thread1 and the main thread.
-    pseudo_barrier_wait(g_barrier2);
+void *thread2() {
+  // Synchronize with thread1 and the main thread.
+  pseudo_barrier_wait(g_barrier2);
 
-    // Synchronize with the main thread.
-    pseudo_barrier_wait(g_barrier3);
+  // Synchronize with the main thread.
+  pseudo_barrier_wait(g_barrier3);
 
-    // Return
-    return NULL;
+  // Return
+  return NULL;
 }
 
-int main ()
-{
-    pseudo_barrier_init(g_barrier1, 2);
-    pseudo_barrier_init(g_barrier2, 3);
-    pseudo_barrier_init(g_barrier3, 2);
+int main() {
+  pseudo_barrier_init(g_barrier1, 2);
+  pseudo_barrier_init(g_barrier2, 3);
+  pseudo_barrier_init(g_barrier3, 2);
 
-    // Create a thread.
-    std::thread thread_1(thread1);
+  // Create a thread.
+  std::thread thread_1(thread1);
 
-    // Wait for thread1 to start.
-    pseudo_barrier_wait(g_barrier1);
+  // Wait for thread1 to start.
+  pseudo_barrier_wait(g_barrier1);
 
-    // Create another thread.
-    std::thread thread_2(thread2);  // Set first breakpoint here
+  // Create another thread.
+  std::thread thread_2(thread2); // Set first breakpoint here
 
-    // Wait for thread2 to start.
-    pseudo_barrier_wait(g_barrier2);
+  // Wait for thread2 to start.
+  pseudo_barrier_wait(g_barrier2);
 
-    // Wait for the first thread to finish
-    thread_1.join();
+  // Wait for the first thread to finish
+  mach_port_t mach_thread_1 = get_mach_thread(thread_1);
+  thread_1.join();
+  wait_for_thread_cleanup(mach_thread_1);
 
-    // Synchronize with the remaining thread
-    int dummy = 47;                   // Set third breakpoint here
-    pseudo_barrier_wait(g_barrier3);
+  // Synchronize with the remaining thread
+  int dummy = 47; // Set third breakpoint here
+  pseudo_barrier_wait(g_barrier3);
 
-    // Wait for the second thread to finish
-    thread_2.join();
+  // Wait for the second thread to finish
+  mach_port_t mach_thread_2 = get_mach_thread(thread_2);
+  thread_2.join();
+  wait_for_thread_cleanup(mach_thread_2);
 
-    return 0;                                         // Set fourth breakpoint here
+  return 0; // Set fourth breakpoint here
 }

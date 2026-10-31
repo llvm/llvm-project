@@ -74,6 +74,12 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
+static cl::opt<bool> UseTagRecord2(
+    "use-codeview-tagrecord2", cl::Hidden,
+    cl::desc(
+        "Use the *2 versions for tag records in CodeView (LF_CLASS2, etc.)"),
+    cl::init(false));
+
 namespace {
 class CVMCAdapter : public CodeViewRecordStreamer {
 public:
@@ -753,6 +759,15 @@ void CodeViewDebug::emitTypeInformation() {
   OS.switchSection(Asm->getObjFileLowering().getCOFFDebugTypesSection());
   emitCodeViewMagicVersion();
 
+  // The records in TypeTable are already serialized, and .debug$H hashes those
+  // exact bytes. Decoding and re-encoding them through TypeRecordMapping is
+  // only needed to produce readable, commented assembly.
+  if (!OS.isVerboseAsm()) {
+    for (ArrayRef<uint8_t> Record : TypeTable.records())
+      OS.emitBinaryData(toStringRef(Record));
+    return;
+  }
+
   TypeTableCollection Table(TypeTable.records());
   TypeVisitorCallbackPipeline Pipeline;
 
@@ -893,8 +908,13 @@ void CodeViewDebug::emitCompilerInformation() {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
   }
   using ArchType = llvm::Triple::ArchType;
-  ArchType Arch = MMI->getModule()->getTargetTriple().getArch();
-  if (CompilerInfoAsm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
+  const Module *M = MMI->getModule();
+  ArchType Arch = M->getTargetTriple().getArch();
+  // The module flag survives LTO, and is reset to 0 if any merged module lacks
+  // it.
+  auto *HotpatchFlag =
+      mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("ms-hotpatch"));
+  if ((HotpatchFlag && HotpatchFlag->isOne()) || Arch == ArchType::thumb ||
       Arch == ArchType::aarch64) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
   }
@@ -1450,6 +1470,10 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
   DenseSet<InlinedEntity> Processed;
   // Grab the variable info that was squirreled away in the MMI side-table.
   collectVariableInfoFromMFTable(Processed);
+
+  for (const MDNode *N : SP->getRetainedNodes())
+    if (const auto *GVE = dyn_cast<DIGlobalVariableExpression>(N))
+      collectGlobalOrStaticLocalVariableInfo(GVE);
 
   for (const auto &I : DbgValues) {
     InlinedEntity IV = I.first;
@@ -2149,7 +2173,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
 
 TypeIndex CodeViewDebug::lowerTypeVFTableShape(const DIDerivedType *Ty) {
   unsigned VSlotCount =
-      Ty->getSizeInBits() / (8 * Asm->MAI->getCodePointerSize());
+      Ty->getSizeInBits() / (8 * Asm->MAI.getCodePointerSize());
   SmallVector<VFTableSlotKind, 4> Slots(VSlotCount, VFTableSlotKind::Near);
 
   VFTableShapeRecord VFTSR(Slots);
@@ -2201,9 +2225,9 @@ static MethodKind translateMethodKindFlags(const DISubprogram *SP,
 static TypeRecordKind getRecordKind(const DICompositeType *Ty) {
   switch (Ty->getTag()) {
   case dwarf::DW_TAG_class_type:
-    return TypeRecordKind::Class;
+    return UseTagRecord2 ? TypeRecordKind::Class2 : TypeRecordKind::Class;
   case dwarf::DW_TAG_structure_type:
-    return TypeRecordKind::Struct;
+    return UseTagRecord2 ? TypeRecordKind::Struct2 : TypeRecordKind::Struct;
   default:
     llvm_unreachable("unexpected tag");
   }
@@ -2281,10 +2305,10 @@ TypeIndex CodeViewDebug::lowerTypeEnum(const DICompositeType *Ty) {
       // We assume that the frontend provides all members in source declaration
       // order, which is what MSVC does.
       if (auto *Enumerator = dyn_cast_or_null<DIEnumerator>(Element)) {
-        // FIXME: Is it correct to always emit these as unsigned here?
-        EnumeratorRecord ER(MemberAccess::Public,
-                            APSInt(Enumerator->getValue(), true),
-                            Enumerator->getName());
+        EnumeratorRecord ER(
+            MemberAccess::Public,
+            APSInt(Enumerator->getValue(), Enumerator->isUnsigned()),
+            Enumerator->getName());
         ContinuationBuilder.writeMemberType(ER);
         EnumeratorCount++;
       }
@@ -2507,7 +2531,9 @@ TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
   ClassOptions CO =
       ClassOptions::ForwardReference | getCommonClassOptions(Ty);
   std::string FullName = getFullyQualifiedName(Ty);
-  UnionRecord UR(0, CO, TypeIndex(), 0, FullName, Ty->getIdentifier());
+  TypeRecordKind Kind =
+      UseTagRecord2 ? TypeRecordKind::Union2 : TypeRecordKind::Union;
+  UnionRecord UR(Kind, 0, CO, TypeIndex(), 0, FullName, Ty->getIdentifier());
   TypeIndex FwdDeclTI = TypeTable.writeLeafType(UR);
   if (!Ty->isForwardDecl())
     DeferredCompleteTypes.push_back(Ty);
@@ -2528,7 +2554,9 @@ TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
   uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
   std::string FullName = getFullyQualifiedName(Ty);
 
-  UnionRecord UR(FieldCount, CO, FieldTI, SizeInBytes, FullName,
+  TypeRecordKind Kind =
+      UseTagRecord2 ? TypeRecordKind::Union2 : TypeRecordKind::Union;
+  UnionRecord UR(Kind, FieldCount, CO, FieldTI, SizeInBytes, FullName,
                  Ty->getIdentifier());
   TypeIndex UnionTI = TypeTable.writeLeafType(UR);
 
@@ -3123,12 +3151,23 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   CurFn = nullptr;
 }
 
-// Usable locations are valid with non-zero line numbers. A line number of zero
-// corresponds to optimized code that doesn't have a distinct source location.
+// Usable locations are valid with non-zero line numbers, or artificial
+// subprograms because they are associated to the corresponding line within the
+// inlined callee.
+//
+// A line number of zero corresponds to optimized code that doesn't have a
+// distinct source location.
+//
 // In this case, we try to use the previous or next source location depending on
 // the context.
 static bool isUsableDebugLoc(DebugLoc DL) {
-  return DL && DL.getLine() != 0;
+  if (!DL)
+    return false;
+  if (DL.getLine() != 0)
+    return true;
+  if (const DILocalScope *Scope = DL->getScope())
+    return Scope->getSubprogram()->isArtificial();
+  return false;
 }
 
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
@@ -3178,13 +3217,6 @@ void CodeViewDebug::endCVSubsection(MCSymbol *EndLabel) {
   OS.emitValueToAlignment(Align(4));
 }
 
-static StringRef getSymbolName(SymbolKind SymKind) {
-  for (const EnumEntry<SymbolKind> &EE : getSymbolTypeNames())
-    if (EE.Value == SymKind)
-      return EE.Name;
-  return "";
-}
-
 MCSymbol *CodeViewDebug::beginSymbolRecord(SymbolKind SymKind) {
   MCSymbol *BeginLabel = MMI->getContext().createTempSymbol(),
            *EndLabel = MMI->getContext().createTempSymbol();
@@ -3192,7 +3224,7 @@ MCSymbol *CodeViewDebug::beginSymbolRecord(SymbolKind SymKind) {
   OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 2);
   OS.emitLabel(BeginLabel);
   if (OS.isVerboseAsm())
-    OS.AddComment("Record kind: " + getSymbolName(SymKind));
+    OS.AddComment("Record kind: " + getSymbolTypeNames().toString(SymKind));
   OS.emitInt16(unsigned(SymKind));
   return EndLabel;
 }
@@ -3210,7 +3242,7 @@ void CodeViewDebug::emitEndSymbolRecord(SymbolKind EndKind) {
   OS.AddComment("Record length");
   OS.emitInt16(2);
   if (OS.isVerboseAsm())
-    OS.AddComment("Record kind: " + getSymbolName(EndKind));
+    OS.AddComment("Record kind: " + getSymbolTypeNames().toString(EndKind));
   OS.emitInt16(uint16_t(EndKind)); // Record Kind
 }
 
@@ -3232,9 +3264,54 @@ void CodeViewDebug::emitDebugInfoForUDTs(
   }
 }
 
+void CodeViewDebug::collectGlobalOrStaticLocalVariableInfo(
+    const DIGlobalVariableExpression *GVE) {
+  const DIGlobalVariable *DIGV = GVE->getVariable();
+  const DIExpression *DIE = GVE->getExpression();
+  // Don't emit string literals in CodeView, as the only useful parts are
+  // generally the filename and line number, which isn't possible to output
+  // in CodeView. String literals should be the only unnamed GlobalVariable
+  // with debug info.
+  if (DIGV->getName().empty())
+    return;
+
+  if ((DIE->getNumElements() == 2) &&
+      (DIE->getElement(0) == dwarf::DW_OP_plus_uconst))
+    // Record the constant offset for the variable.
+    //
+    // A Fortran common block uses this idiom to encode the offset
+    // of a variable from the common block's starting address.
+    CVGlobalVariableOffsets.insert(std::make_pair(DIGV, DIE->getElement(1)));
+
+  // Emit constant global variables in a global symbol section.
+  if (!GlobalMap.count(GVE) && DIE->isConstant())
+    GlobalVariables.emplace_back(CVGlobalVariable{DIGV, DIE});
+
+  const auto *GV = GlobalMap.lookup(GVE);
+  if (!GV || GV->isDeclarationForLinker())
+    return;
+
+  DIScope *Scope = DIGV->getScope();
+  SmallVector<CVGlobalVariable, 1> *VariableList;
+  if (Scope && isa<DILocalScope>(Scope)) {
+    // Locate a global variable list for this scope, creating one if
+    // necessary.
+    auto Insertion =
+        ScopeGlobals.insert({Scope, std::unique_ptr<GlobalVariableList>()});
+    if (Insertion.second)
+      Insertion.first->second = std::make_unique<GlobalVariableList>();
+    VariableList = Insertion.first->second.get();
+  } else if (GV->hasComdat()) {
+    // Emit this global variable into a COMDAT section.
+    VariableList = &ComdatVariables;
+  } else {
+    // Emit this global variable in a single global symbol section.
+    VariableList = &GlobalVariables;
+  }
+  VariableList->emplace_back(CVGlobalVariable{DIGV, GV});
+}
+
 void CodeViewDebug::collectGlobalVariableInfo() {
-  DenseMap<const DIGlobalVariableExpression *, const GlobalVariable *>
-      GlobalMap;
   for (const GlobalVariable &GV : MMI->getModule()->globals()) {
     SmallVector<DIGlobalVariableExpression *, 1> GVEs;
     GV.getDebugInfo(GVEs);
@@ -3246,51 +3323,7 @@ void CodeViewDebug::collectGlobalVariableInfo() {
   for (const MDNode *Node : CUs->operands()) {
     const auto *CU = cast<DICompileUnit>(Node);
     for (const auto *GVE : CU->getGlobalVariables()) {
-      const DIGlobalVariable *DIGV = GVE->getVariable();
-      const DIExpression *DIE = GVE->getExpression();
-      // Don't emit string literals in CodeView, as the only useful parts are
-      // generally the filename and line number, which isn't possible to output
-      // in CodeView. String literals should be the only unnamed GlobalVariable
-      // with debug info.
-      if (DIGV->getName().empty()) continue;
-
-      if ((DIE->getNumElements() == 2) &&
-          (DIE->getElement(0) == dwarf::DW_OP_plus_uconst))
-        // Record the constant offset for the variable.
-        //
-        // A Fortran common block uses this idiom to encode the offset
-        // of a variable from the common block's starting address.
-        CVGlobalVariableOffsets.insert(
-            std::make_pair(DIGV, DIE->getElement(1)));
-
-      // Emit constant global variables in a global symbol section.
-      if (GlobalMap.count(GVE) == 0 && DIE->isConstant()) {
-        CVGlobalVariable CVGV = {DIGV, DIE};
-        GlobalVariables.emplace_back(std::move(CVGV));
-      }
-
-      const auto *GV = GlobalMap.lookup(GVE);
-      if (!GV || GV->isDeclarationForLinker())
-        continue;
-
-      DIScope *Scope = DIGV->getScope();
-      SmallVector<CVGlobalVariable, 1> *VariableList;
-      if (Scope && isa<DILocalScope>(Scope)) {
-        // Locate a global variable list for this scope, creating one if
-        // necessary.
-        auto Insertion = ScopeGlobals.insert(
-            {Scope, std::unique_ptr<GlobalVariableList>()});
-        if (Insertion.second)
-          Insertion.first->second = std::make_unique<GlobalVariableList>();
-        VariableList = Insertion.first->second.get();
-      } else if (GV->hasComdat())
-        // Emit this global variable into a COMDAT section.
-        VariableList = &ComdatVariables;
-      else
-        // Emit this global variable in a single global symbol section.
-        VariableList = &GlobalVariables;
-      CVGlobalVariable CVGV = {DIGV, GV};
-      VariableList->emplace_back(std::move(CVGV));
+      collectGlobalOrStaticLocalVariableInfo(GVE);
     }
   }
 }
@@ -3469,7 +3502,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     bool isUnsigned = isFloatDIType(DIGV->getType())
                           ? true
                           : DebugHandlerBase::isUnsignedDIType(DIGV->getType());
-    APSInt Value(APInt(/*BitWidth=*/64, DIE->getElement(1)), isUnsigned);
+    APSInt Value(APInt(/*BitWidth=*/64, DIE->getConstantValue()), isUnsigned);
     emitConstantSymbolRecord(DIGV->getType(), Value, QualifiedName);
   }
 }

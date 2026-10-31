@@ -9,6 +9,7 @@
 #include "DXILTranslateMetadata.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -92,19 +93,23 @@ static NamedMDNode *emitResourceMetadata(Module &M, DXILResourceMap &DRM,
   LLVMContext &Context = M.getContext();
 
   for (ResourceInfo &RI : DRM)
-    if (!RI.hasSymbol())
+    if (RI.hasBinding() && !RI.hasSymbol())
       RI.createSymbol(M,
                       DRTM[RI.getHandleTy()].createElementStruct(RI.getName()));
 
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
   for (const ResourceInfo &RI : DRM.srvs())
-    SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.uavs())
-    UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.cbuffers())
-    CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.samplers())
-    Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
 
   Metadata *SRVMD = SRVs.empty() ? nullptr : MDNode::get(Context, SRVs);
   Metadata *UAVMD = UAVs.empty() ? nullptr : MDNode::get(Context, UAVs);
@@ -293,7 +298,7 @@ static void emitValidatorVersionMD(Module &M, const ModuleMetadataInfo &MMDI) {
     return;
 
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   Metadata *MDVals[2];
   MDVals[0] =
       ConstantAsMetadata::get(IRB.getInt32(MMDI.ValidatorVersion.getMajor()));
@@ -308,7 +313,7 @@ static void emitValidatorVersionMD(Module &M, const ModuleMetadataInfo &MMDI) {
 static void emitShaderModelVersionMD(Module &M,
                                      const ModuleMetadataInfo &MMDI) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   Metadata *SMVals[3];
   VersionTuple SM = MMDI.ShaderModelVersion;
   SMVals[0] = MDString::get(Ctx, getShortShaderStage(MMDI.ShaderProfile));
@@ -320,7 +325,7 @@ static void emitShaderModelVersionMD(Module &M,
 
 static void emitDXILVersionTupleMD(Module &M, const ModuleMetadataInfo &MMDI) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   VersionTuple DXILVer = MMDI.DXILVersion;
   Metadata *DXILVals[2];
   DXILVals[0] = ConstantAsMetadata::get(IRB.getInt32(DXILVer.getMajor()));
@@ -476,8 +481,7 @@ static void translateInstructionMetadata(Module &M) {
     for (BasicBlock &BB : F) {
       // This needs to be done first so that "hlsl.controlflow.hints" isn't
       // removed in the allow-list below
-      if (auto *I = BB.getTerminator())
-        translateBranchMetadata(M, I);
+      translateBranchMetadata(M, BB.getTerminator());
 
       for (auto &I : make_early_inc_range(BB)) {
         if (isa<UncondBrInst, CondBrInst>(I))
@@ -514,22 +518,26 @@ static void cleanModuleFlags(Module &M) {
     M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
 }
 
-using GlobalMDList = std::array<StringLiteral, 7>;
+using GlobalMDList = std::array<StringLiteral, 12>;
 
 // The following are compatible with DXIL but not emit with clang, they can
 // be added when applicable:
-// dx.typeAnnotations, dx.viewIDState, dx.dxrPayloadAnnotations
+// dx.typeAnnotations, dx.dxrPayloadAnnotations
 static GlobalMDList CompatibleNamedModuleMDs = {
-    "llvm.ident",     "llvm.module.flags", "dx.resources",   "dx.valver",
-    "dx.shaderModel", "dx.version",        "dx.entryPoints",
-};
+    "llvm.ident",        "llvm.module.flags",
+    "dx.resources",      "dx.valver",
+    "dx.shaderModel",    "dx.version",
+    "dx.entryPoints",    "dx.source.contents",
+    "dx.source.defines", "dx.source.mainFileName",
+    "dx.source.args",    "dx.viewIdState"};
 
 static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
                                     DXILResourceTypeMap &DRTM,
                                     const ModuleShaderFlags &ShaderFlags,
-                                    const ModuleMetadataInfo &MMDI) {
+                                    const ModuleMetadataInfo &MMDI,
+                                    const ModuleSignatureInfo &SignatureInfo) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   SmallVector<MDNode *> EntryFnMDNodes;
 
   emitValidatorVersionMD(M, MMDI);
@@ -538,9 +546,6 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
   NamedMDNode *NamedResourceMD = emitResourceMetadata(M, DRM, DRTM);
   auto *ResourceMD =
       (NamedResourceMD != nullptr) ? NamedResourceMD->getOperand(0) : nullptr;
-  // FIXME: Add support to construct Signatures
-  // See https://github.com/llvm/llvm-project/issues/57928
-  MDTuple *Signatures = nullptr;
 
   if (MMDI.ShaderProfile == Triple::EnvironmentType::Library) {
     // Get the combined shader flag mask of all functions in the library to be
@@ -564,6 +569,24 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
                    "' different from specified target profile '" +
                    Twine(Triple::getEnvironmentTypeName(MMDI.ShaderProfile) +
                          "'"));
+    }
+    MDTuple *Signatures = nullptr;
+    if (const EntrySignature *Sig = SignatureInfo.get(EntryProp.Entry)) {
+      Signatures = Sig->getAsMetadata(Ctx, MMDI.ValidatorVersion);
+      // This module-level dependency state describes a single shader, not a
+      // concatenation of the independent signatures in a library.
+      if (MMDI.ShaderProfile != Triple::Library &&
+          (MMDI.ValidatorVersion.empty() ||
+           MMDI.ValidatorVersion == VersionTuple(0, 0) ||
+           MMDI.ValidatorVersion >= VersionTuple(1, 1)) &&
+          (Sig->InputVectors || Sig->OutputVectors)) {
+        auto State = Sig->getDependencyState(
+            ShaderFlags.getFunctionFlags(EntryProp.Entry).ViewID);
+        auto *StateMD = M.getOrInsertNamedMetadata("dx.viewIdState");
+        StateMD->clearOperands();
+        StateMD->addOperand(MDNode::get(
+            Ctx, ConstantAsMetadata::get(ConstantDataArray::get(Ctx, State))));
+      }
     }
     EntryFnMDNodes.emplace_back(emitEntryMD(
         M, EntryProp, Signatures, ResourceMD, EntryShaderFlags, MMDI));
@@ -596,7 +619,8 @@ PreservedAnalyses DXILTranslateMetadata::run(Module &M,
   const ModuleShaderFlags &ShaderFlags = MAM.getResult<ShaderFlagsAnalysis>(M);
   const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
-  translateGlobalMetadata(M, DRM, DRTM, ShaderFlags, MMDI);
+  const auto &SignatureInfo = MAM.getResult<SignatureAnalysis>(M);
+  translateGlobalMetadata(M, DRM, DRTM, ShaderFlags, MMDI, SignatureInfo);
   translateInstructionMetadata(M);
 
   return PreservedAnalyses::all();
@@ -608,11 +632,13 @@ void DXILTranslateMetadataLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<ShaderFlagsAnalysisWrapper>();
   AU.addRequired<DXILMetadataAnalysisWrapperPass>();
   AU.addRequired<RootSignatureAnalysisWrapper>();
+  AU.addRequired<SignatureAnalysisWrapper>();
 
   AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
   AU.addPreserved<DXILResourceBindingWrapperPass>();
   AU.addPreserved<DXILResourceWrapperPass>();
   AU.addPreserved<RootSignatureAnalysisWrapper>();
+  AU.addPreserved<SignatureAnalysisWrapper>();
   AU.addPreserved<ShaderFlagsAnalysisWrapper>();
 }
 
@@ -626,7 +652,9 @@ bool DXILTranslateMetadataLegacy::runOnModule(Module &M) {
   dxil::ModuleMetadataInfo MMDI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  translateGlobalMetadata(M, DRM, DRTM, ShaderFlags, MMDI);
+  const auto &SignatureInfo =
+      getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo();
+  translateGlobalMetadata(M, DRM, DRTM, ShaderFlags, MMDI, SignatureInfo);
   translateInstructionMetadata(M);
   return true;
 }
@@ -642,6 +670,7 @@ INITIALIZE_PASS_BEGIN(DXILTranslateMetadataLegacy, "dxil-translate-metadata",
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(RootSignatureAnalysisWrapper)
+INITIALIZE_PASS_DEPENDENCY(SignatureAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_END(DXILTranslateMetadataLegacy, "dxil-translate-metadata",
                     "DXIL Translate Metadata", false, false)

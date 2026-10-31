@@ -505,6 +505,7 @@ dupm	z0.d, #0xfffffffffffffff9
 dupm	z0.s, #0xfffffff9
 dupm	z23.h, #0xfff9
 dupm	z5.b, #0xf9
+dup	z0.s, w1
 eor	p0.b, p0/z, p0.b, p1.b
 eor	z0.d, z0.d, #0x6
 eor	z0.d, z0.d, #0xfffffffffffffff9
@@ -550,12 +551,16 @@ facge	p0.h, p0/z, z0.h, z1.h
 facge	p0.h, p0/z, z1.h, z0.h
 facge	p0.s, p0/z, z0.s, z1.s
 facge	p0.s, p0/z, z1.s, z0.s
+facle	p0.d, p0/z, z0.d, z1.d
+facle	p0.s, p0/z, z0.s, z1.s
 facgt	p0.d, p0/z, z0.d, z1.d
 facgt	p0.d, p0/z, z1.d, z0.d
 facgt	p0.h, p0/z, z0.h, z1.h
 facgt	p0.h, p0/z, z1.h, z0.h
 facgt	p0.s, p0/z, z0.s, z1.s
 facgt	p0.s, p0/z, z1.s, z0.s
+faclt	p0.d, p0/z, z0.d, z1.d
+faclt	p0.s, p0/z, z0.s, z1.s
 fadd	z0.d, p0/m, z0.d, #0.5
 fadd	z0.d, p7/m, z0.d, z31.d
 fadd	z0.d, z1.d, z31.d

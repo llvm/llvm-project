@@ -11,14 +11,14 @@
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Plugins/Language/CPlusPlus/VectorIterator.h"
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
-#include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -56,7 +56,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
@@ -75,7 +75,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   // The lifetime of a ValueObject and all its derivative ValueObjects
@@ -143,8 +143,8 @@ lldb::ValueObjectSP
 LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (m_pair_address != 0 && m_pair_type) {
     if (!m_pair_sp)
-      m_pair_sp = CreateValueObjectFromAddress("pair", m_pair_address,
-                                               m_exe_ctx_ref, m_pair_type);
+      m_pair_sp = CreateChildValueObjectFromAddress("pair", m_pair_address,
+                                                    m_exe_ctx_ref, m_pair_type);
     if (m_pair_sp)
       return m_pair_sp->GetChildAtIndex(idx);
   }
@@ -153,7 +153,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
 
 llvm::Expected<size_t>
 LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+    llvm::StringRef name) {
   if (name == "first")
     return 0;
   if (name == "second")
@@ -184,57 +184,6 @@ lldb_private::formatters::LibStdcppVectorIteratorSyntheticFrontEndCreator(
   return (valobj_sp ? new VectorIteratorSyntheticFrontEnd(
                           valobj_sp, {ConstString("_M_current")})
                     : nullptr);
-}
-
-lldb_private::formatters::VectorIteratorSyntheticFrontEnd::
-    VectorIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp,
-                                    llvm::ArrayRef<ConstString> item_names)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(),
-      m_item_names(item_names), m_item_sp() {
-  if (valobj_sp)
-    Update();
-}
-
-lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
-  m_item_sp.reset();
-
-  ValueObjectSP valobj_sp = m_backend.GetSP();
-  if (!valobj_sp)
-    return lldb::ChildCacheState::eRefetch;
-
-  ValueObjectSP item_ptr =
-      formatters::GetChildMemberWithName(*valobj_sp, m_item_names);
-  if (!item_ptr)
-    return lldb::ChildCacheState::eRefetch;
-  if (item_ptr->GetValueAsUnsigned(0) == 0)
-    return lldb::ChildCacheState::eRefetch;
-  Status err;
-  m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  m_item_sp = CreateValueObjectFromAddress(
-      "item", item_ptr->GetValueAsUnsigned(0), m_exe_ctx_ref,
-      item_ptr->GetCompilerType().GetPointeeType());
-  if (err.Fail())
-    m_item_sp.reset();
-  return lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<uint32_t>
-VectorIteratorSyntheticFrontEnd::CalculateNumChildren() {
-  return 1;
-}
-
-lldb::ValueObjectSP
-VectorIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
-  if (idx == 0)
-    return m_item_sp;
-  return lldb::ValueObjectSP();
-}
-
-llvm::Expected<size_t>
-VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
-  if (name == "item")
-    return 0;
-  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
@@ -380,13 +329,14 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   if (!cast_ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
+  m_ptr_obj = cast_ptr_sp->Clone("pointer").get();
 
   return lldb::ChildCacheState::eRefetch;
 }
 
 llvm::Expected<size_t>
-LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(
+    llvm::StringRef name) {
   if (name == "pointer")
     return 0;
 
@@ -403,8 +353,49 @@ lldb_private::formatters::LibStdcppSharedPtrSyntheticFrontEndCreator(
                     : nullptr);
 }
 
+static ValueObjectSP GetReferenceCountPointer(ValueObject &parent,
+                                              bool is_atomic_child) {
+  ValueObjectSP refcount_sp = parent.GetChildMemberWithName("_M_refcount");
+  if (!refcount_sp)
+    return nullptr;
+
+  if (!is_atomic_child)
+    return refcount_sp->GetChildMemberWithName("_M_pi");
+
+  ValueObjectSP val_sp = refcount_sp->GetChildMemberWithName("_M_val");
+  if (!val_sp || !val_sp->GetCompilerType())
+    return nullptr;
+
+  // May be a scalar value depending on libstdc++ version
+  if (!val_sp->GetCompilerType().IsScalarType()) {
+    val_sp = val_sp->GetChildMemberWithName("_M_i");
+    if (!val_sp)
+      return nullptr;
+  }
+
+  // Extract and align the raw value
+  bool is_success = false;
+  uint64_t raw_val = val_sp->GetValueAsUnsigned(0, &is_success);
+  if (!is_success || raw_val == 0)
+    return nullptr;
+  // Clear the least significant bit. See
+  // https://github.com/gcc-mirror/gcc/blob/releases/gcc-15.2.0/libstdc%2B%2B-v3/include/bits/shared_ptr_atomic.h#L465
+  raw_val &= ~1ULL;
+
+  // Get the pointer type
+  CompilerType ref_count_ptr_type =
+      refcount_sp->GetCompilerType().GetDirectNestedTypeWithName("pointer");
+  if (!ref_count_ptr_type)
+    return nullptr;
+
+  return ValueObject::CreateValueObjectFromAddress(
+      "", raw_val, parent.GetExecutionContextRef(), ref_count_ptr_type,
+      /*do_deref=*/false);
+}
+
 bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options,
+    bool is_atomic_child) {
   ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
   if (!valobj_sp)
     return false;
@@ -415,7 +406,7 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
 
   DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
 
-  ValueObjectSP pi_sp = valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi"});
+  ValueObjectSP pi_sp = GetReferenceCountPointer(*valobj_sp, is_atomic_child);
   if (!pi_sp)
     return false;
 
@@ -470,10 +461,14 @@ bool formatters::LibStdcppVariantSummaryProvider(
   if (!index_obj || !data_obj)
     return false;
 
-  auto index_bytes = index_obj->GetByteSize();
-  if (!index_bytes)
+  auto index_bytes_or_err = index_obj->GetByteSize();
+  if (!index_bytes_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   index_bytes_or_err.takeError(),
+                   "failed to get variant index byte size: {0}");
     return false;
-  auto npos_value = LibStdcppVariantNposValue(*index_bytes);
+  }
+  auto npos_value = LibStdcppVariantNposValue(*index_bytes_or_err);
   auto index = index_obj->GetValueAsUnsigned(0);
   if (index == npos_value) {
     stream.Printf(" No Value");
@@ -570,5 +565,38 @@ bool lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider(
   default:
     return false;
   }
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP impl_sp = valobj.GetChildMemberWithName("_M_impl");
+  if (!impl_sp)
+    return false;
+
+  ValueObjectSP file_sp = impl_sp->GetChildMemberWithName("_M_file_name");
+  ValueObjectSP function_sp =
+      impl_sp->GetChildMemberWithName("_M_function_name");
+  ValueObjectSP line_sp = impl_sp->GetChildMemberWithName("_M_line");
+  ValueObjectSP column_sp = impl_sp->GetChildMemberWithName("_M_column");
+
+  if (!file_sp || !function_sp || !line_sp || !column_sp)
+    return false;
+
+  bool success = false;
+  uint64_t line = line_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  uint64_t column = column_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  const char *file = file_sp->GetSummaryAsCString();
+  stream.Format("{0}:{1}:{2}", file ? file : "<unknown>", line, column);
+
+  if (const char *function = function_sp->GetSummaryAsCString())
+    stream.Printf(" (%s)", function);
+
   return true;
 }

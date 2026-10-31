@@ -11,7 +11,7 @@ namespace PR39822 {
   };
 
   // CHECK: _ZN7PR398223fooaSERS0_:
-  // CHECK-NEXT: File 0, [[@LINE+1]]:28 -> [[@LINE+1]]:29 = #0
+  // CHECK-NEXT: File 0, [[@LINE+1]]:32 -> [[@LINE+1]]:39 = #0
   foo &foo::operator=(foo &) = default;
 } // namespace PR39822
 

@@ -10,9 +10,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbtest
 
+import addressable_bits_scripted_process
 import dummy_scripted_process
 
 
+@requireThreadSupport
 class ScriptedProcesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -99,19 +101,19 @@ class ScriptedProcesTestCase(TestBase):
             log = f.read()
 
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
+            "abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.is_alive not implemented",
+            "abstract method MissingMethodsScriptedProcess.is_alive not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
+            "abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
             log,
         )
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_invalid_scripted_register_context(self):
         """Test that we can launch an lldb scripted process with an invalid
         Scripted Thread, with invalid register context."""
@@ -157,12 +159,88 @@ class ScriptedProcesTestCase(TestBase):
         buff = process.ReadMemory(addr, 4, error)
         self.assertEqual(buff, None)
         self.assertTrue(error.Fail())
-        self.assertEqual(error.GetCString(), "This is an invalid scripted process!")
+        self.assertEqual(
+            error.GetCString(),
+            "Failed to read memory from scripted process at 0x500000000: "
+            "This is an invalid scripted process!",
+        )
 
         with open(log_file, "r") as f:
             log = f.read()
 
         self.assertIn("Failed to get scripted thread registers data.", log)
+
+    @skipUnlessDarwin
+    def test_scripted_extension_instances(self):
+        """Test that the threads and frames a scripted process creates in Python
+        are listed under their own classes, not under the process's."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"] = "1"
+
+        def cleanup():
+            del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+
+        self.addTearDownHook(cleanup)
+
+        script_path = os.path.join(self.getSourceDir(), "dummy_scripted_process.py")
+        self.runCmd("command script import " + script_path)
+
+        args = lldb.SBStructuredData()
+        self.assertSuccess(args.SetFromJSON('{"answer": 42}'))
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetProcessPluginName("ScriptedProcess")
+        launch_info.SetScriptedProcessClassName(
+            "dummy_scripted_process.DummyScriptedProcess"
+        )
+        launch_info.SetScriptedProcessDictionary(args)
+
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
+        # Fetching the frames is what wraps the Python frame objects.
+        self.assertGreater(process.GetThreadAtIndex(0).GetNumFrames(), 0)
+
+        result = lldb.SBCommandReturnObject()
+        self.dbg.GetCommandInterpreter().HandleCommand(
+            "scripting extension list --instances --json", result
+        )
+        self.assertTrue(result.Succeeded(), result.GetError())
+        data = lldb.SBStructuredData()
+        self.assertSuccess(data.SetFromJSON(result.GetOutput()))
+        groups = {}
+        for i in range(data.GetSize()):
+            group = data.GetItemAtIndex(i)
+            groups[group.GetValueForKey("class_name").GetStringValue(256)] = group
+
+        def args_of(class_name):
+            instance = groups[class_name].GetValueForKey("instances").GetItemAtIndex(0)
+            return instance.GetValueForKey("args")
+
+        process_class = "dummy_scripted_process.DummyScriptedProcess"
+        thread_class = "dummy_scripted_process.DummyScriptedThread"
+        frame_class = "dummy_scripted_process.DummyScriptedFrame"
+        self.assertIn(process_class, groups)
+        self.assertIn(thread_class, groups)
+        self.assertIn(frame_class, groups)
+        self.assertEqual(groups[process_class].GetValueForKey("instances").GetSize(), 1)
+        for class_name in (thread_class, frame_class):
+            self.assertEqual(
+                os.path.realpath(
+                    groups[class_name]
+                    .GetValueForKey("source_path")
+                    .GetStringValue(4096)
+                ),
+                os.path.realpath(script_path),
+            )
+
+        # Only the process was created from the launch arguments.
+        self.assertEqual(
+            args_of(process_class).GetValueForKey("answer").GetIntegerValue(), 42
+        )
+        self.assertFalse(args_of(thread_class).IsValid())
 
     @skipUnlessDarwin
     def test_scripted_process_and_scripted_thread(self):
@@ -317,3 +395,59 @@ class ScriptedProcesTestCase(TestBase):
             "ScriptedFrame.thread should be valid after thread " "registration",
         )
         self.assertEqual(post_launch_frame.thread.GetThreadID(), tid)
+
+    # No dylib on Windows.
+    @skipIfWindows
+    @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
+    def test_scripted_process_addressable_bits(self):
+        """Test that the addressable bits a scripted process reports are in
+        effect for the very first stop, without resuming the process."""
+        self.build()
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        self.runCmd(
+            "command script import "
+            + os.path.join(self.getSourceDir(), "addressable_bits_scripted_process.py")
+        )
+
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetProcessPluginName("ScriptedProcess")
+        launch_info.SetScriptedProcessClassName(
+            "addressable_bits_scripted_process.AddressableBitsScriptedProcess"
+        )
+
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertSuccess(error)
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # The script only reports "lowmem", so the high memory masks have to
+        # fall back to it.
+        for mask_type in [lldb.eAddressMaskTypeCode, lldb.eAddressMaskTypeData]:
+            for mask_range in [lldb.eAddressMaskRangeLow, lldb.eAddressMaskRangeHigh]:
+                self.assertEqual(
+                    process.GetAddressMask(mask_type, mask_range),
+                    0xFFFFFFFC00000000,
+                    f"mask type {mask_type}, range {mask_range}",
+                )
+        self.assertEqual(
+            process.FixAddress(addressable_bits_scripted_process.TAGGED_PC),
+            addressable_bits_scripted_process.FIXED_PC,
+        )
+
+        # The mask has to have been installed before the threads and their
+        # stack frames were built for this stop: nothing resumes the process
+        # here, so a frame that resolved its pc with the default mask would
+        # never be recomputed.
+        #
+        # Thread 0 has its frame zero built by the unwinder from the register
+        # context, thread 1 reports its frames from the script.
+        for idx in range(2):
+            frame = process.GetThreadAtIndex(idx).GetFrameAtIndex(0)
+            self.assertEqual(
+                frame.GetPC(),
+                addressable_bits_scripted_process.FIXED_PC,
+                f"thread {idx} frame zero pc",
+            )

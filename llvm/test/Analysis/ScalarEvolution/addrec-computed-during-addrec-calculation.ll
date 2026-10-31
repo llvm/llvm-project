@@ -20,7 +20,7 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    %iv2.ext = sext i32 %iv2 to i64
 ; CHECK-NEXT:    --> {(sext i32 %iv to i64),+,1}<nsw><%loop2> U: [-2147483648,6442450943) S: [-2147483648,6442450943) Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2: Computable, %loop3: Invariant }
 ; CHECK-NEXT:    %iv3 = phi i64 [ %iv2.ext, %loop2.end ], [ %iv3.next, %loop3 ]
-; CHECK-NEXT:    --> {{\{\{}}(sext i32 %iv to i64),+,1}<nsw><%loop2>,+,1}<nsw><%loop3> U: [-2147483648,6442450943) S: [-2147483648,6442450943) Exits: {(sext i32 %iv to i64),+,1}<nsw><%loop2> LoopDispositions: { %loop3: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {{\{\{}}(sext i32 %iv to i64),+,1}<nsw><%loop2>,+,1}<nuw><nsw><%loop3> U: [-2147483648,6442450943) S: [-2147483648,6442450943) Exits: {(sext i32 %iv to i64),+,1}<nsw><%loop2> LoopDispositions: { %loop3: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv3.next = add nsw i64 %iv3, 1
 ; CHECK-NEXT:    --> {{\{\{}}(1 + (sext i32 %iv to i64))<nsw>,+,1}<nsw><%loop2>,+,1}<nsw><%loop3> U: [-2147483647,6442450944) S: [-2147483647,6442450944) Exits: {(1 + (sext i32 %iv to i64))<nsw>,+,1}<nsw><%loop2> LoopDispositions: { %loop3: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv.next = trunc i64 %iv3 to i32
@@ -63,4 +63,42 @@ loop3:
 loop.latch:
   %iv.next = trunc i64 %iv3 to i32
   br label %loop.header
+}
+
+define void @cached_result(i32 %n) {
+; CHECK-LABEL: 'cached_result'
+; CHECK-NEXT:  Classifying expressions for: @cached_result
+; CHECK-NEXT:    %b = phi i32 [ 2, %entry ], [ %b.n, %loop ]
+; CHECK-NEXT:    --> {2,+,4}<%loop> U: [0,-1) S: [-2147483648,2147483647) Exits: (2 + (4 * ((-2 + (3 umax %n)) /u 2)))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %a = phi i32 [ 1, %entry ], [ %a.n, %loop ]
+; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (1 + (2 * ((-2 + (3 umax %n)) /u 2))<nuw>)<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %b.n = add i32 %b, 4
+; CHECK-NEXT:    --> {6,+,4}<%loop> U: [0,-1) S: [-2147483648,2147483647) Exits: (6 + (4 * ((-2 + (3 umax %n)) /u 2))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %a.n = add nsw i32 %a, 2
+; CHECK-NEXT:    --> {3,+,2}<nuw><nsw><%loop> U: [3,-2147483648) S: [3,-2147483648) Exits: (3 + (2 * ((-2 + (3 umax %n)) /u 2))<nuw>)<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %c = add nsw i32 %a, %a
+; CHECK-NEXT:    --> {2,+,4}<nuw><%loop> U: [2,-1) S: [-2147483648,2147483647) Exits: (2 + (4 * ((-2 + (3 umax %n)) /u 2)))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %d = add i32 %b, 0
+; CHECK-NEXT:    --> {2,+,4}<nuw><%loop> U: [2,-1) S: [-2147483648,2147483647) Exits: (2 + (4 * ((-2 + (3 umax %n)) /u 2)))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @cached_result
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-2 + (3 umax %n)) /u 2)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-2 + (3 umax %n)) /u 2)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+
+loop:
+  %b = phi i32 [ 2, %entry ], [ %b.n, %loop ]
+  %a = phi i32 [ 1, %entry ], [ %a.n, %loop ]
+  %b.n = add i32 %b, 4
+  %a.n = add nsw i32 %a, 2
+  %c = add nsw i32 %a, %a
+  %d = add i32 %b, 0
+  %cmp = icmp ult i32 %a.n, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
 }

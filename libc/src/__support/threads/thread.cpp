@@ -7,14 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/thread.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/threads/mutex.h"
-
+#include "hdr/limits_macros.h"
+#include "hdr/types/struct___pthread_cleanup_frame.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/optional.h"
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/threads/cleanup_stack.h"
+#include "src/__support/threads/mutex.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace {
@@ -53,8 +55,8 @@ class TSSKeyMgr {
 
 public:
   constexpr TSSKeyMgr()
-      : mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
-            /*pshared=*/false) {}
+      : mtx(/*is_priority_inherit=*/false, /*is_recursive=*/false,
+            /*is_robust=*/false, /*is_pshared=*/false) {}
 
   cpp::optional<unsigned int> new_key(TSSDtor *dtor) {
     cpp::lock_guard lock(mtx);
@@ -112,8 +114,8 @@ class ThreadAtExitCallbackMgr {
 
 public:
   constexpr ThreadAtExitCallbackMgr()
-      : mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
-            /*pshared=*/false) {}
+      : mtx(/*is_priority_inherit=*/false, /*is_recursive=*/false,
+            /*is_robust=*/false, /*is_pshared=*/false) {}
 
   int add_callback(AtExitCallback *callback, void *obj) {
     cpp::lock_guard lock(mtx);
@@ -131,39 +133,43 @@ public:
       atexit_unit.callback(atexit_unit.obj);
       mtx.lock();
     }
+    mtx.unlock();
   }
 };
 
 static LIBC_THREAD_LOCAL ThreadAtExitCallbackMgr atexit_callback_mgr;
 
-// The function __cxa_thread_atexit is provided by C++ runtimes like libcxxabi.
-// It is used by thread local object runtime to register destructor calls. To
-// actually register destructor call with the threading library, it calls
-// __cxa_thread_atexit_impl, which is to be provided by the threading library.
-// The semantics are very similar to the __cxa_atexit function except for the
-// fact that the registered callback is thread specific.
-extern "C" int __cxa_thread_atexit_impl(AtExitCallback *callback, void *obj,
-                                        void *) {
+int add_thread_atexit_callback(AtExitCallback *callback, void *obj) {
   return atexit_callback_mgr.add_callback(callback, obj);
 }
-
 namespace internal {
 
-ThreadAtExitCallbackMgr *get_thread_atexit_callback_mgr() {
-  return &atexit_callback_mgr;
-}
+void call_atexit_callbacks() {
+  // Cancellation cleanup handlers (pthread_cleanup_push).
+  __pthread_cleanup_frame *frame;
+  while ((frame = current_thread().attrib->cleanup_stack.pop()) != nullptr)
+    frame->__routine(frame->__arg);
 
-void call_atexit_callbacks(ThreadAttributes *attrib) {
-  attrib->atexit_callback_mgr->call();
-  for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
-    TSSValueUnit &unit = tss_values[i];
-    // Both dtor and value need to nonnull to call dtor
-    if (unit.dtor != nullptr && unit.payload != nullptr)
-      unit.dtor(unit.payload);
+  // thread exit callbacks (__cxa_thread_atexit).
+  atexit_callback_mgr.call();
+
+  // Thread-specific keys (pthread_key_create).
+  for (size_t iter = 0; iter < PTHREAD_DESTRUCTOR_ITERATIONS; ++iter) {
+    bool called_dtor = false;
+    for (TSSValueUnit &unit : tss_values) {
+      // Both dtor and value need to be nonnull to call dtor
+      if (unit.dtor == nullptr || unit.payload == nullptr)
+        continue;
+
+      void *val = unit.payload;
+      unit.payload = nullptr;
+      unit.dtor(val);
+      called_dtor = true;
+    }
+    if (!called_dtor)
+      break;
   }
 }
-
-extern "C" void __cxa_thread_finalize() { call_atexit_callbacks(self.attrib); }
 
 } // namespace internal
 

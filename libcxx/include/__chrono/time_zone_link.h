@@ -29,23 +29,23 @@
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
 class time_zone_link {
 public:
   [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI explicit time_zone_link(__private_constructor_tag, string_view __name, string_view __target)
+  explicit time_zone_link(__private_constructor_tag, string_view __name, string_view __target)
       : __name_{__name}, __target_{__target} {}
 
-  _LIBCPP_HIDE_FROM_ABI time_zone_link(time_zone_link&&)            = default;
-  _LIBCPP_HIDE_FROM_ABI time_zone_link& operator=(time_zone_link&&) = default;
+  time_zone_link(time_zone_link&&)            = default;
+  time_zone_link& operator=(time_zone_link&&) = default;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view target() const noexcept { return __target_; }
+  [[nodiscard]] string_view name() const noexcept { return __name_; }
+  [[nodiscard]] string_view target() const noexcept { return __target_; }
 
 private:
   string __name_;
@@ -55,22 +55,22 @@ private:
   string __target_;
 };
 
-[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline bool
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB inline bool
 operator==(const time_zone_link& __x, const time_zone_link& __y) noexcept {
   return __x.name() == __y.name();
 }
 
-[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline strong_ordering
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB inline strong_ordering
 operator<=>(const time_zone_link& __x, const time_zone_link& __y) noexcept {
   return __x.name() <=> __y.name();
 }
 
 } // namespace chrono
 
+_LIBCPP_END_NAMESPACE_STD
+
 #  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
          // _LIBCPP_HAS_LOCALIZATION
-
-_LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 

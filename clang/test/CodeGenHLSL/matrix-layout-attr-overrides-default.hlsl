@@ -1,0 +1,296 @@
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=column-major -o - | FileCheck %s
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=row-major -o - | FileCheck %s
+
+// Verifies that a per-decl `[[hlsl::row_major]]` / `[[hlsl::column_major]]`
+// (spelled `row_major` / `column_major` in HLSL) overrides the
+// `-fmatrix-memory-layout=` default at every CodeGen lowering site:
+//
+//   * `MatrixSubscriptExpr` index computation
+//   * `MatrixSingleSubscriptExpr` row extraction
+//   * `CK_HLSLElementwiseCast` matrix construction
+//   * `__builtin_hlsl_mul` matrix-multiply transpose insertion
+//   * `__builtin_hlsl_transpose` row/col dimension swap
+//   * `CK_HLSLMatrixTruncation` shuffle mask
+//
+// The decl-level attribute should win regardless of the TU default.
+
+// -----------------------------------------------------------------------------
+// MatrixSubscriptExpr indexing uses canonical column-major prvalues.
+// -----------------------------------------------------------------------------
+export float subscript_rm(int row, int col, row_major float2x3 m) {
+  return m[row][col];
+}
+// CHECK-LABEL: define {{.*}} float @_Z12subscript_rmiiu11matrix_typeILm2ELm3EfE
+// CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
+// CHECK: [[COL:%.*]] = load i32, ptr %col.addr
+// CHECK: [[OFFSET:%.*]] = mul i32 [[COL]], 2
+// CHECK: [[IDX:%.*]] = add i32 [[OFFSET]], [[ROW]]
+// CHECK: extractelement <6 x float> %{{.*}}, i32 [[IDX]]
+
+// Matrix out parameters point directly to storage, so their element indices
+// must use the declared memory layout.
+export void write_row_major_element(out row_major float2x3 m, float value) {
+  m[0][1] = value;
+}
+// CHECK-LABEL: define void @_Z23write_row_major_element{{.*}}(
+// CHECK: [[M_PTR:%.*]] = load ptr, ptr %m.addr
+// CHECK: [[ELEMENT_ADDR:%.*]] = getelementptr <6 x float>, ptr [[M_PTR]], i32 0, i32 1
+// CHECK: store float %{{.*}}, ptr [[ELEMENT_ADDR]]
+
+export float call_write_row_major_element(float value) {
+  column_major float2x3 source = {1, 2, 3, 4, 5, 6};
+  write_row_major_element(source, value);
+  return source._m01;
+}
+// CHECK-LABEL: define {{.*}} float @_Z28call_write_row_major_element
+// CHECK: [[SOURCE:%.*]] = alloca [3 x <2 x float>]
+// CHECK-NEXT: [[OUT_TEMP:%.*]] = alloca <6 x float>
+// CHECK: call void @_Z23write_row_major_element{{.*}}(ptr {{.*}} [[OUT_TEMP]], float {{.*}})
+// CHECK-NEXT: [[ROW_MAJOR:%.*]] = load <6 x float>, ptr [[OUT_TEMP]]
+// CHECK-NEXT: [[TO_COLUMN_MAJOR:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[ROW_MAJOR]], i32 3, i32 2)
+// CHECK-NEXT: store <6 x float> [[TO_COLUMN_MAJOR]], ptr [[SOURCE]]
+// CHECK: [[CANONICAL:%.*]] = load <6 x float>, ptr [[SOURCE]]
+// CHECK-NEXT: [[ELEMENT:%.*]] = extractelement <6 x float> [[CANONICAL]], i32 2
+// CHECK-NEXT: ret float [[ELEMENT]]
+
+// -----------------------------------------------------------------------------
+// MatrixSubscriptExpr indexing: column-major attr -> Col*NumRows + Row
+// -----------------------------------------------------------------------------
+export float subscript_cm(int row, int col, column_major float2x3 m) {
+  return m[row][col];
+}
+// CHECK-LABEL: define {{.*}} float @_Z12subscript_cmiiu11matrix_typeILm2ELm3EfE
+// CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
+// CHECK: [[COL:%.*]] = load i32, ptr %col.addr
+// CHECK: [[OFFSET:%.*]] = mul i32 [[COL]], 2
+// CHECK: [[IDX:%.*]] = add i32 [[OFFSET]], [[ROW]]
+// CHECK: extractelement <6 x float> %{{.*}}, i32 [[IDX]]
+
+// -----------------------------------------------------------------------------
+// MatrixSingleSubscriptExpr (row extraction) uses canonical column-major
+// indexing even when the destination storage layout is row-major.
+// -----------------------------------------------------------------------------
+
+// Row extraction also indexes the canonical column-major prvalue.
+export float3 row_extract_rm(int row, row_major float2x3 m) {
+  return m[row];
+}
+// CHECK-LABEL: define {{.*}} <3 x float> @_Z14row_extract_rmiu11matrix_typeILm2ELm3EfE
+// CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
+// CHECK: add i32 0, [[ROW]]
+// CHECK: add i32 2, [[ROW]]
+// CHECK: add i32 4, [[ROW]]
+
+// Column-major: per-column element index is Col*NumRows + Row, so we *don't*
+// see the Row*NumCols multiply; instead each column folds the constant
+// Col*NumRows into the GEP, leaving just an add of Row.
+export float3 row_extract_cm(int row, column_major float2x3 m) {
+  return m[row];
+}
+// CHECK-LABEL: define {{.*}} <3 x float> @_Z14row_extract_cmiu11matrix_typeILm2ELm3EfE
+// CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
+// CHECK: add i32 0, [[ROW]]
+// CHECK: add i32 2, [[ROW]]
+// CHECK: add i32 4, [[ROW]]
+
+// -----------------------------------------------------------------------------
+// CK_HLSLElementwiseCast produces a canonical column-major register value.
+// An explicit row-major destination affects only the subsequent memory store.
+// -----------------------------------------------------------------------------
+typedef row_major float2x2 RowMajorMatrix;
+
+export float cast_row_major(float4 v) {
+  RowMajorMatrix m = (RowMajorMatrix)v;
+  return m[0][1];
+}
+// CHECK-LABEL: define {{.*}} float @_Z14cast_row_major
+// CHECK: [[SECOND:%.*]] = extractelement <4 x float> %{{.*}}, i32 1
+// CHECK: insertelement <4 x float> %{{.*}}, float [[SECOND]], i64 2
+
+// -----------------------------------------------------------------------------
+// __builtin_hlsl_mul (vector * matrix): row-major operand triggers a transpose
+// before the column-major matrix.multiply intrinsic.
+// -----------------------------------------------------------------------------
+export float3 vec_mat_rm(float2 v, row_major float2x3 m) { return mul(v, m); }
+// CHECK-LABEL: define {{.*}} <3 x float> @_Z10vec_mat_rmDv2_fu11matrix_typeILm2ELm3EfE
+// CHECK: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
+// CHECK: call {{.*}} <3 x float> @llvm.matrix.multiply.v3f32.v2f32.v6f32(<2 x float> %{{.*}}, <6 x float> [[T]], i32 1, i32 2, i32 3)
+
+// Column-major operand: no transpose is inserted before matrix.multiply.
+export float3 vec_mat_cm(float2 v, column_major float2x3 m) { return mul(v, m); }
+// CHECK-LABEL: define {{.*}} <3 x float> @_Z10vec_mat_cmDv2_fu11matrix_typeILm2ELm3EfE
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: call {{.*}} <3 x float> @llvm.matrix.multiply.v3f32.v2f32.v6f32(<2 x float> %{{.*}}, <6 x float> %{{.*}}, i32 1, i32 2, i32 3)
+
+// -----------------------------------------------------------------------------
+// __builtin_hlsl_mul (matrix * matrix): mixed per-decl layouts cause a
+// transpose only on the row-major operand.
+// -----------------------------------------------------------------------------
+
+// LHS row-major, RHS column-major: only LHS is transposed.
+export float2x2 mat_mat_rm_cm(row_major float2x3 a, column_major float3x2 b) { return mul(a, b); }
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z13mat_mat_rm_cm
+// CHECK: [[AMat:%.*]] = load <6 x float>, ptr %a.addr, align 4
+// CHECK: [[A:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[AMat]], i32 3, i32 2)
+// CHECK: [[BMat:%.*]] = load <6 x float>, ptr %b.addr, align 4
+// CHECK: call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> [[A]], <6 x float> [[BMat]], i32 2, i32 3, i32 2)
+
+// LHS column-major, RHS row-major: only RHS is transposed.
+export float2x2 mat_mat_cm_rm(column_major float2x3 a, row_major float3x2 b) { return mul(a, b); }
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z13mat_mat_cm_rm
+// CHECK: [[AMat:%.*]] = load <6 x float>, ptr %a.addr, align 4
+// CHECK: [[BMat:%.*]] = load <6 x float>, ptr %b.addr, align 4
+// CHECK: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[BMat]], i32 2, i32 3)
+// CHECK: call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> [[AMat]], <6 x float> [[T]], i32 2, i32 3, i32 2)
+
+// Destination layout: the result is column-major, so no transpose is needed.
+export column_major float2x2 mat_mat_dst_cm(column_major float2x3 a, column_major float3x2 b) { return mul(a, b); }
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z14mat_mat_dst_cm
+// CHECK: [[MUL:%.*]] = call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}}, i32 2, i32 3, i32 2)
+// CHECK-NOT: @llvm.matrix.transpose
+
+// Destination layout: the result is row-major, so a transpose is needed.
+export row_major float2x2 mat_mat_dst_rm(column_major float2x3 a, column_major float3x2 b) { return mul(a, b); }
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z14mat_mat_dst_rm
+// CHECK: [[MUL:%.*]] = call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}}, i32 2, i32 3, i32 2)
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: ret <4 x float> [[MUL]]
+
+
+// The transpose cancels the row-major load normalization.
+export column_major float3x2 transpose_rm_to_cm(row_major float2x3 m) { return transpose(m); }
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_rm_to_cmu11matrix_typeILm2ELm3EfE
+// CHECK: [[TO_MEMORY:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// CHECK: store <6 x float> [[TO_MEMORY]], ptr %{{.*}}
+// CHECK: [[FROM_MEMORY:%.*]] = load <6 x float>, ptr %{{.*}}
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: ret <6 x float> [[FROM_MEMORY]]
+
+// Return layout metadata does not change the canonical value representation.
+export row_major float3x2 transpose_cm_to_rm(column_major float2x3 m) { return transpose(m); }
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_cm_to_rmu11matrix_typeILm2ELm3EfE
+// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+
+// Row-major source -> row-major destination: the transpose cancels load normalization.
+export row_major float3x2 transpose_rm_to_rm(row_major float2x3 m) { return transpose(m); }
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_rm_to_rmu11matrix_typeILm2ELm3EfE
+// CHECK: [[TO_MEMORY:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// CHECK: store <6 x float> [[TO_MEMORY]], ptr %{{.*}}
+// CHECK: [[FROM_MEMORY:%.*]] = load <6 x float>, ptr %{{.*}}
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: ret <6 x float> [[FROM_MEMORY]]
+
+// Column-major source -> column-major destination: real transpose, natural dims.
+export column_major float3x2 transpose_cm_to_cm(column_major float2x3 m) { return transpose(m); }
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_cm_to_cmu11matrix_typeILm2ELm3EfE
+// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+
+// The TU memory-layout default does not affect matrix prvalues.
+export float3x2 transpose_rm(row_major float2x3 m) { return transpose(m); }
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z12transpose_rmu11matrix_typeILm2ELm3EfE
+// CHECK: [[TO_MEMORY:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// CHECK: store <6 x float> [[TO_MEMORY]], ptr %{{.*}}
+// CHECK: [[FROM_MEMORY:%.*]] = load <6 x float>, ptr %{{.*}}
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: ret <6 x float> [[FROM_MEMORY]]
+
+
+export float3x2 transpose_cm(column_major float2x3 m) { return transpose(m); }
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z12transpose_cmu11matrix_typeILm2ELm3EfE
+// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+
+// -----------------------------------------------------------------------------
+// CK_HLSLMatrixTruncation: the shuffle mask that picks elements from the
+// source matrix uses the operand's per-decl layout to flatten indices.
+// -----------------------------------------------------------------------------
+
+typedef row_major    float2x2 RM22;
+typedef column_major float2x2 CM22;
+typedef row_major    float3x3 RM33;
+typedef column_major float3x3 CM33;
+
+// Matrix truncation uses canonical column-major indices.
+export row_major float2x2 truncate_rm(row_major float3x2 m) { return (RM22)m; }
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z11truncate_rmu11matrix_typeILm3ELm2EfE
+// CHECK: shufflevector <6 x float> %{{.*}}, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
+
+// Column-major source 3x2 -> column-major dest 2x2: flat column-major mask is {0,1,3,4}.
+export column_major float2x2 truncate_cm(column_major float3x2 m) { return (CM22)m; }
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z11truncate_cmu11matrix_typeILm3ELm2EfE
+// CHECK: shufflevector <6 x float> %{{.*}}, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
+
+// -----------------------------------------------------------------------------
+// CK_HLSLMatrixTruncation cross-layout: when source and destination carry
+// different layout keywords, `IsSrcRowMajor` and `IsDstRowMajor` differ. The
+// source indices flatten using the source layout while the destination
+// positions flatten using the destination layout. This is independent of the
+// `-fmatrix-memory-layout=` default.
+// -----------------------------------------------------------------------------
+
+export column_major float3x3 truncate_rm_to_cm(row_major float3x4 m) { return (CM33)m; }
+// CHECK-LABEL: define {{.*}} <9 x float> @_Z17truncate_rm_to_cmu11matrix_typeILm3ELm4EfE
+// CHECK: shufflevector <12 x float> %{{.*}}, <12 x float> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+
+// Column-major src 3x4 -> row-major dst 3x3.
+// src idx (R,C) = C*3+R; dst slot (R,C) = R*3+C.
+//   (0,0)->mask[0]=0  (0,1)->mask[1]=3  (0,2)->mask[2]=6
+//   (1,0)->mask[3]=1  (1,1)->mask[4]=4  (1,2)->mask[5]=7
+//   (2,0)->mask[6]=2  (2,1)->mask[7]=5  (2,2)->mask[8]=8
+export row_major float3x3 truncate_cm_to_rm(column_major float3x4 m) { return (RM33)m; }
+// CHECK-LABEL: define {{.*}} <9 x float> @_Z17truncate_cm_to_rmu11matrix_typeILm3ELm4EfE
+// CHECK: shufflevector <12 x float> %{{.*}}, <12 x float> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+
+// -----------------------------------------------------------------------------
+// Array of matrix: the per-decl layout attribute propagates through
+// ConstantArrayType sugar via wrapMatrixWithLayoutAttr, so indexing into an
+// array element still uses the correct layout.
+// -----------------------------------------------------------------------------
+
+// Row-major array storage is normalized before column-major scalar extraction.
+export float arr_subscript_rm(int row, int col, row_major float2x3 arr[2]) {
+  return arr[1][row][col];
+}
+// CHECK-LABEL: define {{.*}} float @_Z16arr_subscript_rm
+// CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
+// CHECK: [[COL:%.*]] = load i32, ptr %col.addr
+// CHECK: [[OFFSET:%.*]] = mul i32 [[COL]], 2
+// CHECK: [[IDX:%.*]] = add i32 [[OFFSET]], [[ROW]]
+// CHECK: extractelement <6 x float> %{{.*}}, i32 [[IDX]]
+
+// Column-major array element subscript: Col*NumRows + Row
+export float arr_subscript_cm(int row, int col, column_major float2x3 arr[2]) {
+  return arr[1][row][col];
+}
+// CHECK-LABEL: define {{.*}} float @_Z16arr_subscript_cm
+// CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
+// CHECK: [[COL:%.*]] = load i32, ptr %col.addr
+// CHECK: [[OFFSET:%.*]] = mul i32 [[COL]], 2
+// CHECK: [[IDX:%.*]] = add i32 [[OFFSET]], [[ROW]]
+// CHECK: extractelement <6 x float> %{{.*}}, i32 [[IDX]]
+
+// -----------------------------------------------------------------------------
+// Multi-dimensional array of matrix: wrapMatrixWithLayoutAttr recurses
+// through nested ConstantArrayType layers.
+// -----------------------------------------------------------------------------
+
+// Nested row-major array storage is normalized before scalar extraction.
+export float arr2d_subscript_rm(int row, int col, row_major float2x3 arr[2][3]) {
+  return arr[0][1][row][col];
+}
+// CHECK-LABEL: define {{.*}} float @_Z18arr2d_subscript_rm
+// CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
+// CHECK: [[COL:%.*]] = load i32, ptr %col.addr
+// CHECK: [[OFFSET:%.*]] = mul i32 [[COL]], 2
+// CHECK: [[IDX:%.*]] = add i32 [[OFFSET]], [[ROW]]
+// CHECK: extractelement <6 x float> %{{.*}}, i32 [[IDX]]
+
+// Column-major 2D array element subscript: Col*NumRows + Row
+export float arr2d_subscript_cm(int row, int col, column_major float2x3 arr[2][3]) {
+  return arr[0][1][row][col];
+}
+// CHECK-LABEL: define {{.*}} float @_Z18arr2d_subscript_cm
+// CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
+// CHECK: [[COL:%.*]] = load i32, ptr %col.addr
+// CHECK: [[OFFSET:%.*]] = mul i32 [[COL]], 2
+// CHECK: [[IDX:%.*]] = add i32 [[OFFSET]], [[ROW]]
+// CHECK: extractelement <6 x float> %{{.*}}, i32 [[IDX]]

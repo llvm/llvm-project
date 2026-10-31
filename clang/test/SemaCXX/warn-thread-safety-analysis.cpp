@@ -169,10 +169,10 @@ struct TestingMoreComplexAttributes {
 } more_complex_atttributes;
 
 void more_complex_attributes() {
-    more_complex_atttributes.a = true; // expected-warning{{writing variable 'a' requires holding mutex 'lock' exclusively}}
-    more_complex_atttributes.b = true; // expected-warning{{writing variable 'b' requires holding mutex 'strct.lock' exclusively}}
-    *more_complex_atttributes.ptr_a = true; // expected-warning{{writing the value pointed to by 'ptr_a' requires holding mutex 'lock' exclusively}}
-    *more_complex_atttributes.ptr_b = true; // expected-warning{{writing the value pointed to by 'ptr_b' requires holding mutex 'strct.lock' exclusively}}
+    more_complex_atttributes.a = true; // expected-warning{{writing variable 'a' requires holding mutex 'more_complex_atttributes.lock' exclusively}}
+    more_complex_atttributes.b = true; // expected-warning{{writing variable 'b' requires holding mutex 'more_complex_atttributes.strct.lock' exclusively}}
+    *more_complex_atttributes.ptr_a = true; // expected-warning{{writing the value pointed to by 'ptr_a' requires holding mutex 'more_complex_atttributes.lock' exclusively}}
+    *more_complex_atttributes.ptr_b = true; // expected-warning{{writing the value pointed to by 'ptr_b' requires holding mutex 'more_complex_atttributes.strct.lock' exclusively}}
 
     more_complex_atttributes.lock.Lock();
     more_complex_atttributes.lock1.Lock(); // expected-warning{{mutex 'lock1' must be acquired before 'lock'}}
@@ -1977,6 +1977,7 @@ namespace TryLockTest {
 
 struct TestTryLock {
   Mutex mu;
+  Mutex mu2;
   int a GUARDED_BY(mu);
   bool cond;
 
@@ -2008,12 +2009,79 @@ struct TestTryLock {
     }
   }
 
+  void foo3_stmtexpr() {
+    if (({ bool b = mu.TryLock(); b; })) {
+      a = 3;
+      mu.Unlock();
+    }
+  }
+
   void foo3_builtin_expect() {
     bool b = mu.TryLock();
     if (__builtin_expect(b, true)) {
       a = 3;
       mu.Unlock();
     }
+  }
+
+  void foo3_builtin_expect_stmtexpr() {
+    if (({ bool b = mu.TryLock(); __builtin_expect(b, true); })) {
+      a = 3;
+      mu.Unlock();
+    }
+  }
+
+  void foo3_double_branch() {
+    bool failed = !mu.TryLock();
+    if (failed)
+      cond = true;  // does not return; rejoins the success path
+    if (failed)     // paths re-diverge consistently here, so no warning at
+      return;       // the preceding join
+    a = 3;
+    mu.Unlock();
+  }
+
+  // Mimic the logic of the previous test, but in a statement expression.
+  // This pattern is typically found in macros.
+  void foo3_double_branch_statement_expression() {
+    if (({ bool failed = !mu.TryLock(); if (failed) cond = true; failed; }))
+      return;
+    a = 3;
+    mu.Unlock();
+  }
+
+  void foo3_no_rebranch_at_join() {
+    bool failed = !mu.TryLock(); // expected-note {{mutex acquired here}}
+    if (failed)
+      cond = true;
+    // Lock state genuinely differs at this join: nothing re-branches on
+    // 'failed' here, so the warning must be retained.
+    a = 3;          // expected-warning {{mutex 'mu' is not held on every path through here}} \
+                    // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock();    // expected-warning {{releasing mutex 'mu' that was not held}}
+  }
+
+  void foo3_rebranch_after_reassign() {
+    bool failed = !mu.TryLock(); // expected-note {{mutex acquired here}}
+    if (failed)
+      cond = true;
+    failed = true;  // expected-warning {{mutex 'mu' is not held on every path through here}}
+    if (failed)     // no longer the try-lock result: the join above must warn
+      return;
+    a = 3;          // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock();    // expected-warning {{releasing mutex 'mu' that was not held}}
+  }
+
+  void foo3_rebranch_other_mutex_still_warns() {
+    bool failed = !mu.TryLock();
+    if (failed)
+      mu2.Lock();   // expected-note {{mutex acquired here}}
+    // The re-branch on 'failed' only suppresses the warning for 'mu', the
+    // capability the try-lock acquires; 'mu2' must still warn at the join.
+    if (failed)     // expected-warning {{mutex 'mu2' is not held on every path through here}}
+      return;
+    a = 3;
+    mu.Unlock();
   }
 
   void foo4() {
@@ -2129,6 +2197,30 @@ struct TestTryLock {
     if (mu.TryLock() ? 0 : 1) // expected-note{{mutex acquired here}}
       mu.Unlock();            // expected-warning{{releasing mutex 'mu' that was not held}}
   }                           // expected-warning{{mutex 'mu' is not held on every path through here}}
+
+  // A void conditional operator has no result to branch on later, so unlike
+  // foo13-foo15 the branch itself is honored. This is how glibc before 2.32
+  // spells assert().
+  void foo16() {
+    mu.TryLock() ? static_cast<void>(0) : fail();
+    a = 3;
+    mu.Unlock();
+  }
+
+  void foo17() {
+    !mu.TryLock() ? fail() : static_cast<void>(0);
+    a = 3;
+    mu.Unlock();
+  }
+
+  // Both arms return here, so the join disagrees -- as it would for an if.
+  void foo18() {
+    mu.TryLock() ? static_cast<void>(0) : static_cast<void>(0); // expected-note{{mutex acquired here}} \
+                                                                   expected-warning{{mutex 'mu' is not held on every path through here}}
+    mu.Unlock(); // expected-warning{{releasing mutex 'mu' that was not held}}
+  }
+
+  static void fail() __attribute__((noreturn));
 };  // end TestTrylock
 
 } // end namespace TrylockTest
@@ -3739,14 +3831,10 @@ void requireDecl(RelockableScope &scope) {
 struct foo
 {
   Mutex mu;
-  // expected-note@+1{{see attribute on parameter here}}
   void require(RelockableScope &scope EXCLUSIVE_LOCKS_REQUIRED(mu));
   void callRequire(){
     RelockableScope scope(&mu);
-    // TODO: False positive due to incorrect parsing of parameter attribute arguments.
     require(scope);
-    // expected-warning@-1{{calling function 'require' requires holding mutex 'mu' exclusively}}
-    // expected-warning@-2{{mutex managed by 'scope' is 'mu' instead of 'mu'}}
   }
 };
 
@@ -4694,7 +4782,22 @@ namespace UnreachableExitTest {
 class FemmeFatale {
 public:
   FemmeFatale();
+  template <typename T>
+  FemmeFatale& operator<<(const T&) { return *this; }
   ~FemmeFatale() __attribute__((noreturn));
+};
+
+class NonFatal {
+public:
+  NonFatal();
+  template <typename T>
+  NonFatal& operator<<(const T&) { return *this; }
+  ~NonFatal();
+};
+
+struct Voidify {
+  template <typename T>
+  void operator&&(T&&) const&&;
 };
 
 void exitNow() __attribute__((noreturn));
@@ -4723,6 +4826,46 @@ void test3() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
 
 void test4() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
   exitDestruct("foo");
+}
+
+void test5() {
+  fatalmu_.TryLock() ? (void)0 : (void)FemmeFatale();
+  fatalmu_.Unlock();
+}
+
+void test6() {
+  fatalmu_.TryLock() ? (void)0 : Voidify() && FemmeFatale() << "foo";
+  fatalmu_.Unlock();
+}
+
+void test7() {
+  fatalmu_.TryLock() ? (void)0 : Voidify() && NonFatal() << "foo"; // \
+    // expected-warning {{mutex 'fatalmu_' is not held on every path through here}} \
+    // expected-note {{mutex acquired here}}
+  fatalmu_.Unlock(); // expected-warning {{releasing mutex 'fatalmu_' that was not held}}
+}
+
+void test8() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
+  c ? (void)0 : (void)FemmeFatale();
+}
+
+void test9() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
+  c ? (void)FemmeFatale() : (void)0;
+}
+
+void test10() {
+  !fatalmu_.TryLock() ? (void)FemmeFatale() : (void)0;
+  fatalmu_.Unlock();
+}
+
+void test11() {
+  !fatalmu_.TryLock() ? (void)FemmeFatale() : (void)NonFatal();
+  fatalmu_.Unlock();
+}
+
+void test12() {
+  fatalmu_.TryLock() ? (void)NonFatal() : (void)FemmeFatale();
+  fatalmu_.Unlock();
 }
 
 }   // end namespace UnreachableExitTest
@@ -7538,6 +7681,112 @@ void testPointerAliasEscapeAndReset(Foo *f) {
   ptr->mu.Unlock();
 }
 
+struct LOCKABLE Entry;
+void getLockedEntry(Entry **entry) EXCLUSIVE_LOCK_FUNCTION(*entry);
+void useLockedEntry(Entry *entry) EXCLUSIVE_LOCKS_REQUIRED(entry);
+void unlockEntry(Entry *entry) UNLOCK_FUNCTION(entry);
+void assertLockedEntry(Entry **entry)   ASSERT_EXCLUSIVE_LOCK(*entry);
+
+void testOutParamAcquireCap(Entry *in) {
+  Entry *entry = in;
+
+  // 'getLockedEntry' guarantees that '*entry' is locked after return:
+  getLockedEntry(&entry);
+  useLockedEntry(entry);
+  if (1) {
+    useLockedEntry(entry);
+  }
+  unlockEntry(entry);
+}
+
+void testOutParamAcquireCap_invalidation(Entry *in) {
+  Entry *entry = in;
+
+  // 'getLockedEntry' invalidates 'entry' at the pre-state and ensures
+  // 'entry' is locked at the post-state. So 'in' is not locked.
+  getLockedEntry(&entry); // expected-note{{mutex acquired here}}
+  useLockedEntry(in); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in' exclusively}}
+  unlockEntry(in); // expected-warning{{releasing mutex 'in' that was not held}}
+} // expected-warning{{mutex 'entry' is still held at the end of function}}
+
+void getLockedEntryRef(Entry *&entry) EXCLUSIVE_LOCK_FUNCTION(entry);
+
+void testAcquireCapability_outParamRef(Entry *in) {
+  Entry *entry = in;
+  getLockedEntryRef(entry);
+  // 'entry' has been invalidated. So it holds the lock after the call,
+  // but 'in' does not:
+  useLockedEntry(entry);
+  unlockEntry(entry);
+  useLockedEntry(in); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in' exclusively}}
+  unlockEntry(in); // expected-warning{{releasing mutex 'in' that was not held}}
+}
+
+void testAssertCapability_outParam(Entry *in) {
+  Entry *entry = in;
+  assertLockedEntry(&entry);
+  // 'entry' has been invalidated. So it is assumed to hold the lock
+  // after the call, but 'in' does not:
+  useLockedEntry(entry);
+  unlockEntry(entry);
+  useLockedEntry(in); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in' exclusively}}
+  unlockEntry(in); // expected-warning{{releasing mutex 'in' that was not held}}
+}
+
+  void getMultiLockedEntries(Entry **e1, Entry **e2, Entry *e3) EXCLUSIVE_LOCK_FUNCTION(*e1, *e2, e3);
+
+void testAcquireCapability_outParmMultiAttrArg(Entry *in1, Entry *in2, Entry *in3) {
+  Entry *entry1 = in1;
+  Entry *entry2 = in2;
+  Entry *entry3 = in3;
+  getMultiLockedEntries(&entry1, &entry2, entry3);
+  useLockedEntry(entry1);
+  useLockedEntry(entry2);
+  unlockEntry(entry1);
+  unlockEntry(entry2);
+
+  useLockedEntry(in1); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in1' exclusively}}
+  useLockedEntry(in2); // expected-warning{{calling function 'useLockedEntry' requires holding mutex 'in2' exclusively}}
+  useLockedEntry(in3);
+  unlockEntry(in1); // expected-warning{{releasing mutex 'in1' that was not held}}
+  unlockEntry(in2); // expected-warning{{releasing mutex 'in2' that was not held}}
+  unlockEntry(in3);
+}  
+
+void allActions(Entry **e1, Entry **e2, Entry **e3, Entry **e4, Entry **e5)
+  EXCLUSIVE_LOCK_FUNCTION(*e1) EXCLUSIVE_LOCKS_REQUIRED(*e2)
+  UNLOCK_FUNCTION(*e3) ASSERT_EXCLUSIVE_LOCK(*e4) LOCKS_EXCLUDED(*e5);
+
+// Test pre- and post-state handling involving various kinds of
+// attributes at a single call-site.
+void testAllActions_outParms() {
+  Entry *e1 = nullptr, *e2 = nullptr, *e3 = nullptr,
+    *e4 = nullptr;
+
+  getLockedEntry(&e2);
+  // locks e1, requires then unlocks e2, assumes e3 is locked, requires !e4:
+  allActions(&e1, &e2, &e2, &e3, &e4);
+  useLockedEntry(e1);
+  useLockedEntry(e3);
+  unlockEntry(e1);
+  unlockEntry(e3);
+}
+
+void testAllActions_outParms_negative() {
+  Entry *e1 = nullptr, *e2 = nullptr, *e3 = nullptr,
+    *e4 = nullptr;
+
+  getLockedEntry(&e2);
+  getLockedEntry(&e4); // expected-note{{mutex acquired here}}
+  allActions(&e1, &e2, &e2, &e3, &e4); // expected-warning{{cannot call function 'allActions' while mutex 'e4' is held}} \
+                                       // expected-note{{mutex released here}}
+  useLockedEntry(e1);
+  useLockedEntry(e3);
+  unlockEntry(e1);
+  unlockEntry(e2); // expected-warning{{releasing mutex 'e2' that was not held}}
+} // expected-warning{{mutex 'e4' is still held at the end of function}}
+
+
 // A function that may do anything to the objects referred to by the inputs.
 void escapeAliasMultiple(void *, void *, void *);
 void testPointerAliasEscapeMultiple(Foo *F) {
@@ -7618,7 +7867,7 @@ void testPointerAliasTryLockDubious(int x) {
   }
   ptr->data = 42;            // expected-warning{{writing variable 'data' requires holding mutex 'ptr->mu' exclusively}} \
                              // expected-warning{{mutex 'ptr->mu' is not held on every path through here}} \
-                             // expected-warning{{mutex 'returnsFoo().mu' is not held on every path through here}}
+                             // expected-warning{{mutex 'returnsFoo()->mu' is not held on every path through here}}
   ptr->mu.Unlock();          // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 }
 
@@ -7715,6 +7964,18 @@ void testAliasChainUnrelatedReassignment2(ContainerOfPtr *list) {
   busyp = busyp->next;
   eb->data = 42;
   eb->mu.Unlock();
+}
+
+struct GuardedByIndirection {
+  int data GUARDED_BY(foo_ptr->mu);
+  Foo *foo_ptr;
+};
+
+void testGuardedByIndirection(GuardedByIndirection *x) {
+  Foo *f = x->foo_ptr;
+  f->mu.Lock();
+  x->data = 42;
+  f->mu.Unlock();
 }
 
 void testControlFlowDoWhile(Foo *f, int x) {
@@ -7885,3 +8146,602 @@ void test3() {
 }
 
 } // namespace WideStringLiteral
+
+namespace PointerToMemberCall {
+
+struct Guarded {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  Mutex *(Guarded::*mu_of)();
+};
+
+// A call through a pointer to member function has no method declaration; it
+// must not crash when used as a capability expression. The analysis cannot
+// name the callee, so the expression does not resolve to a capability, and
+// calls through different objects are not taken for one capability either.
+void testCallInCapabilityExpr(Guarded *g, Guarded &h) {
+  (g->*g->mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}}
+  (h.*h.mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  (g->*g->mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+  (h.*h.mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+}
+
+} // namespace PointerToMemberCall
+
+namespace FunctionPointers {
+
+Mutex mu;
+int x GUARDED_BY(mu);
+
+void (*lock_fn)(void) EXCLUSIVE_LOCK_FUNCTION(mu);
+void (*shared_lock_fn)(void) SHARED_LOCK_FUNCTION(mu);
+void (*unlock_fn)(void) UNLOCK_FUNCTION(mu);
+void (*shared_unlock_fn)(void) SHARED_UNLOCK_FUNCTION(mu);
+void (*requires_fn)(void) EXCLUSIVE_LOCKS_REQUIRED(mu);
+void (*shared_requires_fn)(void) SHARED_LOCKS_REQUIRED(mu);
+void (*excludes_fn)(void) LOCKS_EXCLUDED(mu);
+bool (*try_lock_fn)(void) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu);
+bool (*shared_try_lock_fn)(void) SHARED_TRYLOCK_FUNCTION(true, mu);
+void (*assert_fn)(void) ASSERT_EXCLUSIVE_LOCK(mu);
+void (*shared_assert_fn)(void) ASSERT_SHARED_LOCK(mu);
+
+void testAcquireRelease() {
+  lock_fn();
+  x = 1;
+  unlock_fn();
+}
+
+void testSharedAcquireRelease() {
+  shared_lock_fn();
+  (void)x;
+  shared_unlock_fn();
+}
+
+void testSharedAcquireWriteFail() {
+  shared_lock_fn();
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  shared_unlock_fn();
+}
+
+void testAcquireNoRelease() {
+  lock_fn(); // expected-note {{mutex acquired here}}
+  x = 1;
+} // expected-warning {{mutex 'mu' is still held at the end of function}}
+
+void testNoAcquire() {
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void testRequires() {
+  mu.Lock();
+  requires_fn();
+  mu.Unlock();
+}
+
+void testRequiresFail() {
+  requires_fn(); // expected-warning {{calling function 'requires_fn' requires holding mutex 'mu' exclusively}}
+}
+
+void testSharedRequires() {
+  mu.ReaderLock();
+  shared_requires_fn();
+  mu.ReaderUnlock();
+}
+
+void testSharedRequiresFail() {
+  shared_requires_fn(); // expected-warning {{calling function 'shared_requires_fn' requires holding mutex 'mu'}}
+}
+
+void testExcludes() {
+  excludes_fn();
+}
+
+void testExcludesFail() {
+  mu.Lock();
+  excludes_fn(); // expected-warning {{cannot call function 'excludes_fn' while mutex 'mu' is held}}
+  mu.Unlock();
+}
+
+void testTryLock() {
+  if (try_lock_fn()) {
+    x = 1;
+    mu.Unlock();
+  }
+}
+
+void testSharedTryLock() {
+  if (shared_try_lock_fn()) {
+    (void)x;
+    mu.Unlock();
+  }
+}
+
+void testAssert() {
+  assert_fn();
+  x = 1;
+}
+
+void testSharedAssert() {
+  shared_assert_fn();
+  (void)x;
+}
+
+struct Ops {
+  void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu);
+  void (*unlock)(void) UNLOCK_FUNCTION(mu);
+  void (*do_thing)(void) EXCLUSIVE_LOCKS_REQUIRED(mu);
+  void (*read_thing)(void) SHARED_LOCKS_REQUIRED(mu);
+};
+
+void testStructOps(Ops *ops) {
+  ops->lock();
+  x = 1;
+  ops->do_thing();
+  ops->read_thing();
+  ops->unlock();
+}
+
+void testStructFail(Ops *ops) {
+  ops->do_thing(); // expected-warning {{calling function 'do_thing' requires holding mutex 'mu' exclusively}}
+  ops->read_thing(); // expected-warning {{calling function 'read_thing' requires holding mutex 'mu'}}
+}
+
+// Incompatible reassignment not an error.
+void otherLock();
+void testReassignIncompatible() {
+  lock_fn = otherLock;
+  lock_fn();
+  x = 1;
+  mu.Unlock();
+}
+
+// A function pointer attribute may reference the pointer's own parameter.
+void (*lock_param_fn)(Mutex *m) EXCLUSIVE_LOCK_FUNCTION(m);
+void (*req_param_fn)(Mutex *m) EXCLUSIVE_LOCKS_REQUIRED(m);
+
+void test_attr_refers_to_param(Mutex *m) {
+  req_param_fn(m); // expected-warning {{calling function 'req_param_fn' requires holding mutex 'm' exclusively}}
+  lock_param_fn(m);
+  req_param_fn(m);
+  m->Unlock();
+}
+
+// Function references name a function to call just like function pointers do.
+void lock_impl(void) EXCLUSIVE_LOCK_FUNCTION(mu);
+void unlock_impl(void) UNLOCK_FUNCTION(mu);
+void requires_impl(void) EXCLUSIVE_LOCKS_REQUIRED(mu);
+
+void (&lock_ref)(void) EXCLUSIVE_LOCK_FUNCTION(mu) = lock_impl;
+void (&unlock_ref)(void) UNLOCK_FUNCTION(mu) = unlock_impl;
+void (&requires_ref)(void) EXCLUSIVE_LOCKS_REQUIRED(mu) = requires_impl;
+
+void testReferenceAcquireRelease() {
+  lock_ref();
+  x = 1;
+  requires_ref();
+  unlock_ref();
+}
+
+void testReferenceRequiresFail() {
+  requires_ref(); // expected-warning {{calling function 'requires_ref' requires holding mutex 'mu' exclusively}}
+}
+
+// Capability attributes on a parameter that names a function to call -- a
+// function pointer, a function reference, or a reference to either -- describe
+// the function reached through the parameter, not a capability that the bound
+// argument stands for. They are checked where the parameter is called, and are
+// neither requirements on nor effects for callers of the enclosing function.
+
+void callback(int) EXCLUSIVE_LOCKS_REQUIRED(mu);
+
+void takes_ptr(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n);
+void takes_ref(void (&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n);
+void takes_ptr_ref(void (*&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n);
+
+// Passing an annotated callee is not itself a use of the capability.
+void testPassCallback(void (*&pcb)(int), int n) {
+  takes_ptr(callback, n);
+  takes_ptr(&callback, n);
+  takes_ref(callback, n);
+  takes_ptr_ref(pcb, n);
+}
+
+// The attributes are checked at the indirect call instead ...
+void testCallPtr(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+void testCallRef(void (&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+void testCallPtrRef(void (*&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+// ... where the enclosing function's own requirements can satisfy them.
+void testCallRefLocked(void (&cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n)
+    EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  cb(n);
+}
+
+// Acquire and release likewise describe the function called through the
+// parameter, so calling the enclosing function neither acquires nor releases.
+void takes_locker(void (&lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu));
+
+void testAcquireNotTransferred() {
+  takes_locker(lock_impl);
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void testCallAcquires(void (&lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu)) {
+  lock();
+  x = 1;
+  mu.Unlock();
+}
+
+// A dependent parameter type is classified after instantiation.
+template <typename F>
+void callDependent(F cb EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  cb(n); // expected-warning 2 {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+void testDependent(int n) {
+  callDependent<void (*)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (*)(int)>' requested here}}
+  callDependent<void (&)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (&)(int)>' requested here}}
+}
+
+// lock_returned on a function pointer or reference.
+struct Guarded {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+};
+Mutex &mu_ref_impl(Guarded &g) LOCK_RETURNED(g.mu);
+Mutex *(*mu_of)(Guarded *g) LOCK_RETURNED(&g->mu);
+// As with the other attributes (see testReassignIncompatible), the initializer
+// is not checked against the attribute: the analysis trusts the declaration.
+Mutex &(&mu_ref_of)(Guarded &g) LOCK_RETURNED(g.mu) = mu_ref_impl;
+
+void testLockReturned(Guarded *g) {
+  mu_of(g)->Lock();
+  g->data = 1;
+  mu_ref_of(*g).Unlock(); // expected-note {{mutex released here}}
+  mu_of(g)->Unlock(); // expected-warning {{releasing mutex 'g->mu' that was not held}}
+}
+
+// A dependent parameter type is classified after instantiation.
+template <typename F>
+void lockReturnedDependent(Guarded *g, F mu_of_g LOCK_RETURNED(&g->mu)) {
+  mu_of_g(g)->Lock();
+  g->data = 1;
+  g->mu.Unlock();
+}
+
+void testLockReturnedDependent(Guarded *g) {
+  lockReturnedDependent<Mutex *(*)(Guarded *)>(g, mu_of);
+}
+
+// A function pointer field may name a sibling member, which is resolved
+// against the object the field was reached through.
+struct GuardedOps {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  Mutex *(*mu_of)() LOCK_RETURNED(&mu);
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION(mu);
+  void (*unlock)() UNLOCK_FUNCTION(mu);
+};
+
+void testMemberLockReturned(GuardedOps *g, GuardedOps &h) {
+  g->mu_of()->Lock();
+  g->data = 1;
+  g->unlock();
+  h.lock();
+  h.data = 2;
+  h.mu_of()->Unlock();
+}
+
+void testMemberLockReturnedFail(GuardedOps *g, GuardedOps &h) {
+  h.mu_of()->Lock();
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}} \
+               // expected-note {{found near match 'h.mu'}}
+  g->mu_of()->Unlock(); // expected-warning {{releasing mutex 'g->mu' that was not held}}
+  h.unlock();
+}
+
+// The field may also be called through an explicit dereference.
+void testMemberDeref(GuardedOps *g, GuardedOps &h) {
+  (*g->mu_of)()->Lock();
+  g->data = 1;
+  (*g->unlock)();
+  (**h.lock)();
+  h.data = 2;
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}} \
+               // expected-note {{found near match 'h.mu'}}
+  (*h.mu_of)()->Unlock();
+}
+
+// Inside a member function, a call through another object must not resolve
+// the sibling against 'this'.
+struct GuardedOpsSelf {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION(mu);
+  void (*unlock)() UNLOCK_FUNCTION(mu);
+  void self() {
+    lock();
+    data = 1;
+    (*unlock)();
+  }
+  void other(GuardedOpsSelf *o) {
+    o->lock();
+    o->data = 1;
+    data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'mu' exclusively}} \
+              // expected-note {{found near match 'o->mu'}}
+    o->unlock();
+  }
+};
+
+} // namespace FunctionPointers
+
+namespace AnonymousMembers {
+
+// An attribute on a member of an anonymous struct/union may name a field of
+// the enclosing record, and vice versa.
+struct S {
+  Mutex mu;
+  union {
+    int a GUARDED_BY(mu);
+  };
+  struct Also {
+    int az GUARDED_BY(inner);
+  };
+  struct {
+    Mutex inner;
+    int c GUARDED_BY(inner);
+    Also al;
+  };
+  int e GUARDED_BY(inner);
+  union { Mutex um; };
+  union { int i GUARDED_BY(um); };
+  int j GUARDED_BY(&S::um); // the wildcard, any object's um
+  struct {
+    struct {
+      Mutex deep;
+      int f GUARDED_BY(mu);
+    };
+    int g GUARDED_BY(deep);
+  };
+  int h GUARDED_BY(deep);
+  Mutex after ACQUIRED_AFTER(inner);
+
+  void member() {
+    a = 1; // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    c = 3; // expected-warning {{writing variable 'c' requires holding mutex 'inner' exclusively}}
+    e = 5; // expected-warning {{writing variable 'e' requires holding mutex 'inner' exclusively}}
+    i = 9; // expected-warning {{writing variable 'i' requires holding mutex 'um' exclusively}}
+    j = 10; // expected-warning {{writing variable 'j' requires holding mutex '&AnonymousMembers::S::um' exclusively}}
+    mu.Lock();
+    inner.Lock();
+    um.Lock();
+    a = 1;
+    c = 3;
+    e = 5;
+    i = 9;
+    j = 10;
+    um.Unlock();
+    inner.Unlock();
+    mu.Unlock();
+  }
+};
+
+void test(S *s, S *other) {
+  s->mu.Lock();
+  s->a = 1;
+  s->mu.Unlock();
+  s->inner.Lock();
+  s->c = 3;
+  s->e = 5;
+  s->al.az = 10;
+  s->inner.Unlock();
+  other->mu.Lock();
+  s->a = 1; // expected-warning {{writing variable 'a' requires holding mutex 's->mu' exclusively}} \
+            // expected-note {{found near match 'other->mu'}}
+  s->e = 5; // expected-warning {{writing variable 'e' requires holding mutex 's->inner' exclusively}}
+  s->al.az = 10; // expected-warning {{writing variable 'az' requires holding mutex 's->inner' exclusively}}
+  s->i = 9; // expected-warning {{writing variable 'i' requires holding mutex 's->um' exclusively}}
+  other->um.Lock();
+  s->j = 10;
+  other->um.Unlock();
+  s->mu.Lock();
+  s->f = 6;
+  s->mu.Unlock();
+  s->deep.Lock();
+  s->g = 7;
+  s->h = 8;
+  s->deep.Unlock();
+  s->f = 6; // expected-warning {{writing variable 'f' requires holding mutex 's->mu' exclusively}} \
+            // expected-note {{found near match 'other->mu'}}
+  s->g = 7; // expected-warning {{writing variable 'g' requires holding mutex 's->deep' exclusively}}
+  s->h = 8; // expected-warning {{writing variable 'h' requires holding mutex 's->deep' exclusively}}
+  other->mu.Unlock();
+}
+
+void testValue(S v) {
+  v.deep.Lock();
+  v.g = 7;
+  v.h = 8;
+  v.deep.Unlock();
+  v.h = 8; // expected-warning {{writing variable 'h' requires holding mutex 'v.deep' exclusively}}
+}
+
+void testOrder(S *s) {
+  s->after.Lock();
+  s->inner.Lock(); // expected-warning {{mutex 'inner' must be acquired before 'after'}}
+  s->inner.Unlock();
+  s->after.Unlock();
+}
+
+struct Base {
+  Mutex bmu;
+  union { int ba GUARDED_BY(bmu); };
+};
+
+struct Derived : Base {
+  int da GUARDED_BY(bmu);
+  union { int du GUARDED_BY(bmu); };
+};
+
+void testDerived(Derived *d, Derived *other) {
+  d->bmu.Lock();
+  d->ba = 1;
+  d->da = 2;
+  d->du = 3;
+  d->bmu.Unlock();
+  other->bmu.Lock();
+  d->ba = 1; // expected-warning {{writing variable 'ba' requires holding mutex 'd->bmu' exclusively}} \
+             // expected-note {{found near match 'other->bmu'}}
+  d->da = 2; // expected-warning {{writing variable 'da' requires holding mutex 'd->bmu' exclusively}} \
+             // expected-note {{found near match 'other->bmu'}}
+  d->du = 3; // expected-warning {{writing variable 'du' requires holding mutex 'd->bmu' exclusively}} \
+             // expected-note {{found near match 'other->bmu'}}
+  other->bmu.Unlock();
+}
+
+// A field of a named nested record may be guarded by a field of an enclosing
+// record, resolved on the nearest enclosing object, and vice versa.
+struct NamedNesting {
+  Mutex mu;
+  struct Named {
+    Mutex nmu;
+    int nx GUARDED_BY(nmu);
+    int ny GUARDED_BY(mu);
+    struct NamedIn {
+      int nix GUARDED_BY(nmu);
+    } nin;
+  } n, narr[2], *np, *pa[2];
+  struct Inner {
+    Mutex imu;
+    int w GUARDED_BY(mu);
+  };
+  struct {
+    Inner in;
+  };
+  int y GUARDED_BY(n.nmu);
+  int z GUARDED_BY(in.imu);
+};
+
+void testNamedNesting(NamedNesting *m, NamedNesting *o) {
+  m->mu.Lock();
+  m->n.ny = 1;
+  m->in.w = 2;
+  m->narr[1].ny = 3;
+  m->narr->ny = 3;
+  (&m->n)->ny = 5;
+  m->np->ny = 4; // expected-warning {{writing variable 'ny' requires holding mutex 'm->np->AnonymousMembers::NamedNesting::mu' exclusively}} \
+                 // expected-note {{found near match 'm->mu'}}
+  m->mu.Unlock();
+  o->mu.Lock();
+  m->n.ny = 1; // expected-warning {{writing variable 'ny' requires holding mutex 'm->mu' exclusively}} \
+               // expected-note {{found near match 'o->mu'}}
+  m->in.w = 2; // expected-warning {{writing variable 'w' requires holding mutex 'm->mu' exclusively}} \
+               // expected-note {{found near match 'o->mu'}}
+  o->mu.Unlock();
+  m->n.nmu.Lock();
+  m->in.imu.Lock();
+  m->y = 1;
+  m->z = 2;
+  o->y = 1; // expected-warning {{writing variable 'y' requires holding mutex 'o->n.nmu' exclusively}} \
+            // expected-note {{found near match 'm->n.nmu'}}
+  o->z = 2; // expected-warning {{writing variable 'z' requires holding mutex 'o->in.imu' exclusively}} \
+            // expected-note {{found near match 'm->in.imu'}}
+  m->in.imu.Unlock();
+  m->n.nmu.Unlock();
+}
+
+// An array of records accessed through its decayed pointer is still an object
+// of its element type, whose own field may be named.
+void testNamedNestingArray(NamedNesting *m, NamedNesting::Named narr[2]) {
+  m->narr->nmu.Lock();
+  m->narr->nx = 1;
+  m->narr->nin.nix = 2;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match 'm->narr->nmu'}}
+  m->narr->nmu.Unlock();
+  m->narr->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr->nmu' exclusively}}
+  m->narr->nin.nix = 2; // expected-warning {{writing variable 'nix' requires holding mutex 'm->narr->nmu' exclusively}}
+  narr->nmu.Lock();
+  narr->nx = 1;
+  narr->nin.nix = 2;
+  narr->nmu.Unlock();
+  // Pointer arithmetic is spelled as written, and is not a subscript.
+  (m->narr + 1)->nmu.Lock();
+  (m->narr + 1)->nx = 1;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match '(m->narr + 1)->nmu'}}
+  (m->narr + 1)->nmu.Unlock();
+  (m->np + 1)->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex '(m->np + 1)->nmu' exclusively}}
+  // An element of an array of pointers is a pointer.
+  m->pa[1]->nmu.Lock();
+  m->pa[1]->nx = 1;
+  m->pa[0]->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->pa[0]->nmu' exclusively}} \
+                    // expected-note {{found near match 'm->pa[1]->nmu'}}
+  m->pa[1]->nmu.Unlock();
+}
+
+// With only the nested object at hand, its enclosing record's field cannot be
+// reached; the requirement is spelled with the field's record.
+struct Unreachable {
+  Mutex mu;
+  union { Mutex amu; };
+  struct Inner {
+    void f() EXCLUSIVE_LOCKS_REQUIRED(mu);
+    void h() EXCLUSIVE_LOCKS_REQUIRED(amu);
+  } in;
+
+  void g(Inner *inner) EXCLUSIVE_LOCKS_REQUIRED(mu, amu) {
+    in.f();
+    in.h();
+    inner->f(); // expected-warning {{calling function 'f' requires holding mutex 'inner->AnonymousMembers::Unreachable::mu' exclusively}} \
+                // expected-note {{found near match 'mu'}}
+    inner->h(); // expected-warning {{calling function 'h' requires holding mutex 'inner->AnonymousMembers::Unreachable::amu' exclusively}} \
+                // expected-note {{found near match 'amu'}}
+  }
+};
+
+// An unqualified name is the innermost record's field.
+struct Shadowed {
+  Mutex mu;
+  struct Shadowing {
+    Mutex mu;
+    int ny GUARDED_BY(mu);
+    struct Deeper {
+      int dz GUARDED_BY(mu);
+    } d;
+  } n;
+};
+
+void testShadowed(Shadowed *o) {
+  o->mu.Lock();
+  o->n.ny = 1;   // expected-warning {{writing variable 'ny' requires holding mutex 'o->n.mu' exclusively}}
+  o->n.d.dz = 1; // expected-warning {{writing variable 'dz' requires holding mutex 'o->n.mu' exclusively}}
+  o->mu.Unlock();
+  o->n.mu.Lock();
+  o->n.ny = 2;
+  o->n.d.dz = 2;
+  o->n.mu.Unlock();
+}
+
+static union {
+  Mutex gmu;
+  int gx GUARDED_BY(gmu);
+};
+
+void testNamespaceUnion() {
+  gmu.Lock();
+  gx = 1;
+  gmu.Unlock();
+  gx = 2; // expected-warning {{writing variable 'gx' requires holding mutex 'gmu' exclusively}}
+}
+
+} // namespace AnonymousMembers

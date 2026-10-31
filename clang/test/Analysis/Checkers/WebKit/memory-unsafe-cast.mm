@@ -1,12 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.MemoryUnsafeCastChecker -verify %s
 
-@protocol NSObject
-+alloc;
--init;
-@end
-
-@interface NSObject <NSObject> {}
-@end
+#include "mock-types.h"
+#include "objc-mock-types.h"
 
 @interface BaseClass : NSObject
 @end
@@ -61,4 +56,91 @@ void testUnrelated(Class1 *c1) {
   Class2 *c2 = (Class2*)c1;
   // expected-warning@-1{{Unsafe cast from type 'Class1' to an unrelated type 'Class2'}}
   Class1 *c1_same = reinterpret_cast<Class1*>(c1); // no warning
+}
+
+struct Base : RefCountable { virtual ~Base() {} };
+struct Derived : Base { int extra; };
+
+void* returnCast(Base* base) {
+  return static_cast<void *>(base);
+}
+
+Derived* fnArgCast(void* base) {
+  return static_cast<Derived*>(base);
+}
+
+void fn_cast_01(Base* base) {
+  auto* d1 = static_cast<Derived*>(base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d2 = static_cast<Derived*>(static_cast<void*>(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d3 = static_cast<Derived*>(returnCast(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d4 = fnArgCast(static_cast<void*>(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  fnArgCast(static_cast<void*>(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d5 = (Derived*)(void*)base;
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d6 = static_cast<Derived*>((void*)base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d7 = (Derived*)reinterpret_cast<void*>(base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d8 = (Derived*)returnCast(base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  fnArgCast((void*)base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  fnArgCast(base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d9 = reinterpret_cast<Derived*>(static_cast<void*>(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d10 = reinterpret_cast<Derived*>((void*)base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+}
+
+void takesNSString(NSString *str);
+
+@interface IdParamReceiver
+- (void)takeString:(NSString *)str;
+@end
+
+struct StringWrapper {
+  StringWrapper(NSString *str);
+};
+
+struct String {
+  String(NSString *str);
+};
+
+void test_id_passed_to_specific_type_param(id anId, NSString *str, IdParamReceiver *receiver) {
+  takesNSString(anId);
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+  [receiver takeString:anId];
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+  StringWrapper wrapper1(anId);
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+  StringWrapper wrapper2 { anId };
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+
+  takesNSString(str);  // no warning
+  [receiver takeString:str];  // no warning
+  StringWrapper wrapper3(str);  // no warning
+
+  NSString *fixed = checked_objc_cast<NSString>(anId);  // no warning
+  takesNSString(fixed);  // no warning
+  RetainPtr<NSString> fixedDynamic = dynamic_objc_cast<NSString>(anId);  // no warning
+
+  id array = [NSArray arrayWithObjects:0 count:0];
+  String s { array };
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+}
+
+void takesNonnullNSString(NSString * _Nonnull str);
+void takesNullableNSString(NSString * _Nullable str);
+
+void test_id_passed_with_nullability(id anId) {
+  takesNonnullNSString(anId);
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+  takesNullableNSString(anId);
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
 }

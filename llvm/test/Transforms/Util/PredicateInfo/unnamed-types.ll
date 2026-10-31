@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -passes=print-predicateinfo < %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -passes='print<predicate-info>' < %s 2>&1 | FileCheck %s
 
 %1 = type opaque
 %0 = type opaque

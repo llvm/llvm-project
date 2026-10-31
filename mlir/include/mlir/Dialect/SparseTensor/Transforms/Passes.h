@@ -62,8 +62,10 @@ namespace sparse_tensor {
 enum class LoopOrderingStrategy : unsigned {
   kDefault,
   kDenseOuter,
+  kSparseOuter,
+  kLoopUseOuter,
+  kLoopUseInner,
 };
-
 } // namespace sparse_tensor
 
 #define GEN_PASS_DECL

@@ -1,7 +1,6 @@
 --- |
   ; REQUIRES: asserts
   ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -debug-only=machinelicm -o - %s -experimental-debug-variable-locations=false | FileCheck %s
-  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -debug-only=machinelicm -early-live-intervals -o - %s -experimental-debug-variable-locations=false | FileCheck %s
   ; Ensure we execute machinelicm post register allocation.
   ; Line numbers should not be retained when loop invariant instructions are hoisted.
   ;
@@ -90,7 +89,7 @@ body:             |
     DBG_VALUE %1, _, !17, !DIExpression(), debug-location !18
     %3 = MOV32rm %0, 1, _, 0, _, debug-location !21 :: (load (s32) from %ir.p.addr.0)
     %4 = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @x, _, debug-location !22 :: (load (s64) from got)
-    MOV32mr killed %4, 1, _, 0, _, killed %3, debug-location !22 :: (store (s32) into @x)
+    MOV32mr %4, 1, _, 0, _, %3, debug-location !22 :: (store (s32) into @x)
     JMP_1 %bb.1.while.body, debug-location !23
 
 ...

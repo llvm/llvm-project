@@ -178,9 +178,6 @@ private:
                          MachineBasicBlock *&MBB,
                          const yaml::StringValue &Source);
 
-  bool parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                            const yaml::StringValue &Source);
-
   /// Return a MIR diagnostic converted from an MI string diagnostic.
   SMDiagnostic diagFromMIStringDiag(const SMDiagnostic &Error,
                                     SMRange SourceRange);
@@ -196,7 +193,8 @@ private:
   void setupDebugValueTracking(MachineFunction &MF,
     PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF);
 
-  bool parseMachineInst(MachineFunction &MF, yaml::MachineInstrLoc MILoc,
+  bool parseMachineInst(PerFunctionMIParsingState &PFS,
+                        const yaml::MachineInstrLoc &MILoc,
                         MachineInstr const *&MI);
 };
 
@@ -485,20 +483,18 @@ bool MIRParserImpl::computeFunctionProperties(
   return false;
 }
 
-bool MIRParserImpl::parseMachineInst(MachineFunction &MF,
-                                     yaml::MachineInstrLoc MILoc,
+bool MIRParserImpl::parseMachineInst(PerFunctionMIParsingState &PFS,
+                                     const yaml::MachineInstrLoc &MILoc,
                                      MachineInstr const *&MI) {
-  if (MILoc.BlockNum >= MF.size()) {
-    return error(Twine(MF.getName()) +
-                 Twine(" instruction block out of range.") +
-                 " Unable to reference bb:" + Twine(MILoc.BlockNum));
-  }
-  auto BB = std::next(MF.begin(), MILoc.BlockNum);
+  MachineFunction &MF = PFS.MF;
+  MachineBasicBlock *BB;
+  if (parseMBBReference(PFS, BB, MILoc.Block))
+    return true;
   if (MILoc.Offset >= BB->size())
-    return error(
-        Twine(MF.getName()) + Twine(" instruction offset out of range.") +
-        " Unable to reference instruction at bb: " + Twine(MILoc.BlockNum) +
-        " at offset:" + Twine(MILoc.Offset));
+    return error(Twine(MF.getName()) +
+                 Twine(" instruction offset out of range.") +
+                 " Unable to reference instruction at " + MILoc.Block.Value +
+                 " at offset:" + Twine(MILoc.Offset));
   MI = &*std::next(BB->instr_begin(), MILoc.Offset);
   return false;
 }
@@ -509,15 +505,15 @@ bool MIRParserImpl::initializeCallSiteInfo(
   SMDiagnostic Error;
   const TargetMachine &TM = MF.getTarget();
   for (auto &YamlCSInfo : YamlMF.CallSitesInfo) {
-    yaml::MachineInstrLoc MILoc = YamlCSInfo.CallLocation;
+    const yaml::MachineInstrLoc &MILoc = YamlCSInfo.CallLocation;
     const MachineInstr *CallI;
-    if (parseMachineInst(MF, MILoc, CallI))
+    if (parseMachineInst(PFS, MILoc, CallI))
       return true;
     if (!CallI->isCall(MachineInstr::IgnoreBundle))
       return error(Twine(MF.getName()) +
                    Twine(" call site info should reference call "
-                         "instruction. Instruction at bb:") +
-                   Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset) +
+                         "instruction. Instruction at ") +
+                   MILoc.Block.Value + " at offset:" + Twine(MILoc.Offset) +
                    " is not a call instruction");
     MachineFunction::CallSiteInfo CSInfo;
     for (auto ArgRegPair : YamlCSInfo.ArgForwardingRegs) {
@@ -772,6 +768,23 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
                          FlagStringValue.Value + "'");
       Info.Flags |= FlagValue;
     }
+    if (!VReg.AntiHints.empty() && Info.Kind != VRegInfo::NORMAL)
+      return error(VReg.AntiHints.front().SourceRange.Start,
+                   "anti-hints can only be set for normal vregs");
+
+    for (const auto &AntiHintValue : VReg.AntiHints) {
+      Register AntiHintReg;
+      if (parseRegisterReference(PFS, AntiHintReg, AntiHintValue.Value, Error))
+        return error(Error, AntiHintValue.SourceRange);
+
+      if (!AntiHintReg.isVirtual()) {
+        return error(AntiHintValue.SourceRange.Start,
+                     "anti-hint '" + Twine(AntiHintValue.Value) +
+                         "' must be a virtual register");
+      }
+
+      Info.AntiHints.push_back(AntiHintReg);
+    }
     RegInfo.noteNewVirtualRegister(Info.VReg);
   }
 
@@ -802,6 +815,46 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
       CalleeSavedRegisters.push_back(Reg.id());
     }
     RegInfo.setCalleeSavedRegs(CalleeSavedRegisters);
+  }
+
+  // Stash any VirtRegMap state on MRI.
+  // VirtRegMap::init() will use that information to get pre-populated
+  // on the first analysis run.
+  for (const auto &VReg : YamlMF.VirtualRegisters) {
+    if (VReg.SplitFrom.Value.empty() && VReg.AssignedPhys.Value.empty())
+      continue;
+
+    auto It = PFS.VRegInfos.find(VReg.ID.Value);
+    if (It == PFS.VRegInfos.end())
+      continue;
+    Register ChildReg = It->second->VReg;
+
+    MachineRegisterInfo::PendingVirtRegMapEntry Pending;
+    Pending.VReg = ChildReg;
+
+    if (!VReg.SplitFrom.Value.empty()) {
+      VRegInfo *Parent = nullptr;
+      if (parseVirtualRegisterReference(PFS, Parent, VReg.SplitFrom.Value,
+                                        Error))
+        return error(Error, VReg.SplitFrom.SourceRange);
+      if (Parent->VReg == ChildReg)
+        return error(VReg.SplitFrom.SourceRange.Start,
+                     Twine("'split-from' references the same vreg as 'id' (%") +
+                         Twine(VReg.ID.Value) + ")");
+      Pending.SplitFrom = Parent->VReg;
+    }
+    if (!VReg.AssignedPhys.Value.empty()) {
+      Register Phys;
+      if (parseRegisterReference(PFS, Phys, VReg.AssignedPhys.Value, Error))
+        return error(Error, VReg.AssignedPhys.SourceRange);
+      if (!Phys.isPhysical())
+        return error(
+            VReg.AssignedPhys.SourceRange.Start,
+            Twine("'assigned-phys' must be a physical register, got '") +
+                VReg.AssignedPhys.Value + "'");
+      Pending.AssignedPhys = Phys.asMCReg();
+    }
+    RegInfo.addPendingVirtRegMapEntry(Pending);
   }
 
   return false;
@@ -838,6 +891,8 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
       MRI.setRegClass(Reg, Info.D.RC);
       if (Info.PreferredReg != 0)
         MRI.setSimpleHint(Reg, Info.PreferredReg);
+      if (!Info.AntiHints.empty())
+        MRI.addRegAllocationAntiHints(Reg, Info.AntiHints);
       break;
     case VRegInfo::GENERIC:
       break;
@@ -900,6 +955,8 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
     MFI.ensureMaxAlignment(Align(YamlMFI.MaxAlignment));
   MFI.setAdjustsStack(YamlMFI.AdjustsStack);
   MFI.setHasCalls(YamlMFI.HasCalls);
+  if (YamlMFI.FramePointerPolicy != FramePointerKind::None)
+    MFI.setFramePointerPolicy(YamlMFI.FramePointerPolicy);
   if (YamlMFI.MaxCallFrameSize != ~0u)
     MFI.setMaxCallFrameSize(YamlMFI.MaxCallFrameSize);
   MFI.setCVBytesOfCalleeSavedRegisters(YamlMFI.CVBytesOfCalleeSavedRegisters);
@@ -1184,26 +1241,31 @@ bool MIRParserImpl::parseMBBReference(PerFunctionMIParsingState &PFS,
   return false;
 }
 
-bool MIRParserImpl::parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                                         const yaml::StringValue &Source) {
-  SMDiagnostic Error;
-  if (llvm::parseMachineMetadata(PFS, Source.Value, Source.SourceRange, Error))
-    return error(Error, Source.SourceRange);
-  return false;
-}
-
 bool MIRParserImpl::parseMachineMetadataNodes(
     PerFunctionMIParsingState &PFS, MachineFunction &MF,
     const yaml::MachineFunction &YMF) {
-  for (const auto &MDS : YMF.MachineMetadataNodes) {
-    if (parseMachineMetadata(PFS, MDS))
+  SmallVector<StringRef> Definitions;
+  for (const auto &MDS : YMF.MachineMetadataNodes)
+    Definitions.push_back(MDS.Value);
+
+  SlotMapping Slots = PFS.IRSlots;
+  SMDiagnostic Error;
+  unsigned ErrorDefinitionIndex = 0;
+  if (parseMetadataDefinitions(Definitions, Error,
+                               *MF.getFunction().getParent(), Slots,
+                               ErrorDefinitionIndex)) {
+    const yaml::StringValue &Source =
+        YMF.MachineMetadataNodes[ErrorDefinitionIndex];
+    if (StringRef(Source.Value).contains('\n')) {
+      reportDiagnostic(diagFromBlockStringDiag(Error, Source.SourceRange));
       return true;
+    }
+    return error(Error, Source.SourceRange);
   }
-  // Report missing definitions from forward referenced nodes.
-  if (!PFS.MachineForwardRefMDNodes.empty())
-    return error(PFS.MachineForwardRefMDNodes.begin()->second.second,
-                 "use of undefined metadata '!" +
-                     Twine(PFS.MachineForwardRefMDNodes.begin()->first) + "'");
+
+  for (auto &[ID, MD] : Slots.MetadataNodes)
+    if (PFS.IRSlots.MetadataNodes.find(ID) == PFS.IRSlots.MetadataNodes.end())
+      PFS.MachineMetadataNodes.try_emplace(ID, MD);
   return false;
 }
 
@@ -1212,15 +1274,15 @@ bool MIRParserImpl::parseCalledGlobals(PerFunctionMIParsingState &PFS,
                                        const yaml::MachineFunction &YMF) {
   Function &F = MF.getFunction();
   for (const auto &YamlCG : YMF.CalledGlobals) {
-    yaml::MachineInstrLoc MILoc = YamlCG.CallSite;
+    const yaml::MachineInstrLoc &MILoc = YamlCG.CallSite;
     const MachineInstr *CallI;
-    if (parseMachineInst(MF, MILoc, CallI))
+    if (parseMachineInst(PFS, MILoc, CallI))
       return true;
     if (!CallI->isCall(MachineInstr::IgnoreBundle))
       return error(Twine(MF.getName()) +
                    Twine(" called global should reference call "
-                         "instruction. Instruction at bb:") +
-                   Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset) +
+                         "instruction. Instruction at ") +
+                   MILoc.Block.Value + " at offset:" + Twine(MILoc.Offset) +
                    " is not a call instruction");
 
     auto Callee =

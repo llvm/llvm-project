@@ -134,10 +134,6 @@ public:
 
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
-  virtual void emitBeginCatch(CIRGenFunction &cgf,
-                              const CXXCatchStmt *catchStmt,
-                              mlir::Value ehToken) = 0;
-
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
 
@@ -293,6 +289,12 @@ public:
   getVTableAddressPoint(BaseSubobject base,
                         const CXXRecordDecl *vtableClass) = 0;
 
+  /// Get the address point of the vtable for the given base subobject as a
+  /// constant suitable for a global initializer.
+  virtual cir::GlobalViewAttr
+  getVTableAddressPointAttr(BaseSubobject base,
+                            const CXXRecordDecl *vtableClass) = 0;
+
   /// Get the address point of the vtable for the given base subobject while
   /// building a constructor or a destructor.
   virtual mlir::Value getVTableAddressPointInStructor(
@@ -394,6 +396,9 @@ protected:
 
 /// Creates and Itanium-family ABI
 CIRGenCXXABI *CreateCIRGenItaniumCXXABI(CIRGenModule &cgm);
+
+/// Creates Microsoft ABI
+CIRGenCXXABI *CreateCIRGenMicrosoftCXXABI(CIRGenModule &cgm);
 
 } // namespace clang::CIRGen
 

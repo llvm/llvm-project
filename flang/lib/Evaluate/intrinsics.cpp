@@ -8,7 +8,6 @@
 
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Common/enum-set.h"
-#include "flang/Common/float128.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
@@ -20,10 +19,10 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <climits>
-#include <cmath>
 #include <map>
 #include <string>
 #include <utility>
@@ -620,6 +619,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"i", OperandUnsigned}, {"j", OperandUnsigned, Rank::elementalOrBOZ}},
         OperandUnsigned},
     {"iand", {{"i", BOZ}, {"j", SameIntOrUnsigned}}, SameIntOrUnsigned},
+    {"iargc", {}, TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"ibclr", {{"i", SameIntOrUnsigned}, {"pos", AnyInt}}, SameIntOrUnsigned},
     {"ibits", {{"i", SameIntOrUnsigned}, {"pos", AnyInt}, {"len", AnyInt}},
         SameIntOrUnsigned},
@@ -1030,6 +1031,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         IntrinsicClass::transformationalFunction},
     {"time", {}, TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar,
         IntrinsicClass::transformationalFunction},
+    {"timef", {}, TypePattern{RealType, KindCode::exactKind, 8}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"tiny",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In,
@@ -1185,6 +1188,7 @@ static const std::pair<const char *, const char *> genericAlias[]{
     {"unsigned", "uint"}, // Sun vs gfortran names
     {"xor", "ieor"},
     {"__builtin_ieee_selected_real_kind", "selected_real_kind"},
+    {IntrinsicProcTable::BuiltinIntName, "int"},
 };
 
 // The following table contains the intrinsic functions listed in
@@ -1662,6 +1666,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"getarg",
+        {{"pos", AnyInt, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"value", DefaultChar, Rank::scalar, Optionality::required,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"getcwd",
         {{"c", DefaultChar, Rank::scalar, Optionality::required,
              common::Intent::Out},
@@ -1697,7 +1707,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
                 common::Intent::Out},
             {"topos", AnyInt}},
-        {}, Rank::elemental, IntrinsicClass::elementalSubroutine},
+        {}, Rank::elemental, IntrinsicClass::simpleElementalSubroutine},
     {"random_init",
         {{"repeatable", AnyLogical, Rank::scalar},
             {"image_distinct", AnyLogical, Rank::scalar}},
@@ -1740,7 +1750,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"signal",
         {{"number", AnyInt, Rank::scalar, Optionality::required,
              common::Intent::In},
-            // note: any pointer also accepts AnyInt
+            // ApplySpecificChecks() narrows this to a procedure or scalar
+            // INTEGER.
             {"handler", AnyPointer, Rank::scalar, Optionality::required,
                 common::Intent::In},
             {"status", AnyInt, Rank::scalar, Optionality::optional,
@@ -1759,7 +1770,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::InOut},
             {"back", AnyLogical, Rank::scalar, Optionality::optional,
                 common::Intent::In}},
-        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::simpleSubroutine},
     {"tokenize",
         {{"string", SameCharNoLen, Rank::scalar, Optionality::required,
              common::Intent::In},
@@ -1769,7 +1780,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::Out},
             {"separator", SameCharNoLen, Rank::vector, Optionality::optional,
                 common::Intent::Out}},
-        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::simpleSubroutine},
     {"tokenize",
         {{"string", SameCharNoLen, Rank::scalar, Optionality::required,
              common::Intent::In},
@@ -1779,7 +1790,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::Out},
             {"last", AnyInt, Rank::vector, Optionality::required,
                 common::Intent::Out}},
-        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::simpleSubroutine},
     {"unlink",
         {{"path", DefaultChar, Rank::scalar, Optionality::required,
              common::Intent::In},
@@ -2041,6 +2052,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // (or compatible) type and kind do so.  Check for missing non-optional
   // arguments now, too.
   const ActualArgument *sameArg{nullptr};
+  const char *sameArgName{nullptr};
   const ActualArgument *operandArg{nullptr};
   const IntrinsicDummyArgument *kindDummyArg{nullptr};
   const ActualArgument *kindArg{nullptr};
@@ -2228,6 +2240,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::same: {
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
       }
       auto sameType{sameArg->GetType().value()};
       if (name == "move_alloc"s) {
@@ -2239,10 +2252,18 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       } else {
         argOk = sameType.IsTkLenCompatibleWith(*type);
       }
+      if (!argOk) {
+        CHECK(sameArgName);
+        messages.Say(arg->sourceLocation(),
+            "Actual argument for '%s=' has type '%s', but '%s=' has type '%s'"_err_en_US,
+            d.keyword, type->AsFortran(), sameArgName, sameType.AsFortran());
+        return std::nullopt;
+      }
     } break;
     case KindCode::sameKind:
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
       }
       argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
       break;
@@ -2278,6 +2299,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::sameAtom:
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
         argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
       } else {
         argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
@@ -2788,7 +2810,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const auto &arg{rearranged[j]}) {
-      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+      if (const Expr<SomeType> *expr{arg->GetArgExpr()}) {
         std::string kw{d.keyword};
         if (arg->keyword()) {
           kw = arg->keyword()->ToString();
@@ -2866,8 +2888,17 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     attrs.set(characteristics::Procedure::Attr::Elemental);
   }
   if (call.isSubroutineCall) {
-    if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */ ||
-        intrinsicClass == IntrinsicClass::elementalSubroutine /* MVBITS */) {
+    if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */) {
+      // F2023 16.9.147 p2: MOVE_ALLOC is simple if and only if FROM is not a
+      // coarray
+      // F2023 16.1 p5: No other standard intrinsic subroutine is pure or simple
+      if (!IsCoarray(*rearranged[0])) {
+        attrs.set(characteristics::Procedure::Attr::Simple);
+        attrs.set(characteristics::Procedure::Attr::Pure);
+      }
+    } else if (intrinsicClass == IntrinsicClass::simpleSubroutine ||
+        intrinsicClass == IntrinsicClass::simpleElementalSubroutine) {
+      attrs.set(characteristics::Procedure::Attr::Simple);
       attrs.set(characteristics::Procedure::Attr::Pure);
     }
     return SpecificCall{
@@ -2875,8 +2906,19 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
         std::move(rearranged)};
   } else {
-    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */)
+    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */) {
       attrs.set(characteristics::Procedure::Attr::Pure);
+      // F2023 16.1: standard intrinsic functions are SIMPLE. Extensions that
+      // are not SIMPLE: they have side effects, or their result varies with
+      // external state. See docs/Extensions.md.
+      static const llvm::StringSet<> notSimpleExtensionFunctions{"chdir",
+          "dsecnds", "etime", "fseek", "ftell", "getcwd", "getgid", "getpid",
+          "getuid", "hostnm", "irand", "malloc", "putenv", "rand", "rename",
+          "rtc", "secnds", "second", "system", "time", "timef", "unlink"};
+      if (!notSimpleExtensionFunctions.contains(name)) {
+        attrs.set(characteristics::Procedure::Attr::Simple);
+      }
+    }
     characteristics::TypeAndShape typeAndShape{resultType.value(), resultRank};
     characteristics::FunctionResult funcResult{std::move(typeAndShape)};
     characteristics::Procedure chars{
@@ -2913,6 +2955,7 @@ public:
   bool IsIntrinsicFunction(const std::string &) const;
   bool IsIntrinsicSubroutine(const std::string &) const;
   bool IsDualIntrinsic(const std::string &) const;
+  bool IsGenericIntrinsic(const std::string &) const;
 
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
   std::string GetGenericIntrinsicName(const std::string &) const;
@@ -2936,6 +2979,18 @@ private:
       ActualArguments &, FoldingContext &) const;
   std::optional<SpecificCall> HandleC_Devloc(
       ActualArguments &, FoldingContext &) const;
+  std::optional<SpecificCall> HandleEnumerationHuge(
+      const semantics::DerivedTypeSpec &, ActualArguments &,
+      FoldingContext &) const;
+  std::optional<SpecificCall> HandleEnumerationNext(
+      const semantics::DerivedTypeSpec &, ActualArguments &,
+      FoldingContext &) const;
+  std::optional<SpecificCall> HandleEnumerationPrevious(
+      const semantics::DerivedTypeSpec &, ActualArguments &,
+      FoldingContext &) const;
+  std::optional<SpecificCall> HandleEnumerationInt(
+      const semantics::DerivedTypeSpec &, ActualArguments &,
+      FoldingContext &) const;
   const std::string &ResolveAlias(const std::string &name) const {
     auto iter{aliases_.find(name)};
     return iter == aliases_.end() ? name : iter->second;
@@ -2964,7 +3019,7 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
   }
   // special cases
   return name == "__builtin_c_loc" || name == "__builtin_c_devloc" ||
-      name == "null";
+      name == "null" || name == "next" || name == "previous";
 }
 bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
     const std::string &name0) const {
@@ -2979,6 +3034,18 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
 bool IntrinsicProcTable::Implementation::IsIntrinsic(
     const std::string &name) const {
   return IsIntrinsicFunction(name) || IsIntrinsicSubroutine(name);
+}
+bool IntrinsicProcTable::Implementation::IsGenericIntrinsic(
+    const std::string &name0) const {
+  const std::string &name{ResolveAlias(name0)};
+  // Intrinsic subroutines have no specific names, so a reference to one is
+  // always a reference to a generic procedure.
+  // Unlike IsIntrinsicFunction() and IsIntrinsicSubroutine(), the names that
+  // Probe() special-cases ahead of these tables are deliberately omitted here:
+  // each of them has a single interface, so nothing about such a reference can
+  // depend on which arguments it is given.
+  return genericFuncs_.find(name) != genericFuncs_.end() ||
+      subroutines_.find(name) != subroutines_.end();
 }
 bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
@@ -3076,6 +3143,31 @@ bool CheckAndRearrangeArguments(ActualArguments &arguments,
   return !anyMissing;
 }
 
+// Locates the actual argument that binds to the first dummy argument of an
+// intrinsic, honoring keyword syntax.  The enumeration-type inline handlers
+// (HUGE/INT/NEXT/PREVIOUS) must decide whether the enum path applies before
+// the actual arguments have been rearranged into dummy order, so they cannot
+// simply inspect arguments[0].  The first dummy is bound either by an explicit
+// keyword (e.g. INT(KIND=8, A=RED)) or, absent that keyword, by the first
+// positional argument.  Returns nullptr if no such argument is present.
+static const ActualArgument *FindFirstDummyArgument(
+    const ActualArguments &arguments, const char *firstDummyKeyword) {
+  const ActualArgument *firstPositional{nullptr};
+  for (const std::optional<ActualArgument> &arg : arguments) {
+    if (!arg) {
+      continue;
+    }
+    if (arg->keyword()) {
+      if (*arg->keyword() == firstDummyKeyword) {
+        return &*arg;
+      }
+    } else if (!firstPositional) {
+      firstPositional = &*arg;
+    }
+  }
+  return firstPositional;
+}
+
 // The NULL() intrinsic is a special case.
 SpecificCall IntrinsicProcTable::Implementation::HandleNull(
     ActualArguments &arguments, FoldingContext &context) const {
@@ -3135,6 +3227,8 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
           attrs.set(isAllocatableMold
                   ? characteristics::Procedure::Attr::NullAllocatable
                   : characteristics::Procedure::Attr::NullPointer);
+          attrs.set(characteristics::Procedure::Attr::Pure);
+          attrs.set(characteristics::Procedure::Attr::Simple);
           characteristics::Procedure chars{
               std::move(*fResult), std::move(args), attrs};
           return SpecificCall{SpecificIntrinsic{"null"s, std::move(chars)},
@@ -3150,6 +3244,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::NullPointer);
   attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Simple);
   arguments.clear();
   return SpecificCall{
       SpecificIntrinsic{"null"s,
@@ -3498,11 +3593,27 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
     CHECK(arguments.size() == 1);
     CheckForCoindexedObject(context.messages(), arguments[0], "c_loc", "x");
     const auto *expr{arguments[0].value().UnwrapExpr()};
+    SpecificCall specificCall{
+        SpecificIntrinsic{"__builtin_c_loc"s,
+            characteristics::Procedure{
+                characteristics::FunctionResult{DynamicType{
+                    GetBuiltinDerivedType(builtinsScope_, "__builtin_c_ptr")}},
+                characteristics::DummyArguments{},
+                characteristics::Procedure::Attrs{
+                    characteristics::Procedure::Attr::Pure}}},
+        {/*arguments*/}};
     if (expr &&
         !(IsObjectPointer(*expr) ||
             (IsVariable(*expr) && GetLastTarget(GetSymbolVector(*expr))))) {
-      context.messages().Say(arguments[0]->sourceLocation(),
-          "C_LOC() argument must be a data pointer or target"_err_en_US);
+      if (context.languageFeatures().IsEnabled(
+              common::LanguageFeature::RelaxedCLocChecks)) {
+        context.Warn(common::LanguageFeature::RelaxedCLocChecks,
+            arguments[0]->sourceLocation(),
+            "C_LOC() argument should be a data pointer or target"_warn_en_US);
+      } else {
+        context.messages().Say(arguments[0]->sourceLocation(),
+            "C_LOC() argument must be a data pointer or target"_err_en_US);
+      }
     }
     if (auto typeAndShape{characteristics::TypeAndShape::Characterize(
             arguments[0], context)}) {
@@ -3539,20 +3650,28 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
               "C_LOC() argument has non-interoperable intrinsic type or kind"_warn_en_US);
         }
       }
-
       characteristics::DummyDataObject ddo{std::move(*typeAndShape)};
       ddo.intent = common::Intent::In;
-      return SpecificCall{
-          SpecificIntrinsic{"__builtin_c_loc"s,
-              characteristics::Procedure{
-                  characteristics::FunctionResult{
-                      DynamicType{GetBuiltinDerivedType(
-                          builtinsScope_, "__builtin_c_ptr")}},
-                  characteristics::DummyArguments{
-                      characteristics::DummyArgument{"x"s, std::move(ddo)}},
-                  characteristics::Procedure::Attrs{
-                      characteristics::Procedure::Attr::Pure}}},
-          std::move(arguments)};
+      specificCall.specificIntrinsic.characteristics.value()
+          .dummyArguments.emplace_back(
+              characteristics::DummyArgument{"x", std::move(ddo)});
+      specificCall.arguments.emplace_back(std::move(arguments[0]));
+      return specificCall;
+    } else if (context.languageFeatures().IsEnabled(
+                   common::LanguageFeature::RelaxedCLocChecks)) {
+      if (!expr || !IsProcedurePointer(*expr)) {
+        // There are more specific errors as to why the expression doesn't exist
+        // or isn't characterizable as a data object or procedure.
+      } else if (auto proc{characteristics::Procedure::Characterize(
+                     *expr, context)}) {
+        characteristics::DummyProcedure dProc{std::move(*proc)};
+        dProc.intent = common::Intent::In;
+        specificCall.specificIntrinsic.characteristics.value()
+            .dummyArguments.emplace_back(
+                characteristics::DummyArgument{"x", std::move(dProc)});
+        specificCall.arguments.emplace_back(std::move(arguments[0]));
+        return specificCall;
+      }
     }
   }
   return std::nullopt;
@@ -3618,6 +3737,200 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Devloc(
     }
   }
   return std::nullopt;
+}
+
+// HUGE(x) for enumeration types — returns the last enumerator
+std::optional<SpecificCall>
+IntrinsicProcTable::Implementation::HandleEnumerationHuge(
+    const semantics::DerivedTypeSpec &derived, ActualArguments &arguments,
+    FoldingContext &context) const {
+  static const char *const keywords[]{"x", nullptr};
+  if (!CheckAndRearrangeArguments(arguments, context.messages(), keywords)) {
+    return std::nullopt;
+  }
+  int count{derived.typeSymbol()
+          .GetUltimate()
+          .get<semantics::DerivedTypeDetails>()
+          .enumeratorCount()};
+  // Build a StructureConstructor with __ordinal = enumeratorCount
+  const auto *scope{derived.GetScope()};
+  if (!scope) {
+    return std::nullopt;
+  }
+  auto ordIter{scope->find(semantics::SourceName{"__ordinal", 9})};
+  if (ordIter == scope->end()) {
+    return std::nullopt;
+  }
+  const semantics::Symbol &ordSym{*ordIter->second};
+  StructureConstructor ctor{derived};
+  ctor.Add(ordSym,
+      Expr<SomeType>{
+          Expr<SomeInteger>{Expr<Type<TypeCategory::Integer, 4>>{count}}});
+  // Build FunctionResult and DummyArguments
+  DynamicType enumType{derived};
+  characteristics::DummyDataObject ddo{characteristics::TypeAndShape{enumType}};
+  ddo.intent = common::Intent::In;
+  ddo.attrs.set(characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry);
+  characteristics::Procedure::Attrs attrs;
+  attrs.set(characteristics::Procedure::Attr::Pure);
+  // Replace arguments with the constant result
+  arguments.clear();
+  arguments.emplace_back(
+      AsGenericExpr(Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}}));
+  return SpecificCall{
+      SpecificIntrinsic{"huge"s,
+          characteristics::Procedure{characteristics::FunctionResult{enumType},
+              characteristics::DummyArguments{
+                  characteristics::DummyArgument{"x"s, std::move(ddo)}},
+              attrs}},
+      std::move(arguments)};
+}
+
+// STAT= of NEXT/PREVIOUS: any integer with a decimal exponent range >= 4.
+static DynamicType GetEnumerationStatType(const ActualArguments &arguments,
+    const char *procName, const common::IntrinsicTypeDefaultKinds &defaults,
+    FoldingContext &context) {
+  if (arguments.size() > 1 && arguments[1]) {
+    if (auto type{arguments[1]->GetType()}) {
+      if (type->category() != TypeCategory::Integer || type->kind() < 2) {
+        context.messages().Say(arguments[1]->sourceLocation(),
+            "STAT= argument to %s() must be an integer with a decimal exponent range of at least four"_err_en_US,
+            procName);
+      }
+      return *type;
+    }
+  }
+  return DynamicType{
+      TypeCategory::Integer, defaults.GetDefaultKind(TypeCategory::Integer)};
+}
+
+// NEXT(a [, stat]) for enumeration types — returns the next enumerator
+std::optional<SpecificCall>
+IntrinsicProcTable::Implementation::HandleEnumerationNext(
+    const semantics::DerivedTypeSpec &derived, ActualArguments &arguments,
+    FoldingContext &context) const {
+  static const char *const keywords[]{"a", "stat", nullptr};
+  if (!CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
+    return std::nullopt;
+  }
+  if (!arguments[0]) {
+    context.messages().Say("NEXT() requires argument A"_err_en_US);
+    return std::nullopt;
+  }
+  DynamicType enumerationType{derived};
+  characteristics::DummyDataObject ddoA{
+      characteristics::TypeAndShape{enumerationType}};
+  ddoA.intent = common::Intent::In;
+  DynamicType statType{
+      GetEnumerationStatType(arguments, "NEXT", defaults_, context)};
+  characteristics::DummyDataObject ddoStat{
+      characteristics::TypeAndShape{statType}};
+  ddoStat.intent = common::Intent::Out;
+  ddoStat.attrs.set(characteristics::DummyDataObject::Attr::Optional);
+  characteristics::Procedure::Attrs attrs;
+  attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Elemental);
+  return SpecificCall{
+      SpecificIntrinsic{"next"s,
+          characteristics::Procedure{
+              characteristics::FunctionResult{enumerationType},
+              characteristics::DummyArguments{
+                  characteristics::DummyArgument{"a"s, std::move(ddoA)},
+                  characteristics::DummyArgument{"stat"s, std::move(ddoStat)}},
+              attrs}},
+      std::move(arguments)};
+}
+
+// PREVIOUS(a [, stat]) for enumeration types — returns the previous enumerator
+std::optional<SpecificCall>
+IntrinsicProcTable::Implementation::HandleEnumerationPrevious(
+    const semantics::DerivedTypeSpec &derived, ActualArguments &arguments,
+    FoldingContext &context) const {
+  static const char *const keywords[]{"a", "stat", nullptr};
+  if (!CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
+    return std::nullopt;
+  }
+  if (!arguments[0]) {
+    context.messages().Say("PREVIOUS() requires argument A"_err_en_US);
+    return std::nullopt;
+  }
+  DynamicType enumerationType{derived};
+  characteristics::DummyDataObject ddoA{
+      characteristics::TypeAndShape{enumerationType}};
+  ddoA.intent = common::Intent::In;
+  DynamicType statType{
+      GetEnumerationStatType(arguments, "PREVIOUS", defaults_, context)};
+  characteristics::DummyDataObject ddoStat{
+      characteristics::TypeAndShape{statType}};
+  ddoStat.intent = common::Intent::Out;
+  ddoStat.attrs.set(characteristics::DummyDataObject::Attr::Optional);
+  characteristics::Procedure::Attrs attrs;
+  attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Elemental);
+  return SpecificCall{
+      SpecificIntrinsic{"previous"s,
+          characteristics::Procedure{
+              characteristics::FunctionResult{enumerationType},
+              characteristics::DummyArguments{
+                  characteristics::DummyArgument{"a"s, std::move(ddoA)},
+                  characteristics::DummyArgument{"stat"s, std::move(ddoStat)}},
+              attrs}},
+      std::move(arguments)};
+}
+
+// INT(x) for enumeration types — returns the ordinal as an integer
+std::optional<SpecificCall>
+IntrinsicProcTable::Implementation::HandleEnumerationInt(
+    const semantics::DerivedTypeSpec &derived, ActualArguments &arguments,
+    FoldingContext &context) const {
+  static const char *const keywords[]{"a", "kind", nullptr};
+  if (!CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
+    return std::nullopt;
+  }
+  // Determine result kind using the same validation as the ordinary INT
+  // intrinsic (fold, check IsTypeEnabled, emit the same diagnostic on failure).
+  int kind{defaults_.GetDefaultKind(TypeCategory::Integer)};
+  if (arguments.size() > 1 && arguments[1]) {
+    if (const auto *kindExpr{arguments[1]->UnwrapExpr()}) {
+      bool kindOk{false};
+      if (auto kindVal{ToInt64(Fold(context, common::Clone(*kindExpr)))}) {
+        if (context.targetCharacteristics().IsTypeEnabled(
+                TypeCategory::Integer, *kindVal)) {
+          kind = static_cast<int>(*kindVal);
+          kindOk = true;
+        }
+      }
+      if (!kindOk) {
+        context.messages().Say(arguments[1]->sourceLocation(),
+            "'kind=' argument must be a constant scalar integer whose value is "
+            "a supported kind for the intrinsic result type"_err_en_US);
+        // fall through with default kind for error recovery
+      }
+    }
+  }
+  DynamicType enumerationType{derived};
+  DynamicType resultType{TypeCategory::Integer, kind};
+  characteristics::DummyDataObject ddo{
+      characteristics::TypeAndShape{enumerationType}};
+  ddo.intent = common::Intent::In;
+  characteristics::Procedure::Attrs attrs;
+  attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Elemental);
+  characteristics::DummyArguments dummies;
+  dummies.emplace_back("a"s, std::move(ddo));
+  // Always include KIND dummy — CheckAndRearrangeArguments always populates
+  // the slot even when absent
+  characteristics::DummyDataObject kindDdo{
+      characteristics::TypeAndShape{DynamicType{TypeCategory::Integer,
+          defaults_.GetDefaultKind(TypeCategory::Integer)}}};
+  kindDdo.intent = common::Intent::In;
+  auto &kindDummy{dummies.emplace_back("kind"s, std::move(kindDdo))};
+  kindDummy.SetOptional();
+  return SpecificCall{SpecificIntrinsic{"int"s,
+                          characteristics::Procedure{
+                              characteristics::FunctionResult{resultType},
+                              std::move(dummies), attrs}},
+      std::move(arguments)};
 }
 
 static bool CheckForNonPositiveValues(FoldingContext &context,
@@ -3735,6 +4048,23 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
     }
+  } else if (name == "signal") {
+    const auto &arg{call.arguments[1]};
+    bool handlerOk{false};
+    if (arg) {
+      if (const auto *expr{arg->UnwrapExpr()}) {
+        if (IsProcedure(*expr)) {
+          handlerOk = true;
+        } else if (auto type{expr->GetType()}) {
+          handlerOk = type->category() == TypeCategory::Integer;
+        }
+      }
+      if (!handlerOk) {
+        ok = false;
+        context.messages().Say(arg->sourceLocation(),
+            "'handler=' argument to SIGNAL() must be a procedure or a scalar INTEGER"_err_en_US);
+      }
+    }
   } else if (name == "tokenize") {
     // Both forms of TOKENIZE have at least 4 dummy arguments, and the last two
     // must be allocatable.
@@ -3825,6 +4155,39 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
           // Treat ALLOCATED(ptr) as ASSOCIATED(ptr)
           CallCharacteristics newCall{"associated"};
           return Probe(newCall, arguments, context);
+        }
+      }
+    }
+
+    if (call.name == "next" || call.name == "previous") {
+      const semantics::DerivedTypeSpec *derived{nullptr};
+      if (const ActualArgument *arg{FindFirstDummyArgument(arguments, "a")}) {
+        derived = GetEnumerationTypeSpec(arg->GetType());
+      }
+      if (derived) {
+        return call.name == "next"
+            ? HandleEnumerationNext(*derived, arguments, context)
+            : HandleEnumerationPrevious(*derived, arguments, context);
+      }
+      context.messages().Say(
+          "Argument of %s() must be of enumeration type"_err_en_US,
+          parser::ToUpperCaseLetters(call.name));
+      return std::nullopt;
+    }
+
+    // HUGE/INT are ordinary intrinsics that also accept enumeration types.
+    if (call.name == "huge" || call.name == "int") {
+      const char *firstDummyKeyword{call.name == "huge" ? "x" : "a"};
+      if (const ActualArgument *arg{
+              FindFirstDummyArgument(arguments, firstDummyKeyword)}) {
+        if (auto type{arg->GetType()}) {
+          if (const auto *derived{GetDerivedTypeSpec(*type)}) {
+            if (derived->IsEnumerationType()) {
+              return call.name == "huge"
+                  ? HandleEnumerationHuge(*derived, arguments, context)
+                  : HandleEnumerationInt(*derived, arguments, context);
+            }
+          }
         }
       }
     }
@@ -4090,7 +4453,9 @@ IntrinsicProcTable::Implementation::IsSpecificIntrinsicFunction(
           std::string{specific.dummy[j].keyword}, std::move(dummy));
     }
     characteristics::Procedure::Attrs attrs;
-    attrs.set(characteristics::Procedure::Attr::Pure)
+    // F2023 16.1: specific intrinsic functions are SIMPLE
+    attrs.set(characteristics::Procedure::Attr::Simple)
+        .set(characteristics::Procedure::Attr::Pure)
         .set(characteristics::Procedure::Attr::Elemental);
     characteristics::Procedure chars{
         std::move(fResult), std::move(args), attrs};
@@ -4144,6 +4509,9 @@ bool IntrinsicProcTable::IsIntrinsicSubroutine(const std::string &name) const {
 bool IntrinsicProcTable::IsDualIntrinsic(const std::string &name) const {
   return DEREF(impl_.get()).IsDualIntrinsic(name);
 }
+bool IntrinsicProcTable::IsGenericIntrinsic(const std::string &name) const {
+  return DEREF(impl_.get()).IsGenericIntrinsic(name);
+}
 
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(
     const std::string &name) const {
@@ -4158,6 +4526,22 @@ std::string IntrinsicProcTable::GetGenericIntrinsicName(
 std::optional<SpecificCall> IntrinsicProcTable::Probe(
     const CallCharacteristics &call, ActualArguments &arguments,
     FoldingContext &context) const {
+  // Actual arguments may retain designators of named constants for the
+  // benefit of storage association in nonintrinsic calls (see
+  // ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray).  Intrinsic
+  // matching, argument checking, and the special handlers inspect constant
+  // values structurally, so probe with a folded copy of such arguments.
+  // On success the SpecificCall carries the folded arguments; on failure
+  // the caller's original arguments are left untouched for subsequent
+  // nonintrinsic resolution.  (Note a pre-existing quirk, unchanged here:
+  // Match() moves arguments while rearranging them and can still fail late,
+  // so a failed match can leave a probe's working vector partially moved
+  // from; using a copy confines that to the copy.)
+  if (AnyNamedConstantActualArguments(arguments)) {
+    ActualArguments folded{arguments};
+    FoldNamedConstantActualArguments(context, folded);
+    return DEREF(impl_.get()).Probe(call, folded, context);
+  }
   return DEREF(impl_.get()).Probe(call, arguments, context);
 }
 

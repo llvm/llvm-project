@@ -984,3 +984,13 @@ eh_test:
     end_loop
   end_loop
   end_function
+
+typed_select_type_mismatch:
+  .functype typed_select_type_mismatch () -> ()
+  f32.const 0x1p+0
+  f32.const 0x1p+1
+  i32.const 0
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
+  select i32
+  drop
+  end_function

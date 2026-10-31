@@ -42,7 +42,7 @@ void g() {
   template_param_kinds_1<int>(); // ok, from cxx-templates-b.h
 
   template_param_kinds_2<Tmpl_T_C>(); // expected-error {{no matching function for call}}
-  // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}
+  // expected-note@Inputs/cxx-templates-a.h:11 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
   // expected-note@Inputs/cxx-templates-b.h:11 {{candidate}}
 
   template_param_kinds_2<Tmpl_T_I_I>(); // expected-error {{ambiguous}}
@@ -193,8 +193,7 @@ namespace hidden_specializations {
     cls<char*> uk4; // expected-error 1+{{partial specialization of 'cls<T *>' must be imported}} expected-error 1+{{definition of}}
     cls<void>::nested_cls unk1; // expected-error 1+{{explicit specialization of 'nested_cls' must be imported}} expected-error 1+{{definition of}}
     cls<void>::nested_cls_t<int> unk2; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}} expected-error 1+{{definition of}}
-    // expected-error@cxx-templates-unimported.h:29 {{explicit specialization of 'nested_cls_t' must be imported}}
-    // expected-note@-2 {{in evaluation of exception specification}}
+    // expected-error@+1 1+{{definition of 'nested_cls_t' must be imported}}
     cls<void>::nested_cls_t<char> unk3; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}}
 
     // For enums, uses that would trigger instantiations of definitions are not

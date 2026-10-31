@@ -11,6 +11,7 @@
 ; RUN: llvm-lto -thinlto-index-stats %p/Inputs/thinlto-function-summary-callgraph-combined.1.bc  | FileCheck %s --check-prefix=OLD-COMBINED
 
 ; CHECK: <SOURCE_FILENAME
+; CHECK-NEXT: <GUIDLIST
 ; CHECK-NEXT: <GLOBALVAR
 ; CHECK-NEXT: <FUNCTION
 ; "func"

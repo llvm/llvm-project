@@ -14,18 +14,13 @@
 #include "AMDGPUWaitSGPRHazards.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-wait-sgpr-hazards"
-
-static cl::opt<bool> GlobalEnableSGPRHazardWaits(
-    "amdgpu-sgpr-hazard-wait", cl::init(true), cl::Hidden,
-    cl::desc("Enable required s_wait_alu on SGPR hazards"));
 
 static cl::opt<bool> GlobalCullSGPRHazardsOnFunctionBoundary(
     "amdgpu-sgpr-hazard-boundary-cull", cl::init(false), cl::Hidden,
@@ -51,7 +46,6 @@ public:
   const MachineRegisterInfo *MRI;
   unsigned DsNopCount;
 
-  bool EnableSGPRHazardWaits;
   bool CullSGPRHazardsOnFunctionBoundary;
   bool CullSGPRHazardsAtMemWait;
   unsigned CullSGPRHazardsMemWaitThreshold;
@@ -68,6 +62,7 @@ public:
     case AMDGPU::EXEC_HI:
     case AMDGPU::SGPR_NULL:
     case AMDGPU::SGPR_NULL64:
+    case AMDGPU::SCC:
       return {};
     default:
       break;
@@ -205,7 +200,8 @@ public:
     if (It->getOpcode() != AMDGPU::S_WAITCNT_DEPCTR)
       return false;
 
-    It->getOperand(0).setImm(mergeMasks(Mask, It->getOperand(0).getImm()));
+    It->getOperand(0).setImm(
+        mergeMasks(Mask, static_cast<unsigned>(It->getOperand(0).getImm())));
     return true;
   }
 
@@ -248,7 +244,7 @@ public:
 
       // Existing S_WAITALU can clear hazards
       if (MI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
-        unsigned int Mask = MI->getOperand(0).getImm();
+        unsigned int Mask = static_cast<unsigned>(MI->getOperand(0).getImm());
         if (AMDGPU::DepCtr::decodeFieldVaVcc(Mask) == 0)
           State.VCCHazard &= ~HazardState::VALU;
         if (AMDGPU::DepCtr::decodeFieldSaSdst(Mask) == 0) {
@@ -278,7 +274,7 @@ public:
       }
 
       // Process only VALUs and SALUs
-      bool IsVALU = SIInstrInfo::isVALU(*MI);
+      bool IsVALU = SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/false);
       bool IsSALU = SIInstrInfo::isSALU(*MI);
       if (!IsVALU && !IsSALU)
         continue;
@@ -314,7 +310,7 @@ public:
           return;
         }
 
-        uint8_t SGPRCount =
+        unsigned SGPRCount =
             AMDGPU::getRegBitWidth(*TRI->getRegClassForReg(*MRI, Reg)) / 32;
 
         if (IsUse) {
@@ -328,7 +324,7 @@ public:
             }
           }
           // Compute required waits
-          for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
+          for (unsigned RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
             Wait |= State.SALUHazards[RegN + RegIdx] ? WA_SALU : 0;
             Wait |= IsVALU && State.VALUHazards[RegN + RegIdx] ? WA_VALU : 0;
           }
@@ -345,7 +341,7 @@ public:
           if (isVCC(Reg)) {
             State.VCCHazard = IsSALU ? HazardState::SALU : HazardState::VALU;
           } else {
-            for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
+            for (unsigned RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
               if (IsSALU)
                 State.SALUHazards.set(RegN + RegIdx);
               else
@@ -442,20 +438,130 @@ public:
     return Changed;
   }
 
+  bool runWaitMerging(MachineFunction &MF) {
+    // Perform per-block merging of existing s_waitcnt_depctr instructions.
+    // Track set of SGPR writes before a given wait instruction, and search
+    // for reads of these SGPRs.
+    // Move the wait to just before the read to improve pipelining.
+    // If no related reads occur before subsequent wait then merged waits.
+    const unsigned ConstantMaskBits = AMDGPU::DepCtr::encodeFieldSaSdst(
+        AMDGPU::DepCtr::encodeFieldVaSdst(
+            AMDGPU::DepCtr::encodeFieldVaVcc(0, *ST), 0),
+        0);
+    const unsigned VccLoIdx = *sgprNumber(AMDGPU::VCC_LO, *TRI);
+    const unsigned VccHiIdx = *sgprNumber(AMDGPU::VCC_HI, *TRI);
+    bool Changed = false;
+    for (MachineBasicBlock &MBB : MF) {
+      SmallBitVector WriteSet(128), PendingSALUWriteSet(128),
+          PendingVALUWriteSet(128);
+      MachineInstr *PrevWait = nullptr;
+
+      auto CommitWrites = [&](unsigned Mask) {
+        if (!AMDGPU::DepCtr::decodeFieldSaSdst(Mask))
+          WriteSet |= PendingSALUWriteSet;
+        bool VccLoBit = WriteSet[VccLoIdx];
+        bool VccHiBit = WriteSet[VccHiIdx];
+        if (!AMDGPU::DepCtr::decodeFieldVaSdst(Mask)) {
+          // Apply pending VALU set minus VCC bits
+          WriteSet |= PendingVALUWriteSet;
+          WriteSet[VccLoIdx] = VccLoBit;
+          WriteSet[VccHiIdx] = VccHiBit;
+        }
+        if (!AMDGPU::DepCtr::decodeFieldVaVcc(Mask)) {
+          WriteSet[VccLoIdx] = VccLoBit || PendingVALUWriteSet[VccLoIdx];
+          WriteSet[VccHiIdx] = VccHiBit || PendingVALUWriteSet[VccHiIdx];
+        }
+        // Clear all pending writes
+        PendingSALUWriteSet.reset();
+        PendingVALUWriteSet.reset();
+      };
+
+      for (MachineInstr &MI : MBB) {
+        if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+            (MI.getOperand(0).getImm() & ConstantMaskBits) ==
+                ConstantMaskBits) {
+          if (PrevWait) {
+            // Merge previous wait into this one.
+            MachineOperand &MaskOp = MI.getOperand(0);
+            MaskOp.setImm(mergeMasks(
+                static_cast<unsigned>(PrevWait->getOperand(0).getImm()),
+                static_cast<unsigned>(MaskOp.getImm())));
+            PrevWait->eraseFromParent();
+            Changed = true;
+          } else {
+            // Starting a new region using fresh write set.
+            WriteSet.reset();
+          }
+          CommitWrites(static_cast<unsigned>(MI.getOperand(0).getImm()));
+          PrevWait = &MI;
+          continue;
+        }
+
+        // Do not optimize over branches or terminators
+        if (PrevWait && (MI.isCall() || MI.isReturn() || MI.isBranch() ||
+                         MI.isTerminator())) {
+          PrevWait->moveBefore(&MI);
+          PrevWait = nullptr;
+          Changed = true;
+        }
+        if (MI.isTerminator())
+          break;
+
+        // Note: test for meta instructions after terminators.
+        // Required to handle terminator meta instruction.
+        if (MI.isMetaInstruction())
+          continue;
+
+        const bool IsVALU = SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false);
+        const bool IsSALU = SIInstrInfo::isSALU(MI);
+        if (!IsVALU && !IsSALU)
+          continue;
+
+        for (const MachineOperand &Op : MI.operands()) {
+          if (!Op.isReg())
+            continue;
+          Register Reg = Op.getReg();
+          if (!TRI->isSGPRReg(*MRI, Reg))
+            continue;
+
+          std::optional<unsigned> RegNumber = sgprNumber(Reg, *TRI);
+          if (!RegNumber)
+            continue;
+          unsigned RegN = *RegNumber;
+          unsigned SGPRCount =
+              AMDGPU::getRegBitWidth(*TRI->getRegClassForReg(*MRI, Reg)) / 32;
+
+          if (Op.isDef()) {
+            if (IsSALU)
+              PendingSALUWriteSet.set(RegN, RegN + SGPRCount);
+            else
+              PendingVALUWriteSet.set(RegN, RegN + SGPRCount);
+            continue;
+          }
+
+          if (PrevWait &&
+              WriteSet.find_prev(RegN + SGPRCount) >= (signed)RegN) {
+            // Move the wait to here, the last point it can be valid
+            PrevWait->moveBefore(&MI);
+            PrevWait = nullptr;
+            Changed = true;
+          }
+        }
+      }
+    }
+    return Changed;
+  }
+
   bool run(MachineFunction &MF) {
     ST = &MF.getSubtarget<GCNSubtarget>();
-    if (!ST->hasVALUReadSGPRHazard())
+    if (!ST->hasVALUReadSGPRHazard() && !ST->hasVALUMaskWriteHazard())
       return false;
 
     // Parse settings
-    EnableSGPRHazardWaits = GlobalEnableSGPRHazardWaits;
     CullSGPRHazardsOnFunctionBoundary = GlobalCullSGPRHazardsOnFunctionBoundary;
     CullSGPRHazardsAtMemWait = GlobalCullSGPRHazardsAtMemWait;
     CullSGPRHazardsMemWaitThreshold = GlobalCullSGPRHazardsMemWaitThreshold;
 
-    if (!GlobalEnableSGPRHazardWaits.getNumOccurrences())
-      EnableSGPRHazardWaits = MF.getFunction().getFnAttributeAsParsedInteger(
-          "amdgpu-sgpr-hazard-wait", EnableSGPRHazardWaits);
     if (!GlobalCullSGPRHazardsOnFunctionBoundary.getNumOccurrences())
       CullSGPRHazardsOnFunctionBoundary =
           MF.getFunction().hasFnAttribute("amdgpu-sgpr-hazard-boundary-cull");
@@ -464,18 +570,19 @@ public:
           MF.getFunction().hasFnAttribute("amdgpu-sgpr-hazard-mem-wait-cull");
     if (!GlobalCullSGPRHazardsMemWaitThreshold.getNumOccurrences())
       CullSGPRHazardsMemWaitThreshold =
-          MF.getFunction().getFnAttributeAsParsedInteger(
+          static_cast<unsigned>(MF.getFunction().getFnAttributeAsParsedInteger(
               "amdgpu-sgpr-hazard-mem-wait-cull-threshold",
-              CullSGPRHazardsMemWaitThreshold);
-
-    // Bail if disabled
-    if (!EnableSGPRHazardWaits)
-      return false;
+              CullSGPRHazardsMemWaitThreshold));
 
     TII = ST->getInstrInfo();
     TRI = ST->getRegisterInfo();
     MRI = &MF.getRegInfo();
     DsNopCount = ST->isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
+
+    // VALU mask write hazards have already been handled, but this pass
+    // performs a forward scan to optimize them.
+    if (ST->hasVALUMaskWriteHazard())
+      return ST->isWave64() ? runWaitMerging(MF) : false;
 
     auto CallingConv = MF.getFunction().getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CallingConv) &&

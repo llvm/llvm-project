@@ -20,6 +20,7 @@ unittest("LexTests") {
     "LexHLSLRootSignatureTest.cpp",
     "LexerTest.cpp",
     "ModuleDeclStateTest.cpp",
+    "ModuleMapTest.cpp",
     "NoTrivialPPDirectiveTracerTest.cpp",
     "PPCallbacksTest.cpp",
     "PPConditionalDirectiveRecordTest.cpp",

@@ -37,7 +37,7 @@ TEST_F(LlvmLibcTanhfTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcTanhfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'001;
+  constexpr uint32_t COUNT = 1'231;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();

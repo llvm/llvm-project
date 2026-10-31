@@ -13,9 +13,9 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.p
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtest1Ex") fortran_attrs<intent_inout> : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>)
   hlfir.where {
-    %2 = hlfir.designate %1#0{"p2"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+    %2 = hlfir.designate %1#0{"p2"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     %3 = fir.load %2 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     %4:3 = fir.box_dims %3, %c0 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
     %5 = arith.addi %4#0, %4#1 : index
@@ -39,7 +39,7 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.p
     }
   } do {
     hlfir.region_assign {
-      %2 = hlfir.designate %1#0{"p1"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
+      %2 = hlfir.designate %1#0{"p1"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
       %3 = fir.load %2 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
       %4:3 = fir.box_dims %3, %c0 : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index) -> (index, index, index)
       %5 = arith.addi %4#0, %4#1 : index
@@ -51,7 +51,7 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.p
       %11 = fir.shape %10 : (index) -> !fir.shape<1>
       %12 = hlfir.designate %3 (%4#0:%6:%c1, %c1)  shape %11 : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
       %13 = hlfir.exactly_once : !hlfir.expr<?xf32> {
-// CHECK:           %[[VAL_26:.*]] = hlfir.designate %{{.*}}#0{"p1"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
+// CHECK:           %[[VAL_26:.*]] = hlfir.designate %{{.*}}#0{"p1"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 // CHECK:           fir.load %[[VAL_26]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 // CHECK:           %[[VAL_47:.*]] = fir.call @_QPcallee(%{{.*}}) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
 // CHECK:           fir.do_loop
@@ -65,7 +65,7 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.p
         %22 = arith.select %21, %20, %c0 : index
         %23 = fir.shape %22 : (index) -> !fir.shape<1>
         %24 = hlfir.designate %15 (%16#0:%18:%c1, %c1)  shape %23 : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-        %25:2 = hlfir.declare %24 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMmy_moduleFcalleeEx"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+        %25:2 = hlfir.declare %24 uniq_name("_QMmy_moduleFcalleeEx") fortran_attrs<intent_in> : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
         %26:3 = fir.box_dims %25#0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
         %27 = fir.convert %26#1 : (index) -> i64
         %28 = fir.convert %27 : (i64) -> index
@@ -74,7 +74,7 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.p
         %31 = fir.shape %30 : (index) -> !fir.shape<1>
         %32 = fir.allocmem !fir.array<?xf32>, %30 {bindc_name = ".tmp.expr_result", uniq_name = ""}
         %33 = fir.convert %32 : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-        %34:2 = hlfir.declare %33(%31) {uniq_name = ".tmp.expr_result"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+        %34:2 = hlfir.declare %33(%31) uniq_name(".tmp.expr_result") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
         %35 = fir.call @_QPcallee(%24) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
         fir.save_result %35 to %34#1(%31) : !fir.array<?xf32>, !fir.ref<!fir.array<?xf32>>, !fir.shape<1>
         %36 = hlfir.as_expr %34#0 move %true : (!fir.box<!fir.array<?xf32>>, i1) -> !hlfir.expr<?xf32>
@@ -94,7 +94,7 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.p
         hlfir.destroy %14 : !hlfir.expr<?xf32>
       }
     } to {
-      %2 = hlfir.designate %1#0{"p2"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+      %2 = hlfir.designate %1#0{"p2"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<_QMmy_moduleTtt{p1:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>,p2:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
       %3 = fir.load %2 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
       %4:3 = fir.box_dims %3, %c0 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
       %5 = arith.addi %4#0, %4#1 : index
@@ -124,10 +124,10 @@ func.func @_QPtest_where_in_forall(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bin
   %0 = fir.alloca !fir.array<100x!fir.logical<4>> {bindc_name = ".tmp.expr_result"}
   %1 = fir.alloca !fir.array<100x!fir.logical<4>> {bindc_name = ".tmp.expr_result"}
   %2 = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} {uniq_name = "_QFtest_where_in_forallEb"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %2 {uniq_name = "_QFtest_where_in_forallEa"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-  %4:2 = hlfir.declare %arg1 dummy_scope %2 {uniq_name = "_QFtest_where_in_forallEb"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-  %5:2 = hlfir.declare %arg2 dummy_scope %2 {uniq_name = "_QFtest_where_in_forallEc"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+// CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} uniq_name("_QFtest_where_in_forallEb") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %2 uniq_name("_QFtest_where_in_forallEa") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %4:2 = hlfir.declare %arg1 dummy_scope %2 uniq_name("_QFtest_where_in_forallEb") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %5:2 = hlfir.declare %arg2 dummy_scope %2 uniq_name("_QFtest_where_in_forallEc") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
   hlfir.forall lb {
     hlfir.yield %c1_i32 : i32 
   } ub {
@@ -135,7 +135,7 @@ func.func @_QPtest_where_in_forall(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bin
   }  (%arg3: i32) {
     hlfir.where {
       %6 = fir.shape %c100 : (index) -> !fir.shape<1>
-      %7:2 = hlfir.declare %0(%6) {uniq_name = ".tmp.expr_result"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+      %7:2 = hlfir.declare %0(%6) uniq_name(".tmp.expr_result") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
       %8 = fir.call @_QPpure_logical_func1() proc_attrs<pure> fastmath<contract> : () -> !fir.array<100x!fir.logical<4>>
       fir.save_result %8 to %7#1(%6) : !fir.array<100x!fir.logical<4>>, !fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>
       %9 = hlfir.as_expr %7#0 move %false : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i1) -> !hlfir.expr<100x!fir.logical<4>>
@@ -214,7 +214,7 @@ func.func @_QPtest_where_in_forall(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bin
       hlfir.elsewhere mask {
         %6 = hlfir.exactly_once : !hlfir.expr<100x!fir.logical<4>> {
           %7 = fir.shape %c100 : (index) -> !fir.shape<1>
-          %8:2 = hlfir.declare %1(%7) {uniq_name = ".tmp.expr_result"} : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
+          %8:2 = hlfir.declare %1(%7) uniq_name(".tmp.expr_result") : (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.ref<!fir.array<100x!fir.logical<4>>>)
           %9 = fir.call @_QPpure_logical_func2() proc_attrs<pure> fastmath<contract> : () -> !fir.array<100x!fir.logical<4>>
           fir.save_result %9 to %8#1(%7) : !fir.array<100x!fir.logical<4>>, !fir.ref<!fir.array<100x!fir.logical<4>>>, !fir.shape<1>
           %10 = hlfir.as_expr %8#0 move %false : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i1) -> !hlfir.expr<100x!fir.logical<4>>

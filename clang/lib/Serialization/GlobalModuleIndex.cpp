@@ -318,9 +318,8 @@ bool GlobalModuleIndex::lookupIdentifier(StringRef Name, HitSet &Hits) {
     return false;
   }
 
-  SmallVector<unsigned, 2> ModuleIDs = *Known;
-  for (unsigned I = 0, N = ModuleIDs.size(); I != N; ++I) {
-    if (ModuleFile *MF = Modules[ModuleIDs[I]].File)
+  for (unsigned ModuleID : *Known) {
+    if (ModuleFile *MF = Modules[ModuleID].File)
       Hits.insert(MF);
   }
 
@@ -631,8 +630,12 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
       // modules while here we are only dealing with cached).
       Blob = Blob.substr(Record[Idx++]);
 
-      // Skip if it is standard C++ module
-      ++Idx;
+      ++Idx; // Standard C++ module
+      bool IsCXX20ModuleOrPrebuiltHeaderUnit = Record[Idx++];
+
+      // Skip C++20 modules and prebuilt header units.
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit)
+        continue;
 
       // Load stored size/modification time.
       off_t StoredSize = (off_t)Record[Idx++];

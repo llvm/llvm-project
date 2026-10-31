@@ -1,0 +1,46 @@
+## A malformed ISA mapping symbol ("$x<garbage>") must not crash llvm-objdump
+## and must not silently produce a wrong decode.  The cache should remember
+## the parse failure so repeated accesses do not keep consuming the error,
+## and decoding must fall back to the base target (which here includes V via
+## Tag_RISCV_arch), so the V instruction still decodes correctly.  A warning
+## should be emitted exactly once per bad string so the user understands why
+## the fallback kicked in.
+##
+## This needs yaml2obj because llvm-mc only ever emits well-formed
+## normalized arch strings.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-objdump -d -M no-aliases --no-show-raw-insn %t.o 2>%t.err \
+# RUN:   | FileCheck %s
+# RUN: FileCheck --check-prefix=WARN --implicit-check-not=warning: %s < %t.err
+
+# WARN: warning: {{.*}}: could not parse ISA mapping symbol '$xbogus_not_a_real_arch_string':{{.*}}; falling back to default disassembler
+
+# CHECK-LABEL: <.text>:
+## 0x003676d7 = vsetvli a3, a2, e8, m8, tu, mu — requires V.  The mapping
+## symbol at offset 0 is "$xbogus_not_a_real_arch_string", which fails to
+## parse; llvm-objdump must silently fall back to the base features (V from
+## Tag_RISCV_arch) and decode the instruction.
+# CHECK-NEXT: 0:      	vsetvli	a3, a2, e8, m8, tu, mu
+## A second instruction exercises the cached-failure path (same bad symbol
+## is consulted repeatedly without re-parsing or spurious diagnostics).
+# CHECK-NEXT: 4:      	vsetvli	a3, a2, e8, m8, tu, mu
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_RISCV
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: D7763600D7763600
+  - Name:    .riscv.attributes
+    Type:    SHT_RISCV_ATTRIBUTES
+    Content: 41bb00000072697363760001b10000000572763634693270315f6d3270305f613270315f663270325f643270325f633270305f763170305f7a696373723270305f7a6d6d756c3170305f7a61616d6f3170305f7a616c7273633170305f7a63613170305f7a63643170305f7a76653332663170305f7a76653332783170305f7a76653634643170305f7a76653634663170305f7a76653634783170305f7a766c313238623170305f7a766c3332623170305f7a766c36346231703000
+Symbols:
+  - Name:    $xbogus_not_a_real_arch_string
+    Section: .text
+    Value:   0x0

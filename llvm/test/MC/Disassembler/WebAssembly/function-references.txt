@@ -1,0 +1,31 @@
+# RUN: llvm-mc --disassemble %s -triple=wasm32-unknown-unknown -mattr=+reference-types,+tail-call,+gc | FileCheck %s
+# RUN: llvm-mc --disassemble %s -triple=wasm64-unknown-unknown -mattr=+reference-types,+tail-call,+gc | FileCheck %s
+
+# The Requires<[...]> feature gates do not filter the disassembler tables, so
+# the same bytes should decode even without features enabled.
+# RUN: llvm-mc --disassemble %s -triple=wasm32-unknown-unknown | FileCheck %s
+
+# CHECK: call_ref 0
+0x14 0x00
+
+# CHECK: call_ref 127
+0x14 0x7F
+
+# Multi-byte ULEB type index.
+# CHECK: call_ref 128
+0x14 0x80 0x01
+
+# CHECK: return_call_ref 0
+0x15 0x00
+
+# CHECK: return_call_ref 42
+0x15 0x2A
+
+# CHECK: ref.cast 0
+0xFB 0x16 0x00
+
+# CHECK: ref.cast 127
+0xFB 0x16 0x7F
+
+# CHECK: end
+0x0B

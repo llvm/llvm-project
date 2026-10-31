@@ -46,12 +46,12 @@ program detach01
         x = x + 1
     !$omp end task
 
-    !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a DETACH clause
+    !ERROR: An array element cannot appear in a DETACH clause
     !$omp task detach(event_02(1))
         x = x + 1
     !$omp end task
 
-    !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a DETACH clause
+    !ERROR: A structure component cannot appear in a DETACH clause
     !$omp task detach(t_01%event)
         x = x + 1
     !$omp end task

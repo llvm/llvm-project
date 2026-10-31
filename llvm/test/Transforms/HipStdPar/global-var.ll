@@ -1,5 +1,5 @@
 ; REQUIRES: amdgpu-registered-target
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
 ; RUN: %s | FileCheck %s
 
 ; CHECK: @var = addrspace(1) global i32 poison, align 4

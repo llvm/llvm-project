@@ -1475,12 +1475,12 @@ define void @store_vfmv_f_s_nxv8f64(ptr %x, ptr %p) {
 define float @extractelt_fadd_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: extractelt_fadd_nxv4f32_splat:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 263168
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    lui a0, 263168
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    fmv.w.x fa4, a0
-; CHECK-NEXT:    fadd.s fa0, fa5, fa4
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fadd.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %bo = fadd <vscale x 4 x float> %x, splat (float 3.0)
   %ext = extractelement <vscale x 4 x float> %bo, i32 2
@@ -1490,12 +1490,12 @@ define float @extractelt_fadd_nxv4f32_splat(<vscale x 4 x float> %x) {
 define float @extractelt_fsub_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: extractelt_fsub_nxv4f32_splat:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 263168
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    lui a0, 263168
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    fmv.w.x fa4, a0
-; CHECK-NEXT:    fsub.s fa0, fa4, fa5
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fsub.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
   %bo = fsub <vscale x 4 x float> splat (float 3.0), %x
   %ext = extractelement <vscale x 4 x float> %bo, i32 1
@@ -1505,12 +1505,12 @@ define float @extractelt_fsub_nxv4f32_splat(<vscale x 4 x float> %x) {
 define float @extractelt_fmul_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: extractelt_fmul_nxv4f32_splat:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 263168
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
-; CHECK-NEXT:    lui a0, 263168
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    fmv.w.x fa4, a0
-; CHECK-NEXT:    fmul.s fa0, fa5, fa4
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fmul.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %bo = fmul <vscale x 4 x float> %x, splat (float 3.0)
   %ext = extractelement <vscale x 4 x float> %bo, i32 3
@@ -1520,11 +1520,11 @@ define float @extractelt_fmul_nxv4f32_splat(<vscale x 4 x float> %x) {
 define float @extractelt_fdiv_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: extractelt_fdiv_nxv4f32_splat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    lui a0, 263168
-; CHECK-NEXT:    fmv.w.x fa4, a0
-; CHECK-NEXT:    fdiv.s fa0, fa5, fa4
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fdiv.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
   %bo = fdiv <vscale x 4 x float> %x, splat (float 3.0)
   %ext = extractelement <vscale x 4 x float> %bo, i32 0
@@ -1557,13 +1557,13 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV32-NEXT:    sub sp, sp, a0
 ; RV32-NEXT:    andi sp, sp, -64
 ; RV32-NEXT:    addi a0, sp, 64
-; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    vs8r.v v8, (a0)
+; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    slli a2, a1, 3
 ; RV32-NEXT:    slli a1, a1, 4
 ; RV32-NEXT:    add a2, a0, a2
-; RV32-NEXT:    vs8r.v v16, (a2)
 ; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    vs8r.v v16, (a2)
 ; RV32-NEXT:    fld fa0, -8(a0)
 ; RV32-NEXT:    addi sp, s0, -80
 ; RV32-NEXT:    .cfi_def_cfa sp, 80
@@ -1590,21 +1590,16 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    andi sp, sp, -64
 ; RV64-NEXT:    addi a0, sp, 64
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    vs8r.v v8, (a0)
-; RV64-NEXT:    slli a3, a2, 3
-; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    slli a2, a2, 1
-; RV64-NEXT:    add a3, a0, a3
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a2, a1, 1
 ; RV64-NEXT:    addi a2, a2, -1
-; RV64-NEXT:    vs8r.v v16, (a3)
-; RV64-NEXT:    bltu a2, a1, .LBB70_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a1
-; RV64-NEXT:  .LBB70_2:
-; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    slli a2, a2, 32
+; RV64-NEXT:    add a1, a0, a1
+; RV64-NEXT:    srli a2, a2, 29
 ; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    vs8r.v v16, (a1)
 ; RV64-NEXT:    fld fa0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    .cfi_def_cfa sp, 80
@@ -1633,13 +1628,6 @@ define double @extractelt_nxv16f64_imm(<vscale x 16 x double> %v) {
 define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %idx) {
 ; RV32-LABEL: extractelt_nxv16f64_idx:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a2, a1, 1
-; RV32-NEXT:    addi a2, a2, -1
-; RV32-NEXT:    bltu a0, a2, .LBB72_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a0, a2
-; RV32-NEXT:  .LBB72_2:
 ; RV32-NEXT:    addi sp, sp, -80
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
@@ -1648,17 +1636,21 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
-; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    slli a2, a2, 4
-; RV32-NEXT:    sub sp, sp, a2
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 4
+; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    andi sp, sp, -64
+; RV32-NEXT:    addi a1, sp, 64
+; RV32-NEXT:    vs8r.v v8, (a1)
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    slli a3, a2, 1
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    and a0, a0, a3
+; RV32-NEXT:    slli a2, a2, 3
+; RV32-NEXT:    add a2, a1, a2
 ; RV32-NEXT:    slli a0, a0, 3
-; RV32-NEXT:    addi a2, sp, 64
-; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a0, a2, a0
-; RV32-NEXT:    vs8r.v v8, (a2)
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    vs8r.v v16, (a1)
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    vs8r.v v16, (a2)
 ; RV32-NEXT:    fld fa0, 0(a0)
 ; RV32-NEXT:    addi sp, s0, -80
 ; RV32-NEXT:    .cfi_def_cfa sp, 80
@@ -1672,13 +1664,6 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ;
 ; RV64-LABEL: extractelt_nxv16f64_idx:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a2, a1, 1
-; RV64-NEXT:    addi a2, a2, -1
-; RV64-NEXT:    bltu a0, a2, .LBB72_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:  .LBB72_2:
 ; RV64-NEXT:    addi sp, sp, -80
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
@@ -1687,17 +1672,21 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    slli a2, a2, 4
-; RV64-NEXT:    sub sp, sp, a2
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 4
+; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    andi sp, sp, -64
+; RV64-NEXT:    addi a1, sp, 64
+; RV64-NEXT:    vs8r.v v8, (a1)
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    slli a3, a2, 1
+; RV64-NEXT:    addi a3, a3, -1
+; RV64-NEXT:    and a0, a0, a3
+; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    add a2, a1, a2
 ; RV64-NEXT:    slli a0, a0, 3
-; RV64-NEXT:    addi a2, sp, 64
-; RV64-NEXT:    slli a1, a1, 3
-; RV64-NEXT:    add a0, a2, a0
-; RV64-NEXT:    vs8r.v v8, (a2)
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    vs8r.v v16, (a1)
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    vs8r.v v16, (a2)
 ; RV64-NEXT:    fld fa0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    .cfi_def_cfa sp, 80

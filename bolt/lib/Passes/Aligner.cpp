@@ -17,54 +17,16 @@
 
 using namespace llvm;
 
-namespace opts {
-
-extern cl::OptionCategory BoltOptCategory;
-
-extern cl::opt<bool> AlignBlocks;
-extern cl::opt<bool> PreserveBlocksAlignment;
-extern cl::opt<unsigned> AlignFunctions;
-
-static cl::opt<unsigned> AlignBlocksMinSize(
-    "align-blocks-min-size",
-    cl::desc("minimal size of the basic block that should be aligned"),
-    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
-
-static cl::opt<unsigned> AlignBlocksThreshold(
-    "align-blocks-threshold",
-    cl::desc(
-        "align only blocks with frequency larger than containing function "
-        "execution frequency specified in percent. E.g. 1000 means aligning "
-        "blocks that are 10 times more frequently executed than the "
-        "containing function."),
-    cl::init(800), cl::Hidden, cl::cat(BoltOptCategory));
-
-static cl::opt<unsigned> AlignFunctionsMaxBytes(
-    "align-functions-max-bytes",
-    cl::desc("maximum number of bytes to use to align functions"), cl::init(32),
-    cl::cat(BoltOptCategory));
-
-static cl::opt<unsigned>
-    BlockAlignment("block-alignment",
-                   cl::desc("boundary to use for alignment of basic blocks"),
-                   cl::init(16), cl::ZeroOrMore, cl::cat(BoltOptCategory));
-
-static cl::opt<bool>
-    UseCompactAligner("use-compact-aligner",
-                      cl::desc("Use compact approach for aligning functions"),
-                      cl::init(true), cl::cat(BoltOptCategory));
-
-} // end namespace opts
-
 namespace llvm {
 namespace bolt {
 
 // Align function to the specified byte-boundary (typically, 64) offsetting
 // the function by not more than the corresponding value
 static void alignMaxBytes(BinaryFunction &Function) {
-  Function.setAlignment(opts::AlignFunctions);
-  Function.setMaxAlignmentBytes(opts::AlignFunctionsMaxBytes);
-  Function.setMaxColdAlignmentBytes(opts::AlignFunctionsMaxBytes);
+  const BinaryContext &BC = Function.getBinaryContext();
+  Function.setAlignment(BC.AlignFunctions);
+  Function.setMaxAlignmentBytes(BC.AlignFunctionsMaxBytes);
+  Function.setMaxColdAlignmentBytes(BC.AlignFunctionsMaxBytes);
 }
 
 // Align function to the specified byte-boundary (typically, 64) offsetting
@@ -90,16 +52,16 @@ static void alignCompact(BinaryFunction &Function,
     else
       HotSize += BC.computeCodeSize(BB.begin(), BB.end(), Emitter);
 
-  Function.setAlignment(opts::AlignFunctions);
+  Function.setAlignment(BC.AlignFunctions);
   if (HotSize > 0)
     Function.setMaxAlignmentBytes(
-      std::min(size_t(opts::AlignFunctionsMaxBytes), HotSize));
+        std::min(size_t(BC.AlignFunctionsMaxBytes), HotSize));
 
   // using the same option, max-align-bytes, both for cold and hot parts of the
   // functions, as aligning cold functions typically does not affect performance
   if (ColdSize > 0)
     Function.setMaxColdAlignmentBytes(
-      std::min(size_t(opts::AlignFunctionsMaxBytes), ColdSize));
+        std::min(size_t(BC.AlignFunctionsMaxBytes), ColdSize));
 }
 
 void AlignerPass::alignBlocks(BinaryFunction &Function,
@@ -115,7 +77,7 @@ void AlignerPass::alignBlocks(BinaryFunction &Function,
   for (BinaryBasicBlock *BB : Function.getLayout().blocks()) {
     uint64_t Count = BB->getKnownExecutionCount();
 
-    if (Count <= FuncCount * opts::AlignBlocksThreshold / 100) {
+    if (Count <= FuncCount * BC.AlignBlocksThreshold / 100) {
       PrevBB = BB;
       continue;
     }
@@ -132,12 +94,12 @@ void AlignerPass::alignBlocks(BinaryFunction &Function,
     const uint64_t BlockSize =
         BC.computeCodeSize(BB->begin(), BB->end(), Emitter);
     const uint64_t BytesToUse =
-        std::min<uint64_t>(opts::BlockAlignment - 1, BlockSize);
+        std::min<uint64_t>(BC.BlockAlignment - 1, BlockSize);
 
-    if (opts::AlignBlocksMinSize && BlockSize < opts::AlignBlocksMinSize)
+    if (BC.AlignBlocksMinSize && BlockSize < BC.AlignBlocksMinSize)
       continue;
 
-    BB->setAlignment(opts::BlockAlignment);
+    BB->setAlignment(BC.BlockAlignment);
     BB->setAlignmentMaxBytes(BytesToUse);
 
     // Update stats.
@@ -153,19 +115,39 @@ Error AlignerPass::runOnFunctions(BinaryContext &BC) {
   if (!BC.HasRelocations)
     return Error::success();
 
-  AlignHistogram.resize(opts::BlockAlignment);
+  AlignHistogram.resize(BC.BlockAlignment);
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     // Create a separate MCCodeEmitter to allow lock free execution
     BinaryContext::IndependentCodeEmitter Emitter =
         BC.createIndependentMCCodeEmitter();
 
-    if (opts::UseCompactAligner)
+    if (BC.UseCompactAligner)
       alignCompact(BF, Emitter.MCE.get());
     else
       alignMaxBytes(BF);
 
-    if (opts::AlignBlocks && !opts::PreserveBlocksAlignment)
+    // Record the function's effective code alignment so layout passes can align
+    // the tentative section base to the eventual section alignment without
+    // re-scanning all functions. AssignSections (run just before this pass) has
+    // assigned the output sections, so route the alignment to whichever of
+    // .text / .text.cold the function actually emits into: a whole cold
+    // function (and its constant island) lands entirely in .text.cold, while a
+    // split function contributes its (duplicated) island and code to both.
+    const uint16_t Align = std::max<uint16_t>(
+        BF.getAlignment(),
+        BF.hasIslandsInfo() ? BF.getConstantIslandAlignment() : uint16_t(0));
+    const SmallString<32> MainSectionName = BF.getCodeSectionName();
+    const bool InMainSection =
+        StringRef(MainSectionName) == BC.getMainCodeSectionName();
+    bool InColdSection =
+        StringRef(MainSectionName) == BC.getColdCodeSectionName();
+    if (!InColdSection && BF.isSplit())
+      InColdSection = StringRef(BF.getCodeSectionName(FragmentNum::cold())) ==
+                      BC.getColdCodeSectionName();
+    BC.updateMaxCodeAlignment(Align, InMainSection, InColdSection);
+
+    if (BC.AlignBlocks && !BC.PreserveBlocksAlignment)
       alignBlocks(BF, Emitter.MCE.get());
   };
 

@@ -70,6 +70,13 @@ private:
   llvm::SmallSet<Capability, 8> givenCapabilities; /// Allowed capabilities
 };
 
+/// Returns the attribute name for specifying function parameter alignment.
+StringRef getFuncParamAlignmentAttrName();
+
+/// Returns the attribute name for specifying function parameter and result
+/// attributes.
+StringRef getFuncParamAttrName();
+
 /// Returns the attribute name for specifying argument ABI information.
 StringRef getInterfaceVarABIAttrName();
 
@@ -111,6 +118,9 @@ ResourceLimitsAttr getDefaultResourceLimits(MLIRContext *context);
 
 /// Returns the attribute name for specifying loop control.
 StringRef getLoopControlAttrName();
+
+/// Returns the attribute name for specifying selection control.
+StringRef getSelectionControlAttrName();
 
 /// Returns the attribute name for specifying SPIR-V target environment.
 StringRef getTargetEnvAttrName();

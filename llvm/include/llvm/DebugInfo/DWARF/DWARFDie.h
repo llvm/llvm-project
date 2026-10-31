@@ -230,6 +230,7 @@ public:
 
   LLVM_ABI bool addressRangeContainsAddress(const uint64_t Address) const;
 
+  /// Returns the DW_LANG_ code for this DIE's DWARF unit, if it exists.
   LLVM_ABI std::optional<uint64_t> getLanguage() const;
 
   LLVM_ABI Expected<DWARFLocationExpressionsVector>

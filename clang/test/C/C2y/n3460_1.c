@@ -16,7 +16,7 @@
 // CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // CHECK-NEXT:    store double 0.000000e+00, ptr [[A_REALP]], align 8
-// CHECK-NEXT:    store double 0x7FF0000000000000, ptr [[A_IMAGP]], align 8
+// CHECK-NEXT:    store double +inf, ptr [[A_IMAGP]], align 8
 // CHECK-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // CHECK-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // CHECK-NEXT:    store double -0.000000e+00, ptr [[B_REALP]], align 8
@@ -24,7 +24,7 @@
 // CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[C]], i32 0, i32 0
 // CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[C]], i32 0, i32 1
 // CHECK-NEXT:    store double 0.000000e+00, ptr [[C_REALP]], align 8
-// CHECK-NEXT:    store double 0x7FF0000000000000, ptr [[C_IMAGP]], align 8
+// CHECK-NEXT:    store double +inf, ptr [[C_IMAGP]], align 8
 // CHECK-NEXT:    [[D_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[D]], i32 0, i32 0
 // CHECK-NEXT:    [[D_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[D]], i32 0, i32 1
 // CHECK-NEXT:    store double 4.000000e+00, ptr [[D_REALP]], align 8

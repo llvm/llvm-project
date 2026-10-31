@@ -15,11 +15,11 @@ th.dcache.cipa # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 th.icache.iva # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 th.icache.ipa # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 
-th.dcache.call t0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
-th.dcache.iall t0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
-th.dcache.ciall t0 # CHECK: :[[@LINE]]:17: error: invalid operand for instruction
-th.icache.iall t0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
-th.icache.ialls t0 # CHECK: :[[@LINE]]:17: error: invalid operand for instruction
-th.l2cache.call t0 # CHECK: :[[@LINE]]:17: error: invalid operand for instruction
-th.l2cache.iall t0 # CHECK: :[[@LINE]]:17: error: invalid operand for instruction
-th.l2cache.ciall t0 # CHECK: :[[@LINE]]:18: error: invalid operand for instruction
+th.dcache.call t0 # CHECK: :[[@LINE]]:16: error: unexpected extra operand for instruction
+th.dcache.iall t0 # CHECK: :[[@LINE]]:16: error: unexpected extra operand for instruction
+th.dcache.ciall t0 # CHECK: :[[@LINE]]:17: error: unexpected extra operand for instruction
+th.icache.iall t0 # CHECK: :[[@LINE]]:16: error: unexpected extra operand for instruction
+th.icache.ialls t0 # CHECK: :[[@LINE]]:17: error: unexpected extra operand for instruction
+th.l2cache.call t0 # CHECK: :[[@LINE]]:17: error: unexpected extra operand for instruction
+th.l2cache.iall t0 # CHECK: :[[@LINE]]:17: error: unexpected extra operand for instruction
+th.l2cache.ciall t0 # CHECK: :[[@LINE]]:18: error: unexpected extra operand for instruction

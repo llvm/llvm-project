@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/Delinearization.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -22,7 +23,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,11 +30,6 @@ using namespace llvm;
 
 #define DL_NAME "delinearize"
 #define DEBUG_TYPE DL_NAME
-
-static cl::opt<bool> UseFixedSizeArrayHeuristic(
-    "delinearize-use-fixed-size-array-heuristic", cl::init(true), cl::Hidden,
-    cl::desc("When printing analysis, use the heuristic for fixed-size arrays "
-             "if the default delinearizetion fails."));
 
 // Return true when S contains at least an undef value.
 static inline bool containsUndefs(const SCEV *S) {
@@ -56,8 +51,11 @@ struct SCEVCollectStrides {
       : SE(SE), Strides(S) {}
 
   bool follow(const SCEV *S) {
-    if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S))
-      Strides.push_back(AR->getStepRecurrence(SE));
+    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S);
+    if (!AR || !AR->isAffine())
+      return false;
+
+    Strides.push_back(AR->getStepRecurrence(SE));
     return true;
   }
 
@@ -72,16 +70,12 @@ struct SCEVCollectTerms {
 
   bool follow(const SCEV *S) {
     if (isa<SCEVUnknown>(S) || isa<SCEVMulExpr>(S) ||
-        isa<SCEVSignExtendExpr>(S)) {
+        isa<SCEVSignExtendExpr>(S))
       if (!containsUndefs(S))
         Terms.push_back(S);
 
-      // Stop recursion: once we collected a term, do not walk its operands.
-      return false;
-    }
-
-    // Keep looking.
-    return true;
+    // Keep looking when S is a specific type expression.
+    return isa<SCEVAddExpr, SCEVAddRecExpr>(S);
   }
 
   bool isDone() const { return false; }
@@ -154,12 +148,10 @@ struct SCEVCollectAddRecMultiplies {
         return false;
 
       Terms.push_back(SE.getMulExpr(Operands));
-      // Stop recursion: once we collected a term, do not walk its operands.
-      return false;
     }
 
-    // Keep looking.
-    return true;
+    // Keep looking when S is a specific type expression.
+    return isa<SCEVAddExpr, SCEVAddRecExpr>(S);
   }
 
   bool isDone() const { return false; }
@@ -805,6 +797,7 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
                           ScalarEvolution *SE) {
   O << "Printing analysis 'Delinearization' for function '" << F->getName()
     << "':";
+  const AnalysisOptions &Opts = getAnalysisOptions(*F);
   for (Instruction &Inst : instructions(F)) {
     // Only analyze loads and stores.
     if (!isa<StoreInst>(&Inst) && !isa<LoadInst>(&Inst))
@@ -838,33 +831,34 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
     };
 
     delinearize(*SE, AccessFn, Subscripts, Sizes, SE->getElementSize(&Inst));
-    if (UseFixedSizeArrayHeuristic && IsDelinearizationFailed()) {
+    if (Opts.delinearize_use_fixed_size_array_heuristic &&
+        IsDelinearizationFailed()) {
       Subscripts.clear();
       Sizes.clear();
       delinearizeFixedSizeArray(*SE, AccessFn, Subscripts, Sizes,
                                 SE->getElementSize(&Inst));
     }
 
-      if (IsDelinearizationFailed()) {
-        O << "failed to delinearize\n";
-        continue;
-      }
+    if (IsDelinearizationFailed()) {
+      O << "failed to delinearize\n";
+      continue;
+    }
 
-      O << "Base offset: " << *BasePointer << "\n";
-      O << "ArrayDecl[UnknownSize]";
-      int Size = Subscripts.size();
-      for (int i = 0; i < Size - 1; i++)
-        O << "[" << *Sizes[i] << "]";
-      O << " with elements of " << *Sizes[Size - 1] << " bytes.\n";
+    O << "Base offset: " << *BasePointer << "\n";
+    O << "ArrayDecl[UnknownSize]";
+    int Size = Subscripts.size();
+    for (int i = 0; i < Size - 1; i++)
+      O << "[" << *Sizes[i] << "]";
+    O << " with elements of " << *Sizes[Size - 1] << " bytes.\n";
 
-      O << "ArrayRef";
-      for (int i = 0; i < Size; i++)
-        O << "[" << *Subscripts[i] << "]";
-      O << "\n";
+    O << "ArrayRef";
+    for (int i = 0; i < Size; i++)
+      O << "[" << *Subscripts[i] << "]";
+    O << "\n";
 
-      bool IsValid = validateDelinearizationResult(*SE, Sizes, Subscripts);
-      O << "Delinearization validation: " << (IsValid ? "Succeeded" : "Failed")
-        << "\n";
+    bool IsValid = validateDelinearizationResult(*SE, Sizes, Subscripts);
+    O << "Delinearization validation: " << (IsValid ? "Succeeded" : "Failed")
+      << "\n";
   }
 }
 

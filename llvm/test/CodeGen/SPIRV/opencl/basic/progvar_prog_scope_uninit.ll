@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK:     OpEntryPoint Kernel %[[#f1:]] "global_check" %[[#var0:]] %[[#var1:]] %[[#var2:]] %[[#var3:]]
 ; CHECK:     OpEntryPoint Kernel %[[#f2:]] "writer" %[[#var0:]] %[[#var1:]] %[[#var2:]] %[[#var3:]]

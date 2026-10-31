@@ -15,12 +15,17 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Process.h"
 
 #include <mutex>
 
 namespace llvm {
+namespace jitlink {
+class LinkGraph;
+} // namespace jitlink
+
 namespace orc {
 
 /// Manages mapping, content transfer and protections for JIT memory
@@ -129,19 +134,11 @@ private:
 
 class LLVM_ABI SharedMemoryMapper final : public MemoryMapper {
 public:
-  struct SymbolAddrs {
-    ExecutorAddr Instance;
-    ExecutorAddr Reserve;
-    ExecutorAddr Initialize;
-    ExecutorAddr Deinitialize;
-    ExecutorAddr Release;
-  };
-
-  SharedMemoryMapper(ExecutorProcessControl &EPC, SymbolAddrs SAs,
+  SharedMemoryMapper(ExecutionSession &ES, SharedMemoryMapBindings B,
                      size_t PageSize);
 
   static Expected<std::unique_ptr<SharedMemoryMapper>>
-  Create(ExecutorProcessControl &EPC, SymbolAddrs SAs);
+  Create(ExecutionSession &ES, SharedMemoryMapBindings B);
 
   unsigned int getPageSize() override { return PageSize; }
 
@@ -167,8 +164,8 @@ private:
     int SharedMemoryId;
   };
 
-  ExecutorProcessControl &EPC;
-  SymbolAddrs SAs;
+  ExecutionSession &ES;
+  SharedMemoryMapBindings B;
 
   std::mutex Mutex;
 

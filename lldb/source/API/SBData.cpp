@@ -10,8 +10,10 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/Core/DumpDataExtractor.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
@@ -309,7 +311,7 @@ const char *SBData::GetString(lldb::SBError &error, lldb::offset_t offset) {
     return nullptr;
   }
 
-  return ConstString(value).GetCString();
+  return StringPool::GetSystemPool().Intern(value);
 }
 
 bool SBData::GetDescription(lldb::SBStream &description,
@@ -349,8 +351,7 @@ void SBData::SetData(lldb::SBError &error, const void *buf, size_t size,
 
   if (!m_opaque_sp.get())
     m_opaque_sp = std::make_shared<DataExtractor>(buf, size, endian, addr_size);
-  else
-  {
+  else {
     m_opaque_sp->SetData(buf, size, endian);
     m_opaque_sp->SetAddressByteSize(addr_size);
   }
@@ -363,13 +364,12 @@ void SBData::SetDataWithOwnership(lldb::SBError &error, const void *buf,
 
   lldb::DataBufferSP buffer_sp = std::make_shared<DataBufferHeap>(buf, size);
 
-  if (!m_opaque_sp.get())
-    m_opaque_sp = std::make_shared<DataExtractor>(buf, size, endian, addr_size);
-  else {
-    m_opaque_sp->SetData(buffer_sp);
-    m_opaque_sp->SetByteOrder(endian);
-    m_opaque_sp->SetAddressByteSize(addr_size);
-  }
+  if (!m_opaque_sp)
+    m_opaque_sp = std::make_shared<DataExtractor>();
+
+  m_opaque_sp->SetData(buffer_sp);
+  m_opaque_sp->SetByteOrder(endian);
+  m_opaque_sp->SetAddressByteSize(addr_size);
 }
 
 bool SBData::Append(const SBData &rhs) {
@@ -517,7 +517,6 @@ bool SBData::SetDataFromCString(const char *data) {
   else
     m_opaque_sp->SetData(buffer_sp);
 
-
   return true;
 }
 
@@ -537,7 +536,6 @@ bool SBData::SetDataFromUInt64Array(uint64_t *array, size_t array_len) {
                                                   GetAddressByteSize());
   else
     m_opaque_sp->SetData(buffer_sp);
-
 
   return true;
 }

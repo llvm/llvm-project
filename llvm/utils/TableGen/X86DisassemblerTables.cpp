@@ -20,6 +20,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <map>
 
 using namespace llvm;
@@ -641,7 +642,7 @@ static inline bool outranks(InstructionContext upper,
 ///
 /// @param decision - The decision to be compacted.
 /// @return         - The compactest available representation for the decision.
-static ModRMDecisionType getDecisionType(ModRMDecision &decision) {
+static ModRMDecisionType getDecisionType(const ModRMDecision &decision) {
   bool satisfiesOneEntry = true;
   bool satisfiesSplitRM = true;
   bool satisfiesSplitReg = true;
@@ -847,7 +848,6 @@ void DisassemblerTables::emitContextDecision(raw_ostream &o1, raw_ostream &o2,
     o2.indent(i2) << "/*";
     o2 << stringForContext((InstructionContext)index);
     o2 << "*/ ";
-
     emitOpcodeDecision(o1, o2, i1, i2, ModRMTableNum,
                        decision.opcodeDecisions[index]);
   }
@@ -1052,21 +1052,91 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
 void DisassemblerTables::emitContextDecisions(raw_ostream &o1, raw_ostream &o2,
                                               unsigned &i1, unsigned &i2,
                                               unsigned &ModRMTableNum) const {
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[0], ONEBYTE_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[1], TWOBYTE_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[2],
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[ONEBYTE],
+                      ONEBYTE_STR);
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[TWOBYTE],
+                      TWOBYTE_STR);
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[THREEBYTE_38],
                       THREEBYTE38_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[3],
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[THREEBYTE_3A],
                       THREEBYTE3A_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[4], XOP8_MAP_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[5], XOP9_MAP_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[6], XOPA_MAP_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[7],
-                      THREEDNOW_MAP_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[8], MAP4_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[9], MAP5_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[10], MAP6_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[11], MAP7_STR);
+
+  using OpcodeDecisionKey = std::vector<uint16_t>;
+  std::map<OpcodeDecisionKey, unsigned> OpcodeDecisionMap;
+  static_assert(XOP8_MAP == 4 && MAP7 == 11);
+  std::array<std::array<unsigned, IC_max>, MAP7 - XOP8_MAP + 1> Indices;
+
+  o2 << "static const struct OpcodeDecision " SPARSE_OPCODE_DECISIONS_STR
+        "[] = {\n";
+  ++i2;
+
+  for (unsigned TableIndex = XOP8_MAP; TableIndex <= MAP7; ++TableIndex) {
+    for (unsigned ContextIndex = 0; ContextIndex < IC_max; ++ContextIndex) {
+      OpcodeDecision &Decision =
+          Tables[TableIndex]->opcodeDecisions[ContextIndex];
+      OpcodeDecisionKey Key;
+
+      for (const ModRMDecision &ModRM : Decision.modRMDecisions) {
+        ModRMDecisionType Type = getDecisionType(ModRM);
+        Key.push_back(Type);
+
+        switch (Type) {
+        default:
+          llvm_unreachable("Unknown decision type");
+        case MODRM_ONEENTRY:
+          Key.push_back(ModRM.instructionIDs[0]);
+          break;
+        case MODRM_SPLITRM:
+          Key.push_back(ModRM.instructionIDs[0x00]);
+          Key.push_back(ModRM.instructionIDs[0xc0]);
+          break;
+        case MODRM_SPLITREG:
+          for (unsigned Index = 0; Index < 64; Index += 8)
+            Key.push_back(ModRM.instructionIDs[Index]);
+          for (unsigned Index = 0xc0; Index < 256; Index += 8)
+            Key.push_back(ModRM.instructionIDs[Index]);
+          break;
+        case MODRM_SPLITMISC:
+          for (unsigned Index = 0; Index < 64; Index += 8)
+            Key.push_back(ModRM.instructionIDs[Index]);
+          for (unsigned Index = 0xc0; Index < 256; ++Index)
+            Key.push_back(ModRM.instructionIDs[Index]);
+          break;
+        case MODRM_FULL:
+          llvm::append_range(Key, ModRM.instructionIDs);
+          break;
+        }
+      }
+
+      auto [It, Inserted] = OpcodeDecisionMap.try_emplace(
+          std::move(Key), OpcodeDecisionMap.size());
+      Indices[TableIndex - XOP8_MAP][ContextIndex] = It->second;
+      if (Inserted)
+        emitOpcodeDecision(o1, o2, i1, i2, ModRMTableNum, Decision);
+    }
+  }
+
+  --i2;
+  o2 << "};\n\n";
+
+  assert(OpcodeDecisionMap.size() <= UINT16_MAX &&
+         "Too many unique sparse opcode decisions");
+  o2 << "static const uint16_t " SPARSE_OPCODE_DECISION_INDICES_STR
+        "[][IC_max] = {\n";
+  ++i2;
+  for (const auto &Table : Indices) {
+    o2.indent(i2) << "{\n";
+    ++i2;
+    for (auto [ContextIndex, DecisionIndex] : enumerate(Table)) {
+      o2.indent(i2) << DecisionIndex << ", // "
+                    << stringForContext(InstructionContext(ContextIndex))
+                    << "\n";
+    }
+    --i2;
+    o2.indent(i2) << "},\n";
+  }
+  --i2;
+  o2 << "};\n";
 }
 
 void DisassemblerTables::emit(raw_ostream &o) const {

@@ -31,6 +31,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toupper
     libc.src.ctype.toupper_l
 
+    # errno.h entrypoints
+    libc.src.errno.errno
+
     # string.h entrypoints
     libc.src.string.memccpy
     libc.src.string.memchr

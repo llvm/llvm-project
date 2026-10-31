@@ -16,31 +16,31 @@ int if0(bool a) {
 
 // CIR: cir.func{{.*}} @_Z3if0b(%arg0: !cir.bool {{.*}} loc({{.*}})) -> (!s32i{{.*}})
 // CIR: cir.scope {
-// CIR:   %4 = cir.load{{.*}} %0 : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:   %4 = cir.load{{.*}} %1 : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT: cir.if %4 {
 // CIR-NEXT:   %5 = cir.const #cir.int<2> : !s32i
-// CIR-NEXT:   cir.store{{.*}} %5, %1 : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %6 = cir.load{{.*}} %1 : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %5, %0 : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %6 = cir.load{{.*}} %0 : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %6 : !s32i
 // CIR-NEXT:   }
 // CIR-NEXT:  }
 
 
-// LLVM: define{{.*}} i32 @_Z3if0b(i1 noundef %0)
+// LLVM: define{{.*}} i32 @_Z3if0b(i1 noundef zeroext %0)
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
-// LLVM:   %6 = load i8, ptr %2, align 1
+// LLVM:   %6 = load i8, ptr %3, align 1
 // LLVM:   %7 = trunc i8 %6 to i1
 // LLVM:   br i1 %7, label %[[THEN:.*]], label %[[END:.*]]
 // LLVM: [[THEN]]:
-// LLVM:   store i32 2, ptr %3, align 4
-// LLVM:   %9 = load i32, ptr %3, align 4
+// LLVM:   store i32 2, ptr %2, align 4
+// LLVM:   %9 = load i32, ptr %2, align 4
 // LLVM:   ret i32 %9
 // LLVM: [[END]]:
 // LLVM:   br label %[[LABEL4:.*]]
 // LLVM: [[LABEL4]]:
-// LLVM:   store i32 3, ptr %3, align 4
-// LLVM:   %12 = load i32, ptr %3, align 4
+// LLVM:   store i32 3, ptr %2, align 4
+// LLVM:   %12 = load i32, ptr %2, align 4
 // LLVM:   ret i32 %12
 
 // OGCG: define{{.*}} i32 @_Z3if0b(i1 noundef zeroext %a)
@@ -50,7 +50,7 @@ int if0(bool a) {
 // OGCG:   %[[STOREDV:.*]] = zext i1 %a to i8
 // OGCG:   store i8 %[[STOREDV]], ptr %[[A_ADDR]], align 1
 // OGCG:   %[[LOADTMP:.*]] = load i8, ptr %[[A_ADDR]], align 1
-// OGCG:   %[[LOADEDV:.*]] = trunc i8 %[[LOADTMP]] to i1
+// OGCG:   %[[LOADEDV:.*]] = icmp ne i8 %[[LOADTMP]], 0
 // OGCG:   br i1 %[[LOADEDV]], label %[[THEN_LABEL:.*]], label %[[END_LABEL:.*]]
 // OGCG: [[THEN_LABEL]]:
 // OGCG:   store i32 2, ptr %[[RETVAL]], align 4
@@ -85,8 +85,8 @@ void if1(int a) {
 // CIR: }
 
 // LLVM: define{{.*}} void @_Z3if1i(i32 noundef %0)
-// LLVM: %[[A:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[X:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[A:.*]] = alloca i32, align 4
+// LLVM: %[[X:.*]] = alloca i32, align 4
 // LLVM: store i32 %0, ptr %[[A]], align 4
 // LLVM: store i32 0, ptr %[[X]], align 4
 // LLVM: br label %[[ENTRY:.*]]
@@ -165,11 +165,11 @@ void if2(int a, bool b, bool c) {
 // CIR:   }
 // CIR: }
 
-// LLVM: define{{.*}} void @_Z3if2ibb(i32 noundef %[[A:.*]], i1 noundef %[[B:.*]], i1 noundef %[[C:.*]])
-// LLVM:   %[[VARA:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[VARB:.*]] = alloca i8, i64 1, align 1
-// LLVM:   %[[VARC:.*]] = alloca i8, i64 1, align 1
-// LLVM:   %[[VARX:.*]] = alloca i32, i64 1, align 4
+// LLVM: define{{.*}} void @_Z3if2ibb(i32 noundef %[[A:.*]], i1 noundef zeroext %[[B:.*]], i1 noundef zeroext %[[C:.*]])
+// LLVM:   %[[VARA:.*]] = alloca i32, align 4
+// LLVM:   %[[VARB:.*]] = alloca i8, align 1
+// LLVM:   %[[VARC:.*]] = alloca i8, align 1
+// LLVM:   %[[VARX:.*]] = alloca i32, align 4
 // LLVM:   store i32 %[[A]], ptr %[[VARA]], align 4
 // LLVM:   %[[B_EXT:.*]] = zext i1 %[[B]] to i8
 // LLVM:   store i8 %[[B_EXT]], ptr %[[VARB]], align 1
@@ -232,8 +232,8 @@ void if2(int a, bool b, bool c) {
 // OGCG: [[IF_THEN]]:
 // OGCG:   store i32 3, ptr %[[X]], align 4
 // OGCG:   %[[B_LOAD:.*]] = load i8, ptr %[[B_ADDR]], align 1
-// OGCG:   %[[B_TRUNC:.*]] = trunc i8 %[[B_LOAD]] to i1
-// OGCG:   br i1 %[[B_TRUNC]], label %[[IF_THEN2:.*]], label %[[IF_END:.*]]
+// OGCG:   %[[B_BOOL:.*]] = icmp ne i8 %[[B_LOAD]], 0
+// OGCG:   br i1 %[[B_BOOL]], label %[[IF_THEN2:.*]], label %[[IF_END:.*]]
 // OGCG: [[IF_THEN2]]:
 // OGCG:   store i32 8, ptr %[[X]], align 4
 // OGCG:   br label %[[IF_END]]
@@ -241,8 +241,8 @@ void if2(int a, bool b, bool c) {
 // OGCG:   br label %[[IF_END6:.*]]
 // OGCG: [[IF_ELSE]]:
 // OGCG:   %[[C_LOAD:.*]] = load i8, ptr %[[C_ADDR]], align 1
-// OGCG:   %[[C_TRUNC:.*]] = trunc i8 %[[C_LOAD]] to i1
-// OGCG:   br i1 %[[C_TRUNC]], label %[[IF_THEN4:.*]], label %[[IF_END5:.*]]
+// OGCG:   %[[C_BOOL:.*]] = icmp ne i8 %[[C_LOAD]], 0
+// OGCG:   br i1 %[[C_BOOL]], label %[[IF_THEN4:.*]], label %[[IF_END5:.*]]
 // OGCG: [[IF_THEN4]]:
 // OGCG:   store i32 14, ptr %[[X]], align 4
 // OGCG:   br label %[[IF_END5]]
@@ -261,9 +261,9 @@ int if_init() {
 }
 
 // CIR: cir.func{{.*}} @_Z7if_initv() -> (!s32i{{.*}})
-// CIR: %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>
+// CIR: %[[RETVAL:.*]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
 // CIR: cir.scope {
-// CIR:   %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>,
+// CIR:   %[[X:.*]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
 // CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !s32i
 // CIR:   cir.store{{.*}} %[[CONST42]], %[[X]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[X_VAL:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!s32i>, !s32i
@@ -286,8 +286,8 @@ int if_init() {
 // CIR: }
 
 // LLVM: define{{.*}} i32 @_Z7if_initv()
-// LLVM: %[[X:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[RETVAL:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[RETVAL:.*]] = alloca i32, align 4
+// LLVM: %[[X:.*]] = alloca i32, align 4
 // LLVM: store i32 42, ptr %[[X]], align 4
 // LLVM: %[[X_VAL:.*]] = load i32, ptr %[[X]], align 4
 // LLVM: %[[COND:.*]] = icmp ne i32 %[[X_VAL]], 0
@@ -326,3 +326,50 @@ int if_init() {
 // OGCG: [[RETURN]]:
 // OGCG:   %[[RETVAL_FINAL:.*]] = load i32, ptr %[[RETVAL]], align 4
 // OGCG:   ret i32 %[[RETVAL_FINAL]]
+
+void if3() {
+  if (0) {
+foo:
+    if_init();
+  } goto foo;
+}
+// CIR: cir.func{{.*}} @_Z3if3v()
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[ZERO_BOOL:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR: cir.if %[[ZERO_BOOL]]
+// CIR: cir.call @_Z7if_initv() : () -> (!s32i {llvm.noundef})
+
+// Just making sure we don't lose either of the above 'if' branches because of
+// the label, so just making sure they have the 'call' should be sufficient.
+// LLVM: define{{.*}} void @_Z3if3v()
+// LLVM: call{{.*}}i32 @_Z7if_initv
+
+// OGCG: define{{.*}} void @_Z3if3v()
+// OGCG: call{{.*}}i32 @_Z7if_initv
+void if4(int a) {
+  switch (a) {
+    case 0:
+      if (0) {
+        case 1:
+          if0(false);
+      }
+  }
+}
+// CIR: cir.func{{.*}} @_Z3if4i(%[[ARG:.*]]: !s32i {{.*}})
+// CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
+// CIR:  %[[LOAD_ARG:.*]] = cir.load align(4) %[[ARG_ALLOCA]] : !cir.ptr<!s32i>, !s32i
+// CIR:  cir.switch(%[[LOAD_ARG]] : !s32i) {
+// CIR:  cir.case(equal, [#cir.int<0> : !s32i]) {
+// CIR:    cir.scope {
+// CIR:      %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:      %[[ZERO_BOOL:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+// CIR:      cir.if %[[ZERO_BOOL]]
+// CIR:        cir.call @_Z3if0b(
+
+// LLVM: define{{.*}} void @_Z3if4i(i32 noundef %[[ARG:.*]])
+// LLVM: switch i32
+// LLVM: call{{.*}}i32 @_Z3if0b(
+
+// OGCG: define{{.*}} void @_Z3if4i(i32 noundef %[[ARG:.*]])
+// OGCG: switch i32
+// OGCG: call{{.*}}i32 @_Z3if0b(

@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -144,6 +145,16 @@ template <> struct ScalarEnumerationTraits<MachineJumpTableInfo::JTEntryKind> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FramePointerKind> {
+  static void enumeration(IO &IO, FramePointerKind &FP) {
+    IO.enumCase(FP, "none", FramePointerKind::None);
+    IO.enumCase(FP, "non-leaf", FramePointerKind::NonLeaf);
+    IO.enumCase(FP, "all", FramePointerKind::All);
+    IO.enumCase(FP, "reserved", FramePointerKind::Reserved);
+    IO.enumCase(FP, "non-leaf-no-reserve", FramePointerKind::NonLeafNoReserve);
+  }
+};
+
 template <> struct ScalarTraits<MaybeAlign> {
   static void output(const MaybeAlign &Alignment, void *,
                      llvm::raw_ostream &out) {
@@ -192,12 +203,20 @@ struct VirtualRegisterDefinition {
   StringValue Class;
   StringValue PreferredRegister;
   std::vector<FlowStringValue> RegisterFlags;
+  std::vector<FlowStringValue> AntiHints;
+  // VirtRegMap state.
+  // SplitFrom: id-form virtual register only (e.g. '%0'); physregs and named
+  //            vregs are rejected by the parser.
+  // AssignedPhys: physical register only (e.g. '$r5'); virtregs are rejected.
+  StringValue SplitFrom;
+  StringValue AssignedPhys;
 
   // TODO: Serialize the target specific register hints.
 
   bool operator==(const VirtualRegisterDefinition &Other) const {
     return ID == Other.ID && Class == Other.Class &&
-           PreferredRegister == Other.PreferredRegister;
+           PreferredRegister == Other.PreferredRegister &&
+           SplitFrom == Other.SplitFrom && AssignedPhys == Other.AssignedPhys;
   }
 };
 
@@ -209,6 +228,18 @@ template <> struct MappingTraits<VirtualRegisterDefinition> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("flags", Reg.RegisterFlags,
                        std::vector<FlowStringValue>());
+    // MIRPrinter sets WriteDefaultValues=true unless -simplify-mir is passed,
+    // so a plain mapOptional with an empty default would still emit the keys
+    // and change every existing test's output.
+    // Skip the call on output when empty to keep them off entirely.
+    if (!YamlIO.outputting() || !Reg.AntiHints.empty()) {
+      YamlIO.mapOptional("anti-hints", Reg.AntiHints,
+                         std::vector<FlowStringValue>());
+    }
+    if (!YamlIO.outputting() || !Reg.SplitFrom.Value.empty())
+      YamlIO.mapOptional("split-from", Reg.SplitFrom, StringValue());
+    if (!YamlIO.outputting() || !Reg.AssignedPhys.Value.empty())
+      YamlIO.mapOptional("assigned-phys", Reg.AssignedPhys, StringValue());
   }
 
   static const bool flow = true;
@@ -381,6 +412,7 @@ struct ScalarEnumerationTraits<TargetStackID::Value> {
     IO.enumCase(ID, "scalable-predicate-vector",
                 TargetStackID::ScalablePredicateVector);
     IO.enumCase(ID, "wasm-local", TargetStackID::WasmLocal);
+    IO.enumCase(ID, "avr-align", TargetStackID::AvrAlign);
     IO.enumCase(ID, "noalloc", TargetStackID::NoAlloc);
   }
 };
@@ -425,9 +457,9 @@ struct FrameIndex {
   SMRange SourceRange;
 
   FrameIndex() = default;
-  FrameIndex(int FI, const llvm::MachineFrameInfo &MFI);
+  LLVM_ABI FrameIndex(int FI, const llvm::MachineFrameInfo &MFI);
 
-  Expected<int> getFI(const llvm::MachineFrameInfo &MFI) const;
+  LLVM_ABI Expected<int> getFI(const llvm::MachineFrameInfo &MFI) const;
 };
 
 template <> struct ScalarTraits<FrameIndex> {
@@ -461,11 +493,11 @@ template <> struct ScalarTraits<FrameIndex> {
 
 /// Identifies call instruction location in machine function.
 struct MachineInstrLoc {
-  unsigned BlockNum;
+  StringValue Block;
   unsigned Offset;
 
   bool operator==(const MachineInstrLoc &Other) const {
-    return BlockNum == Other.BlockNum && Offset == Other.Offset;
+    return Block == Other.Block && Offset == Other.Offset;
   }
 };
 
@@ -488,7 +520,7 @@ struct CallSiteInfo {
   std::vector<uint64_t> CalleeTypeIds;
 
   bool operator==(const CallSiteInfo &Other) const {
-    return CallLocation.BlockNum == Other.CallLocation.BlockNum &&
+    return CallLocation.Block == Other.CallLocation.Block &&
            CallLocation.Offset == Other.CallLocation.Offset;
   }
 };
@@ -511,7 +543,7 @@ namespace yaml {
 
 template <> struct MappingTraits<CallSiteInfo> {
   static void mapping(IO &YamlIO, CallSiteInfo &CSInfo) {
-    YamlIO.mapRequired("bb", CSInfo.CallLocation.BlockNum);
+    YamlIO.mapRequired("bb", CSInfo.CallLocation.Block);
     YamlIO.mapRequired("offset", CSInfo.CallLocation.Offset);
     YamlIO.mapOptional("fwdArgRegs", CSInfo.ArgForwardingRegs,
                        std::vector<CallSiteInfo::ArgRegPair>());
@@ -613,7 +645,7 @@ struct CalledGlobal {
 
 template <> struct MappingTraits<CalledGlobal> {
   static void mapping(IO &YamlIO, CalledGlobal &CG) {
-    YamlIO.mapRequired("bb", CG.CallSite.BlockNum);
+    YamlIO.mapRequired("bb", CG.CallSite.Block);
     YamlIO.mapRequired("offset", CG.CallSite.Offset);
     YamlIO.mapRequired("callee", CG.Callee);
     YamlIO.mapRequired("flags", CG.Flags);
@@ -702,6 +734,7 @@ struct MachineFrameInfo {
   unsigned MaxAlignment = 0;
   bool AdjustsStack = false;
   bool HasCalls = false;
+  FramePointerKind FramePointerPolicy = FramePointerKind::None;
   StringValue StackProtector;
   StringValue FunctionContext;
   unsigned MaxCallFrameSize = ~0u; ///< ~0u means: not computed yet.
@@ -724,6 +757,7 @@ struct MachineFrameInfo {
            OffsetAdjustment == Other.OffsetAdjustment &&
            MaxAlignment == Other.MaxAlignment &&
            AdjustsStack == Other.AdjustsStack && HasCalls == Other.HasCalls &&
+           FramePointerPolicy == Other.FramePointerPolicy &&
            StackProtector == Other.StackProtector &&
            FunctionContext == Other.FunctionContext &&
            MaxCallFrameSize == Other.MaxCallFrameSize &&
@@ -751,6 +785,7 @@ template <> struct MappingTraits<MachineFrameInfo> {
     YamlIO.mapOptional("maxAlignment", MFI.MaxAlignment, (unsigned)0);
     YamlIO.mapOptional("adjustsStack", MFI.AdjustsStack, false);
     YamlIO.mapOptional("hasCalls", MFI.HasCalls, false);
+    YamlIO.mapOptional("framePointerPolicy", MFI.FramePointerPolicy);
     YamlIO.mapOptional("stackProtector", MFI.StackProtector,
                        StringValue()); // Don't print it out when it's empty.
     YamlIO.mapOptional("functionContext", MFI.FunctionContext,
@@ -796,7 +831,7 @@ struct MachineFunction {
   bool Selected = false;
   bool FailedISel = false;
   // Register information
-  bool TracksRegLiveness = false;
+  bool TracksRegLiveness = true;
   bool HasWinCFI = false;
 
   // Computed properties that should be overridable

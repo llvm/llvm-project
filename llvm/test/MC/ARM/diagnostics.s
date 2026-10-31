@@ -136,10 +136,10 @@
 @ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
-@ CHECK-ERRORS-V8: error: invalid instruction
-@ CHECK-ERRORS-V8: error: invalid instruction
-@ CHECK-ERRORS-V8: error: invalid instruction
-@ CHECK-ERRORS-V8: error: invalid instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
 
         @ Out of range immediates for DBG
         dbg #-1
@@ -164,11 +164,11 @@
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: invalid operand for instruction
 
         @ p10 and p11 are reserved for NEON
         mcr p10, #2, r5, c1, c1, #4
@@ -212,12 +212,12 @@
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: invalid operand for instruction
 
         @ Shifter operand validation for PKH instructions.
         pkhbt r2, r2, r3, lsl #-1

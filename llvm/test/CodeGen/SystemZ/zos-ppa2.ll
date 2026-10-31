@@ -12,17 +12,18 @@
 ; CHECK:  DC XL1'E7'
 ; CHECK:  DC XL1'22'
 ; CHECK:  DC XL1'04'
-; CHECK:  DC AD(CELQSTRT-L#PPA2)
+; CHECK:  DC A(CELQSTRT-L#PPA2)
 ; CHECK:  DC XL4'00000000'
-; CHECK:  DC AD(L#DVS-L#PPA2)
+; CHECK:  DC A(L#DVS-L#PPA2)
 ; CHECK:  DC XL4'00000000'
 ; CHECK:  DC XL1'BYTE'
 ; CHECK:  DC XL1'00'
 ; CHECK:  DC XL2'0000'
 ; CHECK: L#DVS DS 0H
 ; CHECK:  DC XL14'F1F9F7F0F0F1F0F1F0F0F0F0F0F0'
-; CHECK:  DC XL6'F2F3F0F0F0F0'
+; CHECK:  DC XL6'F0F9F0F8F0F7'
 ; CHECK:  DC XL2'0000'
+
 
 ; CHECK: C_@@QPPA2 CATTR ALIGN(3),FILL(0),NOTEXECUTABLE,READONLY,RMODE(64),PART(.
 ; CHECK:                .&ppa2)
@@ -32,7 +33,7 @@
 
 ; CHECK: L#EPM_void_test_0 DS 0H
 ; CHECK: * Offset to PPA1
-; CHECK:  DC AD(L#PPA1_void_test_0-L#EPM_void_test_0)
+; CHECK:  DC A(L#PPA1_void_test_0-L#EPM_void_test_0)
  
 ; CHECK: B_IDRL CATTR ALIGN(3),FILL(0),NOLOAD,READONLY,RMODE(64)
 ; CHECK:  DC XL1'00'
@@ -40,8 +41,11 @@
 ; CHECK:  DC XL2'001E'
 ; CHECK:  DC XL30'D3D3E5D4404040404040{{([[:xdigit:]]{8})}}F1F9F7F0F0F1F0F1F0F0F0F0F0F0F0F0'
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !1, !2, !3}
 !0 = !{i32 1, !"zos_le_char_mode", !"MODE"}
+!1 = !{i32 2, !"zos_product_major_version", i32 9}
+!2 = !{i32 2, !"zos_product_minor_version", i32 8}
+!3 = !{i32 2, !"zos_product_patchlevel", i32 7}
 
 define void @void_test() {
 entry:
