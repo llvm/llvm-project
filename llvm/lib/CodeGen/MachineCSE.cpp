@@ -255,6 +255,18 @@ bool MachineCSEImpl::isPhysDefTriviallyDead(
   return false;
 }
 
+/// Return true if \p MI is after an INLINEASM_BR in its block, which can branch
+/// to an indirect target before \p MI runs.
+static bool isAfterInlineAsmBr(const MachineInstr &MI) {
+  const MachineBasicBlock &MBB = *MI.getParent();
+  if (!MBB.mayHaveInlineAsmBr())
+    return false;
+  return any_of(make_range(MBB.begin(), MachineBasicBlock::const_iterator(MI)),
+                [](const MachineInstr &I) {
+                  return I.getOpcode() == TargetOpcode::INLINEASM_BR;
+                });
+}
+
 static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
                                             const MachineInstr &MI,
                                             unsigned OpIdx,
@@ -612,6 +624,16 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
     if (MI.isConvergent() && MI.getParent() != CSMI->getParent()) {
       LLVM_DEBUG(dbgs() << "*** Convergent MI and subexpression exist in "
                            "different BBs, avoid CSE!\n");
+      VNT.insert(&MI, CurrVN++);
+      Exps.push_back(&MI);
+      continue;
+    }
+
+    // A subexpression after an INLINEASM_BR doesn't reach the INLINEASM_BR's
+    // indirect targets, so it can replace MI only in its own block.
+    if (MI.getParent() != CSMI->getParent() && isAfterInlineAsmBr(*CSMI)) {
+      LLVM_DEBUG(dbgs() << "*** Subexpression is after an INLINEASM_BR in "
+                           "another BB, avoid CSE!\n");
       VNT.insert(&MI, CurrVN++);
       Exps.push_back(&MI);
       continue;
