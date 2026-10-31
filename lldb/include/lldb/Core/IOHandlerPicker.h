@@ -38,10 +38,10 @@ struct PickerResult {
 
 /// An interactive ANSI-based picker IOHandler.
 ///
-/// Supports single-select and multi-select modes, column sorting, vim-style
-/// navigation, and scrolling. Works in any terminal that supports basic ANSI
-/// escape codes. Reports a canceled result if the input is not an interactive
-/// terminal.
+/// Supports single-select and multi-select modes, column sorting, filtering
+/// rows by a search query, vim-style navigation, and scrolling. Works in any
+/// terminal that supports basic ANSI escape codes. Reports a canceled result
+/// if the input is not an interactive terminal.
 class IOHandlerPicker : public IOHandler {
 public:
   IOHandlerPicker(Debugger &debugger, llvm::StringRef header,
@@ -66,13 +66,21 @@ private:
     PageDown,
     Home,
     End,
-    Space,
     Enter,
-    Sort,
+    Backspace,
+    Escape,
+    /// Ctrl+C or a read failure, which always cancel the picker.
+    Abort,
     /// A byte arrived on m_wakeup_pipe.
     Wakeup,
-    Escape,
+    /// A printable character, stored in KeyPress::ch.
+    Char,
     Unknown,
+  };
+
+  struct KeyPress {
+    Key key;
+    char ch = 0;
   };
 
   struct SortOrder {
@@ -86,14 +94,16 @@ private:
   bool EnterRawMode();
   void RestoreTerminalMode();
 
-  Key ReadKey();
+  KeyPress ReadKey();
   Input WaitForInput();
   std::optional<char> ReadByte();
   Key ReadEscapeSequence();
-  static Key DecodeByte(char c);
+  static KeyPress DecodeByte(char c);
   static Key DecodeEscapeSequence(llvm::StringRef params, char final_byte);
   void WakeUp();
 
+  void HandleKey(KeyPress press);
+  void HandleSearchKey(KeyPress press);
   void Render();
   void ScrollToCursor();
   void CycleSort();
@@ -117,10 +127,13 @@ private:
   /// Bit i is set if m_items[i] is checked.
   llvm::BitVector m_checked;
 
-  /// Indices into m_items of the rows to show, in display order.
+  /// Indices into m_items of the rows that match m_query, in display order.
   llvm::SmallVector<size_t, 0> m_visible_indices;
   /// Sort column and direction, or std::nullopt for the original order.
   std::optional<SortOrder> m_sort_order;
+
+  std::string m_query;
+  bool m_searching = false;
 
   llvm::SmallVector<size_t> m_column_widths;
 
