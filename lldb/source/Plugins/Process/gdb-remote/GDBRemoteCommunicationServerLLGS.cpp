@@ -1137,6 +1137,11 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
+  if (std::optional<WaitStatus> exit_status = process->GetExitStatus())
+    for (const std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin>
+             &plugin_up : m_accelerator_plugins)
+      plugin_up->NativeProcessDidExit(process->GetID(), *exit_status);
+
   PacketResult result = SendStopReasonForState(
       *process, StateType::eStateExited, /*force_synchronous=*/false);
   if (result != PacketResult::Success) {
@@ -4665,6 +4670,21 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
 void GDBRemoteCommunicationServerLLGS::InstallPlugin(
     std::unique_ptr<LLDBServerAcceleratorPlugin> plugin_up) {
   m_accelerator_plugins.emplace_back(std::move(plugin_up));
+}
+
+std::optional<lldb::pid_t>
+GDBRemoteCommunicationServerLLGS::GetCurrentProcessID() const {
+  if (!m_current_process ||
+      m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)
+    return std::nullopt;
+  return m_current_process->GetID();
+}
+
+void GDBRemoteCommunicationServerLLGS::SetCurrentProcessExitStatus(
+    WaitStatus exit_status) {
+  if (m_current_process)
+    m_current_process->SetExitStatus(exit_status,
+                                     /*bNotifyStateChange=*/true);
 }
 
 GDBRemoteCommunication::PacketResult

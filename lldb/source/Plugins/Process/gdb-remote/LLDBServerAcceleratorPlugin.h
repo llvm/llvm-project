@@ -40,6 +40,12 @@ public:
   virtual llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) = 0;
 
+  /// Notify the plugin that a native process exited. The process ID identifies
+  /// the process in a multiprocess LLGS session, and the wait status describes
+  /// how it exited. This is called synchronously on the backend's process-state
+  /// delegate thread; plugins must marshal work owned by another loop.
+  virtual void NativeProcessDidExit(lldb::pid_t, const WaitStatus &) {}
+
   /// Create an AcceleratorActions with an identifier unique within this plugin,
   /// so identifiers from different actions don't collide.
   AcceleratorActions GetNewAcceleratorAction() {

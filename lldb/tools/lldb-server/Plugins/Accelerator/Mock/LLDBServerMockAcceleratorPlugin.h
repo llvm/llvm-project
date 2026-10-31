@@ -14,6 +14,7 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 
+#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -33,6 +34,8 @@ public:
   std::optional<AcceleratorActions> GetInitializeActions() override;
   llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;
+  void NativeProcessDidExit(lldb::pid_t native_pid,
+                            const WaitStatus &exit_status) override;
 
   std::optional<AcceleratorDynamicLoaderResponse> GetDynamicLoaderLibraryInfos(
       const AcceleratorDynamicLoaderArgs &args) override;
@@ -62,6 +65,9 @@ private:
   HostThread m_mock_main_loop_thread;
   std::unique_ptr<TCPSocket> m_listen_socket;
   std::vector<MainLoopBase::ReadHandleUP> m_read_handles;
+  // The native process that owns this accelerator connection. The exit hook
+  // may read it from a backend delegate thread.
+  std::atomic<lldb::pid_t> m_native_process_id{LLDB_INVALID_PROCESS_ID};
 };
 
 } // namespace lldb_server

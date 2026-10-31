@@ -21,6 +21,7 @@
 #include "lldb/Utility/Connection.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include <cstdlib>
@@ -137,13 +138,36 @@ LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
     response.auto_resume_native = false;
     AcceleratorActions actions = GetNewAcceleratorAction();
     actions.session_name = "Mock Accelerator Session";
+    std::optional<lldb::pid_t> native_pid =
+        m_native_gdb_server.GetCurrentProcessID();
+    if (!native_pid)
+      return llvm::createStringError("no current native process");
+    m_native_process_id = *native_pid;
     actions.connect_info = CreateConnection();
+    if (!actions.connect_info)
+      m_native_process_id = LLDB_INVALID_PROCESS_ID;
     response.actions = std::move(actions);
     break;
   }
   }
 
   return response;
+}
+
+void LLDBServerMockAcceleratorPlugin::NativeProcessDidExit(
+    lldb::pid_t native_pid, const WaitStatus &exit_status) {
+  if (native_pid != m_native_process_id.load())
+    return;
+
+  // The notification can arrive on the native backend's delegate thread.
+  // Update the accelerator process on the mock server's loop.
+  m_mock_main_loop.AddPendingCallback([this, native_pid,
+                                       exit_status](MainLoopBase &) {
+    if (native_pid != m_native_process_id.load() || !m_accelerator_gdb_server)
+      return;
+    m_accelerator_gdb_server->SetCurrentProcessExitStatus(exit_status);
+    m_native_process_id.store(LLDB_INVALID_PROCESS_ID);
+  });
 }
 
 std::optional<AcceleratorConnectionInfo>

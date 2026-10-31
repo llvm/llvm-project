@@ -174,10 +174,29 @@ class MockAcceleratorActionsTestCase(TestBase):
             process, "mock_gpu_accelerator_finish", hit_count=1
         )
 
-        # No more accelerator breakpoints; the process runs to exit.
-        process.Continue()
+        # No more accelerator breakpoints; the native process runs to exit.
+        # The server notifies its accelerator plugin with this process's ID;
+        # the plugin must propagate the same exit status to the accelerator
+        # process associated with it.
+        listener = self.dbg.GetListener()
+        self.addTearDownHook(lambda: self.dbg.SetAsync(False))
+        self.dbg.SetAsync(True)
+        self.assertSuccess(accelerator_process.Continue())
+        lldbutil.expect_state_changes(
+            self, listener, accelerator_process, [lldb.eStateRunning]
+        )
+        self.assertSuccess(process.Continue())
+        lldbutil.expect_state_changes(
+            self, listener, process, [lldb.eStateRunning, lldb.eStateExited]
+        )
+        lldbutil.expect_state_changes(
+            self, listener, accelerator_process, [lldb.eStateExited]
+        )
+        self.dbg.SetAsync(False)
         self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
+        self.assertState(accelerator_process.GetState(), lldb.eStateExited)
+        self.assertEqual(accelerator_process.GetExitStatus(), process.GetExitStatus())
 
     def run_expecting_failed_connection(self):
         """Run the inferior through its breakpoints, asserting the connection is

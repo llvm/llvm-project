@@ -44,7 +44,7 @@ ProcessMockAccelerator::ProcessMockAccelerator(lldb::pid_t pid,
 }
 
 Status ProcessMockAccelerator::Resume(const ResumeActionList &resume_actions) {
-  // Nothing actually runs; stay stopped.
+  SetState(eStateRunning, /*notify_delegates=*/true);
   return Status();
 }
 
