@@ -929,6 +929,50 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
 }
 
+void SIFrameLowering::emitEntryFunctionEpilogue(MachineFunction &MF,
+                                                MachineBasicBlock &MBB) const {
+  // Entry functions don't usually need an epilogue. The only exception is a
+  // block ending in a chain call (which is the only possible tail call in an
+  // entry function), in which case the current frame is becoming dead and we
+  // need to reset SP to point to the base of the stack. Other exits of the
+  // function, e.g. blocks ending in S_ENDPGM, don't need any of this.
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  assert(MBBI != MBB.end() && "return block should end in a terminator");
+  if (!TII->isTailCall(*MBBI))
+    return;
+
+  // If the prologue has set SP and there aren't any local variables, then we
+  // don't need to restore anything.
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  if (requiresStackPointerReference(MF) && FrameInfo.getStackSize() == 0)
+    return;
+
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const DebugLoc &DL = MBBI->getDebugLoc();
+
+  Register SPReg = MFI->getStackPtrOffsetReg();
+  assert(SPReg != AMDGPU::SP_REG);
+
+  // We need to either reset SP to point before the local variables, or to
+  // initialize it in case we skipped it in the prologue. In either case,
+  // the SP needs to be either 0 or point right after the space reserved for
+  // CWSR (which the prologue conveniently puts in FP).
+  if (mayReserveScratchForCWSR(MF)) {
+    assert(hasFP(MF));
+    Register FPReg = MFI->getFrameOffsetReg();
+    assert(FPReg != AMDGPU::FP_REG);
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), SPReg)
+        .addReg(FPReg)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  }
+}
+
 // Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
 void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     MachineFunction &MF, MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -1571,8 +1615,10 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  if (FuncInfo->isEntryFunction())
+  if (FuncInfo->isEntryFunction()) {
+    emitEntryFunctionEpilogue(MF, MBB);
     return;
+  }
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (FuncInfo->isChainFunction() && !MFI.hasTailCall())
@@ -2497,9 +2543,8 @@ bool SIFrameLowering::requiresStackPointerReference(
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Entry points ordinarily don't need to initialize SP. We have to set it up
-  // for callees if there are any. Also note tail calls are only possible via
-  // the `llvm.amdgcn.cs.chain` intrinsic.
-  if (MFI.hasCalls() || MFI.hasTailCall())
+  // for callees if there are any.
+  if (MFI.hasCalls())
     return true;
 
   // We still need to initialize the SP if we're doing anything weird that

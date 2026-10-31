@@ -3477,7 +3477,8 @@ The AMDGPU backend supports the following calling conventions:
     Values in scalar registers as well as v0-v7 are not preserved.
     Values in VGPRs starting at v8 are not preserved for the active lanes, but must be saved by the callee for inactive lanes when using WWM (a notable exception is when the llvm.amdgcn.init.whole.wave intrinsic is used in the function - in this case the backend assumes that there are no inactive lanes upon entry; any inactive lanes that need to be preserved must be explicitly present in the IR).
 
-    Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions.
+    Chain functions receive a stack pointer from their caller (in s32), similar to `amdgpu_gfx` functions. This points to the bottom of the stack.
+    Referencing values on the caller's stack is undefined behaviour.
     If needed, the frame pointer is s33 and the base pointer is s34.
     Calls to `amdgpu_gfx` functions are allowed and behave like they do in `amdgpu_cs` functions.
 

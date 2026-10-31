@@ -26,6 +26,9 @@ public:
 
   void emitEntryFunctionPrologue(MachineFunction &MF,
                                  MachineBasicBlock &MBB) const;
+  void emitEntryFunctionEpilogue(MachineFunction &MF,
+                                 MachineBasicBlock &MBB) const;
+
   void emitPrologue(MachineFunction &MF,
                     MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF,
