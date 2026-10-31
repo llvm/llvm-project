@@ -614,6 +614,12 @@ TEST_F(TypeIndexIteratorTest, RegRelativeIndir) {
   checkTypeReferences(0, RR.Type);
 }
 
+TEST_F(TypeIndexIteratorTest, AliasRecord) {
+  AliasRecord AR(TypeIndex::Int32(), "SomeName");
+  writeTypeRecords(AR);
+  checkTypeReferences(0, AR.UnderlyingType);
+}
+
 TEST_F(TypeIndexIteratorTest, Class2) {
   ClassRecord CR(TypeRecordKind::Class2);
   CR.FieldList = TypeIndex::Int32();
