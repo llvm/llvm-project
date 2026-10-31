@@ -22,6 +22,12 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.sigaction
 )
+add_entrypoint_object(
+  sigpending
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigpending
+)
 
 add_entrypoint_object(
   sigaltstack

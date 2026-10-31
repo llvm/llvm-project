@@ -94,6 +94,17 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
     libc.src.errno.errno
 )
+add_entrypoint_object(
+  sigpending
+  SRCS
+    sigpending.cpp
+  HDRS
+    ../sigpending.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigpending
+    libc.src.errno.errno
+)
 
 add_entrypoint_object(
   pthread_sigmask
