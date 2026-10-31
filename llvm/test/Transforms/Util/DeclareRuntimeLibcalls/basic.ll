@@ -47,9 +47,9 @@ define float @sinf(float %x) {
 ; CHECK: declare float @remquof(float, float, ptr)
 ; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
 
-; CHECK: declare double @scalbln(double, i32)
-; CHECK: declare float @scalblnf(float, i32)
-; CHECK: declare x86_fp80 @scalblnl(x86_fp80, i32)
+; CHECK: declare double @scalbln(double, i64)
+; CHECK: declare float @scalblnf(float, i64)
+; CHECK: declare x86_fp80 @scalblnl(x86_fp80, i64)
 
 ; CHECK: declare double @scalbn(double, i32)
 ; CHECK: declare float @scalbnf(float, i32)
