@@ -384,43 +384,44 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-LABEL: @loop_unroll_and_jam_op
-// CHECK:  %[[VAL_0:.*]]: memref<21x30xf32, 1>, %[[INIT0:.*]]: f32, %[[INIT1:.*]]: f32) {
-func.func @loop_unroll_and_jam_op(%arg0: memref<21x30xf32, 1>, %init : f32, %init1 : f32) {
+// CHECK:  %[[VAL_0:.*]]: memref<21x30xi32, 1>, %[[INIT0:.*]]: i32, %[[INIT1:.*]]: i32) {
+func.func @loop_unroll_and_jam_op(%arg0: memref<21x30xi32, 1>, %init : i32, %init1 : i32) {
   // CHECK:           %[[LAST_OUT_ITER:.*]] = arith.constant 20
-  // CHECK:           %[[VAL_4:.*]]:2 = affine.for %[[OUTER_I:.*]] = 0 to 20 step 2 iter_args(%[[VAL_6:.*]] = %[[INIT0]], %[[VAL_7:.*]] = %[[INIT0]])
-  %0 = affine.for %arg3 = 0 to 21 iter_args(%arg4 = %init) -> (f32) {
+  // CHECK:           %[[ONE:.*]] = arith.constant 1 : i32
+  // CHECK:           %[[VAL_4:.*]]:2 = affine.for %[[OUTER_I:.*]] = 0 to 20 step 2 iter_args(%[[VAL_6:.*]] = %[[INIT0]], %[[VAL_7:.*]] = %[[ONE]])
+  %0 = affine.for %arg3 = 0 to 21 iter_args(%arg4 = %init) -> (i32) {
     // CHECK:             %[[VAL_8:.*]]:2 = affine.for %[[INNER_I:.*]] = 0 to 30 iter_args(%[[SUM0:.*]] = %[[INIT1]], %[[SUM1:.*]] = %[[INIT1]])
-    %1 = affine.for %arg5 = 0 to 30 iter_args(%arg6 = %init1) -> (f32) {
+    %1 = affine.for %arg5 = 0 to 30 iter_args(%arg6 = %init1) -> (i32) {
       // CHECK:               %[[LOAD0:.*]] = affine.load %[[VAL_0]]{{\[}}%[[OUTER_I]], %[[INNER_I]]]
-      // CHECK:               %[[ITER_SUM0:.*]] = arith.addf %[[SUM0]], %[[LOAD0]]
+      // CHECK:               %[[ITER_SUM0:.*]] = arith.addi %[[SUM0]], %[[LOAD0]]
       // CHECK:               %[[APPLY_OUTER_I:.*]] = affine.apply #map(%[[OUTER_I]])
       // CHECK:               %[[LOAD1:.*]] = affine.load %[[VAL_0]]{{\[}}%[[APPLY_OUTER_I]], %[[INNER_I]]]
-      // CHECK:               %[[ITER_SUM1:.*]] = arith.addf %[[SUM1]], %[[LOAD1]]
+      // CHECK:               %[[ITER_SUM1:.*]] = arith.addi %[[SUM1]], %[[LOAD1]]
       // CHECK:               affine.yield %[[ITER_SUM0]], %[[ITER_SUM1]]
-      %3 = affine.load %arg0[%arg3, %arg5] : memref<21x30xf32, 1>
-      %4 = arith.addf %arg6, %3 : f32
-      affine.yield %4 : f32
+      %3 = affine.load %arg0[%arg3, %arg5] : memref<21x30xi32, 1>
+      %4 = arith.addi %arg6, %3 : i32
+      affine.yield %4 : i32
     }
-    // CHECK:             %[[MUL0:.*]] = arith.mulf %[[VAL_6]], %[[VAL_18:.*]]#0
+    // CHECK:             %[[MUL0:.*]] = arith.muli %[[VAL_6]], %[[VAL_18:.*]]#0
     // CHECK:             %[[VAL_19:.*]] = affine.apply #map(%[[OUTER_I]])
-    // CHECK:             %[[MUL1:.*]] = arith.mulf %[[VAL_7]], %[[VAL_18]]#1
+    // CHECK:             %[[MUL1:.*]] = arith.muli %[[VAL_7]], %[[VAL_18]]#1
     // CHECK:             affine.yield %[[MUL0]], %[[MUL1]]
     // CHECK:           }
-    // CHECK:           %[[VAL_21:.*]] = arith.mulf %[[VAL_22:.*]]#0, %[[VAL_22]]#1
+    // CHECK:           %[[VAL_21:.*]] = arith.muli %[[VAL_22:.*]]#0, %[[VAL_22]]#1
     // CHECK:           %[[VAL_23:.*]] = affine.for %[[SUFFIX_I:.*]] = 0 to 30 iter_args(%[[ITER_I:.*]] = %[[INIT1]])
     // CHECK:             %[[LOAD_SUFFIX:.*]] = affine.load %[[VAL_0]]{{\[}}%[[LAST_OUT_ITER]], %[[SUFFIX_I]]]
-    // CHECK:             %[[RES:.*]] = arith.addf %[[ITER_I]], %[[LOAD_SUFFIX]]
+    // CHECK:             %[[RES:.*]] = arith.addi %[[ITER_I]], %[[LOAD_SUFFIX]]
     // CHECK:             affine.yield %[[RES]]
-    %2 = arith.mulf %arg4, %1 : f32
-    affine.yield %2 : f32
+    %2 = arith.muli %arg4, %1 : i32
+    affine.yield %2 : i32
   }
-  // CHECK:           %[[VAL_28:.*]] = arith.mulf %[[VAL_21]], %[[VAL_29:.*]]
+  // CHECK:           %[[VAL_28:.*]] = arith.muli %[[VAL_21]], %[[VAL_29:.*]]
   return
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["arith.addf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 <op_name = "affine.for"> : (!transform.any_op) -> !transform.op<"affine.for">
     %2 = transform.get_parent_op %1 <op_name = "affine.for"> : (!transform.op<"affine.for">) -> !transform.op<"affine.for">
     transform.loop.unroll_and_jam %2 factor = 2 : !transform.op<"affine.for">
