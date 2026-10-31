@@ -6332,8 +6332,6 @@ void Verifier::visitInstruction(Instruction &I) {
 
 /// Allow intrinsics to be verified in different ways.
 void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
-  Function *IF = Call.getCalledFunction();
-
   // If the intrinsic takes MDNode arguments, verify that they are either global
   // or are local to *this* function.
   for (Value *V : Call.args()) {
@@ -6446,25 +6444,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::ucmp:
   case Intrinsic::scmp: {
-    Type *SrcTy = Call.getOperand(0)->getType();
     Type *DestTy = Call.getType();
-
     Check(DestTy->getScalarSizeInBits() >= 2,
           "result type must be at least 2 bits wide", Call);
-
-    bool IsDestTypeVector = DestTy->isVectorTy();
-    Check(SrcTy->isVectorTy() == IsDestTypeVector,
-          "ucmp/scmp argument and result types must both be either vector or "
-          "scalar types",
-          Call);
-    if (IsDestTypeVector) {
-      auto SrcVecLen = cast<VectorType>(SrcTy)->getElementCount();
-      auto DestVecLen = cast<VectorType>(DestTy)->getElementCount();
-      Check(SrcVecLen == DestVecLen,
-            "return type and arguments must have the same number of "
-            "elements",
-            Call);
-    }
     break;
   }
   case Intrinsic::coro_begin:
@@ -6527,21 +6509,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::convert_to_arbitrary_fp: {
-    // Check that vector element counts are consistent.
-    Type *ValueTy = Call.getArgOperand(0)->getType();
     Type *IntTy = Call.getType();
-
-    if (auto *ValueVecTy = dyn_cast<VectorType>(ValueTy)) {
-      auto *IntVecTy = dyn_cast<VectorType>(IntTy);
-      Check(IntVecTy,
-            "if floating-point operand is a vector, integer operand must also "
-            "be a vector",
-            Call);
-      Check(ValueVecTy->getElementCount() == IntVecTy->getElementCount(),
-            "floating-point and integer vector operands must have the same "
-            "element count",
-            Call);
-    }
 
     // Check interpretation metadata (argoperand 1).
     auto *InterpMAV = dyn_cast<MetadataAsValue>(Call.getArgOperand(1));
@@ -6577,21 +6545,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::convert_from_arbitrary_fp: {
-    // Check that vector element counts are consistent.
     Type *IntTy = Call.getArgOperand(0)->getType();
-    Type *ValueTy = Call.getType();
-
-    if (auto *ValueVecTy = dyn_cast<VectorType>(ValueTy)) {
-      auto *IntVecTy = dyn_cast<VectorType>(IntTy);
-      Check(IntVecTy,
-            "if floating-point operand is a vector, integer operand must also "
-            "be a vector",
-            Call);
-      Check(ValueVecTy->getElementCount() == IntVecTy->getElementCount(),
-            "floating-point and integer vector operands must have the same "
-            "element count",
-            Call);
-    }
 
     // Check interpretation metadata (argoperand 1).
     auto *InterpMAV = dyn_cast<MetadataAsValue>(Call.getArgOperand(1));
@@ -7016,22 +6970,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Check(Op3->getZExtValue() <= Op1->getType()->getScalarSizeInBits(),
             "the scale of u[mul|div]_fix[_sat] must be less than or equal "
             "to the width of the operands");
-    }
-    break;
-  }
-  case Intrinsic::lrint:
-  case Intrinsic::llrint:
-  case Intrinsic::lround:
-  case Intrinsic::llround: {
-    Type *ValTy = Call.getArgOperand(0)->getType();
-    Type *ResultTy = Call.getType();
-    Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
-          IF->getName() + ": argument and result disagree on vector use",
-          &Call);
-    if (auto *VTy = dyn_cast<VectorType>(ValTy)) {
-      auto *RTy = dyn_cast<VectorType>(ResultTy);
-      Check(VTy->getElementCount() == RTy->getElementCount(),
-            IF->getName() + ": argument must be same length as result", &Call);
     }
     break;
   }
@@ -7523,16 +7461,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.ptrmask intrinsic first argument must be pointer or vector "
           "of pointers",
           &Call);
-    Check(
-        Ty0->isVectorTy() == Ty1->isVectorTy(),
-        "llvm.ptrmask intrinsic arguments must be both scalars or both vectors",
-        &Call);
-    if (Ty0->isVectorTy())
-      Check(cast<VectorType>(Ty0)->getElementCount() ==
-                cast<VectorType>(Ty1)->getElementCount(),
-            "llvm.ptrmask intrinsic arguments must have the same number of "
-            "elements",
-            &Call);
     Check(DL.getIndexTypeSizeInBits(Ty0) == Ty1->getScalarSizeInBits(),
           "llvm.ptrmask intrinsic second argument bitwidth must match "
           "pointer index type size of first argument",
@@ -7825,58 +7753,10 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     break;
   }
 
-  case Intrinsic::experimental_constrained_fptosi:
-  case Intrinsic::experimental_constrained_fptoui: {
-    Value *Operand = FPI.getArgOperand(0);
-    ElementCount SrcEC;
-    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      SrcEC = cast<VectorType>(OperandT)->getElementCount();
-    }
-
-    Operand = &FPI;
-    Check(SrcEC.isNonZero() == Operand->getType()->isVectorTy(),
-          "Intrinsic first argument and result disagree on vector use", &FPI);
-    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      Check(SrcEC == cast<VectorType>(OperandT)->getElementCount(),
-            "Intrinsic first argument and result vector lengths must be equal",
-            &FPI);
-    }
-    break;
-  }
-
-  case Intrinsic::experimental_constrained_sitofp:
-  case Intrinsic::experimental_constrained_uitofp: {
-    Value *Operand = FPI.getArgOperand(0);
-    ElementCount SrcEC;
-    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      SrcEC = cast<VectorType>(OperandT)->getElementCount();
-    }
-
-    Operand = &FPI;
-    Check(SrcEC.isNonZero() == Operand->getType()->isVectorTy(),
-          "Intrinsic first argument and result disagree on vector use", &FPI);
-    if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      Check(SrcEC == cast<VectorType>(OperandT)->getElementCount(),
-            "Intrinsic first argument and result vector lengths must be equal",
-            &FPI);
-    }
-    break;
-  }
-
   case Intrinsic::experimental_constrained_fptrunc:
   case Intrinsic::experimental_constrained_fpext: {
-    Value *Operand = FPI.getArgOperand(0);
-    Type *OperandTy = Operand->getType();
-    Value *Result = &FPI;
-    Type *ResultTy = Result->getType();
-    Check(OperandTy->isVectorTy() == ResultTy->isVectorTy(),
-          "Intrinsic first argument and result disagree on vector use", &FPI);
-    if (OperandTy->isVectorTy()) {
-      Check(cast<VectorType>(OperandTy)->getElementCount() ==
-                cast<VectorType>(ResultTy)->getElementCount(),
-            "Intrinsic first argument and result vector lengths must be equal",
-            &FPI);
-    }
+    Type *OperandTy = FPI.getArgOperand(0)->getType();
+    Type *ResultTy = FPI.getType();
     if (FPI.getIntrinsicID() == Intrinsic::experimental_constrained_fptrunc) {
       Check(OperandTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits(),
             "Intrinsic first argument's type must be larger than result type",
