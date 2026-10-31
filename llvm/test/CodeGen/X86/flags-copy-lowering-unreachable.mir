@@ -1,11 +1,8 @@
 # RUN: llc -mtriple=x86_64-- -run-pass=x86-flags-copy-lowering -verify-machineinstrs -o - %s | FileCheck %s
 #
-# An EFLAGS copy stranded in a block that is unreachable from the entry must
-# not trip the "Unlowered EFLAGS copy!" assertion. The pass collects copies to
-# lower with a reverse-post-order traversal, which only visits reachable
-# blocks, so such copies are intentionally left in place (a later pass removes
-# the unreachable block). The verification at the end of the pass must use the
-# same notion of reachability.
+# EFLAGS copies in blocks that are unreachable from the entry must be lowered
+# too. At -O0 nothing removes such blocks before register allocation, which
+# cannot copy EFLAGS.
 ---
 name:            stranded_eflags_copy
 tracksRegLiveness: true
@@ -13,17 +10,100 @@ body:             |
   bb.0:
     RET 0
 
-  ; bb.1 has no predecessors, so it is unreachable from bb.0. The save/recheck
-  ; EFLAGS copies below are left untouched rather than crashing the pass.
+  ; bb.1 has no predecessors, so it is unreachable from bb.0.
   bb.1:
     ; CHECK-LABEL: bb.1:
-    ; CHECK: %1:gr64 = COPY $eflags
-    ; CHECK: $eflags = COPY %1
+    ; CHECK-NOT: COPY{{.*}}$eflags
+    ; CHECK: TEST64rr %0, %0, implicit-def $eflags
+    ; CHECK-NEXT: %[[CF:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: TEST64rr %0, %0, implicit-def $eflags
+    ; CHECK-NEXT: MOV8mr $noreg, 1, $noreg, 0, $noreg, %[[CF]]
     %0:gr64 = IMPLICIT_DEF
     TEST64rr %0, %0, implicit-def $eflags
     %1:gr64 = COPY $eflags
     TEST64rr %0, %0, implicit-def $eflags
     $eflags = COPY %1
+    SETCCm $noreg, 1, $noreg, 0, $noreg, 4, implicit $eflags :: (store (s8) into `ptr null`)
+    RET 0
+...
+---
+# The copy is in an unreachable block with EFLAGS live in from other
+# unreachable blocks. Those have no dominator tree nodes, so the test is
+# inserted at the copy instead of being hoisted into a predecessor.
+name:            stranded_eflags_copy_live_in
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    RET 0
+
+  bb.1:
+    successors: %bb.3
+
+    %0:gr64 = IMPLICIT_DEF
+    TEST64rr %0, %0, implicit-def $eflags
+    JMP_1 %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %1:gr64 = IMPLICIT_DEF
+    TEST64rr %1, %1, implicit-def $eflags
+    JMP_1 %bb.3
+
+  bb.3:
+    liveins: $eflags
+    ; CHECK-LABEL: bb.3:
+    ; CHECK-NOT: COPY{{.*}}$eflags
+    ; CHECK: %[[CF:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: %[[X:[^:]*]]:gr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: TEST64rr %[[X]], %[[X]], implicit-def $eflags
+    ; CHECK-NEXT: MOV8mr $noreg, 1, $noreg, 0, $noreg, %[[CF]]
+
+    %2:gr64 = COPY $eflags
+    %3:gr64 = IMPLICIT_DEF
+    TEST64rr %3, %3, implicit-def $eflags
+    $eflags = COPY %2
+    SETCCm $noreg, 1, $noreg, 0, $noreg, 4, implicit $eflags :: (store (s8) into `ptr null`)
+    RET 0
+...
+---
+# The copied EFLAGS are live into an unreachable successor that has another
+# unreachable predecessor. The use there is rewritten even though the SETcc
+# result isn't defined along the edge from bb.2. None of these blocks execute.
+name:            stranded_eflags_copy_live_out
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    RET 0
+
+  bb.1:
+    successors: %bb.3
+    ; CHECK-LABEL: bb.1:
+    ; CHECK-NOT: COPY{{.*}}$eflags
+    ; CHECK: TEST64rr %0, %0, implicit-def $eflags
+    ; CHECK-NEXT: %[[CF:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
+
+    %0:gr64 = IMPLICIT_DEF
+    TEST64rr %0, %0, implicit-def $eflags
+    %1:gr64 = COPY $eflags
+    %2:gr64 = IMPLICIT_DEF
+    TEST64rr %2, %2, implicit-def $eflags
+    $eflags = COPY %1
+    JMP_1 %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %3:gr64 = IMPLICIT_DEF
+    TEST64rr %3, %3, implicit-def $eflags
+    JMP_1 %bb.3
+
+  bb.3:
+    liveins: $eflags
+    ; CHECK-LABEL: bb.3:
+    ; CHECK-NOT: liveins: $eflags
+    ; CHECK: MOV8mr $noreg, 1, $noreg, 0, $noreg, %[[CF]]
+
     SETCCm $noreg, 1, $noreg, 0, $noreg, 4, implicit $eflags :: (store (s8) into `ptr null`)
     RET 0
 ...
