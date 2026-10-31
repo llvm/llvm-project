@@ -2866,6 +2866,13 @@ public:
   //                         OpenMP Emission
   //===--------------------------------------------------------------------===//
 public:
+  /// Emits a Sema-synthesized OpenMP helper variable (loop counter, iteration
+  /// variable or pre-init capture) without lifetime markers. These variables
+  /// are emitted between nested combined/composite OpenMP ops, which must be
+  /// direct children of each other's regions, so they must not open a
+  /// lifetime cleanup scope.
+  void emitOMPHelperVarDecl(const VarDecl &d);
+
   mlir::LogicalResult emitOMPScopeDirective(const OMPScopeDirective &s);
   mlir::LogicalResult emitOMPErrorDirective(const OMPErrorDirective &s);
   mlir::LogicalResult emitOMPParallelDirective(const OMPParallelDirective &s);
