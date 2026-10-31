@@ -27,6 +27,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
@@ -1413,6 +1414,32 @@ LogicalResult ExtractOp::verify() {
   return success();
 }
 
+static bool verifySliceValueDisjoint(Value v1, Value v2) {
+  auto c1 = getConstantIntValue(v1);
+  auto c2 = getConstantIntValue(v2);
+
+  // Return false if dynamic
+  if (!c1 || !c2) {
+    return false;
+  }
+
+  return *c1 != *c2;
+}
+
+static bool verifyRangeDisjoint(OperandRange r1, OperandRange r2) {
+  if (r1.size() != r2.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < r1.size(); i++) {
+    if (verifySliceValueDisjoint(r1[i], r2[i])) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// If we have an ExtractOp consuming an InsertOp with the same
 /// indices, we can return the InsertOp's scalar directly.
 // TODO: This only checks the immediate producer; extend to go up the
@@ -1423,9 +1450,19 @@ static Value foldExtractAfterInsert(ExtractOp extractOp) {
   auto isSame = [](Value a, Value b) {
     return getAsOpFoldResult(a) == getAsOpFoldResult(b);
   };
-  if (insertOp && insertOp.getScalar().getType() == extractOp.getType() &&
-      llvm::equal(insertOp.getIndices(), extractOp.getIndices(), isSame))
-    return insertOp.getScalar();
+
+  while (insertOp) {
+    if (insertOp && insertOp.getScalar().getType() == extractOp.getType() &&
+        llvm::equal(insertOp.getIndices(), extractOp.getIndices(), isSame))
+      return insertOp.getScalar();
+
+    if (verifyRangeDisjoint(insertOp.getIndices(), extractOp.getIndices())) {
+      insertOp = insertOp.getDest().getDefiningOp<InsertOp>();
+      continue;
+    }
+
+    return {};
+  }
 
   return {};
 }
