@@ -80,9 +80,21 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Miscellaneous
 
+### Improvements to clang-apply-replacements
+
+### Improvements to clang-change-namespace
+
 ### Improvements to clang-doc
 
+### Improvements to clang-include-cleaner
+
+### Improvements to clang-include-fixer
+
+### Improvements to clang-move
+
 ### Improvements to clang-query
+
+### Improvements to clang-reorder-fields
 
 ### Improvements to clang-tidy
 
@@ -96,12 +108,6 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Miscellaneous
 
-### Improvements to include-fixer
-
-### Improvements to clang-include-fixer
-
 ### Improvements to modularize
 
 ### Improvements to pp-trace
-
-### Clang-tidy Visual Studio plugin

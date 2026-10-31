@@ -124,9 +124,37 @@ infrastructure are described first, followed by tool-specific sections.
 - Added support for loading dynamic plugins via the `-load` command-line
   option.
 
+### Improvements to clang-apply-replacements
+
+### Improvements to clang-change-namespace
+
 ### Improvements to clang-doc
 
+- Fixed a crash, in builds with assertions enabled, when a documentation
+  comment contains invalid UTF-8. The text is now sanitized before it is
+  emitted.
+
+### Improvements to clang-include-cleaner
+
+- Added Objective-C support to the include analysis. References made through
+  interfaces, protocols, categories, compatible aliases, instance variables,
+  properties, message sends, `@selector` expressions, literals and boxed
+  expressions, and toll-free bridged casts are now attributed to the headers
+  that declare them, and forward declarations of interfaces and protocols no
+  longer satisfy a use that needs the definition. This also applies to
+  {program}`clangd` and to the {program}`clang-tidy` {doc}`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check, which share the analysis.
+
+- Fixed the main header of a source file being inserted at the wrong position
+  when several missing includes are added at once.
+
+### Improvements to clang-include-fixer
+
+### Improvements to clang-move
+
 ### Improvements to clang-query
+
+### Improvements to clang-reorder-fields
 
 ### Improvements to clang-tidy
 
@@ -461,12 +489,6 @@ infrastructure are described first, followed by tool-specific sections.
   inserting a missing `#include`, which stopped {program}`clang-format` and
   the `llvm-include-order` check from being able to sort it correctly afterwards.
 
-### Improvements to include-fixer
-
-### Improvements to clang-include-fixer
-
 ### Improvements to modularize
 
 ### Improvements to pp-trace
-
-### Clang-tidy Visual Studio plugin
