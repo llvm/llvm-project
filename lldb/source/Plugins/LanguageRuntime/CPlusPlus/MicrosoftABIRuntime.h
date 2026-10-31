@@ -49,7 +49,7 @@ private:
                         const LanguageRuntime::VTableInfo &vtable_info,
                         llvm::ArrayRef<llvm::StringRef> vtable_components);
 
-  using OffsetToTopCache = std::map<Address, std::optional<int64_t>>;
+  using OffsetToTopCache = std::map<Address, int64_t>;
 
   OffsetToTopCache m_offset_to_top_map;
 };

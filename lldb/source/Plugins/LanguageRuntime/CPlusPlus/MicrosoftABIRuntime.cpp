@@ -189,8 +189,11 @@ std::optional<int64_t> MicrosoftABIRuntime::GetOffsetToTop(
              in_value.GetPointerValue().address, strategy,
              in_type.GetTypeName(), *offset, type.GetTypeName());
 
+    // TODO: Ideally, we could also store the case where we can't find the
+    // offset. This would need to be invalidated when new modules or debug info
+    // is loaded, as those could contain info about the vtables.
     std::scoped_lock<std::mutex> g(m_mutex);
-    m_offset_to_top_map[vtable_info.addr] = offset;
+    m_offset_to_top_map[vtable_info.addr] = *offset;
   }
 
   return offset;
