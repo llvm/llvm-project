@@ -5775,6 +5775,33 @@ def CIR_AddrOfReturnAddrOp : CIR_Op<"address_of_return_address"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AMDGPUFeaturePredicateOp
+//===----------------------------------------------------------------------===//
+
+def CIR_AMDGPUFeaturePredicateOp : CIR_Op<"amdgpu_feature_predicate"> {
+  let summary = "AMDGPU feature predicate resolved at JIT time";
+
+  let description = [{
+    Represents `__builtin_amdgcn_processor_is` and
+    `__builtin_amdgcn_is_invocable` when targeting AMDGCN-flavored SPIR-V.
+    The result is a specialization constant resolved once the concrete
+    processor is known.
+
+    `predicate` is `is.<processor>` or `has.<features>`.
+
+    Example:
+
+    ```mlir
+    %0 = cir.amdgpu_feature_predicate "is.gfx900"
+    ```
+  }];
+
+  let arguments = (ins StrAttr:$predicate);
+  let results = (outs CIR_BoolType:$result);
+  let assemblyFormat = "$predicate attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // StackSaveOp & StackRestoreOp
 //===----------------------------------------------------------------------===//
 
