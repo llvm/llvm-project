@@ -58,8 +58,8 @@ public:
   void printFileHeaders() override;
   void printSectionHeaders() override;
   void printRelocations() override;
-  void printUnwindInfo() override { llvm_unreachable("unimplemented"); }
-  void printStackMap() const override { llvm_unreachable("unimplemented"); }
+  void printUnwindInfo() override {}
+  void printStackMap() const override {}
 
 protected:
   void printSymbol(const SymbolRef &Sym);
