@@ -184,6 +184,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`boost-use-ranges
+  <clang-tidy/checks/boost/use-ranges>` check by using token-based comma
+  removal for argument fix-its and suppressing partial fix-its when a comma
+  comes from a macro expansion.
+
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
   assignments inside GNU statement expressions unless they form the value of
@@ -253,6 +258,11 @@ infrastructure are described first, followed by tool-specific sections.
   instead of the class name, whenever the destructor is user-declared. The
   diagnostics are still emitted at the class name for implicitly declared
   destructors.
+
+- Improved {doc}`llvm-use-ranges
+  <clang-tidy/checks/llvm/use-ranges>` check by using token-based comma
+  removal for argument fix-its and suppressing partial fix-its when a comma
+  comes from a macro expansion.
 
 - Improved {doc}`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
@@ -328,6 +338,10 @@ infrastructure are described first, followed by tool-specific sections.
 
   - Kept diagnostics but suppressed unsafe fix-its when no safe
     result-preserving rewrite is available.
+
+  - Fixed comma removal in argument fix-its using token-based lexing instead of
+    fixed character offsets, and suppressed partial fix-its when a comma comes
+    from a macro expansion.
 
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
