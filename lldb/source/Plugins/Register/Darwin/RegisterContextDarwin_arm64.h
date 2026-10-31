@@ -1,4 +1,5 @@
-//===-- RegisterContextDarwin_arm.h -----------------------------*- C++ -*-===//
+//===-- RegisterContextDarwin_arm64.h -----------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,29 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDARWIN_ARM_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDARWIN_ARM_H
+#ifndef LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM64_H
+#define LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM64_H
 
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
-
-// BCR address match type
-#define BCR_M_IMVA_MATCH ((uint32_t)(0u << 21))
-#define BCR_M_CONTEXT_ID_MATCH ((uint32_t)(1u << 21))
-#define BCR_M_IMVA_MISMATCH ((uint32_t)(2u << 21))
-#define BCR_M_RESERVED ((uint32_t)(3u << 21))
-
-// Link a BVR/BCR or WVR/WCR pair to another
-#define E_ENABLE_LINKING ((uint32_t)(1u << 20))
-
-// Byte Address Select
-#define BAS_IMVA_PLUS_0 ((uint32_t)(1u << 5))
-#define BAS_IMVA_PLUS_1 ((uint32_t)(1u << 6))
-#define BAS_IMVA_PLUS_2 ((uint32_t)(1u << 7))
-#define BAS_IMVA_PLUS_3 ((uint32_t)(1u << 8))
-#define BAS_IMVA_0_1 ((uint32_t)(3u << 5))
-#define BAS_IMVA_2_3 ((uint32_t)(3u << 7))
-#define BAS_IMVA_ALL ((uint32_t)(0xfu << 5))
 
 // Break only in privileged or user mode
 #define S_RSVD ((uint32_t)(0u << 1))
@@ -36,19 +19,18 @@
 #define S_USER ((uint32_t)(2u << 1))
 #define S_PRIV_USER ((S_PRIV) | (S_USER))
 
-#define BCR_ENABLE ((uint32_t)(1u))
 #define WCR_ENABLE ((uint32_t)(1u))
 
 // Watchpoint load/store
 #define WCR_LOAD ((uint32_t)(1u << 3))
 #define WCR_STORE ((uint32_t)(1u << 4))
 
-class RegisterContextDarwin_arm : public lldb_private::RegisterContext {
+class RegisterContextDarwin_arm64 : public lldb_private::RegisterContext {
 public:
-  RegisterContextDarwin_arm(lldb_private::Thread &thread,
-                            uint32_t concrete_frame_idx);
+  RegisterContextDarwin_arm64(lldb_private::Thread &thread,
+                              uint32_t concrete_frame_idx);
 
-  ~RegisterContextDarwin_arm() override;
+  ~RegisterContextDarwin_arm64() override;
 
   void InvalidateAllRegisters() override;
 
@@ -73,12 +55,6 @@ public:
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                uint32_t num) override;
 
-  uint32_t NumSupportedHardwareBreakpoints() override;
-
-  uint32_t SetHardwareBreakpoint(lldb::addr_t addr, size_t size) override;
-
-  bool ClearHardwareBreakpoint(uint32_t hw_idx) override;
-
   uint32_t NumSupportedHardwareWatchpoints() override;
 
   uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size, bool read,
@@ -86,68 +62,59 @@ public:
 
   bool ClearHardwareWatchpoint(uint32_t hw_index) override;
 
+  // mirrors <mach/arm/thread_status.h> arm_thread_state64_t
   struct GPR {
-    uint32_t r[16]; // R0-R15
-    uint32_t cpsr;  // CPSR
+    uint64_t x[29]; // x0-x28
+    uint64_t fp;    // x29
+    uint64_t lr;    // x30
+    uint64_t sp;    // x31
+    uint64_t pc;    // pc
+    uint32_t cpsr;  // cpsr
   };
 
-  struct QReg {
-    uint8_t bytes[16];
+  struct VReg {
+    alignas(16) char bytes[16];
   };
 
+  // mirrors <mach/arm/thread_status.h> arm_neon_state64_t
   struct FPU {
-    union {
-      uint32_t s[32];
-      uint64_t d[32];
-      QReg q[16]; // the 128-bit NEON registers
-    } floats;
-    uint32_t fpscr;
+    VReg v[32];
+    uint32_t fpsr;
+    uint32_t fpcr;
   };
 
-  //  struct NeonReg
-  //  {
-  //      uint8_t bytes[16];
-  //  };
-  //
-  //  struct VFPv3
-  //  {
-  //      union {
-  //          uint32_t s[32];
-  //          uint64_t d[32];
-  //          NeonReg  q[16];
-  //      } v3;
-  //      uint32_t fpscr;
-  //  };
-
+  // mirrors <mach/arm/thread_status.h> arm_exception_state64_t
   struct EXC {
-    uint32_t exception;
-    uint32_t fsr; /* Fault status */
-    uint32_t far; /* Virtual Fault Address */
+    uint64_t far;       // Virtual Fault Address
+    uint32_t esr;       // Exception syndrome
+    uint32_t exception; // number of arm exception token
   };
 
+  // mirrors <mach/arm/thread_status.h> arm_debug_state64_t
   struct DBG {
-    uint32_t bvr[16];
-    uint32_t bcr[16];
-    uint32_t wvr[16];
-    uint32_t wcr[16];
+    uint64_t bvr[16];
+    uint64_t bcr[16];
+    uint64_t wvr[16];
+    uint64_t wcr[16];
+    uint64_t mdscr_el1;
   };
 
   static void LogDBGRegisters(lldb_private::Log *log, const DBG &dbg);
 
 protected:
   enum {
-    GPRRegSet = 1,    // ARM_THREAD_STATE
-    GPRAltRegSet = 9, // ARM_THREAD_STATE32
-    FPURegSet = 2,    // ARM_VFP_STATE
-    EXCRegSet = 3,    // ARM_EXCEPTION_STATE
-    DBGRegSet = 4     // ARM_DEBUG_STATE
+    GPRRegSet = 6,  // ARM_THREAD_STATE64
+    FPURegSet = 17, // ARM_NEON_STATE64
+    EXCRegSet = 7,  // ARM_EXCEPTION_STATE64
+    DBGRegSet = 15  // ARM_DEBUG_STATE64
   };
 
   enum {
-    GPRWordCount = sizeof(GPR) / sizeof(uint32_t),
-    FPUWordCount = sizeof(FPU) / sizeof(uint32_t),
-    EXCWordCount = sizeof(EXC) / sizeof(uint32_t),
-    DBGWordCount = sizeof(DBG) / sizeof(uint32_t)
+    GPRWordCount = sizeof(GPR) / sizeof(uint32_t), // ARM_THREAD_STATE64_COUNT
+    FPUWordCount = sizeof(FPU) / sizeof(uint32_t), // ARM_NEON_STATE64_COUNT
+    EXCWordCount =
+        sizeof(EXC) / sizeof(uint32_t),           // ARM_EXCEPTION_STATE64_COUNT
+    DBGWordCount = sizeof(DBG) / sizeof(uint32_t) // ARM_DEBUG_STATE64_COUNT
   };
 
   enum { Read = 0, Write = 1, kNumErrors = 2 };
@@ -261,4 +228,4 @@ protected:
   static const lldb_private::RegisterInfo *GetRegisterInfos();
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDARWIN_ARM_H
+#endif // LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM64_H
