@@ -1,5 +1,5 @@
 ;; Test callsite context graph generation for call graph with with MIBs
-;; that have pruned contexts that partially match multiple inlined
+;; that have trimmed contexts that partially match multiple inlined
 ;; callsite contexts, requiring duplication of context ids and nodes
 ;; while matching callsite nodes onto the graph. Also tests graph and IR
 ;; cloning.
@@ -44,7 +44,7 @@
 ;;
 ;; The code below was created by forcing inlining of C into both B and E.
 ;; Since both allocation contexts via C are cold, the matched memprof
-;; metadata has the context pruned above C's callsite. This requires
+;; metadata has the context trimmed above C's callsite. This requires
 ;; matching the stack node for C to callsites where it was inlined (i.e.
 ;; the callsites in B and E that have callsite metadata that includes C's).
 ;; It also requires duplication of that node in the graph as well as the

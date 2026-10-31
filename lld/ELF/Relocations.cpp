@@ -361,7 +361,7 @@ public:
         ++i;
       if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off) {
         Err(ctx) << ".eh_frame: relocation is not in any piece";
-        return 0;
+        return -1;
       }
       it = i;
     }

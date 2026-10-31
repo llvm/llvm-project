@@ -15,67 +15,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVR.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/PassManager.h"
 
 using namespace llvm;
 
 namespace {
 
-class AVRShiftExpand : public FunctionPass {
+class AVRShiftExpandLegacy : public FunctionPass {
 public:
   static char ID;
 
-  AVRShiftExpand() : FunctionPass(ID) {}
+  AVRShiftExpandLegacy() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
 
   StringRef getPassName() const override { return "AVR Shift Expansion"; }
-
-private:
-  void expand(BinaryOperator *BI);
 };
 
 } // end of anonymous namespace
 
-char AVRShiftExpand::ID = 0;
+char AVRShiftExpandLegacy::ID = 0;
 
-INITIALIZE_PASS(AVRShiftExpand, "avr-shift-expand", "AVR Shift Expansion",
+INITIALIZE_PASS(AVRShiftExpandLegacy, "avr-shift-expand", "AVR Shift Expansion",
                 false, false)
 
-Pass *llvm::createAVRShiftExpandPass() { return new AVRShiftExpand(); }
-
-bool AVRShiftExpand::runOnFunction(Function &F) {
-  SmallVector<BinaryOperator *, 1> ShiftInsts;
-  auto &Ctx = F.getContext();
-  for (Instruction &I : instructions(F)) {
-    if (!I.isShift())
-      // Only expand shift instructions (shl, lshr, ashr).
-      continue;
-    if (I.getType() == Type::getInt8Ty(Ctx) ||
-        I.getType() == Type::getInt16Ty(Ctx))
-      // Only expand non-8-bit and non-16-bit shifts, since those are expanded
-      // directly during isel.
-      continue;
-    if (isa<ConstantInt>(I.getOperand(1)))
-      // Only expand when the shift amount is not known.
-      // Known shift amounts are (currently) better expanded inline.
-      continue;
-    ShiftInsts.push_back(cast<BinaryOperator>(&I));
-  }
-
-  // The expanding itself needs to be done separately as expand() will remove
-  // these instructions. Removing instructions while iterating over a basic
-  // block is not a great idea.
-  for (auto *I : ShiftInsts) {
-    expand(I);
-  }
-
-  // Return whether this function expanded any shift instructions.
-  return ShiftInsts.size() > 0;
+Pass *llvm::createAVRShiftExpandLegacyPass() {
+  return new AVRShiftExpandLegacy();
 }
 
-void AVRShiftExpand::expand(BinaryOperator *BI) {
+static void expandBinaryOperator(BinaryOperator *BI) {
   auto &Ctx = BI->getContext();
   IRBuilder<> Builder(BI);
   Type *InputTy = cast<Instruction>(BI)->getType();
@@ -147,4 +118,44 @@ void AVRShiftExpand::expand(BinaryOperator *BI) {
   // Replace the original shift instruction.
   BI->replaceAllUsesWith(Result);
   BI->eraseFromParent();
+}
+
+static bool expandShiftsInFunction(Function &F) {
+  SmallVector<BinaryOperator *, 1> ShiftInsts;
+  auto &Ctx = F.getContext();
+  for (Instruction &I : instructions(F)) {
+    if (!I.isShift())
+      // Only expand shift instructions (shl, lshr, ashr).
+      continue;
+    if (I.getType() == Type::getInt8Ty(Ctx) ||
+        I.getType() == Type::getInt16Ty(Ctx))
+      // Only expand non-8-bit and non-16-bit shifts, since those are expanded
+      // directly during isel.
+      continue;
+    if (isa<ConstantInt>(I.getOperand(1)))
+      // Only expand when the shift amount is not known.
+      // Known shift amounts are (currently) better expanded inline.
+      continue;
+    ShiftInsts.push_back(cast<BinaryOperator>(&I));
+  }
+
+  // The expanding itself needs to be done separately as expand() will remove
+  // these instructions. Removing instructions while iterating over a basic
+  // block is not a great idea.
+  for (auto *I : ShiftInsts) {
+    expandBinaryOperator(I);
+  }
+
+  // Return whether this function expanded any shift instructions.
+  return ShiftInsts.size() > 0;
+}
+
+bool AVRShiftExpandLegacy::runOnFunction(Function &F) {
+  return expandShiftsInFunction(F);
+}
+
+PreservedAnalyses AVRShiftExpandPass::run(Function &F,
+                                          FunctionAnalysisManager &FAM) {
+  return expandShiftsInFunction(F) ? PreservedAnalyses::none()
+                                   : PreservedAnalyses::all();
 }

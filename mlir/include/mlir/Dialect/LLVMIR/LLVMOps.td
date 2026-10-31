@@ -161,8 +161,12 @@ def LLVM_UDivOp : LLVM_IntArithmeticOpWithExactFlag<"udiv", "UDiv",
     [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
 def LLVM_SDivOp : LLVM_IntArithmeticOpWithExactFlag<"sdiv", "SDiv",
     [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
-def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem", [Pure]>;
-def LLVM_SRemOp : LLVM_IntArithmeticOp<"srem", "SRem", [Pure]>;
+def LLVM_URemOp : LLVM_IntArithmeticOp<
+    "urem", "URem",
+    [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
+def LLVM_SRemOp : LLVM_IntArithmeticOp<
+    "srem", "SRem",
+    [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
 def LLVM_AndOp : LLVM_IntArithmeticOp<"and", "And", [Pure]>;
 def LLVM_OrOp : LLVM_IntArithmeticOpWithDisjointFlag<"or", "Or", [Pure]> {
   let hasFolder = 1;

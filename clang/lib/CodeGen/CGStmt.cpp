@@ -1699,11 +1699,11 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
 
 auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
     -> const BreakContinue * {
-  if (!S.hasLabelTarget())
+  if (!S.isNamed())
     return &BreakContinueStack.back();
 
   const Stmt *LoopOrSwitch = S.getNamedLoopOrSwitch();
-  assert(LoopOrSwitch && "break/continue target not set?");
+  assert(LoopOrSwitch && "break/continue target label not available?");
   for (const BreakContinue &BC : llvm::reverse(BreakContinueStack))
     if (BC.LoopOrSwitch == LoopOrSwitch)
       return &BC;
@@ -1848,18 +1848,14 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
     Builder.getInt(S.getLHS()->EvaluateKnownConstInt(getContext()));
 
   // Emit debuginfo for the case value if it is an enum value.
-  const ConstantExpr *CE;
-  if (auto ICE = dyn_cast<ImplicitCastExpr>(S.getLHS()))
-    CE = dyn_cast<ConstantExpr>(ICE->getSubExpr());
-  else
-    CE = dyn_cast<ConstantExpr>(S.getLHS());
-  if (CE) {
-    if (auto DE = dyn_cast<DeclRefExpr>(CE->getSubExpr()))
-      if (CGDebugInfo *Dbg = getDebugInfo())
-        if (CGM.getCodeGenOpts().hasReducedDebugInfo())
-          Dbg->EmitGlobalVariable(DE->getDecl(),
-              APValue(llvm::APSInt(CaseVal->getValue())));
-  }
+  // Look through implicit casts and check the subexpression of ConstantExpr.
+  const auto *CE = dyn_cast<ConstantExpr>(S.getLHS()->IgnoreImpCasts());
+  const Expr *SubExpr = CE ? CE->getSubExpr() : S.getLHS()->IgnoreImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr))
+    if (CGDebugInfo *Dbg = getDebugInfo())
+      if (CGM.getCodeGenOpts().hasReducedDebugInfo())
+        Dbg->EmitGlobalVariable(DRE->getDecl(),
+                                APValue(llvm::APSInt(CaseVal->getValue())));
 
   if (SwitchLikelihood)
     SwitchLikelihood->push_back(Stmt::getLikelihood(Attrs));

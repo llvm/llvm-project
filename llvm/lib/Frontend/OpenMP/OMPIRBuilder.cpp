@@ -2317,8 +2317,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     Builder.CreateBr(*FiniBBOrErr);
     // There's currently a branch to omp.par.exit. Delete it. We will get there
     // via the fini block
-    if (Instruction *Term = Builder.GetInsertBlock()->getTerminator())
-      Term->eraseFromParent();
+    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
   }
 
   // Register the outlined info.
@@ -10715,8 +10714,6 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   auto *FnTy =
       FunctionType::get(Builder.getVoidTy(), Params, /* IsVarArg */ false);
 
-  SmallString<64> TyStr;
-  raw_svector_ostream Out(TyStr);
   Function *MapperFn =
       Function::Create(FnTy, GlobalValue::InternalLinkage, FuncName, M);
   MapperFn->addFnAttr(Attribute::NoInline);

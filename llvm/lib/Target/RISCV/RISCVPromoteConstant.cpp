@@ -8,11 +8,13 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
+#include "RISCVTargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -25,6 +27,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -32,7 +35,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "riscv-promote-const"
+#define DEBUG_TYPE "riscv-promote-constant"
 #define RISCV_PROMOTE_CONSTANT_NAME "RISC-V Promote Constants"
 
 STATISTIC(NumPromoted, "Number of constant literals promoted to globals");
@@ -40,10 +43,10 @@ STATISTIC(NumPromotedUses, "Number of uses of promoted literal constants");
 
 namespace {
 
-class RISCVPromoteConstant : public ModulePass {
+class RISCVPromoteConstantLegacy : public ModulePass {
 public:
   static char ID;
-  RISCVPromoteConstant() : ModulePass(ID) {}
+  RISCVPromoteConstantLegacy() : ModulePass(ID) {}
 
   StringRef getPassName() const override { return RISCV_PROMOTE_CONSTANT_NAME; }
 
@@ -52,41 +55,21 @@ public:
     AU.setPreservesCFG();
   }
 
-  /// Iterate over the functions and promote the double fp constants that
-  /// would otherwise go into the constant pool to a constant array.
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-    // TargetMachine and Subtarget are needed to query isFPImmlegal.
-    const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-    const TargetMachine &TM = TPC.getTM<TargetMachine>();
-    bool Changed = false;
-    for (Function &F : M) {
-      if (F.isDeclaration())
-        continue;
-      const RISCVSubtarget &ST = TM.getSubtarget<RISCVSubtarget>(F);
-      const RISCVTargetLowering *TLI = ST.getTargetLowering();
-      Changed |= runOnFunction(F, TLI);
-    }
-    return Changed;
-  }
-
-private:
-  bool runOnFunction(Function &F, const RISCVTargetLowering *TLI);
+  bool runOnModule(Module &M) override;
 };
 } // end anonymous namespace
 
-char RISCVPromoteConstant::ID = 0;
+char RISCVPromoteConstantLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVPromoteConstant, DEBUG_TYPE, RISCV_PROMOTE_CONSTANT_NAME,
-                false, false)
+INITIALIZE_PASS(RISCVPromoteConstantLegacy, DEBUG_TYPE,
+                RISCV_PROMOTE_CONSTANT_NAME, false, false)
 
-ModulePass *llvm::createRISCVPromoteConstantPass() {
-  return new RISCVPromoteConstant();
+ModulePass *llvm::createRISCVPromoteConstantLegacyPass() {
+  return new RISCVPromoteConstantLegacy();
 }
 
-bool RISCVPromoteConstant::runOnFunction(Function &F,
-                                         const RISCVTargetLowering *TLI) {
+static bool promotConstantsInFunction(Function &F,
+                                      const RISCVTargetLowering *TLI) {
   if (F.hasOptNone() || F.hasOptSize())
     return false;
 
@@ -211,4 +194,34 @@ bool RISCVPromoteConstant::runOnFunction(Function &F,
   }
 
   return true;
+}
+
+/// Iterate over the functions and promote the double fp constants that
+/// would otherwise go into the constant pool to a constant array.
+static bool promoteConstantsInModule(Module &M, const TargetMachine &TM) {
+  bool Changed = false;
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    const RISCVSubtarget &ST = TM.getSubtarget<RISCVSubtarget>(F);
+    const RISCVTargetLowering *TLI = ST.getTargetLowering();
+    Changed |= promotConstantsInFunction(F, TLI);
+  }
+  return Changed;
+}
+
+bool RISCVPromoteConstantLegacy::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+  // TargetMachine and Subtarget are needed to query isFPImmlegal.
+  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  return promoteConstantsInModule(M, TM);
+}
+
+PreservedAnalyses RISCVPromoteConstantPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  return promoteConstantsInModule(M, *TM)
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

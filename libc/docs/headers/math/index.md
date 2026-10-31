@@ -180,7 +180,7 @@ log
 | cbrt      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         | {{ check }}             | 7.12.7.1               | F.10.4.1                   |
 | compoundn |                   |                  |                         |                       |                         |                         | 7.12.7.2               | F.10.4.2                   |
 | cos       | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.4.5               | F.10.1.5                   |
-| cosh      | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.5.4               | F.10.2.4                   |
+| cosh      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.5.4               | F.10.2.4                   |
 | cospi     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.4.12              | F.10.1.12                  |
 | dsqrt     | N/A               | N/A              | {{ check }}             | N/A                   | {{ check }}\*           |                         | 7.12.14.6              | F.10.11                    |
 | erf       | {{ check }}       |                  |                         |                       |                         |                         | 7.12.8.1               | F.10.5.1                   |
@@ -211,11 +211,11 @@ log
 | rsqrt     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.7.9               | F.10.4.9                   |
 | sin       | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.4.6               | F.10.1.6                   |
 | sincos    | {{ check }}       | {{ check }}      |                         |                       |                         |                         |                        |                            |
-| sinh      | {{ check }}       |                  |                         | {{ check }}           |                         | {{ check }}             | 7.12.5.5               | F.10.2.5                   |
+| sinh      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         | {{ check }}             | 7.12.5.5               | F.10.2.5                   |
 | sinpi     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.4.13              | F.10.1.13                  |
 | sqrt      | {{ check }}       | {{ check }}      | {{ check }}             | {{ check }}           | {{ check }}             | {{ check }}             | 7.12.7.10              | F.10.4.10                  |
 | tan       | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         | {{ check }}             | 7.12.4.7               | F.10.1.7                   |
-| tanh      | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.5.6               | F.10.2.6                   |
+| tanh      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         |                         | 7.12.5.6               | F.10.2.6                   |
 | tanpi     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.4.14              | F.10.1.14                  |
 | tgamma    |                   |                  |                         |                       |                         |                         | 7.12.8.4               | F.10.5.4                   |
 

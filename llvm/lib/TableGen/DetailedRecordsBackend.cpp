@@ -130,20 +130,18 @@ void DetailedRecordsEmitter::printDefms(const Record &Rec, raw_ostream &OS) {
 // Print the template arguments of a class.
 void DetailedRecordsEmitter::printTemplateArgs(const Record &Rec,
                                                raw_ostream &OS) {
-  ArrayRef<const Init *> Args = Rec.getTemplateArgs();
+  ArrayRef<RecordVal> Args = Rec.getTemplateArgs();
   if (Args.empty()) {
     OS << "  Template args: (none)\n";
     return;
   }
 
   OS << "  Template args:\n";
-  for (const Init *ArgName : Args) {
-    const RecordVal *Value = Rec.getValue(ArgName);
-    assert(Value && "Template argument value not found.");
+  for (const RecordVal &Arg : Args) {
     OS << "    ";
-    Value->print(OS, false);
+    Arg.print(OS, false);
     OS << formatv("  |{0}|\n",
-                  SrcMgr.getFormattedLocationNoOffset(Value->getLoc()));
+                  SrcMgr.getFormattedLocationNoOffset(Arg.getLoc()));
   }
 }
 
@@ -176,13 +174,12 @@ void DetailedRecordsEmitter::printFields(const Record &Rec, raw_ostream &OS) {
   }
 
   OS << "  Fields:\n";
-  for (const RecordVal &Value : ValueList)
-    if (!Rec.isTemplateArg(Value.getNameInit())) {
-      OS << "    ";
-      Value.print(OS, false);
-      OS << formatv("  |{0}|\n",
-                    SrcMgr.getFormattedLocationNoOffset(Value.getLoc()));
-    }
+  for (const RecordVal &Value : ValueList) {
+    OS << "    ";
+    Value.print(OS, false);
+    OS << formatv("  |{0}|\n",
+                  SrcMgr.getFormattedLocationNoOffset(Value.getLoc()));
+  }
 }
 
 // This function is called by TableGen after parsing the files.
