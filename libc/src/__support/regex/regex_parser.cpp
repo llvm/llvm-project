@@ -13,13 +13,16 @@
 
 #include "src/__support/regex/regex_parser.h"
 
+#include "hdr/limits_macros.h"
 #include "hdr/regex_macros.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/scope.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/alloc-checker.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/regex/regex_ast.h"
@@ -165,17 +168,69 @@ ErrorOr<ExprId> parse_bracket_expr(cpp::string_view &rem, int cflags,
 // Maximum parenthesized group nesting depth to prevent parser stack overflow.
 constexpr size_t MAX_GROUP_DEPTH = 128;
 
+// Parses a decimal repetition bound in [0, RE_DUP_MAX] from the prefix of spec.
+cpp::optional<uint16_t> consume_bound(cpp::string_view &spec) {
+  if (spec.empty() || !internal::isdigit(spec.front()))
+    return cpp::nullopt;
+  uint32_t val = 0;
+  do {
+    val = val * 10 + static_cast<uint32_t>(spec.front() - '0');
+    if (val > RE_DUP_MAX)
+      return cpp::nullopt;
+    spec.remove_prefix(1);
+  } while (!spec.empty() && internal::isdigit(spec.front()));
+  return static_cast<uint16_t>(val);
+}
+
+// Parses a trailing '{m}', '{m,}', or '{m,n}' interval quantifier after '{' has
+// been matched with a leading digit.
+ErrorOr<ExprId> parse_repeat_bounds(cpp::string_view &rem, ExprId atom,
+                                    ExprPool &pool) {
+  rem.remove_prefix(1);
+  // Scan for '}' before parsing bounds so unclosed "a{1,x" reports REG_EBRACE.
+  size_t close_pos = rem.find_first_of('}');
+  if (close_pos == cpp::string_view::npos)
+    return Error(REG_EBRACE);
+  cpp::string_view spec = rem.substr(0, close_pos);
+  rem.remove_prefix(close_pos + 1);
+
+  cpp::optional<uint16_t> min_opt = consume_bound(spec);
+  if (!min_opt.has_value())
+    return Error(REG_BADBR);
+  uint16_t min_val = *min_opt;
+  uint16_t max_val = min_val;
+  if (spec.starts_with(',')) {
+    spec.remove_prefix(1);
+    if (spec.empty()) {
+      max_val = REPEAT_INF;
+    } else {
+      cpp::optional<uint16_t> max_opt = consume_bound(spec);
+      if (!max_opt.has_value() || !spec.empty() || min_val > *max_opt)
+        return Error(REG_BADBR);
+      max_val = *max_opt;
+    }
+  } else if (!spec.empty()) {
+    return Error(REG_BADBR);
+  }
+
+  uint16_t bound = (max_val == REPEAT_INF) ? min_val : max_val;
+  if (bound > 1 && pool.get(atom).rep_expansion > MAX_REPEAT_EXPANSION / bound)
+    return Error(REG_ESPACE);
+  return pool.make_repeat(atom, min_val, max_val);
+}
+
 struct ParsedAtomStack;
 
 ErrorOr<ExprId> parse_alt(cpp::string_view &rem, int cflags, ExprPool &pool,
                           size_t depth, size_t &re_nsub,
                           ParsedAtomStack &stack);
 
-// Parses a single ERE atom and an optional trailing '*', '+', or '?'
+// Parses a single ERE atom and an optional trailing '*', '+', '?', or '{m,n}'
 // quantifier.
 ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
                                       ExprPool &pool, size_t depth,
-                                      size_t &re_nsub, ParsedAtomStack &stack) {
+                                      size_t &re_nsub, ParsedAtomStack &stack,
+                                      ExprId &prefix_atom) {
   char c = rem.front();
   rem.remove_prefix(1);
   ErrorOr<ExprId> atom = INVALID_EXPR_ID;
@@ -236,17 +291,18 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     atom = pool.make_anchor(ANCHOR_EOL);
     can_repeat = false;
     break;
-  // Valid postfix '*', '+', or '?' is consumed after a repeatable atom below;
-  // reaching a quantifier at the start of an atom means it has no preceding
-  // repeatable atom (e.g. "*a", "^*", or doubled "a**").
+  // Valid postfix '*', '+', '?', or '{m,n}' is consumed after a repeatable
+  // atom below; reaching a quantifier at the start of an atom means it has no
+  // preceding repeatable atom (e.g. "*a", "^*", or doubled "a**").
   case '*':
   case '+':
   case '?':
     return Error(REG_BADRPT);
   case '{':
-    if (!rem.empty() && rem.front() >= '0' && rem.front() <= '9')
+    if (!rem.empty() && internal::isdigit(rem.front()))
       return Error(REG_BADRPT);
-    return Error(REG_BADPAT);
+    atom = pool.make_lit('{');
+    break;
   case '[':
     atom = parse_bracket_expr(rem, cflags, pool);
     break;
@@ -280,19 +336,22 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     rem.remove_prefix(1);
     return pool.make_star(*atom);
   }
+  // Push r and Star(r) separately rather than Repeat(r, 1, REPEAT_INF) so
+  // right-to-left folding builds r . (r* . rest) once and regexec peels off
+  // long Concat spines without re-associating r on each repetition.
   if (rem.starts_with('+')) {
     rem.remove_prefix(1);
     ErrorOr<ExprId> star = pool.make_star(*atom);
-    if (!star.has_value())
-      return star;
-    return pool.make_concat(*atom, *star);
+    if (star.has_value())
+      prefix_atom = *atom;
+    return star;
   }
   if (rem.starts_with('?')) {
     rem.remove_prefix(1);
     return pool.make_alt(EMPTY_STR_ID, *atom);
   }
-  if (rem.starts_with('{'))
-    return Error(REG_BADPAT);
+  if (rem.size() >= 2 && rem[0] == '{' && internal::isdigit(rem[1]))
+    return parse_repeat_bounds(rem, *atom, pool);
   return atom;
 }
 
@@ -342,15 +401,20 @@ ErrorOr<ExprId> parse_concat(cpp::string_view &rem, int cflags, ExprPool &pool,
                              size_t depth, size_t &re_nsub,
                              ParsedAtomStack &stack) {
   // Collect quantified atoms for this branch on the shared stack, then fold
-  // right-to-left so right-associative make_concat stays O(1) without orphaned
-  // prefixes.
+  // right-to-left so non-Concat atoms link in O(1) without re-association.
   size_t atom_count = 0;
   while (!rem.empty() && !rem.starts_with('|') &&
          !(depth > 0 && rem.starts_with(')'))) {
-    ErrorOr<ExprId> atom =
-        parse_quantified_atom(rem, cflags, pool, depth, re_nsub, stack);
+    ExprId prefix_atom = INVALID_EXPR_ID;
+    ErrorOr<ExprId> atom = parse_quantified_atom(rem, cflags, pool, depth,
+                                                 re_nsub, stack, prefix_atom);
     if (!atom.has_value())
       return atom;
+    if (prefix_atom != INVALID_EXPR_ID) {
+      if (!stack.push(prefix_atom))
+        return Error(REG_ESPACE);
+      ++atom_count;
+    }
     if (!stack.push(*atom))
       return Error(REG_ESPACE);
     ++atom_count;
