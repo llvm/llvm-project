@@ -52,7 +52,7 @@ static void setThunkProperties(CIRGenModule &cgm, const ThunkInfo &thunk,
 }
 
 mlir::Type CIRGenModule::getVTableComponentType() {
-  mlir::Type ptrTy = builder.getUInt8PtrTy();
+  mlir::Type ptrTy = getGlobalsUInt8PtrTy();
   assert(!cir::MissingFeatures::vtableRelativeLayout());
   return ptrTy;
 }
@@ -142,23 +142,24 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
   const VTableComponent &component = layout.vtable_components()[componentIndex];
 
   CIRGenBuilderTy &builder = cgm.getBuilder();
+  auto componentType = mlir::cast<cir::PointerType>(getVTableComponentType());
 
   assert(!cir::MissingFeatures::vtableRelativeLayout());
 
   switch (component.getKind()) {
   case VTableComponent::CK_UnusedFunctionPointer:
-    return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+    return builder.getConstNullPtrAttr(componentType);
 
   case VTableComponent::CK_VCallOffset:
-    return builder.getConstPtrAttr(builder.getUInt8PtrTy(),
+    return builder.getConstPtrAttr(componentType,
                                    component.getVCallOffset().getQuantity());
 
   case VTableComponent::CK_VBaseOffset:
-    return builder.getConstPtrAttr(builder.getUInt8PtrTy(),
+    return builder.getConstPtrAttr(componentType,
                                    component.getVBaseOffset().getQuantity());
 
   case VTableComponent::CK_OffsetToTop:
-    return builder.getConstPtrAttr(builder.getUInt8PtrTy(),
+    return builder.getConstPtrAttr(componentType,
                                    component.getOffsetToTop().getQuantity());
 
   case VTableComponent::CK_RTTI:
@@ -192,7 +193,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
       if (!canEmitMethod) {
         if (isThunk)
           nextVTableThunkIndex++;
-        return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+        return builder.getConstNullPtrAttr(componentType);
       }
       // Method is acceptable, continue processing as usual.
     }
@@ -254,8 +255,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
     }
 
     return cir::GlobalViewAttr::get(
-        builder.getUInt8PtrTy(),
-        mlir::FlatSymbolRefAttr::get(fnPtr.getSymNameAttr()));
+        componentType, mlir::FlatSymbolRefAttr::get(fnPtr.getSymNameAttr()));
   }
   }
 
@@ -466,10 +466,10 @@ cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *rd) {
 
   VTTBuilder builder(cgm.getASTContext(), rd, /*GenerateDefinition=*/false);
 
-  auto arrayType = cir::ArrayType::get(cgm.getBuilder().getUInt8PtrTy(),
+  auto arrayType = cir::ArrayType::get(cgm.getGlobalsUInt8PtrTy(),
                                        builder.getVTTComponents().size());
   llvm::Align align =
-      cgm.getDataLayout().getABITypeAlign(cgm.getBuilder().getUInt8PtrTy());
+      cgm.getDataLayout().getABITypeAlign(cgm.getGlobalsUInt8PtrTy());
   cir::GlobalOp vtt = cgm.createOrReplaceCXXRuntimeVariable(
       cgm.getLoc(rd->getSourceRange()), name, arrayType,
       cir::GlobalLinkageKind::ExternalLinkage, CharUnits::fromQuantity(align));
@@ -501,7 +501,7 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
 
   mlir::MLIRContext *mlirContext = &cgm.getMLIRContext();
 
-  auto arrayType = cir::ArrayType::get(cgm.getBuilder().getUInt8PtrTy(),
+  auto arrayType = cir::ArrayType::get(cgm.getGlobalsUInt8PtrTy(),
                                        builder.getVTTComponents().size());
 
   SmallVector<cir::GlobalOp> vtables;
@@ -536,8 +536,8 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
 
     auto indicesAttr = mlir::ArrayAttr::get(mlirContext, indices);
     CIRGenBuilderTy &bld = cgm.getBuilder();
-    auto init = bld.getGlobalViewAttr(bld.getUInt8PtrTy(), vtable, indicesAttr,
-                                      /*addressPoint=*/true);
+    auto init = bld.getGlobalViewAttr(cgm.getGlobalsUInt8PtrTy(), vtable,
+                                      indicesAttr, /*addressPoint=*/true);
 
     vttComponents.push_back(init);
   }

@@ -1147,8 +1147,14 @@ mlir::Value CIRAttrToValue::castGlobalAddrToType(mlir::Value addr,
     return mlir::LLVM::BitcastOp::create(rewriter, loc, llvmDstTy, addr);
   }
 
-  if (mlir::isa<cir::VPtrType>(attrType))
+  if (mlir::isa<cir::VPtrType>(attrType)) {
+    auto llvmDstTy =
+        converter->convertType<mlir::LLVM::LLVMPointerType>(attrType);
+    if (addr.getType() != llvmDstTy)
+      return mlir::LLVM::AddrSpaceCastOp::create(rewriter, loc, llvmDstTy,
+                                                 addr);
     return addr;
+  }
 
   llvm_unreachable("Expecting pointer or integer type");
 }
@@ -2113,6 +2119,15 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     assert(!MissingFeatures::dataMemberType());
 
     mlir::Value llvmSrcVal = adaptor.getSrc();
+    if ((mlir::isa<cir::VPtrType>(castOp.getSrc().getType()) ||
+         mlir::isa<cir::VPtrType>(dstTy)) &&
+        mlir::isa<mlir::LLVM::LLVMPointerType>(llvmSrcVal.getType()) &&
+        mlir::isa<mlir::LLVM::LLVMPointerType>(llvmDstTy) &&
+        llvmSrcVal.getType() != llvmDstTy) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AddrSpaceCastOp>(
+          castOp, llvmDstTy, llvmSrcVal);
+      return mlir::success();
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
                                                        llvmSrcVal);
     return mlir::success();
@@ -4328,7 +4343,14 @@ mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
 }
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
-                                 mlir::DataLayout &dataLayout) {
+                                 mlir::DataLayout &dataLayout,
+                                 mlir::ModuleOp module) {
+  unsigned globalAddrSpace = 0;
+  if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          cir::CIRDataLayout(module).getDefaultGlobalsAddrSpace(
+              module.getContext())))
+    globalAddrSpace = targetAS.getValue();
+
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
     mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr = type.getAddrSpace();
     unsigned numericAS = 0;
@@ -4342,9 +4364,9 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       numericAS = targetAsAttr.getValue();
     return mlir::LLVM::LLVMPointerType::get(type.getContext(), numericAS);
   });
-  converter.addConversion([&](cir::VPtrType type) -> mlir::Type {
+  converter.addConversion([globalAddrSpace](cir::VPtrType type) -> mlir::Type {
     assert(!cir::MissingFeatures::addressSpace());
-    return mlir::LLVM::LLVMPointerType::get(type.getContext());
+    return mlir::LLVM::LLVMPointerType::get(type.getContext(), globalAddrSpace);
   });
   // On the device side, surface reference is represented as an object handle
   // in 64-bit integer.
@@ -4876,7 +4898,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::DataLayout dl(module);
   mlir::LLVMTypeConverter converter(&getContext());
-  prepareTypeConverter(converter, dl);
+  prepareTypeConverter(converter, dl, module);
 
   /// Tracks the state required to lower CIR `LabelOp` and `BlockAddressOp`.
   /// Maps labels to their corresponding `BlockTagOp` and keeps bookkeeping
@@ -5088,29 +5110,19 @@ mlir::LogicalResult CIRToLLVMThrowOpLowering::matchAndRewrite(
     return mlir::success();
   }
 
-  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value exceptionPtr = adaptor.getExceptionPtr();
+  mlir::Value typeInfo = adaptor.getTypeInfo();
+  mlir::Value dtor = adaptor.getDtor();
   auto fnTy = mlir::LLVM::LLVMFunctionType::get(
-      voidTy, {llvmPtrTy, llvmPtrTy, llvmPtrTy});
+      voidTy, {exceptionPtr.getType(), typeInfo.getType(), dtor.getType()});
 
-  // Get or create `declare void @__cxa_throw(ptr, ptr, ptr)`
+  // Get or create the __cxa_throw declaration with the operand pointer types.
   const llvm::StringRef fnName = "__cxa_throw";
   createLLVMFuncOpIfNotExist(rewriter, symbolTables, op, fnName, fnTy);
 
-  mlir::Value typeInfo = mlir::LLVM::AddressOfOp::create(
-      rewriter, loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
-      adaptor.getTypeInfoAttr());
-
-  mlir::Value dtor;
-  if (op.getDtor()) {
-    dtor = mlir::LLVM::AddressOfOp::create(rewriter, loc, llvmPtrTy,
-                                           adaptor.getDtorAttr());
-  } else {
-    dtor = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPtrTy);
-  }
-
   auto cxaThrowCall = mlir::LLVM::CallOp::create(
       rewriter, loc, mlir::TypeRange{}, fnName,
-      mlir::ValueRange{adaptor.getExceptionPtr(), typeInfo, dtor});
+      mlir::ValueRange{exceptionPtr, typeInfo, dtor});
 
   rewriter.replaceOp(op, cxaThrowCall);
   return mlir::success();
@@ -5314,8 +5326,10 @@ getValueForVTableSymbol(mlir::Operation *op,
                         mlir::FlatSymbolRefAttr nameAttr, mlir::Type &eltType) {
   auto module = op->getParentOfType<mlir::ModuleOp>();
   mlir::Operation *symbol = symbolTables.lookupSymbolIn(module, nameAttr);
+  unsigned addrSpace = 0;
   if (auto llvmSymbol = mlir::dyn_cast<mlir::LLVM::GlobalOp>(symbol)) {
     eltType = llvmSymbol.getType();
+    addrSpace = llvmSymbol.getAddrSpace();
   } else if (auto cirSymbol = mlir::dyn_cast<cir::GlobalOp>(symbol)) {
     eltType = converter->convertType(cirSymbol.getSymType());
     if (!eltType) {
@@ -5323,6 +5337,9 @@ getValueForVTableSymbol(mlir::Operation *op,
           << " for vtable symbol " << nameAttr;
       return {};
     }
+    if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+            cirSymbol.getAddrSpaceAttr()))
+      addrSpace = targetAS.getValue();
   } else {
     op->emitError() << "unexpected symbol type for " << symbol;
     return {};
@@ -5330,7 +5347,8 @@ getValueForVTableSymbol(mlir::Operation *op,
 
   return mlir::LLVM::AddressOfOp::create(
       rewriter, op->getLoc(),
-      mlir::LLVM::LLVMPointerType::get(op->getContext()), nameAttr.getValue());
+      mlir::LLVM::LLVMPointerType::get(op->getContext(), addrSpace),
+      nameAttr.getValue());
 }
 
 mlir::LogicalResult CIRToLLVMVTableAddrPointOpLowering::matchAndRewrite(
@@ -5374,7 +5392,11 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnAddrOpLowering::matchAndRewrite(
   mlir::Type targetType = getTypeConverter()->convertType(op.getType());
   if (!targetType)
     return emitTypeConversionError(op, op.getType());
-  auto eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  auto eltType = getTypeConverter()->convertType(
+      mlir::cast<cir::PointerType>(op.getType()).getPointee());
+  if (!eltType)
+    return emitTypeConversionError(
+        op, mlir::cast<cir::PointerType>(op.getType()).getPointee());
   llvm::SmallVector<mlir::LLVM::GEPArg> offsets =
       llvm::SmallVector<mlir::LLVM::GEPArg>{op.getIndex()};
   rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
