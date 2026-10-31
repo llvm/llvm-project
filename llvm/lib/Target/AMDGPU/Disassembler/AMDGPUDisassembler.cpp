@@ -30,6 +30,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
+#include "llvm/MC/MCDisassembler/MCExternalSymbolizer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -37,6 +38,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Format.h"
 
 using namespace llvm;
 using namespace llvm::MCD;
@@ -3194,16 +3196,50 @@ void AMDGPUSymbolizer::tryAddingPcLoadReferenceComment(raw_ostream &cStream,
   llvm_unreachable("unimplemented");
 }
 
+class AMDGPUExternalSymbolizer : public MCExternalSymbolizer {
+public:
+  using MCExternalSymbolizer::MCExternalSymbolizer;
+
+  bool tryAddingSymbolicOperand(MCInst &Inst, raw_ostream &cStream,
+                                int64_t Value, uint64_t Address, bool IsBranch,
+                                uint64_t Offset, uint64_t OpSize,
+                                uint64_t InstSize) override {
+    if (!IsBranch)
+      return MCExternalSymbolizer::tryAddingSymbolicOperand(
+          Inst, cStream, Value, Address, IsBranch, Offset, OpSize, InstSize);
+
+    if (SymbolLookUp) {
+      uint64_t ReferenceType = LLVMDisassembler_ReferenceType_In_Branch;
+      const char *ReferenceName = nullptr;
+      if (const char *Name = SymbolLookUp(DisInfo, Value, &ReferenceType,
+                                          Address, &ReferenceName)) {
+        if (ReferenceType == LLVMDisassembler_ReferenceType_DeMangled_Name &&
+            ReferenceName)
+          cStream << ReferenceName << '\n';
+        else
+          cStream << Name << '\n';
+        return false;
+      }
+    }
+
+    cStream << format_hex(static_cast<uint64_t>(Value), 0) << '\n';
+    return false;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Initialization
 //===----------------------------------------------------------------------===//
 
-static MCSymbolizer *createAMDGPUSymbolizer(const Triple &/*TT*/,
-                              LLVMOpInfoCallback /*GetOpInfo*/,
-                              LLVMSymbolLookupCallback /*SymbolLookUp*/,
-                              void *DisInfo,
-                              MCContext *Ctx,
-                              std::unique_ptr<MCRelocationInfo> &&RelInfo) {
+static MCSymbolizer *
+createAMDGPUSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
+                       LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
+                       MCContext *Ctx,
+                       std::unique_ptr<MCRelocationInfo> &&RelInfo) {
+  if (GetOpInfo || SymbolLookUp)
+    return new AMDGPUExternalSymbolizer(*Ctx, std::move(RelInfo), GetOpInfo,
+                                        SymbolLookUp, DisInfo);
+
   return new AMDGPUSymbolizer(*Ctx, std::move(RelInfo), DisInfo);
 }
 
