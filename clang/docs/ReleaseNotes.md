@@ -808,6 +808,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference. (#GH223397)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
+- Fixed a crash when converting between `__bf16` and `__fp16`, such as when passing a `__bf16` value to `__builtin_fmaxf16`, and when converting vectors or matrices of `__bf16` and `_Float16`. (#GH170434)
 - Fixed a crash when a local register variable bound to a pseudo or status register by an `asm` label,
   such as `register long double t __asm("17");` (the flags register), was used as an inline asm operand.
   Such declarations are now rejected, matching GCC. (#GH225033)

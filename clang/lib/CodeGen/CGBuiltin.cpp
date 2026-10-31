@@ -4591,8 +4591,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Vector = EmitScalarExpr(E->getArg(0));
     llvm::Type *ScalarTy = Vector->getType()->getScalarType();
     llvm::Value *StartValue = nullptr;
-    if (E->getNumArgs() == 2)
-      StartValue = Builder.CreateFPCast(EmitScalarExpr(E->getArg(1)), ScalarTy);
+    if (E->getNumArgs() == 2) {
+      const Expr *Start = E->getArg(1);
+      StartValue = EmitScalarConversion(EmitScalarExpr(Start), Start->getType(),
+                                        E->getType(), Start->getExprLoc());
+    }
     llvm::Value *Args[] = {/*start_value=*/StartValue
                                ? StartValue
                                : llvm::ConstantFP::get(ScalarTy, -0.0F),
