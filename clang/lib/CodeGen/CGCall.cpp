@@ -2679,27 +2679,6 @@ static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
   return false;
 }
 
-/// Check if the argument of a function has maybe_undef attribute.
-static bool IsArgumentMaybeUndef(const Decl *TargetDecl,
-                                 unsigned NumRequiredArgs, unsigned ArgNo) {
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-  if (!FD)
-    return false;
-
-  // Assume variadic arguments do not have maybe_undef attribute.
-  if (ArgNo >= NumRequiredArgs)
-    return false;
-
-  // Check if argument has maybe_undef attribute.
-  if (ArgNo < FD->getNumParams()) {
-    const ParmVarDecl *Param = FD->getParamDecl(ArgNo);
-    if (Param && Param->hasAttr<MaybeUndefAttr>())
-      return true;
-  }
-
-  return false;
-}
-
 /// Test if it's legal to apply nofpclass for the given parameter type and it's
 /// lowered IR type.
 static bool canApplyNoFPClass(const ABIArgInfo &AI, QualType ParamType,
@@ -5829,8 +5808,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
 
-    bool ArgHasMaybeUndefAttr =
-        IsArgumentMaybeUndef(TargetDecl, CallInfo.getNumRequiredArgs(), ArgNo);
+    bool ArgHasMaybeUndefAttr = CodeGenUtils::isArgumentMaybeUndef(
+        TargetDecl, CallInfo.getNumRequiredArgs(), ArgNo);
 
     switch (ArgInfo.getKind()) {
     case ABIArgInfo::InAlloca: {
