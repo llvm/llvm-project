@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=aarch64 -S -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s --check-prefixes=FP,ALL
+; RUN: opt -mtriple=aarch64 -S -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s --check-prefixes=FP,NO-RCPC3,ALL
+; RUN: opt -mtriple=aarch64 -mattr=+rcpc3 -S -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s --check-prefixes=FP,RCPC3,ALL
 ; RUN: opt -mtriple=aarch64 -mattr=-fp-armv8 -S -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s --check-prefixes=NOFP,ALL
 
 define half @load_unordered_half(ptr %ptr) {
@@ -23,6 +24,22 @@ define bfloat @load_monotonic_bfloat(ptr %ptr) {
 ; NOFP-NEXT:    ret bfloat [[VAL]]
   %val = load atomic bfloat, ptr %ptr monotonic, align 2
   ret bfloat %val
+}
+
+define float @load_acquire_float(ptr %ptr) {
+; NO-RCPC3-LABEL: define float @load_acquire_float(
+; NO-RCPC3-NEXT:    [[INTVAL:%.*]] = load atomic i32, ptr [[PTR:%.*]] acquire, align 4
+; NO-RCPC3-NEXT:    [[VAL:%.*]] = bitcast i32 [[INTVAL]] to float
+; NO-RCPC3-NEXT:    ret float [[VAL]]
+; RCPC3-LABEL: define float @load_acquire_float(
+; RCPC3-NEXT:    [[VAL:%.*]] = load atomic float, ptr [[PTR:%.*]] acquire, align 4
+; RCPC3-NEXT:    ret float [[VAL]]
+; NOFP-LABEL: define float @load_acquire_float(
+; NOFP-NEXT:    [[INTVAL:%.*]] = load atomic i32, ptr [[PTR:%.*]] acquire, align 4
+; NOFP-NEXT:    [[VAL:%.*]] = bitcast i32 [[INTVAL]] to float
+; NOFP-NEXT:    ret float [[VAL]]
+  %val = load atomic float, ptr %ptr acquire, align 4
+  ret float %val
 }
 
 define double @load_seq_cst_double(ptr %ptr) {
@@ -58,11 +75,34 @@ define void @store_monotonic_bfloat(ptr %ptr, bfloat %val) {
   ret void
 }
 
+define void @store_release_float(ptr %ptr, float %val) {
+; NO-RCPC3-LABEL: define void @store_release_float(
+; NO-RCPC3-NEXT:    [[INTVAL:%.*]] = bitcast float [[VAL:%.*]] to i32
+; NO-RCPC3-NEXT:    store atomic i32 [[INTVAL]], ptr [[PTR:%.*]] release, align 4
+; NO-RCPC3-NEXT:    ret void
+; RCPC3-LABEL: define void @store_release_float(
+; RCPC3-NEXT:    store atomic float [[VAL:%.*]], ptr [[PTR:%.*]] release, align 4
+; RCPC3-NEXT:    ret void
+; NOFP-LABEL: define void @store_release_float(
+; NOFP-NEXT:    [[INTVAL:%.*]] = bitcast float [[VAL:%.*]] to i32
+; NOFP-NEXT:    store atomic i32 [[INTVAL]], ptr [[PTR:%.*]] release, align 4
+; NOFP-NEXT:    ret void
+  store atomic float %val, ptr %ptr release, align 4
+  ret void
+}
+
 define void @store_seq_cst_double(ptr %ptr, double %val) {
-; ALL-LABEL: define void @store_seq_cst_double(
-; ALL-NEXT:    [[INTVAL:%.*]] = bitcast double [[VAL:%.*]] to i64
-; ALL-NEXT:    store atomic i64 [[INTVAL]], ptr [[PTR:%.*]] seq_cst, align 8
-; ALL-NEXT:    ret void
+; NO-RCPC3-LABEL: define void @store_seq_cst_double(
+; NO-RCPC3-NEXT:    [[INTVAL:%.*]] = bitcast double [[VAL:%.*]] to i64
+; NO-RCPC3-NEXT:    store atomic i64 [[INTVAL]], ptr [[PTR:%.*]] seq_cst, align 8
+; NO-RCPC3-NEXT:    ret void
+; RCPC3-LABEL: define void @store_seq_cst_double(
+; RCPC3-NEXT:    store atomic double [[VAL:%.*]], ptr [[PTR:%.*]] seq_cst, align 8
+; RCPC3-NEXT:    ret void
+; NOFP-LABEL: define void @store_seq_cst_double(
+; NOFP-NEXT:    [[INTVAL:%.*]] = bitcast double [[VAL:%.*]] to i64
+; NOFP-NEXT:    store atomic i64 [[INTVAL]], ptr [[PTR:%.*]] seq_cst, align 8
+; NOFP-NEXT:    ret void
   store atomic double %val, ptr %ptr seq_cst, align 8
   ret void
 }

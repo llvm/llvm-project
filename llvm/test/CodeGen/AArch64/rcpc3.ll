@@ -72,6 +72,25 @@ define hidden nofpclass(nan inf) <2 x double> @test_ldap1_2xdouble_lane1(ptr noc
   ret <2 x double> %ldap1
 }
 
+define hidden <2 x double> @test_ldap1_2xi64_bitcast_double_lane0(ptr nocapture noundef readonly %a, <2 x double> noundef %b) local_unnamed_addr {
+;
+; RCPC3-LABEL: test_ldap1_2xi64_bitcast_double_lane0:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    ldap1 { v0.d }[0], [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_ldap1_2xi64_bitcast_double_lane0:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    ldapr x8, [x0]
+; NO-RCPC3-NEXT:    fmov d1, x8
+; NO-RCPC3-NEXT:    mov v0.d[0], v1.d[0]
+; NO-RCPC3-NEXT:    ret
+  %1 = load atomic i64, ptr %a acquire, align 8
+  %2 = bitcast i64 %1 to double
+  %ldap1 = insertelement <2 x double> %b, double %2, i64 0
+  ret <2 x double> %ldap1
+}
+
 define hidden <1 x i64> @test_ldap1_1xi64_lane0(ptr nocapture noundef readonly %a, <1 x i64> noundef %b) local_unnamed_addr {
 ;
 ; RCPC3-LABEL: test_ldap1_1xi64_lane0:
@@ -105,6 +124,25 @@ define hidden nofpclass(nan inf) <1 x double> @test_ldap1_1xdouble_lane0(ptr noc
 ; NO-RCPC3-NEXT:    ret
   %1 = load atomic double, ptr %a acquire, align 8
   %ldap1 = insertelement <1 x double> poison, double %1, i64 0
+  ret <1 x double> %ldap1
+}
+
+define hidden <1 x double> @test_ldap1_1xi64_bitcast_double_lane0(ptr nocapture noundef readonly %a) local_unnamed_addr {
+;
+; RCPC3-LABEL: test_ldap1_1xi64_bitcast_double_lane0:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    ldap1 { v0.d }[0], [x0]
+; RCPC3-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_ldap1_1xi64_bitcast_double_lane0:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    ldapr x8, [x0]
+; NO-RCPC3-NEXT:    fmov d0, x8
+; NO-RCPC3-NEXT:    ret
+  %1 = load atomic i64, ptr %a acquire, align 8
+  %2 = bitcast i64 %1 to double
+  %ldap1 = insertelement <1 x double> poison, double %2, i64 0
   ret <1 x double> %ldap1
 }
 
@@ -159,6 +197,24 @@ define hidden void @test_stl1_2xdouble_lane0(ptr nocapture noundef writeonly %a,
   ret void
 }
 
+define hidden void @test_stl1_2xdouble_bitcast_i64_lane0(ptr nocapture noundef writeonly %a, <2 x double> noundef %b) local_unnamed_addr {
+;
+; RCPC3-LABEL: test_stl1_2xdouble_bitcast_i64_lane0:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stl1 { v0.d }[0], [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_stl1_2xdouble_bitcast_i64_lane0:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    fmov x8, d0
+; NO-RCPC3-NEXT:    stlr x8, [x0]
+; NO-RCPC3-NEXT:    ret
+  %1 = extractelement <2 x double> %b, i64 0
+  %2 = bitcast double %1 to i64
+  store atomic i64 %2, ptr %a release, align 8
+  ret void
+}
+
 define hidden void @test_stl1_2xdouble_lane1(ptr nocapture noundef writeonly %a, <2 x double> noundef nofpclass(nan inf) %b) local_unnamed_addr {
 ;
 ; RCPC3-LABEL: test_stl1_2xdouble_lane1:
@@ -196,6 +252,24 @@ define hidden void @test_stl1_1xi64_lane0(ptr nocapture noundef writeonly %a, <1
   ret void
 }
 
+define hidden void @test_stl1_1xdouble_bitcast_i64_lane0(ptr nocapture noundef writeonly %a, <1 x double> noundef %b) local_unnamed_addr {
+;
+; RCPC3-LABEL: test_stl1_1xdouble_bitcast_i64_lane0:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    // kill: def $d0 killed $d0 def $q0
+; RCPC3-NEXT:    stl1 { v0.d }[0], [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_stl1_1xdouble_bitcast_i64_lane0:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    fmov x8, d0
+; NO-RCPC3-NEXT:    stlr x8, [x0]
+; NO-RCPC3-NEXT:    ret
+  %1 = bitcast <1 x double> %b to i64
+  store atomic i64 %1, ptr %a release, align 8
+  ret void
+}
+
 define hidden void @test_stl1_1xdouble_lane0(ptr nocapture noundef writeonly %a, <1 x double> noundef nofpclass(nan inf) %b) local_unnamed_addr {
 ;
 ; RCPC3-LABEL: test_stl1_1xdouble_lane0:
@@ -214,26 +288,34 @@ define hidden void @test_stl1_1xdouble_lane0(ptr nocapture noundef writeonly %a,
   ret void
 }
 
-; The remaining tests do not have any particular RCPC3-specific codegen:
-
 ; load-acquire a plain non-vector double value
 define hidden double @test_double_load(ptr nocapture noundef readonly %a) local_unnamed_addr {
-; BOTH-LABEL: test_double_load:
-; BOTH:       // %bb.0:
-; BOTH-NEXT:    ldapr x8, [x0]
-; BOTH-NEXT:    fmov d0, x8
-; BOTH-NEXT:    ret
+; RCPC3-LABEL: test_double_load:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    ldapur d0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_double_load:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    ldapr x8, [x0]
+; NO-RCPC3-NEXT:    fmov d0, x8
+; NO-RCPC3-NEXT:    ret
   %1 = load atomic double, ptr %a acquire, align 8
   ret double %1
 }
 
 ; store-release a plain non-vector double value
 define hidden void @test_double_store(ptr nocapture noundef writeonly %a, double noundef %b) local_unnamed_addr {
-; BOTH-LABEL: test_double_store:
-; BOTH:       // %bb.0:
-; BOTH-NEXT:    fmov x8, d0
-; BOTH-NEXT:    stlr x8, [x0]
-; BOTH-NEXT:    ret
+; RCPC3-LABEL: test_double_store:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stlur d0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_double_store:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    fmov x8, d0
+; NO-RCPC3-NEXT:    stlr x8, [x0]
+; NO-RCPC3-NEXT:    ret
   store atomic double %b, ptr %a release, align 8
   ret void
 }
