@@ -4751,11 +4751,15 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
     /// Return the callee of this operation
     mlir::CallInterfaceCallable getCallableForCallee() {
+      if (isIndirect())
+        return getIndirectCall();
       return (*this)->getAttrOfType<mlir::SymbolRefAttr>("callee");
     }
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      if (isIndirect())
+        return setOperand(0, mlir::cast<mlir::Value>(callee));
       (*this)->setAttr(getCalleeAttrName(),
                        mlir::cast<mlir::SymbolRefAttr>(callee));
     }
