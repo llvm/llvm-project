@@ -31,11 +31,13 @@ int baz() { return y + x; }
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -DX -o %t-x.o
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -DY -o %t-y.o
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -DZ -o %t-z.o
+// RUN: %clang -cc1 %s -triple nvptx64-nvidia-cuda -emit-llvm-bc -fvisibility=hidden -DZ -o %t-z.bc
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -DW -o %t-w.o
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -DU -o %t-u.o
 // RUN: llvm-ar rcs %t-x.a %t-x.o
 // RUN: llvm-ar rcs %t-y.a %t-y.o
 // RUN: llvm-ar rcs %t-z.a %t-z.o
+// RUN: llvm-ar rcs %t-z.bc.a %t-z.bc
 // RUN: llvm-ar rcs %t-w.a %t-w.o
 // RUN: llvm-ar rcs %t-u.a %t-u.o
 
@@ -70,11 +72,27 @@ int baz() { return y + x; }
 // FORWARD: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.o {{.*}}-u-{{.*}}.o {{.*}}-y-{{.*}}.o {{.*}}-z-{{.*}}.o {{.*}}-w-{{.*}}.o
 
 //
-// Same as above but we use '--undefined' to forcibly extract 'libz.a'
+// Same as above, but '-u' and '--undefined' forcibly extract 'libz.a'
+// without being forwarded to 'nvlink'.
 //
 // RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
-// RUN:   -u z -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LINK
-// UNDEFINED: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.cubin{{.*}}-y-{{.*}}.cubin{{.*}}-z-{{.*}}.cubin
+// RUN:   -u z -arch sm_52 -o a.out > %t.undefined 2>&1
+// RUN: FileCheck %s --check-prefix=UNDEFINED < %t.undefined
+// RUN: FileCheck %s --check-prefix=WRAPPER-ONLY < %t.undefined
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
+// RUN:   --undefined z -arch sm_52 -o a.out > %t.undefined 2>&1
+// RUN: FileCheck %s --check-prefix=UNDEFINED < %t.undefined
+// RUN: FileCheck %s --check-prefix=WRAPPER-ONLY < %t.undefined
+// UNDEFINED: nvlink{{.*}} -arch sm_52 -o a.out
+// UNDEFINED-SAME: -z-{{[^ ]*}}.cubin
+// WRAPPER-ONLY-NOT: {{(^|[[:space:]])(-u|--undefined)}}
+
+// Check that forced undefined symbols also extract bitcode archive members and
+// keep hidden definitions alive during LTO.
+// RUN: rm -f %t-z.s
+// RUN: clang-nvlink-wrapper --dry-run %t-z.bc.a -u z -arch sm_52 --lto-emit-asm -o %t-z.s
+// RUN: FileCheck %s --check-prefix=FORCED-LTO < %t-z.s
+// FORCED-LTO: .global .align 4 .u32 z = 42;
 
 //
 // Check that the LTO interface works and properly preserves symbols used in a
