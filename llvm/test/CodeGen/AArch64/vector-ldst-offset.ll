@@ -585,8 +585,7 @@ define [2 x ptr] @v2i32_preidx_same_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-SA-NEXT:    ldrh w9, [x0, #2]
 ; CHECK-BE-SA-NEXT:    ldrh w10, [x0, #4]
 ; CHECK-BE-SA-NEXT:    ldrh w11, [x0, #6]
-; CHECK-BE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-BE-SA-NEXT:    lsr w8, w8, #16
+; CHECK-BE-SA-NEXT:    uxth w8, w8
 ; CHECK-BE-SA-NEXT:    strh w8, [x1, #8]!
 ; CHECK-BE-SA-NEXT:    strh w10, [x1, #4]
 ; CHECK-BE-SA-NEXT:    strh w11, [x1, #6]
@@ -689,8 +688,7 @@ define [2 x ptr] @v2i32_preidx_different_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-SA-NEXT:    ldrh w9, [x0, #2]
 ; CHECK-BE-SA-NEXT:    ldrh w10, [x0, #4]
 ; CHECK-BE-SA-NEXT:    ldrh w11, [x0, #6]
-; CHECK-BE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-BE-SA-NEXT:    lsr w8, w8, #16
+; CHECK-BE-SA-NEXT:    uxth w8, w8
 ; CHECK-BE-SA-NEXT:    strh w8, [x1, #16]!
 ; CHECK-BE-SA-NEXT:    strh w10, [x1, #4]
 ; CHECK-BE-SA-NEXT:    strh w11, [x1, #6]
@@ -903,8 +901,7 @@ define [2 x ptr] @v1i64_preidx_same_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-SA-NEXT:    ldrh w9, [x0, #2]
 ; CHECK-BE-SA-NEXT:    ldrh w10, [x0, #4]
 ; CHECK-BE-SA-NEXT:    ldrh w11, [x0, #6]
-; CHECK-BE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-BE-SA-NEXT:    lsr w8, w8, #16
+; CHECK-BE-SA-NEXT:    uxth w8, w8
 ; CHECK-BE-SA-NEXT:    strh w8, [x1, #8]!
 ; CHECK-BE-SA-NEXT:    strh w10, [x1, #4]
 ; CHECK-BE-SA-NEXT:    strh w11, [x1, #6]
@@ -1006,8 +1003,7 @@ define [2 x ptr] @v1i64_preidx_different_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-SA-NEXT:    ldrh w9, [x0, #2]
 ; CHECK-BE-SA-NEXT:    ldrh w10, [x0, #4]
 ; CHECK-BE-SA-NEXT:    ldrh w11, [x0, #6]
-; CHECK-BE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-BE-SA-NEXT:    lsr w8, w8, #16
+; CHECK-BE-SA-NEXT:    uxth w8, w8
 ; CHECK-BE-SA-NEXT:    strh w8, [x1, #16]!
 ; CHECK-BE-SA-NEXT:    strh w10, [x1, #4]
 ; CHECK-BE-SA-NEXT:    strh w11, [x1, #6]
@@ -1470,8 +1466,7 @@ define [2 x ptr] @v2f32_preidx_same_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-SA-NEXT:    ldrh w9, [x0, #2]
 ; CHECK-BE-SA-NEXT:    ldrh w10, [x0, #4]
 ; CHECK-BE-SA-NEXT:    ldrh w11, [x0, #6]
-; CHECK-BE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-BE-SA-NEXT:    lsr w8, w8, #16
+; CHECK-BE-SA-NEXT:    uxth w8, w8
 ; CHECK-BE-SA-NEXT:    strh w8, [x1, #8]!
 ; CHECK-BE-SA-NEXT:    strh w10, [x1, #4]
 ; CHECK-BE-SA-NEXT:    strh w11, [x1, #6]
@@ -1577,8 +1572,7 @@ define [2 x ptr] @v2f32_preidx_different_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-SA-NEXT:    ldrh w9, [x0, #2]
 ; CHECK-BE-SA-NEXT:    ldrh w10, [x0, #4]
 ; CHECK-BE-SA-NEXT:    ldrh w11, [x0, #6]
-; CHECK-BE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-BE-SA-NEXT:    lsr w8, w8, #16
+; CHECK-BE-SA-NEXT:    uxth w8, w8
 ; CHECK-BE-SA-NEXT:    strh w8, [x1, #16]!
 ; CHECK-BE-SA-NEXT:    strh w10, [x1, #4]
 ; CHECK-BE-SA-NEXT:    strh w11, [x1, #6]
@@ -1794,8 +1788,7 @@ define [2 x ptr] @v1f64_preidx_same_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-SA-NEXT:    ldrh w9, [x0, #2]
 ; CHECK-BE-SA-NEXT:    ldrh w10, [x0, #4]
 ; CHECK-BE-SA-NEXT:    ldrh w11, [x0, #6]
-; CHECK-BE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-BE-SA-NEXT:    lsr w8, w8, #16
+; CHECK-BE-SA-NEXT:    uxth w8, w8
 ; CHECK-BE-SA-NEXT:    strh w8, [x1, #8]!
 ; CHECK-BE-SA-NEXT:    strh w10, [x1, #4]
 ; CHECK-BE-SA-NEXT:    strh w11, [x1, #6]
@@ -1896,8 +1889,7 @@ define [2 x ptr] @v1f64_preidx_different_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-SA-NEXT:    ldrh w9, [x0, #2]
 ; CHECK-BE-SA-NEXT:    ldrh w10, [x0, #4]
 ; CHECK-BE-SA-NEXT:    ldrh w11, [x0, #6]
-; CHECK-BE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-BE-SA-NEXT:    lsr w8, w8, #16
+; CHECK-BE-SA-NEXT:    uxth w8, w8
 ; CHECK-BE-SA-NEXT:    strh w8, [x1, #16]!
 ; CHECK-BE-SA-NEXT:    strh w10, [x1, #4]
 ; CHECK-BE-SA-NEXT:    strh w11, [x1, #6]
