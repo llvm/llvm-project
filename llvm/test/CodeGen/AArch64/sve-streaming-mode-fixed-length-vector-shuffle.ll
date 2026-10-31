@@ -554,12 +554,12 @@ define <4 x float> @shuffle_ext_byone_v4f32(<4 x float> %op1, <4 x float> %op2) 
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [sp, #-48]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #24]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #44]
 ; NONEON-NOSVE-NEXT:    ldr x8, [sp, #16]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #44]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #12]
 ; NONEON-NOSVE-NEXT:    stur x8, [sp, #36]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #12]
+; NONEON-NOSVE-NEXT:    str w8, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret

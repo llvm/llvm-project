@@ -459,6 +459,16 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
        return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
      } else if (ValueVT.bitsLT(PartEVT)) {
        const uint64_t ValueSize = ValueVT.getFixedSizeInBits();
+       if (PartEVT.isFloatingPoint()) {
+         // Floating-point ABI carriers hold the leading vector lanes. Extract
+         // them before narrowing to preserve their order on big-endian targets.
+         EVT PartVecVT = EVT::getVectorVT(
+             *DAG.getContext(), ValueVT.getVectorElementType(),
+             PartEVT.getFixedSizeInBits() / ValueVT.getScalarSizeInBits());
+         Val = DAG.getBitcast(PartVecVT, Val);
+         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
+                            DAG.getVectorIdxConstant(0, DL));
+       }
        EVT IntermediateType = EVT::getIntegerVT(*DAG.getContext(), ValueSize);
        // Drop the extra bits.
        Val = DAG.getNode(ISD::TRUNCATE, DL, IntermediateType, Val);

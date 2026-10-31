@@ -265,8 +265,8 @@ define void @arg_v4f32(<4 x float> %arg) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[BITCAST]](<4 x f32>), [[DEF]](p0) :: (store (<4 x f32>) into `ptr undef`)
   ; CHECK-NEXT:   RET_ReallyLR
@@ -279,14 +279,14 @@ define void @ret_arg_v16f32(<16 x float> %arg) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $q0, $q1, $q2, $q3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $q2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x i64>) = COPY $q3
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x i64>)
-  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY1]](<2 x i64>)
-  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY2]](<2 x i64>)
-  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY3]](<2 x i64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<4 x i32>) = COPY $q2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x i32>) = COPY $q3
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<4 x i32>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY1]](<4 x i32>)
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY2]](<4 x i32>)
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY3]](<4 x i32>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x f32>) = G_CONCAT_VECTORS [[BITCAST]](<4 x f32>), [[BITCAST1]](<4 x f32>), [[BITCAST2]](<4 x f32>), [[BITCAST3]](<4 x f32>)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<16 x f32>), [[DEF]](p0) :: (store (<16 x f32>) into `ptr undef`)
