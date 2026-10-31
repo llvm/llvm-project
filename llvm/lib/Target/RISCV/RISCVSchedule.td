@@ -33,11 +33,13 @@ def WriteLDB        : SchedWrite;    // Load byte
 def WriteLDH        : SchedWrite;    // Load half-word
 def WriteLDW        : SchedWrite;    // Load word
 def WriteLDD        : SchedWrite;    // Load double-word
+// TODO: def WriteLDY        : SchedWrite;    // Load capability
 def WriteCSR        : SchedWrite;    // CSR instructions
 def WriteSTB        : SchedWrite;    // Store byte
 def WriteSTH        : SchedWrite;    // Store half-word
 def WriteSTW        : SchedWrite;    // Store word
 def WriteSTD        : SchedWrite;    // Store double-word
+// TODO: def WriteSTY        : SchedWrite;    // Store capability
 def WriteAtomicB    : SchedWrite;    //Atomic memory operation byte size
 def WriteAtomicH    : SchedWrite;    //Atomic memory operation halfword size
 def WriteAtomicW    : SchedWrite;    //Atomic memory operation word size
