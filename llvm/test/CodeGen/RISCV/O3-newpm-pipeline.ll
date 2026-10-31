@@ -127,6 +127,7 @@
 ; CHECK-NEXT: MachineOutlinerPass
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
+; CHECK-NEXT:     cfi-fixup
 ; CHECK-NEXT:     stack-frame-layout
 ; CHECK-NEXT:     riscv-move-merge
 ; CHECK-NEXT:     riscv-push-pop-opt
