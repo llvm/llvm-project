@@ -1759,6 +1759,15 @@ class AsmParser {
   // Only effective when ReportMultipleNearMisses is also 1.
   bit PrioritizeFeatureInMultiMismatchFallback = false;
 
+  // CheckAmbiguousMatches -
+  // When 1, the generated matcher does not stop at the first matching
+  // encoding but keeps searching, and reports an error if any other encoding
+  // would also match the parsed instruction. The first match is still used so
+  // that assembly can continue. This is intended as a debugging aid for
+  // finding ambiguous instruction definitions.
+  // Not compatible with ReportMultipleNearMisses.
+  bit CheckAmbiguousMatches = false;
+
   // OperandParserMethod - If non-empty, this is the name of a custom
   // member function of the AsmParser class to call for every custom instruction
   // operand to be parsed. If unset, this defaults to calling the generated
