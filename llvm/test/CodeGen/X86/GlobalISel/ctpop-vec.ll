@@ -2,10 +2,14 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vpopcntdq,+avx512bitalg -global-isel -O2 < %s | FileCheck %s --check-prefix=NOVLX
 ; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl,+avx512vpopcntdq,+avx512bitalg -global-isel -O2 < %s | FileCheck %s --check-prefix=VLX
 
-; 256-bit and 512-bit forms are legal with the instruction feature alone: without
-; VLX the widening patterns in X86InstrAVX512.td implement 256-bit operations
-; with the 512-bit instruction.
+; Vector popcount only needs the instruction feature: without VLX the widening
+; patterns in X86InstrAVX512.td implement 128-bit and 256-bit operations with
+; the 512-bit instruction.
 
+declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)
+declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
+declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>)
+declare <8 x i16> @llvm.ctpop.v8i16(<8 x i16>)
 declare <8 x i32> @llvm.ctpop.v8i32(<8 x i32>)
 declare <32 x i8> @llvm.ctpop.v32i8(<32 x i8>)
 declare <16 x i32> @llvm.ctpop.v16i32(<16 x i32>)
@@ -69,4 +73,72 @@ define <64 x i8> @ctpop_v64i8(<64 x i8> %x) {
 ; VLX-NEXT:    retq
   %r = call <64 x i8> @llvm.ctpop.v64i8(<64 x i8> %x)
   ret <64 x i8> %r
+}
+
+define <4 x i32> @ctpop_v4i32(<4 x i32> %x) {
+; NOVLX-LABEL: ctpop_v4i32:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; NOVLX-NEXT:    vpopcntd %zmm0, %zmm0
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; NOVLX-NEXT:    vzeroupper
+; NOVLX-NEXT:    retq
+;
+; VLX-LABEL: ctpop_v4i32:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpopcntd %xmm0, %xmm0
+; VLX-NEXT:    retq
+  %r = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %x)
+  ret <4 x i32> %r
+}
+
+define <2 x i64> @ctpop_v2i64(<2 x i64> %x) {
+; NOVLX-LABEL: ctpop_v2i64:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; NOVLX-NEXT:    vpopcntq %zmm0, %zmm0
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; NOVLX-NEXT:    vzeroupper
+; NOVLX-NEXT:    retq
+;
+; VLX-LABEL: ctpop_v2i64:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpopcntq %xmm0, %xmm0
+; VLX-NEXT:    retq
+  %r = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %x)
+  ret <2 x i64> %r
+}
+
+define <16 x i8> @ctpop_v16i8(<16 x i8> %x) {
+; NOVLX-LABEL: ctpop_v16i8:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; NOVLX-NEXT:    vzeroupper
+; NOVLX-NEXT:    retq
+;
+; VLX-LABEL: ctpop_v16i8:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpopcntb %xmm0, %xmm0
+; VLX-NEXT:    retq
+  %r = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %x)
+  ret <16 x i8> %r
+}
+
+define <8 x i16> @ctpop_v8i16(<8 x i16> %x) {
+; NOVLX-LABEL: ctpop_v8i16:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; NOVLX-NEXT:    vzeroupper
+; NOVLX-NEXT:    retq
+;
+; VLX-LABEL: ctpop_v8i16:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpopcntw %xmm0, %xmm0
+; VLX-NEXT:    retq
+  %r = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %x)
+  ret <8 x i16> %r
 }
