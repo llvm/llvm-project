@@ -35,6 +35,38 @@ body: |
 ...
 
 ---
+name: trunc_i128_to_i16_s
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GFX-LABEL: name: trunc_i128_to_i16_s
+    ; GFX: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GFX-NEXT: {{  $}}
+    ; GFX-NEXT: [[COPY:%[0-9]+]]:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GFX-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s128)
+    %0:_(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:_(s16) = G_TRUNC %0
+...
+
+---
+name: trunc_i64_to_i16_s
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; GFX-LABEL: name: trunc_i64_to_i16_s
+    ; GFX: liveins: $sgpr0_sgpr1
+    ; GFX-NEXT: {{  $}}
+    ; GFX-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; GFX-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s64)
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s16) = G_TRUNC %0
+...
+
+---
 name: trunc_i64_to_i1_s
 legalized: true
 
