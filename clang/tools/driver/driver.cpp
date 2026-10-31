@@ -385,7 +385,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
         /*NeedsPOSIXUtilitySignalHandling=*/true);
   }
 
-  std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
+  bool CC1MainIsReusable = ToolContext.hasSession() && !UseNewCC1Process;
+  std::unique_ptr<Compilation> C(
+      TheDriver.BuildCompilation(Args, CC1MainIsReusable));
 
   Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
   if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {
