@@ -1008,7 +1008,7 @@ static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
 
 static bool getAllTidLvlsInLatPoints(
     CodegenEnv &env, LatPointId li, LoopId curr,
-    llvm::function_ref<void(TensorLevel, AffineExpr, bool)> callback) {
+    llvm::function_ref<void(TensorLevel, AffineExpr)> callback) {
   const BitVector &simple = env.lat(li).simple;
   const TensorId outTid = env.merger().getOutTensorID();
   const std::optional<Level> outLvl = env.merger().getLvl(outTid, curr);
@@ -1020,8 +1020,7 @@ static bool getAllTidLvlsInLatPoints(
                     LevelType lt, bool isIdxReduc) {
         if (simple[b]) {
           if (isIdxReduc) {
-            callback(env.makeTensorLevel(tid, *lvl), nullptr,
-                     /*isLoopCond=*/true);
+            callback(env.makeTensorLevel(tid, *lvl), nullptr);
             numloopCond++;
             return;
           }
@@ -1045,12 +1044,10 @@ static bool getAllTidLvlsInLatPoints(
             }
           }
           hasNonUnique = !isUniqueLT(lt) || hasNonUnique;
-          callback(env.makeTensorLevel(tid, *lvl), nullptr,
-                   /*isLoopCond=*/true);
+          callback(env.makeTensorLevel(tid, *lvl), nullptr);
           numloopCond++;
         } else if (lt.hasDenseSemantic() || isIdxReduc) {
-          callback(env.makeTensorLevel(tid, *lvl), nullptr,
-                   /*isLoopCond=*/false);
+          callback(env.makeTensorLevel(tid, *lvl), nullptr);
         } else {
           assert(isUndefLT(lt));
           linalg::GenericOp op = env.op();
@@ -1085,8 +1082,7 @@ static bool getAllTidLvlsInLatPoints(
                 // level. We need to generate the address according to the
                 // affine expression. This is also the best place we can do it
                 // to avoid putting it inside inner loops.
-                callback(env.makeTensorLevel(tid, l), exp,
-                         /*isLoopCond=*/false);
+                callback(env.makeTensorLevel(tid, l), exp);
               }
             }
           }
@@ -1101,16 +1097,14 @@ static bool getAllTidLvlsInLatPoints(
     // TODO: we should avoid introducing corner cases for all-dense sparse
     // tensors.
     if (stt.hasEncoding() && stt.isAllDense())
-      callback(env.makeTensorLevel(outTid, *outLvl), nullptr,
-               /*isLoopCond=*/false);
+      callback(env.makeTensorLevel(outTid, *outLvl), nullptr);
   }
 
   if (numloopCond == 0) {
     // Corner cases where the loop bound is defined by a *unused* operand, in
     // this case, we just generate a dense "fake" loop by iterating over the
     // synthetic tensor.
-    callback(env.makeTensorLevel(env.merger().getSynTensorID(), curr), nullptr,
-             /*isLoopCond=*/true);
+    callback(env.makeTensorLevel(env.merger().getSynTensorID(), curr), nullptr);
     numloopCond++;
   }
   // If we just need to one loop conditions and the conditions is not imposed on
@@ -1135,16 +1129,14 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
   const LatPointId l0 = env.set(lts)[0];
 
   SmallVector<TensorLevel> tidLvls;
-  getAllTidLvlsInLatPoints(env, l0, curr,
-                           [&](TensorLevel tl, AffineExpr, bool) {
-                             // TODO: remove this! The same tensor level might
-                             // be added for multiple times due to the special
-                             // handling for all-dense "sparse" output tensor
-                             // (see L1038).
-                             if (llvm::is_contained(tidLvls, tl))
-                               return;
-                             tidLvls.emplace_back(tl);
-                           });
+  getAllTidLvlsInLatPoints(env, l0, curr, [&](TensorLevel tl, AffineExpr) {
+    // TODO: remove this! The same tensor level might be added for multiple
+    // times due to the special handling for all-dense "sparse" output tensor
+    // (see L1038).
+    if (llvm::is_contained(tidLvls, tl))
+      return;
+    tidLvls.emplace_back(tl);
+  });
 
   env.emitter().enterNewLoopSeq(builder, env.op().getLoc(), tidLvls);
 
@@ -1198,18 +1190,14 @@ static void genInitConstantDenseAddress(CodegenEnv &env,
 static bool translateBitsToTidLvlPairs(
     CodegenEnv &env, LatPointId li, LoopId curr,
     SmallVectorImpl<TensorLevel> &tidLvls,
-    SmallVectorImpl<TensorLevel> &condTidLvls,
     SmallVectorImpl<std::pair<TensorLevel, AffineExpr>> &affineTidLvls) {
-  return getAllTidLvlsInLatPoints(
-      env, li, curr, [&](TensorLevel tl, AffineExpr exp, bool isLoopCond) {
-        if (exp)
-          affineTidLvls.emplace_back(tl, exp);
-        else {
-          tidLvls.emplace_back(tl);
-          if (isLoopCond)
-            condTidLvls.emplace_back(tl);
-        }
-      });
+  return getAllTidLvlsInLatPoints(env, li, curr,
+                                  [&](TensorLevel tl, AffineExpr exp) {
+                                    if (exp)
+                                      affineTidLvls.emplace_back(tl, exp);
+                                    else
+                                      tidLvls.emplace_back(tl);
+                                  });
 }
 
 /// Starts a single loop in current sequence.
@@ -1221,20 +1209,15 @@ static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
   // after fully migration.
   // The set of tensors + lvls to generate loops on
   SmallVector<TensorLevel> tidLvls;
-  SmallVector<TensorLevel> condTidLvls;
 
   // The set of dense tensors with non-trivial affine expression that just
   // becomes invariant and the address are generated at the current level.
   SmallVector<std::pair<TensorLevel, AffineExpr>> affineTidLvls;
-  bool isSingleCond = translateBitsToTidLvlPairs(env, li, curr, tidLvls,
-                                                 condTidLvls, affineTidLvls);
+  bool isSingleCond =
+      translateBitsToTidLvlPairs(env, li, curr, tidLvls, affineTidLvls);
 
   // Emit the for/while-loop control.
-  ArrayRef<TensorLevel> loopTidLvls = env.generatingSparseIterator()
-                                          ? ArrayRef(condTidLvls)
-                                          : ArrayRef(tidLvls);
-  Operation *loop =
-      genLoop(env, builder, curr, numCases, needsUniv, loopTidLvls);
+  Operation *loop = genLoop(env, builder, curr, numCases, needsUniv, tidLvls);
   Location loc = env.op().getLoc();
   for (auto [tidLvl, exp] : affineTidLvls) {
     env.emitter().locateLvlAtAffineAddress(builder, loc, tidLvl, exp);
@@ -1315,7 +1298,7 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
     const LatPointId li = env.set(lts)[0];
     auto [loop, isSingleCond] =
         startLoop(env, rewriter, curr, li, lsize, needsUniv);
-    assert(isSingleCond == llvm::isa<IterateOp>(loop));
+    isSingleCond = llvm::isa<IterateOp, scf::ForOp>(loop);
     // We cannot change this to `for (const LatPointId li : env.set(lts))`
     // because the loop body causes data-movement which invalidates
     // the iterator.

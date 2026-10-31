@@ -275,21 +275,23 @@ void LoopEmitter::initializeLoopEmit(
     }
   }
 
-  // The sparse iterator values will only be available after the loop is
-  // constructed.
-  if (emitStrategy == SparseEmitStrategy::kSparseIterator)
-    return;
-
   // For every synthetic tensor, set the high bound by calling the callback.
   if (synSetter) {
     TensorId synId = getSynTensorId();
     for (unsigned i = 0, e = loopHighs.size(); i < e; i++) {
       Value sz = loopHighs[i] = synSetter(builder, loc, i);
+      if (emitStrategy == SparseEmitStrategy::kSparseIterator)
+        continue;
       auto [stl, it] = makeSynLevelAndIterator(sz, synId, i, emitStrategy);
       lvls[synId][i] = std::move(stl);
       iters[synId][i].emplace_back(std::move(it));
     }
   }
+
+  // The sparse iterator values will only be available after the loop is
+  // constructed.
+  if (emitStrategy == SparseEmitStrategy::kSparseIterator)
+    return;
 
   // For every manifest tensor:
   // * For every level:
@@ -536,6 +538,38 @@ bool LoopEmitter::shouldIteratedByForLoop(ArrayRef<SparseIterator *> spIters) {
   return true;
 }
 
+void LoopEmitter::linkSparseIteratorDenseLvls(OpBuilder &builder, Location loc,
+                                              ArrayRef<TensorLevel> tidLvls,
+                                              Value crd) {
+  // Dense levels do not drive coiteration, but their iterator values are
+  // needed when extracting a child iteration space.
+  for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
+    SparseTensorType stt = getSparseTensorType(tensors[tid]);
+    assert(stt.getLvlType(lvl).hasDenseSemantic());
+
+    Value pos = crd;
+    if (lvl != 0) {
+      Value parentIter = spIterVals[tid][lvl - 1];
+      assert(parentIter && "expected parent iterator for encoded dense level");
+      IteratorType parentTp = cast<IteratorType>(parentIter.getType());
+      SmallVector<Type> cursorTps(parentTp.isUnique() ? 1 : 2,
+                                  builder.getIndexType());
+      auto parentCursor = UnrealizedConversionCastOp::create(
+          builder, loc, cursorTps, parentIter);
+      Value parentPos = parentCursor.getResults().back();
+      Value lvlSize = LvlOp::create(builder, loc, tensors[tid], lvl);
+      pos = ADDI(MULI(parentPos, lvlSize), crd);
+    }
+
+    IteratorType itTp = IterSpaceType::get(builder.getContext(),
+                                           stt.getEncoding(), lvl, lvl + 1)
+                            .getIteratorType();
+    spIterVals[tid][lvl] =
+        UnrealizedConversionCastOp::create(builder, loc, itTp, pos)
+            .getResult(0);
+  }
+}
+
 Region *LoopEmitter::enterCurrentCoIterationCase(OpBuilder &builder,
                                                  Location loc,
                                                  I64BitSet caseBit,
@@ -586,6 +620,9 @@ Region *LoopEmitter::enterCurrentCoIterationCase(OpBuilder &builder,
   }
   // Must have consumed all iterator SSA values.
   assert(iters.empty());
+  linkSparseIteratorDenseLvls(builder, loc,
+                              loopStack.back().auxiliaryDenseTidLvls,
+                              loopStack.back().iv);
   return &caseRegion;
 }
 
@@ -595,10 +632,43 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     bool needsUniv) {
   // TODO: Argument `numCases` only used when generating iterator-based sparse
   // loops. Simplify the code upon feature complete.
-  // TODO: handle coiteration with sparse iterator.
   if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
-    if (tidLvls.size() == 1) {
-      auto [tid, lvl] = unpackTensorLevel(tidLvls.front());
+    SmallVector<TensorLevel> iteratedTidLvls;
+    SmallVector<TensorLevel> auxiliaryDenseTidLvls;
+    for (auto [tidLvl, tidAndLvl] :
+         llvm::zip_equal(tidLvls, unpackTensorLevelRange(tidLvls))) {
+      auto [tid, lvl] = tidAndLvl;
+      if (isSynTensor(tid))
+        continue;
+      SparseTensorType stt = getSparseTensorType(tensors[tid]);
+      if (!stt.hasEncoding())
+        continue;
+      if (stt.getLvlType(lvl).hasDenseSemantic())
+        auxiliaryDenseTidLvls.push_back(tidLvl);
+      else
+        iteratedTidLvls.push_back(tidLvl);
+    }
+
+    if (iteratedTidLvls.empty() && !auxiliaryDenseTidLvls.empty()) {
+      iteratedTidLvls.push_back(auxiliaryDenseTidLvls.front());
+      auxiliaryDenseTidLvls.erase(auxiliaryDenseTidLvls.begin());
+    }
+
+    // Unencoded dense and synthetic levels are represented by an SCF loop.
+    if (iteratedTidLvls.empty()) {
+      Value hi = loopHighs[loopStack.size()];
+      assert(hi && "expected a loop bound for dense iteration");
+      scf::ForOp forOp =
+          scf::ForOp::create(builder, loc, C_IDX(0), hi, C_IDX(1), reduc);
+      llvm::copy(forOp.getRegionIterArgs(), reduc.begin());
+      builder.setInsertionPointToStart(forOp.getBody());
+      loopStack.emplace_back(tidLvls, forOp, builder.getInsertionBlock(),
+                             forOp.getInductionVar(), loopTag);
+      return forOp;
+    }
+
+    if (iteratedTidLvls.size() == 1) {
+      auto [tid, lvl] = unpackTensorLevel(iteratedTidLvls.front());
       Value t = tensors[tid];
 
       // Extract and iterate over the iteration space.
@@ -615,14 +685,17 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
       llvm::copy(iterOp.getRegionIterArgs(), reduc.begin());
       // Set the insertion point to loop body.
       builder.setInsertionPointToStart(iterOp.getBody());
-      loopStack.emplace_back(tidLvls, iterOp, builder.getInsertionBlock(),
-                             iterOp.getCrds().front(), loopTag);
+      linkSparseIteratorDenseLvls(builder, loc, auxiliaryDenseTidLvls,
+                                  iterOp.getCrds().front());
+      loopStack.emplace_back(
+          iteratedTidLvls, iterOp, builder.getInsertionBlock(),
+          iterOp.getCrds().front(), loopTag, auxiliaryDenseTidLvls);
       return iterOp;
     }
 
     // CoIteration Loops.
     SmallVector<Value> spaces;
-    for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
+    for (auto [tid, lvl] : unpackTensorLevelRange(iteratedTidLvls)) {
       Value t = tensors[tid];
       ExtractIterSpaceOp extractSpaceOp =
           lvl == 0 ? ExtractIterSpaceOp::create(builder, loc, t)
@@ -633,8 +706,10 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     auto coIterOp = CoIterateOp::create(builder, loc, spaces, reduc, numCases);
     // The CoIterationOp does not have insertion block nor induction variable.
     // TODO: the `struct LoopInfo` should be simplied after full migration.
-    loopStack.emplace_back(tidLvls, coIterOp, /*insertion block*/ nullptr,
-                           /*induction variable*/ nullptr, loopTag);
+    loopStack.emplace_back(iteratedTidLvls, coIterOp,
+                           /*insertion block*/ nullptr,
+                           /*induction variable*/ nullptr, loopTag,
+                           auxiliaryDenseTidLvls);
     return coIterOp;
   }
 
@@ -725,8 +800,7 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
 void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
                               MutableArrayRef<Value> reduc) {
   const LoopInfo &loopInfo = loopStack.back();
-  if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
-    auto iterateOp = llvm::cast<IterateOp>(loopInfo.loop);
+  if (auto iterateOp = llvm::dyn_cast<IterateOp>(loopInfo.loop)) {
     assert(reduc.size() == iterateOp.getNumResults());
     sparse_tensor::YieldOp::create(rewriter, loc, reduc);
     // Exit the loop.
@@ -869,7 +943,8 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
   // Clean up the values, it would help use to discover potential bug at a
   // earlier stage (instead of silently using a wrong value).
   const LoopInfo &loopInfo = loopStack.back();
-  if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
+  if (emitStrategy == SparseEmitStrategy::kSparseIterator &&
+      !isa<scf::ForOp>(loopInfo.loop)) {
     Operation *p = loopInfo.loop;
     if (isa<IterateOp>(p))
       sparse_tensor::YieldOp::create(rewriter, loc, reduc);
