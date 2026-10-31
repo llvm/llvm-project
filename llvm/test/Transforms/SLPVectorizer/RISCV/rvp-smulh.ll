@@ -10,14 +10,7 @@
 define <2 x i16> @smulh_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: define <2 x i16> @smulh_v2i16(
 ; CHECK-SAME: <2 x i16> [[A:%.*]], <2 x i16> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <2 x i16> [[A]], i32 0
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <2 x i16> [[B]], i32 0
-; CHECK-NEXT:    [[M0:%.*]] = call i16 @llvm.smulh.i16(i16 [[A0]], i16 [[B0]])
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i16> poison, i16 [[M0]], i32 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x i16> [[A]], i32 1
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <2 x i16> [[B]], i32 1
-; CHECK-NEXT:    [[M1:%.*]] = call i16 @llvm.smulh.i16(i16 [[A1]], i16 [[B1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> [[V0]], i16 [[M1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.smulh.v2i16(<2 x i16> [[A]], <2 x i16> [[B]])
 ; CHECK-NEXT:    ret <2 x i16> [[TMP1]]
 ;
   %a0 = extractelement <2 x i16> %a, i32 0
@@ -34,14 +27,7 @@ define <2 x i16> @smulh_v2i16(<2 x i16> %a, <2 x i16> %b) {
 define <2 x i16> @umulh_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: define <2 x i16> @umulh_v2i16(
 ; CHECK-SAME: <2 x i16> [[A:%.*]], <2 x i16> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <2 x i16> [[A]], i32 0
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <2 x i16> [[B]], i32 0
-; CHECK-NEXT:    [[M0:%.*]] = call i16 @llvm.umulh.i16(i16 [[A0]], i16 [[B0]])
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i16> poison, i16 [[M0]], i32 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x i16> [[A]], i32 1
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <2 x i16> [[B]], i32 1
-; CHECK-NEXT:    [[M1:%.*]] = call i16 @llvm.umulh.i16(i16 [[A1]], i16 [[B1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> [[V0]], i16 [[M1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.umulh.v2i16(<2 x i16> [[A]], <2 x i16> [[B]])
 ; CHECK-NEXT:    ret <2 x i16> [[TMP1]]
 ;
   %a0 = extractelement <2 x i16> %a, i32 0
@@ -55,25 +41,12 @@ define <2 x i16> @umulh_v2i16(<2 x i16> %a, <2 x i16> %b) {
   ret <2 x i16> %res
 }
 
+; There is no pmulh.b, but v4i8 mulh is custom lowered (pwmul.b + pncvth.b on
+; RV32, pmul.h.b00/b11 + ppairo.b on RV64).
 define <4 x i8> @smulh_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: define <4 x i8> @smulh_v4i8(
 ; CHECK-SAME: <4 x i8> [[A:%.*]], <4 x i8> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x i8> [[A]], i32 0
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x i8> [[B]], i32 0
-; CHECK-NEXT:    [[M0:%.*]] = call i8 @llvm.smulh.i8(i8 [[A0]], i8 [[B0]])
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i8> poison, i8 [[M0]], i32 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x i8> [[A]], i32 1
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x i8> [[B]], i32 1
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.smulh.i8(i8 [[A1]], i8 [[B1]])
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i8> [[V0]], i8 [[M1]], i32 1
-; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x i8> [[A]], i32 2
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x i8> [[B]], i32 2
-; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.smulh.i8(i8 [[A2]], i8 [[B2]])
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i8> [[V1]], i8 [[M2]], i32 2
-; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x i8> [[A]], i32 3
-; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x i8> [[B]], i32 3
-; CHECK-NEXT:    [[M3:%.*]] = call i8 @llvm.smulh.i8(i8 [[A3]], i8 [[B3]])
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[V2]], i8 [[M3]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.smulh.v4i8(<4 x i8> [[A]], <4 x i8> [[B]])
 ; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
 ;
   %a0 = extractelement <4 x i8> %a, i32 0
@@ -100,22 +73,11 @@ define <4 x i8> @smulh_v4i8(<4 x i8> %a, <4 x i8> %b) {
 define <2 x i16> @smulh_v2i16_opencoded(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: define <2 x i16> @smulh_v2i16_opencoded(
 ; CHECK-SAME: <2 x i16> [[A:%.*]], <2 x i16> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <2 x i16> [[A]], i32 0
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <2 x i16> [[B]], i32 0
-; CHECK-NEXT:    [[A0E:%.*]] = sext i16 [[A0]] to i32
-; CHECK-NEXT:    [[B0E:%.*]] = sext i16 [[B0]] to i32
-; CHECK-NEXT:    [[P0:%.*]] = mul nsw i32 [[A0E]], [[B0E]]
-; CHECK-NEXT:    [[S0:%.*]] = lshr i32 [[P0]], 16
-; CHECK-NEXT:    [[T0:%.*]] = trunc i32 [[S0]] to i16
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i16> poison, i16 [[T0]], i32 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x i16> [[A]], i32 1
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <2 x i16> [[B]], i32 1
-; CHECK-NEXT:    [[A1E:%.*]] = sext i16 [[A1]] to i32
-; CHECK-NEXT:    [[B1E:%.*]] = sext i16 [[B1]] to i32
-; CHECK-NEXT:    [[P1:%.*]] = mul nsw i32 [[A1E]], [[B1E]]
-; CHECK-NEXT:    [[S1:%.*]] = lshr i32 [[P1]], 16
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[S1]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> [[V0]], i16 [[T1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i16> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i16> [[B]] to <2 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[TMP3]], splat (i32 16)
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i32> [[TMP4]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[TMP5]]
 ;
   %a0 = extractelement <2 x i16> %a, i32 0
@@ -139,25 +101,23 @@ define <2 x i16> @smulh_v2i16_opencoded(<2 x i16> %a, <2 x i16> %b) {
 
 ; v4i16 only fits in a GPR on RV64.
 define <4 x i16> @smulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: define <4 x i16> @smulh_v4i16(
-; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x i16> [[A]], i32 0
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x i16> [[B]], i32 0
-; CHECK-NEXT:    [[M0:%.*]] = call i16 @llvm.smulh.i16(i16 [[A0]], i16 [[B0]])
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i16> poison, i16 [[M0]], i32 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x i16> [[A]], i32 1
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x i16> [[B]], i32 1
-; CHECK-NEXT:    [[M1:%.*]] = call i16 @llvm.smulh.i16(i16 [[A1]], i16 [[B1]])
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i16> [[V0]], i16 [[M1]], i32 1
-; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x i16> [[A]], i32 2
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x i16> [[B]], i32 2
-; CHECK-NEXT:    [[M2:%.*]] = call i16 @llvm.smulh.i16(i16 [[A2]], i16 [[B2]])
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i16> [[V1]], i16 [[M2]], i32 2
-; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x i16> [[A]], i32 3
-; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x i16> [[B]], i32 3
-; CHECK-NEXT:    [[M3:%.*]] = call i16 @llvm.smulh.i16(i16 [[A3]], i16 [[B3]])
-; CHECK-NEXT:    [[RES:%.*]] = insertelement <4 x i16> [[V2]], i16 [[M3]], i32 3
-; CHECK-NEXT:    ret <4 x i16> [[RES]]
+; RV32-LABEL: define <4 x i16> @smulh_v4i16(
+; RV32-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]]) #[[ATTR0]] {
+; RV32-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+; RV32-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i16> [[B]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+; RV32-NEXT:    [[TMP3:%.*]] = call <2 x i16> @llvm.smulh.v2i16(<2 x i16> [[TMP1]], <2 x i16> [[TMP2]])
+; RV32-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; RV32-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+; RV32-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[B]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+; RV32-NEXT:    [[TMP7:%.*]] = call <2 x i16> @llvm.smulh.v2i16(<2 x i16> [[TMP5]], <2 x i16> [[TMP6]])
+; RV32-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i16> [[TMP7]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; RV32-NEXT:    [[RES1:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; RV32-NEXT:    ret <4 x i16> [[RES1]]
+;
+; RV64-LABEL: define <4 x i16> @smulh_v4i16(
+; RV64-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]]) #[[ATTR0]] {
+; RV64-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.smulh.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+; RV64-NEXT:    ret <4 x i16> [[TMP1]]
 ;
   %a0 = extractelement <4 x i16> %a, i32 0
   %b0 = extractelement <4 x i16> %b, i32 0
@@ -177,6 +137,3 @@ define <4 x i16> @smulh_v4i16(<4 x i16> %a, <4 x i16> %b) {
   %res = insertelement <4 x i16> %v2, i16 %m3, i32 3
   ret <4 x i16> %res
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; RV32: {{.*}}
-; RV64: {{.*}}
