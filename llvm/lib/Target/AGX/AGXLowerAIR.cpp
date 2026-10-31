@@ -1806,7 +1806,8 @@ void LowerAIR::recoverAGXOperations(Function &F) {
       }
       // A canonical NaN on the bits of an f32 ALU result (fadd32, fmul32,
       // fmadd32: their NaN is always 0x7fc00000, the operands' payloads and
-      // signs dropped; playground novel-results/2026-10-11-float-semantics),
+      // signs dropped; playground novel-results/2026-10-11-float-semantics)
+      // or of rcp, rsqrt, exp2, log2 (the same NaN: 2026-10-31-special-nan),
       // select((x & 0x7fffffff) > 0x7f800000, 0x7fffffff, x): one comparison
       // with that NaN, select(x == 0x7fc00000, 0x7fffffff, x), instead of two
       // instructions (a front end's strict mode makes one for every result it
@@ -1818,7 +1819,11 @@ void LowerAIR::recoverAGXOperations(Function &F) {
                                                    m_SpecificInt(0x7fffffff)),
                                              m_SpecificInt(0x7f800000)),
                               m_SpecificInt(0x7fffffff), m_Deferred(Y))) &&
-          match(Y, m_BitCast(m_Value(A))) && FlushingArith(A))
+          match(Y, m_BitCast(m_Value(A))) &&
+          (FlushingArith(A) || match(A, m_Intrinsic<Intrinsic::agx_rcp>()) ||
+           match(A, m_Intrinsic<Intrinsic::agx_rsqrt>()) ||
+           match(A, m_Intrinsic<Intrinsic::agx_exp2>()) ||
+           match(A, m_Intrinsic<Intrinsic::agx_log2>())))
         R = B.CreateSelect(B.CreateICmpEQ(Y, ConstantInt::get(Ty, 0x7fc00000)),
                            ConstantInt::get(Ty, 0x7fffffff), Y);
     }
