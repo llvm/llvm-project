@@ -4486,8 +4486,19 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
     // If the address value is uniform across all lanes, then the address can be
     // calculated with scalar type and broadcast.
-    if (!vputils::isSingleScalar(getAddr()))
+    bool AddrIsSingleScalar = vputils::isSingleScalar(getAddr());
+    if (!AddrIsSingleScalar)
       PtrTy = toVectorTy(PtrTy, VF);
+
+    // The scalar address does not say which of its operands varies across
+    // lanes, and a target that reads the GEP cannot tell a chase like p[i]->y
+    // from a uniform base reached through a narrow index. VPlan knows.
+    std::optional<bool> UniformBase;
+    if (AddrIsSingleScalar)
+      UniformBase = true;
+    else if (auto *GEP = dyn_cast_or_null<VPWidenGEPRecipe>(
+                 getAddr()->getDefiningRecipe()))
+      UniformBase = vputils::isSingleScalar(GEP->getOperand(0));
 
     unsigned IID = isa<VPWidenLoadRecipe>(R)      ? Intrinsic::masked_gather
                    : isa<VPWidenStoreRecipe>(R)   ? Intrinsic::masked_scatter
@@ -4497,7 +4508,8 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                              Ctx.CostKind) +
            Ctx.TTI.getMemIntrinsicInstrCost(
                MemIntrinsicCostAttributes(IID, Ty, Ptr, IsMasked, Alignment,
-                                          &Ingredient),
+                                          &Ingredient, /*StrideVal=*/nullptr,
+                                          UniformBase),
                Ctx.CostKind);
   }
 
