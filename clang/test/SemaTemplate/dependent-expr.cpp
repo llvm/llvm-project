@@ -180,3 +180,13 @@ public:
     static constexpr auto Val = JoinStringViews<Equal>;
 };
 } // namespace PR65153
+
+namespace GH175934 {
+template <class T>
+struct Y {
+  static const int e = 1;
+  decltype(&e) g;
+};
+
+void f() { Y<int> y; }
+} // namespace GH175934
