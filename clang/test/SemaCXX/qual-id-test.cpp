@@ -159,3 +159,10 @@ namespace PR6645 {
     // expected-error{{cannot define or redeclare 'foo' here because namespace 'Inner' does not enclose namespace 'PR6645'}}
   }
 }
+
+namespace UnionTest {
+  union U { int x; void f(); };
+  namespace Inner {
+    void U::f() {} // expected-error{{cannot define or redeclare 'f' here because namespace 'Inner' does not enclose union 'U'}}
+  }
+}

@@ -6469,9 +6469,29 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
         // The cases that DC is not NamespaceDecl should be handled in
         // CheckRedeclarationExported.
         return false;
-    } else
+    } else {
+      unsigned DCKind = [&] {
+        if (auto *TD = dyn_cast<TagDecl>(DC)) {
+          switch (TD->getTagKind()) {
+          case TagTypeKind::Struct:
+            return diag::EnclosingDeclKind::Struct;
+          case TagTypeKind::Interface:
+            return diag::EnclosingDeclKind::Struct;
+          case TagTypeKind::Class:
+            return diag::EnclosingDeclKind::Class;
+          case TagTypeKind::Union:
+            return diag::EnclosingDeclKind::Union;
+          case TagTypeKind::Enum:
+            return diag::EnclosingDeclKind::Enum;
+          }
+        }
+        assert(isa<NamespaceDecl>(DC));
+        return diag::EnclosingDeclKind::Namespace;
+      }();
       Diag(Loc, diag::err_invalid_declarator_scope)
-      << Name << cast<NamedDecl>(Cur) << cast<NamedDecl>(DC) << SS.getRange();
+          << Name << cast<NamedDecl>(Cur) << DCKind << cast<NamedDecl>(DC)
+          << SS.getRange();
+    }
 
     return true;
   }

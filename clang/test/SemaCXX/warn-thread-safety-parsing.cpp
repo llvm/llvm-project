@@ -1681,7 +1681,7 @@ namespace InvalidDeclTest {
 class Foo { };
 namespace {
 void Foo::bar(Mutex* mu) LOCKS_EXCLUDED(mu) { } // \
-   // expected-error   {{cannot define or redeclare 'bar' here because namespace '' does not enclose namespace 'Foo'}} \
+   // expected-error   {{cannot define or redeclare 'bar' here because namespace '' does not enclose class 'Foo'}} \
    // expected-warning {{attribute locks_excluded ignored, because it is not attached to a declaration}}
 }
 
