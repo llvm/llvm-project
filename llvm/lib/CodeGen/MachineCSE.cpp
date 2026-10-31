@@ -14,6 +14,7 @@
 
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -99,6 +100,8 @@ private:
       PREMap;
   ScopedHTType VNT;
   SmallVector<MachineInstr *, 64> Exps;
+  /// Registers whose kill flags were already cleared by copy propagation.
+  DenseSet<Register> KillFlagsCleared;
   unsigned CurrVN = 0;
 
   bool PerformTrivialCopyPropagation(MachineInstr *MI, MachineBasicBlock *MBB);
@@ -200,9 +203,15 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
     LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
     LLVM_DEBUG(dbgs() << "***     to: " << *MI);
 
-    // Propagate SrcReg of copies to MI.
+    // Propagate SrcReg of copies to MI. Kill flags of SrcReg may be wrong
+    // now; MachineCSE never adds kill flags, so clearing them once per
+    // register is enough (clearing is linear in the number of uses and would
+    // otherwise be quadratic for a register copied many times, e.g. the ADA
+    // base register on z/OS).
     MO.setReg(SrcReg);
-    MRI->clearKillFlags(SrcReg);
+    MO.setIsKill(false);
+    if (KillFlagsCleared.insert(SrcReg).second)
+      MRI->clearKillFlags(SrcReg);
     // Coalesce single use copies.
     if (OnlyOneUse) {
       // If (and only if) we've eliminated all uses of the copy, also
@@ -932,6 +941,7 @@ void MachineCSEImpl::releaseMemory() {
   ScopeMap.clear();
   PREMap.clear();
   Exps.clear();
+  KillFlagsCleared.clear();
 }
 
 bool MachineCSEImpl::run(MachineFunction &MF) {
