@@ -16,6 +16,9 @@
 // C++20 modules are incompatible with Clang modules
 // ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
+// Ensure the std module declaration does not trigger a reserved-name warning.
+// ADDITIONAL_COMPILE_FLAGS: -Werror=reserved-module-identifier
+
 // MODULE_DEPENDENCIES: std
 
 import std;
