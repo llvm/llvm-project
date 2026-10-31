@@ -4446,10 +4446,12 @@ define i32 @add_reduce_sqr_sum_not_one_use(i32 %a, i32 %b) {
 define i32 @add_reduce_sqr_sum_not_one_use2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_not_one_use2(
 ; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[TWO_A:%.*]] = shl i32 [[A]], 1
+; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = add i32 [[TWO_A]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TWO_A_PLUS_B]], [[B]]
 ; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ]])
-; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB]], [[AB]]
-; CHECK-NEXT:    ret i32 [[AB_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], [[A_SQ]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %a_sq = mul nsw i32 %a, %a
   %two_a = shl i32 %a, 1
@@ -4483,10 +4485,12 @@ define i32 @add_reduce_sqr_sum_order2_not_one_use(i32 %a, i32 %b) {
 define i32 @add_reduce_sqr_sum_order2_not_one_use2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order2_not_one_use2(
 ; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[TWOA:%.*]] = shl i32 [[A]], 1
+; CHECK-NEXT:    [[TWOAB1:%.*]] = add i32 [[TWOA]], [[B:%.*]]
+; CHECK-NEXT:    [[TWOAB_B2:%.*]] = mul i32 [[TWOAB1]], [[B]]
 ; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ]])
-; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB]], [[AB]]
-; CHECK-NEXT:    ret i32 [[AB_SQ]]
+; CHECK-NEXT:    [[AB2:%.*]] = add i32 [[A_SQ]], [[TWOAB_B2]]
+; CHECK-NEXT:    ret i32 [[AB2]]
 ;
   %a_sq = mul nsw i32 %a, %a
   %twoa = mul i32 %a, 2
@@ -5329,6 +5333,68 @@ define i32 @zext_add_no_fold_symmetric(i8 %x) {
   %z = zext i8 %inner to i32
   %r = add i32 %z, -4
   ret i32 %r
+}
+
+; An assume that (x & y) == 0 proves x and y share no common bits, even
+; though neither is a constant, so add should fold to or disjoint.
+define i32 @add_disjoint_via_assume(i32 %x, i32 %y) {
+; CHECK-LABEL: @add_disjoint_via_assume(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  %add = add i32 %y, %x
+  ret i32 %add
+}
+
+; Negative test: the assume proves nothing about %z, so no fold.
+define i32 @add_no_fold_wrong_operand_assume(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @add_no_fold_wrong_operand_assume(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  %add = add i32 %z, %x
+  ret i32 %add
+}
+
+; Negative test: the assume does not dominate the add (it's in a
+; not-always-executed sibling block), so no fold.
+define i32 @add_no_fold_non_dominating_assume(i32 %x, i32 %y, i1 %cond) {
+; CHECK-LABEL: @add_no_fold_non_dominating_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ASSUME_BB:%.*]], label [[ADD_BB:%.*]]
+; CHECK:       assume_bb:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br label [[ADD_BB]]
+; CHECK:       add_bb:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  br i1 %cond, label %assume_bb, label %add_bb
+
+assume_bb:
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  br label %add_bb
+
+add_bb:
+  %add = add i32 %y, %x
+  ret i32 %add
 }
 
 define i8 @add_or_add(i8 %x) {
