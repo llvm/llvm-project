@@ -372,6 +372,15 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
       AddrDisc);
 }
 
+// Scalar PEXT and PDEP without BEXT and BDEP. Every shift-and-XOR step of the
+// whole-word network is one EOR with a shifted register, and it beats the
+// carry-less multiplies through PMULL.
+static SDValue expandScalarPEXTPDEP(const AArch64TargetLowering &TLI, SDNode *N,
+                                    SelectionDAG &DAG) {
+  return N->getOpcode() == ISD::PEXT ? TLI.expandPEXTWholeWord(N, DAG)
+                                     : TLI.expandPDEPWholeWord(N, DAG);
+}
+
 AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                              const AArch64Subtarget &STI)
     : TargetLowering(TM, STI), Subtarget(&STI) {
@@ -2178,6 +2187,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                 MVT::nxv8bf16, Legal);
     setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
   }
+
+  // Without BEXT/BDEP, pick the expansion of scalar PEXT/PDEP here. i8 and i16
+  // are expanded in place rather than promoted.
+  if (!Subtarget->isSVEBitPermAvailable())
+    setOperationAction({ISD::PEXT, ISD::PDEP},
+                       {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, Custom);
 
   if (Subtarget->isSVEAvailable() ||
       (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())) {
@@ -9112,6 +9127,10 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerCLMUL(Op, DAG);
   case ISD::PEXT:
   case ISD::PDEP: {
+    if (Op.getValueType().isScalarInteger() &&
+        !Subtarget->isSVEBitPermAvailable())
+      return expandScalarPEXTPDEP(*this, Op.getNode(), DAG);
+
     // Lower generic PEXT/PDEP to SVE2 intrinsics.
     SDLoc DL(Op);
     EVT VT = Op.getValueType();
@@ -33178,6 +33197,10 @@ void AArch64TargetLowering::ReplaceNodeResults(
     llvm_unreachable("Don't know how to custom expand this");
   case ISD::BITCAST:
     ReplaceBITCASTResults(N, Results, DAG);
+    return;
+  case ISD::PEXT:
+  case ISD::PDEP:
+    Results.push_back(expandScalarPEXTPDEP(*this, N, DAG));
     return;
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_SMAX:

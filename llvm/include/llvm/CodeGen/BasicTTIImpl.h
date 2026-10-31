@@ -1030,6 +1030,50 @@ public:
     return It->second;
   }
 
+  /// Cost of the shift-and-XOR network that TargetLowering::expandPEXT and
+  /// expandPDEP build for a scalar \p Ty: over the whole word, or with
+  /// \p Bytewise within each byte, then one variable shift per byte.
+  InstructionCost getPEXTPDEPNetworkCost(Intrinsic::ID IID, Type *Ty,
+                                         bool Bytewise,
+                                         TTI::TargetCostKind CostKind) const {
+    auto Op = [&](unsigned Opcode, bool ConstAmt = false) {
+      TTI::OperandValueInfo Op2 = {ConstAmt ? TTI::OK_UniformConstantValue
+                                            : TTI::OK_AnyValue,
+                                   TTI::OP_None};
+      return thisT()->getArithmeticInstrCost(
+          Opcode, Ty, CostKind, {TTI::OK_AnyValue, TTI::OP_None}, Op2);
+    };
+    InstructionCost And = Op(Instruction::And);
+    InstructionCost Xor = Op(Instruction::Xor);
+    InstructionCost Shift = Op(Instruction::Shl, /*ConstAmt=*/true);
+
+    // Stage masks and stages for fields of W bits: log2(W) stages, each with
+    // a prefix XOR of one step fewer than the one before. Within bytes every
+    // shift takes an AND to stay in its field.
+    unsigned BW = Ty->getScalarSizeInBits();
+    unsigned L = Log2_32(Bytewise ? 8 : BW);
+    unsigned Steps = L * (L + 1) / 2;
+    unsigned NumShifts = Steps + 2 * L - 1;
+    InstructionCost Cost = (2 * L + (Bytewise ? NumShifts : 0)) * And +
+                           NumShifts * Shift + (Steps + 4 * L - 1) * Xor;
+    if (!Bytewise)
+      return Cost;
+
+    // Kept bits below each byte: a popcount per byte, summed by a multiply
+    // or by shifts and adds. Then each byte joins with a variable shift.
+    unsigned Bytes = BW / 8;
+    InstructionCost Add = Op(Instruction::Add);
+    Cost += 4 * And + 4 * Shift + 3 * Add;
+    if (getTLI()->isOperationLegal(ISD::MUL, getTLI()->getValueType(DL, Ty)))
+      Cost += Op(Instruction::Mul);
+    else
+      Cost += Log2_32(Bytes) * (Shift + Add);
+    unsigned JoinAnds = IID == Intrinsic::pext ? 2 * Bytes - 3 : 2 * Bytes - 2;
+    Cost += JoinAnds * And + 2 * (Bytes - 1) * Shift +
+            (Bytes - 1) * (Op(Instruction::Shl) + Op(Instruction::Or));
+    return Cost;
+  }
+
 private:
   std::pair<InstructionCost, MVT> computeTypeLegalizationCost(Type *Ty) const {
     LLVMContext &C = Ty->getContext();
@@ -3255,25 +3299,35 @@ public:
     case Intrinsic::pext: {
       if (RetTy->isVectorTy())
         break;
-      // Based on Hacker's Delight §7-5: Expand, or Generalized Insert.
+      // Scalars wider than a register take the whole-word network.
+      if (LT.first > 1)
+        return getPEXTPDEPNetworkCost(IID, RetTy, /*Bytewise=*/false, CostKind);
+      // The expansion runs on the promoted type and picks as
+      // TargetLowering::expandPEXT does.
+      MVT VT = LT.second;
+      unsigned BW = VT.getSizeInBits();
+      Type *Ty = IntegerType::get(RetTy->getContext(), BW);
+      if (!TLI->isOperationLegal(ISD::CLMUL, VT)) {
+        bool Bytewise = BW >= 16 && BW <= 64 && isPowerOf2_32(BW) &&
+                        TLI->isOperationLegal(ISD::SHL, VT) &&
+                        TLI->isOperationLegal(ISD::SRL, VT);
+        return getPEXTPDEPNetworkCost(IID, Ty, Bytewise, CostKind);
+      }
+
+      // Hacker's Delight §7-4 with each parallel prefix as clmul(Mk, ~0).
       // Below cost is accurate for pext, pdep will be similar.
-      unsigned BW = RetTy->getScalarSizeInBits();
       InstructionCost AndCost =
-          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind);
+          thisT()->getArithmeticInstrCost(Instruction::And, Ty, CostKind);
       InstructionCost ShiftCost =
-          thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind);
+          thisT()->getArithmeticInstrCost(Instruction::Shl, Ty, CostKind);
       InstructionCost OrCost =
-          thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
+          thisT()->getArithmeticInstrCost(Instruction::Or, Ty, CostKind);
       InstructionCost XorCost =
-          thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
-      IntrinsicCostAttributes ClmulAttrs(Intrinsic::clmul, RetTy,
-                                         {RetTy, RetTy});
-      int Iterations = Log2_32_Ceil(BW);
-      // Expansion of CLMUL(Mk, ~0) is lot cheaper
-      InstructionCost GenericClmulCost =
+          thisT()->getArithmeticInstrCost(Instruction::Xor, Ty, CostKind);
+      IntrinsicCostAttributes ClmulAttrs(Intrinsic::clmul, Ty, {Ty, Ty});
+      InstructionCost MulCost =
           thisT()->getIntrinsicInstrCost(ClmulAttrs, CostKind);
-      InstructionCost AllOnesClmulCost = Iterations * (ShiftCost + XorCost);
-      InstructionCost MulCost = std::min(GenericClmulCost, AllOnesClmulCost);
+      int Iterations = Log2_32_Ceil(BW);
 
       InstructionCost Cost = AndCost + ShiftCost; // Prefix cost
       Cost += Iterations *
