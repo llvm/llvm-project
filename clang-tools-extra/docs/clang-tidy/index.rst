@@ -177,6 +177,8 @@ An overview of all the command-line options:
                                        headers to exclude diagnostics from. Diagnostics
                                        from the main file of each translation unit are
                                        always displayed.
+                                       The pattern uses POSIX extended regular
+                                       expression syntax, like --header-filter.
                                        Must be used together with --header-filter.
                                        Can be used together with -line-filter.
                                        This option overrides the 'ExcludeHeaderFilterRegex'
@@ -222,6 +224,11 @@ An overview of all the command-line options:
                                        headers are displayed by default. Diagnostics
                                        from the main file of each translation unit are
                                        always displayed.
+                                       The pattern uses POSIX extended regular
+                                       expression syntax, so lookahead such as '(?!...)'
+                                       is not supported; use --exclude-header-filter to
+                                       exclude headers instead. An empty pattern matches
+                                       no headers.
                                        Can be used together with -line-filter.
                                        This option overrides the 'HeaderFilterRegex'
                                        option in .clang-tidy file, if any.
