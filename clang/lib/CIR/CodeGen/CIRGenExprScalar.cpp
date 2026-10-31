@@ -3288,10 +3288,11 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
         loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getFixedSize()));
   }
 
-  // The result type is size_t (target-dependent width); use it so the IntAttr
-  // width matches the APInt from EvaluateKnownConstInt.
+  mlir::Type resultType = e->getKind() == UETT_AddrSpaceOf
+                              ? convertType(e->getType())
+                              : cgf.cgm.sizeTy;
   return builder.getConstant(
-      loc, cir::IntAttr::get(cgf.cgm.sizeTy,
+      loc, cir::IntAttr::get(resultType,
                              e->EvaluateKnownConstInt(cgf.getContext())));
 }
 
