@@ -1834,11 +1834,6 @@ public:
   DenseMap<const GlobalValue *, GlobalValue::SanitizerMetadata>
       GlobalValueSanitizerMetadata;
 
-  /// DiscriminatorTable - This table maps file:line locations to an
-  /// integer representing the next DWARF path discriminator to assign to
-  /// instructions in different blocks at the same location.
-  DenseMap<std::pair<const char *, unsigned>, unsigned> DiscriminatorTable;
-
   /// A set of interned tags for operand bundles.  The StringMap maps
   /// bundle tags to their IDs.
   ///

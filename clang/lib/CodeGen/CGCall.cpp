@@ -4729,8 +4729,9 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
         CalleeDestructedParamCleanups.lookup(cast<ParmVarDecl>(param));
     assert(cleanup.isValid() &&
            "cleanup for callee-destructed param not recorded");
-    // This unreachable is a temporary marker which will be removed later.
-    llvm::Instruction *isActive = Builder.CreateUnreachable();
+    // This load is a temporary marker which will be removed later.
+    llvm::Instruction *isActive =
+        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
     args.addArgCleanupDeactivation(cleanup, isActive);
   }
 }
@@ -5145,10 +5146,8 @@ void CodeGenFunction::EmitCallArgs(
   // case, there are certain language constructs that require left-to-right
   // evaluation, and in those cases we consider the evaluation order requirement
   // to trump the "destruction order is reverse construction order" guarantee.
-  bool LeftToRight =
-      CGM.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()
-          ? Order == EvaluationOrder::ForceLeftToRight
-          : Order != EvaluationOrder::ForceRightToLeft;
+  bool LeftToRight = CodeGenUtils::shouldEvaluateArgsLeftToRight(
+      Order, CGM.getTarget().getCXXABI());
 
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
                                          RValue EmittedArg) {

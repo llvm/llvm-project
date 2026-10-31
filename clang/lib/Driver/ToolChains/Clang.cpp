@@ -24,6 +24,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MakeSupport.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -691,6 +692,12 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     if (EmitCovNotes) {
       CmdArgs.push_back(
           Args.MakeArgString("-coverage-notes-file=" + CoverageFilename));
+
+      bool UseAbsolutePathsInNotes =
+          Args.hasFlag(options::OPT_fprofile_abs_path,
+                       options::OPT_fno_profile_abs_path, false);
+      if (UseAbsolutePathsInNotes)
+        CmdArgs.push_back(Args.MakeArgString("-coverage-notes-abs-paths"));
     }
 
     if (EmitCovData) {
@@ -1215,7 +1222,7 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    if (Triple.isOSDarwin() || Triple.isOSWindows())
+    if (Triple.isOSDarwin() || Triple.isOSWindowsOrUEFI())
       return true;
     return false;
 
@@ -1458,9 +1465,9 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     if (Scope != "none" && Scope != "non-leaf" && Scope != "all")
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Scope;
-    // This spelling cannot express a key, and AArch64 Windows only supports
-    // B-key, so default to it there as parseBranchProtection() does.
-    Key = isAArch64 && Triple.isOSWindows() ? "b_key" : "a_key";
+    // This spelling cannot express a key, and AArch64 Windows and UEFI only
+    // support B-key, so default to it there as parseBranchProtection() does.
+    Key = isAArch64 && Triple.isOSWindowsOrUEFI() ? "b_key" : "a_key";
     IndirectBranches =
         (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
     BranchProtectionPAuthLR = false;
@@ -2798,11 +2805,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                 .Case("-Av8plus", {"+v8plus", "+v9"})
                 .Case("-Av8plusa", {"+v8plus", "+v9", "+vis"})
                 .Case("-Av8plusb", {"+v8plus", "+v9", "+vis", "+vis2"})
-                .Case("-Av8plusd", {"+v8plus", "+v9", "+vis", "+vis2", "+vis3"})
+                .Case("-Av8plusd", {"+v8plus", "+v9", "+vis", "+vis2", "+vis3",
+                                    "+ua2005", "+ua2007"})
                 .Case("-Av9", {"+v9"})
                 .Case("-Av9a", {"+v9", "+vis"})
                 .Case("-Av9b", {"+v9", "+vis", "+vis2"})
-                .Case("-Av9d", {"+v9", "+vis", "+vis2", "+vis3"})
+                .Case("-Av9d",
+                      {"+v9", "+vis", "+vis2", "+vis3", "+ua2005", "+ua2007"})
                 .Default({});
         if (!SparcTargetFeatures.empty())
           continue;
@@ -4052,6 +4061,7 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("--dx-pdb-in-private");
   }
+  CmdArgs.push_back("-load-bool-from-mem=nonzero");
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
@@ -4162,8 +4172,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                    options::OPT_fno_modules_strict_decluse, false))
     CmdArgs.push_back("-fmodules-strict-decluse");
 
-  Args.addOptOutFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
-                     options::OPT_fno_modulemap_allow_subdirectory_search);
+  Args.addOptInFlag(CmdArgs, options::OPT_fmodulemap_allow_subdirectory_search,
+                    options::OPT_fno_modulemap_allow_subdirectory_search);
 
   // -fno-implicit-modules turns off implicitly compiling modules on demand.
   bool ImplicitModules = false;
@@ -7326,14 +7336,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << A->getAsString(Args) << TripleStr;
     }
     if (Arg *A = Args.getLastArg(options::OPT_mnop_mcount)) {
-      if (Arch == llvm::Triple::systemz)
+      if (Arch == llvm::Triple::systemz ||
+          (TC.getTriple().isX86() && TC.getTriple().isOSBinFormatELF()))
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << A->getAsString(Args) << TripleStr;
     }
     if (Arg *A = Args.getLastArg(options::OPT_mrecord_mcount)) {
-      if (Arch == llvm::Triple::systemz)
+      if (Arch == llvm::Triple::systemz ||
+          (TC.getTriple().isX86() && TC.getTriple().isOSBinFormatELF()))
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -9916,9 +9928,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       }
 
       // If the user explicitly requested it via `--offload-arch` we should
-      // extract it from any static libraries if present.
-      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ))
-        CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Arg));
+      // extract it from any static libraries if present. Device images are
+      // labeled with the canonical target ID, so request that.
+      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ)) {
+        std::optional<std::string> TargetID =
+            getCanonicalTargetID(TC->getTriple(), Arg);
+        CmdArgs.emplace_back(Args.MakeArgString(
+            "--should-extract=" + (TargetID ? StringRef(*TargetID) : Arg)));
+      }
 
       // If this is OpenMP the device linker will need `-lompdevice`.
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&

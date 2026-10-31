@@ -381,9 +381,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignf80
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
+    libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.cospif
     libc.src.math.dfmal
@@ -405,6 +407,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fabsf80
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
@@ -424,6 +427,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
+    libc.src.math.fmaxf80
     libc.src.math.fmaximum
     libc.src.math.fmaximum_mag
     libc.src.math.fmaximum_mag_num
@@ -435,10 +439,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_numf
     libc.src.math.fmaximum_numl
     libc.src.math.fmaximumf
+    libc.src.math.fmaximumf80
     libc.src.math.fmaximuml
     libc.src.math.fmaxl
     libc.src.math.fmin
     libc.src.math.fminf
+    libc.src.math.fminf80
     libc.src.math.fminimum
     libc.src.math.fminimum_mag
     libc.src.math.fminimum_mag_num
@@ -450,6 +456,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_numf
     libc.src.math.fminimum_numl
     libc.src.math.fminimumf
+    libc.src.math.fminimumf80
     libc.src.math.fminimuml
     libc.src.math.fminl
     libc.src.math.fmod
@@ -570,6 +577,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinf
+    libc.src.math.sinh
     libc.src.math.sinhf
     libc.src.math.sinpif
     libc.src.math.sqrt
@@ -577,6 +585,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
+    libc.src.math.tanh
     libc.src.math.tanhf
     libc.src.math.totalorder
     libc.src.math.totalorderf
@@ -987,6 +996,18 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
     # libintl.h entrypoints
     libc.src.libintl.bind_textdomain_codeset
     libc.src.libintl.bindtextdomain
+    libc.src.libintl.dcgettext
+    libc.src.libintl.dcgettext_l
+    libc.src.libintl.dcngettext
+    libc.src.libintl.dcngettext_l
+    libc.src.libintl.dgettext
+    libc.src.libintl.dgettext_l
+    libc.src.libintl.dngettext
+    libc.src.libintl.dngettext_l
+    libc.src.libintl.gettext
+    libc.src.libintl.gettext_l
+    libc.src.libintl.ngettext
+    libc.src.libintl.ngettext_l
     libc.src.libintl.textdomain
 
     # regex.h entrypoints

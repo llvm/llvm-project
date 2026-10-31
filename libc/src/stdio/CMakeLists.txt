@@ -116,6 +116,7 @@ add_entrypoint_object(
   HDRS
     fopencookie.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.stdio_macros
     libc.hdr.types.off_t
     libc.hdr.types.cookie_io_functions_t
@@ -318,6 +319,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.fdopen
+)
+
+add_entrypoint_object(
+  popen
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.popen
+)
+
+add_entrypoint_object(
+  pclose
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pclose
 )
 
 add_entrypoint_object(

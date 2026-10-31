@@ -1,11 +1,10 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -fenumeration-type
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test declaration, constructor, and expression semantics for enumeration types
 
 ! C7114: access specifier only allowed in module
 subroutine test_access_specifier_outside_module()
   !ERROR: PRIVATE attribute may only appear in the specification part of a module
   !ERROR: Access specifier on ENUMERATION TYPE may only appear in the specification part of a module
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type, private :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -13,7 +12,6 @@ end subroutine
 
 ! Valid: basic declarations and usage
 subroutine test_basic_declarations()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -32,7 +30,6 @@ end subroutine
 
 ! Valid: constructor syntax — color(n) where n is a positive integer <= count
 subroutine test_constructor_valid()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -47,7 +44,6 @@ end subroutine
 
 ! Constructor errors
 subroutine test_constructor_errors()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -78,7 +74,6 @@ end subroutine
 
 ! Component reference on enumeration type is not allowed
 subroutine test_component_reference()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -93,7 +88,6 @@ end subroutine
 
 ! Module providing an enumeration type by USE association
 module enum_constructor_mod
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -132,7 +126,6 @@ end subroutine
 ! A duplicate enumerator name within an enumeration type is diagnosed as a
 ! clean semantic error.
 subroutine test_duplicate_enumerator()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     !ERROR: 'red' is already declared in this scoping unit
     enumerator :: red, green, red
@@ -143,7 +136,6 @@ end subroutine
 ! numeric: assignment and arithmetic mixing an enumeration value with an
 ! integer (or two enumeration values) must be rejected.
 subroutine test_assignment_and_arithmetic()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -163,4 +155,52 @@ subroutine test_assignment_and_arithmetic()
   i = red + 1
   !ERROR: Operands of + must be numeric; have TYPE(color) and TYPE(color)
   c = red + green
+end subroutine
+
+! An enumeration type has no type parameters (F2023 7.6.2), so no type-spec may
+! give it a type-param-spec-list.  An enumeration constructor is still valid.
+subroutine test_type_parameters(u)
+  enumeration type :: state
+    enumerator :: off, on
+  end enumeration type
+  type :: holder
+    !ERROR: Enumeration type 'state' has no type parameters
+    type(state(1)) :: comp
+  end type
+  class(*), intent(in) :: u
+  !ERROR: Enumeration type 'state' has no type parameters
+  type(state(1)) :: a
+  !ERROR: Enumeration type 'state' has no type parameters
+  type(state(k=2)) :: b
+  !ERROR: Enumeration type 'state' has no type parameters
+  type(state(:)), allocatable :: c
+  class(*), allocatable :: d
+
+  a = state(1)
+  b = off
+  !ERROR: Enumeration type 'state' has no type parameters
+  allocate(state(1) :: d)
+  deallocate(d)
+  allocate(d, source=state(2))
+  select type (u)
+  !ERROR: Enumeration type 'state' has no type parameters
+  type is (state(1))
+  end select
+end subroutine
+
+! A FUNCTION prefix and IMPLICIT resolve their type-spec on separate paths.
+module enum_type_param_mod
+  enumeration type :: state
+    enumerator :: off, on
+  end enumeration type
+contains
+  !ERROR: Enumeration type 'state' has no type parameters
+  type(state(1)) function param_result()
+  end function
+end module
+
+subroutine test_type_parameters_implicit()
+  use enum_type_param_mod, only: state
+  !ERROR: Enumeration type 'state' has no type parameters
+  implicit type(state(1)) (z)
 end subroutine

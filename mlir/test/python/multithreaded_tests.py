@@ -40,8 +40,10 @@ import gc
 import importlib.util
 import os
 import sys
+import sysconfig
 import threading
 import tempfile
+import types
 import unittest
 
 from contextlib import contextmanager
@@ -284,6 +286,7 @@ TESTS_TO_SKIP = [
     "test_dialects_arith_dialect__testArithValue_multi_threaded",  # RuntimeError: Value caster is already registered: <class 'dialects/arith_dialect.testArithValue.<locals>.ArithValue'>, even with GIL
     "test_ir_dialects__testAppendPrefixSearchPath_multi_threaded",  # PyGlobals::setDialectSearchPrefixes is not thread-safe, even with GIL. Strange usage of static PyGlobals vs python exposed _cext.globals
     "test_ir_value__testValueCasters_multi_threaded",  # RuntimeError: Value caster is already registered: <function testValueCasters.<locals>.dont_cast_int, even with GIL
+    "test_dialects_transform_structured_ext__testMatchInterfaceEnumReplaceAttributeBuilder_multi_threaded",  # Globally replaces the MatchInterfaceEnum attribute builder, which breaks testMatchInterfaceEnum, even with GIL
     # tests indirectly calling thread-unsafe llvm::raw_ostream
     "test_execution_engine__testInvalidModule_multi_threaded",  # mlirExecutionEngineCreate calls thread-unsafe llvm::raw_ostream
     "test_pass_manager__testPrintIrAfterAll_multi_threaded",  # IRPrinterInstrumentation::runAfterPass calls thread-unsafe llvm::raw_ostream
@@ -311,6 +314,8 @@ TESTS_TO_XFAIL = [
     "test_execution_engine__testComplexUnrankedMemrefAdd_multi_threaded",
     "test_execution_engine__testDynamicMemrefAdd2D_multi_threaded",
     "test_execution_engine__testF16MemrefAdd_multi_threaded",
+    "test_execution_engine__testF8E3M4Memref_multi_threaded",
+    "test_execution_engine__testF8E4M3Memref_multi_threaded",
     "test_execution_engine__testF8E5M2Memref_multi_threaded",
     "test_execution_engine__testInvokeFloatAdd_multi_threaded",
     "test_execution_engine__testInvokeVoid_multi_threaded",  # a ctypes race
@@ -340,6 +345,40 @@ TESTS_TO_XFAIL = [
 ]
 
 
+# The tests above are expected to fail only when ThreadSanitizer reports
+# warnings. Without TSAN the underlying races (e.g. in ctypes) make them fail
+# nondeterministically, so skip them instead. The check mirrors CPython's
+# test.support.check_sanitizer(thread=True).
+def is_tsan_enabled() -> bool:
+    cflags = sysconfig.get_config_var("CFLAGS") or ""
+    config_args = sysconfig.get_config_var("CONFIG_ARGS") or ""
+    return "-fsanitize=thread" in cflags or "--with-thread-sanitizer" in config_args
+
+
+if not is_tsan_enabled():
+    TESTS_TO_SKIP += TESTS_TO_XFAIL
+    TESTS_TO_XFAIL = []
+
+# Tests converting numpy arrays to memref descriptors with these helpers from
+# mlir.runtime.np_to_memref race on concurrent ctypes type creation
+# (https://github.com/python/cpython/issues/127945), e.g. "TypeError:
+# incompatible types, LP_c_float instance instead of LP_c_float instance".
+# The race reproduces with np_to_memref alone, without any MLIR native code.
+# Like TESTS_TO_XFAIL, they are expected to fail with TSAN and skipped otherwise.
+NP_TO_MEMREF_DESCRIPTOR_FNS = {
+    "get_ranked_memref_descriptor",
+    "get_unranked_memref_descriptor",
+    "make_nd_memref_descriptor",
+}
+
+
+def uses_np_to_memref_descriptors(code: types.CodeType) -> bool:
+    return any(name in NP_TO_MEMREF_DESCRIPTOR_FNS for name in code.co_names) or any(
+        isinstance(const, types.CodeType) and uses_np_to_memref_descriptors(const)
+        for const in code.co_consts
+    )
+
+
 def add_existing_tests(test_modules, test_prefix: str = "_original_test"):
     def decorator(test_cls):
         this_folder = Path(__file__).parent.absolute()
@@ -367,7 +406,12 @@ def add_existing_tests(test_modules, test_prefix: str = "_original_test"):
                 )
                 if is_test_fn:
                     obj = getattr(test_mod, attr_name)
-                    if callable(obj):
+                    # Only collect functions defined in the test module itself,
+                    # not imported helpers (e.g. test_diagnostics_with_errors_and_notes).
+                    if (
+                        callable(obj)
+                        and getattr(obj, "__module__", None) == test_mod.__name__
+                    ):
                         test_name = f"{test_prefix}_{test_module_name.replace('/', '_')}__{attr_name}"
 
                         def wrapped_test_fn(
@@ -375,6 +419,9 @@ def add_existing_tests(test_modules, test_prefix: str = "_original_test"):
                         ):
                             __exec_fn__(__test_fn__)
 
+                        wrapped_test_fn.uses_np_to_memref_descriptors = hasattr(
+                            obj, "__code__"
+                        ) and uses_np_to_memref_descriptors(obj.__code__)
                         setattr(test_cls, test_name, wrapped_test_fn)
         return test_cls
 
@@ -434,6 +481,11 @@ def multi_threaded(
                     continue
 
             def multi_threaded_test_fn(self, *args, __test_fn__=test_fn, **kwargs):
+                # Some source test modules intentionally keep a Context alive at
+                # module scope (e.g. ir/array_attributes.py), so compare against
+                # the number of live contexts before the test instead of zero.
+                gc.collect()
+                num_live_contexts = Context._get_live_count()
                 with capture_stdout(), capture_stderr() as get_output:
                     barrier = threading.Barrier(num_workers)
 
@@ -453,7 +505,7 @@ def multi_threaded(
                         assert len(list(f.result() for f in futures)) == num_workers
 
                     gc.collect()
-                    assert Context._get_live_count() == 0
+                    assert Context._get_live_count() == num_live_contexts
 
                 captured = get_output()
                 if len(captured) > 0 and "ThreadSanitizer" in captured:
@@ -462,7 +514,13 @@ def multi_threaded(
                     )
 
             test_new_name = f"{name}{multithreaded_test_postfix}"
-            if xfail_tests is not None and test_new_name in xfail_tests:
+            is_xfail = xfail_tests is not None and test_new_name in xfail_tests
+            if getattr(test_fn, "uses_np_to_memref_descriptors", False):
+                # See NP_TO_MEMREF_DESCRIPTOR_FNS.
+                if not is_tsan_enabled():
+                    continue
+                is_xfail = True
+            if is_xfail:
                 multi_threaded_test_fn = unittest.expectedFailure(
                     multi_threaded_test_fn
                 )
@@ -491,10 +549,7 @@ class TestAllMultiThreaded(unittest.TestCase):
         with Context() as ctx:
             print(ctx._get_live_count())
             print(ctx._get_live_module_count())
-            print(ctx._get_live_operation_count())
-            print(ctx._get_live_operation_objects())
             print(ctx._get_context_again() is ctx)
-            print(ctx._clear_live_operations())
 
     def _original_test_create_module_with_consts(self):
         py_values = [123, 234, 345]

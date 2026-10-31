@@ -334,6 +334,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption(const TargetMachine &TM) {
     Opt.EnableIPRA = Opts.enable_ipra == BoolOrDefault::True;
   Opt.EnableFastISelOption = toBoolOrDefault(Opts.fast_isel);
   Opt.EnableRegAllocFastTied = toBoolOrDefault(Opts.regalloc_fast_tied);
+  Opt.EnableMachinePipeliner = toBoolOrDefault(Opts.enable_pipeliner);
   Opt.EnableGlobalISelOption = toBoolOrDefault(Opts.global_isel);
   Opt.VerifyMachineCode = computeMachineVerifierMode(
       Opts, valueOr(Opts.verify_machineinstrs, false));
@@ -765,48 +766,51 @@ void TargetPassConfig::addIRPasses() {
 /// Turn exception handling constructs into something the code generators can
 /// handle.
 void TargetPassConfig::addPassesToHandleExceptions() {
-  const MCAsmInfo &MCAI = TM->getMCAsmInfo();
-  switch (MCAI.getExceptionHandlingType()) {
-  case ExceptionHandling::SjLj:
-    // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
-    // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
-    // catch info can get misplaced when a selector ends up more than one block
-    // removed from the parent invoke(s). This could happen when a landing
-    // pad is shared by multiple invokes and is also a target of a normal
-    // edge from elsewhere.
+  // The module's exception model is not known when the pipeline is built, so
+  // schedule the preparation pass for every model the target supports. Each
+  // pass does nothing for other models.
+  bool HasEHPrep = false;
+
+  // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
+  // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
+  // catch info can get misplaced when a selector ends up more than one block
+  // removed from the parent invoke(s). This could happen when a landing
+  // pad is shared by multiple invokes and is also a target of a normal
+  // edge from elsewhere.
+  if (TM->supportsExceptionModel(ExceptionHandling::SjLj)) {
     addPass(createSjLjEHPreparePass(TM));
-    [[fallthrough]];
-  case ExceptionHandling::DwarfCFI:
-  case ExceptionHandling::ARM:
-  case ExceptionHandling::AIX:
-  case ExceptionHandling::ZOS:
-    addPass(createDwarfEHPass(getOptLevel()));
-    break;
-  case ExceptionHandling::WinEH:
-    // We support using both GCC-style and MSVC-style exceptions on Windows, so
-    // add both preparation passes. Each pass will only actually run if it
-    // recognizes the personality function.
+    HasEHPrep = true;
+  }
+
+  // We support using both GCC-style and MSVC-style exceptions on Windows, so
+  // WinEHPrepare runs in addition to DwarfEHPrepare below. Each pass will only
+  // actually run if it recognizes the personality function.
+  //
+  // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
+  // on catchpads and cleanuppads because it does not outline them into
+  // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
+  // should remove PHIs there. WinEHPrepare derives this from the Wasm
+  // personality, so no explicit flag is needed here.
+  if (TM->supportsExceptionModel(ExceptionHandling::WinEH) ||
+      TM->supportsExceptionModel(ExceptionHandling::Wasm)) {
     addPass(createWinEHPass());
+    HasEHPrep = true;
+  }
+
+  if (TM->supportsExceptionModel(ExceptionHandling::Wasm))
+    addPass(createWasmEHPass());
+
+  if (TM->supportsExceptionModel(ExceptionHandling::DwarfCFI)) {
     addPass(createDwarfEHPass(getOptLevel()));
-    break;
-  case ExceptionHandling::Wasm:
-    // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
-    // on catchpads and cleanuppads because it does not outline them into
-    // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
-    // should remove PHIs there. WinEHPrepare derives this from the Wasm
-    // personality, so no explicit flag is needed here.
-    addPass(createWinEHPass());
-    break;
-  case ExceptionHandling::Default:
-  case ExceptionHandling::None:
-  case ExceptionHandling::Emscripten:
-    // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
-    // by this point it needs no generic EH preparation, like the None case.
+    HasEHPrep = true;
+  }
+
+  // If the target supports no exception model, nothing else lowers invokes.
+  if (!HasEHPrep) {
     addPass(createLowerInvokePass());
 
     // The lower invoke pass may create unreachable code. Remove it.
     addPass(createUnreachableBlockEliminationPass());
-    break;
   }
 }
 
@@ -993,6 +997,10 @@ void TargetPassConfig::addMachinePasses() {
   if (TM->Options.EnableIPRA)
     addPass(createRegUsageInfoPropPass());
 
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      valueOr(getOpts(*TM).enable_pipeliner, isMachinePipelinerEnabled()))
+    addPass(&MachinePipelinerID);
+
   // Run pre-ra passes.
   addPreRegAlloc();
 
@@ -1146,12 +1154,12 @@ void TargetPassConfig::addMachinePasses() {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
+      if (!Opts.basic_block_section_match_infer || Opts.propeller_match_bbid)
+        addPass(llvm::createBasicBlockPathCloningPass());
       if (Opts.basic_block_section_match_infer)
         addPass(llvm::createBasicBlockMatchingAndInferencePass());
-      else {
-        addPass(llvm::createBasicBlockPathCloningPass());
+      else
         addPass(llvm::createInsertCodePrefetchPass());
-      }
     }
     addPass(llvm::createBasicBlockSectionsPass(SplitFunctionsWithPGO));
   }
@@ -1286,9 +1294,6 @@ bool TargetPassConfig::addRegAssignAndRewriteFast() {
 
   addPass(createRegAllocPass(false));
 
-  // Allow targets to change the register assignments after
-  // fast register allocation.
-  addPostFastRegAllocRewrite();
   return true;
 }
 
@@ -1334,18 +1339,10 @@ void TargetPassConfig::addOptimizedRegAlloc() {
 
   addPass(&ProcessImplicitDefsID);
 
-  // LiveVariables currently requires pure SSA form.
-  //
-  // FIXME: Once TwoAddressInstruction pass no longer uses kill flags,
-  // LiveVariables can be removed completely, and LiveIntervals can be directly
-  // computed. (We still either need to regenerate kill flags after regalloc, or
-  // preferably fix the scavenger to not depend on them).
-  // FIXME: UnreachableMachineBlockElim is a dependant pass of LiveVariables.
-  // When LiveVariables is removed this has to be removed/moved either.
+  // LiveIntervals requires pure SSA form and no unreachable blocks.
   // Explicit addition of UnreachableMachineBlockElim allows stopping before or
   // after it with -stop-before/-stop-after.
   addPass(&UnreachableMachineBlockElimID);
-  addPass(&LiveVariablesID);
 
   // Run SSA machine scheduler runs just before PHI elimination.
   if (EnableSSAMachineScheduler) {
@@ -1353,9 +1350,6 @@ void TargetPassConfig::addOptimizedRegAlloc() {
     addPass(&SSAMachineSchedulerID);
   }
 
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
   addPass(&LiveIntervalsID);
 
   // Edge splitting is smarter with machine loop info.

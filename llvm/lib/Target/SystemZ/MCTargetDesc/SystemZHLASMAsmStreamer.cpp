@@ -361,6 +361,29 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
   EmitEOL();
 }
 
+void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
+                                       uint64_t FillValue, SMLoc Loc) {
+  int64_t Count;
+  if (!NumBytes.evaluateAsAbsolute(Count)) {
+    getContext().reportError(Loc, "fill length must be absolute in HLASM");
+    return;
+  }
+  if (Count < 0) {
+    getContext().reportError(Loc, "invalid number of bytes");
+    return;
+  }
+  if (Count > 0x7FFFFFFF) {
+    getContext().reportError(Loc, "fill length too large for HLASM");
+    return;
+  }
+  if (Count == 0)
+    return;
+
+  OS << " DC " << Count << "XL1'"
+     << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
+  EmitEOL();
+}
+
 void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
                                                  const MCSubtargetInfo &STI) {
   raw_ostream &OS = getCommentOS();
@@ -495,6 +518,17 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   }
 }
 
+// Print the HLASM address constant type for a value of the given size:
+// A(...) is a fullword, AD(...) a doubleword, AL<n>(...) any other length.
+static void printAddrConstPrefix(raw_ostream &OS, unsigned Size) {
+  if (Size == 4)
+    OS << "A(";
+  else if (Size == 8)
+    OS << "AD(";
+  else
+    OS << "AL" << Size << '(';
+}
+
 bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                                   MCSymbolAttr Attribute) {
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
@@ -541,7 +575,7 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
     }
 
     if (Parens)
-      OS << "AD(";
+      printAddrConstPrefix(OS, Size);
     emitHLASMValueImpl(BE.getLHS(), Size);
 
     switch (BE.getOpcode()) {
@@ -579,7 +613,7 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
   default:
     Parens &= isa<MCSymbolRefExpr>(Value);
     if (Parens)
-      OS << "AD(";
+      printAddrConstPrefix(OS, Size);
     MAI->printExpr(OS, *Value);
     if (Parens)
       OS << ')';

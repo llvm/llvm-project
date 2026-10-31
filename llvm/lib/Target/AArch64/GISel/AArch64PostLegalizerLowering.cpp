@@ -1041,6 +1041,70 @@ void applyBuildVectorToDup(MachineInstr &MI, Register Src,
   MI.eraseFromParent();
 }
 
+bool matchBuildVectorToHalfDup(MachineInstr &MI,
+                               std::pair<Register, Register> &Srcs,
+                               MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (Ty.getSizeInBits() != 128 || isConstantOrConstantVector(MI, MRI))
+    return false;
+
+  // Later, during selection, we'll try to match imported patterns using
+  // immAllOnesV and immAllZerosV. These require G_BUILD_VECTOR. Don't lower
+  // G_BUILD_VECTORs which could match those patterns.
+  if (isBuildVectorAllZeros(MI, MRI) || isBuildVectorAllOnes(MI, MRI))
+    return false;
+
+  // Find buildvector which always uses the same register or undef in the first
+  // and second halves of the register.
+  Register Reg1;
+  Register Reg2;
+  unsigned NumOps = MI.getNumOperands() - 1;
+  if (NumOps <= 2 || NumOps % 2 != 0)
+    return false;
+
+  unsigned NumNonUndef1 = 0, NumNonUndef2 = 0;
+  for (unsigned I = 0; I < NumOps / 2; I++) {
+    Register Src1 = MI.getOperand(I + 1).getReg();
+    if (!getOpcodeDef<GImplicitDef>(Src1, MRI)) {
+      if (!Reg1)
+        Reg1 = Src1;
+      else if (Src1 != Reg1)
+        return false;
+      NumNonUndef1++;
+    }
+
+    Register Src2 = MI.getOperand(NumOps / 2 + I + 1).getReg();
+    if (!getOpcodeDef<GImplicitDef>(Src2, MRI)) {
+      if (!Reg2)
+        Reg2 = Src2;
+      else if (Src2 != Reg2)
+        return false;
+      NumNonUndef2++;
+    }
+  }
+
+  Srcs = {Reg1, Reg2};
+  return NumNonUndef1 >= 1 && NumNonUndef2 >= 1 &&
+         NumNonUndef1 + NumNonUndef2 >= 3 && Reg1 != Reg2;
+}
+
+void applyBuildVectorToHalfDup(MachineInstr &MI,
+                               std::pair<Register, Register> &Srcs,
+                               MachineRegisterInfo &MRI, MachineIRBuilder &B) {
+  B.setInstrAndDebugLoc(MI);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  LLT HalfTy = Ty.divide(2);
+  auto D1 = Srcs.first
+                ? B.buildInstr(AArch64::G_SPLAT_VECTOR, {HalfTy}, {Srcs.first})
+                : B.buildUndef(HalfTy);
+  auto D2 = Srcs.second
+                ? B.buildInstr(AArch64::G_SPLAT_VECTOR, {HalfTy}, {Srcs.second})
+                : B.buildUndef(HalfTy);
+  B.buildConcatVectors(MI.getOperand(0), {D1.getReg(0), D2.getReg(0)});
+  MI.eraseFromParent();
+}
+
 /// \returns how many instructions would be saved by folding a G_ICMP's shift
 /// and/or extension operations.
 static unsigned getCmpOperandFoldingProfit(Register CmpOp,

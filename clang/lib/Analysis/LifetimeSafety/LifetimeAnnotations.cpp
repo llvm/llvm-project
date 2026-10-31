@@ -57,40 +57,36 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
          CMD->getParamDecl(0)->hasAttr<clang::LifetimeBoundAttr>();
 }
 
-/// Check if a function has a lifetimebound attribute on its function type
+/// Check if a function has an attribute on its function type
 /// (which represents the implicit 'this' parameter for methods).
 /// Returns the attribute if found, nullptr otherwise.
-static const LifetimeBoundAttr *
-getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
-  // Walk through the type layers looking for a lifetimebound attribute.
-  TypeLoc TL = TSI.getTypeLoc();
+template <typename AttrType>
+static const AttrType *getAttrFromFunctionType(const FunctionDecl *FD) {
+  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+  if (!TSI)
+    return nullptr;
+  TypeLoc TL = TSI->getTypeLoc();
   while (true) {
     auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
     if (!ATL)
       break;
-    if (auto *LBAttr = ATL.getAttrAs<LifetimeBoundAttr>())
-      return LBAttr;
+    if (auto *Attr = ATL.getAttrAs<AttrType>())
+      return Attr;
     TL = ATL.getModifiedLoc();
   }
   return nullptr;
 }
 
-const LifetimeBoundAttr *
-getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
-  if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo())
-    if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
-      return Attr;
-  return nullptr;
-}
-
-const LifetimeBoundAttr *
-getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
+template <typename AttrType>
+static const AttrType *getImplicitObjectParamAttr(const FunctionDecl *FD) {
+  // getDeclWithMergedLifetimeBoundAttrs just returns the most recent decl,
+  // so it is perfectly safe to reuse for capture_by as well.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
-  auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
+  auto CheckRedecls = [](const FunctionDecl *F) -> const AttrType * {
     for (const FunctionDecl *Redecl : F->redecls())
-      if (const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(Redecl))
+      if (const auto *Attr = getAttrFromFunctionType<AttrType>(Redecl))
         return Attr;
     return nullptr;
   };
@@ -102,10 +98,25 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   return nullptr;
 }
 
+const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
+  return getAttrFromFunctionType<LifetimeBoundAttr>(FD);
+}
+
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
+  return getImplicitObjectParamAttr<LifetimeBoundAttr>(FD);
+}
+
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
+}
+
+const LifetimeCaptureByAttr *
+getCaptureByAttrFromFunctionType(const FunctionDecl *FD) {
+  return getImplicitObjectParamAttr<LifetimeCaptureByAttr>(FD);
 }
 
 FunctionCallInfo::FunctionCallInfo(const Expr *Call) {

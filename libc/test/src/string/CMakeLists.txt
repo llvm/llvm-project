@@ -1,4 +1,4 @@
-add_custom_target(libc-string-tests)
+add_libc_testsuite(libc-string-tests)
 
 add_subdirectory(memory_utils)
 
@@ -167,7 +167,6 @@ add_libc_test(
     strdup_test.cpp
   DEPENDS
     libc.src.string.strdup
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
 )
 

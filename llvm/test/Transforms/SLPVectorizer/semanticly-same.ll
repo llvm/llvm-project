@@ -505,3 +505,55 @@ entry:
   store i16 %mul3, ptr %s3
   ret void
 }
+
+define <4 x i32> @lshr_udiv_alt_opc(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
+; CHECK-LABEL: @lshr_udiv_alt_opc(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[R2:%.*]] = udiv i32 [[D:%.*]], 2
+; CHECK-NEXT:    [[R3:%.*]] = add i32 [[E:%.*]], [[F:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[R2]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x i32> [[I2]], i32 [[R3]], i32 3
+; CHECK-NEXT:    ret <4 x i32> [[I3]]
+;
+  %r0 = add i32 %a, %b
+  %r1 = lshr i32 %c, 1
+  %r2 = udiv i32 %d, 2
+  %r3 = add i32 %e, %f
+  %i0 = insertelement <4 x i32> poison, i32 %r0, i32 0
+  %i1 = insertelement <4 x i32> %i0, i32 %r1, i32 1
+  %i2 = insertelement <4 x i32> %i1, i32 %r2, i32 2
+  %i3 = insertelement <4 x i32> %i2, i32 %r3, i32 3
+  ret <4 x i32> %i3
+}
+
+define <4 x i32> @lshr_udiv_main_opc(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
+; CHECK-LABEL: @lshr_udiv_main_opc(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> <i32 1, i32 poison>, i32 [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[R2:%.*]] = udiv i32 [[D:%.*]], 2
+; CHECK-NEXT:    [[R3:%.*]] = add i32 [[E:%.*]], [[F:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[R2]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x i32> [[I2]], i32 [[R3]], i32 3
+; CHECK-NEXT:    ret <4 x i32> [[I3]]
+;
+  %r0 = lshr i32 %c, 1
+  %r1 = add i32 %a, %b
+  %r2 = udiv i32 %d, 2
+  %r3 = add i32 %e, %f
+  %i0 = insertelement <4 x i32> poison, i32 %r0, i32 0
+  %i1 = insertelement <4 x i32> %i0, i32 %r1, i32 1
+  %i2 = insertelement <4 x i32> %i1, i32 %r2, i32 2
+  %i3 = insertelement <4 x i32> %i2, i32 %r3, i32 3
+  ret <4 x i32> %i3
+}

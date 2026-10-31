@@ -57,6 +57,7 @@ public:
 #if defined(_LIBUNWIND_TARGET_AARCH64)
     bool      addressesSignedWithBKey;
     bool      mteTaggedFrame;
+    bool      nonHintPAuthFrame;
 #endif
   };
 
@@ -342,6 +343,7 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   cieInfo->addressesSignedWithBKey = false;
   cieInfo->mteTaggedFrame = false;
+  cieInfo->nonHintPAuthFrame = false;
 #endif
   cieInfo->cieStart = cie;
   pint_t p = cie;
@@ -442,6 +444,9 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
         break;
       case 'G':
         cieInfo->mteTaggedFrame = true;
+        break;
+      case 'N':
+        cieInfo->nonHintPAuthFrame = true;
         break;
 #endif
       default:

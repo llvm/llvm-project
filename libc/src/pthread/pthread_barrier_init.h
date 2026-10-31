@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int pthread_barrier_init(pthread_barrier_t *b,
+int pthread_barrier_init(pthread_barrier_t *__restrict b,
                          const pthread_barrierattr_t *__restrict attr,
                          unsigned count);
 

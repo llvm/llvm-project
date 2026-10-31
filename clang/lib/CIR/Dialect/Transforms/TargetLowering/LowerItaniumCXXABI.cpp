@@ -150,11 +150,21 @@ std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
   case clang::TargetCXXABI::GenericItanium:
     return std::make_unique<LowerItaniumCXXABI>(lm);
 
+  case clang::TargetCXXABI::GenericARM:
+  case clang::TargetCXXABI::iOS:
+  case clang::TargetCXXABI::WatchOS:
+  case clang::TargetCXXABI::Fuchsia:
+  case clang::TargetCXXABI::GenericMIPS:
+  case clang::TargetCXXABI::WebAssembly:
+  case clang::TargetCXXABI::XL:
+    // FIXME: these ABIS are not yet implemented by CIR. The error is reported
+    // by consumers of LowerModule/CIRCXXABI when missing CIRCXXABI is
+    // encountered.
+    return nullptr;
   case clang::TargetCXXABI::Microsoft:
     llvm_unreachable("Microsoft ABI is not Itanium-based");
-  default:
-    llvm_unreachable("Other Itanium ABI?");
   }
+  llvm_unreachable("bad ABI kind");
 }
 
 static cir::IntType getPtrDiffCIRTy(LowerModule &lm) {
@@ -779,7 +789,7 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
   mlir::Location loc = op.getLoc();
   bool vtableUsesRelativeLayout = op.getRelativeLayout();
 
-  // TODO(cir): consider address space in this function.
+  // TODO(cir): consider address space of the vtable pointer.
   assert(!cir::MissingFeatures::addressSpace());
 
   mlir::Type vtableElemTy;
@@ -827,20 +837,18 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
       /*mem_order=*/cir::MemOrderAttr(),
       /*invariant=*/false);
 
-  auto voidPtrTy =
-      cir::PointerType::get(cir::VoidType::get(builder.getContext()));
-
   // Add the offset to the given pointer to get the cast result.
   // Cast the input pointer to a uint8_t* to allow pointer arithmetic.
   mlir::Type u8PtrTy =
       cir::PointerType::get(cir::IntType::get(builder.getContext(), /*width=*/8,
-                                              /*isSigned=*/false));
+                                              /*isSigned=*/false),
+                            op.getSrc().getType().getAddrSpace());
   mlir::Value srcBytePtr = cir::CastOp::create(
       builder, loc, u8PtrTy, cir::CastKind::bitcast, op.getSrc());
   auto dstBytePtr =
       cir::PtrStrideOp::create(builder, loc, u8PtrTy, srcBytePtr, offsetToTop);
   // Cast the result to a void*.
-  return cir::CastOp::create(builder, loc, voidPtrTy, cir::CastKind::bitcast,
+  return cir::CastOp::create(builder, loc, op.getType(), cir::CastKind::bitcast,
                              dstBytePtr);
 }
 

@@ -281,8 +281,7 @@ bool CodeGenAction::beginSourceFileAction() {
         makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
     llvm::omp::Version version =
         ci.getInvocation().getLangOpts().getOpenMPVersion();
-    mlir::omp::setOpenMPVersionAttribute(lb.getModule(),
-                                         static_cast<unsigned>(version));
+    mlir::omp::setOpenMPVersionAttribute(lb.getModule(), version.value());
     if (!ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
       mlir::omp::setOpenMPIntegerWrapAround(lb.getModule(), false);
   }
@@ -647,13 +646,6 @@ void CodeGenAction::lowerHLFIRToFIR() {
   MLIRToLLVMPassPipelineConfig config(level);
   config.fpMaxminBehavior =
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
-  if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
-    config.EnableOpenMPIsTargetDevice = true;
-  // Parser options, not frontend options: they are seeded from the frontend
-  // ones and additionally get CUDA enabled for a .cuf/.CUF input.
-  if (ci.getInvocation().getFortranOpts().features.IsEnabled(
-          Fortran::common::LanguageFeature::CUDA))
-    config.EnableCUDA = true;
   // Give plugins a chance to register passes at the extension points.
   fir::invokePassPipelineConfigCallbacks(config);
   // Create the pass pipeline
@@ -789,9 +781,6 @@ void CodeGenAction::generateLLVMIR() {
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
-
-  if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
-    config.EnableOpenMPIsTargetDevice = true;
 
   if (ci.getInvocation().getLangOpts().OpenMPSimd)
     config.EnableOpenMPSimd = true;
@@ -947,8 +936,8 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
-  llvm::Error codeGenError =
-      runCodeGenPipeline(tm, llvmModule, os, dwoOS, cgft);
+  llvm::Error codeGenError = runCodeGenPipeline(
+      tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft);
   if (codeGenError) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
@@ -1032,7 +1021,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   pto.LoopVectorization = opts.VectorizeLoop;
   pto.SLPVectorization = opts.VectorizeSLP;
 
-  llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
+  llvm::PassBuilder pb(llvmModule->getContext(), targetMachine, pto, pgoOpt,
+                       &pic);
 
   // Register plugin callbacks with PB.
   for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())

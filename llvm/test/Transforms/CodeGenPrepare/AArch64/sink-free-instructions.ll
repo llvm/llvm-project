@@ -1124,4 +1124,40 @@ if.else:
   ret <8 x i8> %b
 }
 
+define <8 x i8> @no_sink_bsl_not_after_splat_not_multiuse(<8 x i8> %m, <8 x i8> %b, i8 %s, i1 %c, ptr %p) {
+; CHECK-LABEL: @no_sink_bsl_not_after_splat_not_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = xor <8 x i8> [[M:%.*]], splat (i8 -1)
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[NS:%.*]] = xor i8 [[S:%.*]], -1
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <8 x i8> poison, i8 [[NS]], i64 0
+; CHECK-NEXT:    [[SPL:%.*]] = shufflevector <8 x i8> [[INS]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <8 x i8> [[M]], splat (i8 -1)
+; CHECK-NEXT:    [[X:%.*]] = and <8 x i8> [[M]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = and <8 x i8> [[SPL]], [[TMP0]]
+; CHECK-NEXT:    [[R:%.*]] = or <8 x i8> [[X]], [[Y]]
+; CHECK-NEXT:    store <8 x i8> [[R]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret <8 x i8> [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret <8 x i8> [[N]]
+;
+entry:
+  %n = xor <8 x i8> %m, splat (i8 -1)
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  %ns = xor i8 %s, -1
+  %ins = insertelement <8 x i8> poison, i8 %ns, i64 0
+  %spl = shufflevector <8 x i8> %ins, <8 x i8> poison, <8 x i32> zeroinitializer
+  %x = and <8 x i8> %m, %b
+  %y = and <8 x i8> %spl, %n
+  %r = or <8 x i8> %x, %y
+  store <8 x i8> %r, ptr %p
+  ret <8 x i8> %r
+
+if.else:
+  ret <8 x i8> %n
+}
+
 !0 = !{i64 0, i64 128}

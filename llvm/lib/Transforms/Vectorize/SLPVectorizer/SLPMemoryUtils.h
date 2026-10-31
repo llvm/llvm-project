@@ -42,24 +42,33 @@ class VectorType;
 
 namespace llvm::slpvectorizer {
 
-/// Caches pointer distances. The same pointers are queried over and over while
-/// trees are built and priced, and a miss may need a SCEV query. The answer for
-/// (A, B) also serves (B, A). The answers for the surviving pointers may change
-/// once the code is rewritten, so the owner clears the cache after each
-/// successful vectorization.
-class PointersDiffCache {
+/// Caches the results of the expensive analyses that are queried repeatedly
+/// for the same values while the vectorization trees are built and their costs
+/// are estimated. The results may change once the vectorized code is emitted
+/// and the scalars are erased, so the cache is cleared after each successful
+/// vectorizeTree().
+class SLPAnalysisCache {
 public:
-  /// Same contract as `llvm::getPointersDiff`.
-  std::optional<int64_t> get(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
-                             Value *PtrB, const DataLayout &DL,
-                             ScalarEvolution &SE, bool StrictCheck = false,
-                             bool CheckType = true);
+  /// Cached llvm::getPointersDiff(), a miss may require SCEV analysis. The
+  /// result for (\p PtrA, \p PtrB) also serves the query for the swapped
+  /// pointers.
+  std::optional<int64_t>
+  getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
+                  const DataLayout &DL, ScalarEvolution &SE,
+                  bool StrictCheck = false, bool CheckType = true);
 
-  void clear() { Cache.clear(); }
+  /// Cached llvm::isGuaranteedNotToBePoison().
+  bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC);
+
+  void clear() {
+    PtrsDiffCache.clear();
+    NotPoisonCache.clear();
+  }
 
 private:
-  using KeyT = std::tuple<Type *, Value *, Type *, Value *, unsigned>;
-  SmallDenseMap<KeyT, std::optional<int64_t>, 16> Cache;
+  using PtrsDiffKeyT = std::tuple<Type *, Value *, Type *, Value *, unsigned>;
+  SmallDenseMap<PtrsDiffKeyT, std::optional<int64_t>, 16> PtrsDiffCache;
+  SmallDenseMap<const Value *, bool, 16> NotPoisonCache;
 };
 
 /// \p MaxDepth is the recursion limit for getUnderlyingObject.
@@ -107,7 +116,7 @@ bool isMaskedLoadCompress(
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
     bool &IsMasked, unsigned &InterleaveFactor,
     SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy,
-    PointersDiffCache &Cache);
+    SLPAnalysisCache &Cache);
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.
@@ -118,7 +127,7 @@ bool isMaskedLoadCompress(
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    PointersDiffCache &Cache);
+    SLPAnalysisCache &Cache);
 
 /// Checks if the simple loads of \p VL, mixed with the undef and poison lanes,
 /// can be replaced by a single load of the whole \p VL width. The loads must be
@@ -144,7 +153,7 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                            ScalarEvolution &SE, Align CommonAlignment,
                            SmallVectorImpl<int> &ReuseShuffleIndices,
                            FixedVectorType *&StoreVecTy,
-                           PointersDiffCache &Cache);
+                           SLPAnalysisCache &Cache);
 
 /// Clusters \p VL pointers by (basic block, underlying object) pair and sorts
 /// each cluster by offset. Returns false and leaves \p SortedIndices empty if
@@ -153,7 +162,7 @@ bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
                             Type *ElemTy, const DataLayout &DL,
                             ScalarEvolution &SE, unsigned MaxDepth,
                             SmallVectorImpl<unsigned> &SortedIndices,
-                            PointersDiffCache &Cache);
+                            SLPAnalysisCache &Cache);
 
 } // namespace llvm::slpvectorizer
 

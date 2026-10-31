@@ -1,0 +1,48 @@
+# RUN: llc -mtriple=x86_64 -emit-call-site-info -run-pass=none %s -o - | FileCheck %s
+
+# The bb field of callSites and calledGlobals is a block number, which need not
+# match the position of the block in the function. The parser renumbers the
+# blocks in layout order, so the entries for bb.2 come out as bb.1.
+
+# CHECK:      callSites:
+# CHECK-NEXT:   - { bb: '%bb.1', offset: 0, fwdArgRegs:
+# CHECK-NEXT:       - { arg: 0, reg: '$edi' } }
+# CHECK-NEXT:   - { bb: '%bb.2', offset: 0, fwdArgRegs:
+# CHECK-NEXT:       - { arg: 0, reg: '$esi' } }
+# CHECK:      calledGlobals:
+# CHECK-NEXT:   - bb: '%bb.1'
+# CHECK-NEXT:     offset: 0
+# CHECK-NEXT:     callee: foo
+# CHECK:        - bb: '%bb.2'
+# CHECK-NEXT:     offset: 0
+# CHECK-NEXT:     callee: bar
+
+--- |
+  declare void @foo()
+  declare void @bar()
+  define void @caller() { ret void }
+...
+---
+name: caller
+callSites:
+  - { bb: '%bb.2', offset: 0, fwdArgRegs: [ { arg: 0, reg: '$edi' } ] }
+  - { bb: '%bb.1', offset: 0, fwdArgRegs: [ { arg: 0, reg: '$esi' } ] }
+calledGlobals:
+  - { bb: '%bb.2', offset: 0, callee: foo, flags: 0 }
+  - { bb: '%bb.1', offset: 0, callee: bar, flags: 0 }
+body: |
+  bb.0:
+    liveins: $rdi, $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    liveins: $rdi
+    CALL64r $rdi, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    RET64
+
+  bb.1:
+    liveins: $rdi
+    CALL64r $rdi, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    RET64
+...

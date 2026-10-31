@@ -90,7 +90,7 @@ def ROCDL_Dialect : Dialect {
     behavior of these operations can be determined by investigating the
     documentation for the corresponding intrinsic. This documentation
     can be found in
-    - `llvm/docs/AMDGPUUsage.rst` and
+    - `llvm/docs/AMDGPUUsage.md` and
     - The comments of `llvm/include/llvm/IR/IntrinsicsAMDGPU.td`, which
       is where details of the meaning of certain bitfields or of how an
       intrinsic corresponds to hardware instructions are most likely to

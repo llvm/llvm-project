@@ -1,13 +1,13 @@
+add_libc_testsuite(libc-stdlib-integration-tests PARENT libc-integration-tests)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
 endif()
-add_custom_target(stdlib-integration-tests)
-add_dependencies(libc-integration-tests stdlib-integration-tests)
 
 add_integration_test(
   getenv_test
   SUITE
-    stdlib-integration-tests
+    libc-stdlib-integration-tests
   SRCS
     getenv_test.cpp
   DEPENDS
@@ -21,7 +21,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_integration_test(
     secure_getenv_test
     SUITE
-      stdlib-integration-tests
+      libc-stdlib-integration-tests
     SRCS
       secure_getenv_test.cpp
     DEPENDS
@@ -37,11 +37,10 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_integration_test(
     setenv_test
     SUITE
-      stdlib-integration-tests
+      libc-stdlib-integration-tests
     SRCS
       setenv_test.cpp
     DEPENDS
-      libc.src.errno.errno
       libc.src.stdlib.getenv
       libc.src.stdlib.setenv
   )
@@ -49,11 +48,10 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_integration_test(
     putenv_test
     SUITE
-      stdlib-integration-tests
+      libc-stdlib-integration-tests
     SRCS
       putenv_test.cpp
     DEPENDS
-      libc.src.errno.errno
       libc.src.stdlib.getenv
       libc.src.stdlib.putenv
       libc.src.unistd.environ
@@ -62,12 +60,11 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_integration_test(
     unsetenv_test
     SUITE
-      stdlib-integration-tests
+      libc-stdlib-integration-tests
     SRCS
       unsetenv_test.cpp
     DEPENDS
       libc.src.__support.alloc_checker
-      libc.src.errno.errno
       libc.src.stdlib.getenv
       libc.src.stdlib.setenv
       libc.src.stdlib.unsetenv
@@ -78,7 +75,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_integration_test(
     clearenv_test
     SUITE
-      stdlib-integration-tests
+      libc-stdlib-integration-tests
     SRCS
       clearenv_test.cpp
     DEPENDS
@@ -93,7 +90,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_integration_test(
     abort_test
     SUITE
-      stdlib-integration-tests
+      libc-stdlib-integration-tests
     SRCS
       abort_test.cpp
     DEPENDS
@@ -113,7 +110,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_integration_test(
     atexit_thread_test
     SUITE
-      stdlib-integration-tests
+      libc-stdlib-integration-tests
     SRCS
       atexit_thread_test.cpp
     DEPENDS

@@ -726,6 +726,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     auto *CBR = cast<CallBase>(R);
     if (int Res = cmpNumbers(CBL->getCallingConv(), CBR->getCallingConv()))
       return Res;
+    if (int Res = cmpTypes(CBL->getFunctionType(), CBR->getFunctionType()))
+      return Res;
     if (int Res = cmpAttrs(CBL->getAttributes(), CBR->getAttributes()))
       return Res;
     if (int Res = cmpOperandBundlesSchema(*CBL, *CBR))

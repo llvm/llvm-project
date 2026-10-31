@@ -213,7 +213,8 @@ static void AddMachOSysLibRoot(Compilation &C, const ArgList &Args,
   // --isysroot as the syslibroot.
   // We check `OPT__sysroot_EQ` directly instead of `getSysRoot` to make sure we
   // prioritise command line arguments over configuration of `DEFAULT_SYSROOT`.
-  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ);
+      A && !StringRef(A->getValue()).empty()) {
     CmdArgs.push_back("-syslibroot");
     CmdArgs.push_back(A->getValue());
   } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
@@ -3638,35 +3639,6 @@ void Darwin::addClangTargetOptions(
   if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
                                 options::OPT_fno_define_target_os_macros))
     CC1Args.push_back("-fdefine-target-os-macros");
-
-  // Disable subdirectory modulemap search on sufficiently recent SDKs.
-  if (SDKInfo &&
-      !DriverArgs.hasFlag(options::OPT_fmodulemap_allow_subdirectory_search,
-                          options::OPT_fno_modulemap_allow_subdirectory_search,
-                          false)) {
-    bool RequiresSubdirectorySearch;
-    VersionTuple SDKVersion = SDKInfo->getVersion();
-    switch (TargetPlatform) {
-    default:
-      RequiresSubdirectorySearch = true;
-      break;
-    case MacOS:
-      RequiresSubdirectorySearch = SDKVersion < VersionTuple(15, 0);
-      break;
-    case IPhoneOS:
-    case TvOS:
-      RequiresSubdirectorySearch = SDKVersion < VersionTuple(18, 0);
-      break;
-    case WatchOS:
-      RequiresSubdirectorySearch = SDKVersion < VersionTuple(11, 0);
-      break;
-    case XROS:
-      RequiresSubdirectorySearch = SDKVersion < VersionTuple(2, 0);
-      break;
-    }
-    if (!RequiresSubdirectorySearch)
-      CC1Args.push_back("-fno-modulemap-allow-subdirectory-search");
-  }
 }
 
 void Darwin::addClangCC1ASTargetOptions(

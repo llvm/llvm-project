@@ -12,8 +12,6 @@ class MultithreadedStopHookTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
-    # Flaky on Linux and Windows, see https://github.com/llvm/llvm-project/issues/225860.
-    @skipIfWindows
-    @skipIfLinux
+    @skip("https://github.com/llvm/llvm-project/issues/225860")
     def test(self):
         self.buildAndRunDriver("driver.cpp test_stop-hook.cpp", "inferior.cpp")

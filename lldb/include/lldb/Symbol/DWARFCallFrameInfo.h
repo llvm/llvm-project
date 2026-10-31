@@ -50,6 +50,13 @@ public:
 
   /// Return an UnwindPlan based on the call frame information encoded in the
   /// FDE of this DWARFCallFrameInfo section. The returned plan will be valid
+  /// (at least) for \a pc. \a func_start corresponds to the offset zero in the
+  /// returned UnwindPlan.
+  std::unique_ptr<UnwindPlan> GetUnwindPlan(const Address &pc,
+                                            const Address &func_start);
+
+  /// Return an UnwindPlan based on the call frame information encoded in the
+  /// FDE of this DWARFCallFrameInfo section. The returned plan will be valid
   /// (at least) for some address in the given ranges. If no unwind information
   /// is found, nullptr is returned. \a addr represents the entry point of the
   /// function. It corresponds to the offset zero in the returned UnwindPlan.

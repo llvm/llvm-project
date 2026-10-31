@@ -366,8 +366,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
 
-  if (Subtarget.hasStdExtP())
+  if (Subtarget.hasStdExtP()) {
     setOperationAction({ISD::FSHL, ISD::FSHR}, XLenVT, Legal);
+    if (!Subtarget.is64Bit())
+      setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i64, Custom);
+  }
 
   setOperationAction(ISD::BSWAP, XLenVT,
                      Subtarget.hasREV8Like() ? Legal : Expand);
@@ -2036,6 +2039,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors() || Subtarget.hasStdExtP())
     setTargetDAGCombine(ISD::BITCAST);
+  if (Subtarget.hasStdExtP() && Subtarget.is64Bit())
+    setTargetDAGCombine(ISD::ZERO_EXTEND_VECTOR_INREG);
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
@@ -2815,8 +2820,9 @@ int RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
   return RISCVLoadFPImm::getLoadFPImm(Imm);
 }
 
-bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                       bool ForCodeSize) const {
+TargetLowering::FPImmAction
+RISCVTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                    bool ForCodeSize) const {
   bool IsLegalVT = false;
   if (VT == MVT::f16)
     IsLegalVT = Subtarget.hasStdExtZfhminOrZhinxmin();
@@ -2828,25 +2834,25 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     IsLegalVT = Subtarget.hasStdExtZfbfmin();
 
   if (!IsLegalVT)
-    return false;
+    return FPImmAction::ConstantPool;
 
   if (getLegalZfaFPImm(Imm, VT) >= 0)
-    return true;
+    return FPImmAction::Legal;
 
   // Some constants can be produced by fli+fneg.
   if (Imm.isNegative() && getLegalZfaFPImm(-Imm, VT) >= 0)
-    return true;
+    return FPImmAction::Legal;
 
   // Cannot create a 64 bit floating-point immediate value for rv32.
   if (Subtarget.getXLen() < VT.getScalarSizeInBits()) {
     // td can handle +0.0 or -0.0 already.
     // -0.0 can be created by fmv + fneg.
-    return Imm.isZero();
+    return Imm.isZero() ? FPImmAction::Legal : FPImmAction::ConstantPool;
   }
 
   // Special case: fmv + fneg
   if (Imm.isNegZero())
-    return true;
+    return FPImmAction::Legal;
 
   // Building an integer and then converting requires a fmv at the end of
   // the integer sequence. The fmv is not required for Zfinx.
@@ -2854,7 +2860,32 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   const int Cost =
       FmvCost + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(),
                                            Subtarget.getXLen(), Subtarget);
-  return Cost <= Subtarget.getCLOpts().lower_fpimm_cost;
+  return Cost <= Subtarget.getCLOpts().lower_fpimm_cost
+             ? FPImmAction::Legal
+             : FPImmAction::ConstantPool;
+}
+
+static bool hasFPType(const RISCVSubtarget &Subtarget, LLT Ty) {
+  if (Ty.isBFloat16())
+    return Subtarget.hasStdExtZfbfmin();
+
+  switch (Ty.getSizeInBits()) {
+  case 16:
+    return Subtarget.hasStdExtZfhmin();
+  case 32:
+    return Subtarget.hasStdExtF();
+  case 64:
+    return Subtarget.hasStdExtD();
+  default:
+    return false;
+  }
+}
+
+TargetLowering::FPImmAction
+RISCVTargetLowering::getFPImmAction(const APFloat &Imm, LLT Ty,
+                                    bool ForCodeSize) const {
+  return hasFPType(Subtarget, Ty) ? FPImmAction::ConstantPool
+                                  : FPImmAction::Bitcast;
 }
 
 // TODO: This is very conservative.
@@ -3563,7 +3594,9 @@ InstructionCost RISCVTargetLowering::getVRGatherVICost(MVT VT) const {
 /// variants.)  Slides may be linear in the number of vregs implied by LMUL,
 /// or may track the vrgather.vv cost. It is implementation-dependent.
 InstructionCost RISCVTargetLowering::getVSlideVXCost(MVT VT) const {
-  return getLMULCost(VT);
+  // Slides aren't as pipelined as arithmetic ops and don't have the same
+  // throughput on most hardware.
+  return getLMULCost(VT) * 2;
 }
 
 /// Return the cost of a vslidedown.vi or vslideup.vi instruction
@@ -3571,7 +3604,9 @@ InstructionCost RISCVTargetLowering::getVSlideVXCost(MVT VT) const {
 /// variants.)  Slides may be linear in the number of vregs implied by LMUL,
 /// or may track the vrgather.vv cost. It is implementation-dependent.
 InstructionCost RISCVTargetLowering::getVSlideVICost(MVT VT) const {
-  return getLMULCost(VT);
+  // Slides aren't as pipelined as arithmetic ops and don't have the same
+  // throughput on most hardware.
+  return getLMULCost(VT) * 2;
 }
 
 static SDValue lowerINT_TO_FP(SDValue Op, SelectionDAG &DAG,
@@ -8854,9 +8889,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue Res;
     std::tie(Res, Chain) =
         makeLibCall(DAG, LC, MVT::f32, Op0, CallOptions, DL, Chain);
-    if (Subtarget.is64Bit())
-      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res);
-    SDValue Result = DAG.getBitcast(MVT::i32, IsStrict ? Res.getValue(0) : Res);
+    SDValue Result =
+        Subtarget.is64Bit()
+            ? DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res)
+            : DAG.getBitcast(MVT::i32, Res);
     if (IsStrict)
       return DAG.getMergeValues({Result, Chain}, DL);
     return Result;
@@ -12632,6 +12668,51 @@ static unsigned getRVPHorizontalMulOpcode(unsigned IntNo) {
     return RISCVISD::PM4ADDSU;
   case Intrinsic::riscv_pm2addsu:
     return RISCVISD::PM2ADDSU;
+  case Intrinsic::riscv_pm2wadd:
+    return RISCVISD::PM2WADD;
+  case Intrinsic::riscv_pm2wadd_x:
+    return RISCVISD::PM2WADD_X;
+  case Intrinsic::riscv_pm2waddu:
+    return RISCVISD::PM2WADDU;
+  case Intrinsic::riscv_pm2wsub:
+    return RISCVISD::PM2WSUB;
+  case Intrinsic::riscv_pm2wsub_x:
+    return RISCVISD::PM2WSUB_X;
+  case Intrinsic::riscv_pm2waddsu:
+    return RISCVISD::PM2WADDSU;
+  }
+}
+
+static unsigned getRVPWideningMulAccOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V packed pwmacc intrinsic");
+  case Intrinsic::riscv_pwmacc_i32x2:
+    return RISCVISD::PWMACC_H;
+  case Intrinsic::riscv_pwmaccu_u32x2:
+    return RISCVISD::PWMACCU_H;
+  case Intrinsic::riscv_pwmaccsu_i32x2:
+    return RISCVISD::PWMACCSU_H;
+  }
+}
+
+static unsigned getRVPHorizontalMulAccOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable(
+        "Unexpected RISC-V packed horizontal multiply-accumulate intrinsic");
+  case Intrinsic::riscv_pm2wadda:
+    return RISCVISD::PM2WADDA;
+  case Intrinsic::riscv_pm2wadda_x:
+    return RISCVISD::PM2WADDA_X;
+  case Intrinsic::riscv_pm2waddau:
+    return RISCVISD::PM2WADDAU;
+  case Intrinsic::riscv_pm2wsuba:
+    return RISCVISD::PM2WSUBA;
+  case Intrinsic::riscv_pm2wsuba_x:
+    return RISCVISD::PM2WSUBA_X;
+  case Intrinsic::riscv_pm2waddasu:
+    return RISCVISD::PM2WADDASU;
   }
 }
 
@@ -12641,6 +12722,12 @@ static SDValue lowerRV32HorizontalMul64(unsigned IntNo, SDValue Rs1,
   auto Extract = [&](SDValue V, unsigned Idx) {
     return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
   };
+
+  if (Rs1.getSimpleValueType() == MVT::v2i16) {
+    SDValue Res =
+        DAG.getNode(getRVPHorizontalMulOpcode(IntNo), DL, MVT::v2i32, Rs1, Rs2);
+    return DAG.getBitcast(MVT::i64, Res);
+  }
 
   if (Rs1.getSimpleValueType() == MVT::v4i16) {
     auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
@@ -12884,6 +12971,9 @@ getRVPWordMulPartsAccOpcodeAndLanes(unsigned IntNo) {
     return {RISCVISD::WMACCSU, 1, 1};
   }
 }
+
+static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
+                                          SDValue V, MVT WideVT);
 
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
@@ -13294,8 +13384,11 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        ShAmt);
   }
   case Intrinsic::riscv_psati:
-  case Intrinsic::riscv_pusati: {
-    bool IsSigned = IntNo == Intrinsic::riscv_psati;
+  case Intrinsic::riscv_pusati:
+  case Intrinsic::riscv_sati:
+  case Intrinsic::riscv_usati: {
+    bool IsSigned =
+        IntNo == Intrinsic::riscv_psati || IntNo == Intrinsic::riscv_sati;
     unsigned Opc = IsSigned ? RISCVISD::SATI : RISCVISD::USATI;
     return DAG.getNode(
         Opc, DL, Op.getValueType(), Op.getOperand(1),
@@ -13422,6 +13515,18 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     // ReplaceNodeResults.
     unsigned Opc = getRVScalarQFormatMulOpcode(IntNo);
     return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
+  }
+  case Intrinsic::riscv_mqwacc_i64:
+  case Intrinsic::riscv_mqrwacc_i64: {
+    // RV32 goes via ReplaceNodeResults. RV64 uses mqacc.w00 on the low words.
+    unsigned Opc = IntNo == Intrinsic::riscv_mqwacc_i64
+                       ? RISCVISD::MQACC_HALVES_00
+                       : RISCVISD::MQRACC_HALVES_00;
+    SDValue Rs1 =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, Op.getOperand(2));
+    SDValue Rs2 =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, Op.getOperand(3));
+    return DAG.getNode(Opc, DL, MVT::i64, Op.getOperand(1), Rs1, Rs2);
   }
   case Intrinsic::riscv_pmhacc:
   case Intrinsic::riscv_pmhracc:
@@ -13625,6 +13730,148 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pwmacc_i32x2:
+  case Intrinsic::riscv_pwmaccu_u32x2:
+  case Intrinsic::riscv_pwmaccsu_i32x2: {
+    EVT VT = Op.getValueType();
+    SDValue Acc = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    if (Subtarget.is64Bit()) {
+      // Per the spec decomposition table: a single zip16p puts the
+      // halfwords of Rs1 in the even elements and those of Rs2 in the odd
+      // elements (the su form uses the pwcvtu.wh spelling, zip16p with x0).
+      // pmacc.w.h01 then multiplies the even elements of the first source
+      // by the odd elements of the second source into rd. RV32 selects the
+      // pwmacc.h family on the register pair instead.
+      Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs1,
+                        DAG.getUNDEF(MVT::v2i16));
+      Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs2,
+                        DAG.getUNDEF(MVT::v2i16));
+      if (IntNo == Intrinsic::riscv_pwmaccsu_i32x2) {
+        SDValue Zero = DAG.getConstant(0, DL, MVT::v4i16);
+        Rs1 = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Zero);
+        Rs2 = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs2, Zero);
+        return DAG.getNode(RISCVISD::PMACCSU_HALVES_00, DL, VT, Acc, Rs1, Rs2);
+      }
+      SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Rs2);
+      unsigned Opc = IntNo == Intrinsic::riscv_pwmaccu_u32x2
+                         ? RISCVISD::PMACCU_HALVES_01
+                         : RISCVISD::PMACC_HALVES_01;
+      return DAG.getNode(Opc, DL, VT, Acc, Zip, Zip);
+    }
+
+    // RV32 uses pwmacc.h/pwmaccsu.h on the 64-bit accumulator register
+    // pair, represented as a single v2i32 value.
+    return DAG.getNode(getRVPWideningMulAccOpcode(IntNo), DL, VT, Acc, Rs1,
+                       Rs2);
+  }
+  case Intrinsic::riscv_pm2wadd:
+  case Intrinsic::riscv_pm2wadd_x:
+  case Intrinsic::riscv_pm2waddu:
+  case Intrinsic::riscv_pm2wsub:
+  case Intrinsic::riscv_pm2wsub_x:
+  case Intrinsic::riscv_pm2waddsu: {
+    // These intrinsics only have a dedicated widening instruction on RV32
+    // (handled in ReplaceNodeResults). On RV64 the i64 result type is legal,
+    // so synthesize the equivalent value directly at i64 width: the add forms
+    // zero-extend their operands to v4i16 and reuse pm4add(u/su).h, relying on
+    // zero lanes contributing zero products (the "_x" exchanged form
+    // additionally swaps rs2's halfwords via ppairoe.h first); the sub forms
+    // extract and sign-extend each halfword lane and compute the product
+    // difference with plain i64 arithmetic. A custom RISCVISD opcode must
+    // never be the direct result of an i32-producing DAG.getNode here: i32 is
+    // not a legal type on RV64 (only i64 has a register class), and the
+    // generic legalizer's post-hoc promotion of such a "naked" custom-opcode
+    // node mis-widens its vector operands instead of leaving the node alone.
+    assert(Subtarget.is64Bit() && Op.getValueType() == MVT::i64 &&
+           "Unexpected widening horizontal multiply-add legalization");
+    SDValue Rs1 = Op.getOperand(1);
+    SDValue Rs2 = Op.getOperand(2);
+
+    if (IntNo == Intrinsic::riscv_pm2wsub ||
+        IntNo == Intrinsic::riscv_pm2wsub_x) {
+      // Route through the existing riscv_pm2sub(_x) intrinsic (a plain
+      // ISD::INTRINSIC_WO_CHAIN, which is registered Custom for i32 on RV64)
+      // rather than calling RISCVISD::PM2SUB(_X) directly: a "naked" custom
+      // opcode freshly materialized here with an i32 result hits the same
+      // legalizer trap described above, but INTRINSIC_WO_CHAIN's i32 action
+      // is a recognized Custom target that correctly re-enters LowerOperation.
+      unsigned SubIntNo = IntNo == Intrinsic::riscv_pm2wsub
+                              ? Intrinsic::riscv_pm2sub
+                              : Intrinsic::riscv_pm2sub_x;
+      SDValue IntrId = DAG.getTargetConstant(SubIntNo, DL, MVT::i64);
+      SDValue Res =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, IntrId, Rs1, Rs2);
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Res);
+    }
+
+    auto WidenAny = [&](SDValue V) {
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, V,
+                         DAG.getUNDEF(MVT::v2i16));
+    };
+
+    SDValue A = WidenAny(Rs1);
+    SDValue B;
+    if (IntNo == Intrinsic::riscv_pm2wadd_x) {
+      SDValue Rs2Wide = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
+      B = DAG.getNode(RISCVISD::PPAIROE, DL, MVT::v4i16, Rs2Wide, Rs2Wide);
+    } else {
+      B = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
+    }
+
+    unsigned MulOpc = IntNo == Intrinsic::riscv_pm2waddu    ? RISCVISD::PM4ADDU
+                      : IntNo == Intrinsic::riscv_pm2waddsu ? RISCVISD::PM4ADDSU
+                                                            : RISCVISD::PM4ADD;
+    return DAG.getNode(MulOpc, DL, MVT::i64, A, B);
+  }
+  case Intrinsic::riscv_pm2wadda:
+  case Intrinsic::riscv_pm2wadda_x:
+  case Intrinsic::riscv_pm2waddau:
+  case Intrinsic::riscv_pm2wsuba:
+  case Intrinsic::riscv_pm2wsuba_x:
+  case Intrinsic::riscv_pm2waddasu: {
+
+    assert(Subtarget.is64Bit() && Op.getValueType() == MVT::i64 &&
+           "Unexpected widening horizontal multiply-accumulate legalization");
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    auto WidenAnyAcc = [&](SDValue V) {
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, V,
+                         DAG.getUNDEF(MVT::v2i16));
+    };
+    SDValue A = WidenAnyAcc(Rs1);
+
+    if (IntNo == Intrinsic::riscv_pm2wsuba ||
+        IntNo == Intrinsic::riscv_pm2wsuba_x) {
+
+      SDValue B = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
+      unsigned SubOpc = IntNo == Intrinsic::riscv_pm2wsuba ? RISCVISD::PM2SUB
+                                                           : RISCVISD::PM2SUB_X;
+      SDValue Packed = DAG.getNode(SubOpc, DL, MVT::v2i32, A, B);
+      SDValue SumId =
+          DAG.getTargetConstant(Intrinsic::riscv_predsum, DL, MVT::i64);
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64, SumId, Packed,
+                         Rd);
+    }
+
+    SDValue B;
+    if (IntNo == Intrinsic::riscv_pm2wadda_x) {
+      SDValue Rs2Wide = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
+      B = DAG.getNode(RISCVISD::PPAIROE, DL, MVT::v4i16, Rs2Wide, Rs2Wide);
+    } else {
+      B = widenPackedVectorWithZeros(DAG, DL, Rs2, MVT::v4i16);
+    }
+
+    unsigned AccOpc = IntNo == Intrinsic::riscv_pm2waddau ? RISCVISD::PM4ADDAU
+                      : IntNo == Intrinsic::riscv_pm2waddasu
+                          ? RISCVISD::PM4ADDASU
+                          : RISCVISD::PM4ADDA;
+    return DAG.getNode(AccOpc, DL, MVT::i64, Rd, A, B);
   }
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
@@ -14478,9 +14725,6 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
       DL, ResVT, NoNaNs, Res,
       DAG.getConstantFP(APFloat::getNaN(ResVT.getFltSemantics()), DL, ResVT));
 }
-
-static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
-                                          SDValue V, MVT WideVT);
 
 SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
@@ -17351,6 +17595,56 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
     break;
   }
+  case ISD::FSHL:
+  case ISD::FSHR: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           N->getValueType(0) == MVT::i64 &&
+           "Unexpected custom funnel shift legalization");
+
+    // The generic expansion folds its selects for constant shifts.
+    if (isa<ConstantSDNode>(N->getOperand(2)))
+      return;
+
+    auto [XLo, XHi] = DAG.SplitScalar(N->getOperand(0), DL, MVT::i32, MVT::i32);
+    auto [YLo, YHi] = DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+    SDValue Shamt = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, N->getOperand(2));
+    unsigned Opc = N->getOpcode();
+    auto Funnel = [&](SDValue Lo, SDValue Hi) {
+      return DAG.getNode(Opc, DL, MVT::i32, Lo, Hi, Shamt);
+    };
+
+    // The i32 funnel shifts use the low 5 shift bits. Convert bit 5 into a
+    // mask and use packed merge instructions to select the adjacent results.
+    SDValue Mask = DAG.getNode(ISD::SRA, DL, MVT::i32,
+                               DAG.getNode(ISD::SHL, DL, MVT::i32, Shamt,
+                                           DAG.getConstant(26, DL, MVT::i32)),
+                               DAG.getConstant(31, DL, MVT::i32));
+    auto Merge = [&](SDValue Below32, SDValue AtLeast32) {
+      return DAG.getNode(RISCVISD::MERGE, DL, MVT::i32, Mask, Below32,
+                         AtLeast32);
+    };
+
+    // Form the three adjacent 32-bit funnel shifts. The mask then selects the
+    // two parts corresponding to shifts below or above 32 bits.
+    SDValue Cross = Funnel(XLo, YHi);
+    SDValue LoBelow32, HiBelow32, LoAtLeast32, HiAtLeast32;
+    if (Opc == ISD::FSHL) {
+      LoBelow32 = Cross;
+      HiBelow32 = Funnel(XHi, XLo);
+      LoAtLeast32 = Funnel(YHi, YLo);
+      HiAtLeast32 = Cross;
+    } else {
+      LoBelow32 = Funnel(YHi, YLo);
+      HiBelow32 = Cross;
+      LoAtLeast32 = Cross;
+      HiAtLeast32 = Funnel(XHi, XLo);
+    }
+
+    SDValue Lo = Merge(LoBelow32, LoAtLeast32);
+    SDValue Hi = Merge(HiBelow32, HiAtLeast32);
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi));
+    return;
+  }
   case ISD::ROTL:
   case ISD::ROTR:
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
@@ -17833,6 +18127,42 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
+    case Intrinsic::riscv_pm2wadd:
+    case Intrinsic::riscv_pm2wadd_x:
+    case Intrinsic::riscv_pm2waddu:
+    case Intrinsic::riscv_pm2wsub:
+    case Intrinsic::riscv_pm2wsub_x:
+    case Intrinsic::riscv_pm2waddsu: {
+      // i64 is only illegal here on RV32; the RV64 (legal i64) case is
+      // handled directly in LowerOperation.
+      assert(!Subtarget.is64Bit() && N->getSimpleValueType(0) == MVT::i64 &&
+             "Unexpected widening horizontal multiply-add legalization");
+      SDValue Rs1 = N->getOperand(1);
+      SDValue Rs2 = N->getOperand(2);
+      Results.push_back(lowerRV32HorizontalMul64(IntNo, Rs1, Rs2, DL, DAG));
+      return;
+    }
+
+    case Intrinsic::riscv_pm2wadda:
+    case Intrinsic::riscv_pm2wadda_x:
+    case Intrinsic::riscv_pm2waddau:
+    case Intrinsic::riscv_pm2wsuba:
+    case Intrinsic::riscv_pm2wsuba_x:
+    case Intrinsic::riscv_pm2waddasu: {
+
+      assert(!Subtarget.is64Bit() && N->getSimpleValueType(0) == MVT::i64 &&
+             "Unexpected widening horizontal multiply-accumulate legalization");
+      SDValue Rs1 = N->getOperand(2);
+      SDValue Rs2 = N->getOperand(3);
+      auto [RdLo, RdHi] =
+          DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+      SDValue Rd = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, RdLo, RdHi);
+      SDValue Res = DAG.getNode(getRVPHorizontalMulAccOpcode(IntNo), DL,
+                                MVT::v2i32, Rd, Rs1, Rs2);
+      Results.push_back(DAG.getBitcast(MVT::i64, Res));
+      return;
+    }
+
     case Intrinsic::riscv_pmul_00:
     case Intrinsic::riscv_pmul_01:
     case Intrinsic::riscv_pmul_11:
@@ -18086,6 +18416,21 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
+    case Intrinsic::riscv_sati:
+    case Intrinsic::riscv_usati: {
+      // RV64 has no 32-bit sati; promote to i64.
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+      unsigned Opc =
+          IntNo == Intrinsic::riscv_sati ? RISCVISD::SATI : RISCVISD::USATI;
+      SDValue Rs1 =
+          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue Res = DAG.getNode(
+          Opc, DL, MVT::i64, Rs1,
+          DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
     case Intrinsic::riscv_mulhr_i32:
     case Intrinsic::riscv_mulhru_u32:
     case Intrinsic::riscv_mulhsu_i32:
@@ -18139,6 +18484,21 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
       SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
       Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_mqwacc_i64:
+    case Intrinsic::riscv_mqrwacc_i64: {
+      if (Subtarget.is64Bit())
+        return;
+      unsigned Opc = IntNo == Intrinsic::riscv_mqwacc_i64 ? RISCVISD::MQWACC
+                                                          : RISCVISD::MQRWACC;
+      auto [RdLo, RdHi] =
+          DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+      SDValue Acc =
+          DAG.getNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      {RdLo, RdHi, N->getOperand(2), N->getOperand(3)});
+      Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
+                                    Acc.getValue(0), Acc.getValue(1)));
       return;
     }
     case Intrinsic::riscv_pnclipp:
@@ -19082,6 +19442,53 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, DL, VT, New1, DAG.getSignedConstant(CB, DL, VT));
 }
 
+// add (ext X), (ext Y) -> ext (add X, Y)
+// if the add can't overflow in the narrow type.
+static SDValue
+combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || !Subtarget.hasVInstructions())
+    return SDValue();
+
+  // Ensure the user has a widening variant so the extend can be moved after
+  // the add and still be combined. Do not interfere with existing fusion
+  // opportunities, such as mul-add or .vx patterns.
+  if (!N->hasOneUse())
+    return SDValue();
+
+  const SDUse &Use = *N->use_begin();
+  const SDNode *User = Use.getUser();
+  if (User->getOpcode() == ISD::ADD) {
+    const SDValue OtherOp = User->getOperand(1 - Use.getOperandNo());
+    if (OtherOp->getOpcode() == ISD::MUL || DAG.isSplatValue(OtherOp))
+      return SDValue();
+  } else if (User->getOpcode() != ISD::VECREDUCE_ADD) {
+    return SDValue();
+  }
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  unsigned ExtOpc = LHS.getOpcode();
+  if ((ExtOpc != ISD::SIGN_EXTEND && ExtOpc != ISD::ZERO_EXTEND) ||
+      RHS.getOpcode() != ExtOpc || !LHS.hasOneUse() || !RHS.hasOneUse())
+    return SDValue();
+
+  SDValue LHSSrc = LHS.getOperand(0);
+  SDValue RHSSrc = RHS.getOperand(0);
+  if (LHSSrc.getValueType() != RHSSrc.getValueType() ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(LHSSrc.getValueType()))
+    return SDValue();
+
+  if (!DAG.willNotOverflowAdd(ExtOpc == ISD::SIGN_EXTEND, LHSSrc, RHSSrc))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Add =
+      DAG.getNode(ISD::ADD, DL, LHSSrc.getValueType(), LHSSrc, RHSSrc);
+  return DAG.getNode(ExtOpc, DL, N->getValueType(0), Add);
+}
+
 // add (zext, zext) -> zext (add (zext, zext))
 // sub (zext, zext) -> sext (sub (zext, zext))
 // mul (zext, zext) -> zext (mul (zext, zext))
@@ -19296,6 +19703,39 @@ static SDValue combineAddMulParts(SDNode *N, SelectionDAG &DAG,
                        DAG.getTargetConstant(AccId, DL, Subtarget.getXLenVT()),
                        N->getOperand(1 - I), Mul.getOperand(1),
                        Mul.getOperand(2));
+  }
+  return SDValue();
+}
+
+// Expose the two scalar accumulates instead of a dot-product pair and PADD.DW.
+static SDValue combineAddPackedByteDot(SDNode *N, SelectionDAG &DAG,
+                                       const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP() || Subtarget.is64Bit() ||
+      N->getValueType(0) != MVT::v2i32)
+    return SDValue();
+
+  using namespace SDPatternMatch;
+  for (unsigned I = 0; I != 2; ++I) {
+    SDValue Lo, Hi;
+    if (!sd_match(N->getOperand(I), m_OneUse(m_Node(ISD::BUILD_VECTOR,
+                                                    m_Value(Lo), m_Value(Hi)))))
+      continue;
+    unsigned Opc = Lo.getOpcode();
+    if (Opc != Hi.getOpcode() ||
+        (Opc != RISCVISD::PM4ADD && Opc != RISCVISD::PM4ADDU &&
+         Opc != RISCVISD::PM4ADDSU))
+      continue;
+    // Splitting is profitable if at least one dot can fold into its add.
+    if (!Lo.hasOneUse() && !Hi.hasOneUse())
+      continue;
+
+    SDLoc DL(N);
+    SDValue Acc = N->getOperand(1 - I);
+    SDValue AccLo = DAG.getExtractVectorElt(DL, MVT::i32, Acc, 0);
+    SDValue AccHi = DAG.getExtractVectorElt(DL, MVT::i32, Acc, 1);
+    SDValue SumLo = DAG.getNode(ISD::ADD, DL, MVT::i32, AccLo, Lo);
+    SDValue SumHi = DAG.getNode(ISD::ADD, DL, MVT::i32, AccHi, Hi);
+    return DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, SumLo, SumHi);
   }
   return SDValue();
 }
@@ -19521,6 +19961,10 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
   if (SDValue V = combineAddOfExts(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineAddOfExtsAlreadyExtended(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineAddPackedByteDot(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
@@ -20228,8 +20672,10 @@ static SDValue combineOrToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
 
-// Generate a QC_INSB/QC_INSBI from 'or (and X, MaskImm), OrImm' iff the value
-// being inserted only sets known zero bits.
+// Generate a QC_INSB/QC_INSBI from either
+// 'or (and X, MaskImm), OrImm' or
+// 'or (and X, MaskImm), (shl Y, ShAmt)' when the inserted value only sets
+// bits known to be zero in X.
 static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
                                             const RISCVSubtarget &Subtarget) {
   // Supported only in Xqcibm for now.
@@ -20238,38 +20684,52 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 
   using namespace SDPatternMatch;
 
-  SDValue Inserted;
-  APInt MaskImm, OrImm;
-  if (!sd_match(
-          N, m_SpecificVT(MVT::i32, m_Or(m_OneUse(m_And(m_Value(Inserted),
-                                                        m_ConstInt(MaskImm))),
-                                         m_ConstInt(OrImm)))))
+  SDValue And, Base, Shl, ShiftSrc;
+  APInt OrImm, ShiftImm;
+  bool IsImmediate = sd_match(
+      N, m_SpecificVT(
+             MVT::i32,
+             m_Or(m_OneUse(m_Value(And, m_And(m_Value(Base), m_ConstInt()))),
+                  m_ConstInt(OrImm))));
+
+  if (!IsImmediate &&
+      !sd_match(
+          N,
+          m_SpecificVT(
+              MVT::i32,
+              m_Or(m_OneUse(m_Value(And, m_And(m_Value(Base), m_ConstInt()))),
+                   m_OneUse(m_Value(
+                       Shl, m_Shl(m_Value(ShiftSrc), m_ConstInt(ShiftImm))))))))
     return SDValue();
 
   // Compute the Known Zero for the AND as this allows us to catch more general
   // cases than just looking for AND with imm.
-  KnownBits Known = DAG.computeKnownBits(N->getOperand(0));
-
-  // The bits being inserted must only set those bits that are known to be
-  // zero.
-  if (!OrImm.isSubsetOf(Known.Zero)) {
-    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
-    // currently handle this case.
-    return SDValue();
-  }
-
+  KnownBits Known = DAG.computeKnownBits(And);
   unsigned ShAmt, Width;
   // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
   if (!Known.Zero.isShiftedMask(ShAmt, Width))
     return SDValue();
 
+  SDValue Source;
+  if (IsImmediate) {
+    // The bits being inserted must only set those bits that are known to be
+    // zero.
+    if (!OrImm.isSubsetOf(Known.Zero))
+      // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we
+      // don't currently handle this case.
+      return SDValue();
+    Source = DAG.getSignedConstant(OrImm.getSExtValue() >> ShAmt, SDLoc(N),
+                                   MVT::i32);
+  } else {
+    if (ShiftImm.ugt(31) || ShiftImm.getZExtValue() != ShAmt ||
+        !DAG.MaskedValueIsZero(Shl, ~Known.Zero))
+      return SDValue();
+    Source = ShiftSrc;
+  }
+
   // QC_INSB(I) dst, src, #width, #shamt.
   SDLoc DL(N);
-
-  SDValue ImmNode =
-      DAG.getSignedConstant(OrImm.getSExtValue() >> ShAmt, DL, MVT::i32);
-
-  SDValue Ops[] = {Inserted, ImmNode, DAG.getConstant(Width, DL, MVT::i32),
+  SDValue Ops[] = {Base, Source, DAG.getConstant(Width, DL, MVT::i32),
                    DAG.getConstant(ShAmt, DL, MVT::i32)};
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
@@ -21210,6 +21670,22 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       Src.getOperand(0).getOpcode() == ISD::SETCC && DCI.isAfterLegalizeDAG())
     return DAG.getNode(ISD::ADD, DL, VT, Src.getOperand(0),
                        DAG.getAllOnesConstant(DL, VT));
+
+  // Fold (sext_inreg (bitcast (ppaire X, Y)), SrcVT) ->
+  // (sext_inreg (bitcast (freeze X)), SrcVT).
+  // ppaire only replaces the odd narrow elements, which are above the bits that
+  // sext_inreg reads.
+  if (VT.isFixedLengthVector() && Opc == ISD::BITCAST && Src.hasOneUse()) {
+    SDValue Pair = Src.getOperand(0);
+    if (Pair.getOpcode() == RISCVISD::PPAIRE && Pair.hasOneUse() &&
+        VT.getScalarSizeInBits() == 2 * Pair.getScalarValueSizeInBits() &&
+        SrcVT.getScalarSizeInBits() <= Pair.getScalarValueSizeInBits())
+      // The odd elements of X were ignored by the ppaire, but would now be
+      // seen through the bitcast so we need to freeze X.
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT,
+                         DAG.getBitcast(VT, DAG.getFreeze(Pair.getOperand(0))),
+                         N->getOperand(1));
+  }
 
   return SDValue();
 }
@@ -25230,6 +25706,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case RISCVISD::USATI: {
+    // USATI with null immediate folds to 0.
+    if (isNullConstant(N->getOperand(1)))
+      return DAG.getConstant(0, DL, N->getValueType(0));
+    break;
+  }
   case RISCVISD::FMV_W_X_RV64: {
     // If the input to FMV_W_X_RV64 is just FMV_X_ANYEXTW_RV64 the the
     // conversion is unnecessary and can be replaced with the
@@ -25410,6 +25892,22 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return performSETCCCombine(N, DCI, Subtarget);
   case ISD::SIGN_EXTEND_INREG:
     return performSIGN_EXTEND_INREGCombine(N, DCI, Subtarget);
+  case ISD::ZERO_EXTEND_VECTOR_INREG: {
+    // (zext_invec (punzipe X, Y)) -> (ppaire X, 0). Only the low half of the
+    // result is used, which holds the even narrow elements of X. PPAIRE with
+    // zero keeps the even elements in place and clears the odd ones.
+    SDValue Src = N->getOperand(0);
+    EVT VT = N->getValueType(0);
+    if (Src.getOpcode() != RISCVISD::PUNZIPE || !Src.hasOneUse() ||
+        Src.getValueSizeInBits() != VT.getSizeInBits())
+      break;
+    if (VT.getScalarSizeInBits() != 2 * Src.getScalarValueSizeInBits())
+      break;
+    EVT SrcVT = Src.getValueType();
+    SDValue Pair = DAG.getNode(RISCVISD::PPAIRE, DL, SrcVT, Src.getOperand(0),
+                               DAG.getConstant(0, DL, SrcVT));
+    return DAG.getBitcast(VT, Pair);
+  }
   case ISD::ZERO_EXTEND:
     // Fold (zero_extend (fp_to_uint X)) to prevent forming fcvt+zexti32 during
     // type legalization. This is safe because fp_to_uint produces poison if
@@ -30487,6 +30985,10 @@ unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
   return isCtpopFast(VT) ? 0 : 1;
 }
 
+bool RISCVTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
+  return Subtarget.hasVInstructions() && VT.isVector();
+}
+
 bool RISCVTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   if (Subtarget.hasStdExtZalasr()) {
@@ -30517,6 +31019,8 @@ bool RISCVTargetLowering::shouldInsertFencesForAtomic(
 }
 
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
+  if (Subtarget.hasStdExtZfinx())
+    return true;
 
   // GISel support is in progress or complete for these opcodes.
   unsigned Op = Inst.getOpcode();

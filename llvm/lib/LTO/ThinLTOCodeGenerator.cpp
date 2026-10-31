@@ -192,7 +192,6 @@ static std::unique_ptr<Module> loadModuleFromInput(lto::InputFile *Input,
                                                    bool Lazy,
                                                    bool IsImporting) {
   auto &Mod = Input->getSingleBitcodeModule();
-  SMDiagnostic Err;
   Expected<std::unique_ptr<Module>> ModuleOrErr =
       Lazy ? Mod.getLazyModule(Context,
                                /* ShouldLazyLoadMetadata */ true, IsImporting)
@@ -265,7 +264,7 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
   PipelineTuningOptions PTO(&TheModule.getContext().getLibraryOptions());
   PTO.LoopVectorization = true;
   PTO.SLPVectorization = true;
-  PassBuilder PB(&TM, PTO, PGOOpt, &PIC);
+  PassBuilder PB(TheModule.getContext(), &TM, PTO, PGOOpt, &PIC);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       new TargetLibraryInfoImpl(TM.getTargetTriple(), TM.Options.VecLib));

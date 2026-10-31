@@ -59,13 +59,6 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
-static SourceLocation getMacroDebugLoc(const CodeGenModule &CGM,
-                                       SourceLocation Loc) {
-  if (CGM.getCodeGenOpts().DebugInfoMacroExpansionLoc)
-    return Loc;
-  return CGM.getContext().getSourceManager().getFileLoc(Loc);
-}
-
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
   if (TI.isAlignRequired())
@@ -353,7 +346,7 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
     return;
 
   SourceManager &SM = CGM.getContext().getSourceManager();
-  SourceLocation NewLoc = SM.getExpansionLoc(getMacroDebugLoc(CGM, Loc));
+  SourceLocation NewLoc = SM.getExpansionLoc(Loc);
   if (CurLoc != NewLoc) {
     CurLoc = NewLoc;
     CurLocFile = nullptr;
@@ -596,7 +589,6 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    Loc = getMacroDebugLoc(CGM, Loc);
     if (Loc == CurLoc && CurLocFile)
       return CurLocFile;
 
@@ -627,8 +619,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     if (CSKind)
       CSInfo.emplace(*CSKind, Checksum);
   }
-  return createFile(FileName, CSInfo,
-                    getSource(SM, SM.getFileID(getMacroDebugLoc(CGM, Loc))));
+  return createFile(FileName, CSInfo, getSource(SM, SM.getFileID(Loc)));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
@@ -679,10 +670,9 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  SourceLocation DebugLoc = getMacroDebugLoc(CGM, Loc);
-  if (DebugLoc == CurLoc)
+  if (Loc == CurLoc)
     return CurLocLine;
-  return SM.getPresumedLoc(DebugLoc).getLine();
+  return SM.getPresumedLoc(Loc).getLine();
 }
 
 unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc) {
@@ -694,7 +684,7 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc) {
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  SourceLocation DebugLoc = Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc;
+  SourceLocation DebugLoc = Loc.isValid() ? Loc : CurLoc;
   if (DebugLoc == CurLoc)
     return CurLocColumn;
   PresumedLoc PLoc = SM.getPresumedLoc(DebugLoc);
@@ -3705,10 +3695,22 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   if (ID->getImplementation())
     Flags |= llvm::DINode::FlagObjcClassComplete;
 
+  llvm::DINodeArray Annotations;
+  const auto *RuntimeName = ID->getAttr<ObjCRuntimeNameAttr>();
+  if (RuntimeName && RuntimeName->getMetadataName() != ID->getName()) {
+    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+    llvm::Metadata *Ops[2] = {
+        llvm::MDString::get(Ctx, "objc_runtime_name"),
+        llvm::MDString::get(Ctx, RuntimeName->getMetadataName())};
+    Annotations = DBuilder.getOrCreateArray({llvm::MDNode::get(Ctx, Ops)});
+  }
+
   llvm::DIScope *Mod = getParentModuleOrNull(ID);
   llvm::DICompositeType *RealDecl = DBuilder.createStructType(
       Mod ? Mod : Unit, ID->getName(), DefUnit, Line, Size, Align, Flags,
-      nullptr, llvm::DINodeArray(), RuntimeLang);
+      nullptr, llvm::DINodeArray(), RuntimeLang, /*VTableHolder=*/nullptr,
+      /*UniqueIdentifier=*/"", /*Specification=*/nullptr,
+      /*NumExtraInhabitants=*/0, Annotations);
 
   QualType QTy(Ty, 0);
   TypeCache[QTy.getAsOpaquePtr()].reset(RealDecl);
@@ -5329,9 +5331,7 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
   // Update our current location
   setLocation(Loc);
 
-  if (CurLoc.isInvalid() ||
-      (CGM.getCodeGenOpts().DebugInfoMacroExpansionLoc && CurLoc.isMacroID()) ||
-      LexicalBlockStack.empty())
+  if (CurLoc.isInvalid() || LexicalBlockStack.empty())
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
@@ -6604,7 +6604,7 @@ void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
                                             const StringLiteral *S) {
   SourceLocation Loc = S->getStrTokenLoc(0);
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc));
+  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
   if (!PLoc.isValid())
     return;
 

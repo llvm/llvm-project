@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -314,6 +315,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     break;
   }
   case spirv::Decoration::Alignment:
+  case spirv::Decoration::MaxByteOffset:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
   case spirv::Decoration::Location:
@@ -525,48 +527,24 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
                      decAttr.getValue());
       continue;
     }
-    bool handled = false;
-    for (auto decoration :
-         {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
-          spirv::Decoration::AliasedPointer,
-          spirv::Decoration::RestrictPointer}) {
+    if (!isa<UnitAttr>(decAttr.getValue()))
+      return emitError(unknownLoc, "unhandled decoration '")
+             << decAttr.getName().getValue()
+             << "' on function argument with result <id> " << argID;
 
-      if (decAttr.getName() !=
-          getSymbolDecoration(stringifyDecoration(decoration)))
-        continue;
+    // TODO: Support multiple decorations per function parameter.
+    if (foundDecorationAttr)
+      return emitError(unknownLoc, "already found a decoration for function "
+                                   "argument with result <id> ")
+             << argID;
 
-      if (foundDecorationAttr)
-        return emitError(unknownLoc,
-                         "more than one Aliased/Restrict decorations for "
-                         "function argument with result <id> ")
-               << argID;
-
-      foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
-      handled = true;
-      break;
-    }
-    if (handled)
-      continue;
-
-    if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
-                                 spirv::Decoration::RelaxedPrecision))) {
-      // TODO: Current implementation supports only one decoration per function
-      // parameter so RelaxedPrecision cannot be applied at the same time as,
-      // for example, Aliased/Restrict/etc. This should be relaxed to allow any
-      // combination of decoration allowed by the spec to be supported.
-      if (foundDecorationAttr)
-        return emitError(unknownLoc, "already found a decoration for function "
-                                     "argument with result <id> ")
-               << argID;
-
-      foundDecorationAttr = spirv::DecorationAttr::get(
-          context, spirv::Decoration::RelaxedPrecision);
-      continue;
-    }
-
-    return emitError(unknownLoc, "unhandled decoration '")
-           << decAttr.getName().getValue()
-           << "' on function argument with result <id> " << argID;
+    std::optional<spirv::Decoration> decoration = spirv::symbolizeDecoration(
+        llvm::convertToCamelFromSnakeCase(decAttr.getName(), true));
+    if (!decoration)
+      return emitError(unknownLoc, "unknown decoration '")
+             << decAttr.getName().getValue()
+             << "' on function argument with result <id> " << argID;
+    foundDecorationAttr = spirv::DecorationAttr::get(context, *decoration);
   }
 
   if (foundDecorationAttr)
@@ -2457,26 +2435,51 @@ LogicalResult spirv::Deserializer::processSwitch(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpSwitch must at least specify selector and "
                                  "a default target");
 
-  if (operands.size() % 2)
-    return emitError(unknownLoc,
-                     "OpSwitch must at have an even number of operands: "
-                     "selector, default target and any number of literal and "
-                     "label <id> pairs");
-
   Value selector = getValue(operands[0]);
+  if (!selector)
+    return emitError(unknownLoc, "unknown OpSwitch selector <id>: ")
+           << operands[0];
+  auto selectorType = dyn_cast<IntegerType>(selector.getType());
+  if (!selectorType)
+    return emitError(unknownLoc, "OpSwitch selector must be an integer");
+
+  // Each case literal has the width of the selector type. Literals wider than
+  // one word span multiple words with the low-order word first.
+  unsigned bitWidth = selectorType.getWidth();
+  unsigned literalWords = llvm::divideCeil(bitWidth, 32);
+  unsigned wordsPerCase = literalWords + 1;
+  if ((operands.size() - 2) % wordsPerCase != 0)
+    return emitError(unknownLoc, "OpSwitch must specify selector, default "
+                                 "target and any number of literal and label "
+                                 "<id> pairs, where each literal of a ")
+           << bitWidth << "-bit selector spans " << literalWords << " word(s)";
+
   Block *defaultBlock = getOrCreateBlock(operands[1]);
   Location loc = createFileLineColLoc(opBuilder);
 
-  SmallVector<int32_t> literals;
+  SmallVector<APInt> literals;
   SmallVector<Block *> blocks;
-  for (unsigned i = 2, e = operands.size(); i < e; i += 2) {
-    literals.push_back(operands[i]);
-    blocks.push_back(getOrCreateBlock(operands[i + 1]));
+  for (unsigned i = 2, e = operands.size(); i < e; i += wordsPerCase) {
+    APInt literal;
+    if (bitWidth <= 32) {
+      // Sub-word literals occupy the low-order bits of the word and are
+      // sign-extended for signed selector types, so truncate to the selector
+      // width.
+      literal = APInt(bitWidth, operands[i], /*isSigned=*/true,
+                      /*implicitTrunc=*/true);
+    } else {
+      literal = APInt(bitWidth, 0);
+      for (unsigned w = 0; w < literalWords; ++w)
+        literal.insertBits(APInt(32, operands[i + w]), w * 32);
+    }
+    literals.push_back(literal);
+    blocks.push_back(getOrCreateBlock(operands[i + literalWords]));
   }
 
   SmallVector<ValueRange> targetOperands(blocks.size(), {});
   spirv::SwitchOp::create(opBuilder, loc, selector, defaultBlock,
-                          ArrayRef<Value>(), literals, blocks, targetOperands);
+                          ArrayRef<Value>(), ArrayRef<APInt>(literals), blocks,
+                          targetOperands);
 
   return success();
 }
@@ -3053,8 +3056,9 @@ LogicalResult spirv::Deserializer::splitSelectionHeader() {
     // Do not split a block that only contains a conditional branch / switch,
     // unless it is also a merge block of another construct - in that case we
     // want to split the block. We do not want two constructs to share header /
-    // merge block.
-    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
+    // merge block. The entry block cannot join a region, so split it too.
+    if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock ||
+        isFnEntryBlock(block)) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
       spirv::BranchOp::create(builder, block->getParent()->getLoc(), newBlock);

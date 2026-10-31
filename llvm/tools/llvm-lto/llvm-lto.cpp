@@ -712,7 +712,6 @@ private:
       report_fatal_error(
           "OutputFilename is necessary to store the combined index.\n");
 
-    LLVMContext Ctx;
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (unsigned i = 0; i < InputFilenames.size(); ++i) {
       auto &Filename = InputFilenames[i];
@@ -930,7 +929,6 @@ private:
 
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
       auto InputOrErr = MemoryBuffer::getFile(Filename);
       error(InputOrErr, "error " + CurrentActivity);
       InputBuffers.push_back(std::move(*InputOrErr));
@@ -965,7 +963,6 @@ private:
     if (!ThinLTOIndex.empty())
       errs() << "Warning: -thinlto-index ignored for full ThinLTO process";
 
-    LLVMContext Ctx;
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (unsigned i = 0; i < InputFilenames.size(); ++i) {
       auto &Filename = InputFilenames[i];
@@ -1009,18 +1006,19 @@ private:
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::HideUnrelatedOptions({&LTOCategory, &getColorCategory()});
-  cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
-                              "llvm LTO linker\n");
-
-  if (OptLevel < '0' || OptLevel > '3')
-    error("optimization level must be between 0 and 3");
 
   // Initialize the configured targets.
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
+
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+                              "llvm LTO linker\n");
+
+  if (OptLevel < '0' || OptLevel > '3')
+    error("optimization level must be between 0 and 3");
 
   // set up the TargetOptions for the machine
   TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());

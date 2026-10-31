@@ -12,8 +12,8 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   DEPENDS
   CIRLowering
   MLIRCIREnumsGen
-  MLIRCIROpsIncGen
-  MLIRCIROpInterfacesIncGen
+  MLIRCIRPassIncGen
+  mlir-headers
 
   LINK_LIBS
   clangCIRLoweringCommon
@@ -27,7 +27,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPDialect
-  MLIROpenMPToLLVM
+  MLIROpenMPToLLVMConversion
   MLIROpenMPToLLVMIRTranslation
   MLIROpenMPTransforms
   MLIRIR

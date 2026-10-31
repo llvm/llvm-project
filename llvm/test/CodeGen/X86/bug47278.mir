@@ -32,7 +32,7 @@ body:             |
     %6:gr32 = COPY %1
     %7:gr32 = IMPLICIT_DEF
     %8:gr32 = IMPLICIT_DEF
-    %8:gr32 = CMOV32rr %8, killed %7, 2, implicit undef $eflags
+    %8:gr32 = CMOV32rr %8, %7, 2, implicit undef $eflags
     %9:gr8 = MOV8ri -128
     %9:gr8 = COPY %3
     $cl = IMPLICIT_DEF

@@ -179,9 +179,10 @@ class DebugMapModule : public Module {
 public:
   DebugMapModule(const ModuleSP &exe_module_sp, uint32_t cu_idx,
                  const FileSpec &file_spec, const ArchSpec &arch,
-                 ConstString object_name, off_t object_offset,
+                 std::string object_name, off_t object_offset,
                  const llvm::sys::TimePoint<> object_mod_time)
-      : Module(file_spec, arch, object_name, object_offset, object_mod_time),
+      : Module(file_spec, arch, std::move(object_name), object_offset,
+               object_mod_time),
         m_exe_module_wp(exe_module_sp), m_cu_idx(cu_idx) {}
 
   ~DebugMapModule() override = default;
@@ -418,7 +419,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
           comp_unit_info->oso_sp;
       const char *oso_path = comp_unit_info->oso_path.GetCString();
       FileSpec oso_file(oso_path);
-      ConstString oso_object;
+      llvm::StringRef oso_object;
       if (FileSystem::Instance().Exists(oso_file)) {
         // The modification time returned by the FS can have a higher precision
         // than the one from the CU.
@@ -450,8 +451,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
               "debug map object file \"%s\" containing debug info does not "
               "exist, debug info will not be loaded",
               comp_unit_info->oso_path.GetCString());
-          obj_file->GetModule()->ReportError(
-              "{0}", comp_unit_info->oso_load_error.AsCString());
+          ReportMissingOSOs(*comp_unit_info);
           return nullptr;
         }
       }
@@ -472,19 +472,21 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
                              .c_str());
       comp_unit_info->oso_sp->module_sp = std::make_shared<DebugMapModule>(
           obj_file->GetModule(), GetCompUnitInfoIndex(comp_unit_info), oso_file,
-          oso_arch, oso_object, 0,
-          oso_object ? comp_unit_info->oso_mod_time : llvm::sys::TimePoint<>());
+          oso_arch, oso_object.str(), 0,
+          !oso_object.empty() ? comp_unit_info->oso_mod_time
+                              : llvm::sys::TimePoint<>());
 
-      if (oso_object && !comp_unit_info->oso_sp->module_sp->GetObjectFile() &&
+      if (!oso_object.empty() &&
+          !comp_unit_info->oso_sp->module_sp->GetObjectFile() &&
           FileSystem::Instance().Exists(oso_file)) {
         // If we are loading a .o file from a .a file the "oso_object" will
         // have a valid value name and if the .a file exists, either the .o
         // file didn't exist in the .a file or the mod time didn't match.
-        comp_unit_info->oso_load_error = Status::FromErrorStringWithFormat(
-            "\"%s\" object from the \"%s\" archive: "
+        comp_unit_info->oso_load_error = Status::FromErrorStringWithFormatv(
+            "\"{0}\" object from the \"{1}\" archive: "
             "either the .o file doesn't exist in the archive or the "
-            "modification time (0x%8.8x) of the .o file doesn't match",
-            oso_object.AsCString(""), oso_file.GetPath().c_str(),
+            "modification time (0x{2:x-8}) of the .o file doesn't match",
+            oso_object, oso_file.GetPath(),
             (uint32_t)llvm::sys::toTimeT(comp_unit_info->oso_mod_time));
       }
     }
@@ -492,6 +494,41 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
   if (comp_unit_info->oso_sp)
     return comp_unit_info->oso_sp->module_sp.get();
   return nullptr;
+}
+
+static bool OSOExists(llvm::StringRef oso_path) {
+  FileSpec oso_file(oso_path);
+  llvm::StringRef oso_object;
+  return FileSystem::Instance().Exists(oso_file) ||
+         ObjectFile::SplitArchivePathWithObject(oso_path, oso_file, oso_object,
+                                                /*must_exist=*/true);
+}
+
+void SymbolFileDWARFDebugMap::ReportMissingOSOs(
+    const CompileUnitInfo &missing_info) {
+  // Users have no control over shared cache images, so the error is not
+  // actionable.
+  if (m_objfile_sp->IsSharedCacheBinary())
+    return;
+
+  if (m_reported_missing_osos)
+    return;
+  m_reported_missing_osos = true;
+
+  size_t num_missing =
+      llvm::count_if(m_compile_unit_infos, [](const CompileUnitInfo &info) {
+        return !OSOExists(info.oso_path.GetStringRef());
+      });
+  ModuleSP module_sp = m_objfile_sp->GetModule();
+  if (num_missing <= 1) {
+    module_sp->ReportError("{0}", missing_info.oso_load_error.AsCString());
+    return;
+  }
+  module_sp->ReportError(
+      "{0} of {1} debug map object files do not exist: debug info cannot be "
+      "loaded for them. Run \"image dump separate-debug-info --errors-only\" "
+      "to list them",
+      num_missing, m_compile_unit_infos.size());
 }
 
 bool SymbolFileDWARFDebugMap::GetFileSpecForSO(uint32_t oso_idx,
@@ -1303,12 +1340,12 @@ SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
 
     ModuleSpec spec;
     FileSpec oso_file;
-    ConstString oso_object;
+    llvm::StringRef oso_object;
     if (ObjectFile::SplitArchivePathWithObject(info.oso_path.GetStringRef(),
                                                oso_file, oso_object,
                                                /*must_exist=*/false)) {
       spec.GetFileSpec() = oso_file;
-      spec.SetObjectName(oso_object.GetStringRef().str());
+      spec.SetObjectName(oso_object.str());
     } else {
       spec.GetFileSpec() = FileSpec(info.oso_path.GetStringRef());
     }

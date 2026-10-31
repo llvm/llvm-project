@@ -264,27 +264,8 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   // Such cases are suggested to be clearly documented and explained
   // instead of being silently skipped
   auto isException = [&](const Fortran::semantics::Symbol *sym) -> bool {
-    // The handling of linear clause is deferred to the OpenMP
-    // IRBuilder which is responsible for all its aspects,
-    // including privatization. Privatizing linear variables at this point would
-    // cause the following structure:
-    //
-    // omp.op linear(%linear = %step : !fir.ref<type>) {
-    //	Use %linear in this BB
-    // }
-    //
-    // to be changed to the following:
-    //
-    // omp. op linear(%linear = %step : !fir.ref<type>)
-    // 	private(%linear -> %arg0 : !fir.ref<i32>) {
-    //	Declare and use %arg0 in this BB
-    // }
-    //
-    // The OpenMP IRBuilder needs to map the linear MLIR value
-    // (i.e. %linear) to its `uses` in the BB to correctly
-    // implement the functionalities of linear clause. However,
-    // privatizing here disallows the IRBuilder to
-    // draw a relation between %linear and %arg0. Hence skip.
+    // Linear variables are privatized by the `linear` privatizers of the
+    // linear clause, which genLinearPrivatizers creates.
     if (sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
       return true;
     return false;
@@ -560,8 +541,8 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   }
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
-    // Linear symbols are privatized by OpenMP IRBuilder, except when they are
-    // enclosed within TARGET.
+    // Linear symbols are privatized by the linear clause, except when they are
+    // enclosed within TARGET, where implicit linearization is skipped.
     mlir::Operation *currentOp =
         firOpBuilder.getInsertionBlock()->getParentOp();
     bool inTarget =
@@ -748,7 +729,7 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
 void DataSharingProcessor::privatizeSymbol(
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps,
-    std::optional<llvm::omp::Directive> dir) {
+    std::optional<llvm::omp::Directive> dir, bool isLinear) {
   if (!useDelayedPrivatization) {
     cloneSymbol(symToPrivatize);
     copyFirstPrivateSymbol(symToPrivatize);
@@ -759,7 +740,7 @@ void DataSharingProcessor::privatizeSymbol(
                                   mlir::omp::PrivateClauseOps>(
       converter, firOpBuilder, symTable, allPrivatizedSymbols,
       mightHaveReadHostSym, symToPrivatize, clauseOps, dir,
-      forceHeapAllocationForPrivateDynamicArrays);
+      forceHeapAllocationForPrivateDynamicArrays, isLinear);
 }
 } // namespace omp
 } // namespace lower

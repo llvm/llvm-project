@@ -1,4 +1,4 @@
-add_custom_target(libc_time_unittests)
+add_libc_testsuite(libc-time-tests)
 
 add_header_library(
   time_test_utils
@@ -15,7 +15,7 @@ add_header_library(
 add_libc_test(
   asctime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     asctime_test.cpp
   CXX_STANDARD
@@ -32,7 +32,7 @@ add_libc_test(
 add_libc_test(
   asctime_r_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     asctime_r_test.cpp
   CXX_STANDARD
@@ -49,7 +49,7 @@ add_libc_test(
 add_libc_test(
   ctime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     ctime_test.cpp
   CXX_STANDARD
@@ -67,7 +67,7 @@ add_libc_test(
 add_libc_test(
   ctime_r_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     ctime_r_test.cpp
   CXX_STANDARD
@@ -85,7 +85,7 @@ add_libc_test(
 add_libc_test(
   localtime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     localtime_test.cpp
   DEPENDS
@@ -96,7 +96,7 @@ add_libc_test(
 add_libc_test(
   localtime_r_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     localtime_r_test.cpp
   DEPENDS
@@ -108,7 +108,7 @@ add_libc_test(
 add_libc_test(
   clock_gettime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     clock_gettime_test.cpp
   DEPENDS
@@ -121,7 +121,7 @@ add_libc_test(
 add_libc_test(
   clock_getcpuclockid_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     clock_getcpuclockid_test.cpp
   DEPENDS
@@ -138,7 +138,7 @@ add_libc_test(
 add_libc_test(
   clock_getres_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     clock_getres_test.cpp
   DEPENDS
@@ -150,7 +150,7 @@ add_libc_test(
 add_libc_test(
   clock_settime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     clock_settime_test.cpp
   DEPENDS
@@ -165,7 +165,7 @@ add_libc_test(
 add_libc_test(
   timer_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     timer_test.cpp
   DEPENDS
@@ -179,6 +179,7 @@ add_libc_test(
     libc.src.time.clock_gettime
     libc.src.time.timer_create
     libc.src.time.timer_delete
+    libc.src.time.timer_getoverrun
     libc.src.time.timer_gettime
     libc.src.time.timer_settime
     libc.src.unistd.gettid
@@ -189,7 +190,7 @@ add_libc_test(
 add_libc_test(
   difftime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     difftime_test.cpp
   DEPENDS
@@ -201,7 +202,7 @@ add_libc_test(
 add_libc_test(
   gmtime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     gmtime_test.cpp
   DEPENDS
@@ -218,7 +219,7 @@ add_libc_test(
 add_libc_test(
   gmtime_r_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     gmtime_r_test.cpp
   DEPENDS
@@ -232,7 +233,7 @@ add_libc_test(
 add_libc_test(
   mktime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     mktime_test.cpp
   CXX_STANDARD
@@ -248,7 +249,7 @@ add_libc_test(
 add_libc_test(
   nanosleep_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     nanosleep_test.cpp
   DEPENDS
@@ -262,7 +263,7 @@ add_libc_test(
 add_libc_test(
   strftime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     strftime_test.cpp
   DEPENDS
@@ -273,7 +274,7 @@ add_libc_test(
 add_libc_test(
   strptime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     strptime_test.cpp
   DEPENDS
@@ -284,19 +285,18 @@ add_libc_test(
 add_libc_test(
   time_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     time_test.cpp
   DEPENDS
     libc.src.time.time
     libc.src.__support.time.clock_gettime
-    libc.src.errno.errno
 )
 
 add_libc_test(
   timespec_get_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     timespec_get_test.cpp
   DEPENDS
@@ -307,20 +307,19 @@ add_libc_test(
 add_libc_test(
   clock_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     clock_test.cpp
   DEPENDS
     libc.include.time
     libc.src.time.clock
-    libc.src.errno.errno
     libc.hdr.types.clock_t
 )
 
 add_libc_test(
   tzset_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     tzset_test.cpp
   DEPENDS

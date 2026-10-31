@@ -12,9 +12,9 @@
 #define lldb_NativeRegisterContextLinux_arm_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm.h"
-#include "Plugins/Process/Utility/RegisterInfo_arm.h"
-#include "Plugins/Process/Utility/lldb-arm-register-enums.h"
+#include "Plugins/Register/Native/NativeRegisterContextDBReg_arm.h"
+#include "Register/Common/RegisterInfo_arm.h"
+#include "Register/Arch/lldb-arm-register-enums.h"
 
 namespace lldb_private {
 namespace process_linux {
