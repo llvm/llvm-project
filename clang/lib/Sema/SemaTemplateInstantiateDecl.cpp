@@ -6513,13 +6513,31 @@ void Sema::BuildVariableInstantiation(
       NewVar->isLocalExternDecl() ? RedeclarationKind::ForExternalRedeclaration
                                   : forRedeclarationInCurContext());
 
-  if (NewVar->isLocalExternDecl() && OldVar->getPreviousDecl() &&
-      (!OldVar->getPreviousDecl()->getDeclContext()->isDependentContext() ||
-       OldVar->getPreviousDecl()->getDeclContext()==OldVar->getDeclContext())) {
+  VarDecl *PatternPrev = nullptr;
+  if (NewVar->isLocalExternDecl()) {
+    for (VarDecl *Prev = OldVar->getPreviousDecl(); Prev;
+         Prev = Prev->getPreviousDecl()) {
+      DeclContext *PrevDC = Prev->getDeclContext();
+      if (!PrevDC->isDependentContext()) {
+        PatternPrev = Prev;
+        break;
+      }
+      if (PrevDC != OldVar->getDeclContext())
+        break;
+      if (CurrentInstantiationScope &&
+          CurrentInstantiationScope->getInstantiationOfIfExists(Prev)) {
+        PatternPrev = Prev;
+        break;
+      }
+      // Discarded 'if constexpr' branch: look further back.
+    }
+  }
+
+  if (PatternPrev) {
     // We have a previous declaration. Use that one, so we merge with the
     // right type.
-    if (NamedDecl *NewPrev = FindInstantiatedDecl(
-            NewVar->getLocation(), OldVar->getPreviousDecl(), TemplateArgs))
+    if (NamedDecl *NewPrev = FindInstantiatedDecl(NewVar->getLocation(),
+                                                  PatternPrev, TemplateArgs))
       Previous.addDecl(NewPrev);
   } else if (!isa<VarTemplateSpecializationDecl>(NewVar) &&
              OldVar->hasLinkage()) {

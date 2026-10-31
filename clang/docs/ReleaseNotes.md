@@ -1093,6 +1093,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   template template parameter whose constant template parameter is declared
   as `auto &&`.
 
+- Fixed a crash when instantiating a local `extern` variable declaration whose
+  previous declaration was in a discarded branch of an `if constexpr`. (#GH223003)
+
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
 
