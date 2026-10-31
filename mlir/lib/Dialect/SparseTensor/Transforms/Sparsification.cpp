@@ -1298,7 +1298,7 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
     const LatPointId li = env.set(lts)[0];
     auto [loop, isSingleCond] =
         startLoop(env, rewriter, curr, li, lsize, needsUniv);
-    assert(isSingleCond == llvm::isa<IterateOp>(loop));
+    isSingleCond = llvm::isa<IterateOp, scf::ForOp>(loop);
     // We cannot change this to `for (const LatPointId li : env.set(lts))`
     // because the loop body causes data-movement which invalidates
     // the iterator.

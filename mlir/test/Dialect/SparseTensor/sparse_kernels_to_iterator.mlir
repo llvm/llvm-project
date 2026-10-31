@@ -16,6 +16,10 @@
   map = (d0) -> (d0 : compressed)
 }>
 
+#CSR = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
+}>
+
 
 // CHECK-LABEL:   func.func @sqsum(
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
@@ -166,4 +170,116 @@ func.func @add(%arg0: tensor<10xi32, #VEC>, %arg1: tensor<10xi32, #VEC>) -> tens
       linalg.yield %2 : i32
   } -> tensor<10xi32>
   return %0 : tensor<10xi32>
+}
+
+// ITER-LABEL:   func.func @matvec(
+// ITER:           %[[VECTOR:.*]] = bufferization.to_buffer
+// ITER:           %[[ROW_SPACE:.*]] = sparse_tensor.extract_iteration_space %{{.*}} lvls = 0
+// ITER:           sparse_tensor.iterate %[[ROW_ITER:.*]] in %[[ROW_SPACE]] at(%[[ROW:[a-zA-Z0-9_]+]])
+// ITER:             %[[COL_SPACE:.*]] = sparse_tensor.extract_iteration_space %{{.*}} at %[[ROW_ITER]] lvls = 1
+// ITER:             sparse_tensor.iterate %[[COL_ITER:.*]] in %[[COL_SPACE]] at(%[[COL:[a-zA-Z0-9_]+]])
+// ITER:               %[[MATRIX_VALUE:.*]] = sparse_tensor.extract_value %{{.*}} at %[[COL_ITER]]
+// ITER:               %[[VECTOR_VALUE:.*]] = memref.load %[[VECTOR]][%[[COL]]]
+// ITER:               %[[PRODUCT:.*]] = arith.mulf %[[MATRIX_VALUE]], %[[VECTOR_VALUE]] : f64
+// ITER:               arith.addf %{{.*}}, %[[PRODUCT]] : f64
+
+// CHECK-LABEL:   func.func @matvec(
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VECTOR:.*]] = bufferization.to_buffer
+// CHECK:           %[[OUTPUT:.*]] = bufferization.to_buffer
+// CHECK:           scf.for %[[ROW:.*]] = %[[C0]] to %{{.*}} step %[[C1]] {
+// CHECK:             %[[SUM:.*]] = memref.load %[[OUTPUT]][%[[ROW]]]
+// CHECK:             %[[COL_LO:.*]] = memref.load %{{.*}}[%[[ROW]]]
+// CHECK:             %[[ROW_END:.*]] = arith.addi %[[ROW]], %[[C1]] : index
+// CHECK:             %[[COL_HI:.*]] = memref.load %{{.*}}[%[[ROW_END]]]
+// CHECK:             %[[RESULT:.*]] = scf.for %[[POS:.*]] = %[[COL_LO]] to %[[COL_HI]] step %[[C1]] iter_args(%[[ACC:.*]] = %[[SUM]]) -> (f64) {
+// CHECK:               %[[COL:.*]] = memref.load %{{.*}}[%[[POS]]]
+// CHECK:               %[[MATRIX_VALUE:.*]] = memref.load %{{.*}}[%[[POS]]]
+// CHECK:               %[[VECTOR_VALUE:.*]] = memref.load %[[VECTOR]][%[[COL]]]
+// CHECK:               %[[PRODUCT:.*]] = arith.mulf %[[MATRIX_VALUE]], %[[VECTOR_VALUE]] : f64
+// CHECK:               %[[NEXT:.*]] = arith.addf %[[ACC]], %[[PRODUCT]] : f64
+// CHECK:               scf.yield %[[NEXT]] : f64
+// CHECK:             }
+// CHECK:             memref.store %[[RESULT]], %[[OUTPUT]][%[[ROW]]]
+// CHECK:           }
+func.func @matvec(%matrix: tensor<4x8xf64, #CSR>,
+                  %vector: tensor<8xf64>,
+                  %output: tensor<4xf64>) -> tensor<4xf64> {
+  %result = linalg.generic {
+    indexing_maps = [
+      affine_map<(i, j) -> (i, j)>,
+      affine_map<(i, j) -> (j)>,
+      affine_map<(i, j) -> (i)>
+    ],
+    iterator_types = ["parallel", "reduction"]
+  } ins(%matrix, %vector : tensor<4x8xf64, #CSR>, tensor<8xf64>)
+    outs(%output : tensor<4xf64>) {
+  ^bb0(%matrixValue: f64, %vectorValue: f64, %sum: f64):
+    %product = arith.mulf %matrixValue, %vectorValue : f64
+    %next = arith.addf %sum, %product : f64
+    linalg.yield %next : f64
+  } -> tensor<4xf64>
+  return %result : tensor<4xf64>
+}
+
+// ITER-LABEL:   func.func @mixed_sparse_encoded_dense_parent(
+// ITER:           sparse_tensor.iterate %{{.*}} in %{{.*}} at(%[[ROW:.*]])
+// ITER:             %[[DENSE_ITER:.*]] = builtin.unrealized_conversion_cast %[[ROW]]
+// ITER:             sparse_tensor.extract_iteration_space %{{.*}} at %[[DENSE_ITER]] lvls = 1
+
+// CHECK-LABEL:   func.func @mixed_sparse_encoded_dense_parent(
+// CHECK:           %[[MIXED_C1:.*]] = arith.constant 1 : index
+// CHECK:           scf.for %[[MIXED_ROW_POS:.*]] = %{{.*}} to %{{.*}} step %[[MIXED_C1]] {
+// CHECK:             %[[MIXED_ROW:.*]] = memref.load %{{.*}}[%[[MIXED_ROW_POS]]]
+// CHECK:             %[[MIXED_COL_LO:.*]] = memref.load %{{.*}}[%[[MIXED_ROW]]]
+// CHECK:             %[[MIXED_ROW_END:.*]] = arith.addi %[[MIXED_ROW]], %[[MIXED_C1]] : index
+// CHECK:             %[[MIXED_COL_HI:.*]] = memref.load %{{.*}}[%[[MIXED_ROW_END]]]
+// CHECK:             scf.for %[[MIXED_COL_POS:.*]] = %[[MIXED_COL_LO]] to %[[MIXED_COL_HI]] step %[[MIXED_C1]] {
+// CHECK:               %[[MIXED_COL:.*]] = memref.load %{{.*}}[%[[MIXED_COL_POS]]]
+// CHECK:               memref.store %{{.*}}, %{{.*}}[%[[MIXED_ROW]], %[[MIXED_COL]]]
+func.func @mixed_sparse_encoded_dense_parent(
+    %rows: tensor<4xf64, #VEC>, %matrix: tensor<4x8xf64, #CSR>,
+    %output: tensor<4x8xf64>) -> tensor<4x8xf64> {
+  %result = linalg.generic {
+    indexing_maps = [
+      affine_map<(i, j) -> (i)>,
+      affine_map<(i, j) -> (i, j)>,
+      affine_map<(i, j) -> (i, j)>
+    ],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%rows, %matrix : tensor<4xf64, #VEC>, tensor<4x8xf64, #CSR>)
+    outs(%output : tensor<4x8xf64>) {
+  ^bb0(%rowValue: f64, %matrixValue: f64, %out: f64):
+    %product = arith.mulf %rowValue, %matrixValue : f64
+    linalg.yield %product : f64
+  } -> tensor<4x8xf64>
+  return %result : tensor<4x8xf64>
+}
+
+// ITER-LABEL:   func.func @sparse_broadcast(
+// ITER:           sparse_tensor.iterate
+// ITER:             scf.for
+
+// CHECK-LABEL:   func.func @sparse_broadcast(
+// CHECK:           %[[BROADCAST_C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[BROADCAST_C8:.*]] = arith.constant 8 : index
+// CHECK:           scf.for %[[BROADCAST_ROW_POS:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:             %[[BROADCAST_ROW:.*]] = memref.load %{{.*}}[%[[BROADCAST_ROW_POS]]]
+// CHECK:             %[[BROADCAST_VALUE:.*]] = memref.load %{{.*}}[%[[BROADCAST_ROW_POS]]]
+// CHECK:             scf.for %[[BROADCAST_COL:.*]] = %[[BROADCAST_C0]] to %[[BROADCAST_C8]] step %{{.*}} {
+// CHECK:               memref.store %[[BROADCAST_VALUE]], %{{.*}}[%[[BROADCAST_ROW]], %[[BROADCAST_COL]]]
+func.func @sparse_broadcast(%input: tensor<4xf64, #VEC>,
+                            %output: tensor<4x8xf64>) -> tensor<4x8xf64> {
+  %result = linalg.generic {
+    indexing_maps = [
+      affine_map<(i, j) -> (i)>,
+      affine_map<(i, j) -> (i, j)>
+    ],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%input : tensor<4xf64, #VEC>) outs(%output : tensor<4x8xf64>) {
+  ^bb0(%inputValue: f64, %outputValue: f64):
+    linalg.yield %inputValue : f64
+  } -> tensor<4x8xf64>
+  return %result : tensor<4x8xf64>
 }
