@@ -89,6 +89,8 @@ public:
   }
 };
 
+using MCPTestTransport = TestTransport<lldb_protocol::mcp::ProtocolDescriptor>;
+
 class MCPClientTest : public testing::Test {
 public:
   SubsystemRAII<FileSystem, HostInfo, Socket> subsystems;
@@ -96,12 +98,10 @@ public:
   MainLoop loop;
   std::unique_ptr<Server> server;
   std::unique_ptr<Client> client;
-  TestTransport<lldb_protocol::mcp::ProtocolDescriptor> *client_transport =
-      nullptr;
+  MCPTestTransport *client_transport = nullptr;
 
   void SetUp() override {
-    auto pair = TestTransport<
-        lldb_protocol::mcp::ProtocolDescriptor>::createConnectedPair(loop);
+    auto pair = MCPTestTransport::createConnectedPair(loop);
     client_transport = pair.first.get();
 
     server = std::make_unique<Server>("lldb-mcp", "0.1.0");
