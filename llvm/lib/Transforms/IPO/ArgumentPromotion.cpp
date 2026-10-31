@@ -52,6 +52,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -107,6 +108,39 @@ static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
     Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt(APOffset));
   }
   return Ptr;
+}
+
+/// Size in bits of the object a pointer/reference variable points to, or
+/// std::nullopt if unknown (void *, forward declarations, ...).
+static std::optional<uint64_t>
+getPointeeSizeInBits(const DILocalVariable *Var) {
+  auto Strip = [](const DIType *Ty) {
+    while (auto *DT = dyn_cast_or_null<DIDerivedType>(Ty)) {
+      switch (DT->getTag()) {
+      case dwarf::DW_TAG_typedef:
+      case dwarf::DW_TAG_const_type:
+      case dwarf::DW_TAG_volatile_type:
+      case dwarf::DW_TAG_restrict_type:
+      case dwarf::DW_TAG_atomic_type:
+        Ty = DT->getBaseType();
+        continue;
+      default:
+        return Ty;
+      }
+    }
+    return Ty;
+  };
+
+  auto *PtrTy = dyn_cast_or_null<DIDerivedType>(Strip(Var->getType()));
+  if (!PtrTy || (PtrTy->getTag() != dwarf::DW_TAG_pointer_type &&
+                 PtrTy->getTag() != dwarf::DW_TAG_reference_type &&
+                 PtrTy->getTag() != dwarf::DW_TAG_rvalue_reference_type))
+    return std::nullopt;
+
+  const DIType *Pointee = Strip(PtrTy->getBaseType());
+  if (!Pointee || Pointee->getSizeInBits() == 0)
+    return std::nullopt;
+  return Pointee->getSizeInBits();
 }
 
 /// DoPromotion - This method actually performs the promotion of the specified
@@ -325,7 +359,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // the new arguments, also transferring over the names as well.
   Function::arg_iterator I2 = NF->arg_begin();
   for (Argument &Arg : F->args()) {
-    if (!ArgsToPromote.count(&Arg)) {
+    auto It = ArgsToPromote.find(&Arg);
+    if (It == ArgsToPromote.end()) {
       // If this is an unmodified argument, move the name and users over to the
       // new version.
       Arg.replaceAllUsesWith(&*I2);
@@ -334,8 +369,34 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
       continue;
     }
 
-    // There potentially are metadata uses for things like llvm.dbg.value.
-    // Replace them with poison, after handling the other regular uses.
+    const auto &ArgParts = It->second;
+
+    // Describe the promoted pointer with DW_OP_LLVM_implicit_pointer only when
+    // the single promoted part is the whole pointee (offset 0, same size) and
+    // the expression does no computation on the address (fragments are fine).
+    // Field promotions, multi-part promotions and everything else fall back to
+    // poison below.
+    if (ArgParts.size() == 1 && ArgParts[0].first == 0 && !Arg.use_empty()) {
+      Argument *PromotedNewArg = &*I2;
+      uint64_t PartBits =
+          DL.getTypeStoreSizeInBits(ArgParts[0].second.Ty).getFixedValue();
+      SmallVector<DbgVariableRecord *> DVRs;
+      findDbgUsers(&Arg, DVRs);
+      for (auto *DVR : DVRs) {
+        if (!DVR->isDbgValue() || DVR->hasArgList() ||
+            DVR->getExpression()->isComplex() ||
+            getPointeeSizeInBits(DVR->getVariable()) != PartBits)
+          continue;
+        // prependOpcodes appends the existing ops into Ops, build it fresh
+        // for each record.
+        SmallVector<uint64_t, 4> Ops = {dwarf::DW_OP_LLVM_implicit_pointer};
+        DVR->replaceVariableLocationOp(&Arg, PromotedNewArg);
+        DVR->setExpression(
+            DIExpression::prependOpcodes(DVR->getExpression(), Ops));
+      }
+    }
+
+    // Replace any remaining metadata uses with poison.
     llvm::scope_exit RauwPoisonMetadata(
         [&]() { Arg.replaceAllUsesWith(PoisonValue::get(Arg.getType())); });
 
