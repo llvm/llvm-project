@@ -1249,8 +1249,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::FPOW,      MVT::f32, Expand);
 
   if (!Subtarget->hasVFP4Base()) {
-    setOperationAction(ISD::FMA, MVT::f64, Expand);
-    setOperationAction(ISD::FMA, MVT::f32, Expand);
+    for (auto Op : {ISD::FMA, ISD::STRICT_FMA})
+      for (auto VT : {MVT::f64, MVT::f32})
+        setOperationAction(Op, VT, Expand);
   }
 
   // Various VFP goodness
@@ -10211,6 +10212,12 @@ SDValue ARMTargetLowering::LowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(2);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
   bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
+
+  // If we're dealing with f16, and we don't have fullfp16, then decline to do
+  // any custom handling. That way the caller will take care of promoting to
+  // f32, and call us back with a type we _can_ handle.
+  if (LHS.getValueType() == MVT::f16 && !Subtarget->hasFullFP16())
+    return SDValue();
 
   // If we don't have instructions of this float type then soften to a libcall
   // and use SETCC instead.
