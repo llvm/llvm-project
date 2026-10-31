@@ -474,22 +474,22 @@ define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind {
 ;
 ; X86-SSE2-LABEL: var_funnnel_v8i16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
 ; X86-SSE2-NEXT:    pxor %xmm2, %xmm2
-; X86-SSE2-NEXT:    psubw %xmm1, %xmm2
-; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm1
-; X86-SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
+; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
+; X86-SSE2-NEXT:    psubw %xmm1, %xmm3
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm1
+; X86-SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1065353216,1065353216,1065353216,1065353216]
 ; X86-SSE2-NEXT:    paddd %xmm4, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    pslld $16, %xmm1
 ; X86-SSE2-NEXT:    psrad $16, %xmm1
-; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; X86-SSE2-NEXT:    pslld $23, %xmm2
-; X86-SSE2-NEXT:    paddd %xmm4, %xmm2
-; X86-SSE2-NEXT:    cvttps2dq %xmm2, %xmm2
+; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; X86-SSE2-NEXT:    pslld $23, %xmm3
+; X86-SSE2-NEXT:    paddd %xmm4, %xmm3
+; X86-SSE2-NEXT:    cvttps2dq %xmm3, %xmm2
 ; X86-SSE2-NEXT:    pslld $16, %xmm2
 ; X86-SSE2-NEXT:    psrad $16, %xmm2
 ; X86-SSE2-NEXT:    packssdw %xmm1, %xmm2

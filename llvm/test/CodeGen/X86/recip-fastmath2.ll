@@ -1118,42 +1118,42 @@ define <8 x float> @v8f32_no_step2(<8 x float> %x) #3 {
 define <16 x float> @v16f32_one_step2(<16 x float> %x) #1 {
 ; SSE-LABEL: v16f32_one_step2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm1, %xmm4
-; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    rcpps %xmm0, %xmm5
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
-; SSE-NEXT:    movaps %xmm5, %xmm6
-; SSE-NEXT:    mulps %xmm0, %xmm6
-; SSE-NEXT:    mulps %xmm6, %xmm1
-; SSE-NEXT:    subps %xmm1, %xmm0
-; SSE-NEXT:    mulps %xmm5, %xmm0
-; SSE-NEXT:    addps %xmm6, %xmm0
-; SSE-NEXT:    rcpps %xmm4, %xmm5
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [5.0E+0,6.0E+0,7.0E+0,8.0E+0]
-; SSE-NEXT:    movaps %xmm5, %xmm6
-; SSE-NEXT:    mulps %xmm1, %xmm6
-; SSE-NEXT:    mulps %xmm6, %xmm4
-; SSE-NEXT:    subps %xmm4, %xmm1
-; SSE-NEXT:    mulps %xmm5, %xmm1
-; SSE-NEXT:    addps %xmm6, %xmm1
-; SSE-NEXT:    rcpps %xmm2, %xmm5
-; SSE-NEXT:    movaps {{.*#+}} xmm4 = [9.0E+0,1.0E+1,1.1E+1,1.2E+1]
+; SSE-NEXT:    movaps {{.*#+}} xmm4 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; SSE-NEXT:    movaps %xmm5, %xmm6
 ; SSE-NEXT:    mulps %xmm4, %xmm6
-; SSE-NEXT:    mulps %xmm6, %xmm2
-; SSE-NEXT:    subps %xmm2, %xmm4
+; SSE-NEXT:    mulps %xmm6, %xmm0
+; SSE-NEXT:    subps %xmm0, %xmm4
 ; SSE-NEXT:    mulps %xmm5, %xmm4
 ; SSE-NEXT:    addps %xmm6, %xmm4
-; SSE-NEXT:    rcpps %xmm3, %xmm2
-; SSE-NEXT:    movaps {{.*#+}} xmm5 = [1.3E+1,1.4E+1,1.5E+1,1.6E+1]
-; SSE-NEXT:    movaps %xmm2, %xmm6
+; SSE-NEXT:    rcpps %xmm1, %xmm0
+; SSE-NEXT:    movaps {{.*#+}} xmm5 = [5.0E+0,6.0E+0,7.0E+0,8.0E+0]
+; SSE-NEXT:    movaps %xmm0, %xmm6
 ; SSE-NEXT:    mulps %xmm5, %xmm6
-; SSE-NEXT:    mulps %xmm6, %xmm3
-; SSE-NEXT:    subps %xmm3, %xmm5
-; SSE-NEXT:    mulps %xmm2, %xmm5
+; SSE-NEXT:    mulps %xmm6, %xmm1
+; SSE-NEXT:    subps %xmm1, %xmm5
+; SSE-NEXT:    mulps %xmm0, %xmm5
 ; SSE-NEXT:    addps %xmm6, %xmm5
-; SSE-NEXT:    movaps %xmm4, %xmm2
-; SSE-NEXT:    movaps %xmm5, %xmm3
+; SSE-NEXT:    rcpps %xmm2, %xmm0
+; SSE-NEXT:    movaps {{.*#+}} xmm6 = [9.0E+0,1.0E+1,1.1E+1,1.2E+1]
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    mulps %xmm6, %xmm1
+; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    subps %xmm2, %xmm6
+; SSE-NEXT:    mulps %xmm0, %xmm6
+; SSE-NEXT:    addps %xmm1, %xmm6
+; SSE-NEXT:    rcpps %xmm3, %xmm0
+; SSE-NEXT:    movaps {{.*#+}} xmm7 = [1.3E+1,1.4E+1,1.5E+1,1.6E+1]
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    mulps %xmm7, %xmm1
+; SSE-NEXT:    mulps %xmm1, %xmm3
+; SSE-NEXT:    subps %xmm3, %xmm7
+; SSE-NEXT:    mulps %xmm0, %xmm7
+; SSE-NEXT:    addps %xmm1, %xmm7
+; SSE-NEXT:    movaps %xmm4, %xmm0
+; SSE-NEXT:    movaps %xmm5, %xmm1
+; SSE-NEXT:    movaps %xmm6, %xmm2
+; SSE-NEXT:    movaps %xmm7, %xmm3
 ; SSE-NEXT:    retq
 ;
 ; AVX-RECIP-LABEL: v16f32_one_step2:
@@ -1285,19 +1285,19 @@ define <16 x float> @v16f32_one_step2(<16 x float> %x) #1 {
 define <16 x float> @v16f32_one_step_2_divs(<16 x float> %x) #1 {
 ; SSE-LABEL: v16f32_one_step_2_divs:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rcpps %xmm0, %xmm6
-; SSE-NEXT:    mulps %xmm6, %xmm0
+; SSE-NEXT:    rcpps %xmm0, %xmm5
+; SSE-NEXT:    mulps %xmm5, %xmm0
 ; SSE-NEXT:    movaps {{.*#+}} xmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; SSE-NEXT:    movaps %xmm4, %xmm5
-; SSE-NEXT:    subps %xmm0, %xmm5
-; SSE-NEXT:    mulps %xmm6, %xmm5
-; SSE-NEXT:    addps %xmm6, %xmm5
+; SSE-NEXT:    movaps %xmm4, %xmm6
+; SSE-NEXT:    subps %xmm0, %xmm6
+; SSE-NEXT:    mulps %xmm5, %xmm6
+; SSE-NEXT:    addps %xmm5, %xmm6
 ; SSE-NEXT:    rcpps %xmm1, %xmm0
 ; SSE-NEXT:    mulps %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm4, %xmm6
-; SSE-NEXT:    subps %xmm1, %xmm6
-; SSE-NEXT:    mulps %xmm0, %xmm6
-; SSE-NEXT:    addps %xmm0, %xmm6
+; SSE-NEXT:    movaps %xmm4, %xmm5
+; SSE-NEXT:    subps %xmm1, %xmm5
+; SSE-NEXT:    mulps %xmm0, %xmm5
+; SSE-NEXT:    addps %xmm0, %xmm5
 ; SSE-NEXT:    rcpps %xmm2, %xmm0
 ; SSE-NEXT:    mulps %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm4, %xmm7
@@ -1314,11 +1314,11 @@ define <16 x float> @v16f32_one_step_2_divs(<16 x float> %x) #1 {
 ; SSE-NEXT:    movaps {{.*#+}} xmm2 = [9.0E+0,1.0E+1,1.1E+1,1.2E+1]
 ; SSE-NEXT:    mulps %xmm7, %xmm2
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [5.0E+0,6.0E+0,7.0E+0,8.0E+0]
-; SSE-NEXT:    mulps %xmm6, %xmm1
+; SSE-NEXT:    mulps %xmm5, %xmm1
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
-; SSE-NEXT:    mulps %xmm5, %xmm0
-; SSE-NEXT:    mulps %xmm5, %xmm0
-; SSE-NEXT:    mulps %xmm6, %xmm1
+; SSE-NEXT:    mulps %xmm6, %xmm0
+; SSE-NEXT:    mulps %xmm6, %xmm0
+; SSE-NEXT:    mulps %xmm5, %xmm1
 ; SSE-NEXT:    mulps %xmm7, %xmm2
 ; SSE-NEXT:    mulps %xmm4, %xmm3
 ; SSE-NEXT:    retq

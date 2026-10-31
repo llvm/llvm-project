@@ -923,18 +923,18 @@ define <8 x i16> @test_buildvector_8i16_2_load(ptr %p0, ptr %p1) {
 ;
 ; SSE41-32-LABEL: test_buildvector_8i16_2_load:
 ; SSE41-32:       # %bb.0:
-; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE41-32-NEXT:    movzwl (%eax), %eax
+; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE41-32-NEXT:    movzwl (%ecx), %ecx
-; SSE41-32-NEXT:    movd %ecx, %xmm0
-; SSE41-32-NEXT:    pinsrw $1, %eax, %xmm0
-; SSE41-32-NEXT:    pinsrw $2, %ecx, %xmm0
-; SSE41-32-NEXT:    pinsrw $3, %ecx, %xmm0
-; SSE41-32-NEXT:    pinsrw $4, %ecx, %xmm0
-; SSE41-32-NEXT:    pinsrw $5, %ecx, %xmm0
-; SSE41-32-NEXT:    pinsrw $6, %ecx, %xmm0
-; SSE41-32-NEXT:    pinsrw $7, %eax, %xmm0
+; SSE41-32-NEXT:    movzwl (%eax), %eax
+; SSE41-32-NEXT:    movd %eax, %xmm0
+; SSE41-32-NEXT:    pinsrw $1, %ecx, %xmm0
+; SSE41-32-NEXT:    pinsrw $2, %eax, %xmm0
+; SSE41-32-NEXT:    pinsrw $3, %eax, %xmm0
+; SSE41-32-NEXT:    pinsrw $4, %eax, %xmm0
+; SSE41-32-NEXT:    pinsrw $5, %eax, %xmm0
+; SSE41-32-NEXT:    pinsrw $6, %eax, %xmm0
+; SSE41-32-NEXT:    pinsrw $7, %ecx, %xmm0
 ; SSE41-32-NEXT:    retl
 ;
 ; SSE41-64-LABEL: test_buildvector_8i16_2_load:
@@ -997,22 +997,22 @@ define <16 x i8> @test_buildvector_16i8_2_var(i8 %a0, i8 %a1) {
 ; SSE2-32-LABEL: test_buildvector_16i8_2_var:
 ; SSE2-32:       # %bb.0:
 ; SSE2-32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-32-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE2-32-NEXT:    movdqa %xmm2, %xmm1
-; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE2-32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-32-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
 ; SSE2-32-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3],xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
-; SSE2-32-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-32-NEXT:    movdqa %xmm2, %xmm4
 ; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
-; SSE2-32-NEXT:    movdqa %xmm3, %xmm2
-; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
+; SSE2-32-NEXT:    movdqa %xmm3, %xmm1
+; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
-; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE2-32-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-32-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-32-NEXT:    retl
 ;
 ; SSE2-64-LABEL: test_buildvector_16i8_2_var:
@@ -1146,22 +1146,22 @@ define <16 x i8> @test_buildvector_16i8_2_load(ptr %p0, ptr %p1) {
 ; SSE2-32-NEXT:    movzbl (%ecx), %ecx
 ; SSE2-32-NEXT:    movd %ecx, %xmm0
 ; SSE2-32-NEXT:    movzbl (%eax), %eax
-; SSE2-32-NEXT:    movd %eax, %xmm2
-; SSE2-32-NEXT:    movdqa %xmm2, %xmm1
-; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE2-32-NEXT:    movd %eax, %xmm1
+; SSE2-32-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
 ; SSE2-32-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3],xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
-; SSE2-32-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-32-NEXT:    movdqa %xmm2, %xmm4
 ; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
-; SSE2-32-NEXT:    movdqa %xmm3, %xmm2
-; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-32-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
+; SSE2-32-NEXT:    movdqa %xmm3, %xmm1
+; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; SSE2-32-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
-; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE2-32-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-32-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-32-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-32-NEXT:    retl
 ;
 ; SSE2-64-LABEL: test_buildvector_16i8_2_load:
@@ -1213,24 +1213,24 @@ define <16 x i8> @test_buildvector_16i8_2_load(ptr %p0, ptr %p1) {
 ;
 ; SSE41-64-LABEL: test_buildvector_16i8_2_load:
 ; SSE41-64:       # %bb.0:
-; SSE41-64-NEXT:    movzbl (%rsi), %ecx
-; SSE41-64-NEXT:    movzbl (%rdi), %eax
-; SSE41-64-NEXT:    movd %eax, %xmm0
-; SSE41-64-NEXT:    pinsrb $1, %ecx, %xmm0
-; SSE41-64-NEXT:    pinsrb $2, %eax, %xmm0
-; SSE41-64-NEXT:    pinsrb $3, %eax, %xmm0
-; SSE41-64-NEXT:    pinsrb $4, %eax, %xmm0
-; SSE41-64-NEXT:    pinsrb $5, %eax, %xmm0
-; SSE41-64-NEXT:    pinsrb $6, %eax, %xmm0
-; SSE41-64-NEXT:    pinsrb $7, %ecx, %xmm0
-; SSE41-64-NEXT:    pinsrb $8, %ecx, %xmm0
-; SSE41-64-NEXT:    pinsrb $9, %eax, %xmm0
-; SSE41-64-NEXT:    pinsrb $10, %ecx, %xmm0
-; SSE41-64-NEXT:    pinsrb $11, %ecx, %xmm0
-; SSE41-64-NEXT:    pinsrb $12, %ecx, %xmm0
-; SSE41-64-NEXT:    pinsrb $13, %eax, %xmm0
-; SSE41-64-NEXT:    pinsrb $14, %eax, %xmm0
-; SSE41-64-NEXT:    pinsrb $15, %eax, %xmm0
+; SSE41-64-NEXT:    movzbl (%rsi), %eax
+; SSE41-64-NEXT:    movzbl (%rdi), %ecx
+; SSE41-64-NEXT:    movd %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrb $1, %eax, %xmm0
+; SSE41-64-NEXT:    pinsrb $2, %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrb $3, %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrb $4, %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrb $5, %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrb $6, %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrb $7, %eax, %xmm0
+; SSE41-64-NEXT:    pinsrb $8, %eax, %xmm0
+; SSE41-64-NEXT:    pinsrb $9, %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrb $10, %eax, %xmm0
+; SSE41-64-NEXT:    pinsrb $11, %eax, %xmm0
+; SSE41-64-NEXT:    pinsrb $12, %eax, %xmm0
+; SSE41-64-NEXT:    pinsrb $13, %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrb $14, %ecx, %xmm0
+; SSE41-64-NEXT:    pinsrb $15, %ecx, %xmm0
 ; SSE41-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_buildvector_16i8_2_load:
