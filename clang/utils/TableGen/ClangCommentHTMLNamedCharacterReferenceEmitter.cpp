@@ -56,8 +56,7 @@ void clang::EmitClangCommentHTMLNamedCharacterReferences(
     CLiteral.clear();
     CLiteral.append("return ");
     if (!translateCodePointToUTF8(CodePoint, CLiteral)) {
-      SrcMgr.PrintMessage(Tag->getLoc().front(), SourceMgr::DK_Error,
-                          Twine("invalid code point"));
+      PrintError(Tag->getLoc().front(), "invalid code point");
       continue;
     }
     CLiteral.append(";");

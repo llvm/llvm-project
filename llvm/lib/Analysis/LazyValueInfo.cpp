@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -59,11 +60,6 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
-
-static cl::opt<bool> PerPredRanges(
-    "lvi-per-pred-ranges", cl::Hidden, cl::init(false),
-    cl::desc("Enable tracking of ranges for a value in a block for"
-             "each block predecessor (default = false)"));
 
 namespace llvm {
 FunctionPass *createLazyValueInfoPass() {
@@ -133,6 +129,8 @@ class LazyValueInfoCache {
     std::optional<PredecessorValueLatticeMap> PredecessorLatticeElements;
   };
 
+  const bool PerPredRanges;
+
   /// Cached information per basic block, indexed by block number.
   SmallVector<std::unique_ptr<BlockCacheEntry>> BlockCache;
   /// Set of value handles used to erase values from the cache on deletion.
@@ -171,8 +169,9 @@ class LazyValueInfoCache {
   }
 
 public:
-  LazyValueInfoCache(const Function *F)
-      : BlockNumberEpoch(F->getBlockNumberEpoch()) {}
+  LazyValueInfoCache(const Function *F, bool PerPredRanges)
+      : PerPredRanges(PerPredRanges),
+        BlockNumberEpoch(F->getBlockNumberEpoch()) {}
 
   void insertResult(Value *Val, BasicBlock *BB,
                     const ValueLatticeElement &Result) {
@@ -374,6 +373,7 @@ public:
 } // namespace
 // The actual implementation of the lazy analysis and update.
 class LazyValueInfoImpl {
+  const bool PerPredRanges;
 
   /// Cached results from previous queries
   LazyValueInfoCache TheCache;
@@ -520,7 +520,8 @@ public:
 
   LazyValueInfoImpl(Function *F, AssumptionCache *AC, const DataLayout &DL,
                     Function *GuardDecl)
-      : TheCache(F), AC(AC), DL(DL), GuardDecl(GuardDecl) {}
+      : PerPredRanges(getAnalysisOptions(*F).lvi_per_pred_ranges),
+        TheCache(F, PerPredRanges), AC(AC), DL(DL), GuardDecl(GuardDecl) {}
 };
 } // namespace llvm
 
@@ -1662,7 +1663,10 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
         // instructions with many operands.
         if (isa<IntegerType>(Usr->getType()) && isOperationFoldable(Usr)) {
           const DataLayout &DL = BBTo->getDataLayout();
-          if (usesOperand(Usr, Condition)) {
+          Value *TempCond = Condition;
+          if (usesOperand(Usr, Condition) ||
+              (match(Condition, m_Not(m_Value(TempCond))) &&
+               usesOperand(Usr, TempCond))) {
             // If Val has Condition as an operand and Val can be folded into a
             // constant with either Condition == true or Condition == false,
             // propagate the constant.
@@ -1670,8 +1674,8 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
             //   ; %Val is true on the edge to %then.
             //   %Val = and i1 %Condition, true.
             //   br %Condition, label %then, label %else
-            APInt ConditionVal(1, isTrueDest ? 1 : 0);
-            Result = constantFoldUser(Usr, Condition, ConditionVal, DL);
+            APInt ConditionVal(1, isTrueDest ^ (TempCond != Condition) ? 1 : 0);
+            Result = constantFoldUser(Usr, TempCond, ConditionVal, DL);
           } else if (isa<TruncInst, ZExtInst, SExtInst>(Usr)) {
             ValueLatticeElement OpLatticeVal =
                 *getValueFromCondition(Usr->getOperand(0), Condition,

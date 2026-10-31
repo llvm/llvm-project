@@ -13,7 +13,6 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/types/struct_passwd.h"
-#include "src/__support/libc_errno.h"
 #include "src/pwd/endpwent.h"
 #include "src/pwd/getpwent.h"
 #include "src/pwd/pwd_utils.h"

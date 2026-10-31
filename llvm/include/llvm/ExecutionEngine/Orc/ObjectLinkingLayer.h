@@ -27,7 +27,6 @@
 namespace llvm {
 
 namespace jitlink {
-class EHFrameRegistrar;
 class LinkGraph;
 class Symbol;
 } // namespace jitlink

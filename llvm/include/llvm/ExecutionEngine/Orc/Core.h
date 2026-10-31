@@ -560,7 +560,6 @@ class AsynchronousSymbolQuery {
   friend class ExecutionSession;
   friend class InProgressFullLookupState;
   friend class JITDylib;
-  friend class JITSymbolResolverAdapter;
   friend class MaterializationResponsibility;
 
 public:

@@ -245,6 +245,34 @@ TEST_F(HLSLSemanticSignaturePackingTest, SkipsNotAllocatedElements) {
                 {{/*Row=*/1, /*Col=*/0}, Unallocated, {/*Row=*/0, /*Col=*/0}});
 }
 
+TEST_F(HLSLSemanticSignaturePackingTest, BarycentricsDoNotReserveRegisters) {
+  TestConfig Config(
+      Triple::Pixel, IOType::In,
+      {{dxbc::PSV::SemanticKind::Barycentrics, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/32, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  for (PackingMethod Method :
+       {PackingMethod::PrefixStable, PackingMethod::Optimized})
+    verifyPacking(Method, Config, /*ExpectedRows=*/32,
+                  {Unallocated, {/*Row=*/0, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, SampleIndexDoesNotReserveRegisters) {
+  // SV_SampleIndex stays in the signature but is read with a dedicated
+  // intrinsic and never occupies a register.
+  TestConfig Config(
+      Triple::Pixel, IOType::In,
+      {{dxbc::PSV::SemanticKind::SampleIndex, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/32, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  for (PackingMethod Method :
+       {PackingMethod::PrefixStable, PackingMethod::Optimized})
+    verifyPacking(Method, Config, /*ExpectedRows=*/32,
+                  {Unallocated, {/*Row=*/0, /*Col=*/0}});
+}
+
 TEST_F(HLSLSemanticSignaturePackingTest, StacksInDeclarationOrder) {
   // Elements are assigned whole rows in declaration order, regardless of their
   // semantic interpretation.

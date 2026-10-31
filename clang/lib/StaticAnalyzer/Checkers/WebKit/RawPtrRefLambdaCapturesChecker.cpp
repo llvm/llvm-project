@@ -11,6 +11,7 @@
 #include "PtrTypesSemantics.h"
 #include "RawPtrRefSafetyModel.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -228,6 +229,15 @@ public:
           result.first->second.push_back(L);
         ConstructToIgnore.insert(CE);
         LambdasToIgnore.insert(L);
+      }
+
+      bool VisitExplicitCastExpr(ExplicitCastExpr *CE) override {
+        // Discarding a variable with (void) doesn't let a lambda escape.
+        if (CE->getCastKind() != CK_ToVoid)
+          return true;
+        if (auto *DRE = dyn_cast<DeclRefExpr>(CE->getSubExpr()->IgnoreParens()))
+          DeclRefExprsToIgnore.insert(DRE);
+        return true;
       }
 
       bool VisitDeclRefExpr(DeclRefExpr *DRE) override {

@@ -869,10 +869,18 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
           CIRGenFunction::ArrayInitLoopExprScope loopExprScope(
               cgf, setArrayInitLoopExprScope, idx);
 
-          if (arrayFiller)
+          // C++17 [class.temporary]p5:
+          // "when a default constructor is called to initialize an element of
+          // an array with no corresponding initializer [...] the destruction
+          // of every temporary created in a default argument is sequenced
+          // before the construction of the next array element, if any."
+          if (arrayFiller) {
+            CIRGenFunction::FullExprCleanupScope scope(cgf, arrayFiller);
+            scope.deferLifetimeExtendedCleanups();
             emitInitializationToLValue(arrayFiller, elementLV);
-          else
+          } else {
             emitNullInitializationToLValue(loc, elementLV);
+          }
 
           // Advance pointer and store them to temporary variable
           cir::ConstantOp one = builder.getConstInt(

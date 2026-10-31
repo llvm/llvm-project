@@ -7,6 +7,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-cir %s -x cuda \
 // RUN:   -target-sdk-version=12.3 -fcuda-include-gpubinary %t.fatbin -o - \
 // RUN:   | FileCheck %s --check-prefix=CIR --implicit-check-not=fatbin \
+// RUN:     --implicit-check-not=cu.kernel_name \
 // RUN:     --implicit-check-not=Register --implicit-check-not=module_ctor
 
 // With no entities to register, the binary must not even be read.

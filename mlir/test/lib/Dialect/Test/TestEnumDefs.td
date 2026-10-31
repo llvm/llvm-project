@@ -107,6 +107,34 @@ def TestSimpleEnum64 : I64Enum<"SimpleEnum64", "", [
 }
 
 //===----------------------------------------------------------------------===//
+// Greedy CFG Rewrite Mode
+//===----------------------------------------------------------------------===//
+
+// The CFG change performed by `test.greedy_cfg_rewrite`. The cases are
+// documented on the op.
+def TestGreedyCfgRewriteMode
+    : I32Enum<"GreedyCfgRewriteMode", "a CFG change during a greedy rewrite", [
+        I32EnumCase<"Observe", 0, "observe">,
+        I32EnumCase<"AppendUnreachable", 1, "append_unreachable">,
+        I32EnumCase<"AppendReachable", 2, "append_reachable">,
+        I32EnumCase<"InsertEntry", 3, "insert_entry">,
+        I32EnumCase<"MoveEntry", 4, "move_entry">,
+        I32EnumCase<"MoveEntryAway", 5, "move_entry_away">,
+        I32EnumCase<"EraseEntry", 6, "erase_entry">,
+        I32EnumCase<"Redirect", 7, "redirect">,
+        I32EnumCase<"DoubleRedirect", 8, "double_redirect">,
+        I32EnumCase<"Reconnect", 9, "reconnect">,
+        I32EnumCase<"DisconnectParent", 10, "disconnect_parent">,
+        I32EnumCase<"MoveParent", 11, "move_parent">,
+        I32EnumCase<"MoveErase", 12, "move_erase">,
+        I32EnumCase<"Merge", 13, "merge">,
+        I32EnumCase<"MergeDisconnect", 14, "merge_disconnect">,
+        I32EnumCase<"RedirectRetarget", 15, "redirect_retarget">,
+      ]> {
+  let cppNamespace = "::test";
+}
+
+//===----------------------------------------------------------------------===//
 // Test Bit Enum
 //===----------------------------------------------------------------------===//
 

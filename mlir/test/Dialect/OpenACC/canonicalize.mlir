@@ -147,6 +147,23 @@ func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
 
 // -----
 
+// A constant false condition removes the construct even when its region is
+// empty.
+
+func.func @testhostdataop_empty_region(%a: memref<f32>) -> () {
+  %0 = acc.use_device varPtr(%a : memref<f32>) -> memref<f32>
+  %false = arith.constant false
+  acc.host_data dataOperands(%0 : memref<f32>) if(%false) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @testhostdataop_empty_region
+// CHECK-NOT: acc.host_data
+// CHECK: return
+
+// -----
+
 func.func @update_no_op(%x : memref<i32>) {
   acc.atomic.update %x : memref<i32> {
   ^bb0(%xval : i32):

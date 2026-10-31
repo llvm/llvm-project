@@ -35,7 +35,7 @@ use omp_lib
   a = a + 1
   !$omp end atomic
 
-  !ERROR: At most one clause from the 'atomic' group is allowed on ATOMIC construct
+  !ERROR: READ and WRITE clauses are mutually exclusive as members of 'atomic' clause group
   !$omp atomic read write
   !ERROR: Atomic expression a+1._4 should be a variable
   a = a + 1

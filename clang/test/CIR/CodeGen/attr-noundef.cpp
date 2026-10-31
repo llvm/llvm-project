@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // All cases from CodeGen/attr-noundef.cpp (x86_64 only).
 // Tests noundef placement on structs, unions, this pointers, vectors,
@@ -32,11 +32,10 @@ NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
 
 // CIR-LABEL: cir.func {{.*}} @_ZN13check_structs10ret_nocopyEv
-// CIR-LABEL: cir.func {{.*}} @_ZN13check_structs11pass_nocopyENS_6NoCopyE(%arg0: !cir.ptr<!rec_check_structs3A3ANoCopy> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}
+// CIR-LABEL: cir.func {{.*}} @_ZN13check_structs11pass_nocopyENS_6NoCopyE(%arg0: !cir.ptr<!rec_check_structs3A3ANoCopy> {llvm.align = 4 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}
 
 // LLVM: define dso_local void @_ZN13check_structs10ret_nocopyEv(ptr dead_on_unwind noalias writable sret(%"struct.check_structs::NoCopy") align 4 %
-// LLVMCIR: define dso_local void @_ZN13check_structs11pass_nocopyENS_6NoCopyE(ptr nofreeobj noundef align 4 dereferenceable(4) %
-// OGCG: define dso_local void @_ZN13check_structs11pass_nocopyENS_6NoCopyE(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %
+// LLVM: define dso_local void @_ZN13check_structs11pass_nocopyENS_6NoCopyE(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %
 
 struct Huge {
   int a[1024];
@@ -74,11 +73,10 @@ NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
 
 // CIR-LABEL: cir.func {{.*}} @_ZN12check_unions10ret_nocopyEv
-// CIR-LABEL: cir.func {{.*}} @_ZN12check_unions11pass_nocopyENS_6NoCopyE(%arg0: !cir.ptr<!rec_check_unions3A3ANoCopy> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}
+// CIR-LABEL: cir.func {{.*}} @_ZN12check_unions11pass_nocopyENS_6NoCopyE(%arg0: !cir.ptr<!rec_check_unions3A3ANoCopy> {llvm.align = 4 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}
 
 // LLVM: define dso_local void @_ZN12check_unions10ret_nocopyEv(ptr dead_on_unwind noalias writable sret(%"union.check_unions::NoCopy") align 4 %
-// LLVMCIR: define dso_local void @_ZN12check_unions11pass_nocopyENS_6NoCopyE(ptr nofreeobj noundef align 4 dereferenceable(4) %
-// OGCG: define dso_local void @_ZN12check_unions11pass_nocopyENS_6NoCopyE(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %
+// LLVM: define dso_local void @_ZN12check_unions11pass_nocopyENS_6NoCopyE(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %
 } // namespace check_unions
 
 //************ Passing `this` pointers

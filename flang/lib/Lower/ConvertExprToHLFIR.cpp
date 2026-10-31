@@ -405,6 +405,11 @@ private:
   gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
     PartInfo partInfo;
     mlir::Type resultType = visit(coarrayRef, partInfo);
+
+    if (partInfo.componentName.empty() && partInfo.subscripts.empty() &&
+        partInfo.substring.empty())
+      return gen(coarrayRef.GetFirstSymbol());
+
     return genDesignate(resultType, partInfo, coarrayRef);
   }
 
@@ -2142,7 +2147,23 @@ private:
 
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::RankOneBoundElement &x) {
-    TODO(getLoc(), "rank-1 bound element lowering");
+    mlir::Location loc = getLoc();
+    auto &builder = getBuilder();
+    using ResTy = Fortran::evaluate::RankOneBoundElement::Result;
+    mlir::Type resultType =
+        getConverter().genType(ResTy::category, ResTy::kind);
+    // Evaluate the rank-1 base expression.
+    Fortran::lower::SomeExpr someExpr{Fortran::evaluate::AsGenericExpr(
+        Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
+            Fortran::common::Clone(x.base())})};
+    hlfir::Entity baseArray{Fortran::lower::convertExprToHLFIR(
+        loc, getConverter(), someExpr, getSymMap(), getStmtCtx())};
+    // Extract element at dimension (1-based index).
+    mlir::Value idx = builder.createIntegerConstant(loc, builder.getIndexType(),
+                                                    x.dimension() + 1);
+    mlir::Value elem = hlfir::loadElementAt(loc, builder, baseArray, {idx});
+    return hlfir::EntityWithAttributes{
+        builder.createConvert(loc, resultType, elem)};
   }
 
   /// Generate a conditional expression as an hlfir.conditional op whose
@@ -2620,8 +2641,11 @@ fir::ExtendedValue Fortran::lower::convertExprToBox(
     Fortran::lower::StatementContext &stmtCtx) {
   hlfir::EntityWithAttributes loweredExpr =
       HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+  unsigned corank = 0;
+  if (auto ref{evaluate::ExtractDataRef(expr)})
+    corank = ref->GetLastSymbol().Corank();
   return convertToBox(loc, converter, loweredExpr, stmtCtx,
-                      converter.genType(expr));
+                      converter.genType(expr), corank);
 }
 
 fir::ExtendedValue Fortran::lower::convertToAddress(

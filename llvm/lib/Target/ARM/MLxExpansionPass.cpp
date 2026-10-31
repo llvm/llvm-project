@@ -301,13 +301,10 @@ MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
   MIB = BuildMI(MBB, MI, MI->getDebugLoc(), MCID2)
     .addReg(DstReg, getDefRegState(true) | getDeadRegState(DstDead));
 
-  if (NegAcc) {
-    bool AccKill = MRI->hasOneNonDBGUse(AccReg);
-    MIB.addReg(TmpReg, getKillRegState(true))
-       .addReg(AccReg, getKillRegState(AccKill));
-  } else {
-    MIB.addReg(AccReg).addReg(TmpReg, getKillRegState(true));
-  }
+  if (NegAcc)
+    MIB.addReg(TmpReg).addReg(AccReg);
+  else
+    MIB.addReg(AccReg).addReg(TmpReg);
   MIB.addImm(Pred).addReg(PredReg);
 
   LLVM_DEBUG({

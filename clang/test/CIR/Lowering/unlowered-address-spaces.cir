@@ -185,7 +185,7 @@ module attributes {cir.triple = "spirv64-unknown-unknown"} {
 
 !langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_local)>
 
-module attributes {cir.triple = "amdgcn-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
+module attributes {cir.triple = "amdgpu-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
   // The copy needs the local pointer's layout, not the outer opaque pointer's.
   // The default pointer layout would incorrectly copy 8 bytes with alignment 8.
   cir.func @copy_language_address_space(%src: !cir.ptr<!langptr>, %dst: !cir.ptr<!langptr>) {
@@ -201,7 +201,7 @@ module attributes {cir.triple = "amdgcn-amd-amdhsa", llvm.data_layout = "e-p:64:
 !langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_local)>
 !record = !cir.struct<{data !langptr}>
 
-module attributes {cir.triple = "amdgcn-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
+module attributes {cir.triple = "amdgpu-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
   // Validate the copied layout through aggregate members as well.
   cir.func @copy_record_language_address_space(%src: !cir.ptr<!record>, %dst: !cir.ptr<!record>) {
     // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.struct<{data !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_local)>}>'}}
@@ -385,7 +385,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 !s64i = !cir.int<s, 64>
 !langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_local)>
 
-module attributes {cir.triple = "amdgcn-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
+module attributes {cir.triple = "amdgpu-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
   // Pointer differences must not divide by the default 8-byte pointer size.
   cir.func @ptr_diff_language_address_space(%lhs: !cir.ptr<!langptr>, %rhs: !cir.ptr<!langptr>) -> !s64i {
     // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.ptr<!cir.int<s, 32>, lang_address_space(offload_local)>'}}

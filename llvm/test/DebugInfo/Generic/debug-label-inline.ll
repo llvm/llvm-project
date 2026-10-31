@@ -1,8 +1,5 @@
 ; RUN: llc -O0 -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
 ;
-; Bug 47129
-; XFAIL: target=sparc{{.*}}
-;
 ; CHECK: .debug_info contents:
 ; CHECK: [[LABEL_ORIGIN:0x[0-9a-zA-Z]+]]:{{ *}}DW_TAG_label
 ; CHECK-NEXT: DW_AT_name {{.*}}"top"

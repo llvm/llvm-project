@@ -387,8 +387,7 @@ define i64 @foo18_overflow3(i1 %cmp) nounwind readnone optsize ssp {
 ; CHECK-GI-LABEL: foo18_overflow3:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    and x8, x0, #0x1
-; CHECK-GI-NEXT:    lsl x0, x8, #63
+; CHECK-GI-NEXT:    lsl x0, x0, #63
 ; CHECK-GI-NEXT:    ret
 entry:
   %. = select i1 %cmp, i64 -9223372036854775808, i64 0
@@ -407,7 +406,6 @@ define i64 @foo18_overflow4(i1 %cmp) nounwind readnone optsize ssp {
 ; CHECK-GI-LABEL: foo18_overflow4:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    eor w8, w0, #0x1
-; CHECK-GI-NEXT:    and x8, x8, #0x1
 ; CHECK-GI-NEXT:    lsl x0, x8, #63
 ; CHECK-GI-NEXT:    ret
 entry:

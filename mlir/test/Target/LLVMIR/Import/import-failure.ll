@@ -40,8 +40,10 @@ define dso_local void @tbaa(ptr %0) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: has cycle in TBAA graph: ![[ID:.*]] = distinct !{![[ID]], i64 4, !"int"}
+; CHECK:      Cycle detected in access type parent chain
+; CHECK-NEXT:   store i32 1, ptr %{{.*}}, align 4, !tbaa ![[TAG:[0-9]+]]
+; CHECK-NEXT: ![[TAG]] = !{![[ID:[0-9]+]], ![[ID]], i64 0, i64 4}
+; CHECK-NEXT: ![[ID]] = distinct !{![[ID]], i64 4, !"int"}
 define dso_local void @tbaa(ptr %0) {
   store i32 1, ptr %0, align 4, !tbaa !2
   ret void

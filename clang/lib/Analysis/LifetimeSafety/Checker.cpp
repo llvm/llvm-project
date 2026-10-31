@@ -322,58 +322,81 @@ public:
 
       } else if (const auto *OEF =
                      dyn_cast<const OriginEscapesFact *>(CausingFact)) {
+        llvm::SmallVector<const Expr *> ExprChain =
+            getExprChain(LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
         if (Warning.InvalidatedByExpr) {
           if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
             // Invalidated object escapes to a field.
             if (IssueExpr)
               // Invalidated object on stack escapes to a field.
-              SemaHelper->reportInvalidatedField(IssueExpr,
-                                                 FieldEscape->getFieldDecl(),
-                                                 Warning.InvalidatedByExpr);
+              SemaHelper->reportInvalidatedField(
+                  IssueExpr, FieldEscape->getFieldDecl(),
+                  Warning.InvalidatedByExpr, ExprChain);
             else if (InvalidatedPVD)
               // Invalidated parameter escapes to a field.
-              SemaHelper->reportInvalidatedField(InvalidatedPVD,
-                                                 FieldEscape->getFieldDecl(),
-                                                 Warning.InvalidatedByExpr);
+              SemaHelper->reportInvalidatedField(
+                  InvalidatedPVD, FieldEscape->getFieldDecl(),
+                  Warning.InvalidatedByExpr, ExprChain);
           } else if (const auto *GlobalEscape =
                          dyn_cast<GlobalEscapeFact>(OEF)) {
             // Invalidated object escapes to global or static storage.
             if (IssueExpr)
               // Invalidated object on stack escapes to global or static
               // storage.
-              SemaHelper->reportInvalidatedGlobal(IssueExpr,
-                                                  GlobalEscape->getGlobal(),
-                                                  Warning.InvalidatedByExpr);
+              SemaHelper->reportInvalidatedGlobal(
+                  IssueExpr, GlobalEscape->getGlobal(),
+                  Warning.InvalidatedByExpr, ExprChain);
             else if (InvalidatedPVD)
               // Invalidated parameter escapes to global or static storage.
-              SemaHelper->reportInvalidatedGlobal(InvalidatedPVD,
-                                                  GlobalEscape->getGlobal(),
-                                                  Warning.InvalidatedByExpr);
+              SemaHelper->reportInvalidatedGlobal(
+                  InvalidatedPVD, GlobalEscape->getGlobal(),
+                  Warning.InvalidatedByExpr, ExprChain);
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
+          } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF)) {
+            // A loan still held by the object at the method's exit was
+            // invalidated.
+            llvm::SmallVector<const Expr *> ExprChain = getExprChain(
+                LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
+            if (IssueExpr)
+              SemaHelper->reportUseAfterInvalidation(
+                  IssueExpr, ThisEscape->getLoc(), Warning.InvalidatedByExpr,
+                  ExprChain);
+            else if (InvalidatedPVD)
+              SemaHelper->reportUseAfterInvalidation(
+                  InvalidatedPVD, ThisEscape->getLoc(),
+                  Warning.InvalidatedByExpr, ExprChain);
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), MovedExpr,
-              getExprChain(
-                  LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)));
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr, ExprChain);
         } else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
           // Dangling field.
           bool IsCapturedByLambda =
               FactMgr.isFieldCapturedByLambda(FieldEscape->getFieldDecl());
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr,
-              IsCapturedByLambda, ExpiryLoc);
+              IsCapturedByLambda, ExpiryLoc, ExprChain);
         } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF)) {
           // Global escape.
           bool IsMain = false;
           if (const auto *Func = dyn_cast_if_present<FunctionDecl>(FD))
             IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
-                                           MovedExpr, ExpiryLoc, IsMain);
-        } else
+                                           MovedExpr, ExpiryLoc, ExprChain,
+                                           IsMain);
+        } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF))
+          // A borrow is still held by the object (e.g. captured via
+          // lifetime_capture_by_this) when the captured local goes out of
+          // scope; reuse the use-after-scope diagnostic at the capturing
+          // method.
+          SemaHelper->reportUseAfterScope(
+              IssueExpr, ThisEscape->getLoc(), MovedExpr, ExpiryLoc,
+              getExprChain(
+                  LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)));
+        else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
         llvm_unreachable("Unhandled CausingFact type");

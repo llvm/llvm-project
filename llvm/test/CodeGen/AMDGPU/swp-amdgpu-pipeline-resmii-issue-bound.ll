@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-enable-pipeliner -debug-only=pipeliner %s -filetype=null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -enable-pipeliner -debug-only=pipeliner %s -filetype=null 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Resource-bound II set by the aggregate micro-op issue width, not by any single

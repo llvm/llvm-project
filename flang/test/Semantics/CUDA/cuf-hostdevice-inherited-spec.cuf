@@ -2,8 +2,7 @@
 ! Inherited specification expressions in separate MODULE PROCEDURE bodies.
 ! See llvm-project PR #228176.
 
-! TODO: This documents bad behavior: the inherited dummy array bound calls a
-! host-only function from host,device code without a device-code diagnostic.
+! An inherited host-only bound is invalid in host,device code.
 module inherited_host
   interface
     attributes(host,device) module subroutine caller(a)
@@ -17,13 +16,13 @@ contains
 end module
 submodule(inherited_host) implementation_host
 contains
+  !ERROR: 'extent', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
   module procedure caller
     a = 1
   end procedure
 end submodule
 
-! TODO: This documents bad behavior: the inherited dummy array bound calls a
-! device-only function from host,device code without a host-code diagnostic.
+! An inherited device-only bound is invalid in host,device code.
 module inherited_device
   interface
     attributes(host,device) module subroutine caller(a)
@@ -37,6 +36,7 @@ contains
 end module
 submodule(inherited_device) implementation_device
 contains
+  !ERROR: 'extent', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
   module procedure caller
     a = 1
   end procedure
@@ -61,8 +61,7 @@ contains
   end procedure
 end submodule
 
-! TODO: This documents bad behavior: the inherited dummy character length
-! calls a host-only function without a device-code diagnostic.
+! Inherited dummy character lengths are evaluated on entry.
 module inherited_character
   interface
     attributes(host,device) module subroutine caller(a)
@@ -76,13 +75,13 @@ contains
 end module
 submodule(inherited_character) implementation_character
 contains
+  !ERROR: 'length', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
   module procedure caller
     a = 'x'
   end procedure
 end submodule
 
-! TODO: This documents bad behavior: the inherited array result shape calls a
-! host-only function without a device-code diagnostic.
+! Inherited result bounds are evaluated on entry.
 module inherited_result
   interface
     attributes(host,device) module function caller() result(a)
@@ -96,14 +95,13 @@ contains
 end module
 submodule(inherited_result) implementation_result
 contains
+  !ERROR: 'extent', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
   module procedure caller
     a = 1
   end procedure
 end submodule
 
-! TODO: This documents bad behavior from PR #228176 discussion_r4168564977:
-! the inherited character result length calls a host-only function from a
-! device-only function without a device-code diagnostic.
+! A device-only function also evaluates its inherited result length.
 module inherited_spec
   interface
     attributes(device) module function from_interface(n) result(r)
@@ -119,6 +117,7 @@ contains
 end module
 submodule(inherited_spec) impl
 contains
+  !ERROR: 'host_len', a procedure with the HOST attribute, may not be called from device code
   module procedure from_interface
     r = 'x'
   end procedure
@@ -136,4 +135,29 @@ contains
     integer :: a(extent())
     a = 1
   end subroutine
+end module
+
+! A same-module implementation reuses its interface scope. Both bounds need
+! checking even though the implementation has no moduleInterface() link.
+module same_module_spec
+  interface
+    attributes(host,device) module subroutine caller(n,a)
+      integer, intent(in) :: n
+      integer :: a(lower(n):upper(n))
+    end subroutine
+  end interface
+contains
+  pure integer function lower(n)
+    integer, intent(in) :: n
+    lower = n
+  end function
+  attributes(device) pure integer function upper(n)
+    integer, intent(in) :: n
+    upper = n+1
+  end function
+  !ERROR: 'lower', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+  !ERROR: 'upper', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
+  module procedure caller
+    a = 1
+  end procedure
 end module

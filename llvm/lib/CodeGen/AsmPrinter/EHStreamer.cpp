@@ -297,7 +297,7 @@ void EHStreamer::computeCallSiteTable(
       // throw, create a call-site entry with no landing pad for the region
       // between the try-ranges.
       if (SawPotentiallyThrowing &&
-          (Asm->MAI.usesCFIForEH() ||
+          (Asm->MAI.usesCFIForEH(Asm->getModuleExceptionModel()) ||
            Asm->getModuleExceptionModel() == ExceptionHandling::AIX)) {
         CallSites.push_back({LastLabel, BeginLabel, nullptr, 0});
         PreviousIsInvoke = false;

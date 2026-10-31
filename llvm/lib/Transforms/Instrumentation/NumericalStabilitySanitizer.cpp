@@ -569,8 +569,7 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
       // time. Hook them into the global ctors list in that case:
       [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
 
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   NumericalStabilitySanitizer Nsan(Opts, M);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M)

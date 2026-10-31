@@ -16,6 +16,7 @@
 #include "X86RecognizableInstr.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/X86FoldTablesUtils.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <set>
@@ -114,10 +115,10 @@ class X86FoldTablesEmitter {
 
   // Represents an entry in the folding table
   class X86FoldTableEntry {
+  public:
     const CodeGenInstruction *RegInst;
     const CodeGenInstruction *MemInst;
 
-  public:
     bool NoReverse = false;
     bool NoForward = false;
     bool FoldLoad = false;
@@ -134,6 +135,7 @@ class X86FoldTablesEmitter {
     BcastType BroadcastKind = BCAST_NONE;
 
     Align Alignment;
+    std::optional<unsigned> UnfoldIdx;
 
     X86FoldTableEntry() = default;
     X86FoldTableEntry(const CodeGenInstruction *RegInst,
@@ -146,6 +148,8 @@ class X86FoldTablesEmitter {
       OS << "X86::" << MemInst->getName() << ", ";
 
       std::string Attrs;
+      if (UnfoldIdx)
+        Attrs += "TB_INDEX_" + std::to_string(*UnfoldIdx) + "|";
       if (FoldLoad)
         Attrs += "TB_FOLDED_LOAD|";
       if (FoldStore)
@@ -239,6 +243,7 @@ class X86FoldTablesEmitter {
   FoldTable BroadcastTable2;
   FoldTable BroadcastTable3;
   FoldTable BroadcastTable4;
+  FoldTable MemUnfoldTable;
   std::vector<const CodeGenInstruction *> NonFoldableWithSameMaskTable;
 
 public:
@@ -263,6 +268,10 @@ private:
   // broadcast table.
   void addBroadcastEntry(FoldTable &Table, const CodeGenInstruction *RegInst,
                          const CodeGenInstruction *MemInst);
+
+  // Adds the reversible entries of Table to MemUnfoldTable, where ExtraFlags
+  // holds the folded operand's TB_INDEX_n and any TB_FOLDED_* implied by Table.
+  void addUnfoldEntries(const FoldTable &Table, uint16_t ExtraFlags);
 
   // Print the given table as a static const C++ array of type
   // X86FoldTableEntry.
@@ -797,6 +806,31 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   CheckMemFoldTable(BroadcastTable3);
   CheckMemFoldTable(BroadcastTable4);
 #endif
+
+  // Build the memory unfolding table from the reversible entries of all the
+  // fold tables, keyed by the memory instruction.
+  // Index 0, folded load and store, no alignment requirement.
+  addUnfoldEntries(Table2Addr, TB_INDEX_0 | TB_FOLDED_LOAD | TB_FOLDED_STORE);
+  // Index 0, mix of loads and stores.
+  addUnfoldEntries(Table0, TB_INDEX_0);
+  // Index 1, folded load
+  addUnfoldEntries(Table1, TB_INDEX_1 | TB_FOLDED_LOAD);
+  // Index 2, folded load
+  addUnfoldEntries(Table2, TB_INDEX_2 | TB_FOLDED_LOAD);
+  // Index 3, folded load
+  addUnfoldEntries(Table3, TB_INDEX_3 | TB_FOLDED_LOAD);
+  // Index 4, folded load
+  addUnfoldEntries(Table4, TB_INDEX_4 | TB_FOLDED_LOAD);
+  // Broadcast tables.
+  // Index 1, folded broadcast
+  addUnfoldEntries(BroadcastTable1, TB_INDEX_1 | TB_FOLDED_LOAD);
+  // Index 2, folded broadcast
+  addUnfoldEntries(BroadcastTable2, TB_INDEX_2 | TB_FOLDED_LOAD);
+  // Index 3, folded broadcast
+  addUnfoldEntries(BroadcastTable3, TB_INDEX_3 | TB_FOLDED_LOAD);
+  // Index 4, folded broadcast
+  addUnfoldEntries(BroadcastTable4, TB_INDEX_4 | TB_FOLDED_LOAD);
+
 #define PRINT_TABLE(TABLE) printTable(TABLE, #TABLE, OS);
   // Print all tables.
   PRINT_TABLE(Table2Addr)
@@ -810,6 +844,26 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   PRINT_TABLE(BroadcastTable3)
   PRINT_TABLE(BroadcastTable4)
   PRINT_TABLE(NonFoldableWithSameMaskTable)
+  PRINT_TABLE(MemUnfoldTable)
+}
+
+void X86FoldTablesEmitter::addUnfoldEntries(const FoldTable &Table,
+                                            uint16_t ExtraFlags) {
+  for (const auto &[RegInst, Entry] : Table) {
+    if (Entry.NoReverse)
+      continue;
+    X86FoldTableEntry UnfoldEntry = Entry;
+    std::swap(UnfoldEntry.RegInst, UnfoldEntry.MemInst);
+    UnfoldEntry.UnfoldIdx = ExtraFlags & TB_INDEX_MASK;
+    UnfoldEntry.FoldLoad |= ExtraFlags & TB_FOLDED_LOAD;
+    UnfoldEntry.FoldStore |= ExtraFlags & TB_FOLDED_STORE;
+    if (!MemUnfoldTable.try_emplace(Entry.MemInst, UnfoldEntry).second)
+      PrintFatalError(Entry.MemInst->TheDef,
+                      "Memory unfolding table is not unique: " +
+                          Entry.MemInst->getName() + " unfolds to both " +
+                          MemUnfoldTable.at(Entry.MemInst).MemInst->getName() +
+                          " and " + RegInst->getName());
+  }
 }
 
 static TableGen::Emitter::OptClass<X86FoldTablesEmitter>

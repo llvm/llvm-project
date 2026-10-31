@@ -12,7 +12,6 @@ add_libc_test(
     libc.src.search.hsearch
     libc.src.search.hcreate
     libc.src.search.hdestroy
-    libc.src.errno.errno
 )
 
 add_libc_test(

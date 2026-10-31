@@ -558,8 +558,7 @@ bool GCOVProfiler::runOnModule(
 PreservedAnalyses GCOVProfilerPass::run(Module &M,
                                         ModuleAnalysisManager &AM) {
 
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   GCOVProfiler Profiler(GCOVOpts ? *GCOVOpts : getDefaultOptions(Opts), *VFS);
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();

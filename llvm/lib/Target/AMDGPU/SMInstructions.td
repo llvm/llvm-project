@@ -859,9 +859,14 @@ def smrd_extloadi16 : SMRDLoadPat<extloadi16>;
 def smrd_zextloadi16 : SMRDLoadPat<zextloadi16>;
 def smrd_sextloadi16 : SMRDLoadPat<sextloadi16>;
 
+// Unless a vector prefetch can be used, a divergent pointer is read from the
+// first active lane, since a prefetch is a hint and this is as valid a
+// refinement as dropping it.
 def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                              (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
-                             [{ return !N->getOperand(1)->isDivergent() && Subtarget->hasSafeSmemPrefetch();}]> {
+                             [{ return Subtarget->hasSafeSmemPrefetch() &&
+                                       (!N->getOperand(1)->isDivergent() || !Subtarget->hasVmemPrefInsts() ||
+                                        !N->getConstantOperandVal(4)); }]> {
   let GISelPredicateCode = [{
     return isInstrUniform(MI) && Subtarget->hasSafeSmemPrefetch();
   }];
@@ -1146,13 +1151,6 @@ multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
   def : GCNPat <
     (smrd_prefetch (i64 SReg_64:$sbase), timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, 0, (i32 SGPR_NULL), (i8 0), 0)
-  >;
-
-  def : GCNPat <
-    (smrd_prefetch (i32 SReg_32:$sbase), timm, timm, cache_type),
-    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type)
-        (i64 (REG_SEQUENCE SReg_64, $sbase, sub0, (i32 (S_MOV_B32 (i32 0))), sub1)),
-        0, (i32 SGPR_NULL), (i8 0), 0)
   >;
 }
 

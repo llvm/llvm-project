@@ -9,6 +9,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/Directive/Version.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "gtest/gtest.h"
 
@@ -208,7 +209,7 @@ TEST(OpenACCTest, ClauseHelpers) {
   EXPECT_EQ(getOpenACCClauseName(ACCC_write), "write");
 }
 
-static void expectAllowedClauses(Directive Dir, unsigned Version,
+static void expectAllowedClauses(Directive Dir, directive::Version Version,
                                  const ArrayRef<Clause> &AllowedClauses) {
   SmallSet<Clause, 30> AllowedClausesSet;
   for (Clause Cl : AllowedClauses) {
@@ -224,36 +225,37 @@ static void expectAllowedClauses(Directive Dir, unsigned Version,
 }
 
 TEST(OpenACCTest, AllowedClause) {
-  expectAllowedClauses(ACCD_atomic, 3, {});
-  expectAllowedClauses(ACCD_cache, 3, {});
-  expectAllowedClauses(ACCD_unknown, 3, {});
-  expectAllowedClauses(ACCD_parallel, 0, {}); // Version starts at 1
+  using Version = directive::Version;
+  expectAllowedClauses(ACCD_atomic, Version(3), {});
+  expectAllowedClauses(ACCD_cache, Version(3), {});
+  expectAllowedClauses(ACCD_unknown, Version(3), {});
+  expectAllowedClauses(ACCD_parallel, Version(0), {}); // Version starts at 1
 
-  expectAllowedClauses(ACCD_data, 3,
+  expectAllowedClauses(ACCD_data, Version(3),
                        {ACCC_if, ACCC_attach, ACCC_copy, ACCC_copyin,
                         ACCC_copyout, ACCC_create, ACCC_default, ACCC_deviceptr,
                         ACCC_no_create, ACCC_present});
 
-  expectAllowedClauses(ACCD_declare, 3,
+  expectAllowedClauses(ACCD_declare, Version(3),
                        {ACCC_copy, ACCC_copyin, ACCC_copyout, ACCC_create,
                         ACCC_present, ACCC_deviceptr, ACCC_device_resident,
                         ACCC_link});
 
   expectAllowedClauses(
-      ACCD_enter_data, 3,
+      ACCD_enter_data, Version(3),
       {ACCC_async, ACCC_if, ACCC_wait, ACCC_attach, ACCC_create, ACCC_copyin});
 
-  expectAllowedClauses(ACCD_exit_data, 3,
+  expectAllowedClauses(ACCD_exit_data, Version(3),
                        {ACCC_async, ACCC_if, ACCC_wait, ACCC_finalize,
                         ACCC_copyout, ACCC_delete, ACCC_detach});
 
-  expectAllowedClauses(ACCD_host_data, 3,
+  expectAllowedClauses(ACCD_host_data, Version(3),
                        {ACCC_if, ACCC_if_present, ACCC_use_device});
 
-  expectAllowedClauses(ACCD_init, 3,
+  expectAllowedClauses(ACCD_init, Version(3),
                        {ACCC_device_num, ACCC_device_type, ACCC_if});
 
-  expectAllowedClauses(ACCD_kernels, 3,
+  expectAllowedClauses(ACCD_kernels, Version(3),
                        {ACCC_attach, ACCC_copy, ACCC_copyin, ACCC_copyout,
                         ACCC_create, ACCC_device_type, ACCC_no_create,
                         ACCC_present, ACCC_deviceptr, ACCC_async, ACCC_default,
@@ -261,7 +263,7 @@ TEST(OpenACCTest, AllowedClause) {
                         ACCC_vector_length, ACCC_wait});
 
   expectAllowedClauses(
-      ACCD_kernels_loop, 3,
+      ACCD_kernels_loop, Version(3),
       {ACCC_copy,        ACCC_copyin,        ACCC_copyout, ACCC_create,
        ACCC_device_type, ACCC_no_create,     ACCC_present, ACCC_private,
        ACCC_reduction,   ACCC_deviceptr,     ACCC_attach,  ACCC_async,
@@ -270,13 +272,13 @@ TEST(OpenACCTest, AllowedClause) {
        ACCC_vector,      ACCC_vector_length, ACCC_wait,    ACCC_worker,
        ACCC_auto,        ACCC_independent,   ACCC_seq});
 
-  expectAllowedClauses(ACCD_loop, 3,
+  expectAllowedClauses(ACCD_loop, Version(3),
                        {ACCC_device_type, ACCC_private, ACCC_reduction,
                         ACCC_collapse, ACCC_gang, ACCC_tile, ACCC_vector,
                         ACCC_worker, ACCC_auto, ACCC_independent, ACCC_seq});
 
   expectAllowedClauses(
-      ACCD_parallel, 3,
+      ACCD_parallel, Version(3),
       {ACCC_async,         ACCC_wait,         ACCC_num_gangs, ACCC_num_workers,
        ACCC_vector_length, ACCC_device_type,  ACCC_if,        ACCC_self,
        ACCC_copy,          ACCC_copyin,       ACCC_copyout,   ACCC_create,
@@ -284,7 +286,7 @@ TEST(OpenACCTest, AllowedClause) {
        ACCC_private,       ACCC_firstprivate, ACCC_reduction, ACCC_default});
 
   expectAllowedClauses(
-      ACCD_parallel_loop, 3,
+      ACCD_parallel_loop, Version(3),
       {ACCC_attach,      ACCC_copy,      ACCC_copyin,      ACCC_copyout,
        ACCC_create,      ACCC_deviceptr, ACCC_device_type, ACCC_firstprivate,
        ACCC_no_create,   ACCC_present,   ACCC_private,     ACCC_reduction,
@@ -293,11 +295,11 @@ TEST(OpenACCTest, AllowedClause) {
        ACCC_num_workers, ACCC_self,      ACCC_vector,      ACCC_vector_length,
        ACCC_worker,      ACCC_auto,      ACCC_independent, ACCC_seq});
 
-  expectAllowedClauses(ACCD_routine, 3,
+  expectAllowedClauses(ACCD_routine, Version(3),
                        {ACCC_bind, ACCC_device_type, ACCC_nohost, ACCC_gang,
                         ACCC_seq, ACCC_vector, ACCC_worker});
 
-  expectAllowedClauses(ACCD_serial, 3,
+  expectAllowedClauses(ACCD_serial, Version(3),
                        {ACCC_attach, ACCC_copy, ACCC_copyin, ACCC_copyout,
                         ACCC_create, ACCC_deviceptr, ACCC_device_type,
                         ACCC_no_create, ACCC_present, ACCC_private,
@@ -305,7 +307,7 @@ TEST(OpenACCTest, AllowedClause) {
                         ACCC_async, ACCC_default, ACCC_if, ACCC_self});
 
   expectAllowedClauses(
-      ACCD_serial_loop, 3,
+      ACCD_serial_loop, Version(3),
       {ACCC_attach,    ACCC_copy,      ACCC_copyin,      ACCC_copyout,
        ACCC_create,    ACCC_deviceptr, ACCC_device_type, ACCC_firstprivate,
        ACCC_no_create, ACCC_present,   ACCC_private,     ACCC_reduction,
@@ -315,17 +317,17 @@ TEST(OpenACCTest, AllowedClause) {
        ACCC_seq});
 
   expectAllowedClauses(
-      ACCD_set, 3,
+      ACCD_set, Version(3),
       {ACCC_default_async, ACCC_device_num, ACCC_device_type, ACCC_if});
 
-  expectAllowedClauses(ACCD_shutdown, 3,
+  expectAllowedClauses(ACCD_shutdown, Version(3),
                        {ACCC_device_num, ACCC_device_type, ACCC_if});
 
-  expectAllowedClauses(ACCD_update, 3,
+  expectAllowedClauses(ACCD_update, Version(3),
                        {ACCC_async, ACCC_wait, ACCC_device_type, ACCC_if,
                         ACCC_if_present, ACCC_self, ACCC_host, ACCC_device});
 
-  expectAllowedClauses(ACCD_wait, 3, {ACCC_async, ACCC_if});
+  expectAllowedClauses(ACCD_wait, Version(3), {ACCC_async, ACCC_if});
 }
 
 } // namespace

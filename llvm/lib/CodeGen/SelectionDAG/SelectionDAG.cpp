@@ -6244,8 +6244,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case ISD::POISON: {
-    Known.setKnownFPClasses(fcNone);
-    Known.setSignBit(false);
+    Known = KnownFPClass::getEmpty();
     break;
   }
   case ISD::FNEG: {
@@ -6287,7 +6286,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                     Depth + 1);
       } else {
         // Out of bounds index is poison.
-        Known.setKnownFPClasses(fcNone);
+        Known = KnownFPClass::getEmpty();
       }
     } else {
       Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
@@ -12614,8 +12613,8 @@ SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
 /// UpdateSDLocOnMergeSDNode - If the opt level is -O0 then it throws away
 /// the line number information on the merged node since it is not possible to
 /// preserve the information that operation is associated with multiple lines.
-/// This will make the debugger working better at -O0, were there is a higher
-/// probability having other instructions associated with that line.
+/// This will make the debugger work better at -O0, where there is a higher
+/// probability of having other instructions associated with that line.
 ///
 /// For IROrder, we keep the smaller of the two
 SDNode *SelectionDAG::UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &OLoc) {
@@ -15003,6 +15002,12 @@ bool BuildVectorSDNode::getConstantRawBits(
   assert(((NumSrcOps * SrcEltSizeInBits) % DstEltSizeInBits) == 0 &&
          "Invalid bitcast scale");
 
+  // If the elements don't pack cleanly, don't attempt to recast.
+  // TODO: Add handling (e.g. bitcast <33 x i8> --> <8 x i33>)
+  if ((SrcEltSizeInBits % DstEltSizeInBits) != 0 &&
+      (DstEltSizeInBits % SrcEltSizeInBits) != 0)
+    return false;
+
   // Extract raw src bits.
   SmallVector<APInt> SrcBitElements(NumSrcOps,
                                     APInt::getZero(SrcEltSizeInBits));
@@ -15037,8 +15042,10 @@ void BuildVectorSDNode::recastRawBits(bool IsLittleEndian,
   unsigned SrcEltSizeInBits = SrcBitElements[0].getBitWidth();
   assert(((NumSrcOps * SrcEltSizeInBits) % DstEltSizeInBits) == 0 &&
          "Invalid bitcast scale");
-  assert(NumSrcOps == SrcUndefElements.size() &&
-         "Vector size mismatch");
+  assert(((SrcEltSizeInBits % DstEltSizeInBits) == 0 ||
+          (DstEltSizeInBits % SrcEltSizeInBits) == 0) &&
+         "Unsupported bitcast scale");
+  assert(NumSrcOps == SrcUndefElements.size() && "Vector size mismatch");
 
   unsigned NumDstOps = (NumSrcOps * SrcEltSizeInBits) / DstEltSizeInBits;
   DstUndefElements.clear();

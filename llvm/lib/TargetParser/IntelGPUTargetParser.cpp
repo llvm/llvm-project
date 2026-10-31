@@ -11,7 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
 using namespace llvm;
@@ -62,4 +66,134 @@ std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
   const uint32_t Revision = GPUIPVersion & GPUIPRevisionMask;
   return ("xe_" + Twine(Major) + "." + Twine(Minor) + "." + Twine(Revision))
       .str();
+}
+
+StringRef llvm::IntelGPU::getArchName(GPUKind Kind) {
+  switch (Kind) {
+  case GK_NONE:
+    return "";
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  case GK_##KIND:                                                              \
+    return NAME;
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  case GK_##KIND:                                                              \
+    return NAME;
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+  }
+  llvm_unreachable("invalid Intel GPU kind");
+}
+
+GPUKind llvm::IntelGPU::parseArch(StringRef Name) {
+  // A numeric name ends in a revision, e.g. "xe_12.60.7". Only the major and
+  // minor versions name a device, so the revision may be any number and is not
+  // looked up.
+  if (Name.starts_with("xe_")) {
+    auto [Device, Revision] = Name.rsplit('.');
+    if (Device.count('.') != 1 || Revision.empty() ||
+        !all_of(Revision, isDigit))
+      return GK_NONE;
+    Name = Device;
+  }
+
+  return StringSwitch<GPUKind>(Name)
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  .Case(NAME, GK_##KIND).Case("xe_" #MAJOR "." #MINOR, GK_##KIND)
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  .Case(NAME, GK_##KIND)
+#define INTEL_GPU_ALIAS(NAME, KIND) .Case(NAME, GK_##KIND)
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+      .Default(GK_NONE);
+}
+
+namespace {
+// The IGCA target of each row in IntelGPUTargetParser.def, e.g. {20,
+// ComputeExact} for xe-pvc. Several rows can have the same IGCA target, e.g.
+// the nine igca_10r devices, so entries repeat.
+struct DeviceIGCATarget {
+  uint16_t Target;
+  IGCAFeatureSet FeatureSet;
+};
+constexpr DeviceIGCATarget DeviceIGCATargets[] = {
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  {IGCA_TARGET, IGCAFeatureSet::IGCA_FEATURE_SETS},
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  {IGCA_TARGET, IGCAFeatureSet::IGCA_FEATURE_SETS},
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+};
+
+// All five possible names for each device's numeric IGCA target, e.g. igca_20,
+// igca_20c, igca_20ca, igca_20r and igca_20ra for xe-pvc. Which of them are
+// valid is decided by the IGCATarget constructor, so the rule is in one place.
+// The names are string literals, so getIGCATargetName() can return them.
+struct IGCATargetNameEntry {
+  const char *Name;
+  uint16_t Target;
+  IGCAFeatureSet FeatureSet;
+};
+#define IGCA_TARGET_NAMES(TARGET)                                              \
+  {"igca_" #TARGET, TARGET, IGCAFeatureSet::Core},                             \
+      {"igca_" #TARGET "c", TARGET, IGCAFeatureSet::Compute},                  \
+      {"igca_" #TARGET "ca", TARGET, IGCAFeatureSet::ComputeExact},            \
+      {"igca_" #TARGET "r", TARGET, IGCAFeatureSet::Render},                   \
+      {"igca_" #TARGET "ra", TARGET, IGCAFeatureSet::RenderExact},
+constexpr IGCATargetNameEntry IGCATargetNames[] = {
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  IGCA_TARGET_NAMES(IGCA_TARGET)
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  IGCA_TARGET_NAMES(IGCA_TARGET)
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+};
+#undef IGCA_TARGET_NAMES
+} // namespace
+
+/// \return true if a device with the IGCA feature set \p DeviceFeatureSet can
+/// run code built for the IGCA feature set \p RequestedFeatureSet at the
+/// device's own numeric IGCA target. For example, xe-pvc (igca_20ca,
+/// ComputeExact) can run code built for igca_20ca, igca_20c and igca_20, but
+/// not igca_20r.
+static bool deviceCanRunIGCAFeatureSet(IGCAFeatureSet DeviceFeatureSet,
+                                       IGCAFeatureSet RequestedFeatureSet) {
+  // Every device runs code built for the Core IGCA feature set, e.g. igca_20.
+  if (RequestedFeatureSet == IGCAFeatureSet::Core)
+    return true;
+  // A device runs code built for its own IGCA feature set, e.g. igca_20ca.
+  if (RequestedFeatureSet == DeviceFeatureSet)
+    return true;
+  // An exact IGCA feature set also runs code built for its non-exact form,
+  // e.g. igca_20c.
+  if (DeviceFeatureSet == IGCAFeatureSet::ComputeExact)
+    return RequestedFeatureSet == IGCAFeatureSet::Compute;
+  if (DeviceFeatureSet == IGCAFeatureSet::RenderExact)
+    return RequestedFeatureSet == IGCAFeatureSet::Render;
+  return false;
+}
+
+bool llvm::IntelGPU::IGCATarget::isKnownIGCATarget(uint32_t Packed) {
+  // A value with any of bits 3-15 set is not an IGCA target, e.g. igca_20c
+  // (0x00140002) with bit 3 set.
+  if (Packed & ReservedMask)
+    return false;
+  // Split the value into its numeric IGCA target and feature set, e.g. 20 and
+  // Compute for igca_20c.
+  uint16_t RequestedTarget = uint16_t(Packed >> TargetShift);
+  auto RequestedFeatureSet = IGCAFeatureSet(Packed & FeatureSetMask);
+  for (const DeviceIGCATarget &D : DeviceIGCATargets)
+    if (D.Target == RequestedTarget &&
+        deviceCanRunIGCAFeatureSet(D.FeatureSet, RequestedFeatureSet))
+      return true;
+  return false;
+}
+
+IGCATarget llvm::IntelGPU::parseIGCATarget(StringRef MaybeTarget) {
+  for (const IGCATargetNameEntry &E : IGCATargetNames)
+    if (MaybeTarget == E.Name)
+      return IGCATarget(E.Target, E.FeatureSet);
+  return IGCATarget::invalid();
+}
+
+StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
+  for (const IGCATargetNameEntry &E : IGCATargetNames)
+    if (E.Target == T.getTarget() && E.FeatureSet == T.getFeatureSet())
+      return E.Name;
+  return "";
 }

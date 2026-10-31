@@ -1906,7 +1906,9 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
       // If the member was explicitly marked as nontemporal, mark it as
       // nontemporal. If the base lvalue is marked as nontemporal, mark access
       // to children as nontemporal too.
-      cgm.errorNYI(e->getSourceRange(), "emitMemberExpr: OpenMP");
+      assert(!cir::MissingFeatures::openMPNontemporalDecl());
+      if (baseLV.isNontemporal())
+        lv.setNontemporal(true);
     }
     return lv;
   }
@@ -2272,10 +2274,7 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     else
       emitStoreThroughLValue(rv, lv);
 
-    if (getLangOpts().OpenMP) {
-      cgm.errorNYI(e->getSourceRange(), "openmp");
-      return {};
-    }
+    assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
     return lv;
   }

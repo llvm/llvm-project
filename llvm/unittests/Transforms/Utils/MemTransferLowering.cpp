@@ -200,7 +200,7 @@ TEST_F(MemTransferLowerTest, AtomicMemCpyKnownLength) {
         auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
         Instruction *Inst = &MemCpyBB->front();
         assert(isa<AnyMemCpyInst>(Inst) &&
-               "Expecting llvm.memcpy.p0i8.i64 instructon");
+               "Expecting llvm.memcpy.p0i8.i64 instruction");
         AnyMemCpyInst *MemCpyI = cast<AnyMemCpyInst>(Inst);
         auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
         expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);
@@ -246,7 +246,7 @@ TEST_F(MemTransferLowerTest, AtomicMemCpyUnKnownLength) {
         auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
         Instruction *Inst = &MemCpyBB->front();
         assert(isa<AnyMemCpyInst>(Inst) &&
-               "Expecting llvm.memcpy.p0i8.i64 instructon");
+               "Expecting llvm.memcpy.p0i8.i64 instruction");
         auto *MemCpyI = cast<AnyMemCpyInst>(Inst);
         auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
         expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);

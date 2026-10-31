@@ -1,7 +1,7 @@
 // RUN: llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s
 
 // Check that when a target excludes some impls from a shared library via
-// LibraryRef AND re-adds them through its own same-name library variant, the
+// LibraryExclusion AND re-adds them through its own same-name library variant, the
 // variant's adds are emitted AFTER the exclusion's setUnavailable calls. This
 // lets a target's own re-adds win over its own opt-out, while the exclusion
 // still suppresses those impls for any other variant's contribution.
@@ -33,8 +33,8 @@ def ARMCompilerRt : LibcallLibrary<"compiler-rt",
 
 // ARM excludes __addsf3 from the shared core (all ARM), then re-adds
 // it via ARMCompilerRt on non-Windows ARM.
-def ARMSystem : SystemRuntimeLibrary<isARM,
-    (add LibraryRef<CompilerRt, [__addsf3]>, Libm)>;
+def ARMSystem : SystemRuntimeLibrary<isARM, ["compiler-rt", "libm"]>;
+def : LibraryExclusion<"compiler-rt", isARM, [__addsf3]>;
 
 // In the merged compiler-rt function: the shared core runs first,
 // then the exclusion's setUnavailable, then ARM's own variant re-add

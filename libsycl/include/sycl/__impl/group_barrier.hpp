@@ -15,6 +15,7 @@
 #define _LIBSYCL___IMPL_GROUP_BARRIER_HPP
 
 #include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/group.hpp>
 #include <sycl/__impl/memory_enums.hpp>
 #include <sycl/__impl/sub_group.hpp>
@@ -23,8 +24,10 @@
 #include <cstdint>
 #include <type_traits>
 
+#ifdef __SYCL_DEVICE_ONLY__
 void __spirv_ControlBarrier(std::uint32_t Execution, std::uint32_t Memory,
                             std::uint32_t Semantics);
+#endif
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -73,12 +76,19 @@ template <> struct GroupScope<::sycl::sub_group> {
 /// point.
 template <typename Group>
 std::enable_if_t<is_group_v<Group>>
-group_barrier(Group /*g*/, memory_scope fence_scope = Group::fence_scope) {
+group_barrier(Group /*g*/,
+              [[maybe_unused]] memory_scope fence_scope = Group::fence_scope) {
+#ifdef __SYCL_DEVICE_ONLY__
   __spirv_ControlBarrier(detail::GroupScope<Group>::value,
                          detail::getScope(fence_scope),
                          __spirv::MemorySemanticsMask::SequentiallyConsistent |
                              __spirv::MemorySemanticsMask::SubgroupMemory |
                              __spirv::MemorySemanticsMask::WorkgroupMemory);
+#else
+  throw sycl::exception(
+      sycl::make_error_code(sycl::errc::feature_not_supported),
+      "Barriers are not supported on host");
+#endif
 }
 
 _LIBSYCL_END_NAMESPACE_SYCL

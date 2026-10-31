@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c23 -fsyntax-only -verify=c %s
-// RUN: %clang_cc1 -fsyntax-only -verify=cpp -x c++ -Wno-c23-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -verify=cpp -x c++ -Wno-c++26-extensions %s
 
 
 struct S {
@@ -46,5 +46,11 @@ struct S1 s1 = {
     // c-warning@-1{{excess elements in struct initializer}}
     // cpp-error@-2{{excess elements in struct initializer}}
   , x
+};
+
+int f = {
+#embed __FILE__
+    // c-warning@-1{{excess elements in scalar initializer}}
+    // cpp-error@-3{{excess elements in scalar initializer}}
 };
 }

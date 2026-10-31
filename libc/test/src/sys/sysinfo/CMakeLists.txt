@@ -10,7 +10,6 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.types.struct_sysinfo
     libc.include.sys_sysinfo
-    libc.src.errno.errno
     libc.src.__support.common
     libc.src.sys.sysinfo.sysinfo
     libc.test.UnitTest.ErrnoSetterMatcher

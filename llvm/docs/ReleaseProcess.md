@@ -91,8 +91,7 @@ TODO
 
 ## Test Suite
 
-Follow the [LNT Quick Start Guide](https://llvm.org/docs/lnt/quickstart.html) link on how to set-up the
-test-suite
+See the {doc}`TestSuiteGuide` on how to set up and run the test-suite.
 
 The binary location you'll have to use for testing is inside the
 `rcN/Phase3/Release+Asserts/llvmCore-REL-RC.install`.
@@ -102,13 +101,12 @@ An example on the run command line, assuming you created a link from the correct
 install directory to `~/devel/llvm/install`:
 
 ```
-./sandbox/bin/python sandbox/bin/lnt runtest \
-    nt \
-    -j4 \
-    --sandbox sandbox \
-    --test-suite ~/devel/llvm/test/test-suite \
-    --cc ~/devel/llvm/install/bin/clang \
-    --cxx ~/devel/llvm/install/bin/clang++
+mkdir test-suite-build && cd test-suite-build
+cmake -DCMAKE_C_COMPILER=~/devel/llvm/install/bin/clang \
+      -C ~/devel/llvm-test-suite/cmake/caches/O3.cmake \
+      ~/devel/llvm-test-suite
+make -j4
+llvm-lit -v -j4 .
 ```
 
 It should have no new regressions, compared to the previous release or release

@@ -1400,3 +1400,11 @@ func.func @allocmem_bad_alignment() -> !fir.heap<!fir.array<10xf32>> {
   %0 = fir.allocmem !fir.array<10xf32> {alignment = 3 : i64}
   return %0 : !fir.heap<!fir.array<10xf32>>
 }
+
+// -----
+
+func.func @alloca_bad_alignment() -> !fir.ref<!fir.array<10xf32>> {
+  // expected-error@+1 {{'fir.alloca' op alignment must be a positive power of two}}
+  %0 = fir.alloca !fir.array<10xf32> {alignment = 24 : i64}
+  return %0 : !fir.ref<!fir.array<10xf32>>
+}

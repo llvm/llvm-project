@@ -2,12 +2,14 @@
 // RUN: mlir-opt %s -scf-for-loop-peeling=skip-partial=false -canonicalize -split-input-file -verify-diagnostics | FileCheck %s -check-prefix=CHECK-NO-SKIP
 
 
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s1 - (-s0 + s1) mod s2, s0)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
 //      CHECK: func @fully_dynamic_bounds(
 // CHECK-SAME:     %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index
 //      CHECK:   %[[C0_I32:.*]] = arith.constant 0 : i32
-//      CHECK:   %[[NEW_UB:.*]] = affine.max #[[MAP0]]()[%[[LB]], %[[UB]], %[[STEP]]]
+//      CHECK:   %[[LB_EFF:.*]] = arith.minsi %[[LB]], %[[UB]] : index
+//      CHECK:   %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB_EFF]] : index
+//      CHECK:   %[[SPLIT_REM:.*]] = arith.remui %[[DIFF]], %[[STEP]] : index
+//      CHECK:   %[[NEW_UB:.*]] = arith.subi %[[UB]], %[[SPLIT_REM]] : index
 //      CHECK:   %[[LOOP:.*]] = scf.for %[[IV:.*]] = %[[LB]] to %[[NEW_UB]]
 // CHECK-SAME:       step %[[STEP]] iter_args(%[[ACC:.*]] = %[[C0_I32]]) -> (i32) {
 //      CHECK:     %[[CAST:.*]] = arith.index_cast %[[STEP]] : index to i32
@@ -132,7 +134,6 @@ func.func @fully_static_bounds_integers() -> i32 {
 
 // -----
 
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> ((s0 floordiv 4) * 4, 0)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
 //      CHECK: func @dynamic_upper_bound(
 // CHECK-SAME:     %[[UB:.*]]: index
@@ -140,7 +141,10 @@ func.func @fully_static_bounds_integers() -> i32 {
 //  CHECK-DAG:   %[[C4_I32:.*]] = arith.constant 4 : i32
 //  CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //  CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : index
-//      CHECK:   %[[NEW_UB:.*]] = affine.max #[[MAP0]]()[%[[UB]]]
+//      CHECK:   %[[LB_EFF:.*]] = arith.minsi %[[UB]], %[[C0]] : index
+//      CHECK:   %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB_EFF]] : index
+//      CHECK:   %[[SPLIT_REM:.*]] = arith.remui %[[DIFF]], %[[C4]] : index
+//      CHECK:   %[[NEW_UB:.*]] = arith.subi %[[UB]], %[[SPLIT_REM]] : index
 //      CHECK:   %[[LOOP:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[NEW_UB]]
 // CHECK-SAME:       step %[[C4]] iter_args(%[[ACC:.*]] = %[[C0_I32]]) -> (i32) {
 //      CHECK:     %[[ADD:.*]] = arith.addi %[[ACC]], %[[C4_I32]] : i32
@@ -171,14 +175,16 @@ func.func @dynamic_upper_bound(%ub : index) -> i32 {
 
 // -----
 
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> ((s0 floordiv 4) * 4, 0)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
 //      CHECK: func @no_loop_results(
 // CHECK-SAME:     %[[UB:.*]]: index, %[[MEMREF:.*]]: memref<i32>
 //  CHECK-DAG:   %[[C4_I32:.*]] = arith.constant 4 : i32
 //  CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //  CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : index
-//      CHECK:   %[[NEW_UB:.*]] = affine.max #[[MAP0]]()[%[[UB]]]
+//      CHECK:   %[[LB_EFF:.*]] = arith.minsi %[[UB]], %[[C0]] : index
+//      CHECK:   %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB_EFF]] : index
+//      CHECK:   %[[SPLIT_REM:.*]] = arith.remui %[[DIFF]], %[[C4]] : index
+//      CHECK:   %[[NEW_UB:.*]] = arith.subi %[[UB]], %[[SPLIT_REM]] : index
 //      CHECK:   scf.for %[[IV:.*]] = %[[C0]] to %[[NEW_UB]] step %[[C4]] {
 //      CHECK:     %[[LOAD:.*]] = memref.load %[[MEMREF]][]
 //      CHECK:     %[[ADD:.*]] = arith.addi %[[LOAD]], %[[C4_I32]] : i32
@@ -360,12 +366,9 @@ func.func @regression(%arg0: memref<i64>, %arg1: index) {
 // Regression test: Make sure that we do not crash.
 
 // CHECK-LABEL: func @zero_step(
-//       CHECK:   %[[c0:.*]] = arith.constant 0
-//       CHECK:   %[[c1:.*]] = arith.constant 1
-//       CHECK:   %[[bound:.*]] = affine.max
-//       CHECK:   scf.for %{{.*}} = %[[c0]] to %[[bound]] step %[[c0]]
+//       CHECK:   scf.for
 //       CHECK:     arith.index_cast
-//       CHECK:   scf.for %{{.*}} = %[[bound]] to %[[c1]] step %[[c0]]
+//       CHECK:   scf.for
 //       CHECK:     arith.index_cast
 func.func @zero_step(%arg0: memref<i64>) {
   %c0 = arith.constant 0 : index
@@ -383,12 +386,14 @@ func.func @zero_step(%arg0: memref<i64>) {
 // CHECK-LABEL:   func.func @non_index_loop_bounds(
 // CHECK-SAME:                                         %[[INIT:.*]]: i32,
 // CHECK-SAME:                                         %[[N:.*]]: i32) -> i32 {
-// CHECK:           %[[C0:.*]] = arith.constant 0 : i32
-// CHECK:           %[[C2:.*]] = arith.constant 2 : i32
-// CHECK:           %[[RESULT:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[N]] step %[[C2]] iter_args(%[[ACC:.*]] = %[[INIT]]) -> (i32) : i32 {
-// CHECK:             %[[ADD:.*]] = arith.addi %[[ACC]], %[[IV]] : i32
-// CHECK:             scf.yield %[[ADD]] : i32
-// CHECK:           }
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[C2:.*]] = arith.constant 2 : i32
+// CHECK:           %[[LB_EFF:.*]] = arith.minsi %[[N]], %[[C0]] : i32
+// CHECK:           %[[DIFF:.*]] = arith.subi %[[N]], %[[LB_EFF]] : i32
+// CHECK:           %[[SPLIT_REM:.*]] = arith.remui %[[DIFF]], %[[C2]] : i32
+// CHECK:           %[[NEW_UB:.*]] = arith.subi %[[N]], %[[SPLIT_REM]] : i32
+// CHECK:           %[[FIRST:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[NEW_UB]] step %[[C2]] iter_args(%[[ACC:.*]] = %[[INIT]]) -> (i32) : i32 {
+// CHECK:           %[[RESULT:.*]] = scf.for %[[IV2:.*]] = %[[NEW_UB]] to %[[N]] step %[[C2]] iter_args(%[[ACC2:.*]] = %[[FIRST]]) -> (i32) : i32 {
 // CHECK:           return %[[RESULT]] : i32
 func.func @non_index_loop_bounds(%init: i32, %n: i32) -> i32 {
   %c0 = arith.constant 0 : i32
@@ -398,4 +403,197 @@ func.func @non_index_loop_bounds(%init: i32, %n: i32) -> i32 {
     scf.yield %t : i32
   }
   return %r : i32
+}
+
+// -----
+
+// Fully dynamic i32 bounds: nothing can fold. Unsigned min/sub/remui chain,
+// iter_args threaded from the main loop into the partial loop.
+
+// CHECK-LABEL: func @unsigned_back_peel_dynamic(
+// CHECK-SAME:      %[[LB:.*]]: i32, %[[UB:.*]]: i32, %[[STEP:.*]]: i32
+//      CHECK:   %[[C0:.*]] = arith.constant 0 : i32
+//      CHECK:   %[[LBEFF:.*]] = arith.minui %[[LB]], %[[UB]] : i32
+//      CHECK:   %[[DIFF:.*]] = arith.subi %[[UB]], %[[LBEFF]] : i32
+//      CHECK:   %[[REM:.*]] = arith.remui %[[DIFF]], %[[STEP]] : i32
+//      CHECK:   %[[SPLIT:.*]] = arith.subi %[[UB]], %[[REM]] : i32
+//      CHECK:   %[[MAIN:.*]] = scf.for unsigned %[[IV:.*]] = %[[LB]] to %[[SPLIT]] step %[[STEP]] iter_args(%[[ACC:.*]] = %[[C0]]) -> (i32) : i32 {
+//      CHECK:     %[[ADD:.*]] = arith.addi %[[ACC]], %[[IV]] : i32
+//      CHECK:     scf.yield %[[ADD]] : i32
+//      CHECK:   }
+//      CHECK:   %[[RES:.*]] = scf.for unsigned %[[IV2:.*]] = %[[SPLIT]] to %[[UB]] step %[[STEP]] iter_args(%[[ACC2:.*]] = %[[MAIN]]) -> (i32) : i32 {
+//      CHECK:     %[[ADD2:.*]] = arith.addi %[[ACC2]], %[[IV2]] : i32
+//      CHECK:     scf.yield %[[ADD2]] : i32
+//      CHECK:   }
+//      CHECK:   return %[[RES]] : i32
+func.func @unsigned_back_peel_dynamic(%lb: i32, %ub: i32, %step: i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %r = scf.for unsigned %iv = %lb to %ub step %step iter_args(%acc = %c0) -> (i32) : i32 {
+    %0 = arith.addi %acc, %iv : i32
+    scf.yield %0 : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// Constants that only make sense unsigned: lb = 0x7FFFFFF8, ub = 0xFFFFFFF9
+// (printed -7), step 4. (ub - lb) = 2147483649, remainder 1, so split =
+// 0xFFFFFFF8 (-8). The main loop runs 536870912 iterations. The partial loop
+// is exactly one iteration, so the canonicalizer inlines it with iv = split.
+
+func.func private @effect(i32)
+
+// CHECK-LABEL: func @unsigned_back_peel_above_signed_max
+//   CHECK-DAG:   %[[LB:.*]] = arith.constant 2147483640 : i32
+//   CHECK-DAG:   %[[STEP:.*]] = arith.constant 4 : i32
+//   CHECK-DAG:   %[[SPLIT:.*]] = arith.constant -8 : i32
+//       CHECK:   scf.for unsigned %{{.*}} = %[[LB]] to %[[SPLIT]] step %[[STEP]] : i32 {
+//       CHECK:     call @effect(%{{.*}}) : (i32) -> ()
+//       CHECK:   }
+//       CHECK:   call @effect(%[[SPLIT]]) : (i32) -> ()
+func.func @unsigned_back_peel_above_signed_max() {
+  %lb = arith.constant 2147483640 : i32
+  %ub = arith.constant -7 : i32
+  %step = arith.constant 4 : i32
+  scf.for unsigned %iv = %lb to %ub step %step : i32 {
+    func.call @effect(%iv) : (i32) -> ()
+  }
+  return
+}
+
+// -----
+
+// Empty unsigned loop: lb = 0xFFFFFFFF, ub = 0 (ub <= lb). Signed code would
+// read this as -1 to 0, which has one iteration. After peeling and
+// canonicalization no iteration may remain.
+
+func.func private @effect(i32)
+
+// CHECK-LABEL: func @unsigned_back_peel_empty_loop
+//   CHECK-NOT:   call @effect
+//       CHECK:   return
+func.func @unsigned_back_peel_empty_loop() {
+  %lb = arith.constant -1 : i32
+  %ub = arith.constant 0 : i32
+  %step = arith.constant 2 : i32
+  scf.for unsigned %iv = %lb to %ub step %step : i32 {
+    func.call @effect(%iv) : (i32) -> ()
+  }
+  return
+}
+
+// -----
+
+// Step divides the range (0x80000000 - 0 = 2^29 * 4): nothing to peel, so one
+// loop stays. 0x80000000 prints as -2147483648, which signed code would read
+// as an empty loop.
+
+func.func private @effect(i32)
+
+// CHECK-LABEL: func @unsigned_back_peel_step_divides_range
+//       CHECK:   scf.for unsigned
+//       CHECK:     call @effect
+//       CHECK:   }
+//   CHECK-NOT:   scf.for
+//   CHECK-NOT:   call @effect
+func.func @unsigned_back_peel_step_divides_range() {
+  %lb = arith.constant 0 : i32
+  %ub = arith.constant -2147483648 : i32
+  %step = arith.constant 4 : i32
+  scf.for unsigned %iv = %lb to %ub step %step : i32 {
+    func.call @effect(%iv) : (i32) -> ()
+  }
+  return
+}
+
+// -----
+
+// Constant step of 1 with dynamic bounds: step 1 always divides the range,
+// so there is nothing to peel. One loop stays and no split bound is computed.
+
+func.func private @effect(i32)
+
+// CHECK-LABEL: func @unsigned_back_peel_step_one_dynamic_bounds(
+// CHECK-SAME:      %[[LB:.*]]: i32, %[[UB:.*]]: i32
+//      CHECK:   %[[STEP:.*]] = arith.constant 1 : i32
+//      CHECK:   scf.for unsigned %{{.*}} = %[[LB]] to %[[UB]] step %[[STEP]] : i32 {
+//      CHECK:     call @effect
+//      CHECK:   }
+//  CHECK-NOT:   scf.for
+//  CHECK-NOT:   arith.remui
+func.func @unsigned_back_peel_step_one_dynamic_bounds(%lb: i32, %ub: i32) {
+  %step = arith.constant 1 : i32
+  scf.for unsigned %iv = %lb to %ub step %step : i32 {
+    func.call @effect(%iv) : (i32) -> ()
+  }
+  return
+}
+
+// -----
+
+// Unsigned loop with an affine.min in the body: the loop is peeled, but the
+// affine.min is not simplified in either loop (the simplification is signed).
+
+#map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
+func.func private @use(index)
+
+// CHECK-LABEL: func @unsigned_no_bound_simplification
+//       CHECK:   scf.for unsigned
+//       CHECK:     affine.min
+//       CHECK:   scf.for unsigned
+//       CHECK:     affine.min
+func.func @unsigned_no_bound_simplification(%lb: index, %ub: index, %step: index) {
+  scf.for unsigned %iv = %lb to %ub step %step {
+    %s = affine.min #map(%ub, %iv)[%step]
+    func.call @use(%s) : (index) -> ()
+  }
+  return
+}
+
+// -----
+
+// Signed empty loop whose range is not a multiple of the step: lb=10, ub=5,
+// step=4. Without the clamp to lb, split was 2 and the partial loop ran iv=2.
+
+func.func private @effect(index)
+
+// CHECK-LABEL: func @signed_empty_loop_not_executed
+//   CHECK-NOT:   call @effect
+//       CHECK:   return
+func.func @signed_empty_loop_not_executed() {
+  %lb = arith.constant 10 : index
+  %ub = arith.constant 5 : index
+  %step = arith.constant 4 : index
+  scf.for %iv = %lb to %ub step %step {
+    func.call @effect(%iv) : (index) -> ()
+  }
+  return
+}
+
+// -----
+
+// Signed i32 loop whose range (INT_MIN to INT_MAX - 4) exceeds the signed max.
+// ub - lb = 4294967291 only makes sense as an unsigned value, so remui is
+// needed for signed loops too. remainder 3, so split = 2147483640. The
+// partial loop is exactly one iteration, so canonicalization inlines it.
+
+func.func private @effect(i32)
+
+// CHECK-LABEL: func @signed_range_above_signed_max
+//   CHECK-DAG:   %[[LB:.*]] = arith.constant -2147483648 : i32
+//   CHECK-DAG:   %[[STEP:.*]] = arith.constant 4 : i32
+//   CHECK-DAG:   %[[SPLIT:.*]] = arith.constant 2147483640 : i32
+//       CHECK:   scf.for %{{.*}} = %[[LB]] to %[[SPLIT]] step %[[STEP]] : i32 {
+//       CHECK:     call @effect(%{{.*}}) : (i32) -> ()
+//       CHECK:   }
+//       CHECK:   call @effect(%[[SPLIT]]) : (i32) -> ()
+func.func @signed_range_above_signed_max() {
+  %lb = arith.constant -2147483648 : i32
+  %ub = arith.constant 2147483643 : i32
+  %step = arith.constant 4 : i32
+  scf.for %iv = %lb to %ub step %step : i32 {
+    func.call @effect(%iv) : (i32) -> ()
+  }
+  return
 }

@@ -45,7 +45,7 @@ static void ForEachFormatterInModule(
     return;
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
 
   // The type summary record is serialized as follows.
   //
@@ -116,8 +116,7 @@ void LoadTypeSummariesForModule(ModuleSP module_sp) {
       [&](llvm::DataExtractor extractor, llvm::StringRef type_name,
           uint32_t version) {
         TypeCategoryImplSP category;
-        DataVisualization::Categories::GetCategory(ConstString("default"),
-                                                   category);
+        DataVisualization::Categories::GetCategory("default", category);
         // The type summary record is serialized as follows.
         //
         //   * The size of the summary string
@@ -179,8 +178,7 @@ void LoadFormattersForModule(ModuleSP module_sp) {
         // * Length of the program (ULEB128)
         // * The program bytecode
         TypeCategoryImplSP category;
-        DataVisualization::Categories::GetCategory(ConstString("default"),
-                                                   category);
+        DataVisualization::Categories::GetCategory("default", category);
         llvm::DataExtractor::Cursor cursor(0);
         uint64_t flags = extractor.getULEB128(cursor);
 

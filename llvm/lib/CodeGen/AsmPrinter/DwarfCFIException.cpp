@@ -37,7 +37,7 @@ void DwarfCFIException::addPersonality(const GlobalValue *Personality) {
 /// content.
 void DwarfCFIException::endModule() {
   // SjLj uses this pass and it doesn't need this info.
-  if (!Asm->MAI.usesCFIForEH())
+  if (!Asm->MAI.usesCFIForEH(Asm->getModuleExceptionModel()))
     return;
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
@@ -92,9 +92,10 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
     LSDAEncoding != dwarf::DW_EH_PE_omit;
 
   const MCAsmInfo &MAI = MF->getContext().getAsmInfo();
-  if (Asm->getModuleExceptionModel() != ExceptionHandling::None)
+  ExceptionHandling EH = Asm->getModuleExceptionModel();
+  if (EH != ExceptionHandling::None)
     shouldEmitCFI =
-        MAI.usesCFIForEH() && (shouldEmitPersonality || shouldEmitMoves);
+        (shouldEmitPersonality || shouldEmitMoves) && MAI.usesCFIForEH(EH);
   else
     shouldEmitCFI = Asm->usesCFIWithoutEH() && shouldEmitMoves;
 }

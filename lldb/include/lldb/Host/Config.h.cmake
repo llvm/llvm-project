@@ -19,6 +19,8 @@
 
 #cmakedefine01 HAVE_PTSNAME_R
 
+#cmakedefine01 HAVE_GETEXECPATH
+
 #cmakedefine01 HAVE_PROCESS_VM_READV
 
 #cmakedefine01 HAVE_NR_PROCESS_VM_READV

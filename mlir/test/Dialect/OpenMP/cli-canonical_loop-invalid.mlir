@@ -48,3 +48,14 @@ func.func @omp_canonloop_no_generator() -> () {
   omp.unroll_heuristic(%cli)
   return
 }
+
+
+func.func private @sink(!omp.cli)
+
+func.func @omp_newcli_invalid_use() -> () {
+  // expected-error@below {{'omp.new_cli' op CLI must only be used by loop transformations}}
+  %cli = omp.new_cli
+  // expected-note@below {{invalid use here}}
+  func.call @sink(%cli) : (!omp.cli) -> ()
+  return
+}

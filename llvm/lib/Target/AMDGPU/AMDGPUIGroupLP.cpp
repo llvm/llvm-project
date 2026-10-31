@@ -1404,7 +1404,7 @@ private:
 
   // Whether the instruction occurs after the first TRANS instruction. This
   // implies the instruction can not be a predecessor of the first TRANS
-  // insruction
+  // instruction.
   class OccursAfterExp final : public InstructionRule {
   public:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,

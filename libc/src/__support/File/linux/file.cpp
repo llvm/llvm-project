@@ -13,6 +13,7 @@
 
 #include "file.h"
 #include "file_flags.h"
+#include "hdr/errno_macros.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/sys_stat_macros.h" // For S_IS*, S_IF*, and S_IR* flags.
 #include "hdr/types/off_t.h"
@@ -26,7 +27,6 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
-#include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

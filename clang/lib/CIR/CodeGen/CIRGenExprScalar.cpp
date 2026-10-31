@@ -634,8 +634,7 @@ public:
   mlir::Value emitFixedPointIncDec(const UnaryOperator *e, mlir::Value value,
                                    QualType type);
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv) {
-    if (cgf.getLangOpts().OpenMP)
-      cgf.cgm.errorNYI(e->getSourceRange(), "inc/dec OpenMP");
+    assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
     QualType type = e->getSubExpr()->getType();
 
@@ -1738,8 +1737,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   else
     cgf.emitStoreThroughLValue(RValue::get(result), lhsLV);
 
-  if (cgf.getLangOpts().OpenMP)
-    cgf.cgm.errorNYI(e->getSourceRange(), "openmp");
+  assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
   return lhsLV;
 }

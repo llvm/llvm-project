@@ -183,7 +183,8 @@ static FunctionType getElementalFuncTypeForOp(Operation *op) {
 ///   }
 /// }
 static func::FuncOp createElementIPowIFunc(Operation *symbolTable,
-                                           Type elementType) {
+                                           Type elementType,
+                                           bool setLLVMLinkage) {
   assert(isa<IntegerType>(elementType) &&
          "non-integer element type for IPowIOp");
 
@@ -197,10 +198,12 @@ static func::FuncOp createElementIPowIFunc(Operation *symbolTable,
   FunctionType funcType = FunctionType::get(
       builder.getContext(), {elementType, elementType}, elementType);
   auto funcOp = func::FuncOp::create(builder, funcName, funcType);
-  LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
-  Attribute linkage =
-      LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setDiscardableAttr("llvm.linkage", linkage);
+  if (setLLVMLinkage) {
+    LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
+    Attribute linkage =
+        LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
+    funcOp->setDiscardableAttr("llvm.linkage", linkage);
+  }
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -399,7 +402,8 @@ IPowIOpLowering::matchAndRewrite(math::IPowIOp op,
 ///   return result;
 /// }
 static func::FuncOp createElementFPowIFunc(Operation *symbolTable,
-                                           FunctionType funcType) {
+                                           FunctionType funcType,
+                                           bool setLLVMLinkage) {
   auto baseType = cast<FloatType>(funcType.getInput(0));
   auto powType = cast<IntegerType>(funcType.getInput(1));
   ImplicitLocOpBuilder builder = ImplicitLocOpBuilder::atBlockEnd(
@@ -410,10 +414,12 @@ static func::FuncOp createElementFPowIFunc(Operation *symbolTable,
   nameOS << '_' << baseType;
   nameOS << '_' << powType;
   auto funcOp = func::FuncOp::create(builder, funcName, funcType);
-  LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
-  Attribute linkage =
-      LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setDiscardableAttr("llvm.linkage", linkage);
+  if (setLLVMLinkage) {
+    LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
+    Attribute linkage =
+        LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
+    funcOp->setDiscardableAttr("llvm.linkage", linkage);
+  }
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -639,7 +645,8 @@ FPowIOpLowering::matchAndRewrite(math::FPowIOp op,
 ///   }
 ///   return %out: i32
 /// }
-static func::FuncOp createCtlzFunc(Operation *symbolTable, Type elementType) {
+static func::FuncOp createCtlzFunc(Operation *symbolTable, Type elementType,
+                                   bool setLLVMLinkage) {
   if (!isa<IntegerType>(elementType)) {
     LDBG() << "non-integer element type for CtlzFunc; type was: "
            << elementType;
@@ -660,10 +667,12 @@ static func::FuncOp createCtlzFunc(Operation *symbolTable, Type elementType) {
 
   // LinkonceODR ensures that there is only one implementation of this function
   // across all math.ctlz functions that are lowered in this way.
-  LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
-  Attribute linkage =
-      LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setDiscardableAttr("llvm.linkage", linkage);
+  if (setLLVMLinkage) {
+    LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
+    Attribute linkage =
+        LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
+    funcOp->setDiscardableAttr("llvm.linkage", linkage);
+  }
   funcOp.setPrivate();
 
   // set the insertion point to the start of the function
@@ -812,7 +821,8 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           auto key = std::make_tuple(op->getName(), resultType, symbolTable);
           auto entry = funcImpls.try_emplace(key, func::FuncOp{});
           if (entry.second)
-            entry.first->second = createCtlzFunc(symbolTable, resultType);
+            entry.first->second =
+                createCtlzFunc(symbolTable, resultType, setLLVMLinkage);
         })
         .Case([&](math::IPowIOp op) {
           if (!isConvertible(op))
@@ -827,7 +837,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           auto entry = funcImpls.try_emplace(key, func::FuncOp{});
           if (entry.second)
             entry.first->second =
-                createElementIPowIFunc(symbolTable, resultType);
+                createElementIPowIFunc(symbolTable, resultType, setLLVMLinkage);
         })
         .Case([&](math::FPowIOp op) {
           if (!isFPowIConvertible(op))
@@ -843,7 +853,8 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           auto key = std::make_tuple(op->getName(), funcType, symbolTable);
           auto entry = funcImpls.try_emplace(key, func::FuncOp{});
           if (entry.second)
-            entry.first->second = createElementFPowIFunc(symbolTable, funcType);
+            entry.first->second =
+                createElementFPowIFunc(symbolTable, funcType, setLLVMLinkage);
         });
   });
 }

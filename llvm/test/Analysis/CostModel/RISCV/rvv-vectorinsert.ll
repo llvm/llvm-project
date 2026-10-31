@@ -11,13 +11,13 @@ define void @vector_insert_nxv128i8_0(<vscale x 128 x i8> %v) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv16i8(<vscale x 128 x i8> %v, <vscale x 16 x i8> undef, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv32i8(<vscale x 128 x i8> %v, <vscale x 32 x i8> undef, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv64i8(<vscale x 128 x i8> %v, <vscale x 64 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v2i8(<vscale x 128 x i8> %v, <2 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v4i8(<vscale x 128 x i8> %v, <4 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v8i8(<vscale x 128 x i8> %v, <8 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m1 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v16i8(<vscale x 128 x i8> %v, <16 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v32i8(<vscale x 128 x i8> %v, <32 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v64i8(<vscale x 128 x i8> %v, <64 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v128i8(<vscale x 128 x i8> %v, <128 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v2i8(<vscale x 128 x i8> %v, <2 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v4i8(<vscale x 128 x i8> %v, <4 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v8i8(<vscale x 128 x i8> %v, <8 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m1 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v16i8(<vscale x 128 x i8> %v, <16 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v32i8(<vscale x 128 x i8> %v, <32 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v64i8(<vscale x 128 x i8> %v, <64 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v128i8(<vscale x 128 x i8> %v, <128 x i8> undef, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_insert_nxv128i8_0'
@@ -64,13 +64,13 @@ define void @vector_insert_nxv128i8_undef_0() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv16i8(<vscale x 128 x i8> undef, <vscale x 16 x i8> undef, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv32i8(<vscale x 128 x i8> undef, <vscale x 32 x i8> undef, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv64i8(<vscale x 128 x i8> undef, <vscale x 64 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v2i8(<vscale x 128 x i8> undef, <2 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v4i8(<vscale x 128 x i8> undef, <4 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v8i8(<vscale x 128 x i8> undef, <8 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m1 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v16i8(<vscale x 128 x i8> undef, <16 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v32i8(<vscale x 128 x i8> undef, <32 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v64i8(<vscale x 128 x i8> undef, <64 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v128i8(<vscale x 128 x i8> undef, <128 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v2i8(<vscale x 128 x i8> undef, <2 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v4i8(<vscale x 128 x i8> undef, <4 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v8i8(<vscale x 128 x i8> undef, <8 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m1 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v16i8(<vscale x 128 x i8> undef, <16 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v32i8(<vscale x 128 x i8> undef, <32 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v64i8(<vscale x 128 x i8> undef, <64 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v128i8(<vscale x 128 x i8> undef, <128 x i8> undef, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_insert_nxv128i8_undef_0'
@@ -117,13 +117,13 @@ define void @vector_insert_nxv128i8_1(<vscale x 128 x i8> %v) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv16i8(<vscale x 128 x i8> %v, <vscale x 16 x i8> undef, i64 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv32i8(<vscale x 128 x i8> %v, <vscale x 32 x i8> undef, i64 32)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv64i8(<vscale x 128 x i8> %v, <vscale x 64 x i8> undef, i64 64)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v2i8(<vscale x 128 x i8> %v, <2 x i8> undef, i64 2)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v4i8(<vscale x 128 x i8> %v, <4 x i8> undef, i64 4)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v8i8(<vscale x 128 x i8> %v, <8 x i8> undef, i64 8)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m1 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v16i8(<vscale x 128 x i8> %v, <16 x i8> undef, i64 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v32i8(<vscale x 128 x i8> %v, <32 x i8> undef, i64 32)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v64i8(<vscale x 128 x i8> %v, <64 x i8> undef, i64 64)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v128i8(<vscale x 128 x i8> %v, <128 x i8> undef, i64 128)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v2i8(<vscale x 128 x i8> %v, <2 x i8> undef, i64 2)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v4i8(<vscale x 128 x i8> %v, <4 x i8> undef, i64 4)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v8i8(<vscale x 128 x i8> %v, <8 x i8> undef, i64 8)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m1 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v16i8(<vscale x 128 x i8> %v, <16 x i8> undef, i64 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v32i8(<vscale x 128 x i8> %v, <32 x i8> undef, i64 32)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v64i8(<vscale x 128 x i8> %v, <64 x i8> undef, i64 64)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v128i8(<vscale x 128 x i8> %v, <128 x i8> undef, i64 128)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_insert_nxv128i8_1'
@@ -170,13 +170,13 @@ define void @vector_insert_nxv128i8_undef_1() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv16i8(<vscale x 128 x i8> undef, <vscale x 16 x i8> undef, i64 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv32i8(<vscale x 128 x i8> undef, <vscale x 32 x i8> undef, i64 32)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %scalable_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.nxv64i8(<vscale x 128 x i8> undef, <vscale x 64 x i8> undef, i64 64)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v2i8(<vscale x 128 x i8> undef, <2 x i8> undef, i64 2)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v4i8(<vscale x 128 x i8> undef, <4 x i8> undef, i64 4)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v8i8(<vscale x 128 x i8> undef, <8 x i8> undef, i64 8)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m1 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v16i8(<vscale x 128 x i8> undef, <16 x i8> undef, i64 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v32i8(<vscale x 128 x i8> undef, <32 x i8> undef, i64 32)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v64i8(<vscale x 128 x i8> undef, <64 x i8> undef, i64 64)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v128i8(<vscale x 128 x i8> undef, <128 x i8> undef, i64 128)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v2i8(<vscale x 128 x i8> undef, <2 x i8> undef, i64 2)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v4i8(<vscale x 128 x i8> undef, <4 x i8> undef, i64 4)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_mf2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v8i8(<vscale x 128 x i8> undef, <8 x i8> undef, i64 8)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m1 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v16i8(<vscale x 128 x i8> undef, <16 x i8> undef, i64 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m2 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v32i8(<vscale x 128 x i8> undef, <32 x i8> undef, i64 32)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m4 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v64i8(<vscale x 128 x i8> undef, <64 x i8> undef, i64 64)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %fixed_m8 = call <vscale x 128 x i8> @llvm.vector.insert.nxv128i8.v128i8(<vscale x 128 x i8> undef, <128 x i8> undef, i64 128)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_insert_nxv128i8_undef_1'
@@ -216,13 +216,13 @@ define void @vector_insert_nxv128i8_undef_1() {
 
 define void @vector_insert_v128i8_0(<128 x i8> %v) {
 ; CHECK-LABEL: 'vector_insert_v128i8_0'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf8 = call <128 x i8> @llvm.vector.insert.v128i8.v2i8(<128 x i8> %v, <2 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf4 = call <128 x i8> @llvm.vector.insert.v128i8.v4i8(<128 x i8> %v, <4 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf2 = call <128 x i8> @llvm.vector.insert.v128i8.v8i8(<128 x i8> %v, <8 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m1 = call <128 x i8> @llvm.vector.insert.v128i8.v16i8(<128 x i8> %v, <16 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m2 = call <128 x i8> @llvm.vector.insert.v128i8.v32i8(<128 x i8> %v, <32 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m4 = call <128 x i8> @llvm.vector.insert.v128i8.v64i8(<128 x i8> %v, <64 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m8 = call <128 x i8> @llvm.vector.insert.v128i8.v128i8(<128 x i8> %v, <128 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf8 = call <128 x i8> @llvm.vector.insert.v128i8.v2i8(<128 x i8> %v, <2 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf4 = call <128 x i8> @llvm.vector.insert.v128i8.v4i8(<128 x i8> %v, <4 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf2 = call <128 x i8> @llvm.vector.insert.v128i8.v8i8(<128 x i8> %v, <8 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m1 = call <128 x i8> @llvm.vector.insert.v128i8.v16i8(<128 x i8> %v, <16 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m2 = call <128 x i8> @llvm.vector.insert.v128i8.v32i8(<128 x i8> %v, <32 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m4 = call <128 x i8> @llvm.vector.insert.v128i8.v64i8(<128 x i8> %v, <64 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m8 = call <128 x i8> @llvm.vector.insert.v128i8.v128i8(<128 x i8> %v, <128 x i8> undef, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_insert_v128i8_0'
@@ -247,13 +247,13 @@ define void @vector_insert_v128i8_0(<128 x i8> %v) {
 
 define void @vector_insert_v128i8_undef_0() {
 ; CHECK-LABEL: 'vector_insert_v128i8_undef_0'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf8 = call <128 x i8> @llvm.vector.insert.v128i8.v2i8(<128 x i8> undef, <2 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf4 = call <128 x i8> @llvm.vector.insert.v128i8.v4i8(<128 x i8> undef, <4 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf2 = call <128 x i8> @llvm.vector.insert.v128i8.v8i8(<128 x i8> undef, <8 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m1 = call <128 x i8> @llvm.vector.insert.v128i8.v16i8(<128 x i8> undef, <16 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m2 = call <128 x i8> @llvm.vector.insert.v128i8.v32i8(<128 x i8> undef, <32 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m4 = call <128 x i8> @llvm.vector.insert.v128i8.v64i8(<128 x i8> undef, <64 x i8> undef, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m8 = call <128 x i8> @llvm.vector.insert.v128i8.v128i8(<128 x i8> undef, <128 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf8 = call <128 x i8> @llvm.vector.insert.v128i8.v2i8(<128 x i8> undef, <2 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf4 = call <128 x i8> @llvm.vector.insert.v128i8.v4i8(<128 x i8> undef, <4 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf2 = call <128 x i8> @llvm.vector.insert.v128i8.v8i8(<128 x i8> undef, <8 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m1 = call <128 x i8> @llvm.vector.insert.v128i8.v16i8(<128 x i8> undef, <16 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m2 = call <128 x i8> @llvm.vector.insert.v128i8.v32i8(<128 x i8> undef, <32 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m4 = call <128 x i8> @llvm.vector.insert.v128i8.v64i8(<128 x i8> undef, <64 x i8> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m8 = call <128 x i8> @llvm.vector.insert.v128i8.v128i8(<128 x i8> undef, <128 x i8> undef, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_insert_v128i8_undef_0'
@@ -278,12 +278,12 @@ define void @vector_insert_v128i8_undef_0() {
 
 define void @vector_insert_v128i8_1(<128 x i8> %v) {
 ; CHECK-LABEL: 'vector_insert_v128i8_1'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf8 = call <128 x i8> @llvm.vector.insert.v128i8.v2i8(<128 x i8> %v, <2 x i8> undef, i64 2)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf4 = call <128 x i8> @llvm.vector.insert.v128i8.v4i8(<128 x i8> %v, <4 x i8> undef, i64 4)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf2 = call <128 x i8> @llvm.vector.insert.v128i8.v8i8(<128 x i8> %v, <8 x i8> undef, i64 8)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m1 = call <128 x i8> @llvm.vector.insert.v128i8.v16i8(<128 x i8> %v, <16 x i8> undef, i64 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m2 = call <128 x i8> @llvm.vector.insert.v128i8.v32i8(<128 x i8> %v, <32 x i8> undef, i64 32)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m4 = call <128 x i8> @llvm.vector.insert.v128i8.v64i8(<128 x i8> %v, <64 x i8> undef, i64 64)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf8 = call <128 x i8> @llvm.vector.insert.v128i8.v2i8(<128 x i8> %v, <2 x i8> undef, i64 2)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf4 = call <128 x i8> @llvm.vector.insert.v128i8.v4i8(<128 x i8> %v, <4 x i8> undef, i64 4)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf2 = call <128 x i8> @llvm.vector.insert.v128i8.v8i8(<128 x i8> %v, <8 x i8> undef, i64 8)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m1 = call <128 x i8> @llvm.vector.insert.v128i8.v16i8(<128 x i8> %v, <16 x i8> undef, i64 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m2 = call <128 x i8> @llvm.vector.insert.v128i8.v32i8(<128 x i8> %v, <32 x i8> undef, i64 32)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m4 = call <128 x i8> @llvm.vector.insert.v128i8.v64i8(<128 x i8> %v, <64 x i8> undef, i64 64)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_insert_v128i8_1'
@@ -307,12 +307,12 @@ define void @vector_insert_v128i8_1(<128 x i8> %v) {
 
 define void @vector_insert_v128i8_undef_1() {
 ; CHECK-LABEL: 'vector_insert_v128i8_undef_1'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf8 = call <128 x i8> @llvm.vector.insert.v128i8.v2i8(<128 x i8> undef, <2 x i8> undef, i64 2)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf4 = call <128 x i8> @llvm.vector.insert.v128i8.v4i8(<128 x i8> undef, <4 x i8> undef, i64 4)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_mf2 = call <128 x i8> @llvm.vector.insert.v128i8.v8i8(<128 x i8> undef, <8 x i8> undef, i64 8)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m1 = call <128 x i8> @llvm.vector.insert.v128i8.v16i8(<128 x i8> undef, <16 x i8> undef, i64 16)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m2 = call <128 x i8> @llvm.vector.insert.v128i8.v32i8(<128 x i8> undef, <32 x i8> undef, i64 32)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fixed_m4 = call <128 x i8> @llvm.vector.insert.v128i8.v64i8(<128 x i8> undef, <64 x i8> undef, i64 64)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf8 = call <128 x i8> @llvm.vector.insert.v128i8.v2i8(<128 x i8> undef, <2 x i8> undef, i64 2)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf4 = call <128 x i8> @llvm.vector.insert.v128i8.v4i8(<128 x i8> undef, <4 x i8> undef, i64 4)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_mf2 = call <128 x i8> @llvm.vector.insert.v128i8.v8i8(<128 x i8> undef, <8 x i8> undef, i64 8)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m1 = call <128 x i8> @llvm.vector.insert.v128i8.v16i8(<128 x i8> undef, <16 x i8> undef, i64 16)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m2 = call <128 x i8> @llvm.vector.insert.v128i8.v32i8(<128 x i8> undef, <32 x i8> undef, i64 32)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %fixed_m4 = call <128 x i8> @llvm.vector.insert.v128i8.v64i8(<128 x i8> undef, <64 x i8> undef, i64 64)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'vector_insert_v128i8_undef_1'

@@ -23,6 +23,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -856,51 +857,38 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
   Indent(NLOut, InnerSpace, IsDot) << "\"";  // then begin the next message.
 
   ++Space;
-  bool HasMessage = false;
 
-  // Store the last CheckerTag.
-  const void *LastCT = nullptr;
+  std::vector<std::pair<std::string, std::string>> CheckerMsgs;
   for (const auto &CT : CheckerTags) {
-    // See whether the current checker has a message.
     CT.second->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
-
-    if (TempBuf.empty())
-      continue;
-
-    if (!HasMessage) {
-      Out << '[' << NL;
-      HasMessage = true;
-    }
-
-    LastCT = &CT;
+    const std::string Msg = TempBuf.str().trim().str();
     TempBuf.clear();
+
+    if (!Msg.empty())
+      CheckerMsgs.push_back({CT.second->getDebugTag().str(), Msg});
   }
+  llvm::sort(CheckerMsgs);
 
-  for (const auto &CT : CheckerTags) {
-    // See whether the current checker has a message.
-    CT.second->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
+  if (!CheckerMsgs.empty())
+    Out << '[' << NL;
 
-    if (TempBuf.empty())
-      continue;
-
-    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CT.second->getDebugTag()
-                              << "\", \"messages\": [" << NL;
-    Indent(Out, InnerSpace, IsDot)
-        << '\"' << TempBuf.str().trim() << '\"' << NL;
-    Indent(Out, Space, IsDot) << "]}";
-
-    if (&CT != LastCT)
-      Out << ',';
-    Out << NL;
-
-    TempBuf.clear();
-  }
+  llvm::interleave(
+      CheckerMsgs,
+      [&](const std::pair<std::string, std::string> &CM) {
+        Indent(Out, Space, IsDot)
+            << "{ \"checker\": \"" << CM.first << "\", \"messages\": [" << NL;
+        Indent(Out, InnerSpace, IsDot) << '\"' << CM.second << '\"' << NL;
+        Indent(Out, Space, IsDot) << "]}";
+      },
+      [&] { Out << ',' << NL; });
 
   // It is the last element of the 'program_state' so do not add a comma.
-  if (HasMessage)
+  if (!CheckerMsgs.empty()) {
+    Out << NL;
     Indent(Out, --Space, IsDot) << "]";
-  else
+  } else {
     Out << "null";
+  }
 
   Out << NL;
 }

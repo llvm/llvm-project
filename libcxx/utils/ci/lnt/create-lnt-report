@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+from typing import Dict, List
+import argparse
+import common
+import datetime
+import json
+import logging
+import os
+import pathlib
+import platform
+import re
+import subprocess
+import sys
+
+
+class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                    argparse.RawDescriptionHelpFormatter):
+    """Show defaults, but keep the paragraphs of the description intact."""
+
+
+def directory_path(string: str) -> pathlib.Path:
+    if not os.path.isdir(string):
+        raise argparse.ArgumentTypeError(f'{string} is not a directory')
+    return pathlib.Path(string)
+
+
+def utc_timestamp(string: str) -> datetime.datetime:
+    try:
+        return datetime.datetime.strptime(string, common.LNT_TIMESTAMP_FORMAT).replace(tzinfo=datetime.timezone.utc)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f'expected a UTC timestamp of the form YYYY-MM-DDTHH:MM:SSZ, got {string!r}')
+
+
+def git(git_repo: pathlib.Path, *args: str) -> str:
+    command = ['git', '-C', str(git_repo), *args]
+    logging.debug(f'$ {" ".join(command)}')
+    try:
+        return subprocess.run(command, check=True, text=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE).stdout.strip()
+    except subprocess.CalledProcessError as error:
+        raise ValueError(f'{" ".join(command)} failed: {error.stderr.strip()}')
+
+
+def gather_machine_information(args: argparse.Namespace) -> Dict[str, str]:
+    """
+    Gather the machine information to upload to LNT as part of the submission.
+    """
+    info = {}
+    if platform.system() == 'Darwin':
+        profiler_info = json.loads(subprocess.check_output(['system_profiler', 'SPHardwareDataType', 'SPSoftwareDataType', '-json']).decode())
+        info['hardware'] = profiler_info['SPHardwareDataType'][0]['chip_type']
+        info['os'] = profiler_info['SPSoftwareDataType'][0]['os_version']
+        info['sdk'] = subprocess.check_output(['xcrun', '--show-sdk-version']).decode().strip()
+
+    info['compiler'] = subprocess.check_output([args.compiler, '--version']).decode().strip().splitlines()[0]
+    if args.test_suite_commit is not None:
+        info['test_suite_commit'] = git(args.git_repo, 'rev-parse', '--verify', f'{args.test_suite_commit}^{{commit}}')
+
+    if args.spec_dir is not None:
+        with open(args.spec_dir / 'version.txt', 'r') as f:
+            info['spec'] = f.read().strip()
+
+    return info
+
+
+def gather_lit_features(build_dir: pathlib.Path, lit_args: List[str]) -> Dict[str, str]:
+    """
+    Gather the Lit features in effect for the configuration we benchmarked, as a dictionary of
+    feature name to feature value.
+
+    `build_dir` is the build directory of the test suite (as created by test-at-commit) and
+    `lit_args` are the arguments the benchmarks were run with, since they can change the features.
+    """
+    # Lit features that we report as part of the machine information, and the names
+    # we use in that machine information.
+    REPORTED_FEATURES = {
+        'libcpp-abi-version': 'abi_version',
+        'libcpp-hardening-mode': 'hardening_mode',
+    }
+
+    lit = build_dir / 'bin/llvm-lit'
+    if not lit.is_file():
+        logging.warning(f'{lit} does not exist: not reporting any Lit feature')
+        return {}
+
+    # Lit prints the features of the configuration it discovered and exits without running anything.
+    command = [str(c) for c in [lit, '--show-suites', *lit_args, build_dir / 'libcxx/test/benchmarks']]
+    logging.debug(f'$ {" ".join(command)}')
+    try:
+        output = subprocess.check_output(command, stderr=subprocess.PIPE).decode()
+    except subprocess.CalledProcessError as e:
+        logging.warning(f'Could not determine the Lit features in effect: {e.stderr.decode()}')
+        return {}
+
+    matches = re.findall(r'^\s*Available Features:\s*(.+)$', output, flags=re.MULTILINE)
+    if len(matches) != 1:
+        logging.warning(f'Expected exactly one list of features in the output of Lit, got {len(matches)}')
+        return {}
+    parsed = dict(f.split('=', 1) for f in matches[0].split() if '=' in f)
+
+    reported = {}
+    for (name, value) in parsed.items():
+        if name in REPORTED_FEATURES:
+            reported[REPORTED_FEATURES[name]] = value
+    return reported
+
+
+def gather_commit_information(args: argparse.Namespace) -> dict:
+    """
+    Gather the information about the benchmarked commit to upload to LNT as part of the submission.
+    """
+    sha = git(args.git_repo, 'rev-parse', '--verify', f'{args.commit}^{{commit}}')
+    (subject, author, timestamp) = git(args.git_repo, 'log', '-1', '--no-show-signature', '--format=%s%x00%an%x00%ct', sha).split('\0')
+    fields = {
+        'short_sha': sha[:12],
+        'title': subject,
+        'author': author,
+        'committed_at': datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc).strftime(common.LNT_TIMESTAMP_FORMAT),
+    }
+    commit = {'value': sha, 'fields': fields}
+    if args.no_ordinal:
+        return commit
+
+    # Only commits on the main branch get an ordinal so we can order them on time series. Other commits
+    # can exist, but they are not totally ordered with the rest.
+    ancestor = subprocess.run(['git', '-C', args.git_repo, 'merge-base', '--is-ancestor', sha, args.main_branch])
+    if ancestor.returncode == 0:
+        commit['ordinal'] = int(git(args.git_repo, 'rev-list', '--count', sha))
+    elif ancestor.returncode == 1:
+        logging.info(f'{sha} is not on {args.main_branch}: not giving it an ordinal')
+    else:
+        raise ValueError(f'could not determine whether {sha} is on {args.main_branch} (does that branch exist?)')
+    return commit
+
+
+def main(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog='create-lnt-report',
+        description='Create a LNT run submission (in the LNT v5 format) from benchmark results in the LNT text '
+                    'format, i.e. lines of the form `<test>.<metric> <value>`.\n'
+                    '\n'
+                    'Information about the machine (hardware, OS, compiler, etc.) and about the benchmarked commit '
+                    'is gathered by this tool and included in the report.\n'
+                    '\n'
+                    'A test with several values for the same metric is reported with several samples. Empty results '
+                    'are valid, and produce a report that contains no tests.',
+        formatter_class=HelpFormatter)
+    parser.add_argument('--input', type=argparse.FileType('r'), default='-', metavar='FILE',
+        help='The benchmark results in the LNT text format. By default, this is read from standard input.')
+    parser.add_argument('--output', type=pathlib.Path, required=True,
+        help='Path where the resulting LNT JSON report is written. It is an error for the file to already exist.')
+    parser.add_argument('--machine', type=str, required=True,
+        help='The name of the LNT machine to report the results as.')
+    parser.add_argument('--commit', type=str, required=True,
+        help='The commit of the library that was benchmarked.')
+    parser.add_argument('--test-suite-commit', type=str, required=False,
+        help='The commit of the test suite that was used for benchmarking, which is reported as part of the machine '
+             'information.')
+    parser.add_argument('--compiler', type=str, required=True,
+        help='The compiler used to build the benchmarks.')
+    parser.add_argument('--git-repo', type=directory_path, default=pathlib.Path(os.getcwd()),
+        help='Path to the Git repository containing the benchmarked commit and the test suite commit.')
+    ordinal = parser.add_mutually_exclusive_group()
+    ordinal.add_argument('--main-branch', type=str, default='origin/main',
+        help='The main branch of the repository. Only commits on that branch are given an ordinal, which is '
+             'computed from the history of that branch.')
+    ordinal.add_argument('--no-ordinal', action='store_true',
+        help='Never give the commit an ordinal. This is useful for results that are not meant to be part of a '
+             'time series, and required when the repository does not have the full history (e.g. a shallow clone).')
+    parser.add_argument('--untracked-machine', action='store_true',
+        help='Mark the machine as not tracked, which keeps it out of the dashboards and the automatic machine '
+             'selection of LNT. This is useful for machines holding throwaway results, like A/B comparisons.')
+    parser.add_argument('--delete-after-inactive-days', type=common.at_least(1), default=None, metavar='DAYS',
+        help='Ask LNT to delete the machine and the commit after they have been inactive for that many days.')
+    parser.add_argument('--measured-at', type=utc_timestamp, default=None, metavar='YYYY-MM-DDTHH:MM:SSZ',
+        help='The UTC time at which the benchmarks were run. Defaults to the current time.')
+    parser.add_argument('--run-parameter', type=common.key_value, action='append', default=[], metavar='KEY=VALUE',
+        help='Additional information about the run to include in the report (e.g. the URL of the CI job). '
+             'This can be passed multiple times.')
+    parser.add_argument('--spec-dir', type=pathlib.Path, required=False,
+        help='Optional path to the SPEC installation used for benchmarking, whose version is reported.')
+    parser.add_argument('--lit-build-dir', type=pathlib.Path, required=False,
+        help='Optional build directory of the test suite used to run the benchmarks. When provided, the Lit '
+             'features of that configuration (e.g. the ABI version) are reported. The Lit options used to run '
+             'the benchmarks should be provided too, since they can change these features. If the features '
+             'can\'t be determined (e.g. the test suite failed to configure), a warning is issued and they '
+             'are not reported.')
+    parser.add_argument('lit_options', nargs=argparse.REMAINDER,
+        help='Optional arguments that were passed to Lit when running the benchmarks, used with --lit-build-dir. '
+             'Should be provided last and separated from other arguments with a `--`.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+        help='Verbosity level: passing the option multiple times increases the level.')
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+                        level=logging.DEBUG if args.verbose else logging.INFO)
+
+    lit_options = []
+    if args.lit_options:
+        if args.lit_options[0] != '--':
+            raise ValueError('for clarity, Lit options must be separated from other options by --')
+        lit_options = args.lit_options[1:]
+    if lit_options and args.lit_build_dir is None:
+        raise ValueError('Lit options are only used with --lit-build-dir')
+
+    if args.output.exists():
+        raise ValueError(f'output report {args.output} already exists; not overwriting it')
+
+    if not args.no_ordinal and git(args.git_repo, 'rev-parse', '--is-shallow-repository') == 'true':
+        raise ValueError(f'{args.git_repo} is a shallow clone, so the ordinal of the commit can\'t be computed: '
+                         f'pass --no-ordinal or use a repository with the full history')
+
+    tests = common.parse_lnt_results(args.input)
+    commit = gather_commit_information(args)
+    machine_fields = gather_machine_information(args)
+    if args.lit_build_dir is not None:
+        machine_fields.update(gather_lit_features(args.lit_build_dir, lit_options))
+
+    machine_settings = {}
+    if args.untracked_machine:
+        machine_settings['tracked'] = False
+    if args.delete_after_inactive_days is not None:
+        machine_settings['delete_after_inactive_days'] = args.delete_after_inactive_days
+        commit['delete_after_inactive_days'] = args.delete_after_inactive_days
+
+    measured_at = args.measured_at or datetime.datetime.now(datetime.timezone.utc)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    common.write_lnt_report(args.output, args.machine, machine_fields, commit, tests, measured_at,
+                            run_parameters=dict(args.run_parameter), machine_settings=machine_settings)
+    logging.info(f'Report written to {args.output}')
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        sys.exit(f'error: {error}')

@@ -94,7 +94,7 @@ template <typename ConstT> struct ConstantMatch {
   ConstantMatch(ConstT &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     if (auto MaybeCst = matchConstant<ConstT>(Reg, MRI)) {
-      CR = *MaybeCst;
+      CR = std::move(*MaybeCst);
       return true;
     }
     return false;
@@ -129,12 +129,12 @@ template <typename ConstT> struct ICstOrSplatMatch {
   ICstOrSplatMatch(ConstT &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     if (auto MaybeCst = matchConstant<ConstT>(Reg, MRI)) {
-      CR = *MaybeCst;
+      CR = std::move(*MaybeCst);
       return true;
     }
 
     if (auto MaybeCstSplat = matchConstantSplat<ConstT>(Reg, MRI)) {
-      CR = *MaybeCstSplat;
+      CR = std::move(*MaybeCstSplat);
       return true;
     }
 
@@ -216,14 +216,9 @@ struct SpecificConstantMatch {
       : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
-    if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
-      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
-        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
-      else
-        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
-
-      return APInt::isSameValue(MatchedVal, RequestedVal);
-    }
+    if (mi_match(Reg, MRI, m_ICst(MatchedVal)))
+      return APInt::isSameValue(MatchedVal, RequestedVal,
+                                /*SignedCompare=*/true);
     return false;
   }
 };
@@ -300,12 +295,7 @@ struct SpecificConstantOrSplatMatch {
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
     if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
-      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
-        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
-      else
-        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
-
-      if (APInt::isSameValue(MatchedVal, RequestedVal))
+      if (APInt::isSameValue(MatchedVal, RequestedVal, /*SignedCompare=*/true))
         return true;
     }
     return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
@@ -587,8 +577,8 @@ inline GConstantBitsMatch m_GConstantOrFConstantBits(APInt &Bits) {
   return {Bits};
 }
 
-/// Match a load of type \p Class, binding its pointer operand (like IR's
-/// m_Load), and optionally the instruction and/or its MachineMemOperand.
+/// Match a load of type \p Class, matching its pointer operand and optionally
+/// binding the instruction and/or its MachineMemOperand.
 template <typename Class, typename PtrP> struct LoadOp_match {
   PtrP Ptr;
   Class **InstOut = nullptr;
@@ -600,9 +590,10 @@ template <typename Class, typename PtrP> struct LoadOp_match {
   LoadOp_match(Class *&Inst, const PtrP &Ptr, MMORef MMO)
       : Ptr(Ptr), InstOut(&Inst), MMOOut(&MMO.MMO) {}
 
-  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
     MachineInstr *TmpMI;
-    if (!mi_match(Reg, MRI, m_MInstr(TmpMI)))
+    if (!mi_match(Op, MRI, m_MInstr(TmpMI)))
       return false;
     auto *Load = dyn_cast<Class>(TmpMI);
     if (!Load || !Ptr.match(MRI, Load->getPointerReg()))
@@ -636,6 +627,24 @@ inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr) {
 template <typename PtrP>
 inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr, MMORef MMO) {
   return LoadOp_match<GLoad, PtrP>(Ptr, MMO);
+}
+
+inline LoadOp_match<GSExtLoad, operand_type_match>
+m_GSExtLoad(GSExtLoad *&Inst) {
+  return {Inst, m_Reg()};
+}
+inline LoadOp_match<GZExtLoad, operand_type_match>
+m_GZExtLoad(GZExtLoad *&Inst) {
+  return {Inst, m_Reg()};
+}
+
+inline LoadOp_match<GSExtLoad, operand_type_match> m_GSExtLoad(GSExtLoad *&Inst,
+                                                               MMORef MMO) {
+  return {Inst, m_Reg(), MMO};
+}
+inline LoadOp_match<GZExtLoad, operand_type_match> m_GZExtLoad(GZExtLoad *&Inst,
+                                                               MMORef MMO) {
+  return {Inst, m_Reg(), MMO};
 }
 
 /// Instruction binders for ops with no operand-form matcher (constant-immediate
@@ -757,6 +766,8 @@ struct BinaryOp_match {
     const MachineInstr *TmpMI;
     if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 3) {
+        if ((TmpMI->getFlags() & Flags) != Flags)
+          return false;
         if ((!L.match(MRI, TmpMI->getOperand(1).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(2).getReg())) &&
             // NOTE: When trying the alternative operand ordering
@@ -766,8 +777,6 @@ struct BinaryOp_match {
             // expected.
             (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(1).getReg())))
-          return false;
-        if ((TmpMI->getFlags() & Flags) != Flags)
           return false;
         if (FlagsOut)
           *FlagsOut = TmpMI->getFlags();

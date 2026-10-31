@@ -996,7 +996,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
     (M, K for lhs; K, N for rhs; M, N for result).
 
     In lane level code, each lane from a subgroup holds a data fragment for A, B, C and the result,
-    which are represented as 1D vectors. Please refer to [OpenCL Intel extentions]
+    which are represented as 1D vectors. Please refer to [OpenCL Intel extensions]
     (https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_matrix_multiply_accumulate.html)
     for more details about the fragment distribution.
 

@@ -120,8 +120,6 @@ public:
   void run(raw_ostream &OS);
 
 private:
-  using SearchTableEntry = std::pair<const Init *, int>;
-
   enum TypeContext {
     TypeInStaticStruct,
     TypeInTempStruct,

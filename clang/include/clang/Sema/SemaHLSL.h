@@ -342,6 +342,9 @@ private:
   void diagnoseSemanticType(const Decl *D, const HLSLAppliedSemanticAttr *A,
                             llvm::dxbc::PSV::SemanticKind SemanticKind);
 
+  void diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
+                                   llvm::dxbc::PSV::SemanticKind SemanticKind);
+
   void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 
   // Infer a common global binding info for an Expr

@@ -219,6 +219,7 @@ struct AArch64LoadStoreOptLegacy : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -1752,6 +1753,12 @@ static bool canRenameMOP(const MachineInstr &MI, const MachineOperand &MOP,
       return TRI->isSuperOrSubRegisterEq(MI.getOperand(0).getReg(),
                                          MOP.getReg());
     }
+
+    // Implicit uses of calls and instruction description are fixed and cannot
+    // be renamed.
+    if (MOP.isImplicit() &&
+        (MI.isCall() || MI.getDesc().hasImplicitUseOfPhysReg(MOP.getReg())))
+      return false;
   }
   return MOP.isImplicit() ||
          (MOP.isRenamable() && !MOP.isEarlyClobber() && !MOP.isTied());

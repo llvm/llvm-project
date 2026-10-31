@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
+#include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
@@ -43,7 +44,6 @@
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineVerifier.h"
@@ -632,6 +633,13 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
                   PMW, /*Force=*/true);
     addMachineFunctionPass(RegUsageInfoPropagationPass(), PMW);
   }
+
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      (Opt.EnableMachinePipeliner == cl::boolOrDefault::BOU_UNSET
+           ? isMachinePipelinerEnabled()
+           : Opt.EnableMachinePipeliner == cl::boolOrDefault::BOU_TRUE))
+    addMachineFunctionPass(MachinePipelinerPass(), PMW);
+
   // Run pre-ra passes.
   addPreRegAlloc(PMW);
 
@@ -728,6 +736,9 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
     addMachineFunctionPass(GCEmptyBasicBlocksPass(), PMW);
 
   addPostBBSections(PMW);
+
+  if (!Opt.DisableCFIFixup && TM.Options.EnableCFIFixup)
+    addMachineFunctionPass(CFIFixupPass(), PMW);
 
   addMachineFunctionPass(StackFrameLayoutAnalysisPass(), PMW);
 
@@ -876,9 +887,6 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(SSAMachineSchedulerPass(&TM), PMW);
   }
 
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
   addMachineFunctionPass(
       RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 

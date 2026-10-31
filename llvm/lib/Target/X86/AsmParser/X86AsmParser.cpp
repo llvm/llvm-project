@@ -3959,7 +3959,7 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     HadVerifyError = VerifyAndAdjustOperands(Operands, TmpOperands);
   }
 
-  // Check if we encountered an error for one the string insturctions
+  // Check if we encountered an error for one the string instructions.
   if (HadVerifyError) {
     return HadVerifyError;
   }

@@ -9,6 +9,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -943,6 +944,68 @@ TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
   ASSERT_TRUE(isa<ConstantVector>(CVWithPoison));
   ConstantRange CRPoison = CVWithPoison->toConstantRange();
   EXPECT_EQ(CRPoison, ConstantRange(APInt(7, 10), APInt(7, 21)));
+}
+
+TEST(ConstantsTest, ToConstantFPRangeScalar) {
+  LLVMContext Context;
+  Type *FloatTy = Type::getFloatTy(Context);
+  const fltSemantics &Sem = APFloat::IEEEsingle();
+
+  EXPECT_EQ(ConstantFP::get(FloatTy, 1.5)->toConstantFPRange(),
+            ConstantFPRange(APFloat(1.5f)));
+  EXPECT_EQ(UndefValue::get(FloatTy)->toConstantFPRange(),
+            ConstantFPRange::getFull(Sem));
+  EXPECT_EQ(PoisonValue::get(FloatTy)->toConstantFPRange(),
+            ConstantFPRange::getFull(Sem));
+}
+
+TEST(ConstantsTest, ToConstantFPRangeVector) {
+  LLVMContext Context;
+  Type *FloatTy = Type::getFloatTy(Context);
+  auto *VecTy = FixedVectorType::get(FloatTy, 3);
+  const fltSemantics &Sem = APFloat::IEEEsingle();
+  auto GetFP = [&](float V) { return ConstantFP::get(FloatTy, V); };
+
+  EXPECT_EQ(ConstantFP::get(VecTy, 2.0)->toConstantFPRange(),
+            ConstantFPRange(APFloat(2.0f)));
+  EXPECT_EQ(Constant::getNullValue(VecTy)->toConstantFPRange(),
+            ConstantFPRange(APFloat(0.0f)));
+
+  Constant *SplatWithPoison = ConstantVector::get(
+      {GetFP(2.0f), PoisonValue::get(FloatTy), GetFP(2.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(SplatWithPoison));
+  EXPECT_EQ(SplatWithPoison->toConstantFPRange(),
+            ConstantFPRange(APFloat(2.0f)));
+
+  Constant *CDV = ConstantVector::get({GetFP(1.0f), GetFP(-2.0f), GetFP(0.5f)});
+  ASSERT_TRUE(isa<ConstantDataVector>(CDV));
+  EXPECT_EQ(CDV->toConstantFPRange(),
+            ConstantFPRange::getNonNaN(APFloat(-2.0f), APFloat(1.0f)));
+
+  Constant *Zeros =
+      ConstantVector::get({GetFP(-0.0f), GetFP(0.0f), GetFP(-0.0f)});
+  ASSERT_TRUE(isa<ConstantDataVector>(Zeros));
+  EXPECT_EQ(Zeros->toConstantFPRange(),
+            ConstantFPRange::getNonNaN(APFloat(-0.0f), APFloat(0.0f)));
+
+  Constant *WithNaN = ConstantVector::get(
+      {GetFP(1.0f), ConstantFP::get(FloatTy, APFloat::getQNaN(Sem)),
+       GetFP(1.0f)});
+  ASSERT_TRUE(isa<ConstantDataVector>(WithNaN));
+  EXPECT_EQ(WithNaN->toConstantFPRange(),
+            ConstantFPRange(APFloat(1.0f))
+                .unionWith(ConstantFPRange(APFloat::getQNaN(Sem))));
+
+  Constant *WithPoison = ConstantVector::get(
+      {GetFP(1.0f), PoisonValue::get(FloatTy), GetFP(3.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(WithPoison));
+  EXPECT_EQ(WithPoison->toConstantFPRange(),
+            ConstantFPRange::getNonNaN(APFloat(1.0f), APFloat(3.0f)));
+
+  Constant *WithUndef = ConstantVector::get(
+      {GetFP(1.0f), UndefValue::get(FloatTy), GetFP(3.0f)});
+  ASSERT_TRUE(isa<ConstantVector>(WithUndef));
+  EXPECT_EQ(WithUndef->toConstantFPRange(), ConstantFPRange::getFull(Sem));
 }
 
 TEST(ConstantsTest, GetElementPtrDataLayout) {

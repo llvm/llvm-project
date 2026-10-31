@@ -38,7 +38,7 @@ define i64 @pack_bytes(ptr %p) {
 ; BE-NEXT:    [[TMP3:%.*]] = load <6 x i16>, ptr [[ARRAYIDX_2]], align 2
 ; BE-NEXT:    [[TMP4:%.*]] = lshr <6 x i16> [[TMP3]], splat (i16 4)
 ; BE-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 255)
-; BE-NEXT:    [[TMP6:%.*]] = zext <6 x i16> [[TMP5]] to <6 x i64>
+; BE-NEXT:    [[TMP6:%.*]] = zext nneg <6 x i16> [[TMP5]] to <6 x i64>
 ; BE-NEXT:    [[TMP7:%.*]] = shl nuw <6 x i64> [[TMP6]], <i64 16, i64 24, i64 32, i64 40, i64 48, i64 56>
 ; BE-NEXT:    [[TMP8:%.*]] = shl i16 [[TMP2]], 4
 ; BE-NEXT:    [[TMP9:%.*]] = and i16 [[TMP1]], 255
@@ -118,7 +118,7 @@ define i64 @nonuniform_shift(ptr %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <6 x i16>, ptr [[ARRAYIDX_2]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr <6 x i16> [[TMP3]], <i16 6, i16 4, i16 4, i16 4, i16 4, i16 4>
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 255)
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <6 x i16> [[TMP5]] to <6 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext nneg <6 x i16> [[TMP5]] to <6 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <6 x i64> [[TMP6]] to <48 x i8>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <48 x i8> [[TMP7]], <48 x i8> zeroinitializer, <8 x i32> <i32 48, i32 48, i32 0, i32 8, i32 16, i32 24, i32 32, i32 40>
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <8 x i8> [[TMP8]] to i64
@@ -142,7 +142,7 @@ define i64 @nonuniform_shift(ptr %p) {
 ; BE-NEXT:    [[TMP3:%.*]] = load <6 x i16>, ptr [[ARRAYIDX_2]], align 2
 ; BE-NEXT:    [[TMP4:%.*]] = lshr <6 x i16> [[TMP3]], <i16 6, i16 4, i16 4, i16 4, i16 4, i16 4>
 ; BE-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 255)
-; BE-NEXT:    [[TMP6:%.*]] = zext <6 x i16> [[TMP5]] to <6 x i64>
+; BE-NEXT:    [[TMP6:%.*]] = zext nneg <6 x i16> [[TMP5]] to <6 x i64>
 ; BE-NEXT:    [[TMP7:%.*]] = shl nuw <6 x i64> [[TMP6]], <i64 16, i64 24, i64 32, i64 40, i64 48, i64 56>
 ; BE-NEXT:    [[TMP8:%.*]] = shl i16 [[TMP2]], 4
 ; BE-NEXT:    [[TMP9:%.*]] = and i16 [[TMP1]], 255
@@ -222,7 +222,7 @@ define i64 @masked_field(ptr %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <6 x i16>, ptr [[ARRAYIDX_2]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr <6 x i16> [[TMP3]], splat (i16 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], <i16 254, i16 255, i16 255, i16 255, i16 255, i16 255>
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <6 x i16> [[TMP5]] to <6 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext nneg <6 x i16> [[TMP5]] to <6 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw <6 x i64> [[TMP6]], <i64 16, i64 24, i64 32, i64 40, i64 48, i64 56>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl i16 [[TMP2]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i16 [[TMP1]], 255
@@ -245,7 +245,7 @@ define i64 @masked_field(ptr %p) {
 ; BE-NEXT:    [[TMP3:%.*]] = load <6 x i16>, ptr [[ARRAYIDX_2]], align 2
 ; BE-NEXT:    [[TMP4:%.*]] = lshr <6 x i16> [[TMP3]], splat (i16 4)
 ; BE-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], <i16 254, i16 255, i16 255, i16 255, i16 255, i16 255>
-; BE-NEXT:    [[TMP6:%.*]] = zext <6 x i16> [[TMP5]] to <6 x i64>
+; BE-NEXT:    [[TMP6:%.*]] = zext nneg <6 x i16> [[TMP5]] to <6 x i64>
 ; BE-NEXT:    [[TMP7:%.*]] = shl nuw <6 x i64> [[TMP6]], <i64 16, i64 24, i64 32, i64 40, i64 48, i64 56>
 ; BE-NEXT:    [[TMP8:%.*]] = shl i16 [[TMP2]], 4
 ; BE-NEXT:    [[TMP9:%.*]] = and i16 [[TMP1]], 255
@@ -469,7 +469,7 @@ define i64 @pack_rev(ptr %p) {
 ; BE-NEXT:    [[TMP3:%.*]] = load <6 x i16>, ptr [[P]], align 2
 ; BE-NEXT:    [[TMP4:%.*]] = lshr <6 x i16> [[TMP3]], splat (i16 4)
 ; BE-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 255)
-; BE-NEXT:    [[TMP6:%.*]] = zext <6 x i16> [[TMP5]] to <6 x i64>
+; BE-NEXT:    [[TMP6:%.*]] = zext nneg <6 x i16> [[TMP5]] to <6 x i64>
 ; BE-NEXT:    [[TMP7:%.*]] = shl nuw <6 x i64> [[TMP6]], <i64 56, i64 48, i64 40, i64 32, i64 24, i64 16>
 ; BE-NEXT:    [[TMP8:%.*]] = shl i16 [[TMP2]], 4
 ; BE-NEXT:    [[TMP9:%.*]] = and i16 [[TMP1]], 255
@@ -558,7 +558,7 @@ define i64 @pack_shift3(ptr %p) {
 ; BE-NEXT:    [[TMP3:%.*]] = load <6 x i16>, ptr [[ARRAYIDX_2]], align 2
 ; BE-NEXT:    [[TMP4:%.*]] = lshr <6 x i16> [[TMP3]], splat (i16 3)
 ; BE-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 255)
-; BE-NEXT:    [[TMP6:%.*]] = zext <6 x i16> [[TMP5]] to <6 x i64>
+; BE-NEXT:    [[TMP6:%.*]] = zext nneg <6 x i16> [[TMP5]] to <6 x i64>
 ; BE-NEXT:    [[TMP7:%.*]] = shl nuw <6 x i64> [[TMP6]], <i64 16, i64 24, i64 32, i64 40, i64 48, i64 56>
 ; BE-NEXT:    [[TMP8:%.*]] = shl i16 [[TMP2]], 5
 ; BE-NEXT:    [[TMP9:%.*]] = and i16 [[TMP1]], 255
@@ -689,7 +689,7 @@ define i64 @pack_rev_i16_fields(ptr %p) {
 ; BE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P]], align 4
 ; BE-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[TMP0]], splat (i32 4)
 ; BE-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], splat (i32 65535)
-; BE-NEXT:    [[TMP3:%.*]] = zext <4 x i32> [[TMP2]] to <4 x i64>
+; BE-NEXT:    [[TMP3:%.*]] = zext nneg <4 x i32> [[TMP2]] to <4 x i64>
 ; BE-NEXT:    [[TMP4:%.*]] = shl nuw <4 x i64> [[TMP3]], <i64 48, i64 32, i64 16, i64 0>
 ; BE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP4]])
 ; BE-NEXT:    ret i64 [[TMP5]]
@@ -743,7 +743,7 @@ define i64 @pack_add(ptr %p, ptr %q) {
 ; BE-NEXT:    [[TMP2:%.*]] = add <8 x i16> [[TMP0]], [[TMP1]]
 ; BE-NEXT:    [[TMP3:%.*]] = lshr <8 x i16> [[TMP2]], splat (i16 4)
 ; BE-NEXT:    [[TMP4:%.*]] = and <8 x i16> [[TMP3]], splat (i16 255)
-; BE-NEXT:    [[TMP5:%.*]] = zext <8 x i16> [[TMP4]] to <8 x i64>
+; BE-NEXT:    [[TMP5:%.*]] = zext nneg <8 x i16> [[TMP4]] to <8 x i64>
 ; BE-NEXT:    [[TMP6:%.*]] = shl nuw <8 x i64> [[TMP5]], <i64 0, i64 8, i64 16, i64 24, i64 32, i64 40, i64 48, i64 56>
 ; BE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP6]])
 ; BE-NEXT:    ret i64 [[TMP7]]
@@ -852,7 +852,7 @@ define i64 @pack_alt_src(ptr %p, ptr %q) {
 ; BE-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; BE-NEXT:    [[TMP5:%.*]] = lshr <4 x i16> [[TMP4]], splat (i16 4)
 ; BE-NEXT:    [[TMP6:%.*]] = and <4 x i16> [[TMP5]], splat (i16 255)
-; BE-NEXT:    [[TMP7:%.*]] = zext <4 x i16> [[TMP6]] to <4 x i64>
+; BE-NEXT:    [[TMP7:%.*]] = zext nneg <4 x i16> [[TMP6]] to <4 x i64>
 ; BE-NEXT:    [[TMP8:%.*]] = shl nuw <4 x i64> [[TMP7]], <i64 0, i64 8, i64 16, i64 24>
 ; BE-NEXT:    [[PA4:%.*]] = getelementptr inbounds nuw i16, ptr [[P]], i64 4
 ; BE-NEXT:    [[PB4:%.*]] = getelementptr inbounds nuw i16, ptr [[Q]], i64 4
@@ -863,7 +863,7 @@ define i64 @pack_alt_src(ptr %p, ptr %q) {
 ; BE-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i16> [[TMP11]], <4 x i16> [[TMP12]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; BE-NEXT:    [[TMP14:%.*]] = lshr <4 x i16> [[TMP13]], splat (i16 4)
 ; BE-NEXT:    [[TMP15:%.*]] = and <4 x i16> [[TMP14]], splat (i16 255)
-; BE-NEXT:    [[TMP16:%.*]] = zext <4 x i16> [[TMP15]] to <4 x i64>
+; BE-NEXT:    [[TMP16:%.*]] = zext nneg <4 x i16> [[TMP15]] to <4 x i64>
 ; BE-NEXT:    [[TMP17:%.*]] = shl nuw <4 x i64> [[TMP16]], <i64 32, i64 40, i64 48, i64 56>
 ; BE-NEXT:    [[RDX_OP:%.*]] = or disjoint <4 x i64> [[TMP8]], [[TMP17]]
 ; BE-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[RDX_OP]])

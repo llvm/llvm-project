@@ -92,7 +92,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; CONSTRUCT-NEXT:    Successor(s): latch
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    latch:
-; CONSTRUCT-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CONSTRUCT-NEXT:      CLONE ir<%iv.next> = add ir<%iv>, ir<1>
 ; CONSTRUCT-NEXT:      CLONE ir<%ec> = icmp eq ir<%iv.next>, ir<1024>
 ; CONSTRUCT-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CONSTRUCT-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -296,7 +296,7 @@ define void @selects(ptr noalias %a, ptr noalias %b, i1 %c, i64 %n) {
 ; CONSTRUCT-NEXT:      CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
 ; CONSTRUCT-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CONSTRUCT-NEXT:      WIDEN store vp<[[VP6]]>, ir<%sel.uniform>
-; CONSTRUCT-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CONSTRUCT-NEXT:      CLONE ir<%iv.next> = add ir<%iv>, ir<1>
 ; CONSTRUCT-NEXT:      CLONE ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CONSTRUCT-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CONSTRUCT-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>

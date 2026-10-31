@@ -1,12 +1,13 @@
 // Test optimization pipelines do not interfere with AllocToken lowering, and we
 // pass on function attributes correctly.
 //
-// RUN: %clang_cc1     -fsanitize=alloc-token -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
-// RUN: %clang_cc1 -O1 -fsanitize=alloc-token -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
-// RUN: %clang_cc1 -O2 -fsanitize=alloc-token -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
+// RUN: %clang_cc1     -fsanitize=alloc-token -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT,X86
+// RUN: %clang_cc1 -O1 -fsanitize=alloc-token -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT,X86
+// RUN: %clang_cc1 -O2 -fsanitize=alloc-token -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT,X86
 // RUN: %clang_cc1     -fsanitize=alloc-token -fsanitize-alloc-token-fast-abi -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,FASTABI
 // RUN: %clang_cc1 -O1 -fsanitize=alloc-token -fsanitize-alloc-token-fast-abi -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,FASTABI
 // RUN: %clang_cc1 -O2 -fsanitize=alloc-token -fsanitize-alloc-token-fast-abi -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,FASTABI
+// RUN: %clang_cc1 -O1 -fsanitize=alloc-token -triple aarch64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT,ARM
 
 typedef __typeof(sizeof(int)) size_t;
 
@@ -45,7 +46,8 @@ typedef struct {
 __sized_ptr_t __size_returning_new(size_t size) __attribute__((malloc_span));
 
 // CHECK-LABEL: @test_size_returning_new
-// DEFAULT: call{{.*}} { ptr, i64 } @__alloc_token___size_returning_new(i64 noundef 4, i64 2689373973731826898){{.*}} !alloc_token [[META_INT]]
+// X86: call{{.*}} { ptr, i64 } @__alloc_token___size_returning_new(i64 noundef 4, i64 2689373973731826898){{.*}} !alloc_token [[META_INT]]
+// ARM: call{{.*}} [2 x i64] @__alloc_token___size_returning_new(i64 noundef 4, i64 2689373973731826898){{.*}} !alloc_token [[META_INT]]
 // FASTABI: call{{.*}} { ptr, i64 } @__alloc_token_2689373973731826898___size_returning_new(i64 noundef 4){{.*}} !alloc_token [[META_INT]]
 void *test_size_returning_new() {
   __sized_ptr_t ret = __size_returning_new(sizeof(int));

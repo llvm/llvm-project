@@ -70,11 +70,11 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.ph:
-; FINAL-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = sub vp<%num.active.lanes>, ir<1>
 ; FINAL-NEXT:    EMIT vp<%n.rnd.up> = add ir<%n>, vp<[[VP8]]>
 ; FINAL-NEXT:    EMIT vp<%n.mod.vf> = urem vp<%n.rnd.up>, vp<%num.active.lanes>
 ; FINAL-NEXT:    EMIT vp<%n.vec> = sub vp<%n.rnd.up>, vp<%n.mod.vf>
+; FINAL-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; FINAL-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = step-vector i64
 ; FINAL-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = broadcast vp<%num.active.lanes>

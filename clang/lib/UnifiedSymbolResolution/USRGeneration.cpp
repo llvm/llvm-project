@@ -228,7 +228,7 @@ bool USRGenerator::ShouldGenerateLocation(const NamedDecl *D) {
 void USRGenerator::VisitDeclContext(const DeclContext *DC) {
   if (const NamedDecl *D = dyn_cast<NamedDecl>(DC))
     Visit(D);
-  else if (isa<LinkageSpecDecl>(DC)) // Linkage specs are transparent in USRs.
+  else if (DC->isTransparentContext()) // e.g. linkage specs and exports.
     VisitDeclContext(DC->getParent());
 }
 

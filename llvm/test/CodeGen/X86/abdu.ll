@@ -979,6 +979,39 @@ entry:
   ret i32 %a
 }
 
+; l < 2^63 <= r, so abdu(l, r) == r - l: should not become abs(sub).
+define i64 @abd_select_known_order_i64(i64 %a, i64 %b) nounwind {
+; X86-LABEL: abd_select_known_order_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    shrdl $1, %esi, %ecx
+; X86-NEXT:    shrl %esi
+; X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: abd_select_known_order_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    shrq %rdi
+; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-NEXT:    orq %rsi, %rax
+; X64-NEXT:    subq %rdi, %rax
+; X64-NEXT:    retq
+  %l = lshr i64 %a, 1
+  %r = or i64 %b, -9223372036854775808
+  %c = icmp ugt i64 %l, %r
+  %s1 = sub i64 %l, %r
+  %s2 = sub i64 %r, %l
+  %res = select i1 %c, i64 %s1, i64 %s2
+  ret i64 %res
+}
+
 declare i8 @llvm.abs.i8(i8, i1)
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)

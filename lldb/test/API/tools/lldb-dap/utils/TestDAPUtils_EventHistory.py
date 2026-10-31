@@ -167,6 +167,15 @@ class TestDAPUtils_EventHistory(DAPTestCaseBase):
         self.assertIsInstance(seen_event, ExitedEvent)
         self.assertEqual(seen_event.body.exitCode, 0)  # type: ignore
 
+        # Waiting on an event with zero timeout checks the history at least once.
+        seen_event2 = history.wait_for_any_event(
+            (ModuleEvent, ExitedEvent),
+            after=start_event,
+            until=sdl3_module_loaded_or_process_exited,
+            timeout=0,
+        )
+        self.assertEqual(seen_event2.seq, seen_event.seq)
+
     def test_wait_for_X_event_with_timeout(self):
         """Tests the timeout functionality when waiting for events.
 

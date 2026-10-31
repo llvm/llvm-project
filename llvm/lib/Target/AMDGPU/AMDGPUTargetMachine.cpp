@@ -636,8 +636,9 @@ diagnoseUnsupportedCoExecSchedulerSelection(const Function &F,
 static bool useNoopPostScheduler(const Function &F) {
   Attribute PostSchedStrategyAttr =
       F.getFnAttribute("amdgpu-post-sched-strategy");
-  return PostSchedStrategyAttr.isValid() &&
-         PostSchedStrategyAttr.getValueAsString() == "nop";
+  if (PostSchedStrategyAttr.isValid())
+    return PostSchedStrategyAttr.getValueAsString() == "nop";
+  return AMDGPU::getSchedStrategy(F) == "coexec";
 }
 
 static cl::opt<bool> EnableRewritePartialRegUses(
@@ -664,11 +665,6 @@ static cl::opt<bool> EnableUniformIntrinsicCombine(
     "amdgpu-enable-uniform-intrinsic-combine",
     cl::desc("Enable/Disable the Uniform Intrinsic Combine Pass"),
     cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    EnableMachinePipeliner("amdgpu-enable-pipeliner",
-                           cl::desc("Enable Machine Pipeliner for AMDGCN"),
-                           cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
     UseSSAMachineScheduler("amdgpu-use-ssa-machine-scheduler",
@@ -1848,8 +1844,6 @@ void GCNPassConfig::addFastRegAlloc() {
 void GCNPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
-  if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
-    addPass(&MachinePipelinerID);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
@@ -2710,8 +2704,6 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
-  if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
-    addMachineFunctionPass(MachinePipelinerPass(), PMW);
 }
 
 Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
