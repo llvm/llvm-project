@@ -394,6 +394,58 @@ void nb21() [[clang::nonblocking]] {
 void nb22(int param = badForDefaultArg()) [[clang::nonblocking]] { // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'badForDefaultArg'}}
 }
 
+ // Template default arguments
+ template <typename T>
+ int tmplDefaultSafe() noexcept [[clang::nonblocking]] {
+   return 0;
+ }
+
+ template <typename T>
+ auto tmplDefault(T a = tmplDefaultSafe<T>()) noexcept [[clang::nonblocking]] {
+   return a;
+ }
+
+ void testTmplDefaultExplicit(int x) [[clang::nonblocking]] {
+   tmplDefault(x);
+ }
+
+ void testTmplDefaultImplicit() [[clang::nonblocking]] {
+   tmplDefault<int>();
+ }
+
+ int badForTmplDefaultArg(); // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}} \
+                             // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+
+ template <typename T>
+ auto tmplDefaultBad(T a = badForTmplDefaultArg()) noexcept [[clang::nonblocking]] { // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'badForTmplDefaultArg'}} \
+                                                                                     // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'badForTmplDefaultArg'}}
+   return a;
+ }
+
+ void testTmplDefaultBadExplicit(int x) [[clang::nonblocking]] {
+   tmplDefaultBad(x);
+ }
+
+ void testTmplDefaultBadImplicit() [[clang::nonblocking]] {
+   tmplDefaultBad<int>(); // expected-note {{in evaluating default argument here}}
+ }
+
+ // An explicit argument must not trigger analysis of an unused dependent
+ // default argument.
+ template <typename T>
+ int f1() noexcept [[clang::nonblocking]] {
+   return 0;
+ }
+
+ template <typename T>
+ auto f2(T a = f1<T>()) noexcept [[clang::nonblocking]] {
+   return a;
+ }
+
+ void testDependentDefaultExplicit(int argc) [[clang::nonblocking]] {
+   f2(argc);
+ }
+
 // Verify traversal of implicit code paths - constructors and destructors.
 struct Unsafe {
   static void problem1();   // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}

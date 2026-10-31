@@ -1352,6 +1352,14 @@ private:
       return Result;
     }
 
+    bool TraverseParmVarDecl(ParmVarDecl *D) override {
+      // Uninstantiated default arguments are dependent expressions that cannot
+      // be analyzed for function effects without producing incorrect warnings.
+      if (D->hasUninstantiatedDefaultArg())
+        return true;
+      return DynamicRecursiveASTVisitor::TraverseParmVarDecl(D);
+    }
+
     bool TraverseLambdaExpr(LambdaExpr *Lambda) override {
       // We override this so as to be able to skip traversal of the lambda's
       // body. We have to explicitly traverse the captures. Why not return
