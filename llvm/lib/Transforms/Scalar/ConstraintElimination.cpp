@@ -1285,15 +1285,17 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (Header != &BB && Latch != &BB)
     return;
 
-  // A is either a phi or a post-increment PN + C with constant step. For the
-  // latter, extract the constant IncStep.
+  // A is either a phi, a zext/sext of a phi, or a post-increment PN + C with
+  // constant step. For the latter, extract the constant IncStep.
   Value *A;
   Value *B;
   PHINode *PN = nullptr;
   const APInt *IncStep = nullptr;
   CmpPredicate Pred;
-  auto IndValue =
-      m_Value(A, m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep)));
+  auto BaseInd = m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep));
+  auto IndValue = m_Value(
+      A,
+      m_CombineOr(BaseInd, m_CombineOr(m_ZExt(m_Phi(PN)), m_SExt(m_Phi(PN)))));
 
   auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
   if (!Br)
@@ -1314,6 +1316,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
   if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
       !SE->isSCEVable(PN->getType()))
+    return;
+
+  bool IsZExt = match(A, m_ZExt(m_Specific(PN)));
+  bool IsSExt = match(A, m_SExt(m_Specific(PN)));
+  bool IsWidened = IsZExt || IsSExt;
+  if (IsWidened && (&BB != Header || IncStep))
     return;
 
   bool ContinueOnTrue =
@@ -1338,10 +1346,32 @@ void State::addInfoForInductions(BasicBlock &BB) {
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
   DomTreeNode *HeaderDTN = DT.getNode(Header);
 
+  MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
+  // For widened inductions, the narrow phi can wrap before reaching B if B
+  // exceeds the narrow type's range, unless the narrow induction itself is
+  // guaranteed not to wrap. Also bail out on decreasing steps (including i1
+  // true, which is -1 when sign-extended).
+  if ((IsZExt && !Info.Unsigned) ||
+      (IsSExt && (!Info.Signed || Info.Decreasing)))
+    return;
+
+  Value *IndTarget = PN;
+  Value *ExtStartValue = StartValue;
+  if (IsWidened) {
+    auto *StartC = dyn_cast<ConstantInt>(StartValue);
+    if (!StartC)
+      return;
+    IndTarget = A;
+    unsigned BitWidth = A->getType()->getScalarSizeInBits();
+    ExtStartValue = ConstantInt::get(
+        A->getType(), IsZExt ? StartC->getValue().zext(BitWidth)
+                             : StartC->getValue().sext(BitWidth));
+  }
+
   // BB is the header or the latch, so every iteration taking the backedge
-  // checked PN ContinuePred B, which guarantees PN != B for NE and LT
-  // predicates. For an increment by one, PN != B together with StartValue <= B
-  // (added precondition) imply PN <= B.
+  // checked IndTarget ContinuePred B, which guarantees IndTarget != B for NE
+  // and LT predicates. For an increment by one, IndTarget != B together with
+  // ExtStartValue <= B (added precondition) imply IndTarget <= B.
   const APInt *Step;
   bool HasHeaderBound =
       !IncStep && match(Backedge, m_IncrementOf(m_Specific(PN), Step)) &&
@@ -1350,7 +1380,8 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (HasHeaderBound) {
     for (CmpInst::Predicate BoundPred : {CmpInst::ICMP_ULE, CmpInst::ICMP_SLE})
       WorkList.push_back(FactOrCheck::getConditionFact(
-          HeaderDTN, BoundPred, PN, B, ConditionTy(BoundPred, StartValue, B)));
+          HeaderDTN, BoundPred, IndTarget, B,
+          ConditionTy(BoundPred, ExtStartValue, B)));
   }
 
   // For latch conditions, we need to inject the condition that holds for the
@@ -1380,7 +1411,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
       assert((ContinuePred == CmpInst::ICMP_SLT ||
               ContinuePred == CmpInst::ICMP_SLE) &&
              "Expected a signed less-than continuation predicate");
-      MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
       if (Info.Signed && !Info.Decreasing) {
         CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
         WorkList.push_back(FactOrCheck::getConditionFact(
@@ -1410,8 +1440,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // really the induction's post-increment or post-decrement.
   if (IncStep && *IncStep != *StepOffset)
     return;
-
-  MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
 
   // Handle negative steps.
   if (StepOffset->isNegative()) {
@@ -1453,40 +1481,49 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
   if (!StepOffset->isOne()) {
     // Check whether B-Start is known to be a multiple of StepOffset.
-    if (!StartSCEV)
+    if (IsWidened)
+      StartSCEV = SE->getSCEV(ExtStartValue);
+    else if (!StartSCEV)
       StartSCEV = SE->getSCEV(StartValue);
     const SCEV *BMinusStart = SE->getMinusSCEV(SE->getSCEV(B), StartSCEV);
-    if (isa<SCEVCouldNotCompute>(BMinusStart) ||
-        !SE->getConstantMultiple(BMinusStart).urem(*StepOffset).isZero())
+    if (isa<SCEVCouldNotCompute>(BMinusStart))
+      return;
+    unsigned BitWidth = SE->getTypeSizeInBits(BMinusStart->getType());
+    if (!SE->getConstantMultiple(BMinusStart)
+             .urem(StepOffset->zext(BitWidth))
+             .isZero())
       return;
   }
 
   // We already established that B - Start is a multiple of Step above. The loop
-  // exits once the compared value reaches B, that is at PN == B when comparing
-  // the phi, and at PN + Step == B for a post-increment. Together with the
-  // added precondition StartValue <= B for the former and the strict
-  // StartValue < B for the latter (which implies StartValue + Step <= B),
-  // neither PN nor the increment can wrap.
+  // exits once the compared value reaches B, that is at IndTarget == B when
+  // comparing the phi (or its extension), and at PN + Step == B for a
+  // post-increment. Together with the added precondition ExtStartValue <= B
+  // for the former and the strict ExtStartValue < B for the latter (which
+  // implies ExtStartValue + Step <= B), neither IndTarget nor the increment can
+  // wrap.
   CmpInst::Predicate UPrecond = IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
-  ConditionTy StartBeforeBoundUnsigned = {UPrecond, StartValue, B};
+  ConditionTy StartBeforeBoundUnsigned = {UPrecond, ExtStartValue, B};
   ConditionTy StartBeforeBoundSigned = {ICmpInst::getSignedPredicate(UPrecond),
-                                        StartValue, B};
+                                        ExtStartValue, B};
 
-  // Add PN >= StartValue, as the loop exits before wrapping.
-  if (!Info.Unsigned)
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundUnsigned));
-  if (!Info.Signed)
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
-  // Add PN < B, as the loop exits once the compared value reaches B. With a
-  // header bound, the PN != B condition fact in InLoopSucc already tightens it
-  // to PN < B.
+  // Add IndTarget >= ExtStartValue, as the loop exits before wrapping.
+  if (IsWidened || !Info.Unsigned)
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE,
+                                                     IndTarget, ExtStartValue,
+                                                     StartBeforeBoundUnsigned));
+  if (IsWidened || !Info.Signed)
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGE,
+                                                     IndTarget, ExtStartValue,
+                                                     StartBeforeBoundSigned));
+  // Add IndTarget < B, as the loop exits once the compared value reaches B.
+  // With a header bound, the IndTarget != B condition fact in InLoopSucc
+  // already tightens it to IndTarget < B.
   if (!HasHeaderBound || !canAddSuccessor(BB, InLoopSucc)) {
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SLT, PN, B, StartBeforeBoundSigned));
+        DTN, CmpInst::ICMP_SLT, IndTarget, B, StartBeforeBoundSigned));
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+        DTN, CmpInst::ICMP_ULT, IndTarget, B, StartBeforeBoundUnsigned));
   }
 
   // Try to add condition from the header or latch to the dedicated exit
@@ -1494,7 +1531,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // must be u<= B, as other exits may only exit earlier.
   assert(!StepOffset->isNegative() && "induction must be increasing");
   assert(ContinuePred == CmpInst::ICMP_NE && "unsupported predicate");
-  // The header bound already implies PN u<= B in the exits.
+  // The header bound already implies IndTarget u<= B in the exits.
   if (HasHeaderBound)
     return;
   SmallVector<BasicBlock *> ExitBBs;
