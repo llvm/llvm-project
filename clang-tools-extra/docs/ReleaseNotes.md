@@ -231,6 +231,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
 
+- Improved {doc}`bugprone-suspicious-stringview-data-usage
+  <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` by allowing
+  unqualified patterns in the {option}`AllowedCallees` to match constructor names.
+
 - Improved {doc}`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false
   positives on `bsl::optional` and `bdlb::NullableValue` constructed from a
