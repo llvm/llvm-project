@@ -9,13 +9,16 @@
 #ifndef LLVM_LIB_ANALYSIS_ANALYSISOPTIONS_H
 #define LLVM_LIB_ANALYSIS_ANALYSISOPTIONS_H
 
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/IR2VecKind.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include <optional>
 
 namespace llvm {
+
+// Forward-declared so that Analysis headers can include this one. Fields of
+// these types default to the zero enumerator.
+enum class IR2VecKind;
+enum class PGOViewCountsType;
 
 enum class OutputCostKind {
   RecipThroughput,

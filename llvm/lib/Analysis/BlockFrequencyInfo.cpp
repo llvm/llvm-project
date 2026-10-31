@@ -63,7 +63,7 @@ StringRef llvm::getPrintBFIFuncName(const LLVMContext &C) {
 namespace llvm {
 
 static GVDAGType getGVDT(const LLVMContext &C) {
-  if (getPGOViewCounts(C) == PGOVCT_Graph)
+  if (getPGOViewCounts(C) == PGOViewCountsType::Graph)
     return GVDT_Count;
   return ViewBlockFreqPropagationDAG;
 }

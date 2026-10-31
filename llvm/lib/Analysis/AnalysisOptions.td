@@ -48,9 +48,9 @@ defm : ValueField<"view-bfi-func-name", "StringRef", "",
   "The option to specify the name of the function whose CFG will be displayed">;
 defm : ValueField<"view-hot-freq-percent", "unsigned", "10",
   "An integer in percent used to specify the hot blocks/edges to be displayed in red: a block or edge whose frequency is no less than the max frequency of the function multiplied by this percent">;
-defm : EnumField<"pgo-view-counts", "PGOViewCountsType", "PGOVCT_None",
+defm : EnumField<"pgo-view-counts", "PGOViewCountsType", "",
   "none,graph,text",
-  ["PGOVCT_None", "PGOVCT_Graph", "PGOVCT_Text"],
+  ["PGOViewCountsType::None", "PGOViewCountsType::Graph", "PGOViewCountsType::Text"],
   "A boolean option to show CFG dag or text with block profile counts and branch probabilities right after PGO profile annotation step. The profile counts are computed using branch probabilities from the runtime profile data and block frequency propagation algorithm. To view the raw counts from the profile, use option -pgo-view-raw-counts instead. To limit graph display to only one function, use filtering option -view-bfi-func-name">;
 defm : ValueField<"print-bfi-func-name", "StringRef", "",
   "The option to specify the name of the function whose block frequency info is printed">;
@@ -171,7 +171,7 @@ defm : ValueField<"ir2vec-type-weight", "float", "0.5",
   "Weight for type embeddings">;
 defm : ValueField<"ir2vec-arg-weight", "float", "0.2",
   "Weight for argument embeddings">;
-defm : EnumField<"ir2vec-kind", "IR2VecKind", "IR2VecKind::Symbolic", "symbolic,flow-aware", ["IR2VecKind::Symbolic", "IR2VecKind::FlowAware"],
+defm : EnumField<"ir2vec-kind", "IR2VecKind", "", "symbolic,flow-aware", ["IR2VecKind::Symbolic", "IR2VecKind::FlowAware"],
   "IR2Vec embedding kind">;
 
 // IndirectCallPromotionAnalysis.cpp

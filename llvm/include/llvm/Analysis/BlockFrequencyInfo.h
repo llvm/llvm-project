@@ -32,7 +32,7 @@ class Module;
 class raw_ostream;
 template <class BlockT> class BlockFrequencyInfoImpl;
 
-enum PGOViewCountsType { PGOVCT_None, PGOVCT_Graph, PGOVCT_Text };
+enum class PGOViewCountsType { None, Graph, Text };
 
 /// Return -view-bfi-func-name.
 LLVM_ABI StringRef getViewBlockFreqFuncName(const LLVMContext &C);
