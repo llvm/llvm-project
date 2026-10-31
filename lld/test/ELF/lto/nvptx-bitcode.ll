@@ -1,23 +1,52 @@
 ; REQUIRES: nvptx
+;; NVPTX bitcode can be compiled with --lto-emit-asm or --lto-emit-llvm.
+;; Kernels must be exported to survive internalization.
 
-; RUN: llvm-as %s -o %t.bc
-; RUN: ld.lld --lto-emit-asm --plugin-opt=-mcpu=sm_70 --plugin-opt=-mattr=+ptx70 %t.bc -o %t
-;
-; lld writes assembly output produced by LTO to a .lto.s side file.
-; RUN: FileCheck %s --check-prefix=PTX < %t.lto.s
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: llvm-as a.ll -o a.bc
+; RUN: llvm-as b.ll -o b.bc
 
-; RUN: ld.lld --lto-emit-llvm %t.bc -o %t.lto.bc
-; RUN: llvm-dis %t.lto.bc -o - | FileCheck %s --check-prefix=LLVM
+; RUN: ld.lld --export-dynamic-symbol=kern --lto-emit-asm --plugin-opt=mcpu=sm_70 --plugin-opt=-mattr=+ptx70 a.bc b.bc -o out
+; RUN: FileCheck %s --check-prefix=PTX < out.lto.s
 
-; RUN: not ld.lld %t.bc -o %t.out 2>&1 | FileCheck %s --check-prefix=ERR
+; PTX:      .version 7.0
+; PTX-NEXT: .target sm_70
+; PTX-NEXT: .address_size 64
+; PTX-NOT:  .func
+; PTX:      .visible .entry kern(
+; PTX-NOT:  .func
 
-target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
+; RUN: ld.lld --export-dynamic-symbol=kern --lto-emit-llvm a.bc b.bc -o out.bc
+; RUN: llvm-dis out.bc -o - | FileCheck %s --check-prefix=LLVM
+
+; LLVM:     target triple = "nvptx64-nvidia-cuda"
+; LLVM:     define dso_local ptx_kernel void @kern(
+; LLVM-NOT: @unused
+
+; RUN: not ld.lld a.bc b.bc 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+
+; ERR: error: CUDA input is only supported with --lto-emit-asm or --lto-emit-llvm
+
+;--- a.ll
+target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
-; PTX: .version 7.0
-; PTX: .target sm_70
-; PTX: .address_size 64
+declare void @helper(ptr)
 
-; LLVM: target triple = "nvptx64-nvidia-cuda"
+define ptx_kernel void @kern(ptr %p) {
+  call void @helper(ptr %p)
+  ret void
+}
 
-; ERR: error: CUDA bitcode inputs are only supported with --lto-emit-asm or --lto-emit-llvm
+;--- b.ll
+target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64"
+target triple = "nvptx64-nvidia-cuda"
+
+define void @helper(ptr %p) {
+  store i32 1, ptr %p
+  ret void
+}
+
+define void @unused() {
+  ret void
+}
