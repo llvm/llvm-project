@@ -12,26 +12,26 @@
 // Overview:
 // ---------
 // The tile clause specifies that the iterations of the associated loops should
-// be divided into tiles (rectangular blocks). This pass transforms a single
-// or nested acc.loop with tile clauses into a structure of "tile loops"
-// (iterating over tiles) containing "element loops" (iterating within tiles).
+// be divided into tiles (rectangular blocks). This pass transforms an acc.loop
+// with a tile clause into a "tile group" loop (iterating over tiles) containing
+// an "element group" loop (iterating within a tile). Each of them carries all
+// the induction variables of the original loop.
 //
-// For example, tiling a 2-level nested loop with tile(T1, T2) produces:
+// The tile clause lists its sizes innermost loop first, so the first size
+// applies to the last induction variable. For example, tiling a 2-level loop
+// nest with tile(T1, T2) produces:
 //
 //   // Before tiling:
-//   acc.loop tile(T1, T2) control(%i, %j) = (lb1, lb2) to (ub1, ub2) step (s1,
-//   s2)
+//   acc.loop tile(T1, T2) control(%i, %j) = (lb1, lb2) to (ub1, ub2)
+//       step (s1, s2)
 //
 //   // After tiling:
-//   acc.loop control(%i) = (lb1) to (ub1) step (s1*T1) {      // tile loop 1
-//     acc.loop control(%j) = (lb2) to (ub2) step (s2*T2) {    // tile loop 2
-//       acc.loop control(%ii) = (%i) to (min(ub1, %i+s1*T1)) step (s1) { //
-//       element 1
-//         acc.loop control(%jj) = (%j) to (min(ub2, %j+s2*T2)) step (s2) { //
-//         element 2
-//           // loop body using %ii, %jj
-//         }
-//       }
+//   acc.loop control(%i, %j) = (lb1, lb2) to (ub1, ub2)
+//       step (s1*T2, s2*T1) {                               // tile group
+//     acc.loop control(%ii, %jj) = (%i, %j)
+//         to (min(ub1, %i+s1*T2), min(ub2, %j+s2*T1))
+//         step (s1, s2) {                                   // element group
+//       // loop body using %ii, %jj
 //     }
 //   }
 //
@@ -92,15 +92,17 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
   // Check that tile size types are not narrower than IV types.
   // We only check when both types are IntegerType. For IndexType, the width
   // is target-dependent and the casting utility will handle it correctly.
+  // The tile sizes are in clause order, so the last one belongs to the
+  // outermost IV.
   LogicalResult checkTileSizeTypes(acc::LoopOp loop,
                                    ArrayRef<Value> tileSizes) const {
     auto ivTypes = loop.getBody().getArgumentTypes();
-    for (size_t i = 0; i < tileSizes.size() && i < ivTypes.size(); ++i) {
-      Type tileType = tileSizes[i].getType();
-      Type ivType = ivTypes[i];
+    for (auto [tileSize, ivType] :
+         llvm::zip(llvm::reverse(tileSizes), ivTypes)) {
+      Type tileType = tileSize.getType();
 
       // Skip unknown tile sizes (will be created with correct type)
-      auto constVal = getConstantIntValue(tileSizes[i]);
+      auto constVal = getConstantIntValue(tileSize);
       if (constVal && *constVal < 0)
         continue;
 
