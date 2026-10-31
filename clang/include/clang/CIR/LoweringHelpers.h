@@ -36,11 +36,11 @@ convertToDenseElementsAttr(cir::ConstArrayAttr attr,
 
 std::optional<mlir::Attribute> lowerConstArrayAttr(
     cir::ConstArrayAttr constArr, mlir::SymbolTableCollection &symbolTables,
-    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp = {});
+    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp);
 
 std::optional<mlir::Attribute> lowerConstRecordAttr(
     cir::ConstRecordAttr constRecord, mlir::SymbolTableCollection &symbolTables,
-    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp = {});
+    const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp);
 
 /// Return \p attr with the trailing zeros of any array that
 /// adjustGlobalTypeForInit would split off written out as explicit zero

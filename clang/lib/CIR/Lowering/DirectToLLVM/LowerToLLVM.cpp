@@ -2894,8 +2894,9 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
       return op.emitError() << "array does not have a constant initializer";
 
     std::optional<mlir::Attribute> denseAttr;
-    if (constArr && (denseAttr = lowerConstArrayAttr(constArr, symbolTables,
-                                                     typeConverter))) {
+    mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
+    if (constArr && (denseAttr = lowerConstArrayAttr(
+                         constArr, symbolTables, typeConverter, moduleOp))) {
       attr = denseAttr.value();
     } else {
       const mlir::Value initVal =
