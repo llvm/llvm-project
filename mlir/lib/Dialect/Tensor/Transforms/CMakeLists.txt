@@ -1,5 +1,8 @@
-add_mlir_dialect_library(MLIRTensorTransforms
+set(LLVM_OPTIONAL_SOURCES
   BufferizableOpInterfaceImpl.cpp
+  )
+
+add_mlir_dialect_library(MLIRTensorTransforms
   ConcatOpPatterns.cpp
   DropRedundantRankExpansionPatterns.cpp
   EmptyOpPatterns.cpp
@@ -28,7 +31,6 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRDialectUtils
   MLIRFuncDialect # Dependency of scalarize-single-element-tensor-return
   MLIRIR
-  MLIRLinalgDialect
   MLIRLoopLikeInterface
   MLIRMemRefDialect
   MLIRPass
@@ -42,4 +44,22 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRVectorDialect
   MLIRVectorUtils
   MLIRValueBoundsOpInterface
+)
+
+add_mlir_dialect_library(MLIRTensorBufferizableOpInterfaceImpl
+  BufferizableOpInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tensor/Transforms
+
+  LINK_LIBS PUBLIC
+  MLIRAffineDialect
+  MLIRArithDialect
+  MLIRBufferizationDialect
+  MLIRDialectUtils
+  MLIRIR
+  MLIRLinalgDialect
+  MLIRMemRefDialect
+  MLIRTensorDialect
+  MLIRTensorTransforms
 )

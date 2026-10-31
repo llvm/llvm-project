@@ -1,0 +1,195 @@
+# REQUIRES: asserts
+
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mattr=+fuse-apple-sme-compute -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m4 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m4 -mattr=-fuse-apple-sme-compute -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+
+# CHECK-LABEL: fuse_fmla
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+# CHECK: Successors:
+# FUSE: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# NOFUSE-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+---
+name:            fuse_fmla
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za
+    $za = FMLA_VG2_M2ZZ_S $za, undef %0:matrixindexgpr32_8_11, 0, undef %1:zpr2, undef %2:zpr_4b
+    %3:gpr32sp = ORRWri undef %4:gpr32common, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, undef %5:matrixindexgpr32_8_11, 7, undef %6:zpr2, undef %7:zpr_4b
+    RET undef $lr
+...
+
+# CHECK-LABEL: fuse_za_write
+# CHECK: SU({{[0-9]+}}): ZERO_M 255, implicit-def $za
+# CHECK: Successors:
+# FUSE: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# NOFUSE-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+---
+name:            fuse_za_write
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ZERO_M 255, implicit-def $za
+    %0:gpr32sp = ORRWri undef %1:gpr32common, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, undef %2:matrixindexgpr32_8_11, 0, undef %3:zpr2, undef %4:zpr_4b
+    RET undef $lr
+...
+
+# CHECK-LABEL: fuse_z_write
+# CHECK: SU({{[0-9]+}}): %0:zpr = ADD_ZZZ_S
+# CHECK: Successors:
+# FUSE: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# NOFUSE-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): dead %5:zpr = ADD_ZZZ_S
+---
+name:            fuse_z_write
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:zpr = ADD_ZZZ_S undef %1:zpr, undef %2:zpr
+    %3:gpr32sp = ORRWri undef %4:gpr32common, 4096
+    %5:zpr = ADD_ZZZ_S %0, undef %6:zpr
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_load
+# CHECK: SU({{[0-9]+}}): %0:zpr_4b = LDR_ZXI
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+---
+name:            no_fuse_load
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za
+    %0:zpr_4b = LDR_ZXI undef %1:gpr64common, 0
+    %2:gpr32sp = ORRWri undef %3:gpr32common, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, undef %4:matrixindexgpr32_8_11, 0, undef %5:zpr2, %0
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_store
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): STR_ZA
+---
+name:            no_fuse_store
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za
+    $za = FMLA_VG2_M2ZZ_S $za, undef %0:matrixindexgpr32_8_11, 0, undef %1:zpr2, undef %2:zpr_4b
+    %3:gpr32sp = ORRWri undef %4:gpr32common, 4096
+    STR_ZA $za, undef %5:matrixindexgpr32_12_15, 0, undef %6:gpr64common, 0
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_write_p
+# CHECK: SU({{[0-9]+}}): %0:zpr = ADD_ZZZ_S
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): dead %5:ppr = FCMEQ_PPzZZ_S
+---
+name:            no_fuse_write_p
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:zpr = ADD_ZZZ_S undef %1:zpr, undef %2:zpr
+    %3:gpr32sp = ORRWri undef %4:gpr32common, 4096
+    %5:ppr = FCMEQ_PPzZZ_S undef %6:ppr_3b, %0, undef %7:zpr
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_write_gpr32
+# CHECK: SU({{[0-9]+}}): %0:zpr = ADD_ZZZ_S
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): dead %5:gpr32 = LASTB_RPZ_S
+---
+name:            no_fuse_write_gpr32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:zpr = ADD_ZZZ_S undef %1:zpr, undef %2:zpr
+    %3:gpr32sp = ORRWri undef %4:gpr32common, 4096
+    %5:gpr32 = LASTB_RPZ_S undef %6:ppr_3b, %0
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_write_gpr64
+# CHECK: SU({{[0-9]+}}): %0:zpr = ADD_ZZZ_S
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): dead %5:gpr64 = LASTB_RPZ_D
+---
+name:            no_fuse_write_gpr64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:zpr = ADD_ZZZ_S undef %1:zpr, undef %2:zpr
+    %3:gpr32sp = ORRWri undef %4:gpr32common, 4096
+    %5:gpr64 = LASTB_RPZ_D undef %6:ppr_3b, %0
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_read_gpr32_not_za
+# CHECK: SU({{[0-9]+}}): %0:zpr_4b = DUP_ZR_S
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+---
+name:            no_fuse_read_gpr32_not_za
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za
+    %0:zpr_4b = DUP_ZR_S undef %1:gpr32common
+    %2:gpr32sp = ORRWri undef %3:gpr32common, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, undef %4:matrixindexgpr32_8_11, 0, undef %5:zpr2, %0
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_read_gpr64_not_za
+# CHECK: SU({{[0-9]+}}): %0:zpr_4b = DUP_ZR_D
+# CHECK: Successors:
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+---
+name:            no_fuse_read_gpr64_not_za
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za
+    %0:zpr_4b = DUP_ZR_D undef %1:gpr64common
+    %2:gpr32sp = ORRWri undef %3:gpr32common, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, undef %4:matrixindexgpr32_8_11, 0, undef %5:zpr2, %0
+    RET undef $lr
+...
+
+## SME fusion doesnt require RAW dependency. This is a representative test case for Z write
+
+# CHECK-LABEL: fuse_non_raw
+# CHECK: SU({{[0-9]+}}): $z0 = ADD_ZZZ_S
+# CHECK: Successors:
+# FUSE: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# NOFUSE-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $z0 = ADD_ZZZ_S
+---
+name:            fuse_non_raw
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $z0 = ADD_ZZZ_S undef %0:zpr, undef %1:zpr
+    %2:gpr32sp = ORRWri undef %3:gpr32common, 4096
+    $z0 = ADD_ZZZ_S undef %4:zpr, undef %5:zpr
+    RET undef $lr
+...

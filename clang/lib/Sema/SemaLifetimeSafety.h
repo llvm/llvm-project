@@ -36,8 +36,10 @@ inline bool ShouldCheckSafety(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_invalidation,
       diag::warn_lifetime_safety_dangling_field,
       diag::warn_lifetime_safety_dangling_field_moved,
+      diag::warn_lifetime_safety_dangling_field_lambda_capture,
       diag::warn_lifetime_safety_dangling_global,
       diag::warn_lifetime_safety_dangling_global_moved,
+      diag::warn_lifetime_safety_dangling_global_in_main,
       diag::warn_lifetime_safety_invalidated_field,
       diag::warn_lifetime_safety_invalidated_global};
   for (unsigned DiagID : DiagIDs)

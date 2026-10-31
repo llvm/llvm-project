@@ -617,7 +617,7 @@ INTERCEPTOR(char*, strncat, char* to, const char* from, usize size) {
     ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
     ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
     if (from_length > 0) {
-      CHECK_RANGES_OVERLAP("strncat", to, to_length + copy_length + 1, from,
+      CHECK_RANGES_OVERLAP("strncat", to, to_length + from_length + 1, from,
                            copy_length);
     }
   }
