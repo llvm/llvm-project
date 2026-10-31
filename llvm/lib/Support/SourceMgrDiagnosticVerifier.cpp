@@ -253,6 +253,35 @@ SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
   return MatchResult::Unexpected;
 }
 
+SourceMgrDiagnosticVerifier::MatchResult
+SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
+                                     const SMDiagnostic &diag,
+                                     bool reportUnexpected) {
+  // Don't pass the verifier's own errors back to the verifier.
+  SourceMgr::DiagHandlerTy handler = mgr.getDiagHandler();
+  void *handlerCtx = mgr.getDiagContext();
+  mgr.setDiagHandler(nullptr);
+
+  bool hasLoc = diag.getLoc().isValid();
+  const MemoryBuffer *buf = nullptr;
+  if (hasLoc)
+    if (unsigned id = mgr.FindBufferContainingLoc(diag.getLoc()))
+      buf = mgr.getMemoryBuffer(id);
+  MatchResult result =
+      process(os, mgr, diag.getKind(), hasLoc, buf, diag.getLineNo(),
+              diag.getMessage(), reportUnexpected);
+  if (result == MatchResult::Unexpected)
+    mgr.PrintMessage(
+        os, SMDiagnostic(
+                mgr, diag.getLoc(), diag.getFilename(), diag.getLineNo(),
+                diag.getColumnNo(), SourceMgr::DK_Error,
+                "unexpected " + getDiagKindStr(diag.getKind()).str() + ": " +
+                    diag.getMessage().str(),
+                diag.getLineContents(), diag.getRanges(), diag.getFixIts()));
+  mgr.setDiagHandler(handler, handlerCtx);
+  return result;
+}
+
 bool SourceMgrDiagnosticVerifier::verify(raw_ostream &os, SourceMgr &mgr) {
   // Verify that all expected errors were seen.
   auto checkExpectedDiags = [&](ExpectedDiag &diag) {
