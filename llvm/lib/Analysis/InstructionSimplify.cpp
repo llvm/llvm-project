@@ -4822,6 +4822,65 @@ static Value *simplifySelectWithBitTest(Value *CondVal, Value *TrueVal,
   return nullptr;
 }
 
+/// Fold a select of zero and a count whose input has a known end bit set on
+/// the zero arm. Use the condition as context rather than matching its shape.
+static Value *simplifySelectWithCountZeros(Value *Cond, Value *TrueVal,
+                                           Value *FalseVal,
+                                           const SimplifyQuery &Q) {
+  if (!TrueVal->getType()->isIntOrIntVectorTy())
+    return nullptr;
+
+  bool Invert = match(FalseVal, m_Zero());
+  if (Invert)
+    std::swap(TrueVal, FalseVal);
+  if (!match(TrueVal, m_Zero()))
+    return nullptr;
+
+  Value *Count, *X;
+  auto CountPattern =
+      m_CombineOr(m_Cttz(m_Value(X), m_Value()), m_Ctlz(m_Value(X), m_Value()));
+  if (!match(FalseVal,
+             m_TruncOrSelf(m_CombineAnd(m_Value(Count), CountPattern))))
+    return nullptr;
+  auto *II = cast<IntrinsicInst>(Count);
+
+  // The zero arm may hide poison from a range annotation on the count.
+  if (II->hasPoisonGeneratingMetadata())
+    return nullptr;
+  if (auto Range = II->getRange();
+      Range &&
+      !Range->contains(APInt(Count->getType()->getScalarSizeInBits(), 0)))
+    return nullptr;
+
+  // The condition and the count must observe the same, non-poison input.
+  if (!isGuaranteedNotToBeUndefOrPoison(X, Q.AC, Q.CtxI, Q.DT))
+    return nullptr;
+
+  KnownBits Known(X->getType()->getScalarSizeInBits());
+  if (Cond->getType()->isVectorTy()) {
+    // Only apply lane-local facts directly to X. Propagating the condition
+    // through its operands could transfer facts between lanes via a shuffle.
+    Known = computeKnownBits(X, Q);
+    adjustKnownBitsForSelectArm(Known, Cond, X, Invert, Q);
+  } else {
+    CondContext CC(Cond);
+    CC.Invert = Invert;
+    findValuesAffectedByCondition(Cond, /*IsAssume=*/false, [&](Value *V) {
+      CC.AffectedValues.insert(V);
+    });
+    if (CC.AffectedValues.empty())
+      return nullptr;
+    Known = computeKnownBits(X, Q.getWithCondContext(CC));
+  }
+  // A set end bit makes the count zero, so zero-poison and truncation flags
+  // cannot introduce poison on the arm where the count was previously unused.
+  unsigned EndBit =
+      II->getIntrinsicID() == Intrinsic::cttz ? 0 : Known.getBitWidth() - 1;
+  if (!Known.One[EndBit])
+    return nullptr;
+  return FalseVal;
+}
+
 /// Try to simplify a select instruction when its condition operand is an
 /// integer equality or floating-point equivalence comparison.
 static Value *simplifySelectWithEquivalence(
@@ -5282,6 +5341,9 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     return V;
 
   if (Value *V = simplifySelectWithBitTest(Cond, TrueVal, FalseVal))
+    return V;
+
+  if (Value *V = simplifySelectWithCountZeros(Cond, TrueVal, FalseVal, Q))
     return V;
 
   if (Value *V =
