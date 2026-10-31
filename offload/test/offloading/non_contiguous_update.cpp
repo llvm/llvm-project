@@ -130,5 +130,29 @@ int main() {
     // DEBUG: offset 80 len 12
   }
 
+  {
+    // case 4: a contiguous pair of outer dimensions must not be merged across
+    // a gap in an inner dimension. This describes the Fortran array section
+    // arr(:,3:5,:,:) for integer(4) :: arr(4,5,3,2).
+    __tgt_target_non_contig non_contig[5] = {
+        {0, 2, 240}, {0, 3, 80}, {32, 3, 16}, {0, 4, 4}, {0, 4, 1}};
+    int64_t size = sizeof(non_contig) / sizeof(non_contig[0]),
+            type = OMP_TGT_MAPTYPE_NON_CONTIG;
+
+    int32_t array[2][3][5][4];
+    void *base = array;
+    void *begin = &non_contig;
+    __tgt_target_data_update(/*device_id*/ -1, /*arg_num*/ 1, &base, &begin,
+                             &size, &type);
+    // Each (k-point, spin) slice has a separate contiguous band section.
+    // DEBUG: Merged 2 dimensions
+    // DEBUG: offset 32 len 48
+    // DEBUG: offset 112 len 48
+    // DEBUG: offset 192 len 48
+    // DEBUG: offset 272 len 48
+    // DEBUG: offset 352 len 48
+    // DEBUG: offset 432 len 48
+  }
+
   return 0;
 }

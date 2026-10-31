@@ -2827,6 +2827,15 @@ public:
     /// runtime library for debugging
     Value *MapNamesArray = nullptr;
 
+    struct NonContiguousDescriptor {
+      /// The entry in PointersArray that refers to this descriptor.
+      unsigned MapIndex;
+      AllocaInst *Storage;
+    };
+    /// Descriptors referenced by PointersArray need their own task-private
+    /// copies when the runtime call is deferred.
+    SmallVector<NonContiguousDescriptor, 2> NonContiguousDescriptors;
+
     explicit TargetDataRTArgs() = default;
     explicit TargetDataRTArgs(Value *BasePointersArray, Value *PointersArray,
                               Value *SizesArray, Value *MapTypesArray,
