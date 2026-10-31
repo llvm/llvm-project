@@ -15,12 +15,12 @@ body:             |
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]], [[COPY1]]
     ; CHECK-LABEL: name: no_break_s_mov_b64_multi_use_copy_inline_imm_extract
     ; CHECK: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY killed [[S_MOV_B64_]].sub0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY killed [[S_MOV_B64_]].sub1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B64_]].sub0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B64_]].sub1
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY]], [[COPY1]]
     %0:sreg_64 = S_MOV_B64 0
-    %1:sreg_32 = COPY killed %0.sub0
-    %2:sreg_32 = COPY killed %0.sub1
+    %1:sreg_32 = COPY %0.sub0
+    %2:sreg_32 = COPY %0.sub1
     SI_RETURN_TO_EPILOG %1, %2
 
 ...
@@ -37,12 +37,12 @@ body:             |
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]], [[COPY1]]
     ; CHECK-LABEL: name: no_break_v_mov_b64_multi_use_copy_inline_imm_extract
     ; CHECK: [[V_MOV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_e64 0, implicit $exec
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY killed [[V_MOV_B64_e64_]].sub0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[V_MOV_B64_e64_]].sub1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B64_e64_]].sub0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B64_e64_]].sub1
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY]], [[COPY1]]
     %0:vreg_64_align2 = V_MOV_B64_e64 0, implicit $exec
-    %1:vgpr_32 = COPY killed %0.sub0
-    %2:vgpr_32 = COPY killed %0.sub1
+    %1:vgpr_32 = COPY %0.sub0
+    %2:vgpr_32 = COPY %0.sub1
     SI_RETURN_TO_EPILOG %1, %2
 
 ...
@@ -61,12 +61,12 @@ body:             |
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]], [[COPY1]]
     ; CHECK-LABEL: name: break_s_mov_b64_multi_use_copy_extract_use_is_inline_imm
     ; CHECK: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -96
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY killed [[S_MOV_B]].sub0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY killed [[S_MOV_B]].sub1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B]].sub0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B]].sub1
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY]], [[COPY1]]
     %0:sreg_64 = S_MOV_B64_IMM_PSEUDO -96
-    %1:sreg_32 = COPY killed %0.sub0
-    %2:sreg_32 = COPY killed %0.sub1
+    %1:sreg_32 = COPY %0.sub0
+    %2:sreg_32 = COPY %0.sub1
     SI_RETURN_TO_EPILOG %1, %2
 
 ...
@@ -83,12 +83,12 @@ body:             |
     ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]], [[COPY1]]
     ; CHECK-LABEL: name: break_v_mov_b64_multi_use_copy_extract_use_is_inline_imm
     ; CHECK: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO -96, implicit $exec
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY killed [[V_MOV_B]].sub0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[V_MOV_B]].sub1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B]].sub0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B]].sub1
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY]], [[COPY1]]
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO -96, implicit $exec
-    %1:vgpr_32 = COPY killed %0.sub0
-    %2:vgpr_32 = COPY killed %0.sub1
+    %1:vgpr_32 = COPY %0.sub0
+    %2:vgpr_32 = COPY %0.sub1
     SI_RETURN_TO_EPILOG %1, %2
 
 ...

@@ -120,7 +120,7 @@ body:             |
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %0:sreg_32 = S_MOV_B32 %stack.0
-    %1:sreg_32 = S_MOV_B32 killed %0
+    %1:sreg_32 = S_MOV_B32 %0
     %2:sreg_64 = S_MOV_B64 0
     %3:av_32 = COPY %1
     %4:vgpr_32 = COPY %3, implicit $exec

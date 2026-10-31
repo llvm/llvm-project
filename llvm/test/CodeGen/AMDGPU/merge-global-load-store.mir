@@ -445,13 +445,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0, killed [[DEF2]], %subreg.sub1
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0, [[DEF2]], %subreg.sub1
     ; GCN-NEXT: GLOBAL_STORE_DWORDX2 [[DEF]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORD %0, killed %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
 ...
 
 ---
@@ -464,16 +464,16 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0, killed [[DEF2]], %subreg.sub1
-    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE [[REG_SEQUENCE]], %subreg.sub0_sub1, killed [[DEF3]], %subreg.sub2
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0, [[DEF2]], %subreg.sub1
+    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE [[REG_SEQUENCE]], %subreg.sub0_sub1, [[DEF3]], %subreg.sub2
     ; GCN-NEXT: GLOBAL_STORE_DWORDX3 [[DEF]], [[REG_SEQUENCE1]], 4, 1, implicit $exec :: (store (s96) into `ptr addrspace(1) poison`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORD %0, killed %1, 4, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORD %0, killed %2, 8, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORD killed %0, killed %3, 12, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %1, 4, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %2, 8, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %3, 12, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
 ...
 
 ---
@@ -493,7 +493,7 @@ body:             |
     GLOBAL_STORE_DWORD %0, %1.sub1, 8, 2, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
     GLOBAL_STORE_DWORD %0, %1.sub2, 12, 2, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
     GLOBAL_STORE_DWORD %0, %1.sub3, 16, 2, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORD killed %0, %1.sub0, 4, 2, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %1.sub0, 4, 2, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
 ...
 
 ---
@@ -569,13 +569,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0_sub1, killed [[DEF2]], %subreg.sub2_sub3
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0_sub1, [[DEF2]], %subreg.sub2_sub3
     ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], [[REG_SEQUENCE]], 4, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vreg_64_align2 = IMPLICIT_DEF
     %2:vreg_64_align2 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORDX2 %0, killed %1, 4, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORDX2 %0, killed %2, 12, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %0, %1, 4, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORDX2 %0, %2, 12, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 4, addrspace 1)
 ...
 
 ---
@@ -587,13 +587,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0_sub1_sub2, killed [[DEF2]], %subreg.sub3
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0_sub1_sub2, [[DEF2]], %subreg.sub3
     ; GCN-NEXT: GLOBAL_STORE_DWORDX4 [[DEF]], [[REG_SEQUENCE]], 4, 0, implicit $exec :: (store (s128) into `ptr addrspace(1) poison`, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vreg_96_align2 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORDX3 %0, killed %1, 4, 0, implicit $exec :: (store (s96) into `ptr addrspace(1) poison`, align 16, addrspace 1)
-    GLOBAL_STORE_DWORD %0, killed %2, 16, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORDX3 %0, %1, 4, 0, implicit $exec :: (store (s96) into `ptr addrspace(1) poison`, align 16, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %2, 16, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
 ...
 
 ---
@@ -605,13 +605,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_64_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0, killed [[DEF2]], %subreg.sub1
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_64_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0, [[DEF2]], %subreg.sub1
     ; GCN-NEXT: GLOBAL_STORE_DWORDX2 [[DEF]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(1) poison`, align 4, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:agpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORD %0, killed %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
 ...
 
 ---
@@ -623,13 +623,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 6, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], [[DEF2]], 6, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORD %0, killed %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORD killed %0, killed %2, 6, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %2, 6, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
 ...
 
 ---
@@ -641,13 +641,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 2, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 2, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], [[DEF2]], 2, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 2, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORD %0, killed %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORD killed %0, killed %2, 2, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 2, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %2, 2, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 2, addrspace 1)
 ...
 
 ---
@@ -659,13 +659,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed [[DEF]], killed [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], [[DEF1]], 0, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]], [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORD %0, killed %1, 0, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %1, 0, 1, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0, %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
 ...
 
 ---
@@ -677,13 +677,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]].sub0_sub1, killed [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]].sub2_sub3, killed [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]].sub0_sub1, [[DEF1]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD [[DEF]].sub2_sub3, [[DEF2]], 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
     %0:vreg_128_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORD %0.sub0_sub1, killed %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-    GLOBAL_STORE_DWORD %0.sub2_sub3, killed %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0.sub0_sub1, %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
+    GLOBAL_STORE_DWORD %0.sub2_sub3, %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, align 4, addrspace 1)
 ...
 
 ---

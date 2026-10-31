@@ -815,7 +815,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.14(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, killed [[DEF]], implicit $exec
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, [[DEF]], implicit $exec
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; GCN-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_]]
@@ -826,9 +826,9 @@ body: |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.14(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_1:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, killed [[DEF1]], implicit $exec
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_1:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, [[DEF1]], implicit $exec
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; GCN-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY1]], killed [[V_CMP_EQ_U32_e64_1]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY1]], [[V_CMP_EQ_U32_e64_1]], implicit-def dead $scc
   ; GCN-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.14, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
@@ -837,9 +837,9 @@ body: |
   ; GCN-NEXT:   successors: %bb.3(0x40000000), %bb.7(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_2:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, killed [[DEF2]], implicit $exec
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_2:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, [[DEF2]], implicit $exec
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; GCN-NEXT:   [[S_AND_B64_2:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY2]], killed [[V_CMP_EQ_U32_e64_2]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_AND_B64_2:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY2]], [[V_CMP_EQ_U32_e64_2]], implicit-def dead $scc
   ; GCN-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_2]]
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.7, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.3
@@ -848,9 +848,9 @@ body: |
   ; GCN-NEXT:   successors: %bb.4(0x40000000), %bb.7(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_3:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, killed [[DEF3]], implicit $exec
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_3:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, [[DEF3]], implicit $exec
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; GCN-NEXT:   [[S_AND_B64_3:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], killed [[V_CMP_EQ_U32_e64_3]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_AND_B64_3:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], [[V_CMP_EQ_U32_e64_3]], implicit-def dead $scc
   ; GCN-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_3]]
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.7, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.4
@@ -875,9 +875,9 @@ body: |
   ; GCN-NEXT:   successors: %bb.11(0x40000000), %bb.12(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_4:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, killed [[DEF4]], implicit $exec
+  ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_4:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 0, [[DEF4]], implicit $exec
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; GCN-NEXT:   [[S_AND_B64_4:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY4]], killed [[V_CMP_EQ_U32_e64_4]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_AND_B64_4:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY4]], [[V_CMP_EQ_U32_e64_4]], implicit-def dead $scc
   ; GCN-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64 = S_XOR_B64 [[S_AND_B64_4]], [[COPY4]], implicit-def dead $scc
   ; GCN-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_4]]
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.12, implicit $exec
@@ -909,7 +909,7 @@ body: |
     successors: %bb.1, %bb.14
 
     %0:vgpr_32 = IMPLICIT_DEF
-    %1:sreg_64 = V_CMP_EQ_U32_e64 0, killed %0:vgpr_32, implicit $exec
+    %1:sreg_64 = V_CMP_EQ_U32_e64 0, %0:vgpr_32, implicit $exec
     %2:sreg_64 = SI_IF %1:sreg_64, %bb.14, implicit-def $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
@@ -917,24 +917,24 @@ body: |
     successors: %bb.2, %bb.6
 
     %3:vgpr_32 = IMPLICIT_DEF
-    %4:sreg_64 = V_CMP_EQ_U32_e64 0, killed %3:vgpr_32, implicit $exec
-    %5:sreg_64 = SI_IF killed %4:sreg_64, %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %4:sreg_64 = V_CMP_EQ_U32_e64 0, %3:vgpr_32, implicit $exec
+    %5:sreg_64 = SI_IF %4:sreg_64, %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
     successors: %bb.3, %bb.7
 
     %6:vgpr_32 = IMPLICIT_DEF
-    %7:sreg_64 = V_CMP_EQ_U32_e64 0, killed %6:vgpr_32, implicit $exec
-    %8:sreg_64 = SI_IF killed %7:sreg_64, %bb.7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %7:sreg_64 = V_CMP_EQ_U32_e64 0, %6:vgpr_32, implicit $exec
+    %8:sreg_64 = SI_IF %7:sreg_64, %bb.7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
   bb.3:
     successors: %bb.4, %bb.5
 
     %9:vgpr_32 = IMPLICIT_DEF
-    %10:sreg_64 = V_CMP_EQ_U32_e64 0, killed %9:vgpr_32, implicit $exec
-    %11:sreg_64 = SI_IF killed %10:sreg_64, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %10:sreg_64 = V_CMP_EQ_U32_e64 0, %9:vgpr_32, implicit $exec
+    %11:sreg_64 = SI_IF %10:sreg_64, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:
@@ -969,8 +969,8 @@ body: |
     successors: %bb.11, %bb.12
 
     %12:vgpr_32 = IMPLICIT_DEF
-    %13:sreg_64 = V_CMP_EQ_U32_e64 0, killed %12:vgpr_32, implicit $exec
-    %14:sreg_64 = SI_IF killed %13:sreg_64, %bb.12, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %13:sreg_64 = V_CMP_EQ_U32_e64 0, %12:vgpr_32, implicit $exec
+    %14:sreg_64 = SI_IF %13:sreg_64, %bb.12, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.11
 
   bb.10:

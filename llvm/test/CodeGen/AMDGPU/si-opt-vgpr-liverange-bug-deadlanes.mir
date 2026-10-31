@@ -70,7 +70,7 @@ body:             |
     %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %3:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %1, undef %6:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s32))
     %4:sreg_64 = V_CMP_NE_U32_e64 0, %3, implicit $exec
-    %8:sreg_64 = SI_IF killed %4, %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %8:sreg_64 = SI_IF %4, %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.5
 
   bb.5:
@@ -82,17 +82,17 @@ body:             |
     successors: %bb.7(0x40000000), %bb.8(0x40000000)
 
     %10:vreg_128 = PHI undef %156:vreg_128, %bb.0, %9, %bb.5
-    %11:sreg_64 = SI_ELSE killed %8, %bb.8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %11:sreg_64 = SI_ELSE %8, %bb.8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.7
 
   bb.7:
     successors: %bb.8(0x80000000)
 
-    %12:vreg_128 = REG_SEQUENCE %3, %subreg.sub0, %3, %subreg.sub1, killed %3, %subreg.sub2, undef %7, %subreg.sub3
+    %12:vreg_128 = REG_SEQUENCE %3, %subreg.sub0, %3, %subreg.sub1, %3, %subreg.sub2, undef %7, %subreg.sub3
 
   bb.8:
     %13:vreg_128 = PHI %10, %bb.6, %12, %bb.7
-    SI_END_CF killed %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %5:vreg_128 = REG_SEQUENCE %13.sub2, %subreg.sub0, %13.sub2, %subreg.sub1, killed %13.sub2, %subreg.sub2, undef %3, %subreg.sub3
+    SI_END_CF %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %5:vreg_128 = REG_SEQUENCE %13.sub2, %subreg.sub0, %13.sub2, %subreg.sub1, %13.sub2, %subreg.sub2, undef %3, %subreg.sub3
     S_ENDPGM 0
 ...

@@ -6,7 +6,7 @@
 # GFX10-LABEL: name: test_fmamk_reg_imm_f16
 # GFX10: dead %2:vgpr_32 = IMPLICIT_DEF
 # GFX10-NOT: V_MOV_B32
-# GFX10-NOLIS: V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GFX10-NOLIS: V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 # GFX10-LIS: V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f16
@@ -17,7 +17,7 @@ body:             |
     %0:vreg_64 = IMPLICIT_DEF
     %1:vgpr_32 = COPY %0.sub1
     %2:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3:vgpr_32 = V_FMAC_F16_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_FMAC_F16_e32 %0.sub0, %2, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -25,7 +25,7 @@ body:             |
 # GFX10: %0:vreg_64 = IMPLICIT_DEF
 # GFX10: %1:vgpr_32 = COPY %0.sub1
 # GFX10: dead undef %2.sub0:vreg_64 = IMPLICIT_DEF
-# GFX10-NOLIS: %3:vgpr_32 = V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GFX10-NOLIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 # GFX10-LIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f16__imm_is_subreg
@@ -36,7 +36,7 @@ body:             |
     %0:vreg_64 = IMPLICIT_DEF
     %1:vgpr_32 = COPY %0.sub1
     undef %2.sub0:vreg_64 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3:vgpr_32 = V_FMAC_F16_e32 killed %0.sub0, %2.sub0, killed %1, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_FMAC_F16_e32 %0.sub0, %2.sub0, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -45,7 +45,7 @@ body:             |
 # GFX10: %1:vgpr_32 = COPY %0.sub1
 # GFX10: undef %2.sub1:vreg_64 = V_MOV_B32_e32 9999, implicit $exec
 # GFX10: %2.sub0:vreg_64 = V_MOV_B32_e32 1078523331, implicit $exec
-# GFX10-NOLIS: %3:vgpr_32 = V_FMA_F16_gfx9_e64 0, killed %0.sub0, 0, %2.sub0, 0, killed %1, 0, 0, 0, implicit $mode, implicit $e
+# GFX10-NOLIS: %3:vgpr_32 = V_FMA_F16_gfx9_e64 0, %0.sub0, 0, %2.sub0, 0, %1, 0, 0, 0, implicit $mode, implicit $e
 # GFX10-LIS: %3:vgpr_32 = V_FMA_F16_gfx9_e64 0, %0.sub0, 0, %2.sub0, 0, %1, 0, 0, 0, implicit $mode, implicit $e
 ---
 name:            test_fmamk_reg_imm_f16__imm_is_subreg_fully_defined
@@ -56,7 +56,7 @@ body:             |
     %1:vgpr_32 = COPY %0.sub1
     undef %2.sub1 = V_MOV_B32_e32 9999, implicit $exec
     %2.sub0:vreg_64 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3:vgpr_32 = V_FMAC_F16_e32 killed %0.sub0, %2.sub0, killed %1, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_FMAC_F16_e32 %0.sub0, %2.sub0, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -65,7 +65,7 @@ body:             |
 # GFX10: %1:vgpr_32 = COPY %0.sub1
 # GFX10: %2:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
 # GFX10: S_NOP 0, implicit %2
-# GFX10-NOLIS: %3:vgpr_32 = V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GFX10-NOLIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 # GFX10-LIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f16__use_imm_before_mac
@@ -77,7 +77,7 @@ body:             |
     %1:vgpr_32 = COPY %0.sub1
     %2:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
     S_NOP 0, implicit %2
-    %3:vgpr_32 = V_FMAC_F16_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_FMAC_F16_e32 %0.sub0, %2, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -85,7 +85,7 @@ body:             |
 # GFX10: %0:vreg_64 = IMPLICIT_DEF
 # GFX10: %1:vgpr_32 = COPY %0.sub1
 # GFX10: %2:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
-# GFX10-NOLIS: %3:vgpr_32 = V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GFX10-NOLIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 # GFX10-LIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f16__use_imm_after_mac
@@ -96,7 +96,7 @@ body:             |
     %0:vreg_64 = IMPLICIT_DEF
     %1:vgpr_32 = COPY %0.sub1
     %2:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3:vgpr_32 = V_FMAC_F16_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_FMAC_F16_e32 %0.sub0, %2, %1, implicit $mode, implicit $exec
     S_NOP 0, implicit %2
 
 ...
@@ -106,7 +106,7 @@ body:             |
 # GFX10: %1:vgpr_32 = COPY %0.sub1
 # GFX10: %2:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
 # GFX10: S_NOP 0, implicit %2
-# GFX10-NOLIS: %3:vgpr_32 = V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GFX10-NOLIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 # GFX10-LIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 # GFX10: S_NOP 0, implicit %2
 
@@ -120,7 +120,7 @@ body:             |
     %1:vgpr_32 = COPY %0.sub1
     %2:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
     S_NOP 0, implicit %2
-    %3:vgpr_32 = V_FMAC_F16_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_FMAC_F16_e32 %0.sub0, %2, %1, implicit $mode, implicit $exec
     S_NOP 0, implicit %2
 
 ...
@@ -128,7 +128,7 @@ body:             |
 # GFX10-LABEL: name: test_fmamk_imm_reg_f16
 # GFX10: dead %2:vgpr_32 = IMPLICIT_DEF
 # GFX10-NOT: V_MOV_B32
-# GFX10-NOLIS: V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GFX10-NOLIS: V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 # GFX10-LIS: V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_imm_reg_f16
@@ -144,14 +144,14 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0.sub1
     %2 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3 = V_FMAC_F16_e32 %2, killed %0.sub0, killed %1, implicit $mode, implicit $exec
+    %3 = V_FMAC_F16_e32 %2, %0.sub0, %1, implicit $mode, implicit $exec
 
 ...
 
 # GFX10-LABEL: name: test_fmaak_f16
 # GFX10: %1:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
 # GFX10-NOT: V_MOV_B32
-# GFX10-NOLIS: V_FMAAK_F16 killed %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
+# GFX10-NOLIS: V_FMAAK_F16 %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 # GFX10-LIS: V_FMAAK_F16 %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_f16
@@ -165,14 +165,14 @@ body:             |
 
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B32_e32 1078523331, implicit $exec
-    %2 = V_FMAC_F16_e32 killed %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
+    %2 = V_FMAC_F16_e32 %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %1
 ...
 
 # GFX10-LABEL: name: test_fmaak_inline_literal_f16
 # GFX10: %1:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
 # GFX10-NOT: V_MOV_B32
-# GFX10-NOLIS: %2:vgpr_32 = V_FMAAK_F16 16384, killed %0, 49664, implicit $mode, implicit $exec
+# GFX10-NOLIS: %2:vgpr_32 = V_FMAAK_F16 16384, %0, 49664, implicit $mode, implicit $exec
 # GFX10-LIS: %2:vgpr_32 = V_FMAAK_F16 16384, %0, 49664, implicit $mode, implicit $exec
 
 ---
@@ -187,6 +187,6 @@ body:             |
     %0:vgpr_32 = COPY killed $vgpr0
 
     %1:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
-    %2:vgpr_32 = V_FMAC_F16_e32 16384, killed %0, %1, implicit $mode, implicit $exec
+    %2:vgpr_32 = V_FMAC_F16_e32 16384, %0, %1, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %1
 ...
