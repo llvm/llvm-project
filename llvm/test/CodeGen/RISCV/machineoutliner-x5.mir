@@ -18,10 +18,10 @@ body:             |
   bb.0:
     liveins: $x10, $x11, $x5
     ; RV32I-MO-LABEL: name: outline_tail_1
-    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
+    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x6, implicit-def $x7, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
     ;
     ; RV64I-MO-LABEL: name: outline_tail_1
-    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
+    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x6, implicit-def $x7, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
     $x11 = ORI $x11, 1023
     $x12 = ADDI $x10, 17
     $x10 = ADD $x10, $x5
@@ -37,10 +37,10 @@ body:             |
   bb.0:
     liveins: $x10, $x11, $x5
     ; RV32I-MO-LABEL: name: outline_tail_2
-    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
+    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x6, implicit-def $x7, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
     ;
     ; RV64I-MO-LABEL: name: outline_tail_2
-    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
+    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x6, implicit-def $x7, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
     $x11 = ORI $x11, 1023
     $x12 = ADDI $x10, 17
     $x10 = ADD $x10, $x5

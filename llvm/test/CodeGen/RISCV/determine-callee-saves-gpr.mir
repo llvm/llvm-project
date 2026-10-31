@@ -142,7 +142,7 @@ body: |
     ; RV64I-SR-NEXT: frame-setup CFI_INSTRUCTION offset $x19, -40
     ; RV64I-SR-NEXT: $x18 = IMPLICIT_DEF
     ; RV64I-SR-NEXT: $x19 = IMPLICIT_DEF
-    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_4, implicit $x2, implicit-def $x2, implicit-def $x18, implicit-def $x19
+    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_4, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x2, implicit-def $x18, implicit-def $x19
     $x18 = IMPLICIT_DEF
     $x19 = IMPLICIT_DEF
     PseudoRET
@@ -448,7 +448,7 @@ body: |
     ; RV64I-SR-NEXT: frame-setup CFI_INSTRUCTION offset $x25, -88
     ; RV64I-SR-NEXT: frame-setup CFI_INSTRUCTION offset $x26, -96
     ; RV64I-SR-NEXT: frame-setup CFI_INSTRUCTION offset $x27, -104
-    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit $x2, implicit-def $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
+    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
     PseudoRET
 ...
 
@@ -643,7 +643,7 @@ body: |
     ; RV64I-SR-NEXT: frame-setup CFI_INSTRUCTION def_cfa $x8, 0
     ; RV64I-SR-NEXT: $x18 = IMPLICIT_DEF
     ; RV64I-SR-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $x2, 32
-    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_3, implicit $x2, implicit-def $x2, implicit-def $x1, implicit-def $x8, implicit-def $x18
+    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_3, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x2, implicit-def $x1, implicit-def $x8, implicit-def $x18
     $x18 = IMPLICIT_DEF
     PseudoRET
 ...
@@ -799,7 +799,7 @@ body: |
     ; RV64I-SR-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $x2, 64
     ; RV64I-SR-NEXT: $x2 = frame-destroy ADDI $x2, 32
     ; RV64I-SR-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 32
-    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_3, implicit $x2, implicit-def $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18
+    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_3, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18
     $x18 = IMPLICIT_DEF
     PseudoRET
 ...
@@ -896,7 +896,7 @@ body: |
     ; RV64I-SR-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 96
     ; RV64I-SR-NEXT: frame-setup CFI_INSTRUCTION offset $x26, -96
     ; RV64I-SR-NEXT: $x26 = IMPLICIT_DEF
-    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_11, implicit $x2, implicit-def $x2, implicit-def $x26
+    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_11, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x2, implicit-def $x26
     $x26 = IMPLICIT_DEF
     PseudoRET
 ...
@@ -1163,7 +1163,7 @@ body: |
     ; RV64I-SR-NEXT: $x25 = IMPLICIT_DEF
     ; RV64I-SR-NEXT: $x26 = IMPLICIT_DEF
     ; RV64I-SR-NEXT: $x27 = IMPLICIT_DEF
-    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit $x2, implicit-def $x2, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
+    ; RV64I-SR-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x2, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
     $x18 = IMPLICIT_DEF
     $x19 = IMPLICIT_DEF
     $x20 = IMPLICIT_DEF

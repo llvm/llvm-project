@@ -1957,7 +1957,9 @@ def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_glue)]>,
 // the callee's lpad accepts the incoming branch (lpad rejects X6 but accepts X7).
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2],
     Size = 8 in {
-let isCodeGenOnly = 0 in
+// Annoyingly we have to clobber X6 and X7 because the assembler may use Zicfilp
+// to decide which register to use.
+let isCodeGenOnly = 0, Defs = [X6, X7] in
 def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                         "tail", "$dst">,
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
@@ -1969,6 +1971,7 @@ def PseudoTAILReg : Pseudo<(outs GPR:$rs), (ins tail_call_symbol:$dst), [],
                     Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 // PseudoTAILX7 is CodeGenOnly; used when cf-protection-branch is active.
 // Lowered to PseudoTAILReg with X7 in RISCVAsmPrinter.
+let Defs = [X7] in
 def PseudoTAILX7 : Pseudo<(outs), (ins call_symbol:$dst), []>,
                    Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 }
