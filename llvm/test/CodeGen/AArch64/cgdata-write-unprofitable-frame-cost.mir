@@ -1,0 +1,72 @@
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -codegen-data-generate \
+# RUN:   -machine-outliner-publish-unprofitable-candidates -verify-machineinstrs \
+# RUN:   -filetype=obj %s -o %t.o
+# RUN: llvm-cgdata --merge %t.o -o %t.cgdata
+# RUN: llvm-cgdata --convert --format text %t.cgdata -o - | \
+# RUN:   FileCheck %s --check-prefix=TREE --match-full-lines
+# RUN: llvm-cgdata --merge %t.o %t.o -o %t.four.cgdata
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -codegen-data-use-path=%t.four.cgdata \
+# RUN:   -verify-machineinstrs %s -o - | \
+# RUN:   FileCheck /dev/null --implicit-check-not=OUTLINED_FUNCTION
+# RUN: llvm-cgdata --merge %t.o %t.o %t.o -o %t.six.cgdata
+# RUN: llc -mtriple=aarch64-apple-darwin -enable-machine-outliner \
+# RUN:   -start-before=machine-outliner -codegen-data-use-path=%t.six.cgdata \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=READ
+
+# A two-instruction sequence costs 8 bytes and its call costs 4. Signing and
+# returning add 12 bytes to the helper, so it needs six global sites to save
+# space. Publish it and let Read mode decide profitability.
+#
+# TREE: :outlined_hash_tree
+# TREE-NEXT: ---
+# TREE-NEXT: 0:
+# TREE-NEXT:   Hash:            0x0
+# TREE-NEXT:   Terminals:       0
+# TREE-NEXT:   SuccessorIds:    [ 1 ]
+# TREE-NEXT: 1:
+# TREE-NEXT:   Hash:            {{0x[0-9A-F]+}}
+# TREE-NEXT:   Terminals:       0
+# TREE-NEXT:   SuccessorIds:    [ 2 ]
+# TREE-NEXT: 2:
+# TREE-NEXT:   Hash:            {{0x[0-9A-F]+}}
+# TREE-NEXT:   Terminals:       2
+# TREE-NEXT:   SuccessorIds:    [  ]
+# TREE-NEXT: ...
+#
+# READ-LABEL: _first:
+# READ: bl _OUTLINED_FUNCTION_0.content.
+# READ-LABEL: _second:
+# READ: bl _OUTLINED_FUNCTION_1.content.
+# READ-LABEL: _OUTLINED_FUNCTION_0.content.{{[0-9]+}}:
+# READ: hint #25
+# READ-NEXT: orr w0, wzr, #0x3
+# READ-NEXT: orr w1, wzr, #0x7
+# READ-NEXT: hint #29
+# READ-NEXT: ret
+
+--- |
+  define void @first() noredzone "sign-return-address"="all" { unreachable }
+  define void @second() noredzone "sign-return-address"="all" { unreachable }
+...
+---
+name: first
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: second
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
