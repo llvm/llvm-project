@@ -4132,6 +4132,44 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   return SplatElementsAttr::get(getType(), {constOperand});
 }
 
+namespace {
+/// Change the type of the result of a `tensor.splat` by making the result
+/// type statically sized along dimensions that in the original operation were
+/// defined as dynamic, but the size was defined using a `constant` op. For
+/// example
+///
+///  %c4 = arith.constant 4 : index
+///  %0 = tensor.splat %arg0[%c4] : tensor<?xf32>
+///
+///  to
+///
+///  %0 = tensor.splat %arg0 : tensor<4xf32>
+struct ReplaceSplatStaticShapeDims : OpRewritePattern<SplatOp> {
+  using OpRewritePattern<SplatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SplatOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> foldedDynamicSizes;
+    RankedTensorType foldedTensorType = foldDynamicToStaticDimSizes(
+        op.getType(), op.getDynamicSizes(), foldedDynamicSizes);
+
+    // Stop here if no dynamic size was promoted to static.
+    if (foldedTensorType == op.getType())
+      return failure();
+
+    auto newOp = SplatOp::create(rewriter, op.getLoc(), op.getInput(),
+                                 foldedTensorType, foldedDynamicSizes);
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
+    return success();
+  }
+};
+} // namespace
+
+void SplatOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                          MLIRContext *context) {
+  results.add<ReplaceSplatStaticShapeDims>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Common Canonicalizers and Folders.
 //===----------------------------------------------------------------------===//
