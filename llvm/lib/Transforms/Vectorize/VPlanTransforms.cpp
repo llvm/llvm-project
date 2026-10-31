@@ -2174,13 +2174,11 @@ static bool replaceMaskWithCompareForScalarPlan(VPlan &Plan,
 
   bool MadeChange = false;
   VPBuilder Builder;
-  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
-  VPBasicBlock *PreheaderVPBB = Plan.getVectorPreheader();
-  VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
 
   VPValue *Start, *TC;
   uint64_t Idx;
-  for (VPBasicBlock *VPBB : {PreheaderVPBB, ExitingVPBB}) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!match(&R, m_ExtractVectorForPart(
                          m_WideActiveLaneMask(m_VPValue(Start), m_VPValue(TC),
@@ -3584,8 +3582,9 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   for (auto [EarlyExitingVPBB, ExitBlock] :
        vputils::getEarlyExits(Plan, MiddleVPBB)) {
     // The final value of a reduction is computed in the middle block, which is
-    // only reached when leaving the vector loop via the latch.
-    // TODO: Support reductions used on early exits.
+    // only reached when leaving the vector loop via the latch. On early exits,
+    // it is computed from the accumulators of the exiting iteration.
+    // TODO: Support more reductions used on early exits.
     for (VPRecipeBase &R : ExitBlock->phis()) {
       VPValue *ExitV =
           cast<VPIRPhi>(&R)->getIncomingValueForBlock(EarlyExitingVPBB);
@@ -3593,12 +3592,17 @@ bool VPlanTransforms::handleUncountableEarlyExits(
            make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
         if (ExitV != PhiR.getBackedgeValue())
           continue;
-        reportVectorizationFailure(
-            "Found reduction used on an early exit",
-            "Cannot vectorize early exit loop with reduction used on an "
-            "early exit",
-            "ReductionUsedOnEarlyExit", ORE, TheLoop);
-        return false;
+        RecurKind Kind = PhiR.getRecurrenceKind();
+        if (PhiR.isOrdered() || PhiR.hasUsesOutsideReductionChain() ||
+            RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) ||
+            RecurrenceDescriptor::isFindRecurrenceKind(Kind)) {
+          reportVectorizationFailure(
+              "Found reduction used on an early exit",
+              "Cannot vectorize early exit loop with reduction used on an "
+              "early exit",
+              "ReductionUsedOnEarlyExit", ORE, TheLoop);
+          return false;
+        }
       }
     }
 
@@ -5727,6 +5731,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   SmallVector<VPReductionPHIRecipe *, 4> UnorderedReductions;
   for (VPReductionPHIRecipe &RedPhiR :
        make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
+    // Skip reductions used outside the loop region, e.g. on early exits.
+    if (any_of(RedPhiR.users(),
+               [](VPUser *U) { return !cast<VPRecipeBase>(U)->getRegion(); }))
+      continue;
     if (auto Chain = getScaledReductionChain(&RedPhiR))
       PhiToChain.try_emplace(&RedPhiR, std::move(*Chain));
     else if (CostCtx.Opts.use_partial_reductions_by_default &&

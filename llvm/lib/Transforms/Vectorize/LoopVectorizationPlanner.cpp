@@ -635,6 +635,16 @@ void VFSelectionContext::collectInLoopReductions() {
         RecurrenceDescriptor::isFindLastRecurrenceKind(Kind))
       continue;
 
+    // Reductions used on uncountable early exits are computed outside the
+    // loop.
+    if (Legal->hasUncountableEarlyExit() && !useOrderedReductions(RdxDesc) &&
+        any_of(RdxDesc.getLoopExitInstr()->uses(), [this](Use &U) {
+          auto *ExitPhi = dyn_cast<PHINode>(U.getUser());
+          return ExitPhi && !TheLoop->contains(ExitPhi) &&
+                 ExitPhi->getIncomingBlock(U) != TheLoop->getLoopLatch();
+        }))
+      continue;
+
     // If the target would prefer this reduction to happen "in-loop", then we
     // want to record it as such.
     if (!Opts.prefer_inloop_reductions && !useOrderedReductions(RdxDesc) &&
