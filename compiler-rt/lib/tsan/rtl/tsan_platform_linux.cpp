@@ -626,8 +626,10 @@ static void InitializeLongjmpSpMangling() {
     atomic_store(&longjmp_rot, kRot, memory_order_relaxed);
     atomic_store(&longjmp_xor_key, r1 ^ sp1, memory_order_release);
   } else {
-    Printf("ThreadSanitizer: unrecognized jmp_buf pointer mangling scheme\n");
-    CHECK(0);
+    Printf(
+        "FATAL: ThreadSanitizer: unrecognized jmp_buf pointer mangling "
+        "scheme\n");
+    Die();
   }
 }
 #    endif
