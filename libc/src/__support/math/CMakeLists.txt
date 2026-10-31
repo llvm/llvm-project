@@ -1,3 +1,5 @@
+add_subdirectory(check)
+
 add_header_library(
   acos
   HDRS
