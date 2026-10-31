@@ -2120,10 +2120,16 @@ struct PointerBounds {
   Value *StrideToCheck;
 };
 
-RuntimeCheckBounds
-llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
-                            const Loop *TheLoop, ScalarEvolution &SE,
-                            bool HoistRuntimeChecks) {
+/// Expand code for the lower and upper bound of the pointer group \p CG
+/// in \p TheLoop.  \return the values for the bounds.
+static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
+                                  Loop *TheLoop, Instruction *Loc,
+                                  SCEVExpander &Exp, bool HoistRuntimeChecks) {
+  LLVMContext &Ctx = Loc->getContext();
+  Type *PtrArithTy = PointerType::get(Ctx, CG->AddressSpace);
+
+  Value *Start = nullptr, *End = nullptr;
+  LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
   const SCEV *Low = CG->Low, *High = CG->High, *Stride = nullptr;
 
   // If the Low and High values are themselves loop-variant, then we may want
@@ -2141,6 +2147,7 @@ llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
     auto *HighAR = cast<SCEVAddRecExpr>(High);
     auto *LowAR = cast<SCEVAddRecExpr>(Low);
     const Loop *OuterLoop = TheLoop->getParentLoop();
+    ScalarEvolution &SE = *Exp.getSE();
     const SCEV *Recur = LowAR->getStepRecurrence(SE);
     if (Recur == HighAR->getStepRecurrence(SE) &&
         HighAR->getLoop() == OuterLoop && LowAR->getLoop() == OuterLoop) {
@@ -2168,21 +2175,6 @@ llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
       }
     }
   }
-  return {Low, High, Stride};
-}
-
-/// Expand code for the lower and upper bound of the pointer group \p CG
-/// in \p TheLoop.  \return the values for the bounds.
-static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
-                                  Loop *TheLoop, Instruction *Loc,
-                                  SCEVExpander &Exp, bool HoistRuntimeChecks) {
-  LLVMContext &Ctx = Loc->getContext();
-  Type *PtrArithTy = PointerType::get(Ctx, CG->AddressSpace);
-
-  Value *Start = nullptr, *End = nullptr;
-  LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
-  auto [Low, High, Stride] =
-      getRuntimeCheckBounds(CG, TheLoop, *Exp.getSE(), HoistRuntimeChecks);
 
   Start = Exp.expandCodeFor(Low, PtrArithTy, Loc);
   End = Exp.expandCodeFor(High, PtrArithTy, Loc);
