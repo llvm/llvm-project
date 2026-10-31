@@ -21,10 +21,10 @@ define i16 @and_i8_zext_shl_add_i16(i16 %t0, i8 %t1) {
 define i16 @and_i8_shl_zext_add_i16(i16 %t0, i8 %t1) {
 ; CHECK-LABEL: and_i8_shl_zext_add_i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andb $8, %sil
-; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    leal (%rdi,%rax,4), %eax
+; CHECK-NEXT:    andl $8, %esi
+; CHECK-NEXT:    leal (%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %t4 = and i8 %t1, 8
@@ -52,10 +52,10 @@ define i32 @and_i8_zext_shl_add_i32(i32 %t0, i8 %t1) {
 define i32 @and_i8_shl_zext_add_i32(i32 %t0, i8 %t1) {
 ; CHECK-LABEL: and_i8_shl_zext_add_i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andb $8, %sil
-; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    leal (%rdi,%rax,8), %eax
+; CHECK-NEXT:    andl $8, %esi
+; CHECK-NEXT:    leal (%rdi,%rsi,8), %eax
 ; CHECK-NEXT:    retq
   %t4 = and i8 %t1, 8
   %sh = shl i8 %t4, 3
