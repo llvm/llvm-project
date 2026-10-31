@@ -2795,7 +2795,7 @@ size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
       return 0;
     }
     if (proc.FunctionType.isNoneType())
-      return 0;
+      break;
 
     CVType signature = m_index->tpi().getType(proc.FunctionType);
     if (signature.kind() == LF_PROCEDURE) {
