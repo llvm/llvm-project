@@ -249,3 +249,42 @@ define <2 x i64> @vector_mul_bit_x0_y0(<2 x i64> %x, <2 x i64> %y) {
   %mul = mul <2 x i64> %and1, %and2
   ret <2 x i64> %mul
 }
+
+define i33 @squared_one_demanded_low_bit_multiuse(i33 %x) {
+; CHECK-LABEL: @squared_one_demanded_low_bit_multiuse(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i33 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[LOW:%.*]] = and i33 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = add i33 [[MUL]], [[LOW]]
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %mul = mul i33 %x, %x
+  %low = and i33 %mul, 1
+  %r = add i33 %mul, %low
+  ret i33 %r
+}
+
+define <2 x i8> @squared_one_demanded_low_bit_splat_multiuse(<2 x i8> %x) {
+; CHECK-LABEL: @squared_one_demanded_low_bit_splat_multiuse(
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i8> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[LOW:%.*]] = and <2 x i8> [[X]], splat (i8 1)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[MUL]], [[LOW]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %mul = mul <2 x i8> %x, %x
+  %low = and <2 x i8> %mul, <i8 1, i8 1>
+  %r = add <2 x i8> %mul, %low
+  ret <2 x i8> %r
+}
+
+define i33 @squared_demanded_2_low_bits_multiuse(i33 %x) {
+; CHECK-LABEL: @squared_demanded_2_low_bits_multiuse(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i33 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[LOW:%.*]] = and i33 [[MUL]], 3
+; CHECK-NEXT:    [[R:%.*]] = add i33 [[MUL]], [[LOW]]
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %mul = mul i33 %x, %x
+  %low = and i33 %mul, 3
+  %r = add i33 %mul, %low
+  ret i33 %r
+}
