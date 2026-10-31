@@ -539,9 +539,9 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
 
   Register R0, R1, R2;
   if (!mi_match(MI, MRI,
-                m_CommutativeBinOp(
-                    Opc, m_OneUse(m_BinOp(Opc, m_Reg(R0), m_Reg(R1))),
-                    m_Reg(R2)))) {
+                m_CommutativeBinOp(Opc,
+                                   m_OneUse(m_BinOp(Opc, m_Reg(R0), m_Reg(R1))),
+                                   m_Reg(R2)))) {
     return false;
   }
 

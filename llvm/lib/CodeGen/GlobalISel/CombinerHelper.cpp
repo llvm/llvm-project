@@ -4001,8 +4001,7 @@ matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
          "Expected Reg to only have one non-debug use?");
   Register MaybeLoad;
   int64_t Shift;
-  if (!mi_match(Reg, MRI,
-                m_OneUse(m_GShl(m_Reg(MaybeLoad), m_ICst(Shift))))) {
+  if (!mi_match(Reg, MRI, m_OneUse(m_GShl(m_Reg(MaybeLoad), m_ICst(Shift))))) {
     Shift = 0;
     MaybeLoad = Reg;
   }
@@ -4803,8 +4802,7 @@ bool CombinerHelper::matchBitfieldExtractFromShr(
 
   // Try to match shr (shl x, c1), c2
   if (!mi_match(Dst, MRI,
-                m_BinOp(Opcode,
-                        m_OneUse(m_GShl(m_Reg(ShlSrc), m_ICst(ShlAmt))),
+                m_BinOp(Opcode, m_OneUse(m_GShl(m_Reg(ShlSrc), m_ICst(ShlAmt))),
                         m_ICst(ShrAmt))))
     return false;
 
@@ -4845,8 +4843,7 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   int64_t ShrAmt;
   int64_t SMask;
   if (!mi_match(Dst, MRI,
-                m_BinOp(Opcode,
-                        m_OneUse(m_GAnd(m_Reg(AndSrc), m_ICst(SMask))),
+                m_BinOp(Opcode, m_OneUse(m_GAnd(m_Reg(AndSrc), m_ICst(SMask))),
                         m_ICst(ShrAmt))))
     return false;
 
@@ -6922,9 +6919,9 @@ bool CombinerHelper::matchFPSelectToMinMax(Register Dst, Register Cond,
   // TODO: Allow multiple users of the compare if they are all selects.
   CmpInst::Predicate Pred;
   Register CmpLHS, CmpRHS;
-  if (!mi_match(Cond, MRI,
-                m_OneUse(
-                    m_GFCmp(m_Pred(Pred), m_Reg(CmpLHS), m_Reg(CmpRHS)))) ||
+  if (!mi_match(
+          Cond, MRI,
+          m_OneUse(m_GFCmp(m_Pred(Pred), m_Reg(CmpLHS), m_Reg(CmpRHS)))) ||
       CmpInst::isEquality(Pred))
     return false;
   SelectPatternNaNBehaviour ResWithKnownNaNInfo =

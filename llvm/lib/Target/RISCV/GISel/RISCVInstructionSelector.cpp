@@ -484,8 +484,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
 
   // (shl (and y, mask), c2)
   if (mi_match(RootReg, *MRI,
-               m_GShl(m_OneUse(m_GAnd(m_Reg(RegY), m_ICst(Mask))),
-                      m_ICst(C2))))
+               m_GShl(m_OneUse(m_GAnd(m_Reg(RegY), m_ICst(Mask))), m_ICst(C2))))
     LeftShift = true;
   // (lshr (and y, mask), c2)
   else if (mi_match(RootReg, *MRI,
