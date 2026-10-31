@@ -289,10 +289,6 @@ define void @simple_urem_to_sel_nested2(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    jmp .LBB4_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB4_5: # %for.body1
-; CHECK-NEXT:    # in Loop: Header=BB4_2 Depth=1
-; CHECK-NEXT:    movl %r14d, %edi
-; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:  .LBB4_6: # %for.body.tail
 ; CHECK-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; CHECK-NEXT:    incl %r14d
@@ -315,7 +311,11 @@ define void @simple_urem_to_sel_nested2(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; CHECK-NEXT:    callq get.i1@PLT
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    jne .LBB4_5
+; CHECK-NEXT:    je .LBB4_6
+; CHECK-NEXT:  .LBB4_5: # %for.body1
+; CHECK-NEXT:    # in Loop: Header=BB4_2 Depth=1
+; CHECK-NEXT:    movl %r14d, %edi
+; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:    jmp .LBB4_6
 ; CHECK-NEXT:  .LBB4_7:
 ; CHECK-NEXT:    popq %rbx
@@ -364,13 +364,6 @@ define void @simple_urem_fail_bad_incr3(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    jmp .LBB5_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB5_6: # %for.body1
-; CHECK-NEXT:    # in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ebx
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:  .LBB5_7: # %for.body.tail
 ; CHECK-NEXT:    # in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    callq get.i1@PLT
@@ -398,7 +391,14 @@ define void @simple_urem_fail_bad_incr3(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    callq get.i1@PLT
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    jne .LBB5_6
+; CHECK-NEXT:    je .LBB5_7
+; CHECK-NEXT:  .LBB5_6: # %for.body1
+; CHECK-NEXT:    # in Loop: Header=BB5_2 Depth=1
+; CHECK-NEXT:    movl %ebp, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %ebx
+; CHECK-NEXT:    movl %edx, %edi
+; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:    jmp .LBB5_7
 ; CHECK-NEXT:  .LBB5_8:
 ; CHECK-NEXT:    popq %rbx

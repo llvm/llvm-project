@@ -39,26 +39,26 @@ define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-GI-NEXT:    ldr x8, [x8, :got_lo12:ptr_wrapper]
 ; CHECK-GI-NEXT:    ldr x9, [x8]
 ; CHECK-GI-NEXT:    mov w8, wzr
-; CHECK-GI-NEXT:    b .LBB0_3
-; CHECK-GI-NEXT:  .LBB0_1: // in Loop: Header=BB0_3 Depth=1
-; CHECK-GI-NEXT:    str xzr, [x9, #8]
-; CHECK-GI-NEXT:  .LBB0_2: // in Loop: Header=BB0_3 Depth=1
+; CHECK-GI-NEXT:    b .LBB0_2
+; CHECK-GI-NEXT:  .LBB0_1: // in Loop: Header=BB0_2 Depth=1
 ; CHECK-GI-NEXT:    lsl w1, w1, #1
 ; CHECK-GI-NEXT:    cbz w1, .LBB0_6
-; CHECK-GI-NEXT:  .LBB0_3: // %do.body
+; CHECK-GI-NEXT:  .LBB0_2: // %do.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    and w10, w1, w0
 ; CHECK-GI-NEXT:    tst w1, w0
 ; CHECK-GI-NEXT:    and w11, w2, w0
 ; CHECK-GI-NEXT:    cinc w8, w8, ne
 ; CHECK-GI-NEXT:    cmp w10, w11
-; CHECK-GI-NEXT:    b.eq .LBB0_1
+; CHECK-GI-NEXT:    b.eq .LBB0_5
+; CHECK-GI-NEXT:  // %bb.3: // %do.body
+; CHECK-GI-NEXT:    // in Loop: Header=BB0_2 Depth=1
+; CHECK-GI-NEXT:    cbnz w2, .LBB0_5
 ; CHECK-GI-NEXT:  // %bb.4: // %do.body
-; CHECK-GI-NEXT:    // in Loop: Header=BB0_3 Depth=1
-; CHECK-GI-NEXT:    cbnz w2, .LBB0_1
-; CHECK-GI-NEXT:  // %bb.5: // %do.body
-; CHECK-GI-NEXT:    // in Loop: Header=BB0_3 Depth=1
-; CHECK-GI-NEXT:    cbz w10, .LBB0_2
+; CHECK-GI-NEXT:    // in Loop: Header=BB0_2 Depth=1
+; CHECK-GI-NEXT:    cbz w10, .LBB0_1
+; CHECK-GI-NEXT:  .LBB0_5: // in Loop: Header=BB0_2 Depth=1
+; CHECK-GI-NEXT:    str xzr, [x9, #8]
 ; CHECK-GI-NEXT:    b .LBB0_1
 ; CHECK-GI-NEXT:  .LBB0_6: // %do.end
 ; CHECK-GI-NEXT:    mov w0, w8
