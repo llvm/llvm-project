@@ -1560,7 +1560,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
-      setOperationAction(ISD::MASK_BEFOREFIRST, VT, Legal);
+      setOperationAction(ISD::MASK_BEFOREFIRST, VT, Custom);
     }
 
     if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable()) {
@@ -7375,6 +7375,9 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue PSel = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, Ops);
     return DAG.getNode(ISD::BITCAST, DL, MVT::aarch64svcount, PSel);
   }
+  case Intrinsic::aarch64_sve_brkb_z:
+    return DAG.getNode(AArch64ISD::BRKB_Z, DL, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   }
 }
 
@@ -35984,13 +35987,27 @@ SDValue AArch64TargetLowering::LowerMASK_BEFOREFIRST(SDValue Op,
 
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
-  assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
-  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
-  EVT PredVT = ContainerVT.changeElementType(*DAG.getContext(), MVT::i1);
 
-  SDValue Mask = convertFixedMaskToScalableVector(Op.getOperand(0), DAG);
-  SDValue Brk = DAG.getNode(ISD::MASK_BEFOREFIRST, DL, PredVT, Mask);
-  SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Brk);
+  SDValue Mask = Op.getOperand(0);
+  if (VT.isFixedLengthVector())
+    Mask = convertFixedMaskToScalableVector(Mask, DAG);
+  EVT PredVT = Mask.getValueType();
+
+  // mask_beforefirst(mask) -> brkb_z(ptrue(VT.ElementCount), mask)
+  // NOTE: brkb_z only supports the "byte" predicate type.
+
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  Pg = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Pg);
+
+  Mask = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Mask);
+  Mask = DAG.getNode(AArch64ISD::BRKB_Z, DL, MVT::nxv16i1, Pg, Mask);
+  Mask = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PredVT, Mask);
+
+  if (VT.isScalableVector())
+    return Mask;
+
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
   return convertFromScalableVector(DAG, VT, MaskAsInt);
 }
 
