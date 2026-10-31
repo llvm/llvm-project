@@ -139,14 +139,14 @@ public:
 
 FunctionPass *createMipsConstantIslandLegacyPass();
 
-class MipsMicroSizeReducePass
-    : public RequiredPassInfoMixin<MipsMicroSizeReducePass> {
+class MicroMipsSizeReducePass
+    : public RequiredPassInfoMixin<MicroMipsSizeReducePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-FunctionPass *createMipsMicroSizeReduceLegacyPass();
+FunctionPass *createMicroMipsSizeReduceLegacyPass();
 
 class MipsExpandPseudoPass
     : public RequiredPassInfoMixin<MipsExpandPseudoPass> {
@@ -180,7 +180,7 @@ InstructionSelector *
 createMipsInstructionSelector(const MipsTargetMachine &, const MipsSubtarget &,
                               const MipsRegisterBankInfo &);
 
-void initializeMipsMicroSizeReduceLegacyPass(PassRegistry &);
+void initializeMicroMipsSizeReduceLegacyPass(PassRegistry &);
 void initializeMipsAsmPrinterPass(PassRegistry &);
 void initializeMipsBranchExpansionLegacyPass(PassRegistry &);
 void initializeMipsDAGToDAGISelLegacyPass(PassRegistry &);

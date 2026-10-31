@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "mips-micro-reduce-size"
+#define DEBUG_TYPE "mips-micromips-reduce-size"
 #define MICROMIPS_SIZE_REDUCE_NAME "MicroMips instruction size reduce pass"
 
 STATISTIC(NumReduced, "Number of instructions reduced (32-bit to 16-bit ones, "
@@ -138,10 +138,10 @@ struct ReduceEntryFunArgs {
 
 typedef llvm::SmallVector<ReduceEntry, 32> ReduceEntryVector;
 
-class MipsMicroSizeReduceLegacy : public MachineFunctionPass {
+class MicroMipsSizeReduceLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  MipsMicroSizeReduceLegacy();
+  MicroMipsSizeReduceLegacy();
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -155,11 +155,11 @@ public:
   }
 };
 
-char MipsMicroSizeReduceLegacy::ID = 0;
+char MicroMipsSizeReduceLegacy::ID = 0;
 
 } // namespace
 
-INITIALIZE_PASS(MipsMicroSizeReduceLegacy, DEBUG_TYPE,
+INITIALIZE_PASS(MicroMipsSizeReduceLegacy, DEBUG_TYPE,
                 MICROMIPS_SIZE_REDUCE_NAME, false, false)
 
 // Returns true if the machine operand MO is register SP.
@@ -290,7 +290,7 @@ static bool ConsecutiveInstr(MachineInstr *MI1, MachineInstr *MI2) {
   return ((Offset1 == (Offset2 - 4)) && (ConsecutiveRegisters(Reg1, Reg2)));
 }
 
-MipsMicroSizeReduceLegacy::MipsMicroSizeReduceLegacy()
+MicroMipsSizeReduceLegacy::MicroMipsSizeReduceLegacy()
     : MachineFunctionPass(ID) {}
 
 // Changes opcode of an instruction, replaces an instruction with a
@@ -770,16 +770,16 @@ static bool runMipsSizeReduce(MachineFunction &MF) {
 }
 
 /// Returns an instance of the MicroMips size reduction pass.
-FunctionPass *llvm::createMipsMicroSizeReduceLegacyPass() {
-  return new MipsMicroSizeReduceLegacy();
+FunctionPass *llvm::createMicroMipsSizeReduceLegacyPass() {
+  return new MicroMipsSizeReduceLegacy();
 }
 
-bool MipsMicroSizeReduceLegacy::runOnMachineFunction(MachineFunction &MF) {
+bool MicroMipsSizeReduceLegacy::runOnMachineFunction(MachineFunction &MF) {
   return runMipsSizeReduce(MF);
 }
 
 PreservedAnalyses
-MipsMicroSizeReducePass::run(MachineFunction &MF,
+MicroMipsSizeReducePass::run(MachineFunction &MF,
                              MachineFunctionAnalysisManager &MFAM) {
   return runMipsSizeReduce(MF) ? getMachineFunctionPassPreservedAnalyses()
                                      .preserveSet<CFGAnalyses>()
