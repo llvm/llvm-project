@@ -1367,6 +1367,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   functions with CUDA 13.4 and newer. Added `__nvvm_idp4a_*` and
   `__nvvm_idp2a_*` builtins. (#GH233434)
 
+- CUDA compilations now add the `include/cccl` directory of the selected CUDA
+  installation to the header search path when it exists. From CUDA 13.0 on,
+  libcu++, CUB and Thrust are in that directory, and toolkit headers such as
+  `cooperative_groups.h` include them. The `-nogpuinc` option disables this
+  path together with the other CUDA include paths.
+
 #### AIX Support
 
 #### NetBSD Support

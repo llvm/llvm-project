@@ -1063,10 +1063,18 @@ void CudaToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
                          true) &&
-      CudaInstallation.isValid())
+      CudaInstallation.isValid()) {
+    StringRef IncludePath = CudaInstallation.getIncludePath();
     CC1Args.append(
-        {"-internal-isystem",
-         DriverArgs.MakeArgString(CudaInstallation.getIncludePath())});
+        {"-internal-isystem", DriverArgs.MakeArgString(IncludePath)});
+
+    // From CUDA 13.0 on, libcu++, CUB and Thrust are in include/cccl, and some
+    // of the toolkit's own headers, such as cooperative_groups.h, include them.
+    SmallString<128> CCCLPath(IncludePath);
+    llvm::sys::path::append(CCCLPath, "cccl");
+    if (getDriver().getVFS().exists(CCCLPath))
+      CC1Args.append({"-internal-isystem", DriverArgs.MakeArgString(CCCLPath)});
+  }
 }
 
 void CudaToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
