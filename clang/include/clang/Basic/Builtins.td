@@ -5795,6 +5795,12 @@ def HLSLWavePrefixProduct : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLQuadAll : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_quad_all"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(bool)";
+}
+
 def HLSLQuadReadAcrossX : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_quad_read_across_x"];
   let Attributes = [NoThrow, Const];

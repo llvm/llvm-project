@@ -1728,6 +1728,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(IID, {OpExpr->getType()}, ArrayRef{OpExpr},
                              "hlsl.wave.prefix.product");
   }
+  case Builtin::BI__builtin_hlsl_quad_all: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getQuadAllIntrinsic();
+    return EmitIntrinsicCall(ID, {Op});
+  }
   case Builtin::BI__builtin_hlsl_quad_read_across_x: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID ID = CGM.getHLSLRuntime().getQuadReadAcrossXIntrinsic();
