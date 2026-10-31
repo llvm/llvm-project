@@ -1,0 +1,77 @@
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-prelegalizer-combiner \
+# RUN:   -aarch64prelegalizercombiner-only-enable-rule=lshr_of_trunc_of_lshr,combine_insert_vec_elts_build_vector \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: lshr_trunc_lshr_debug_uses
+# CHECK: %src:_(i64) = COPY $x0
+# CHECK-NEXT: DBG_VALUE $noreg, $noreg
+# CHECK-NEXT: DBG_VALUE $noreg, $noreg
+# CHECK-NEXT: [[SHIFT:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+# CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i64) = G_LSHR %src, [[SHIFT]](i64)
+# CHECK-NEXT: [[MASK:%[0-9]+]]:_(i64) = G_CONSTANT i64 268435455
+# CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[LSHR]], [[MASK]]
+# CHECK-NEXT: %dst:_(i32) = G_TRUNC [[AND]](i64)
+
+# CHECK-LABEL: name: insert_vector_chain_debug_use
+# CHECK: %a:_(i32) = COPY $w0
+# CHECK-NEXT: %b:_(i32) = COPY $w1
+# CHECK-NEXT: DBG_VALUE $noreg, $noreg
+# CHECK-NEXT: %second:_(<2 x i32>) = G_BUILD_VECTOR %a(i32), %b(i32)
+
+---
+name: lshr_trunc_lshr_debug_uses
+machineMetadataNodes:
+  - '!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "mir-test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)'
+  - '!1 = !DIFile(filename: "combine-direct-hasoneuse-debug.mir", directory: "/")'
+  - '!2 = !DISubroutineType(types: !3)'
+  - '!3 = !{}'
+  - '!4 = distinct !DISubprogram(name: "lshr_trunc_lshr_debug_uses", scope: !1, file: !1, line: 1, type: !2, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)'
+  - '!5 = !DIBasicType(name: "u64", size: 64, encoding: DW_ATE_unsigned)'
+  - '!6 = !DIBasicType(name: "u32", size: 32, encoding: DW_ATE_unsigned)'
+  - '!7 = !DILocalVariable(name: "inner", scope: !4, file: !1, line: 1, type: !5)'
+  - '!8 = !DILocalVariable(name: "trunc", scope: !4, file: !1, line: 1, type: !6)'
+  - '!9 = !DILocation(line: 1, column: 1, scope: !4)'
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    %src:_(i64) = COPY $x0
+    %c1:_(i64) = G_CONSTANT i64 8
+    %inner:_(i64) = G_LSHR %src, %c1
+    DBG_VALUE %inner(i64), $noreg, !7, !DIExpression(), debug-location !9
+    %trunc:_(i32) = G_TRUNC %inner
+    DBG_VALUE %trunc(i32), $noreg, !8, !DIExpression(), debug-location !9
+    %c2:_(i32) = G_CONSTANT i32 4
+    %dst:_(i32) = G_LSHR %trunc, %c2
+    $w0 = COPY %dst(i32)
+...
+---
+name: insert_vector_chain_debug_use
+machineMetadataNodes:
+  - '!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "mir-test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)'
+  - '!1 = !DIFile(filename: "combine-direct-hasoneuse-debug.mir", directory: "/")'
+  - '!2 = !DISubroutineType(types: !3)'
+  - '!3 = !{}'
+  - '!4 = distinct !DISubprogram(name: "insert_vector_chain_debug_use", scope: !1, file: !1, line: 2, type: !2, scopeLine: 2, spFlags: DISPFlagDefinition, unit: !0)'
+  - '!5 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 64, elements: !7)'
+  - '!6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)'
+  - '!7 = !{!8}'
+  - '!8 = !DISubrange(count: 2)'
+  - '!9 = !DILocalVariable(name: "partial", scope: !4, file: !1, line: 2, type: !5)'
+  - '!10 = !DILocation(line: 2, column: 1, scope: !4)'
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    %a:_(i32) = COPY $w0
+    %b:_(i32) = COPY $w1
+    %undef:_(<2 x i32>) = G_IMPLICIT_DEF
+    %zero:_(i64) = G_CONSTANT i64 0
+    %one:_(i64) = G_CONSTANT i64 1
+    %first:_(<2 x i32>) = G_INSERT_VECTOR_ELT %undef, %a, %zero
+    DBG_VALUE %first(<2 x i32>), $noreg, !9, !DIExpression(), debug-location !10
+    %second:_(<2 x i32>) = G_INSERT_VECTOR_ELT %first, %b, %one
+    $x0 = COPY %second(<2 x i32>)
+...
