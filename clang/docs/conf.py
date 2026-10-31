@@ -15,6 +15,8 @@ from __future__ import absolute_import, division, print_function
 import sys, os
 from datetime import date
 
+sys.path.insert(0, os.path.abspath("_extensions"))
+
 from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
 globals().update(common_conf(tags))
@@ -32,6 +34,7 @@ extensions += [
     "llvm_sphinx.ext.absolute_links",
     "llvm_sphinx.ext.ghlinks",
     "llvm_sphinx.ext.checks",
+    "clang_attr_syntaxes",
 ]
 
 llvm_sphinx_doc_url_prefixes = ("https://clang.llvm.org/docs/",)
