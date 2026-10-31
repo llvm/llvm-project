@@ -568,21 +568,22 @@ public:
   /// be null).
   VPWidenLoadRecipe *createWidenLoad(LoadInst &Load, VPValue *Addr,
                                      VPValue *Mask, bool Consecutive,
+                                     Align Alignment,
                                      const VPIRMetadata &Metadata,
                                      DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+    return tryInsertInstruction(new VPWidenLoadRecipe(
+        Load, Addr, Mask, Consecutive, Alignment, Metadata, DL));
   }
 
   /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with
   /// \p Mask (may be null).
   VPWidenStoreRecipe *createWidenStore(StoreInst &Store, VPValue *Addr,
                                        VPValue *StoredVal, VPValue *Mask,
-                                       bool Consecutive,
+                                       bool Consecutive, Align Alignment,
                                        const VPIRMetadata &Metadata,
                                        DebugLoc DL) {
     return tryInsertInstruction(new VPWidenStoreRecipe(
-        Store, Addr, StoredVal, Mask, Consecutive, Metadata, DL));
+        Store, Addr, StoredVal, Mask, Consecutive, Alignment, Metadata, DL));
   }
 
   //===--------------------------------------------------------------------===//

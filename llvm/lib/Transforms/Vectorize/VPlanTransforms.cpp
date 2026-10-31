@@ -128,15 +128,16 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           bool IsConsecutive =
               IsConsecutiveAccess(VPI->getOperand(0), VPI->getScalarType());
-          NewRecipe = new VPWidenLoadRecipe(*Load, Ingredient.getOperand(0),
-                                            nullptr /*Mask*/, IsConsecutive,
-                                            *VPI, Ingredient.getDebugLoc());
+          NewRecipe = new VPWidenLoadRecipe(
+              *Load, Ingredient.getOperand(0), nullptr /*Mask*/, IsConsecutive,
+              Load->getAlign(), *VPI, Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           bool IsConsecutive = IsConsecutiveAccess(
               VPI->getOperand(1), VPI->getOperand(0)->getScalarType());
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, IsConsecutive, *VPI, Ingredient.getDebugLoc());
+              nullptr /*Mask*/, IsConsecutive, Store->getAlign(), *VPI,
+              Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP->getSourceElementType(),
                                            Ingredient.operands(), *VPI,
@@ -4554,7 +4555,7 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
     auto *LI = cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos());
     auto *L = VPBuilder(LoadGroup).createWidenLoad(
         *LI, LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-        *LoadGroup, LoadGroup->getDebugLoc());
+        LI->getAlign(), *LoadGroup, LoadGroup->getDebugLoc());
     NarrowedOps.insert(L);
     return L;
   }
@@ -4717,7 +4718,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
         cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
     VPBuilder(StoreGroup)
         .createWidenStore(*SI, StoreGroup->getAddr(), Res, nullptr,
-                          /*Consecutive=*/true, *StoreGroup,
+                          /*Consecutive=*/true, SI->getAlign(), *StoreGroup,
                           StoreGroup->getDebugLoc());
     StoreGroup->eraseFromParent();
   }
@@ -6022,9 +6023,10 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         // the target supports a masked load/store for it.
         // TODO: Determine if a load/store needs predication directly in VPlan.
         bool IsPredicated = RecipeBuilder.isPredicatedInst(I);
-        if (IsPredicated && !CostCtx.Config.isLegalMaskedLoadOrStore(
-                                IsLoad, ScalarTy, getLoadStoreAlignment(I),
-                                getLoadStoreAddressSpace(I)))
+        Align Alignment = getLoadStoreAlignment(I);
+        if (IsPredicated &&
+            !CostCtx.Config.isLegalMaskedLoadOrStore(
+                IsLoad, ScalarTy, Alignment, getLoadStoreAddressSpace(I)))
           return false;
 
         VPBuilder Builder(VPI);
@@ -6040,7 +6042,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         if (IsLoad) {
           VPSingleDefRecipe *Load = Builder.createWidenLoad(
               *cast<LoadInst>(I), VectorPtr, Mask,
-              /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+              /*Consecutive=*/true, Alignment, *VPI, VPI->getDebugLoc());
           // Reverse the loaded values back into program order.
           if (Reverse)
             Load = Builder.createNaryOp(VPInstruction::Reverse, Load,
@@ -6056,7 +6058,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
         auto *StoreR = Builder.createWidenStore(
             *cast<StoreInst>(I), VectorPtr, StoredVal, Mask,
-            /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+            /*Consecutive=*/true, Alignment, *VPI, VPI->getDebugLoc());
         return ReplaceWith(VPI, StoreR);
       });
 
