@@ -162,9 +162,18 @@ public:
       auto length{static_cast<ConstantSubscript>(stride) / T::kind};
       llvm::SmallVector<char, 256> buffer;
       const char *data{GetTailPaddedData(offset_, elements * stride, buffer)};
+      std::size_t unit{InitialImage::ByteSwapUnit<T>(context_, stride)};
       for (std::size_t j{0}; j < elements; ++j) {
-        typedValue[j] = value::Character<T::kind>::FromRawBytes(
-            data + j * stride, length * T::kind);
+        if (unit > 1) {
+          llvm::SmallVector<char, 64> chars(
+              data + j * stride, data + j * stride + length * T::kind);
+          ReverseByteUnits(chars.data(), chars.size(), unit);
+          typedValue[j] = value::Character<T::kind>::FromRawBytes(
+              chars.data(), length * T::kind);
+        } else {
+          typedValue[j] = value::Character<T::kind>::FromRawBytes(
+              data + j * stride, length * T::kind);
+        }
       }
       return AsGenericExpr(
           Const{length, std::move(typedValue), std::move(extents_)});
@@ -176,9 +185,9 @@ public:
               ? 0
               : (elements - 1) * stride + evaluate::Scalar<T>::bytesStored(),
           buffer)};
-      // TODO endianness
-      LoadSerialValues(
-          data, llvm::MutableArrayRef<evaluate::Scalar<T>>(typedValue), stride);
+      LoadSerialValues(data,
+          llvm::MutableArrayRef<evaluate::Scalar<T>>(typedValue), stride,
+          InitialImage::ByteSwapUnit<T>(context_, stride));
       return AsGenericExpr(Const{std::move(typedValue), std::move(extents_)});
     }
   }
