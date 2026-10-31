@@ -445,8 +445,8 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
       if (DataSymbol.starts_with("_ZTV")) {
         uint64_t IP = 0;
         Fields[2].getAsInteger(16, IP);
-        Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
-                                      DataSymbol, 1);
+        Counter.recordVTableAccessCount(Binary->canonicalizeVirtualAddress(IP),
+                                        DataSymbol, 1);
       }
     }
   }
@@ -1522,11 +1522,17 @@ void PerfScriptReader::parsePerfTraces() {
 
 SmallVector<CleanupInstaller, 2> PerfScriptReader::TempFileCleanups;
 
-void ETMReader::recordProcessedRange(uint64_t Start, uint64_t End,
-                                     uint64_t Count) {
+void ETMReader::recordInstructionRange(uint64_t Start, uint64_t End,
+                                       uint64_t Count) {
   assert(!Counters.empty() && "Counters should not be empty!");
   auto &Counter = Counters.begin()->second;
   Counter.recordRangeCount(Start, End, Count);
+}
+
+void ETMReader::recordDataAddress(uint64_t Address, uint64_t Count) {
+  assert(!Counters.empty() && "Counters should not be empty!");
+  auto &Counter = Counters.begin()->second;
+  Counter.recordDataAccessCount(Address, Count);
 }
 
 class ETMCallback : public ETMDecoder::Callback {
@@ -1535,7 +1541,10 @@ class ETMCallback : public ETMDecoder::Callback {
 public:
   ETMCallback(ETMReader *R) : Reader(R) {}
   void processInstructionRange(uint64_t Start, uint64_t End) override {
-    Reader->recordProcessedRange(Start, End, 1);
+    Reader->recordInstructionRange(Start, End, 1);
+  }
+  void processDataAddress(uint64_t Address) override {
+    Reader->recordDataAddress(Address, 1);
   }
 };
 
@@ -1554,25 +1563,15 @@ void ETMReader::parseETMTraces() {
   auto Key = std::make_shared<StringBasedCtxKey>();
   Counters.try_emplace(Hashable<ContextKey>(Key));
 
-  // The protocol utilizes a 0x80 byte as an initial synchronization header.
-  // Perform a manual search for this sync point to discard any leading
-  // padding or truncated packets before decoding begins.
-  size_t StartIdx = 0;
-  while (StartIdx < Data.size() && Data[StartIdx] != 0x80)
-    StartIdx++;
-  if (StartIdx >= Data.size())
-    exitWithError("No synchronization header (0x80) found in the bitstream.");
-  ArrayRef<uint8_t> TraceSlice = Data.slice(StartIdx);
-
   auto DecoderOrErr = ETMDecoder::create(
-      Binary->getBinary(), Binary->getTriple(), static_cast<uint8_t>(TraceID));
+      Binary->getBinary(), Binary->getTriple(), ETMTraceID, ITMTraceID);
 
   if (!DecoderOrErr)
     exitWithError(toString(DecoderOrErr.takeError()));
   auto Decoder = std::move(*DecoderOrErr);
 
   ETMCallback CB(this);
-  if (Error E = Decoder->processTrace(TraceSlice, CB))
+  if (Error E = Decoder->processTrace(Data, CB))
     exitWithError(toString(std::move(E)));
 }
 

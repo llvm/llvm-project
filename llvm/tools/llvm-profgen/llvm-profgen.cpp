@@ -90,12 +90,24 @@ static cl::opt<std::string> DataAccessProfileFilename(
     cl::cat(ProfGenCategory));
 
 static cl::opt<std::string> ETMPath("etm", cl::value_desc("etm"),
-                                    cl::desc("Path of raw ETM trace file"),
+                                    cl::desc("Path of raw ETM/ITM trace file"),
                                     cl::cat(ProfGenCategory));
 
+// Per the Arm CoreSight specification, each trace source in a shared stream has
+// its own 7-bit Trace ID (0x01-0x6F), configured in separate hardware registers
+// for ETM (TRCTRACEIDR) and ITM (ITM_TCR). Since the specification does not
+// define fixed IDs, different debug probes use different values (e.g., 0x01
+// for ETM and 0x11 for ITM).
 static cl::opt<unsigned> ETMTraceID(
-    "etm-trace-id", cl::init(0x10),
-    cl::desc("CoreSight Trace ID (CSID) used to route ETM trace data."),
+    "etm-trace-id", cl::init(0x01),
+    cl::desc("ARM CoreSight Trace ID (CSID) used to route ETM trace data "
+             "(default: 0x01)."),
+    cl::cat(ProfGenCategory));
+
+static cl::opt<unsigned> ITMTraceID(
+    "itm-trace-id", cl::init(0x11),
+    cl::desc("ARM CoreSight Trace ID (CSID) used to route ITM trace data "
+             "(default: 0x11)."),
     cl::cat(ProfGenCategory));
 
 static cl::opt<std::string>
@@ -225,7 +237,8 @@ int main(int argc, const char *argv[]) {
 
     if (File.Format == InputFormat::ETMFormat) {
       EtmReader = std::make_unique<ETMReader>(Binary.get(), File.InputFilePath,
-                                              static_cast<uint8_t>(ETMTraceID));
+                                              static_cast<uint8_t>(ETMTraceID),
+                                              static_cast<uint8_t>(ITMTraceID));
       EtmReader->parseETMTraces();
       Counters = &EtmReader->getSampleCounters();
     } else {

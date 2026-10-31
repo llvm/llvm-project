@@ -12,7 +12,12 @@
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/ProfileData/DataAccessProf.h"
+#include "llvm/ProfileData/InstrProfWriter.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <float.h>
@@ -36,6 +41,20 @@ static cl::opt<SampleProfileFormat> OutputFormat(
                clEnumValN(SPF_Text, "text", "Text encoding"),
                clEnumValN(SPF_GCC, "gcc",
                           "GCC encoding (only meaningful for -sample)")),
+    cl::cat(ProfGenCategory));
+
+enum DataAccessProfileFormat {
+  Sample,
+  Instrumented,
+};
+
+static cl::opt<DataAccessProfileFormat> ProfileFormat(
+    "profile-format", cl::desc("Format of output data access profile"),
+    cl::init(Sample),
+    cl::values(clEnumValN(Sample, "sample",
+                          "Sample-based profile format (default)"),
+               clEnumValN(Instrumented, "instr",
+                          "Instrumentation-based profile format")),
     cl::cat(ProfGenCategory));
 
 static cl::opt<bool> UseMD5(
@@ -170,8 +189,38 @@ void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
     Writer->setProfileSymbolList(&SymbolList);
   }
 
+  if (ProfileFormat == Sample)
+    Writer->setDataAccessProfData(std::move(DataAccessProfileData));
+
   if (std::error_code EC = Writer->write(ProfileMap))
     exitWithError(std::move(EC));
+
+  if (!DataAccessProfileData || DataAccessProfileData->empty())
+    return;
+
+  // Write the instrumentation-based data access profile.
+  StringRef Ext = sys::path::extension(OutputFilename);
+  SmallString<128> DataOutputFilename = StringRef(OutputFilename);
+  sys::path::replace_extension(DataOutputFilename, "");
+  DataOutputFilename += "-data";
+  DataOutputFilename += Ext;
+
+  std::error_code EC;
+  raw_fd_ostream OS(DataOutputFilename, EC, sys::fs::OF_None);
+  if (EC)
+    exitWithError("Could not open data profile output file: " + EC.message());
+
+  // The data access profiles are supported in MemProf Version 4 and above.
+  // Use the maximum supported version and enable the memory profile kind.
+  InstrProfWriter DataWriter(
+      /*Sparse=*/false, /*TemporalProfTraceReservoirSize=*/0,
+      /*MaxTemporalProfTraceLength=*/0, /*WritePrevVersion=*/false,
+      static_cast<memprof::IndexedVersion>(memprof::MaximumSupportedVersion));
+  cantFail(DataWriter.mergeProfileKind(InstrProfKind::MemProf));
+  DataWriter.addDataAccessProfData(std::move(DataAccessProfileData));
+
+  if (Error E = DataWriter.write(OS))
+    exitWithError(toString(std::move(E)));
 }
 
 void ProfileGeneratorBase::write() {
@@ -563,7 +612,8 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   populateBodySamplesForAllFunctions(SC.RangeCounter);
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
-  populateTypeSamplesForAllFunctions(SC.DataAccessCounter);
+  populateTypeSamplesForAllFunctions(SC.VTableAccessCounter);
+  populateDataAccessSamples(SC.DataAccessCounter);
 
   updateFunctionSamples();
 }
@@ -778,10 +828,10 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
 }
 
 void ProfileGenerator::populateTypeSamplesForAllFunctions(
-    const DataAccessSample &DataAccessSamples) {
+    const VTableAccessSample &VTableAccessSamples) {
   // For each instruction with vtable accesses, get its symbolized inline
   // stack, and add the vtable counters to the function samples.
-  for (const auto &[IpData, Count] : DataAccessSamples) {
+  for (const auto &[IpData, Count] : VTableAccessSamples) {
     uint64_t InstAddr = IpData.first;
     const SampleContextFrameVector &FrameVec =
         Binary->getCachedFrameLocationStack(InstAddr,
@@ -795,6 +845,43 @@ void ProfileGenerator::populateTypeSamplesForAllFunctions(
       FunctionProfile.addTypeSamplesAt(Loc, FunctionId(IpData.second), Count);
     }
   }
+}
+
+void ProfileGenerator::populateDataAccessSamples(
+    const DataAccessSample &DataAccessSamples) {
+  if (DataAccessSamples.empty())
+    return;
+
+  MapVector<std::string, memprof::DataAccessProfRecord, StringMap<unsigned>>
+      DataAccessRecords;
+  for (const auto &[Address, Count] : DataAccessSamples) {
+    if (Binary->addressIsCode(Address) || Binary->findFuncRange(Address))
+      continue;
+
+    DIGlobal Global = Binary->symbolizeData(Address);
+    if (Global.Name.empty() || Global.Name == DILineInfo::BadString)
+      continue;
+
+    if (Global.DeclLine == 0 && Global.Start != 0 && Global.Start != Address)
+      Global = Binary->symbolizeData(Global.Start);
+
+    memprof::DataAccessProfRecord &Record = DataAccessRecords[Global.Name];
+    Record.AccessCount += Count;
+    if (Global.DeclFile.empty() || Global.DeclFile == DILineInfo::BadString)
+      continue;
+
+    auto IsSameLocation = [&](const memprof::SourceLocation &L) {
+      return L.FileName == Global.DeclFile && L.Line == Global.DeclLine;
+    };
+    if (!llvm::any_of(Record.Locations, IsSameLocation))
+      Record.Locations.emplace_back(Global.DeclFile, Global.DeclLine);
+  }
+
+  DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  for (const auto &[SymName, Record] : DataAccessRecords)
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            SymName, Record.AccessCount, Record.Locations))
+      consumeError(std::move(E));
 }
 
 void ProfileGeneratorBase::calculateBodySamplesAndSize(
