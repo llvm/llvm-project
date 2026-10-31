@@ -24,6 +24,273 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+namespace {
+// TODO(cir): a lot of what we see under this namespace is a strong candidate
+// to be shared between LLVM and CIR codegen.
+
+/// RAII object to indicate that codegen is copying the value representation
+/// instead of the object representation. Useful when copying a struct or
+/// class which has uninitialized members and we're only performing
+/// lvalue-to-rvalue conversion on the object but not its members.
+class CopyingValueRepresentation {
+public:
+  explicit CopyingValueRepresentation(CIRGenFunction &cgf)
+      : cgf(cgf), oldSanOpts(cgf.sanOpts) {
+    cgf.sanOpts.set(SanitizerKind::Bool, false);
+    cgf.sanOpts.set(SanitizerKind::Enum, false);
+  }
+  ~CopyingValueRepresentation() { cgf.sanOpts = oldSanOpts; }
+
+private:
+  CIRGenFunction &cgf;
+  SanitizerSet oldSanOpts;
+};
+
+class FieldMemcpyizer {
+public:
+  FieldMemcpyizer(CIRGenFunction &cgf, const CXXMethodDecl *methodDecl,
+                  const VarDecl *srcRec)
+      : cgf(cgf), methodDecl(methodDecl), classDecl(methodDecl->getParent()),
+        srcRec(srcRec),
+        recLayout(cgf.getContext().getASTRecordLayout(classDecl)),
+        firstField(nullptr), lastField(nullptr), firstFieldOffset(0),
+        lastFieldOffset(0), lastAddedFieldIndex(0) {}
+
+  bool isMemcpyableField(FieldDecl *f) const {
+    // Never memcpy fields when we are adding poised paddings.
+    if (cgf.getContext().getLangOpts().SanitizeAddressFieldPadding)
+      return false;
+    Qualifiers qual = f->getType().getQualifiers();
+    if (qual.hasVolatile() || qual.hasObjCLifetime())
+      return false;
+    return true;
+  }
+
+  void addMemcpyableField(FieldDecl *f) {
+    // TODO(cir): isEmptyFieldForLayout is not handled here yet.
+    // Incubator has assert(!cir::MissingFeatures::isEmptyFieldForLayout());
+    if (f->isZeroSize(cgf.getContext()))
+      return;
+    if (!firstField)
+      addInitialField(f);
+    else
+      addNextField(f);
+  }
+
+  CharUnits getMemcpySize(uint64_t firstByteOffset) const {
+    ASTContext &astContext = cgf.getContext();
+    unsigned lastFieldSize =
+        lastField->isBitField()
+            ? lastField->getBitWidthValue()
+            : astContext.toBits(
+                  astContext.getTypeInfoDataSizeInChars(lastField->getType())
+                      .Width);
+    uint64_t memcpySizeBits = lastFieldOffset + lastFieldSize -
+                              firstByteOffset + astContext.getCharWidth() - 1;
+    return astContext.toCharUnitsFromBits(memcpySizeBits);
+  }
+
+  void emitMemcpy() {
+    // Give the subclass a chance to bail out if it feels the memcpy isn't worth
+    // it (e.g. Hasn't aggregated enough data).
+    if (!firstField)
+      return;
+
+    uint64_t firstByteOffset;
+    if (firstField->isBitField()) {
+      const CIRGenRecordLayout &rl =
+          cgf.getTypes().getCIRGenRecordLayout(firstField->getParent());
+      const CIRGenBitFieldInfo &bfInfo = rl.getBitFieldInfo(firstField);
+      // firstFieldOffset is not appropriate for bitfields,
+      // we need to use the storage offset instead.
+      firstByteOffset = cgf.getContext().toBits(bfInfo.storageOffset);
+    } else {
+      firstByteOffset = firstFieldOffset;
+    }
+
+    CharUnits memcpySize = getMemcpySize(firstByteOffset);
+    QualType recordTy = cgf.getContext().getTagType(
+        ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt, classDecl,
+        /*OwnsTag=*/false);
+    Address thisPtr = cgf.loadCXXThisAddress();
+    LValue destLv = cgf.makeAddrLValue(thisPtr, recordTy);
+    LValue dest = cgf.emitLValueForFieldInitialization(destLv, firstField,
+                                                       firstField->getName());
+    cir::LoadOp srcPtr = cgf.getBuilder().createLoad(
+        cgf.getLoc(methodDecl->getLocation()), cgf.getAddrOfLocalVar(srcRec));
+    LValue srcLv = cgf.makeNaturalAlignAddrLValue(srcPtr, recordTy);
+    LValue src = cgf.emitLValueForFieldInitialization(srcLv, firstField,
+                                                      firstField->getName());
+
+    emitMemcpyIR(dest.isBitField() ? dest.getBitFieldAddress()
+                                   : dest.getAddress(),
+                 src.isBitField() ? src.getBitFieldAddress() : src.getAddress(),
+                 memcpySize);
+    reset();
+  }
+
+  void reset() { firstField = nullptr; }
+
+protected:
+  CIRGenFunction &cgf;
+  const CXXMethodDecl *methodDecl;
+  const CXXRecordDecl *classDecl;
+
+private:
+  void emitMemcpyIR(Address destPtr, Address srcPtr, CharUnits size) {
+    mlir::Location loc = cgf.getLoc(methodDecl->getLocation());
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    mlir::Value sizeOp =
+        builder.getConstInt(loc, cgf.sizeTy, size.getQuantity());
+    Address destCast = destPtr.withElementType(builder, cgf.voidTy);
+    Address srcCast = srcPtr.withElementType(builder, cgf.voidTy);
+    builder.createMemCpy(loc, destCast, srcCast, sizeOp);
+  }
+
+  void addInitialField(FieldDecl *f) {
+    firstField = f;
+    lastField = f;
+    firstFieldOffset = recLayout.getFieldOffset(f->getFieldIndex());
+    lastFieldOffset = firstFieldOffset;
+    lastAddedFieldIndex = f->getFieldIndex();
+  }
+
+  void addNextField(FieldDecl *f) {
+    // For the most part, the following invariant will hold:
+    //   f->getFieldIndex() == lastAddedFieldIndex + 1
+    // The one exception is that Sema won't add a copy-initializer for an
+    // unnamed bitfield, which will show up here as a gap in the sequence.
+    assert(f->getFieldIndex() >= lastAddedFieldIndex + 1 &&
+           "Cannot aggregate fields out of order.");
+    lastAddedFieldIndex = f->getFieldIndex();
+
+    // The 'first' and 'last' fields are chosen by offset, rather than field
+    // index. This allows the code to support bitfields, as well as regular
+    // fields.
+    uint64_t fOffset = recLayout.getFieldOffset(f->getFieldIndex());
+    if (fOffset < firstFieldOffset) {
+      firstField = f;
+      firstFieldOffset = fOffset;
+    } else if (fOffset >= lastFieldOffset) {
+      lastField = f;
+      lastFieldOffset = fOffset;
+    }
+  }
+
+  const VarDecl *srcRec;
+  const ASTRecordLayout &recLayout;
+  FieldDecl *firstField;
+  FieldDecl *lastField;
+  uint64_t firstFieldOffset, lastFieldOffset;
+  unsigned lastAddedFieldIndex;
+};
+
+class AssignmentMemcpyizer : public FieldMemcpyizer {
+  // Returns the memcpyable field copied by the given statement, if one
+  // exists. Otherwise returns null.
+  FieldDecl *getMemcpyableField(Stmt *s) {
+    if (!assignmentsMemcpyable)
+      return nullptr;
+    if (auto *bo = dyn_cast<BinaryOperator>(s)) {
+      // Recognise trivial assignments.
+      if (bo->getOpcode() != BO_Assign)
+        return nullptr;
+      auto *me = dyn_cast<MemberExpr>(bo->getLHS());
+      if (!me)
+        return nullptr;
+      auto *field = dyn_cast<FieldDecl>(me->getMemberDecl());
+      if (!field || !isMemcpyableField(field))
+        return nullptr;
+      Stmt *rhs = bo->getRHS();
+      if (auto *ec = dyn_cast<ImplicitCastExpr>(rhs))
+        rhs = ec->getSubExpr();
+      if (!rhs)
+        return nullptr;
+      if (auto *me2 = dyn_cast<MemberExpr>(rhs)) {
+        if (me2->getMemberDecl() == field)
+          return field;
+      }
+      return nullptr;
+    } else if (isa<CXXMemberCallExpr>(s)) {
+      // We want to represent all calls explicitly for analysis purposes.
+      return nullptr;
+    } else if (auto *ce = dyn_cast<CallExpr>(s)) {
+      // TODO(cir): https://github.com/llvm/clangir/issues/1177: This can result
+      // in memcpys instead of calls to trivial member functions.
+      auto *fd = dyn_cast<FunctionDecl>(ce->getCalleeDecl());
+      if (!fd || fd->getBuiltinID() != Builtin::BI__builtin_memcpy)
+        return nullptr;
+      Expr *dstPtr = ce->getArg(0);
+      if (auto *dc = dyn_cast<ImplicitCastExpr>(dstPtr))
+        dstPtr = dc->getSubExpr();
+      auto *duo = dyn_cast<UnaryOperator>(dstPtr);
+      if (!duo || duo->getOpcode() != UO_AddrOf)
+        return nullptr;
+      auto *me = dyn_cast<MemberExpr>(duo->getSubExpr());
+      if (!me)
+        return nullptr;
+      auto *field = dyn_cast<FieldDecl>(me->getMemberDecl());
+      if (!field || !isMemcpyableField(field))
+        return nullptr;
+      Expr *srcPtr = ce->getArg(1);
+      if (auto *sc = dyn_cast<ImplicitCastExpr>(srcPtr))
+        srcPtr = sc->getSubExpr();
+      auto *suo = dyn_cast<UnaryOperator>(srcPtr);
+      if (!suo || suo->getOpcode() != UO_AddrOf)
+        return nullptr;
+      auto *me2 = dyn_cast<MemberExpr>(suo->getSubExpr());
+      if (!me2 || field != dyn_cast<FieldDecl>(me2->getMemberDecl()))
+        return nullptr;
+      return field;
+    }
+
+    return nullptr;
+  }
+
+  bool assignmentsMemcpyable;
+  SmallVector<Stmt *, 16> aggregatedStmts;
+
+public:
+  AssignmentMemcpyizer(CIRGenFunction &cgf, const CXXMethodDecl *ad,
+                       FunctionArgList &args)
+      : FieldMemcpyizer(cgf, ad, args[args.size() - 1]),
+        assignmentsMemcpyable(cgf.getLangOpts().getGC() == LangOptions::NonGC) {
+    assert(args.size() == 2);
+  }
+
+  void emitAssignment(Stmt *s) {
+    FieldDecl *f = getMemcpyableField(s);
+    if (f) {
+      addMemcpyableField(f);
+      aggregatedStmts.push_back(s);
+    } else {
+      emitAggregatedStmts();
+      if (cgf.emitStmt(s, /*useCurrentScope=*/true).failed())
+        cgf.cgm.errorNYI(s->getSourceRange(), std::string("emitAssignment: ") +
+                                                  s->getStmtClassName());
+    }
+  }
+
+  void emitAggregatedStmts() {
+    if (aggregatedStmts.size() <= 1) {
+      if (!aggregatedStmts.empty()) {
+        CopyingValueRepresentation cvr(cgf);
+        if (cgf.emitStmt(aggregatedStmts[0], /*useCurrentScope=*/true).failed())
+          cgf.cgm.errorNYI(aggregatedStmts[0]->getSourceRange(),
+                           std::string("emitAggregatedStmts: ") +
+                               aggregatedStmts[0]->getStmtClassName());
+      }
+      reset();
+    }
+
+    emitMemcpy();
+    aggregatedStmts.clear();
+  }
+
+  void finish() { emitAggregatedStmts(); }
+};
+} // namespace
+
 /// Return the smallest possible amount of storage that might be allocated
 /// starting from the beginning of an object of a particular class.
 ///
@@ -873,17 +1140,10 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
 
-  // Classic codegen uses a special class to attempt to replace member
-  // initializers with memcpy. We could possibly defer that to the
-  // lowering or optimization phases to keep the memory accesses more
-  // explicit. For now, we don't insert memcpy at all, though in some
-  // cases the AST contains a call to memcpy.
-  assert(!cir::MissingFeatures::assignMemcpyizer());
-  for (Stmt *s : rootCS->body())
-    if (emitStmt(s, /*useCurrentScope=*/true).failed())
-      cgm.errorNYI(s->getSourceRange(),
-                   std::string("emitImplicitAssignmentOperatorBody: ") +
-                       s->getStmtClassName());
+  AssignmentMemcpyizer AM(*this, assignOp, args);
+  for (auto *i : rootCS->body())
+    AM.emitAssignment(i);
+  AM.finish();
 }
 
 void CIRGenFunction::emitForwardingCallToLambda(
