@@ -59803,6 +59803,18 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   // the optimization here.
   SDNodeFlags Flags = N->getFlags();
   if (Flags.hasNonNeg() || DAG.SignBitIsZero(Op0)) {
+    // Keep the packed unsigned expansion when a signed conversion is not
+    // directly legal and the operand cannot narrow to a signed i32 conversion.
+    // Extended types must be legalized before querying conversion legality.
+    // Strict conversions cannot use that expansion.
+    if (!IsStrict && InVT.isVector() && InVT.getScalarType() == MVT::i64 &&
+        VT.getScalarType() == MVT::f64 &&
+        (!InVT.isSimple() || !VT.isSimple() ||
+         !isLegalConversion(InVT.getSimpleVT(), VT.getSimpleVT(), true,
+                            Subtarget)) &&
+        DAG.ComputeMaxSignificantBits(Op0) > 32)
+      return SDValue();
+
     if (IsStrict)
       return DAG.getNode(ISD::STRICT_SINT_TO_FP, SDLoc(N), {VT, MVT::Other},
                          {N->getOperand(0), Op0});
