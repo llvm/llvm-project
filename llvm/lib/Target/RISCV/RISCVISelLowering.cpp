@@ -13875,35 +13875,39 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
-    auto buildMerge = [&](SDValue Rs1, SDValue Rs2, SDValue Mask,
-                          EVT ResultVT) {
-      MVT IntVT = MVT::getIntegerVT(ResultVT.getSizeInBits());
-      SDValue Res =
-          DAG.getNode(RISCVISD::MERGE, DL, IntVT, DAG.getBitcast(IntVT, Mask),
-                      DAG.getBitcast(IntVT, Rs1), DAG.getBitcast(IntVT, Rs2));
-      return DAG.getBitcast(ResultVT, Res);
-    };
-
-    // 64-bit packed types on RV32: split into two 32-bit halves. v2i32 has no
-    // legal 32-bit vector half, so bitcast it to v4i16 (same 64 bits) first;
-    // the merge result is identical.
-    if (!Subtarget.is64Bit() &&
-        (VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32)) {
-      EVT WorkVT = VT == MVT::v2i32 ? EVT(MVT::v4i16) : VT;
-      SDValue Rs1 = DAG.getBitcast(WorkVT, Op.getOperand(1));
-      SDValue Rs2 = DAG.getBitcast(WorkVT, Op.getOperand(2));
-      SDValue Mask = DAG.getBitcast(WorkVT, Op.getOperand(3));
-      MVT HalfVT = WorkVT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
-      auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL, HalfVT, HalfVT);
-      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL, HalfVT, HalfVT);
-      auto [MaskLo, MaskHi] = DAG.SplitVector(Mask, DL, HalfVT, HalfVT);
-      SDValue ResLo = buildMerge(Rs1Lo, Rs2Lo, MaskLo, HalfVT);
-      SDValue ResHi = buildMerge(Rs1Hi, Rs2Hi, MaskHi, HalfVT);
-      SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, WorkVT, ResLo, ResHi);
-      return DAG.getBitcast(VT, Res);
+    // 64-bit packed types on RV32: split into two 32-bit halves.
+    if (!Subtarget.is64Bit() && (VT == MVT::v8i8 || VT == MVT::v4i16)) {
+      MVT HalfVT = VT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
+      auto [Rs1Lo, Rs1Hi] =
+          DAG.SplitVector(Op.getOperand(1), DL, HalfVT, HalfVT);
+      auto [Rs2Lo, Rs2Hi] =
+          DAG.SplitVector(Op.getOperand(2), DL, HalfVT, HalfVT);
+      auto [MaskLo, MaskHi] =
+          DAG.SplitVector(Op.getOperand(3), DL, HalfVT, HalfVT);
+      SDValue ResLo =
+          DAG.getNode(RISCVISD::MERGE, DL, HalfVT, MaskLo, Rs1Lo, Rs2Lo);
+      SDValue ResHi =
+          DAG.getNode(RISCVISD::MERGE, DL, HalfVT, MaskHi, Rs1Hi, Rs2Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
     }
 
-    return buildMerge(Op.getOperand(1), Op.getOperand(2), Op.getOperand(3), VT);
+    // v2i32 has no legal 32-bit vector half, so merge each i32 element.
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      SDValue Elts[2];
+      for (unsigned I = 0; I != 2; ++I) {
+        SDValue Rs1 =
+            DAG.getExtractVectorElt(DL, MVT::i32, Op.getOperand(1), I);
+        SDValue Rs2 =
+            DAG.getExtractVectorElt(DL, MVT::i32, Op.getOperand(2), I);
+        SDValue Mask =
+            DAG.getExtractVectorElt(DL, MVT::i32, Op.getOperand(3), I);
+        Elts[I] = DAG.getNode(RISCVISD::MERGE, DL, MVT::i32, Mask, Rs1, Rs2);
+      }
+      return DAG.getBuildVector(VT, DL, Elts);
+    }
+
+    return DAG.getNode(RISCVISD::MERGE, DL, VT, Op.getOperand(3),
+                       Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::experimental_get_vector_length:
     return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
