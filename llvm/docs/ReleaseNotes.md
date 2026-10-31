@@ -378,6 +378,13 @@ Makes programs 10x faster by doing Special New Thing.
   and the memory operations access only memory through their pointer
   argument. Before, each one could read and write any memory, so loads of
   loop-invariant values weren't hoisted out of loops of tile operations.
+* Above `-O0`, an inline asm operand that allows a general-purpose register or
+  memory (`"rm"`, or `"g"` for a value that isn't a constant) now gets a
+  register if its integer value fills one, as with GCC. Under register
+  pressure, the register allocator puts it in memory instead. Before, such an
+  operand always used memory, so an asm template that only works with a
+  memory operand (e.g. `clflush`) may now fail to assemble. A direct `"=rm"`
+  output in IR also gets a register now, at any optimization level.
 
 * Non-temporal stores (`!nontemporal` metadata) now have the same
   memory-ordering semantics as normal stores, as is required by the LLVM IR

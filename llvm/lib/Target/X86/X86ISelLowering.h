@@ -414,6 +414,10 @@ namespace llvm {
 
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
+    // X86InstrInfo::getFrameIndexOperands() lets the register allocator fold
+    // an inline asm register operand to a stack slot.
+    bool supportsRegMemInlineAsmFolding() const override { return true; }
+
     /// Examine constraint string and operand type and determine a weight value.
     /// The operand object must already have been set up with the operand type.
     ConstraintWeight
