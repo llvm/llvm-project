@@ -25,8 +25,12 @@
 
 #ifdef __linux__
 
+#include <cerrno>
+#include <fcntl.h>
 #include <sys/mman.h> // mmap()
-#include <time.h>     // clock_gettime()
+#include <sys/stat.h>
+#include <time.h> // clock_gettime()
+#include <unistd.h>
 
 #define DEBUG_TYPE "orc"
 
@@ -50,6 +54,11 @@ struct PerfState {
 
   // perf mmap marker
   void *MarkerAddr = nullptr;
+
+  // Keep one dump and code-index sequence for the executor's whole lifetime,
+  // even when all plugins have been destroyed and are subsequently recreated.
+  uint64_t NextCodeIndex = 0;
+  unsigned Users = 1;
 };
 
 // prevent concurrent dumps from messing up the output file
@@ -126,9 +135,10 @@ static void writeDebugRecord(const PerfJITDebugInfoRecord &DebugRecord) {
 static void writeCodeRecord(const PerfJITCodeLoadRecord &CodeRecord) {
   assert(State && "PerfState not initialized");
   uint32_t Tid = get_threadid();
+  uint64_t CodeIndex = State->NextCodeIndex++;
   LLVM_DEBUG(dbgs() << "Writing code record with code size "
-                    << CodeRecord.CodeSize << " and code index "
-                    << CodeRecord.CodeIndex << "\n");
+                    << CodeRecord.CodeSize << " and code index " << CodeIndex
+                    << "\n");
   CLR Clr{RecHeader{static_cast<uint32_t>(CodeRecord.Prefix.Id),
                     CodeRecord.Prefix.TotalSize, perf_get_timestamp()},
           State->Pid,
@@ -136,7 +146,7 @@ static void writeCodeRecord(const PerfJITCodeLoadRecord &CodeRecord) {
           CodeRecord.Vma,
           CodeRecord.CodeAddr,
           CodeRecord.CodeSize,
-          CodeRecord.CodeIndex};
+          CodeIndex};
   LLVM_DEBUG(dbgs() << "wrote " << sizeof(Clr) << " bytes of CLR, "
                     << CodeRecord.Name.size() + 1 << " bytes of name, "
                     << CodeRecord.CodeSize << " bytes of code\n");
@@ -173,13 +183,13 @@ static Error writeUnwindRecord(StringRef Frame) {
 }
 
 static Error registerJITLoaderPerfImpl(const PerfJITRecordBatch &Batch) {
-  if (!State)
+  std::lock_guard<std::mutex> Lock(Mutex);
+  if (!State || !State->Users)
     return make_error<StringError>("PerfState not initialized",
                                    inconvertibleErrorCode());
 
   // Profiler metadata is optional. A malformed or unsupported CFI record must
   // not turn successful JIT materialization into an allocation-action failure.
-  std::lock_guard<std::mutex> Lock(Mutex);
   std::optional<PerfJITUnwindInfo> UnwindInfo;
   const auto &U = Batch.UnwindingRecord;
   auto SkipUnwind = [](Error Err) {
@@ -315,8 +325,18 @@ static Expected<Header> FillMachine(PerfState &State) {
 }
 
 static Error registerJITLoaderPerfStartImpl() {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  uint32_t Pid = sys::Process::getProcessId();
+  if (State && State->Pid == Pid) {
+    ++State->Users;
+    return Error::success();
+  }
+  if (State) {
+    CloseMarker(*State);
+    State.reset();
+  }
   PerfState Tentative;
-  Tentative.Pid = sys::Process::getProcessId();
+  Tentative.Pid = Pid;
   // check if clock-source is supported
   if (!perf_get_timestamp())
     return make_error<StringError>("kernel does not support CLOCK_MONOTONIC",
@@ -328,55 +348,63 @@ static Error registerJITLoaderPerfStartImpl() {
   // recognizes /tmp/jitted-, so this must not use a cache subdirectory.
   FilenameBuf << "/tmp/jit-" << Tentative.Pid << ".dump";
 
-  // Need to open ourselves, because we need to hand the FD to OpenMarker() and
-  // raw_fd_ostream doesn't expose the FD.
-  if (auto EC = openFileForReadWrite(Filename, Tentative.DumpFd,
-                                     sys::fs::CD_CreateNew, sys::fs::OF_None)) {
-    std::string ErrStr;
-    raw_string_ostream ErrStream(ErrStr);
-    ErrStream << "could not open JIT dump file " << Filename << ": "
-              << EC.message() << "\n";
-    return make_error<StringError>(std::move(ErrStr), inconvertibleErrorCode());
-  }
-
+  // This is the first start in this process. Replace data left by an earlier
+  // process with the same PID, but do not follow links when opening it.
+  Tentative.DumpFd =
+      ::open(Filename.c_str(),
+             O_RDWR | O_CREAT | O_APPEND | O_CLOEXEC | O_NOFOLLOW, 0600);
+  if (Tentative.DumpFd < 0)
+    return make_error<StringError>(
+        "could not open JIT dump file " + Filename,
+        std::error_code(errno, std::generic_category()));
   Tentative.Dumpstream =
       std::make_unique<raw_fd_ostream>(Tentative.DumpFd, true);
+  struct stat Status;
+  if (::fstat(Tentative.DumpFd, &Status) < 0)
+    return make_error<StringError>(
+        "could not stat JIT dump file",
+        std::error_code(errno, std::generic_category()));
+  if (!S_ISREG(Status.st_mode) || Status.st_uid != ::geteuid() ||
+      Status.st_nlink != 1)
+    return make_error<StringError>(
+        "JIT dump must be an owned regular file without links",
+        inconvertibleErrorCode());
+  if (::ftruncate(Tentative.DumpFd, 0) < 0)
+    return make_error<StringError>(
+        "could not truncate JIT dump file",
+        std::error_code(errno, std::generic_category()));
 
   auto Header = FillMachine(Tentative);
   if (!Header)
     return Header.takeError();
 
-  // signal this process emits JIT information
-  if (auto Err = OpenMarker(Tentative))
-    return Err;
-
   Tentative.Dumpstream->write(reinterpret_cast<const char *>(&Header.get()),
                               sizeof(*Header));
+  Tentative.Dumpstream->flush();
 
   // Everything initialized, can do profiling now.
   if (Tentative.Dumpstream->has_error())
     return make_error<StringError>("could not write JIT dump header",
                                    inconvertibleErrorCode());
 
+  // Keep this marker for subsequent starts too, so perf inject sees one dump.
+  if (auto Err = OpenMarker(Tentative))
+    return Err;
+
   State = std::move(Tentative);
   return Error::success();
 }
 
 static Error registerJITLoaderPerfEndImpl() {
-  if (!State)
+  std::lock_guard<std::mutex> Lock(Mutex);
+  if (!State || !State->Users)
     return make_error<StringError>("PerfState not initialized",
                                    inconvertibleErrorCode());
 
-  RecHeader Close;
-  Close.Id = static_cast<uint32_t>(PerfJITRecordType::JIT_CODE_CLOSE);
-  Close.TotalSize = sizeof(Close);
-  Close.Timestamp = perf_get_timestamp();
-  State->Dumpstream->write(reinterpret_cast<const char *>(&Close),
-                           sizeof(Close));
-  if (State->MarkerAddr)
-    CloseMarker(*State);
-
-  State.reset();
+  --State->Users;
+  State->Dumpstream->flush();
+  // CLOSE is optional. Retain the stream, marker and counter so a later start
+  // appends records after the same header instead of starting a second dump.
   return Error::success();
 }
 

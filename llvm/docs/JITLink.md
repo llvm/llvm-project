@@ -909,6 +909,10 @@ the generated `/tmp/jitted-*.so` files must remain available when the recording
 is read. The `/tmp` location also allows perf's libdw unwinder to recognize
 the generated JIT DSOs.
 
+The executor keeps one dump and code-index sequence for its process lifetime.
+Recreating the perf plugin appends records to the same dump. A new process
+overwrites any stale dump at its PID's path.
+
 Each function's unwind and debug records precede its code-load record. Unwind
 payloads contain `.eh_frame` followed by `.eh_frame_hdr`, with addresses
 rebased for the ELF that `perf inject` creates. The implementation generates

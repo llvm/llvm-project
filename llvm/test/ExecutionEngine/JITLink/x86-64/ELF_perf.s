@@ -13,6 +13,10 @@
 # RUN: %python %S/../Inputs/check-perf-jitdump.py --run \
 # RUN:     llvm-jitlink -perf-support %t/ELF_x86-64_perf.o \
 # RUN:     | FileCheck %s --check-prefix=DUMP
+# RUN: %python %S/../Inputs/check-perf-jitdump.py --run sh -c \
+# RUN:     'printf stale > /tmp/jit-$$.dump; exec "$@"' sh \
+# RUN:     llvm-jitlink -perf-support %t/ELF_x86-64_perf.o \
+# RUN:     | FileCheck %s --check-prefix=DUMP
 
 # DUMP-DAG: main: valid per-function unwind record
 # DUMP-DAG: passthrough: valid per-function unwind record

@@ -319,26 +319,59 @@ TEST(PerfJITUnwindInfoTest, TruncationsAndSingleByteMutationsRemainBounded) {
 }
 
 #ifdef __linux__
+std::string perfDumpPath() {
+  return "/tmp/jit-" + Twine(sys::Process::getProcessId()).str() + ".dump";
+}
+
+// The executor retains its dump for the process lifetime. Remove the test's
+// file only after all runtime tests, so their start/end pairs can share it.
+class PerfDumpCleanup : public ::testing::Environment {
+public:
+  bool Used = false;
+  void TearDown() override {
+    if (Used)
+      EXPECT_FALSE(sys::fs::remove(perfDumpPath()));
+  }
+};
+auto *const DumpCleanup = static_cast<PerfDumpCleanup *>(
+    ::testing::AddGlobalTestEnvironment(new PerfDumpCleanup));
+
+Error callPerfLifecycle(
+    decltype(llvm_orc_registerJITLoaderPerfStart) *Function) {
+  using namespace llvm::orc::shared;
+  Error Remote = Error::success();
+  auto Caller = [Function](const char *Data, size_t Size) {
+    return WrapperFunctionBuffer(Function(Data, Size));
+  };
+  Error Transport = WrapperFunction<SPSError()>::call(Caller, Remote);
+  return joinErrors(std::move(Transport), std::move(Remote));
+}
+
+Error callPerfBatch(const PerfJITRecordBatch &Batch) {
+  using namespace llvm::orc::shared;
+  Error Remote = Error::success();
+  Error Transport = WrapperFunction<SPSError(SPSPerfJITRecordBatch)>::call(
+      [](const char *Data, size_t Size) {
+        return WrapperFunctionBuffer(
+            llvm_orc_registerJITLoaderPerfImpl(Data, Size));
+      },
+      Remote, Batch);
+  return joinErrors(std::move(Transport), std::move(Remote));
+}
+
 TEST(PerfJITLoaderTest, UnwindFailuresStillEmitDebugAndCodeLoads) {
   if (sizeof(void *) != 8 || !sys::IsLittleEndianHost)
     GTEST_SKIP() << "Unwind support currently requires little-endian ELF64";
-  using namespace llvm::orc::shared;
-  auto Call = [](auto Function) {
-    Error Remote = Error::success();
-    auto Caller = [Function](const char *Data, size_t Size) {
-      return WrapperFunctionBuffer(Function(Data, Size));
-    };
-    Error Transport = WrapperFunction<SPSError()>::call(Caller, Remote);
-    return joinErrors(std::move(Transport), std::move(Remote));
-  };
-  ASSERT_THAT_ERROR(Call(llvm_orc_registerJITLoaderPerfStart), Succeeded());
-  std::string Path =
-      "/tmp/jit-" + Twine(sys::Process::getProcessId()).str() + ".dump";
+  ASSERT_THAT_ERROR(callPerfLifecycle(llvm_orc_registerJITLoaderPerfStart),
+                    Succeeded());
+  DumpCleanup->Used = true;
+  auto Initial = MemoryBuffer::getFile(perfDumpPath());
+  ASSERT_TRUE(Initial);
+  uint64_t InitialSize = (*Initial)->getBufferSize();
   bool Ended = false;
   auto Cleanup = scope_exit([&] {
     if (!Ended)
-      consumeError(Call(llvm_orc_registerJITLoaderPerfEnd));
-    EXPECT_FALSE(sys::fs::remove(Path));
+      consumeError(callPerfLifecycle(llvm_orc_registerJITLoaderPerfEnd));
   });
   char Memory[256] = {}; // Code and CFI stay within a PC-relative 32-bit range.
   const char *Code = Memory; // Recorded, but never executed.
@@ -396,30 +429,21 @@ TEST(PerfJITLoaderTest, UnwindFailuresStillEmitDebugAndCodeLoads) {
     Debug.Entries.push_back({I.CodeAddr, 1, 0, "test.cc"});
     Batch.DebugInfoRecords.push_back(Debug);
 
-    Error Remote = Error::success();
-    ASSERT_THAT_ERROR(WrapperFunction<SPSError(SPSPerfJITRecordBatch)>::call(
-                          [](const char *Data, size_t Size) {
-                            return WrapperFunctionBuffer(
-                                llvm_orc_registerJITLoaderPerfImpl(Data, Size));
-                          },
-                          Remote, Batch),
-                      Succeeded());
-    ASSERT_THAT_ERROR(std::move(Remote), Succeeded());
+    ASSERT_THAT_ERROR(callPerfBatch(Batch), Succeeded());
     EXPECT_EQ(StringRef(Memory + 8, I.Bytes.size()), Before);
     if (Variant == 0 || Variant == 9)
       ExpectedKinds.push_back(4);
     ExpectedKinds.push_back(2);
     ExpectedKinds.push_back(0);
   }
-  ASSERT_THAT_ERROR(Call(llvm_orc_registerJITLoaderPerfEnd), Succeeded());
+  ASSERT_THAT_ERROR(callPerfLifecycle(llvm_orc_registerJITLoaderPerfEnd),
+                    Succeeded());
   Ended = true;
-  ExpectedKinds.push_back(3);
-  auto Buffer = MemoryBuffer::getFile(Path);
+  auto Buffer = MemoryBuffer::getFile(perfDumpPath());
   ASSERT_TRUE(Buffer);
   DataExtractor Data((*Buffer)->getBuffer(), sys::IsLittleEndianHost);
   SmallVector<uint32_t> Kinds;
-  uint64_t Offset = 8;
-  Offset = Data.getU32(&Offset); // Header's total_size field.
+  uint64_t Offset = InitialSize;
   while (Offset < Data.size()) {
     uint64_t Start = Offset;
     uint32_t Kind = Data.getU32(&Offset);
@@ -430,6 +454,86 @@ TEST(PerfJITLoaderTest, UnwindFailuresStillEmitDebugAndCodeLoads) {
     Offset = Start + Size;
   }
   EXPECT_EQ(Kinds, ExpectedKinds);
+}
+
+TEST(PerfJITLoaderTest, RestartsAppendAndAssignUniqueCodeIndices) {
+  ASSERT_THAT_ERROR(callPerfLifecycle(llvm_orc_registerJITLoaderPerfStart),
+                    Succeeded());
+  DumpCleanup->Used = true;
+  bool Active = true;
+  auto Cleanup = scope_exit([&] {
+    if (Active)
+      consumeError(callPerfLifecycle(llvm_orc_registerJITLoaderPerfEnd));
+  });
+  auto Initial = MemoryBuffer::getFile(perfDumpPath());
+  ASSERT_TRUE(Initial);
+  std::string Prefix = (*Initial)->getBuffer().str();
+  uint64_t InitialSize = Prefix.size();
+  const char Code[3] = {};
+  for (unsigned Session = 0; Session != 2; ++Session) {
+    if (Session) {
+      ASSERT_THAT_ERROR(callPerfLifecycle(llvm_orc_registerJITLoaderPerfStart),
+                        Succeeded());
+      Active = true;
+      auto BeforeAppend = MemoryBuffer::getFile(perfDumpPath());
+      ASSERT_TRUE(BeforeAppend);
+      EXPECT_EQ((*BeforeAppend)->getBuffer(), Prefix);
+    }
+    PerfJITRecordBatch Batch{};
+    for (unsigned I = Session ? 2 : 0; I != (Session ? 3 : 2); ++I) {
+      PerfJITCodeLoadRecord Load{};
+      Load.Name = I == 1 ? "bar" : "foo"; // Include a new instance of foo.
+      Load.Prefix.Id = PerfJITRecordType::JIT_CODE_LOAD;
+      Load.Prefix.TotalSize = 56 + Load.Name.size() + 1 + 1;
+      Load.CodeAddr = Load.Vma = reinterpret_cast<uintptr_t>(Code + I);
+      Load.CodeSize = 1;
+      Load.CodeIndex = 0; // Each controller/plugin may restart its counter.
+      Batch.CodeLoadRecords.push_back(Load);
+    }
+    ASSERT_THAT_ERROR(callPerfBatch(Batch), Succeeded());
+    ASSERT_THAT_ERROR(callPerfLifecycle(llvm_orc_registerJITLoaderPerfEnd),
+                      Succeeded());
+    Active = false;
+    auto AfterAppend = MemoryBuffer::getFile(perfDumpPath());
+    ASSERT_TRUE(AfterAppend);
+    EXPECT_TRUE((*AfterAppend)->getBuffer().starts_with(Prefix));
+    Prefix = (*AfterAppend)->getBuffer().str();
+  }
+  DataExtractor Data(Prefix, sys::IsLittleEndianHost);
+  uint64_t Offset = InitialSize;
+  SmallVector<uint64_t> Indices;
+  SmallVector<std::string> Names;
+  while (Offset < Data.size()) {
+    uint64_t Start = Offset;
+    EXPECT_EQ(Data.getU32(&Offset), 0u); // Only CODE_LOAD, no header or CLOSE.
+    uint32_t Size = Data.getU32(&Offset);
+    ASSERT_GE(Size, 57u);
+    ASSERT_LE(Size, Data.size() - Start);
+    Offset = Start + 48;
+    Indices.push_back(Data.getU64(&Offset));
+    Names.push_back(
+        StringRef(Prefix).substr(Start + 56).split('\0').first.str());
+    Offset = Start + Size;
+  }
+  ASSERT_EQ(Indices.size(), 3u);
+  EXPECT_EQ(Indices[1], Indices[0] + 1);
+  EXPECT_EQ(Indices[2], Indices[1] + 1);
+  EXPECT_THAT(Names, ::testing::ElementsAre("foo", "bar", "foo"));
+}
+
+TEST(PerfJITLoaderTest, OverlappingPluginLifetimesShareTheWriter) {
+  ASSERT_THAT_ERROR(callPerfLifecycle(llvm_orc_registerJITLoaderPerfStart),
+                    Succeeded());
+  DumpCleanup->Used = true;
+  auto Cleanup = scope_exit([&] {
+    consumeError(callPerfLifecycle(llvm_orc_registerJITLoaderPerfEnd));
+  });
+  ASSERT_THAT_ERROR(callPerfLifecycle(llvm_orc_registerJITLoaderPerfStart),
+                    Succeeded());
+  ASSERT_THAT_ERROR(callPerfLifecycle(llvm_orc_registerJITLoaderPerfEnd),
+                    Succeeded());
+  PerfJITRecordBatch Empty{};
+  ASSERT_THAT_ERROR(callPerfBatch(Empty), Succeeded());
 }
 #endif
 
