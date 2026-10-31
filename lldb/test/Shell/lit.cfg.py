@@ -52,7 +52,13 @@ llvm_config.with_system_environment(
 # Enable sanitizer runtime flags.
 if config.llvm_use_sanitizer:
     config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-    config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+    tsan_suppressions = os.path.join(
+        os.path.dirname(config.test_source_root), "tsan-suppressions.txt"
+    )
+    tsan_options = "halt_on_error=1:suppressions=" + tsan_suppressions
+    if config.lldb_test_extra_tsan_options:
+        tsan_options += ":" + config.lldb_test_extra_tsan_options
+    config.environment["TSAN_OPTIONS"] = tsan_options
     config.environment["MallocNanoZone"] = "0"
 
 if config.lldb_platform_url and config.cmake_sysroot and config.enable_remote:
@@ -146,9 +152,6 @@ if getattr(config, "lldb_enable_mte", False):
 if config.lldb_enable_lua:
     config.available_features.add("lua")
 
-if config.lldb_enable_lzma:
-    config.available_features.add("lzma")
-
 if shutil.which("xz") is not None:
     config.available_features.add("xz")
 
@@ -217,6 +220,13 @@ if platform.system() == "Darwin":
             config.available_features.add("ld_new-bug")
     except:
         pass
+
+    # Prevent tests from accidentally invoking the real dsymForUUID, which can
+    # make slow network requests. Tests that need a working dsymForUUID mock
+    # should override this.
+    config.environment["LLDB_APPLE_DSYMFORUUID_EXECUTABLE"] = os.path.join(
+        os.path.dirname(config.test_source_root), "Utils", "fake-dsymForUUID.sh"
+    )
 
 # Some shell tests dynamically link with python.dll and need to know the
 # location of the Python libraries. This ensures that we use the same

@@ -2088,7 +2088,7 @@ TEST_F(VPUtilsTest, ReconstructSSAUnreachableCycle) {
   VPBB1->appendRecipe(Def1);
 
   EXPECT_DEATH(reconstructSSA(VPBB2, {{VPBB1, Def1}}),
-               "VPlan without any entry node without predecessors");
+               "VPBB isn't reachable from entry");
 }
 
 TEST_F(VPUtilsTest, ReconstructSSAUnreachableCyclePredecessor) {
@@ -2111,7 +2111,7 @@ TEST_F(VPUtilsTest, ReconstructSSAUnreachableCyclePredecessor) {
   VPBB1->appendRecipe(Def1);
 
   EXPECT_DEATH(reconstructSSA(VPBB3, {{VPBB1, Def1}}),
-               "VPlan without any entry node without predecessors");
+               "VPBB isn't reachable from entry");
 }
 #endif
 
@@ -2258,6 +2258,30 @@ TEST_F(VPBasicBlockTest, VPRegionBlockCloneSyncsCanonicalIVNUW) {
   // The clone must carry over the cleared NUW flag rather than resetting it.
   VPRegionBlock *Clone = Region->clone();
   EXPECT_FALSE(Clone->hasCanonicalIVNUW());
+}
+
+TEST_F(VPRecipeTest, VPWidenCompressStoreExpandLoadIntr) {
+  VPlan &Plan = getPlan();
+
+  IntegerType *Int64 = IntegerType::get(C, 64);
+  VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int64, 1));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+  VPValue *Value = Plan.getOrAddLiveIn(ConstantInt::get(Int64, 8));
+
+  VPWidenMemIntrinsicRecipe ExpandLoad(Intrinsic::masked_expandload,
+                                       {Addr, Mask, Plan.getPoison(Int64)},
+                                       Int64, Align(8));
+
+  VPWidenMemIntrinsicRecipe CompressStore(Intrinsic::masked_compressstore,
+                                          {Value, Addr, Mask},
+                                          Type::getVoidTy(C), Align(8));
+
+  auto VF = ElementCount::getFixed(4);
+  for (VPWidenMemIntrinsicRecipe *Intr : {&ExpandLoad, &CompressStore}) {
+    EXPECT_EQ(Intr->getMask(), Mask);
+    EXPECT_EQ(Intr->getAccessType(VF)->getScalarType(), Int64);
+    EXPECT_EQ(Intr->getOperand(Intr->getAddrOpIdx()), Addr);
+  }
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)

@@ -1123,41 +1123,41 @@ define <4 x i32> @widen_cttz_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 define <8 x i32> @widen_cttz_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE42-LABEL: widen_cttz_v4i32_v8i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE42-NEXT:    pcmpeqd %xmm5, %xmm5
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    paddd %xmm4, %xmm2
+; SSE42-NEXT:    paddd %xmm5, %xmm2
 ; SSE42-NEXT:    pandn %xmm2, %xmm0
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSE42-NEXT:    movdqa %xmm0, %xmm5
-; SSE42-NEXT:    pand %xmm3, %xmm5
+; SSE42-NEXT:    movdqa %xmm0, %xmm4
+; SSE42-NEXT:    pand %xmm3, %xmm4
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; SSE42-NEXT:    movdqa %xmm2, %xmm6
-; SSE42-NEXT:    pshufb %xmm5, %xmm6
+; SSE42-NEXT:    pshufb %xmm4, %xmm6
 ; SSE42-NEXT:    psrlw $4, %xmm0
 ; SSE42-NEXT:    pand %xmm3, %xmm0
-; SSE42-NEXT:    movdqa %xmm2, %xmm5
-; SSE42-NEXT:    pshufb %xmm0, %xmm5
-; SSE42-NEXT:    paddb %xmm6, %xmm5
-; SSE42-NEXT:    pxor %xmm6, %xmm6
-; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm5[0],zero,xmm5[1],zero
-; SSE42-NEXT:    punpckhdq {{.*#+}} xmm5 = xmm5[2],xmm6[2],xmm5[3],xmm6[3]
-; SSE42-NEXT:    psadbw %xmm6, %xmm5
-; SSE42-NEXT:    psadbw %xmm6, %xmm0
-; SSE42-NEXT:    packuswb %xmm5, %xmm0
-; SSE42-NEXT:    paddd %xmm1, %xmm4
-; SSE42-NEXT:    pandn %xmm4, %xmm1
-; SSE42-NEXT:    movdqa %xmm1, %xmm4
-; SSE42-NEXT:    pand %xmm3, %xmm4
-; SSE42-NEXT:    movdqa %xmm2, %xmm5
-; SSE42-NEXT:    pshufb %xmm4, %xmm5
+; SSE42-NEXT:    movdqa %xmm2, %xmm7
+; SSE42-NEXT:    pshufb %xmm0, %xmm7
+; SSE42-NEXT:    paddb %xmm6, %xmm7
+; SSE42-NEXT:    pxor %xmm4, %xmm4
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm7[0],zero,xmm7[1],zero
+; SSE42-NEXT:    punpckhdq {{.*#+}} xmm7 = xmm7[2],xmm4[2],xmm7[3],xmm4[3]
+; SSE42-NEXT:    psadbw %xmm4, %xmm7
+; SSE42-NEXT:    psadbw %xmm4, %xmm0
+; SSE42-NEXT:    packuswb %xmm7, %xmm0
+; SSE42-NEXT:    paddd %xmm1, %xmm5
+; SSE42-NEXT:    pandn %xmm5, %xmm1
+; SSE42-NEXT:    movdqa %xmm1, %xmm5
+; SSE42-NEXT:    pand %xmm3, %xmm5
+; SSE42-NEXT:    movdqa %xmm2, %xmm6
+; SSE42-NEXT:    pshufb %xmm5, %xmm6
 ; SSE42-NEXT:    psrlw $4, %xmm1
 ; SSE42-NEXT:    pand %xmm3, %xmm1
 ; SSE42-NEXT:    pshufb %xmm1, %xmm2
-; SSE42-NEXT:    paddb %xmm5, %xmm2
+; SSE42-NEXT:    paddb %xmm6, %xmm2
 ; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm2[0],zero,xmm2[1],zero
-; SSE42-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm6[2],xmm2[3],xmm6[3]
-; SSE42-NEXT:    psadbw %xmm6, %xmm2
-; SSE42-NEXT:    psadbw %xmm6, %xmm1
+; SSE42-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; SSE42-NEXT:    psadbw %xmm4, %xmm2
+; SSE42-NEXT:    psadbw %xmm4, %xmm1
 ; SSE42-NEXT:    packuswb %xmm2, %xmm1
 ; SSE42-NEXT:    retq
 ;
@@ -1453,41 +1453,41 @@ define <4 x i32> @widen_cttz_poison_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 define <8 x i32> @widen_cttz_poison_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE42-LABEL: widen_cttz_poison_v4i32_v8i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE42-NEXT:    pcmpeqd %xmm5, %xmm5
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    paddd %xmm4, %xmm2
+; SSE42-NEXT:    paddd %xmm5, %xmm2
 ; SSE42-NEXT:    pandn %xmm2, %xmm0
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; SSE42-NEXT:    movdqa %xmm0, %xmm5
-; SSE42-NEXT:    pand %xmm3, %xmm5
+; SSE42-NEXT:    movdqa %xmm0, %xmm4
+; SSE42-NEXT:    pand %xmm3, %xmm4
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; SSE42-NEXT:    movdqa %xmm2, %xmm6
-; SSE42-NEXT:    pshufb %xmm5, %xmm6
+; SSE42-NEXT:    pshufb %xmm4, %xmm6
 ; SSE42-NEXT:    psrlw $4, %xmm0
 ; SSE42-NEXT:    pand %xmm3, %xmm0
-; SSE42-NEXT:    movdqa %xmm2, %xmm5
-; SSE42-NEXT:    pshufb %xmm0, %xmm5
-; SSE42-NEXT:    paddb %xmm6, %xmm5
-; SSE42-NEXT:    pxor %xmm6, %xmm6
-; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm5[0],zero,xmm5[1],zero
-; SSE42-NEXT:    punpckhdq {{.*#+}} xmm5 = xmm5[2],xmm6[2],xmm5[3],xmm6[3]
-; SSE42-NEXT:    psadbw %xmm6, %xmm5
-; SSE42-NEXT:    psadbw %xmm6, %xmm0
-; SSE42-NEXT:    packuswb %xmm5, %xmm0
-; SSE42-NEXT:    paddd %xmm1, %xmm4
-; SSE42-NEXT:    pandn %xmm4, %xmm1
-; SSE42-NEXT:    movdqa %xmm1, %xmm4
-; SSE42-NEXT:    pand %xmm3, %xmm4
-; SSE42-NEXT:    movdqa %xmm2, %xmm5
-; SSE42-NEXT:    pshufb %xmm4, %xmm5
+; SSE42-NEXT:    movdqa %xmm2, %xmm7
+; SSE42-NEXT:    pshufb %xmm0, %xmm7
+; SSE42-NEXT:    paddb %xmm6, %xmm7
+; SSE42-NEXT:    pxor %xmm4, %xmm4
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm7[0],zero,xmm7[1],zero
+; SSE42-NEXT:    punpckhdq {{.*#+}} xmm7 = xmm7[2],xmm4[2],xmm7[3],xmm4[3]
+; SSE42-NEXT:    psadbw %xmm4, %xmm7
+; SSE42-NEXT:    psadbw %xmm4, %xmm0
+; SSE42-NEXT:    packuswb %xmm7, %xmm0
+; SSE42-NEXT:    paddd %xmm1, %xmm5
+; SSE42-NEXT:    pandn %xmm5, %xmm1
+; SSE42-NEXT:    movdqa %xmm1, %xmm5
+; SSE42-NEXT:    pand %xmm3, %xmm5
+; SSE42-NEXT:    movdqa %xmm2, %xmm6
+; SSE42-NEXT:    pshufb %xmm5, %xmm6
 ; SSE42-NEXT:    psrlw $4, %xmm1
 ; SSE42-NEXT:    pand %xmm3, %xmm1
 ; SSE42-NEXT:    pshufb %xmm1, %xmm2
-; SSE42-NEXT:    paddb %xmm5, %xmm2
+; SSE42-NEXT:    paddb %xmm6, %xmm2
 ; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm2[0],zero,xmm2[1],zero
-; SSE42-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm6[2],xmm2[3],xmm6[3]
-; SSE42-NEXT:    psadbw %xmm6, %xmm2
-; SSE42-NEXT:    psadbw %xmm6, %xmm1
+; SSE42-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; SSE42-NEXT:    psadbw %xmm4, %xmm2
+; SSE42-NEXT:    psadbw %xmm4, %xmm1
 ; SSE42-NEXT:    packuswb %xmm2, %xmm1
 ; SSE42-NEXT:    retq
 ;

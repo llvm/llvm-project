@@ -150,7 +150,7 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
     // Lower single-element structs to just pass a regular value. TODO: We
     // could do reasonable-size multiple-element structs too, using getExpand(),
     // though watch out for things like bitfields.
-    if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
+    if (const Type *SeltTy = isSingleElementRecord(Ty, getContext()))
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
     // For the experimental multivalue ABI, fully expand all other aggregates
     if (Kind == WebAssemblyABIKind::ExperimentalMV) {
@@ -186,7 +186,7 @@ ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
       // Lower single-element structs to just return a regular value. TODO: We
       // could do reasonable-size multiple-element structs too, using
       // ABIArgInfo::getDirect().
-      if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
+      if (const Type *SeltTy = isSingleElementRecord(RetTy, getContext()))
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
       // For the experimental multivalue ABI, return all other aggregates
       if (Kind == WebAssemblyABIKind::ExperimentalMV)
@@ -202,7 +202,7 @@ RValue WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                      QualType Ty, AggValueSlot Slot) const {
   bool IsIndirect = isAggregateTypeForABI(Ty) &&
                     !isEmptyRecord(getContext(), Ty, true) &&
-                    !isSingleElementStruct(Ty, getContext());
+                    !isSingleElementRecord(Ty, getContext());
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(4),

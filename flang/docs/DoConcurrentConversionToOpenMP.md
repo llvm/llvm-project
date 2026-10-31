@@ -8,11 +8,6 @@
 
 # `DO CONCURRENT` mapping to OpenMP
 
-```{contents}
----
-local:
----
-```
 
 This document seeks to describe the effort to parallelize `do concurrent` loops
 by mapping them to OpenMP worksharing constructs. The goals of this document

@@ -1,4 +1,4 @@
-add_custom_target(libc-stdlib-tests)
+add_libc_testsuite(libc-stdlib-tests)
 
 add_libc_test(
   atof_test
@@ -7,7 +7,6 @@ add_libc_test(
   SRCS
     atof_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.stdlib.atof
     libc.test.UnitTest.ErrnoCheckingTest
 )
@@ -17,7 +16,6 @@ add_header_library(
   HDRS
     AtoiTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
 )
@@ -62,7 +60,6 @@ add_fp_unittest(
   SRCS
     strtod_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.stdlib.strtod
     libc.src.__support.FPUtil.fenv_impl
     libc.test.UnitTest.ErrnoCheckingTest
@@ -75,7 +72,6 @@ add_fp_unittest(
   SRCS
     strtof_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.stdlib.strtof
     libc.src.__support.FPUtil.fenv_impl
     libc.test.UnitTest.ErrnoCheckingTest
@@ -86,9 +82,9 @@ add_header_library(
   HDRS
     StrtolTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -101,7 +97,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
-    libc.src.errno.errno
     .strtol_test_support
 )
 
@@ -114,7 +109,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
-    libc.src.errno.errno
     .strtol_test_support
 )
 
@@ -136,7 +130,6 @@ add_libc_test(
   SRCS
     strtold_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.__support.uint128
     libc.src.stdlib.strtold
     libc.test.UnitTest.ErrnoCheckingTest
@@ -190,6 +183,20 @@ add_libc_test(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.properties.architectures
     libc.src.stdlib.strfromf
+  COMPILE_OPTIONS
+    ${strfrom_test_copts}
+)
+
+add_libc_test(
+  strfromf128_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strfromf128_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures
+    libc.src.stdlib.strfromf128
   COMPILE_OPTIONS
     ${strfrom_test_copts}
 )
@@ -441,6 +448,39 @@ add_libc_test(
 )
 
 add_libc_test(
+  mkostemp_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mkostemp_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.func.free
+    libc.hdr.signal_macros
+    libc.hdr.stdio_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
+    libc.src.fcntl.fcntl
+    libc.src.stdlib.mkostemp
+    libc.src.string.strdup
+    libc.src.string.strlen
+    libc.src.sys.stat.stat
+    libc.src.unistd.access
+    libc.src.unistd.close
+    libc.src.unistd.lseek
+    libc.src.unistd.read
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.MemoryMatcher
+)
+
+add_libc_test(
   mkstemp_test
   SUITE
     libc-stdlib-tests
@@ -535,15 +575,41 @@ if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
       libc.src.stdlib._Exit
   )
 
+  set(exit_test_copts "")
+  set(exit_test_deps
+    libc.src.__support.macros.config
+    libc.src.stdlib.exit
+  )
+  if("libc.src.stdio.fflush" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+    libc_add_definition(exit_test_copts "LIBC_COPT_EXIT_FLUSH_STREAMS")
+    list(APPEND exit_test_deps
+      libc.hdr.types.FILE
+      libc.hdr.types.size_t
+      libc.src.__support.CPP.scope
+      libc.src.__support.CPP.string_view
+      libc.src.stdio.fclose
+      libc.src.stdio.fopen
+      libc.src.stdio.fputs
+      libc.src.stdio.fread
+      libc.src.stdio.freopen
+      libc.src.stdio.remove
+      libc.src.stdio.stdout
+      libc.src.stdlib.atexit
+      libc.test.UnitTest.ErrnoCheckingTest
+      libc.test.UnitTest.ErrnoSetterMatcher
+    )
+  endif()
+
   add_libc_test(
     exit_test
     SUITE
       libc-stdlib-tests
     SRCS
       exit_test.cpp
+    COMPILE_OPTIONS
+      ${exit_test_copts}
     DEPENDS
-      libc.src.stdlib._Exit
-      libc.src.stdlib.exit
+      ${exit_test_deps}
   )
 
   add_libc_test(
@@ -636,4 +702,3 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
-

@@ -68,7 +68,7 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<BPFTargetLoweringObjectFileELF>()),
@@ -117,6 +117,7 @@ void BPFPassConfig::addIRPasses() {
   addPass(createBPFCheckAndAdjustIRLegacyPass());
 
   TargetPassConfig::addIRPasses();
+  addPass(createBPFUnwindPreparePass());
 }
 
 TargetTransformInfo
@@ -147,6 +148,7 @@ void BPFPassConfig::addMachineSSAOptimization() {
 }
 
 void BPFPassConfig::addPreEmitPass() {
+  addPass(createBPFUnwindLowerPass());
   addPass(createBPFMIPreEmitCheckingLegacyPass());
   if (!DisableMIPeephole) {
     addPass(createBPFMIExpandStackArgPseudosLegacyPass());

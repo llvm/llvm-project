@@ -81,6 +81,54 @@ def AnyRefOfConstantSizeAggregateType : TypeConstraint<
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
+def fir_AssertOp : fir_Op<"assert", [
+    AttrSizedOperandSegments,
+    TypesMatchWith<"result types match guarded operand types", "guarded",
+                   "results", "$_self">,
+    MemoryEffects<[MemWrite<FortranRuntimeResource>]>]> {
+  let summary = "check a condition and guard values used by subsequent operations";
+  let description = [{
+    If `condition` is true, each result equals the corresponding `guarded`
+    operand. Otherwise, execution terminates through the Fortran runtime,
+    reporting `message` at the operation's source location. The message may
+    contain `%lld` directives, one for each integer or index operand
+    in `values`, and `%%` for a literal percent sign. Diagnostic values are
+    interpreted as signed integers and must have type `i8`, `i16`, `i32`,
+    `i64`, or `index`. Boolean values must be explicitly extended to one of
+    these types, choosing signed or unsigned interpretation at the producer.
+
+    Consumers of the results depend on the check. The operation is deliberately
+    not speculatable or a view: looking through it in a rewrite would discard
+    that dependence. Analyses may inspect the guarded operands. Its write to
+    a non-addressable runtime resource preserves checks without obstructing
+    memory optimizations.
+
+    Guard array bases and scalar operands used by the protected computation.
+    FIR users of shape and slice metadata may require direct constructor
+    operands; guard the underlying extents or indices before constructing that
+    metadata instead.
+  }];
+  let arguments = (ins I1:$condition, fir_RuntimeCheckKindAttr:$kind,
+                       StrAttr:$message,
+                       Variadic<AnyTypeOf<[I8, I16, I32, I64, Index],
+                           "8-, 16-, 32-, or 64-bit signless integer or index">>:$values,
+                       Variadic<AnyType>:$guarded);
+  let results = (outs Variadic<AnyType>:$results);
+  let assemblyFormat = [{
+    $condition `,` enum($kind) `,` $message
+    (`values` `(` $values^ `:` type($values) `)`)?
+    (`guard` `(` $guarded^ `:` type($guarded) `)`)? attr-dict
+  }];
+  let builders = [OpBuilder<(ins "mlir::Value":$condition,
+      "fir::RuntimeCheckKind":$kind, "llvm::StringRef":$message,
+      "mlir::ValueRange":$values, "mlir::ValueRange":$guarded), [{
+    build($_builder, $_state, guarded.getTypes(), condition, kind, message,
+          values, guarded);
+  }]>];
+  let hasVerifier = 1;
+  let hasCanonicalizer = 1;
+}
+
 def fir_AllocaOp : fir_Op<"alloca", [
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<PromotableAllocationOpInterface>
@@ -157,6 +205,11 @@ def fir_AllocaOp : fir_Op<"alloca", [
 
     The pinned attribute is used to flag fir.alloca operation in a specific
     region and avoid them being hoisted in an alloca hoisting pass.
+
+    The optional alignment attribute requests a minimum byte alignment for
+    the allocation, as `fir.allocmem` and `fir.global` do. It must be a
+    positive power of two. Code generation never lowers the alignment below
+    the ABI alignment of the allocated type.
   }];
 
   let arguments = (ins
@@ -165,7 +218,8 @@ def fir_AllocaOp : fir_Op<"alloca", [
     OptionalAttr<StrAttr>:$bindc_name,
     UnitAttr:$pinned,
     Variadic<AnyIntegerType>:$typeparams,
-    Variadic<AnyIntegerType>:$shape
+    Variadic<AnyIntegerType>:$shape,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let results =
@@ -935,7 +989,8 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
       (`source_box` $sourceBox^)? (`map` $accessMap^)?
-      (`optional` $optional^)? attr-dict `:`
+      (`optional` $optional^)?
+      (`allocator_idx` `(` $allocator_idx^ `)`)? attr-dict `:`
       functional-type(operands, results)
   }];
 
@@ -1659,7 +1714,7 @@ def fir_CoordinateOp
       "mlir::Value":$ref, "llvm::ArrayRef<fir::IntOrValue>":$coor)>
   ];
   let extraClassDeclaration = [{
-    constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
+    constexpr static int32_t kDynamicIndex = Fortran::common::numeric_limits<int32_t>::min();
     CoordinateIndicesAdaptor getIndices();
 
     // FortranObjectViewOpInterface methods:
@@ -2467,7 +2522,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
       %r = fir.dispatch "methodA"(%o) : (!fir.class<T>) -> i32
 
       // fir.dispatch with the `pass_arg_pos` attribute.
-      %r = fir.dispatch "methodA"(%o : !fir.class<T>) (%o : !fir.class<T>) -> i32 {pass_arg_pos = 0 : i32}
+      %r = fir.dispatch "methodA"(%o : !fir.class<T>) (%o : !fir.class<T>) -> i32 pass_arg_pos(0)
     ```
   }];
 
@@ -2488,7 +2543,11 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
   let assemblyFormat = [{
     $method `(` $object `:` qualified(type($object)) `)`
     ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)?
-    (`proc_attrs` $procedure_attrs^)? attr-dict
+    (`proc_attrs` $procedure_attrs^)?
+    (`pass_arg_pos` `(` $pass_arg_pos^ `)`)?
+    (`arg_attrs` `(` $arg_attrs^ `)`)?
+    (`res_attrs` `(` $res_attrs^ `)`)?
+    attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -2582,7 +2641,9 @@ class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_ArithmeticOp<mnemonic, traits>,
       Arguments<(ins AnyFirComplex:$lhs, AnyFirComplex:$rhs,
           DefaultValuedAttr<Arith_FastMathAttr,
-                            "::mlir::arith::FastMathFlags::none">:$fastmath)>;
+                            "::mlir::arith::FastMathFlags::none">:$fastmath)> {
+  let assemblyFormat = "operands (`fastmath` `(` enum($fastmath)^ `)`)? attr-dict `:` type($result)";
+}
 
 def fir_AddcOp : ComplexArithmeticOp<"addc",
     [Commutative, DeclareOpInterfaceMethods<ArithFastMathInterface>]>;
@@ -2754,6 +2815,10 @@ def fir_VolatileCastOp
 def fir_ConvertOp
     : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface,
                                         ConditionallySpeculatable,
+                                        DeclareOpInterfaceMethods<
+                                            PromotableOpInterface>,
+                                        DeclareOpInterfaceMethods<
+                                            PromotableAliaserInterface>,
                                         fir_FortranObjectViewOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
@@ -2927,6 +2992,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, SymbolName,
     OptionalAttr<fir_Linkage>:$linkage,
     OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
     OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<StrAttr>:$section,
     OptionalAttr<StrAttr>:$sym_visibility
   );
 
@@ -3088,13 +3154,23 @@ def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
     The region holds one `fir.use_stmt` per `USE`, in program order. This
     operation has no runtime effect. It is emitted only when full debug
     information is requested.
+
+    A submodule is not a first class entity in FIR, and its name is not
+    qualified, so its ancestry is recorded here. `ancestor_module` names the
+    module at the root of it, which is also what tells a submodule and a module
+    apart. `parent_module` names the one directly above, which is that same
+    module for a first level submodule and a submodule of it otherwise.
+    Semantics keeps the two apart in the same way.
   }];
 
-  let arguments = (ins StrAttr:$module_name);
+  let arguments = (ins StrAttr:$module_name,
+                       OptionalAttr<StrAttr>:$ancestor_module,
+                       OptionalAttr<StrAttr>:$parent_module);
   let regions = (region SizedRegion<1>:$uses);
 
   let assemblyFormat = [{
-    $module_name attr-dict-with-keyword $uses
+    $module_name (`in` $ancestor_module^)? (`parent` $parent_module^)?
+    attr-dict-with-keyword $uses
   }];
 }
 
@@ -3287,6 +3363,8 @@ def fir_DeclareOp
                          DeclareOpInterfaceMethods<PromotableOpInterface,
                                                    ["requiresReplacedValues",
                                                     "visitReplacedValues"]>,
+                         DeclareOpInterfaceMethods<
+                             PromotableAliaserInterface>,
                          fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable";
 
@@ -3326,7 +3404,7 @@ def fir_DeclareOp
       %c20 = arith.constant 20 : index
       %1 = fir.load %ag1 : fir.ref<i64>
       %2 = fir.shift %c10, %c20 : (index, index) -> !fir.shift<2>
-      %3 = fir.declare %arg0(%2) typeparams %1 {fortran_attrs = #fir.var_attrs<optional, target>, uniq_name = "c"}
+      %3 = fir.declare %arg0(%2) typeparams %1 uniq_name("c") fortran_attrs<optional, target>
       // ... uses %3 as "c"
     }
    ```
@@ -3349,6 +3427,9 @@ def fir_DeclareOp
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
     (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
     (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
+    `uniq_name` `(` $uniq_name `)`
+    (`fortran_attrs` `` $fortran_attrs^)?
+    (`data_attr` `(` qualified($data_attr)^ `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -3391,6 +3472,9 @@ def fir_DeclareValueOp
   let assemblyFormat = [{
     $value
     (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
+    `uniq_name` `(` $uniq_name `)`
+    (`fortran_attrs` `` $fortran_attrs^)?
+    (`data_attr` `(` qualified($data_attr)^ `)`)?
     attr-dict `:` type($value)
   }];
 
@@ -3473,14 +3557,14 @@ def fir_DummyScopeOp : fir_Op<"dummy_scope",
       func.func @_QPtest(
           %arg0: !fir.ref<f32> {fir.target},
           %arg1: !fir.ref<f32> {fir.target}) {
-        %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>} :
+        %0 = fir.declare %arg0 uniq_name("x") fortran_attrs<target> :
             (!fir.ref<f32>) -> !fir.ref<f32>
-        %1 = fir.declare %arg1 {fortran_attrs = #fir.var_attrs<target>} :
+        %1 = fir.declare %arg1 uniq_name("y") fortran_attrs<target> :
             (!fir.ref<f32>) -> !fir.ref<f32>
         %2 = fir.load %1 : !fir.ref<f32>
         fir.store %2 to %0 : !fir.ref<f32>
-        %3 = fir.declare %0 : (!fir.ref<f32>) -> !fir.ref<f32>
-        %4 = fir.declare %1 : (!fir.ref<f32>) -> !fir.ref<f32>
+        %3 = fir.declare %0 uniq_name("x") : (!fir.ref<f32>) -> !fir.ref<f32>
+        %4 = fir.declare %1 uniq_name("y") : (!fir.ref<f32>) -> !fir.ref<f32>
         %5 = fir.load %4 : !fir.ref<f32>
         fir.store %5 to %3 : !fir.ref<f32>
         return
@@ -3495,17 +3579,17 @@ def fir_DummyScopeOp : fir_Op<"dummy_scope",
           %arg0: !fir.ref<f32> {fir.target},
           %arg1: !fir.ref<f32> {fir.target}) {
         %h1 = fir.dummy_scope : i1
-        %0 = fir.declare %arg0 dummy_scope(%h1)
-            {fortran_attrs = #fir.var_attrs<target>} :
+        %0 = fir.declare %arg0 dummy_scope %h1
+            uniq_name("x") fortran_attrs<target> :
             (!fir.ref<f32>) -> !fir.ref<f32>
-        %1 = fir.declare %arg1 dummy_scope(%h1)
-            {fortran_attrs = #fir.var_attrs<target>} :
+        %1 = fir.declare %arg1 dummy_scope %h1
+            uniq_name("y") fortran_attrs<target> :
             (!fir.ref<f32>) -> !fir.ref<f32>
         %2 = fir.load %1 : !fir.ref<f32>
         fir.store %2 to %0 : !fir.ref<f32>
         %h2 = fir.dummy_scope : i1
-        %3 = fir.declare %0 dummy_scope(%h2) : (!fir.ref<f32>) -> !fir.ref<f32>
-        %4 = fir.declare %1 dummy_scope(%h2) : (!fir.ref<f32>) -> !fir.ref<f32>
+        %3 = fir.declare %0 dummy_scope %h2 uniq_name("x") : (!fir.ref<f32>) -> !fir.ref<f32>
+        %4 = fir.declare %1 dummy_scope %h2 uniq_name("y") : (!fir.ref<f32>) -> !fir.ref<f32>
         %5 = fir.load %4 : !fir.ref<f32>
         fir.store %5 to %3 : !fir.ref<f32>
         return
@@ -3881,6 +3965,7 @@ def fir_DeclareReductionOp : fir_Op<"declare_reduction", [IsolatedFromAbove,
                         AnyRegion:$dataPtrPtrRegion);
 
   let assemblyFormat = "($sym_visibility^)? $sym_name `:` $type "
+                       "(`byref_element_type` `(` $byref_element_type^ `)`)? "
                        "attr-dict-with-keyword "
                        "( `alloc` $allocRegion^ )? "
                        "`init` $initializerRegion "

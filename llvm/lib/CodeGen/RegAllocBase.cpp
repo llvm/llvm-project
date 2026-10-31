@@ -57,15 +57,17 @@ bool RegAllocBase::VerifyEnabled = false;
 // Pin the vtable to this file.
 void RegAllocBase::anchor() {}
 
-void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis,
-                        LiveRegMatrix &mat) {
+void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat,
+                        RegisterClassInfo &rci) {
   TRI = &vrm.getTargetRegInfo();
   MRI = &vrm.getRegInfo();
   VRM = &vrm;
   LIS = &lis;
   Matrix = &mat;
+  RegClassInfo = &rci;
   MRI->freezeReservedRegs();
-  RegClassInfo.runOnMachineFunction(vrm.getMachineFunction());
+  // Keep the shared analysis in step with the set just frozen.
+  RegClassInfo->updateReservedRegs(MRI->getReservedRegs());
   FailedVRegs.clear();
 }
 
@@ -175,6 +177,8 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
   for (MachineOperand &MO : MRI->reg_operands(FailedReg)) {
     if (MO.readsReg())
       MO.setIsUndef(true);
+    if (MO.isDef())
+      cleanupFailedDefs(*MO.getParent(), FailedReg, PhysReg);
   }
 
   if (!MRI->isReserved(PhysReg)) {
@@ -194,6 +198,52 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
   // LiveRegMatrix.
   MRI->replaceRegWith(FailedReg, PhysReg);
   LIS->removeInterval(FailedReg);
+}
+
+void RegAllocBase::cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
+                                     MCRegister PhysReg) {
+  auto IsErrorDef = [=](const MachineOperand &MO) {
+    return MO.getReg() == FailedReg || MO.getReg() == PhysReg;
+  };
+
+  SlotIndex Idx = LIS->getInstructionIndex(MI);
+  std::optional<bool> AssignedIsDead;
+  bool AnyLive = false;
+  for (const MachineOperand &MO : MI.all_defs()) {
+    Register Reg = MO.getReg();
+    if (IsErrorDef(MO)) {
+      AnyLive |= !MO.isDead();
+      if (MRI->isReserved(PhysReg))
+        continue;
+
+      // Add the def to the PhysReg regunit ranges so it interferes with later
+      // assignments. Ranges computed later will include the rewritten def.
+      MCRegister DefReg = PhysReg;
+      if (MO.getSubReg())
+        DefReg = TRI->getSubReg(PhysReg, MO.getSubReg());
+
+      SlotIndex DefIdx = Idx.getRegSlot(MO.isEarlyClobber());
+      for (MCRegUnit Unit : TRI->regunits(DefReg)) {
+        LiveRange *LR = LIS->getCachedRegUnit(Unit);
+        if (LR && !LR->liveAt(DefIdx))
+          LR->createDeadDef(DefIdx, LIS->getVNInfoAllocator());
+      }
+    } else if (Reg.isVirtual() && VRM->hasPhys(Reg)) {
+      MCRegister AssignedReg = VRM->getPhys(Reg);
+      if (MO.getSubReg())
+        AssignedReg = TRI->getSubReg(AssignedReg, MO.getSubReg());
+      if (AssignedReg == PhysReg)
+        AssignedIsDead = MO.isDead();
+    }
+  }
+
+  // Match a virtual register def assigned PhysReg, since its dead flag must
+  // agree with its live interval. Otherwise, keep PhysReg live if any def is.
+  bool IsDead = AssignedIsDead.value_or(!AnyLive);
+  for (MachineOperand &MO : MI.all_defs()) {
+    if (IsErrorDef(MO))
+      MO.setIsDead(IsDead);
+  }
 }
 
 void RegAllocBase::enqueue(const LiveInterval *LI) {
@@ -226,7 +276,7 @@ MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
   const Function &Fn = MF.getFunction();
   LLVMContext &Context = Fn.getContext();
 
-  ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(&RC);
+  ArrayRef<MCPhysReg> AllocOrder = RegClassInfo->getOrder(&RC);
   if (AllocOrder.empty()) {
     // If the allocation order is empty, it likely means all registers in the
     // class are reserved. We still to need to pick something, so look at the

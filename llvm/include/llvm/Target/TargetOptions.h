@@ -38,13 +38,6 @@ enum JumpTableType {
 };
 }
 
-namespace ThreadModel {
-enum Model {
-  POSIX, // POSIX Threads
-  Single // Single Threaded Environment
-};
-}
-
 enum class BasicBlockSection {
   All,    // Use Basic Block Sections for all basic blocks.  A section
           // for every basic block can significantly bloat object file sizes.
@@ -52,30 +45,24 @@ enum class BasicBlockSection {
           // basic block sections for a subset of basic blocks which can be
           // used to control object size bloats from creating sections.
   Preset, // Similar to list but the blocks are identified by passes which
-          // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
+          // seek to use Basic Block Sections, e.g. -function-splitting=all.
           // This option cannot be set via the command line.
   None    // Do not use Basic Block Sections.
 };
 
-/// Identify a debugger for "tuning" the debug info.
-///
-/// The "debugger tuning" concept allows us to present a more intuitive
-/// interface that unpacks into different sets of defaults for the various
-/// individual feature-flag settings, that suit the preferences of the
-/// various debuggers.  However, it's worth remembering that debuggers are
-/// not the only consumers of debug info, and some variations in DWARF might
-/// better be treated as target/platform issues. Fundamentally,
-/// o if the feature is useful (or not) to a particular debugger, regardless
-///   of the target, that's a tuning decision;
-/// o if the feature is useful (or not) on a particular platform, regardless
-///   of the debugger, that's a target decision.
-/// It's not impossible to see both factors in some specific case.
-enum class DebuggerKind {
-  Default, ///< No specific tuning requested.
-  GDB,     ///< Tune debug info for gdb.
-  LLDB,    ///< Tune debug info for lldb.
-  SCE,     ///< Tune debug info for SCE targets (e.g. PS4).
-  DBX      ///< Tune debug info for dbx.
+/// Late function splitting mode. Decides which functions are eligible to have
+/// their cold blocks moved into a separate section.
+enum class FunctionSplittingMode {
+  None,           // Hard off. Never create a cold section, even for functions
+                  // which have a basic block sections profile. Such functions
+                  // are still laid out using the profile, but are emitted as a
+                  // single contiguous section.
+  BBSectionsOnly, // Split only functions that have a basic block sections
+                  // profile. Functions without one are not split, even if
+                  // they have PGO/SamplePGO data. This is the default, and
+                  // matches the behavior without -fsplit-machine-functions.
+  All             // Split functions using the basic block sections profile
+                  // where it is available, and PGO/AutoFDO elsewhere.
 };
 
 /// Enable abort calls when global instruction selection fails to lower/select
@@ -111,30 +98,22 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : EnableAIXExtendedAltivecABI(false), NoZerosInBSS(false),
-        GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
-        EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-        FunctionSections(false), DataSections(false),
-        IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
-        UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
-        SeparateNamedSections(false), TrapUnreachable(false),
-        NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
-        EnableTLSDESC(false), EnableIPRA(false), EmitStackSizeSection(false),
-        EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
-        EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
-        EnableDefaultMachineVerifier(true), EmitAddrsig(false),
-        BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
-        SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+      : NoZerosInBSS(false), GuaranteedTailCallOpt(false),
+        StackSymbolOrdering(true), EnableFastISel(false),
+        EnableGlobalISel(false), UseInitArray(false), FunctionSections(false),
+        DataSections(false), IgnoreXCOFFVisibility(false),
+        XCOFFTracebackTable(true), UniqueSectionNames(true),
+        UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
+        TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
+        EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
+        EmitStackSizeSection(false), EnableMachineOutliner(false),
+        EnableStaticDataPartitioning(false), EnableDefaultMachineVerifier(true),
+        EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
+        EmitCallSiteInfo(false), EnableDebugEntryValues(false),
         ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
-        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
-        JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
-        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true) {}
-
-  /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
-  /// specified. The code generator is then able to use both volatile and
-  /// nonvolitle vector registers. When false, the code generator only uses
-  /// volatile vector registers which is the default setting on AIX.
-  unsigned EnableAIXExtendedAltivecABI : 1;
+        XRayFunctionIndex(true), DebugStrictDwarf(false), JMCInstrument(false),
+        EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
+        VerifyArgABICompliance(false) {}
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for
@@ -222,14 +201,8 @@ public:
   /// Enables the MachineOutliner pass.
   unsigned EnableMachineOutliner : 1;
 
-  /// Enables the MachineFunctionSplitter pass.
-  unsigned EnableMachineFunctionSplitter : 1;
-
   /// Enables the StaticDataSplitter pass.
   unsigned EnableStaticDataPartitioning : 1;
-
-  /// Set if the target supports default outlining behaviour.
-  unsigned SupportsDefaultOutlining : 1;
 
   /// Enable Machine verifier at the end of default codegen pipelines. (Only
   /// used with NPM)
@@ -245,6 +218,10 @@ public:
   /// Emit basic blocks into separate sections.
   BasicBlockSection BBSections = BasicBlockSection::None;
 
+  /// Which functions are eligible for late function splitting.
+  FunctionSplittingMode FunctionSplitting =
+      FunctionSplittingMode::BBSectionsOnly;
+
   /// Memory Buffer that contains information on sampled basic blocks and used
   /// to selectively generate basic block sections.
   std::shared_ptr<MemoryBuffer> BBSectionsFuncListBuf;
@@ -256,16 +233,12 @@ public:
   /// info, and it is restricted only to optimized code. This can be used for
   /// something else, so that should be controlled in the frontend.
   unsigned EmitCallSiteInfo : 1;
-  /// Set if the target supports the debug entry values by default.
-  unsigned SupportsDebugEntryValues : 1;
   /// When set to true, the EnableDebugEntryValues option forces production
   /// of debug entry values even if the target does not officially support
   /// it. Useful for testing purposes only. This flag should never be checked
-  /// directly, always use \ref ShouldEmitDebugEntryValues instead.
+  /// directly, always use \ref TargetMachine::shouldEmitDebugEntryValues
+  /// instead.
   unsigned EnableDebugEntryValues : 1;
-  /// NOTE: There are targets that still do not support the debug entry values
-  /// production.
-  LLVM_ABI bool ShouldEmitDebugEntryValues() const;
 
   // When set to true, use experimental new debug variable location tracking,
   // which seeks to follow the values of variables rather than their location,
@@ -282,9 +255,6 @@ public:
   /// By default, it is set to false.
   unsigned DebugStrictDwarf : 1;
 
-  /// Emit the hotpatch flag in CodeView debug.
-  unsigned Hotpatch : 1;
-
   /// Enable JustMyCode instrumentation.
   unsigned JMCInstrument : 1;
 
@@ -300,9 +270,8 @@ public:
   unsigned XCOFFReadOnlyPointers : 1;
 
   /// When set to true, call/return argument extensions of narrow integers
-  /// are verified in the target backend if it cares about them. This is
-  /// not done with internal tools like llc that run many tests that ignore
-  /// (lack) these extensions.
+  /// are verified in the target backend if it cares about them. This is off
+  /// by default and enabled explicitly by each front-end separately.
   unsigned VerifyArgABICompliance : 1;
 
   /// Name of the stack usage file (i.e., .su file) if user passes
@@ -313,13 +282,6 @@ public:
   /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
   unsigned LoopAlignment = 0;
 
-  /// ThreadModel - This flag specifies the type of threading model to assume
-  /// for things like atomics
-  ThreadModel::Model ThreadModel = ThreadModel::POSIX;
-
-  /// EABIVersion - This flag specifies the EABI version
-  EABI EABIVersion = EABI::Default;
-
   /// Which debugger to tune for.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
@@ -327,9 +289,6 @@ public:
   VectorLibrary VecLib = VectorLibrary::NoLibrary;
 
 public:
-  /// What exception model to use
-  ExceptionHandling ExceptionModel = ExceptionHandling::None;
-
   /// Machine level options.
   MCTargetOptions MCOptions;
 

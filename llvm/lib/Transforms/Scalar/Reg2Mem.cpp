@@ -136,11 +136,6 @@ public:
 };
 } // namespace
 
-INITIALIZE_PASS_BEGIN(RegToMemWrapperPass, "reg2mem", "", true, true)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_END(RegToMemWrapperPass, "reg2mem", "", true, true)
-
 char RegToMemWrapperPass::ID = 0;
 
 FunctionPass *llvm::createRegToMemWrapperPass() {

@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 -show-mc-encoding < %s | FileCheck %s
 
 ;;;==========================================================================;;;
 ;;; MUBUF LOAD TESTS
@@ -7,12 +7,11 @@
 ; MUBUF load with an immediate byte offset that fits into 12-bits
 ; CHECK-LABEL: {{^}}mubuf_load0:
 ; CHECK: buffer_load_dword v{{[0-9]}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ; encoding: [0x04,0x00,0x30,0xe0
-define amdgpu_kernel void @mubuf_load0(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+define i32 @mubuf_load0(ptr addrspace(1) inreg %in) {
 entry:
   %0 = getelementptr i32, ptr addrspace(1) %in, i64 1
   %1 = load i32, ptr addrspace(1) %0
-  store i32 %1, ptr addrspace(1) %out
-  ret void
+  ret i32 %1
 }
 
 ; MUBUF load with the largest possible immediate offset
@@ -30,25 +29,23 @@ entry:
 ; CHECK-LABEL: {{^}}mubuf_load2:
 ; CHECK: s_movk_i32 [[SOFFSET:s[0-9]+]], 0x1000
 ; CHECK: buffer_load_dword v{{[0-9]}}, off, s[{{[0-9]+:[0-9]+}}], [[SOFFSET]] ; encoding: [0x00,0x00,0x30,0xe0
-define amdgpu_kernel void @mubuf_load2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+define i32 @mubuf_load2(ptr addrspace(1) inreg %in) {
 entry:
   %0 = getelementptr i32, ptr addrspace(1) %in, i64 1024
   %1 = load i32, ptr addrspace(1) %0
-  store i32 %1, ptr addrspace(1) %out
-  ret void
+  ret i32 %1
 }
 
 ; MUBUF load with a 12-bit immediate offset and a register offset
 ; CHECK-LABEL: {{^}}mubuf_load3:
 ; CHECK-NOT: ADD
 ; CHECK: buffer_load_dword v{{[0-9]}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:4 ; encoding: [0x04,0x80,0x30,0xe0
-define amdgpu_kernel void @mubuf_load3(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %offset) {
+define i32 @mubuf_load3(ptr addrspace(1) inreg %in, i64 %offset) {
 entry:
   %0 = getelementptr i32, ptr addrspace(1) %in, i64 %offset
   %1 = getelementptr i32, ptr addrspace(1) %0, i64 1
   %2 = load i32, ptr addrspace(1) %1
-  store i32 %2, ptr addrspace(1) %out
-  ret void
+  ret i32 %2
 }
 
 ; CHECK-LABEL: {{^}}soffset_max_imm:
@@ -159,7 +156,7 @@ define amdgpu_kernel void @store_sgpr_ptr_large_offset(ptr addrspace(1) %out) {
 ; CHECK: buffer_atomic_add v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, [[SOFFSET]]
 define amdgpu_kernel void @store_sgpr_ptr_large_offset_atomic(ptr addrspace(1) %out) {
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 32768
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 5 syncscope("agent") seq_cst
+  %val = atomicrmw add ptr addrspace(1) %gep, i32 5 syncscope("agent") seq_cst
   ret void
 }
 

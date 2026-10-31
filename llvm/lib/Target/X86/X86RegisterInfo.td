@@ -419,17 +419,12 @@ def KPAIRS : RegisterTuples<[sub_mask_0, sub_mask_1],
 
 // TMM registers, used by AMX instructions.
 let PositionOrder = 3 in {
-// Tile config registers.
-def TMMCFG: X86Reg<"tmmcfg", 0>;
-// Tile "registers".
-def TMM0:  X86Reg<"tmm0",   0>;
-def TMM1:  X86Reg<"tmm1",   1>;
-def TMM2:  X86Reg<"tmm2",   2>;
-def TMM3:  X86Reg<"tmm3",   3>;
-def TMM4:  X86Reg<"tmm4",   4>;
-def TMM5:  X86Reg<"tmm5",   5>;
-def TMM6:  X86Reg<"tmm6",   6>;
-def TMM7:  X86Reg<"tmm7",   7>;
+  // Tile config registers.
+  def TMMCFG: X86Reg<"tmmcfg", 0>;
+  // Tile "registers".
+  foreach  Index = 0-7 in {
+    def TMM#Index : X86Reg<"tmm"#Index, Index>;
+  }
 }
 
 // Floating point stack registers. These don't map one-to-one to the FP

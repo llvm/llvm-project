@@ -32,7 +32,11 @@
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/Analysis.h"
 #include <queue>
 using namespace llvm;
 using namespace RISCV;
@@ -42,12 +46,6 @@ using namespace RISCV;
 
 STATISTIC(NumInsertedVSETVL, "Number of VSETVL inst inserted");
 STATISTIC(NumCoalescedVSETVL, "Number of VSETVL inst coalesced");
-
-static cl::opt<bool> EnsureWholeVectorRegisterMoveValidVTYPE(
-    DEBUG_TYPE "-whole-vector-register-move-valid-vtype", cl::Hidden,
-    cl::desc("Insert vsetvlis before vmvNr.vs to ensure vtype is valid and "
-             "vill is cleared"),
-    cl::init(true));
 
 namespace {
 
@@ -88,21 +86,11 @@ enum TKTMMode {
   VSETTM = 1,
 };
 
-class RISCVInsertVSETVLI : public MachineFunctionPass {
-  const RISCVSubtarget *ST;
-  const TargetInstrInfo *TII;
-  MachineRegisterInfo *MRI;
-  // Possibly null!
-  LiveIntervals *LIS;
-  RISCVVSETVLIInfoAnalysis VIA;
-
-  std::vector<BlockData> BlockInfo;
-  std::queue<const MachineBasicBlock *> WorkList;
-
+class RISCVInsertVSETVLILegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVInsertVSETVLI() : MachineFunctionPass(ID) {}
+  RISCVInsertVSETVLILegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -118,8 +106,19 @@ public:
   }
 
   StringRef getPassName() const override { return RISCV_INSERT_VSETVLI_NAME; }
+};
 
-private:
+class RISCVInsertVSETVLIImpl {
+  const RISCVSubtarget *ST;
+  const TargetInstrInfo *TII;
+  MachineRegisterInfo *MRI;
+  // Possibly null!
+  LiveIntervals *LIS;
+  RISCVVSETVLIInfoAnalysis VIA;
+
+  std::vector<BlockData> BlockInfo;
+  std::queue<const MachineBasicBlock *> WorkList;
+
   bool needVSETVLI(const DemandedFields &Used, const VSETVLIInfo &Require,
                    const VSETVLIInfo &CurInfo) const;
   bool needVSETVLIPHI(const VSETVLIInfo &Require,
@@ -145,20 +144,23 @@ private:
                                       const MachineInstr &MI) const;
   void coalesceVSETVLIsForTWiden(MachineBasicBlock &MBB) const;
   bool insertVSETMTK(MachineBasicBlock &MBB, TKTMMode Mode) const;
+
+public:
+  bool runOnMachineFunction(MachineFunction &MF, LiveIntervals *LISToUpdate);
 };
 
 } // end anonymous namespace
 
-char RISCVInsertVSETVLI::ID = 0;
-char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
+char RISCVInsertVSETVLILegacy::ID = 0;
+char &llvm::RISCVInsertVSETVLILegacyID = RISCVInsertVSETVLILegacy::ID;
 
-INITIALIZE_PASS(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
+INITIALIZE_PASS(RISCVInsertVSETVLILegacy, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                 false, false)
 
-void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator InsertPt,
-                                       DebugLoc DL, const VSETVLIInfo &Info,
-                                       const VSETVLIInfo &PrevInfo) {
+void RISCVInsertVSETVLIImpl::insertVSETVLI(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator InsertPt,
+                                           DebugLoc DL, const VSETVLIInfo &Info,
+                                           const VSETVLIInfo &PrevInfo) {
   ++NumInsertedVSETVL;
 
   if (PrevInfo.isKnown()) {
@@ -168,7 +170,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
       auto MI = BuildMI(MBB, InsertPt, DL,
                         TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0X0
                                                   : RISCV::PseudoVSETVLIX0X0))
-                    .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                    .addDef(RISCV::X0, RegState::Dead)
                     .addReg(RISCV::X0, RegState::Kill)
                     .addImm(Info.encodeVTYPE())
                     .addReg(RISCV::VL, RegState::Implicit);
@@ -189,7 +191,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
               BuildMI(MBB, InsertPt, DL,
                       TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0X0
                                                 : RISCV::PseudoVSETVLIX0X0))
-                  .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                  .addDef(RISCV::X0, RegState::Dead)
                   .addReg(RISCV::X0, RegState::Kill)
                   .addImm(Info.encodeVTYPE())
                   .addReg(RISCV::VL, RegState::Implicit);
@@ -203,7 +205,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
 
   if (Info.hasAVLImm()) {
     auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
-                  .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                  .addDef(RISCV::X0, RegState::Dead)
                   .addImm(Info.getAVLImm())
                   .addImm(Info.encodeVTYPE());
     if (LIS)
@@ -216,7 +218,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     auto MI = BuildMI(MBB, InsertPt, DL,
                       TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNTX0
                                                 : RISCV::PseudoVSETVLIX0))
-                  .addReg(DestReg, RegState::Define | RegState::Dead)
+                  .addDef(DestReg, RegState::Dead)
                   .addReg(RISCV::X0, RegState::Kill)
                   .addImm(Info.encodeVTYPE());
     if (LIS) {
@@ -231,7 +233,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
   auto MI = BuildMI(MBB, InsertPt, DL,
                     TII->get(Info.getTWiden() ? RISCV::PseudoSF_VSETTNT
                                               : RISCV::PseudoVSETVLI))
-                .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                .addDef(RISCV::X0, RegState::Dead)
                 .addReg(AVLReg)
                 .addImm(Info.encodeVTYPE());
   if (LIS) {
@@ -268,9 +270,9 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
 
 /// Return true if a VSETVLI is required to transition from CurInfo to Require
 /// given a set of DemandedFields \p Used.
-bool RISCVInsertVSETVLI::needVSETVLI(const DemandedFields &Used,
-                                     const VSETVLIInfo &Require,
-                                     const VSETVLIInfo &CurInfo) const {
+bool RISCVInsertVSETVLIImpl::needVSETVLI(const DemandedFields &Used,
+                                         const VSETVLIInfo &Require,
+                                         const VSETVLIInfo &CurInfo) const {
   if (!CurInfo.isKnown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
 
@@ -301,9 +303,9 @@ static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
 // Given an incoming state reaching MI, minimally modifies that state so that it
 // is compatible with MI. The resulting state is guaranteed to be semantically
 // legal for MI, but may not be the state requested by MI.
-void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
-                                        const MachineInstr &MI) const {
-  if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+void RISCVInsertVSETVLIImpl::transferBefore(VSETVLIInfo &Info,
+                                            const MachineInstr &MI) const {
+  if (ST->getCLOpts().insert_vsetvli_whole_vector_register_move_valid_vtype &&
       RISCV::isVectorCopy(ST->getRegisterInfo(), MI) &&
       (!Info.isKnown() || Info.hasSEWLMULRatioOnly())) {
     // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
@@ -372,8 +374,8 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
 // Given a state with which we evaluated MI (see transferBefore above for why
 // this might be different that the state MI requested), modify the state to
 // reflect the changes MI might make.
-void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
-                                       const MachineInstr &MI) const {
+void RISCVInsertVSETVLIImpl::transferAfter(VSETVLIInfo &Info,
+                                           const MachineInstr &MI) const {
   if (RISCVInstrInfo::isVectorConfigInstr(MI)) {
     Info = VIA.getInfoForVSETVLI(MI);
     return;
@@ -407,8 +409,8 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
     Info = VSETVLIInfo::getUnknown();
 }
 
-bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
-                                               VSETVLIInfo &Info) const {
+bool RISCVInsertVSETVLIImpl::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
+                                                   VSETVLIInfo &Info) const {
   bool HadVectorOp = false;
 
   Info = BlockInfo[MBB.getNumber()].Pred;
@@ -427,7 +429,8 @@ bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
   return HadVectorOp;
 }
 
-void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
+void RISCVInsertVSETVLIImpl::computeIncomingVLVTYPE(
+    const MachineBasicBlock &MBB) {
 
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
@@ -484,8 +487,8 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
 // If we weren't able to prove a vsetvli was directly unneeded, it might still
 // be unneeded if the AVL was a phi node where all incoming values are VL
 // outputs from the last VSETVLI in their respective basic blocks.
-bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
-                                        const MachineBasicBlock &MBB) const {
+bool RISCVInsertVSETVLIImpl::needVSETVLIPHI(
+    const VSETVLIInfo &Require, const MachineBasicBlock &MBB) const {
   if (!Require.hasAVLReg())
     return true;
 
@@ -528,7 +531,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
   return false;
 }
 
-void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
+void RISCVInsertVSETVLIImpl::emitVSETVLIs(MachineBasicBlock &MBB) {
   VSETVLIInfo CurInfo = BlockInfo[MBB.getNumber()].Pred;
   // Track whether the prefix of the block we've scanned is transparent
   // (meaning has not yet changed the abstract state).
@@ -558,7 +561,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       PrefixTransparent = false;
     }
 
-    if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+    if (ST->getCLOpts().insert_vsetvli_whole_vector_register_move_valid_vtype &&
         RISCV::isVectorCopy(ST->getRegisterInfo(), MI)) {
       if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
         insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
@@ -623,10 +626,8 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     }
 
     if (MI.isInlineAsm()) {
-      MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ true,
-                                              /*isImp*/ true));
-      MI.addOperand(MachineOperand::CreateReg(RISCV::VTYPE, /*isDef*/ true,
-                                              /*isImp*/ true));
+      MI.addRegisterDefined(RISCV::VL, /*RegInfo=*/nullptr);
+      MI.addRegisterDefined(RISCV::VTYPE, /*RegInfo=*/nullptr);
     }
 
     if (MI.isCall() || MI.isInlineAsm() ||
@@ -652,7 +653,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 /// beginning of one block to the end of one of its predecessors.  Specifically,
 /// this is geared to catch the common case of a fixed length vsetvl in a single
 /// block loop when it could execute once in the preheader instead.
-void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
+void RISCVInsertVSETVLIImpl::doPRE(MachineBasicBlock &MBB) {
   if (!BlockInfo[MBB.getNumber()].Pred.isUnknown())
     return;
 
@@ -754,7 +755,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
 // fields which would be observed.
 // If AVLDefToMove is non-null after the call, it points to an ADDI
 // instruction that needs to be moved before PrevMI.
-bool RISCVInsertVSETVLI::canMutatePriorConfig(
+bool RISCVInsertVSETVLIImpl::canMutatePriorConfig(
     const MachineInstr &PrevMI, const MachineInstr &MI,
     const DemandedFields &Used, MachineInstr *&AVLDefToMove) const {
   AVLDefToMove = nullptr;
@@ -815,7 +816,7 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
   return areCompatibleVTYPEs(PriorVType, VType, Used);
 }
 
-void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
+void RISCVInsertVSETVLIImpl::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   MachineInstr *NextMI = nullptr;
   // We can have arbitrary code in successors, so VL and VTYPE
   // must be considered demanded.
@@ -968,7 +969,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
 // ...
 // VSETVLTNT %avl, type2
 //
-bool RISCVInsertVSETVLI::canMutatePriorConfigWithTWiden(
+bool RISCVInsertVSETVLIImpl::canMutatePriorConfigWithTWiden(
     const MachineInstr &PrevMI, const MachineInstr &MI) const {
 
   if (PrevMI.getOpcode() != RISCV::PseudoVSETVLI)
@@ -1024,7 +1025,7 @@ bool RISCVInsertVSETVLI::canMutatePriorConfigWithTWiden(
   return true;
 }
 
-void RISCVInsertVSETVLI::coalesceVSETVLIsForTWiden(
+void RISCVInsertVSETVLIImpl::coalesceVSETVLIsForTWiden(
     MachineBasicBlock &MBB) const {
   MachineInstr *NextMI = nullptr;
 
@@ -1049,7 +1050,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIsForTWiden(
   }
 }
 
-void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
+void RISCVInsertVSETVLIImpl::insertReadVL(MachineBasicBlock &MBB) {
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I++;
     if (RISCVInstrInfo::isFaultOnlyFirstLoad(MI)) {
@@ -1076,8 +1077,8 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   }
 }
 
-bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
-                                       TKTMMode Mode) const {
+bool RISCVInsertVSETVLIImpl::insertVSETMTK(MachineBasicBlock &MBB,
+                                           TKTMMode Mode) const {
 
   bool Changed = false;
   for (auto &MI : MBB) {
@@ -1109,7 +1110,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
     MachineOperand &Op = MI.getOperand(OpNum);
 
     auto TmpMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(Opcode))
-                     .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                     .addDef(RISCV::X0, RegState::Dead)
                      .addReg(Op.getReg())
                      .addImm(Log2_32(CurrInfo.getSEW()))
                      .addImm(CurrInfo.getTWiden());
@@ -1132,7 +1133,8 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
   return Changed;
 }
 
-bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
+bool RISCVInsertVSETVLIImpl::runOnMachineFunction(MachineFunction &MF,
+                                                  LiveIntervals *LISToUpdate) {
   // Skip if the vector extension is not enabled.
   ST = &MF.getSubtarget<RISCVSubtarget>();
   if (!ST->hasVInstructions())
@@ -1142,8 +1144,7 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
 
   TII = ST->getInstrInfo();
   MRI = &MF.getRegInfo();
-  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
-  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  LIS = LISToUpdate;
   VIA = RISCVVSETVLIInfoAnalysis(ST, LIS);
 
   assert(BlockInfo.empty() && "Expect empty block infos");
@@ -1227,6 +1228,29 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
 }
 
 /// Returns an instance of the Insert VSETVLI pass.
-FunctionPass *llvm::createRISCVInsertVSETVLIPass() {
-  return new RISCVInsertVSETVLI();
+FunctionPass *llvm::createRISCVInsertVSETVLILegacyPass() {
+  return new RISCVInsertVSETVLILegacy();
+}
+
+bool RISCVInsertVSETVLILegacy::runOnMachineFunction(MachineFunction &MF) {
+  RISCVInsertVSETVLIImpl Impl;
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  return Impl.runOnMachineFunction(MF, LIS);
+}
+
+PreservedAnalyses
+RISCVInsertVSETVLIPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  RISCVInsertVSETVLIImpl Impl;
+  LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
+  bool Changed = Impl.runOnMachineFunction(MF, LIS);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<SlotIndexesAnalysis>()
+      .preserve<LiveDebugVariablesAnalysis>()
+      .preserve<LiveStacksAnalysis>();
 }

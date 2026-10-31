@@ -57,7 +57,7 @@ void renderDebugInfoCompressionArgs(const llvm::opt::ArgList &Args,
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs);
+                          llvm::opt::ArgStringList &CmdArgs, Compilation &C);
 
 void linkSanitizerRuntimeDeps(const ToolChain &TC,
                               const llvm::opt::ArgList &Args,
@@ -151,10 +151,6 @@ bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
 void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
-
-void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
-                          const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs);
 
 void addAsNeededOption(const ToolChain &TC, const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs, bool as_needed);

@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -45,30 +47,43 @@ protected:
     ELF64LE::Ehdr *EHdr = reinterpret_cast<typename ELF64LE::Ehdr *>(ElfBuf);
     EHdr->e_ident[llvm::ELF::EI_CLASS] = llvm::ELF::ELFCLASS64;
     EHdr->e_ident[llvm::ELF::EI_DATA] = llvm::ELF::ELFDATA2LSB;
-    EHdr->e_machine = GetParam() == Triple::aarch64 ? EM_AARCH64 : EM_X86_64;
+    EHdr->e_machine = convertTripleArchTypeToEMachine(GetParam());
     MemoryBufferRef Source(StringRef(ElfBuf, sizeof(ElfBuf)), "ELF");
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
   }
 
   void initializeBOLT() {
-    Relocation::Arch = ObjFile->makeTriple().getArch();
+    const Triple TheTriple = GetParam();
+    // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty
+    // feature set for +relax, while other targets reject a non-null one.
+    SubtargetFeatures Features;
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
-        ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
-        {llvm::outs(), llvm::errs()}));
+        TheTriple, std::make_shared<orc::SymbolStringPool>(),
+        ObjFile->getFileName(), TheTriple.isRISCV() ? &Features : nullptr, true,
+        DWARFContext::create(*ObjFile), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
+    BC->initializeRelocationHandler(
+        createRelocationHandler(TheTriple.getArch()));
   }
 
   char ElfBuf[sizeof(typename ELF64LE::Ehdr)] = {};
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
 };
+
 } // namespace
 
 #ifdef X86_AVAILABLE
 
 INSTANTIATE_TEST_SUITE_P(X86, BinaryContextTester,
                          ::testing::Values(Triple::x86_64));
+
+#endif
+
+#ifdef RISCV_AVAILABLE
+
+INSTANTIATE_TEST_SUITE_P(RISCV, BinaryContextTester,
+                         ::testing::Values(Triple::riscv64));
 
 #endif
 
@@ -81,7 +96,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
-  // This test checks that encodeValueAArch64 used by flushPendingRelocations
+  // This test checks that AArch64 encodeValue used by flushPendingRelocations
   // returns correctly encoded values for CALL26 relocation for both backward
   // and forward branches.
   //
@@ -128,7 +143,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
-  // This test checks that encodeValueAArch64 used by flushPendingRelocations
+  // This test checks that AArch64 encodeValue used by flushPendingRelocations
   // returns correctly encoded values for R_AARCH64_JUMP26 relocation for both
   // backward and forward branches.
   //
@@ -270,7 +285,3 @@ TEST_P(BinaryContextTester, BaseAddressSegmentsSmallerThanAlignment) {
   ASSERT_TRUE(BaseAddress.has_value());
   ASSERT_EQ(*BaseAddress, 0xaaaaaaaa0000ULL);
 }
-
-#if !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)
-GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(BinaryContextTester);
-#endif // !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)

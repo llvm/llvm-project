@@ -1,0 +1,13 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s --check-prefix=MLIR
+
+module attributes {cir.triple = "spirv64-amd-amdhsa"} {
+  cir.func @kernel() attributes {cir.max_work_group_size = #cir.max_work_group_size<256, 1, 1>} {
+    cir.return
+  }
+  cir.func @kernel_alias() alias(@kernel) attributes {cir.max_work_group_size = #cir.max_work_group_size<256, 1, 1>}
+}
+
+// MLIR-LABEL: llvm.func @kernel()
+// MLIR-SAME: function_metadata = [#llvm.func_metadata<"max_work_group_size", <#llvm.md_const<256 : i32>, #llvm.md_const<1 : i32>, #llvm.md_const<1 : i32>>>]
+// MLIR-LABEL: llvm.mlir.alias external @kernel_alias
+// MLIR-NOT: function_metadata

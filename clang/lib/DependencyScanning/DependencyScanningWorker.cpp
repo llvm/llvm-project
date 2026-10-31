@@ -14,6 +14,7 @@
 #include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
@@ -398,9 +399,14 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
   ScanInvocation->getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
       true;
 
-  if (ScanInvocation->getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
+  if (ScanInvocation->getHeaderSearchOpts()
+          .ModulesValidateOncePerBuildSession ||
+      Service.getOpts().ValidateAgainstInvalidatedPaths)
     ScanInvocation->getHeaderSearchOpts().BuildSessionTimestamp =
         Service.getOpts().BuildSessionTimestamp;
+  if (Service.getOpts().ValidateAgainstInvalidatedPaths)
+    ScanInvocation->getHeaderSearchOpts().ModulesValidateDirectoryDependencies =
+        true;
 
   ScanInvocation->getFrontendOpts().DisableFree = false;
   ScanInvocation->getFrontendOpts().GenerateGlobalModuleIndex = false;
@@ -697,6 +703,62 @@ createScanningDiagOptions(ArrayRef<std::string> CommandLine) {
   return DiagOpts;
 }
 
+namespace {
+/// Find the module maps that define modules without loading them.
+class ModuleMapLookup {
+public:
+  explicit ModuleMapLookup(CompilerInstance &CI)
+      : CI(CI), HSOpts(CI.getHeaderSearchOpts()),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, CI.getFileManager()),
+        HS(HSOpts, SourceMgr, Diags, CI.getLangOpts(), &CI.getTarget()) {
+    HSOpts.LazyLoadModuleMaps = true;
+    // Ignore verbose mode as it's already respected by the real scan.
+    HSOpts.Verbose = false;
+    ApplyHeaderSearchOptions(HS, HSOpts, CI.getLangOpts(),
+                             CI.getTarget().getTriple());
+  }
+
+  llvm::StringMap<std::string>
+  computeModuleMapsForModules(ArrayRef<StringRef> ModuleNames) {
+    // Resolve any modulemaps passed directly first.
+    for (const std::string &Filename : CI.getFrontendOpts().ModuleMapFiles)
+      if (OptionalFileEntryRef File =
+              CI.getFileManager().getOptionalFileRef(Filename))
+        HS.parseModuleMapFile(*File, /*IsSystem=*/false,
+                              /*ImplicitlyDiscovered=*/false);
+
+    const bool HasPrebuiltModules = !HSOpts.PrebuiltModuleFiles.empty() ||
+                                    !HSOpts.PrebuiltModulePaths.empty();
+
+    llvm::StringMap<std::string> Result;
+    // Then resolve modulemaps through header search.
+    for (StringRef Name : ModuleNames) {
+      // Skip over prebuilt modules.
+      if (HasPrebuiltModules && !HS.getPrebuiltModuleFileName(Name).empty())
+        continue;
+      OptionalFileEntryRef File = HS.lookupModuleMapFileForModule(Name);
+      // Skip over modules that didn't find a modulemap.
+      if (!File)
+        continue;
+      // Canonicalize the path the same way as for the real scan.
+      SmallString<128> Path = File->getNameAsRequested();
+      HS.getModuleMap().canonicalizeModuleMapPath(Path);
+      Result[Name] = std::string(Path);
+    }
+    return Result;
+  }
+
+private:
+  CompilerInstance &CI;
+  HeaderSearchOptions HSOpts;
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags;
+  SourceManager SourceMgr;
+  HeaderSearch HS;
+};
+} // namespace
+
 class CompilerInstanceWithContext {
   // Context
   DependencyScanningWorker &Worker;
@@ -822,6 +884,24 @@ public:
     return std::move(CIWC);
   }
 
+  /// Initialize from a cc1 command line, reporting diagnostics to
+  /// \p DiagConsumer.
+  static std::optional<CompilerInstanceWithContext>
+  initializeFromCC1Commandline(
+      DependencyScanningWorker &Worker, StringRef CWD,
+      ArrayRef<std::string> CC1CommandLine, DiagnosticConsumer &DiagConsumer,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+      DependencyActionController &Controller) {
+    auto FS = Worker.makeEffectiveVFS(CWD, OverlayFS);
+    auto DiagOpts = createScanningDiagOptions(CC1CommandLine);
+    auto DiagEngine =
+        CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DiagConsumer,
+                                            /*ShouldOwnClient=*/false);
+    return initializeFromCC1Commandline(Worker, CWD, CC1CommandLine,
+                                        *DiagEngine, std::move(OverlayFS),
+                                        Controller);
+  }
+
   bool computeDependencies(StringRef ModuleName, DependencyConsumer &Consumer,
                            DependencyActionController &Controller) {
     Worker.Service.getLogger().log() << "start scan_by_name: " << ModuleName;
@@ -934,6 +1014,12 @@ public:
     return true;
   }
 
+  llvm::StringMap<std::string>
+  computeModuleMapsForModules(ArrayRef<StringRef> ModuleNames) {
+    assert(CIPtr && "CIPtr must be initialized before calling this method");
+    return ModuleMapLookup(*CIPtr).computeModuleMapsForModules(ModuleNames);
+  }
+
   std::shared_ptr<ModuleDepCollector>
   scanTranslationUnit(DependencyConsumer &Consumer,
                       DependencyActionController &Controller) {
@@ -990,7 +1076,8 @@ public:
 } // namespace clang
 
 DependencyScanningWorker::DependencyScanningWorker(
-    DependencyScanningService &Service)
+    DependencyScanningService &Service,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS)
     : Service(Service) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
@@ -1008,7 +1095,7 @@ DependencyScanningWorker::DependencyScanningWorker(
   }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-      Service, std::move(BaseFS));
+      Service, std::move(BaseFS), std::move(LocalFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
@@ -1099,14 +1186,9 @@ bool DependencyScanningWorker::computeDependenciesByName(
     DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
     llvm::function_ref<std::optional<std::string>()> getNextName,
     DependencyConsumer &DepConsumer) {
-  auto FS = makeEffectiveVFS(CWD, OverlayFS);
-  auto DiagOpts = createScanningDiagOptions(CC1CommandLine);
-  auto DiagEngine =
-      CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DiagConsumer,
-                                          /*ShouldOwnClient=*/false);
   std::optional<CompilerInstanceWithContext> CIWC =
       CompilerInstanceWithContext::initializeFromCC1Commandline(
-          *this, CWD, CC1CommandLine, *DiagEngine, std::move(OverlayFS),
+          *this, CWD, CC1CommandLine, DiagConsumer, std::move(OverlayFS),
           Controller);
   if (!CIWC)
     return false;
@@ -1119,4 +1201,19 @@ bool DependencyScanningWorker::computeDependenciesByName(
     AllScansSucceeded = AllScansSucceeded && Success;
   }
   return AllScansSucceeded;
+}
+
+std::optional<llvm::StringMap<std::string>>
+DependencyScanningWorker::computeModuleMapsForModules(
+    StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+    DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
+    ArrayRef<StringRef> ModuleNames) {
+  std::optional<CompilerInstanceWithContext> CIWC =
+      CompilerInstanceWithContext::initializeFromCC1Commandline(
+          *this, CWD, CC1CommandLine, DiagConsumer, std::move(OverlayFS),
+          Controller);
+  if (!CIWC)
+    return std::nullopt;
+  return CIWC->computeModuleMapsForModules(ModuleNames);
 }

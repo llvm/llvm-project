@@ -22,18 +22,20 @@
 #include <unordered_map>
 #include <vector>
 
+#include "OffloadError.h"
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
 #include "omptarget.h"
 
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm::offload::debug;
 
 namespace llvm {
 
-/// Base class of per-device allocator.
+/// Base class of the allocator a memory manager pools the memory of.
 class DeviceAllocatorTy {
 public:
   virtual ~DeviceAllocatorTy() = default;
@@ -49,9 +51,9 @@ public:
                      TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 };
 
-/// Class of memory manager. The memory manager is per-device by using
-/// per-device allocator. Therefore, each plugin using memory manager should
-/// have an allocator for each device.
+/// Class of memory manager. A manager pools the memory of a single allocator,
+/// so there is one manager per allocator, e.g. one per context, device and
+/// kind of memory.
 class MemoryManagerTy {
   static constexpr const size_t BucketSize[] = {
       0,       1U << 2, 1U << 3,  1U << 4,  1U << 5,  1U << 6, 1U << 7,
@@ -106,13 +108,17 @@ class MemoryManagerTy {
 
   /// A structure stores the meta data of a target pointer
   struct NodeTy {
-    /// Memory size
+    /// Final allocation size, including the alignment padding
     const size_t Size;
-    /// Target pointer
+    /// Target pointer, returned to the caller after adjustments related to the
+    /// memory alignment (moving the pointer)
     void *Ptr;
+    /// Pointer to the originally allocated memory
+    void *BasePtr;
 
     /// Constructor
-    NodeTy(size_t Size, void *Ptr) : Size(Size), Ptr(Ptr) {}
+    NodeTy(size_t Size, void *Ptr, void *BasePtr)
+        : Size(Size), Ptr(Ptr), BasePtr(BasePtr) {}
   };
 
   /// To make \p NodePtrTy ordered when they're put into \p std::multiset.
@@ -171,7 +177,7 @@ class MemoryManagerTy {
       if (List.empty())
         continue;
       for (const NodeTy &N : List) {
-        if (auto Err = deleteOnDevice(N.Ptr))
+        if (auto Err = deleteOnDevice(N.BasePtr))
           return Err;
         RemoveList.push_back(N.Ptr);
       }
@@ -218,6 +224,14 @@ class MemoryManagerTy {
     return TgtPtr;
   }
 
+  void changeKeyPtr(void *FinalPtr, NodeTy *NodePtr) {
+    std::lock_guard<std::mutex> LG(MapTableLock);
+    auto NodeHandle = PtrToNodeTable.extract(NodePtr->Ptr);
+    NodeHandle.mapped().Ptr = FinalPtr;
+    NodeHandle.key() = FinalPtr;
+    PtrToNodeTable.insert(std::move(NodeHandle));
+  }
+
 public:
   static constexpr size_t DefaultSizeThreshold = 1U << 13;
 
@@ -234,8 +248,8 @@ public:
   /// Destructor
   ~MemoryManagerTy() {
     for (auto &PtrToNode : PtrToNodeTable) {
-      assert(PtrToNode.second.Ptr && "nullptr in map table");
-      if (auto Err = deleteOnDevice(PtrToNode.second.Ptr))
+      assert(PtrToNode.second.BasePtr && "nullptr in map table");
+      if (auto Err = deleteOnDevice(PtrToNode.second.BasePtr))
         REPORT() << "Failure to delete memory: " << toString(std::move(Err));
     }
   }
@@ -248,21 +262,43 @@ public:
     if (Size == 0)
       return nullptr;
 
-    ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: size " << Size
+    size_t AllocationSize = Size;
+    if (Alignment > 0) {
+      auto PaddedSize = checkedAddUnsigned(Size, Alignment - 1);
+      if (!PaddedSize) {
+        ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: warning: "
+                            "size+alignment overflow, bailing out.";
+        return nullptr;
+      }
+      AllocationSize = *PaddedSize;
+    }
+
+    ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: requested memory " << Size
+                     << ", allocated:  " << AllocationSize
                      << " with host pointer " << HstPtr << ".";
 
     // If the size is greater than the threshold, allocate it directly from
     // device.
-    if (Size > SizeThreshold) {
-      ODBG(OLDT_Alloc) << Size << " is greater than the threshold "
+    if (AllocationSize > SizeThreshold) {
+      ODBG(OLDT_Alloc) << AllocationSize << " is greater than the threshold "
                        << SizeThreshold << ". Allocate it directly from device";
       auto TgtPtrOrErr =
-          allocateOrFreeAndAllocateOnDevice(Size, HstPtr, Alignment);
+          allocateOrFreeAndAllocateOnDevice(AllocationSize, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
       ODBG(OLDT_Alloc) << "Got target pointer " << *TgtPtrOrErr
                        << ". Return directly.";
+
+      if (Alignment > 0 && !isAddrAligned(Align(Alignment), *TgtPtrOrErr)) {
+        auto AlignErr = make_error<StringError>(
+            "Allocated address is misaligned", inconvertibleErrorCode());
+        if (auto FreeErr = deleteOnDevice(*TgtPtrOrErr)) {
+          return joinErrors(std::move(FreeErr), std::move(AlignErr));
+        }
+
+        return AlignErr;
+      }
 
       return *TgtPtrOrErr;
     }
@@ -271,24 +307,35 @@ public:
 
     // Try to get a node from FreeList
     {
-      const int B = findBucket(Size);
+      const int B = findBucket(AllocationSize);
       FreeListTy &List = FreeLists[B];
 
-      NodeTy TempNode(Size, nullptr);
+      NodeTy TempNode(AllocationSize, nullptr, nullptr);
       std::lock_guard<std::mutex> LG(FreeListLocks[B]);
-      auto [First, Last] = List.equal_range(TempNode);
+      auto Itr = List.find(TempNode);
 
-      auto Itr = std::find_if(First, Last, [Alignment](const NodeTy &N) {
-        return Alignment == 0 || isAddrAligned(Align(Alignment), N.Ptr);
-      });
-      if (Itr != Last) {
+      if (Itr != List.end()) {
         NodePtr = &Itr->get();
         List.erase(Itr);
       }
     }
 
-    if (NodePtr != nullptr)
+    if (NodePtr != nullptr) {
       ODBG(OLDT_Alloc) << "Find one node " << NodePtr << " in the bucket.";
+
+      if (Alignment > 0) {
+        void *AlignedPointer =
+            (void *)alignAddr(NodePtr->BasePtr, Align(Alignment));
+
+        if (AlignedPointer != NodePtr->Ptr) {
+          changeKeyPtr(AlignedPointer, NodePtr);
+        }
+      } else {
+        if (NodePtr->Ptr != NodePtr->BasePtr) {
+          changeKeyPtr(NodePtr->BasePtr, NodePtr);
+        }
+      }
+    }
 
     // We cannot find a valid node in FreeLists. Let's allocate on device and
     // create a node for it.
@@ -297,7 +344,7 @@ public:
                        << "Allocate on device.";
       // Allocate one on device
       auto TgtPtrOrErr =
-          allocateOrFreeAndAllocateOnDevice(Size, HstPtr, Alignment);
+          allocateOrFreeAndAllocateOnDevice(AllocationSize, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
@@ -305,15 +352,21 @@ public:
       if (TgtPtr == nullptr)
         return nullptr;
 
+      void *BasePtr = TgtPtr;
+      if (Alignment > 0) {
+        TgtPtr = (void *)alignAddr(TgtPtr, Align(Alignment));
+      }
+
       // Create a new node and add it into the map table
       {
         std::lock_guard<std::mutex> Guard(MapTableLock);
-        auto Itr = PtrToNodeTable.emplace(TgtPtr, NodeTy(Size, TgtPtr));
+        auto Itr = PtrToNodeTable.emplace(
+            TgtPtr, NodeTy(AllocationSize, TgtPtr, BasePtr));
         NodePtr = &Itr.first->second;
       }
 
       ODBG(OLDT_Alloc) << "Node address " << NodePtr << ", target pointer "
-                       << TgtPtr << ", size " << Size;
+                       << TgtPtr << ", size " << AllocationSize;
     }
 
     assert(NodePtr && "NodePtr should not be nullptr at this point");

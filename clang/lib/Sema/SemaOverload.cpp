@@ -34,8 +34,10 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseSet.h"
@@ -196,6 +198,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_Conversion,
       ICR_HLSL_Scalar_Widening,
       ICR_HLSL_Scalar_Widening,
+      ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -260,6 +263,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Non-decaying array conversion",
       "HLSL vector splat",
       "HLSL matrix splat",
+      "HLSL packed type conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -483,7 +487,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       Expr::EvalResult R;
       if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
           ((Ctx.getLangOpts().CPlusPlus &&
-            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue,
+            Initializer->isCXX11ConstantExpr(Ctx, ConstantValue,
                                              AllowRelaxedEval)))) {
         // Constant!
         if (Ctx.getLangOpts().C23)
@@ -2345,6 +2349,45 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
   return false;
 }
 
+static bool IsHLSLPackedTypeConversion(Sema &S, QualType FromType,
+                                       QualType ToType,
+                                       ImplicitConversionKind &ICK,
+                                       ImplicitConversionKind &DimensionICK,
+                                       Expr *From) {
+  if (!S.getLangOpts().HLSL)
+    return false;
+  if (S.Context.hasSameUnqualifiedType(FromType, ToType))
+    return false;
+
+  const bool FromPacked = FromType->isHLSLBuiltinPackedType();
+  const bool ToPacked = ToType->isHLSLBuiltinPackedType();
+
+  if (FromPacked && ToPacked) {
+    ICK = ICK_Integral_Conversion;
+    DimensionICK = ICK_Identity;
+    return true;
+  }
+
+  // Only convert packed types to and from uint
+  QualType UIntTy = S.Context.UnsignedIntTy;
+  const bool ToIsUint = S.Context.hasSameUnqualifiedType(ToType, UIntTy);
+  if (FromPacked && !ToIsUint)
+    return false;
+
+  const bool FromIsUint = S.Context.hasSameUnqualifiedType(FromType, UIntTy);
+  if (ToPacked && !FromIsUint)
+    return false;
+
+  // Converting to or from uint
+  if (FromIsUint || ToIsUint) {
+    ICK = ICK_HLSL_Packed_Type_Conversion;
+    DimensionICK = ICK_Identity;
+    return true;
+  }
+
+  return false;
+}
+
 static bool tryAtomicConversion(Sema &S, Expr *From, QualType ToType,
                                 bool InOverloadResolution,
                                 StandardConversionSequence &SCS,
@@ -2609,6 +2652,11 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     FromType = ToType.getUnqualifiedType();
   } else if (IsMatrixConversion(S, FromType, ToType, SecondICK, DimensionICK,
                                 From, InOverloadResolution, CStyle)) {
+    SCS.Second = SecondICK;
+    SCS.Dimension = DimensionICK;
+    FromType = ToType.getUnqualifiedType();
+  } else if (IsHLSLPackedTypeConversion(S, FromType, ToType, SecondICK,
+                                        DimensionICK, From)) {
     SCS.Second = SecondICK;
     SCS.Dimension = DimensionICK;
     FromType = ToType.getUnqualifiedType();
@@ -4196,6 +4244,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       Expr **Args = &From;
       unsigned NumArgs = 1;
       bool ListInitializing = false;
+      SmallVector<Expr *, 8> ExpandedInits;
       if (InitListExpr *InitList = dyn_cast<InitListExpr>(From)) {
         // But first, see if there is an init-list-constructor that will work.
         OverloadingResult Result = IsInitializerListConstructorConversion(
@@ -4209,8 +4258,10 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
 
         // If we're list-initializing, we pass the individual elements as
         // arguments, not the entire list.
-        Args = InitList->getInits();
-        NumArgs = InitList->getNumInits();
+        MultiExprArg Inits =
+            S.getInitsWithEmbedExpanded(InitList, ExpandedInits);
+        Args = Inits.data();
+        NumArgs = Inits.size();
         ListInitializing = true;
       }
 
@@ -5818,7 +5869,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   //   and the initializer list has a single element that is an
   //   appropriately-typed string literal (8.5.2 [dcl.init.string]), the
   //   implicit conversion sequence is the identity conversion.
-  if (From->getNumInits() == 1 && !IsDesignatedInit) {
+  if (From->hasOneInit() && !IsDesignatedInit) {
     if (ToType->isRecordType() && ToType->isAggregateType()) {
       QualType InitType = From->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, ToType) ||
@@ -5857,7 +5908,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   //   can be implicitly converted to X, the implicit conversion sequence is
   //   the worst conversion necessary to convert an element of the list to X.
   if ((AT || S.isStdInitializerList(ToType, &InitTy)) && !IsDesignatedInit) {
-    unsigned e = From->getNumInits();
+    unsigned e = From->getNumInitsWithEmbedExpanded();
     ImplicitConversionSequence DfltElt;
     DfltElt.setBad(BadConversionSequence::no_conversion, QualType(),
                    QualType());
@@ -5909,8 +5960,9 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     Result.Standard.setAsIdentityConversion();
     Result.Standard.setFromType(InitTy);
     Result.Standard.setAllToTypes(InitTy);
-    for (unsigned i = 0; i < e; ++i) {
-      Expr *Init = From->getInit(i);
+    // An EmbedExpr is a single int prvalue, so one conversion sequence covers
+    // all of its elements; narrowing is checked per element after resolution.
+    for (Expr *Init : From->inits()) {
       ImplicitConversionSequence ICS = TryCopyInitialization(
           S, Init, InitTy, SuppressUserConversions, InOverloadResolution,
           AllowObjCWritebackConversion);
@@ -5998,7 +6050,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
 
     // If the initializer list has a single element that is reference-related
     // to the parameter type, we initialize the reference from that.
-    if (From->getNumInits() == 1 && !IsDesignatedInit) {
+    if (From->hasOneInit() && !IsDesignatedInit) {
       Expr *Init = From->getInit(0);
 
       QualType T2 = Init->getType();
@@ -6060,11 +6112,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     //    - if the initializer list has one element that is not itself an
     //      initializer list, the implicit conversion sequence is the one
     //      required to convert the element to the parameter type.
-    // Bail out on EmbedExpr as well since we never create EmbedExpr for a
-    // single integer.
-    unsigned NumInits = From->getNumInits();
-    if (NumInits == 1 && !isa<InitListExpr>(From->getInit(0)) &&
-        !isa<EmbedExpr>(From->getInit(0))) {
+    if (From->hasOneInit() && !isa<InitListExpr>(From->getInit(0))) {
       Result = TryCopyInitialization(
           S, From->getInit(0), ToType, SuppressUserConversions,
           InOverloadResolution, AllowObjCWritebackConversion);
@@ -6073,7 +6121,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     }
     //    - if the initializer list has no elements, the implicit conversion
     //      sequence is the identity conversion.
-    else if (NumInits == 0) {
+    else if (From->hasZeroInits()) {
       Result.setStandard();
       Result.Standard.setAsIdentityConversion();
       Result.Standard.setFromType(ToType);
@@ -6298,12 +6346,24 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
   QualType FromRecordType, DestType;
   QualType ImplicitParamRecordType = Method->getFunctionObjectParameterType();
 
+  LangAS FromAS = From->getType().getAddressSpace();
   if (getLangOpts().HLSL &&
-      From->getType().getAddressSpace() == LangAS::hlsl_constant) {
+      (FromAS == LangAS::hlsl_constant ||
+       (FromAS == LangAS::hlsl_groupshared && Method->isConst()))) {
     QualType CastType = From->getType().getLocalUnqualifiedType().withConst();
     From = ImplicitCastExpr::Create(Context, CastType, CK_LValueToRValue, From,
                                     /*BasePath=*/nullptr, VK_PRValue,
                                     FPOptionsOverride());
+  } else if (getLangOpts().HLSL && FromAS == LangAS::hlsl_groupshared) {
+    ASTContext &Ctx = SemaRef.getASTContext();
+    QualType Ty = From->getType().getLocalUnqualifiedType();
+    InitializedEntity TempEntity =
+        InitializedEntity::InitializeTemporary(Ty.getNonLValueExprType(Ctx));
+    ExprResult Res = SemaRef.HLSL().CreateOutArgExpr(
+        From, Ty, Ty, TempEntity, From->getBeginLoc(), /*IsInOut=*/true);
+    if (Res.isInvalid())
+      return ExprError();
+    From = Res.get();
   }
 
   Expr::Classification FromClassification;
@@ -6491,6 +6551,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Fixed_Point_Conversion:
   case ICK_HLSL_Vector_Truncation:
   case ICK_HLSL_Matrix_Truncation:
+  case ICK_HLSL_Packed_Type_Conversion:
     return false;
 
   case ICK_Lvalue_To_Rvalue:
@@ -6525,17 +6586,6 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
 
   if (checkPlaceholderForOverload(S, From))
     return ExprError();
-
-  if (From->containsErrors()) {
-    if (S.Context.hasSameType(From->getType(), T))
-      return From;
-
-    // The expression already has errors, so the correct cast kind can't be
-    // determined. Use RecoveryExpr to keep the expected type T and mark the
-    // result as invalid, preventing further cascading errors.
-    return S.CreateRecoveryExpr(From->getBeginLoc(), From->getEndLoc(), {From},
-                                T);
-  }
 
   // C++1z [expr.const]p3:
   //  A converted constant expression of type T is an expression,
@@ -6752,7 +6802,8 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   else
     Kind = ConstantExprKind::Normal;
 
-  if (!E->EvaluateAsConstantExpr(Eval, Context, Kind) ||
+  EvalProxy SProxy(*this);
+  if (!E->EvaluateAsMandatedConstantExpr(Eval, Context, SProxy, Kind) ||
       (RequireInt && !Eval.Val.isInt())) {
     // The expression can't be folded, so we can't keep it at this position in
     // the AST.
@@ -9150,9 +9201,19 @@ class BuiltinCandidateTypeSet  {
   /// were present in the candidate set.
   bool HasArithmeticOrEnumeralTypes;
 
+  /// A flag indicating whether the candidate set has a type that might
+  /// convert to a promoted arithmetic type or to a vector type. This is
+  /// conservative: only scoped enumerations, pointers, member pointers,
+  /// nullptr_t, and classes that convert to nothing else are known not to.
+  bool MayConvertToArithmetic;
+
   /// A flag indicating whether the nullptr type was present in the
   /// candidate set.
   bool HasNullPtrType;
+
+  /// A flag indicating whether the reflection type was present in the
+  /// candidate set.
+  bool HasReflectionType;
 
   /// Sema - The semantic analysis instance where we are building the
   /// candidate type set.
@@ -9170,11 +9231,9 @@ public:
   typedef TypeSet::iterator iterator;
 
   BuiltinCandidateTypeSet(Sema &SemaRef)
-    : HasNonRecordTypes(false),
-      HasArithmeticOrEnumeralTypes(false),
-      HasNullPtrType(false),
-      SemaRef(SemaRef),
-      Context(SemaRef.Context) { }
+      : HasNonRecordTypes(false), HasArithmeticOrEnumeralTypes(false),
+        MayConvertToArithmetic(false), HasNullPtrType(false),
+        HasReflectionType(false), SemaRef(SemaRef), Context(SemaRef.Context) {}
 
   void AddTypesConvertedFrom(QualType Ty,
                              SourceLocation Loc,
@@ -9196,7 +9255,9 @@ public:
   bool containsMatrixType(QualType Ty) const { return MatrixTypes.count(Ty); }
   bool hasNonRecordTypes() { return HasNonRecordTypes; }
   bool hasArithmeticOrEnumeralTypes() { return HasArithmeticOrEnumeralTypes; }
+  bool mayConvertToArithmetic() const { return MayConvertToArithmetic; }
   bool hasNullPtrType() const { return HasNullPtrType; }
+  bool hasReflectionType() const { return HasReflectionType; }
 };
 
 } // end anonymous namespace
@@ -9349,6 +9410,13 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
   HasArithmeticOrEnumeralTypes =
     HasArithmeticOrEnumeralTypes || Ty->isArithmeticType();
 
+  // Flag if the type might convert to a promoted arithmetic or vector type.
+  // For records, this is set below when visiting their conversion functions.
+  MayConvertToArithmetic =
+      MayConvertToArithmetic ||
+      !(TyIsRec || Ty->isScopedEnumeralType() || Ty->isAnyPointerType() ||
+        Ty->isMemberPointerType() || Ty->isNullPtrType());
+
   if (Ty->isObjCIdType() || Ty->isObjCClassType())
     PointerTypes.insert(Ty);
   else if (Ty->getAs<PointerType>() || Ty->getAs<ObjCObjectPointerType>()) {
@@ -9378,6 +9446,8 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     MatrixTypes.insert(Ty);
   } else if (Ty->isNullPtrType()) {
     HasNullPtrType = true;
+  } else if (Ty->isMetaInfoType()) {
+    HasReflectionType = true;
   } else if (AllowUserConversions && TyIsRec) {
     // No conversion functions in incomplete types.
     if (!SemaRef.isCompleteType(Loc, Ty))
@@ -9390,8 +9460,10 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
 
       // Skip conversion function templates; they don't tell us anything
       // about which builtin types we can convert to.
-      if (isa<FunctionTemplateDecl>(D))
+      if (isa<FunctionTemplateDecl>(D)) {
+        MayConvertToArithmetic = true;
         continue;
+      }
 
       CXXConversionDecl *Conv = cast<CXXConversionDecl>(D);
       if (AllowExplicitConversions || !Conv->isExplicit()) {
@@ -9538,7 +9610,10 @@ class BuiltinOperatorOverloadBuilder {
   Sema &S;
   ArrayRef<Expr *> Args;
   QualifiersAndAtomic VisibleTypeConversionsQuals;
-  bool HasArithmeticOrEnumeralCandidateType;
+  // Whether a candidate whose parameters are all arithmetic, vector or matrix
+  // types can be viable. It is viable if there is an arithmetic or enumeral
+  // candidate type, and every argument might convert to such a type.
+  bool ArithmeticCandidatesMayBeViable;
   SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes;
   OverloadCandidateSet &CandidateSet;
 
@@ -9677,18 +9752,20 @@ class BuiltinOperatorOverloadBuilder {
 
 public:
   BuiltinOperatorOverloadBuilder(
-    Sema &S, ArrayRef<Expr *> Args,
-    QualifiersAndAtomic VisibleTypeConversionsQuals,
-    bool HasArithmeticOrEnumeralCandidateType,
-    SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes,
-    OverloadCandidateSet &CandidateSet)
-    : S(S), Args(Args),
-      VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
-      HasArithmeticOrEnumeralCandidateType(
-        HasArithmeticOrEnumeralCandidateType),
-      CandidateTypes(CandidateTypes),
-      CandidateSet(CandidateSet) {
-
+      Sema &S, ArrayRef<Expr *> Args,
+      QualifiersAndAtomic VisibleTypeConversionsQuals,
+      bool HasArithmeticOrEnumeralCandidateType,
+      SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes,
+      OverloadCandidateSet &CandidateSet)
+      : S(S), Args(Args),
+        VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
+        ArithmeticCandidatesMayBeViable(
+            HasArithmeticOrEnumeralCandidateType &&
+            llvm::all_of(CandidateTypes,
+                         [](const BuiltinCandidateTypeSet &Types) {
+                           return Types.mayConvertToArithmetic();
+                         })),
+        CandidateTypes(CandidateTypes), CandidateSet(CandidateSet) {
     InitArithmeticTypes();
   }
 
@@ -9712,7 +9789,7 @@ public:
   //       VQ T&      operator--(VQ T&);
   //       T          operator--(VQ T&, int);
   void addPlusPlusMinusMinusArithmeticOverloads(OverloadedOperatorKind Op) {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Arith = 0; Arith < NumArithmeticTypes; ++Arith) {
@@ -9786,7 +9863,7 @@ public:
   //       T         operator+(T);
   //       T         operator-(T);
   void addUnaryPlusOrMinusArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Arith = FirstPromotedArithmeticType;
@@ -9816,7 +9893,7 @@ public:
   //
   //        T         operator~(T);
   void addUnaryTildePromotedIntegralOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Int = FirstPromotedIntegralType;
@@ -9854,6 +9931,14 @@ public:
         CanQualType NullPtrTy = S.Context.getCanonicalType(S.Context.NullPtrTy);
         if (AddedTypes.insert(NullPtrTy).second) {
           QualType ParamTypes[2] = { NullPtrTy, NullPtrTy };
+          S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
+        }
+      }
+
+      if (CandidateTypes[ArgIdx].hasReflectionType()) {
+        CanQualType MetaInfoTy = S.Context.MetaInfoTy;
+        if (AddedTypes.insert(MetaInfoTy).second) {
+          QualType ParamTypes[2] = {MetaInfoTy, MetaInfoTy};
           S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
         }
       }
@@ -10031,7 +10116,7 @@ public:
   //   between types L and R.
   // Our candidates ignore the first parameter.
   void addGenericBinaryArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = FirstPromotedArithmeticType;
@@ -10059,7 +10144,7 @@ public:
   ///  * (M2.getElementType(), M2) -> M2
   ///  * (M2, M2) -> M2 // Only if M2 is not part of CandidateTypes[0].
   void addMatrixBinaryArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (QualType M1 : CandidateTypes[0].matrix_types()) {
@@ -10124,7 +10209,7 @@ public:
   //   where LR is the result of the usual arithmetic conversions
   //   between types L and R.
   void addBinaryBitwiseArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = FirstPromotedIntegralType;
@@ -10289,7 +10374,7 @@ public:
   //        VQ L&      operator+=(VQ L&, R);
   //        VQ L&      operator-=(VQ L&, R);
   void addAssignmentArithmeticOverloads(bool isEqualOp) {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = 0; Left < NumArithmeticTypes; ++Left) {
@@ -10343,7 +10428,7 @@ public:
   //        VQ L&       operator^=(VQ L&, R);
   //        VQ L&       operator|=(VQ L&, R);
   void addAssignmentIntegralOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = FirstIntegralType; Left < LastIntegralType; ++Left) {
@@ -10980,7 +11065,7 @@ static bool sameFunctionParameterTypeLists(Sema &S, FunctionDecl *Fn1,
     if (Mem1->isInstance() && Mem2->isInstance() &&
         !S.getASTContext().hasSameType(
             Mem1->getFunctionObjectParameterReferenceType(),
-            Mem1->getFunctionObjectParameterReferenceType()))
+            Mem2->getFunctionObjectParameterReferenceType()))
       return false;
   }
   return true;
@@ -12447,10 +12532,11 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  TemplateSpecCandidateSetKind CandidateSetKind =
                                      TemplateSpecCandidateSetKind::Normal) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
-  NamedDecl *ParamD;
-  (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
-  (ParamD = Param.dyn_cast<NonTypeTemplateParmDecl*>()) ||
-  (ParamD = Param.dyn_cast<TemplateTemplateParmDecl*>());
+  NamedDecl *ParamD = dyn_cast_if_present<TemplateTypeParmDecl *>(Param);
+  if (!ParamD)
+    ParamD = dyn_cast_if_present<NonTypeTemplateParmDecl *>(Param);
+  if (!ParamD)
+    ParamD = dyn_cast_if_present<TemplateTemplateParmDecl *>(Param);
   switch (DeductionFailure.getResult()) {
   case TemplateDeductionResult::Success:
     llvm_unreachable(
@@ -14294,6 +14380,18 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       // constraints.
 
       // C++ [over.over]p5:
+      //    [...] If more than one function in the set remains, all function
+      //    template specializations in the set are eliminated if the set also
+      //    contains a function that is not a function template specialization.
+      //    [...]
+      if (Result->isFunctionTemplateSpecialization() !=
+          FD->isFunctionTemplateSpecialization()) {
+        if (!FD->isFunctionTemplateSpecialization())
+          FoundBetter();
+        continue;
+      }
+
+      // C++ [over.over]p5:
       //    [...] Any given non-template function F0 is eliminated if the set
       //    contains a second non-template function that is more
       //    partial-ordering-constrained than F0 [...]
@@ -15806,6 +15904,10 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         if (FnExpr.isInvalid())
           return ExprError();
 
+        if (auto *Pattern = FnDecl->getInstantiatedFromMemberFunction();
+            Pattern && Pattern->getOverloadedOperator() == OO_Spaceship)
+          Pattern->setIsUsed();
+
         // Determine the result type.
         QualType ResultTy = FnDecl->getReturnType();
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
@@ -16851,12 +16953,13 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
       = cast<CXXConversionDecl>(
                          Best->Conversions[0].UserDefined.ConversionFunction);
 
+    // FoundDecl may be a UsingShadowDecl naming the conversion function.
+    assert(Conv == Best->FoundDecl.getDecl()->getUnderlyingDecl() &&
+           "Found Decl & conversion-to-functionptr should be same, right?!");
     CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr,
                               Best->FoundDecl);
-    if (DiagnoseUseOfDecl(Best->FoundDecl, LParenLoc))
+    if (DiagnoseUseOfDecl(Conv, LParenLoc))
       return ExprError();
-    assert(Conv == Best->FoundDecl.getDecl() &&
-             "Found Decl & conversion-to-functionptr should be same, right?!");
     // We selected one of the surrogate functions that converts the
     // object parameter to a function pointer. Perform the conversion
     // on the object argument, then let BuildCallExpr finish the job.

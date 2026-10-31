@@ -10,4 +10,4 @@
 
 #include "src/math/fromfpf128.h"
 
-LIST_FROMFP_TESTS(float128, LIBC_NAMESPACE::fromfpf128)
+LIST_FROMFP_TESTS(Fromfpf128, float128, LIBC_NAMESPACE::fromfpf128)

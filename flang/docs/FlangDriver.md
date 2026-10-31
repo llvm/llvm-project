@@ -8,11 +8,6 @@
 
 # Flang drivers
 
-```{contents}
----
-local:
----
-```
 
 There are two main drivers in Flang:
 * the compiler driver, `flang`
@@ -80,7 +75,7 @@ in the same files: `clang/include/clang/Options/Options.td` and
 `clang/include/clang/Options/FlangOptions.td`.
 
 The separation helps us split various tasks and allows us to implement more
-specialised tools. In particular, `flang` is not aware of various
+specialized tools. In particular, `flang` is not aware of various
 compilation phases within the frontend (e.g. scanning, parsing or semantic
 checks). It does not have to be. Conversely, the frontend driver, `flang
 -fc1`, needs not to be concerned with linkers or other external tools like
@@ -565,6 +560,40 @@ config.registerHLFIROptEarlyEPCallbacks(
     });
 ```
 
+### Registering Extension Point Passes from a Plugin
+
+To add passes at these extension points from a
+[plugin](#frontend-driver-plugins), register a *pipeline config callback* with
+`fir::registerPassPipelineConfigCallback`
+(`flang/include/flang/Optimizer/Passes/Pipelines.h`). The frontend driver runs
+every registered callback on its `MLIRToLLVMPassPipelineConfig` once the config
+is fully set up, just before it builds the pipeline. Register from a static initializer, so the callback is in place as
+soon as the plugin is loaded and before any compilation begins:
+
+```c++
+struct MyPluginRegistration {
+  MyPluginRegistration() {
+    fir::registerPassPipelineConfigCallback(
+        [](MLIRToLLVMPassPipelineConfig &config) {
+          config.registerHLFIROptEarlyEPCallbacks(
+              [](mlir::PassManager &pm, llvm::OptimizationLevel) {
+                pm.addPass(createMyHLFIRPass());
+              });
+        });
+  }
+};
+static MyPluginRegistration myPluginRegistration;
+```
+
+These callbacks run on both the `-emit-fir` path
+(`CodeGenAction::lowerHLFIRToFIR`) and the `-emit-llvm`/`-emit-obj` path
+(`CodeGenAction::generateLLVMIR`). `-emit-fir` only builds the HLFIR-to-FIR
+pipeline, so passes registered at the HLFIR extension points run on both paths,
+while those registered at the FIR optimizer extension points run only when
+generating LLVM IR. The registry is append-only and runs callbacks in
+registration order; a callback must not register further callbacks. Only the
+frontend driver runs the registry: `bbc`, `tco` and `fir-opt` do not.
+
 ## LLVM Pass Plugins
 
 Pass plugins are dynamic shared objects that consist of one or more LLVM IR
@@ -604,6 +633,8 @@ documentation for more details.
 
 ## Ofast and Fast Math
 `-Ofast` in Flang means `-O3 -ffast-math -fstack-arrays -fno-protect-parens`.
+`-fstack-arrays` is not applied to code that runs on an accelerator, see the
+"Device code" section of [fstack-arrays.md](fstack-arrays.md).
 
 `-ffast-math` means the following:
  - `-fno-honor-infinities`

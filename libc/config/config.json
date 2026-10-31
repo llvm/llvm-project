@@ -175,6 +175,10 @@
     "LIBC_ADD_NULL_CHECKS": {
       "value": true,
       "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
+    },
+    "LIBC_COPT_PROVIDE_GNU_ALIASES": {
+      "value": false,
+      "doc": "Provide GNU/glibc compatibility symbol aliases (such as __errno_location)."
     }
   },
   "wctype": {
@@ -187,6 +191,12 @@
     "LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT": {
       "value": false,
       "doc": "Trap with SIGFPE when feraiseexcept is called with unmasked floating point exceptions, similar to glibc's behavior.  This is currently working only on x86 with SSE."
+    }
+  },
+  "baremetal": {
+    "LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION": {
+      "value": false,
+      "doc": "Enable rotational dual freestore in FreeListHeap to delay reuse of freed memory. This, when combined with sanitizers, helps detect Use-After-Free (UAF) bugs more reliably by preventing rapid reallocation of recently freed blocks. It costs one extra flag bit in the block header, which doubles the minimum allocation alignment on 32-bit targets."
     }
   },
   "assert": {

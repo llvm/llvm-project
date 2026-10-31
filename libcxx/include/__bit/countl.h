@@ -23,19 +23,19 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _NOEXCEPT {
   return __builtin_clzg(__t, numeric_limits<_Tp>::digits);
 }
 
 #if _LIBCPP_STD_VER >= 20
 
 template <__unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int countl_zero(_Tp __t) noexcept {
+[[nodiscard]] constexpr int countl_zero(_Tp __t) noexcept {
   return std::__countl_zero(__t);
 }
 
 template <__unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int countl_one(_Tp __t) noexcept {
+[[nodiscard]] constexpr int countl_one(_Tp __t) noexcept {
   return std::countl_zero(static_cast<_Tp>(~__t));
 }
 

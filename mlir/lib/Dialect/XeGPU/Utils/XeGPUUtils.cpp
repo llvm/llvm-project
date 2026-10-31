@@ -247,22 +247,9 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
 
-    if (isa<xegpu::StoreScatterOp>(op)) {
-      xegpu::StoreScatterOp store(op);
-      int chunkSize = store.getChunkSize().value_or(1);
-      if (layout && idx >= 2 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+    // For gather/scatter ops the mask and offsets share the value's layout.
+    if (isa<xegpu::StoreScatterOp, xegpu::LoadGatherOp>(op))
       return layout;
-    }
-    if (isa<xegpu::LoadGatherOp>(op)) {
-      xegpu::LoadGatherOp load(op);
-      int chunkSize = load.getChunkSize().value_or(1);
-      if (layout && idx >= 1 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
-      return layout;
-    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
@@ -501,6 +488,24 @@ std::optional<std::string> xegpu::getChipStr(Operation *op) {
   }
 
   return std::nullopt;
+}
+
+FailureOr<int64_t> xegpu::getNumSubgroupsFromBlockSize(Operation *op,
+                                                       int64_t subgroupSize) {
+  auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>();
+  if (!gpuFunc)
+    return failure();
+  std::optional<ArrayRef<int32_t>> blockSize = gpuFunc.getKnownBlockSize();
+  if (!blockSize)
+    return failure();
+  if (!llvm::all_of(*blockSize, [](int32_t dim) {
+        return dim > 0 && llvm::isPowerOf2_32(dim);
+      }))
+    return failure();
+  int64_t numSubgroups = llvm::product_of(*blockSize) / subgroupSize;
+  if (numSubgroups < 1)
+    return failure();
+  return numSubgroups;
 }
 
 /// Generates element-wise addition ops of two arrays with same length.
@@ -742,8 +747,15 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return makeConst(builder.getZeroAttr(elemTy));
 
   case vector::CombiningKind::MUL:
-  case vector::CombiningKind::AND:
     return makeConst(builder.getOneAttr(elemTy));
+
+  case vector::CombiningKind::AND:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy))
+      return makeConst(
+          builder.getIntegerAttr(elemTy, APInt::getAllOnes(intTy.getWidth())));
+    if (elemTy.isIndex())
+      return makeConst(builder.getIndexAttr(-1));
+    return nullptr;
 
   case vector::CombiningKind::MINSI:
     if (auto intTy = dyn_cast<IntegerType>(elemTy))
@@ -763,18 +775,26 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
           elemTy, APInt::getSignedMinValue(intTy.getWidth())));
     return nullptr;
 
-  case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
           elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
     return nullptr;
 
-  case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics(), true)));
+          elemTy,
+          APFloat::getInf(floatTy.getFloatSemantics(), /*Negative=*/true)));
+    return nullptr;
+
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getQNaN(floatTy.getFloatSemantics())));
     return nullptr;
   }
   return nullptr;
@@ -808,7 +828,7 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3p>(uArch))
     return false;
   if (!layout)
     return false;
@@ -851,10 +871,15 @@ bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 // is split into one or more consecutive dimensions in dst whose product equals
 // the original dimension. Populates splitDimGroups with groups of dst indices
 // that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
-// true
+// true. Shapes that only insert unit dimensions are  rejected here.
 bool xegpu::matchSplitDimExpansion(
     ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
     SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  SmallVector<int64_t> expandedUnitDims;
+  if (matchUnitDimExpansion(src, dst, expandedUnitDims) &&
+      !expandedUnitDims.empty())
+    return false;
+
   // each dim in src can be mapped to one or more dims in dst whose product
   // equals to the src dim
   size_t srcIdx = 0;

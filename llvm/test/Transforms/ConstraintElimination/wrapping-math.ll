@@ -202,11 +202,8 @@ define i1 @test_slt(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[A]], 1
 ; CHECK-NEXT:    br i1 [[AND]], label [[IF_END:%.*]], label [[EXIT_1:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[SUB_1]], [[B]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp slt i8 [[SUB_2]], [[B]]
-; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 [[T_1]], [[T_2]]
-; CHECK-NEXT:    [[T_3:%.*]] = icmp slt i8 [[SUB_3]], [[B]]
-; CHECK-NEXT:    [[XOR_2:%.*]] = xor i1 [[XOR_1]], [[T_3]]
+; CHECK-NEXT:    [[XOR_1:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[XOR_2:%.*]] = xor i1 [[XOR_1]], true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[SUB_4]], [[B]]
 ; CHECK-NEXT:    [[XOR_3:%.*]] = xor i1 [[XOR_2]], [[C_1]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i8 [[ADD_1]], [[B]]

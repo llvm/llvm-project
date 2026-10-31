@@ -12,6 +12,7 @@ define i32 @simple_find_last_reduction(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -26,12 +27,12 @@ define i32 @simple_find_last_reduction(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 4 x i1> [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
-; CHECK-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP12]] = select i1 [[TMP10]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i1> [[TMP11]], i32 -1)
@@ -76,6 +77,7 @@ define i32 @non_speculatable_find_last_reduction(ptr noalias %a, ptr noalias %b,
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[DEFAULT_VAL]], i64 0
@@ -94,16 +96,15 @@ define i32 @non_speculatable_find_last_reduction(ptr noalias %a, ptr noalias %b,
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP9]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze <vscale x 4 x i1> [[TMP8]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP11]])
-; CHECK-NEXT:    [[TMP13]] = select i1 [[TMP12]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP13]] = select i1 [[TMP12]], <vscale x 4 x i1> [[TMP11]], <vscale x 4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP14]] = select i1 [[TMP12]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD3]], <vscale x 4 x i32> [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP15]], true
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 4 x i32> [[BROADCAST_SPLAT2]], i64 0
-; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP14]], <vscale x 4 x i1> [[TMP13]], i32 [[TMP17]])
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP14]], <vscale x 4 x i1> [[TMP13]], i32 [[DEFAULT_VAL]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP18]]
@@ -140,7 +141,6 @@ exit:
 define i8 @findlast_blend_with_poison(i8 %e, i1 %c) {
 ; CHECK-LABEL: define i8 @findlast_blend_with_poison(
 ; CHECK-NOT:    vector.body
-;
 entry:
   br label %loop.header
 

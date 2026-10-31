@@ -43,7 +43,7 @@
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/ErrorExtras.h"
 
@@ -145,7 +145,7 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
   };
   options.GetNameForDWARFReg = GetRegName;
   llvm::DWARFExpression E(m_data.GetAsLLVM(), m_data.GetAddressByteSize());
-  llvm::printDwarfExpression(&E, s->AsRawOstream(), options, nullptr);
+  llvm::printDwarfExpression(&E, s->AsRawOstream(), options);
 }
 
 RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }
@@ -797,8 +797,8 @@ static llvm::Error Evaluate_DW_OP_entry_value(EvalContext &eval_ctx,
           "no call edge for retn-pc = {0:x} in parent frame {1}", return_pc,
           parent_func->GetName());
     }
-    Function *callee_func = call_edge->GetCallee(modlist, parent_exe_ctx);
-    if (callee_func != current_func) {
+    SymbolContext callee = call_edge->GetCallee(modlist, parent_exe_ctx);
+    if (callee.function != current_func) {
       return llvm::createStringError(
           "ambiguous call sequence, can't find real parent frame");
     }
@@ -807,7 +807,7 @@ static llvm::Error Evaluate_DW_OP_entry_value(EvalContext &eval_ctx,
     // call sequence that produced the current activation.  The first edge in
     // the parent that points to the current function must be valid.
     for (auto &edge : parent_func->GetTailCallingEdges()) {
-      if (edge->GetCallee(modlist, parent_exe_ctx) == current_func) {
+      if (edge->GetCallee(modlist, parent_exe_ctx).function == current_func) {
         call_edge = edge.get();
         break;
       }
@@ -1112,8 +1112,13 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
   // Reset for the next piece.
   eval_ctx.loc_desc_kind = Memory;
 
-  if (piece_byte_size == 0)
+  if (piece_byte_size == 0) {
+    // A zero-sized piece contributes no data, but it still consumes its source
+    // location description.
+    if (!eval_ctx.stack.empty())
+      eval_ctx.stack.pop_back();
     return llvm::Error::success();
+  }
 
   Value curr_piece;
 

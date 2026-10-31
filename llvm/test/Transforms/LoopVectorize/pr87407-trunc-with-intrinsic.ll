@@ -17,8 +17,7 @@ define i8 @pr87407(i8 %x, i64 %y, i64 %n) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> [[BROADCAST_SPLAT2]], <4 x i64> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[TMP0]] to <4 x i1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i1> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl <4 x i32> [[TMP3]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[TMP4]] to <4 x i8>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

@@ -549,6 +549,10 @@ static bool isLibCallInTailPosition(const CallLowering::ArgInfo &Result,
       CallerAttrs.hasRetAttr(Attribute::SExt))
     return false;
 
+  // Check if tail calls have been disabled in this function.
+  if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
+    return false;
+
   // Only tail call if the following instruction is a standard return or if we
   // have a `thisreturn` callee, and a sequence like:
   //
@@ -1190,6 +1194,7 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
   const Register DstReg = Cmp->getReg(0);
   LLT DstTy = MRI.getType(DstReg);
   const auto Cond = Cmp->getCond();
+  Type *RetTy = TLI.getCmpLibcallReturnType(Ctx);
 
   // Reference:
   // https://gcc.gnu.org/onlinedocs/gccint/Soft-float-library-routines.html#Comparison-functions-1
@@ -1197,12 +1202,12 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
   const auto BuildLibcall = [&](const RTLIB::Libcall Libcall,
                                 const CmpInst::Predicate ICmpPred,
                                 const DstOp &Res) -> Register {
-    // FCMP libcall always returns an i32, and needs an ICMP with #0.
-    LLT TempLLT = LLT::integer(32);
+    // FCMP libcall returns an integer, and needs an ICMP with #0.
+    LLT TempLLT = LLT::integer(RetTy->getIntegerBitWidth());
     Register Temp = MRI.createGenericVirtualRegister(TempLLT);
     // Generate libcall, holding result in Temp
     const auto Status = createLibcall(
-        Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
+        Libcall, {Temp, RetTy, 0},
         {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
         LocObserver, &MI);
     if (Status != Legalized)
@@ -3740,12 +3745,18 @@ LegalizerHelper::lowerConstant(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFConstant(MachineInstr &MI) {
-  const MachineOperand &ConstOperand = MI.getOperand(1);
-  const Constant *ConstantVal = ConstOperand.getFPImm();
+  Register Dst = MI.getOperand(0).getReg();
+  const ConstantFP *ConstantVal = MI.getOperand(1).getFPImm();
+  const APFloat &Imm = ConstantVal->getValueAPF();
 
-  emitLoadFromConstantPool(MI.getOperand(0).getReg(), ConstantVal, MIRBuilder);
+  bool ForCodeSize = MIRBuilder.getMF().getFunction().hasOptSize();
+  if (TLI.getFPImmAction(Imm, MRI.getType(Dst), ForCodeSize) ==
+      TargetLowering::FPImmAction::Bitcast)
+    MIRBuilder.buildConstant(Dst, Imm.bitcastToAPInt());
+  else
+    emitLoadFromConstantPool(Dst, ConstantVal, MIRBuilder);
+
   MI.eraseFromParent();
-
   return Legalized;
 }
 
@@ -3757,10 +3768,52 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
     SmallVector<Register, 8> SrcRegs;
 
     if (DstTy.isVector()) {
-      int NumDstElt = DstTy.getNumElements();
-      int NumSrcElt = SrcTy.getNumElements();
-
       LLT DstEltTy = DstTy.getElementType();
+      ElementCount DstEC = DstTy.getElementCount();
+      ElementCount SrcEC = SrcTy.getElementCount();
+
+      if (!SrcEC.isKnownMultipleOf(DstEC) && !DstEC.isKnownMultipleOf(SrcEC)) {
+        // Split non-integer element ratio bitcast
+        //
+        // %1:_(<3 x s16>) = G_BITCAST %0:_(<2 x s24>)
+        //
+        // =>
+        //
+        // %2:_(<6 x s8>) = G_BITCAST %0:_(<2 x s24>)
+        // %1:_(<3 x s16>) = G_BITCAST %2:_(<6 x s8>)
+        unsigned SrcEltSize = SrcEltTy.getScalarSizeInBits();
+        unsigned PieceSize =
+            std::gcd(SrcEltSize, DstEltTy.getScalarSizeInBits());
+        LLT PieceTy = LLT::integer(PieceSize);
+
+        if (!PieceTy.isByteSized()) {
+          // Split bitcast whose pieces are not whole bytes through a scalar
+          //
+          // %1:_(<3 x s8>) = G_BITCAST %0:_(<2 x s12>)
+          //
+          // =>
+          //
+          // %2:_(s24) = G_BITCAST %0:_(<2 x s12>)
+          // %1:_(<3 x s8>) = G_BITCAST %2:_(s24)
+          LLT ScalarTy = LLT::integer(SrcTy.getSizeInBits());
+          Register ScalarReg = MIRBuilder.buildBitcast(ScalarTy, Src).getReg(0);
+          MIRBuilder.buildBitcast(Dst, ScalarReg);
+          MI.eraseFromParent();
+          return Legalized;
+        }
+
+        LLT PiecesVecTy =
+            LLT::vector(SrcEC * (SrcEltSize / PieceSize), PieceTy);
+        Register PiecesReg =
+            MIRBuilder.buildBitcast(PiecesVecTy, Src).getReg(0);
+        MIRBuilder.buildBitcast(Dst, PiecesReg);
+        MI.eraseFromParent();
+        return Legalized;
+      }
+
+      unsigned NumDstElt = DstEC.getKnownMinValue();
+      unsigned NumSrcElt = SrcEC.getKnownMinValue();
+
       LLT DstCastTy = DstEltTy; // Intermediate bitcast result type
       LLT SrcPartTy = SrcEltTy; // Original unmerge result type.
 
@@ -3774,7 +3827,7 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
         // %2:_(s16), %3:_(s16) = G_UNMERGE_VALUES %0
         // %3:_(<2 x s8>) = G_BITCAST %2
         // %4:_(<2 x s8>) = G_BITCAST %3
-        // %1:_(<4 x s16>) = G_CONCAT_VECTORS %3, %4
+        // %1:_(<4 x s8>) = G_CONCAT_VECTORS %3, %4
         DstCastTy = DstTy.changeVectorElementCount(
             ElementCount::getFixed(NumDstElt / NumSrcElt));
         SrcPartTy = SrcEltTy;
@@ -4375,15 +4428,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AnyExtSize = PowerOf2Ceil(DstTy.getSizeInBits());
 
-  LLT AnyExtTy;
-  LLT OffsetCstRes;
-  if (EltTy.isPointer()) {
-    AnyExtTy = LLT::scalar(AnyExtSize);
-    OffsetCstRes = LLT::scalar(PtrTy.getSizeInBits());
-  } else {
-    AnyExtTy = DstTy.changeElementSize(AnyExtSize);
-    OffsetCstRes = DstTy.changeElementSize(PtrTy.getSizeInBits());
-  }
+  LLT AnyExtTy = LLT::integer(AnyExtSize);
+  LLT OffsetCstRes = LLT::integer(PtrTy.getSizeInBits());
 
   auto LargeLoad = MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, AnyExtTy,
                                              PtrReg, *LargeMMO);
@@ -4401,14 +4447,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     MIRBuilder.buildOr(DstReg, Shift, LargeLoad);
   else if (AnyExtTy.getSizeInBits() != DstTy.getSizeInBits()) {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
-    MIRBuilder.buildTrunc(DstReg, {Or});
-  } else {
-    assert(DstTy.isPointer() && "expected pointer");
+    LLT IntDstTy = DstTy.changeToInteger();
+    if (IntDstTy == DstTy) {
+      MIRBuilder.buildTrunc(DstReg, {Or});
+    } else {
+      auto Trunc = MIRBuilder.buildTrunc(IntDstTy, Or);
+      MIRBuilder.buildBitcast(DstReg, Trunc);
+    }
+  } else if (DstTy.isPointer()) {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
 
     // FIXME: We currently consider this to be illegal for non-integral address
     // spaces, but we need still need a way to reinterpret the bits.
     MIRBuilder.buildIntToPtr(DstReg, Or);
+  } else {
+    auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
+    MIRBuilder.buildBitcast(DstReg, Or);
   }
 
   LoadMI.eraseFromParent();
@@ -7503,9 +7557,10 @@ LegalizerHelper::narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx,
   LLT SrcTy = MRI.getType(Src);
 
   // If all finite floats fit into the narrowed integer type, we can just swap
-  // out the result type. This is practically only useful for conversions from
-  // half to at least 16-bits, so just handle the one case.
-  if (SrcTy.getScalarType() != LLT::scalar(16) ||
+  // out the result type. Only IEEE half qualifies: bfloat is also 16 bits wide
+  // but has float's exponent range. LLT::float16() is equivalent to
+  // LLT::scalar(16) on targets without extended LLTs.
+  if (SrcTy.getScalarType() != LLT::float16() ||
       NarrowTy.getScalarSizeInBits() < (IsSigned ? 17u : 16u))
     return UnableToLegalize;
 
@@ -7636,8 +7691,7 @@ LegalizerHelper::narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx,
     } else {
       InsertOffset = OpStart - DstStart;
       ExtractOffset = 0;
-      SegSize =
-        std::min(NarrowSize - InsertOffset, OpStart + OpSize - DstStart);
+      SegSize = std::min(NarrowSize - InsertOffset, OpSize);
     }
 
     Register SegReg = OpReg;
@@ -8146,6 +8200,15 @@ static bool isNonZeroModBitWidthOrUndef(const MachineRegisterInfo &MRI,
       /*AllowUndefs*/ true);
 }
 
+// Check that (every element of) Reg is a constant that is not an exact multiple
+// of BW.
+static bool isNonZeroModBitWidth(const MachineRegisterInfo &MRI, Register Reg,
+                                 unsigned BW) {
+  return matchUnaryPredicate(MRI, Reg, [=](const Constant *C) {
+    return cast<ConstantInt>(C)->getValue().urem(BW) != 0;
+  });
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFunnelShiftWithInverse(MachineInstr &MI) {
   auto [Dst, X, Y, Z] = MI.getFirst4Regs();
@@ -8415,7 +8478,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
   auto BitWidthMinusOneC = MIRBuilder.buildConstant(AmtTy, EltSizeInBits - 1);
   Register ShVal;
   Register RevShiftVal;
+  unsigned OrFlags = MachineInstr::NoFlags;
   if (isPowerOf2_32(EltSizeInBits)) {
+    // If c may be zero modulo w, both shifts may return x so the or isn't
+    // disjoint.
+    if (isNonZeroModBitWidth(MRI, Amt, EltSizeInBits))
+      OrFlags |= MachineInstr::Disjoint;
     // (rotl x, c) -> x << (c & (w - 1)) | x >> (-c & (w - 1))
     // (rotr x, c) -> x >> (c & (w - 1)) | x << (-c & (w - 1))
     auto NegAmt = MIRBuilder.buildSub(AmtTy, Zero, Amt);
@@ -8425,6 +8493,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
     RevShiftVal =
         MIRBuilder.buildInstr(RevShiftOpc, {DstTy}, {Src, RevAmt}).getReg(0);
   } else {
+    OrFlags |= MachineInstr::Disjoint;
     // (rotl x, c) -> x << (c % w) | x >> 1 >> (w - 1 - (c % w))
     // (rotr x, c) -> x >> (c % w) | x << 1 << (w - 1 - (c % w))
     auto BitWidthC = MIRBuilder.buildConstant(AmtTy, EltSizeInBits);
@@ -8436,7 +8505,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
     RevShiftVal =
         MIRBuilder.buildInstr(RevShiftOpc, {DstTy}, {Inner, RevAmt}).getReg(0);
   }
-  MIRBuilder.buildOr(Dst, ShVal, RevShiftVal, MachineInstr::Disjoint);
+  MIRBuilder.buildOr(Dst, ShVal, RevShiftVal, OrFlags);
   MI.eraseFromParent();
   return Legalized;
 }
@@ -9386,10 +9455,12 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !MI.getFlag(MachineInstr::FmNsz)) {
     GISelValueTracking VT(MIRBuilder.getMF());
+    // FIXME: Also demand for subnormal classes depending on the denormal mode.
     KnownFPClass Src0Info = VT.computeKnownFPClass(Src0, fcZero);
     KnownFPClass Src1Info = VT.computeKnownFPClass(Src1, fcZero);
 
-    if (!Src0Info.isKnownNeverZero() && !Src1Info.isKnownNeverZero()) {
+    // FIXME: Must use isKnownNeverLogicalZero(Mode)
+    if (!Src0Info.isKnownNever(fcZero) && !Src1Info.isKnownNever(fcZero)) {
       const unsigned Flags = MI.getFlags();
       Register Zero = MIRBuilder.buildFConstant(Ty, 0.0).getReg(0);
       auto IsZero = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, CmpTy, Res, Zero);
@@ -11162,6 +11233,10 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   // that type width, and then generate a corresponding store to the dest buffer
   // of that value loaded. This can result in a sequence of loads and stores
   // mixed types, depending on what the target specifies as good types to use.
+  LLT SrcTy = MRI.getType(Src);
+  LLT DstTy = MRI.getType(Dst);
+  unsigned SrcIndexSize = DL.getIndexSizeInBits(SrcTy.getAddressSpace());
+  unsigned DstIndexSize = DL.getIndexSizeInBits(DstTy.getAddressSpace());
   unsigned CurrOffset = 0;
   unsigned Size = KnownLen;
   for (auto CopyTy : MemOps) {
@@ -11184,10 +11259,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     Register LoadPtr = Src;
     Register Offset;
     if (CurrOffset != 0) {
-      LLT SrcTy = MRI.getType(Src);
       Offset =
-          MIB.buildConstant(LLT::integer(SrcTy.getSizeInBits()), CurrOffset)
-              .getReg(0);
+          MIB.buildConstant(LLT::integer(SrcIndexSize), CurrOffset).getReg(0);
       LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     auto LdVal = MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO);
@@ -11195,7 +11268,10 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     // Create the store.
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
-      LLT DstTy = MRI.getType(Dst);
+      if (SrcIndexSize != DstIndexSize) {
+        Offset =
+            MIB.buildConstant(LLT::integer(DstIndexSize), CurrOffset).getReg(0);
+      }
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);

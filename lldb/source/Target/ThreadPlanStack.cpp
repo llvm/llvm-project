@@ -13,6 +13,8 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/Log.h"
 
+#include <unordered_set>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -411,6 +413,8 @@ void ThreadPlanStackMap::Update(ThreadList &current_threads,
                                 bool check_for_new) {
 
   std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
+  assert(current_threads.GetStopID() == m_process.GetStopID() &&
+         "thread list is stale");
   // Now find all the new threads and add them to the map:
   if (check_for_new) {
     for (auto thread : current_threads.Threads()) {
@@ -422,18 +426,24 @@ void ThreadPlanStackMap::Update(ThreadList &current_threads,
     }
   }
 
-  // If we aren't reaping missing threads at this point,
-  // we are done.
-  if (!delete_missing)
+  // If we aren't reaping missing threads or have no plans, we are done.
+  if (!delete_missing || m_plans_list.empty())
     return;
-  // Otherwise scan for absent TID's.
+
+  // Index the already-current thread list rather than searching it separately
+  // for every plan. Repeated linear searches become prohibitively expensive
+  // for targets with large thread counts.
+  std::unordered_set<lldb::tid_t> live_tids;
+  live_tids.reserve(current_threads.GetSize(/*can_update=*/false));
+  for (const auto &thread : current_threads.Threads())
+    live_tids.insert(thread->GetID());
+
   std::vector<lldb::tid_t> missing_threads;
   // If we are going to delete plans from the plan stack,
   // then scan for absent TID's:
   for (auto &thread_plans : m_plans_list) {
     lldb::tid_t cur_tid = thread_plans.first;
-    ThreadSP thread_sp = current_threads.FindThreadByID(cur_tid);
-    if (!thread_sp)
+    if (live_tids.find(cur_tid) == live_tids.end())
       missing_threads.push_back(cur_tid);
   }
   for (lldb::tid_t tid : missing_threads) {

@@ -24,9 +24,10 @@ namespace direct {
 
 struct LLVMBlockAddressInfo;
 
-/// Convert a CIR attribute to an LLVM attribute. May use the datalayout for
-/// lowering attributes to-be-stored in memory. When the attribute may contain
-/// block address attributes, `blockInfoAddr` is used to resolve them.
+/// Convert a CIR attribute to an LLVM value, or return null on failure.
+/// May use the datalayout for lowering attributes to-be-stored in memory. When
+/// the attribute may contain block address attributes, `blockInfoAddr` is used
+/// to resolve them.
 mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
                                 mlir::ConversionPatternRewriter &rewriter,
                                 mlir::SymbolTableCollection &symbolTables,
@@ -35,10 +36,14 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
-void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
-                              cir::SideEffect sideEffect,
-                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
-                              bool &noUnwind, bool &willReturn, bool &noReturn);
+/// Declare `fnName` with type `fnTy` before the function enclosing `srcOp`,
+/// unless the module already has a symbol of that name.
+void createLLVMFuncOpIfNotExist(mlir::ConversionPatternRewriter &rewriter,
+                                mlir::SymbolTableCollection &symbolTables,
+                                mlir::Operation *srcOp, llvm::StringRef fnName,
+                                mlir::Type fnTy,
+                                mlir::ArrayAttr argAttrs = nullptr,
+                                mlir::ArrayAttr resAttrs = nullptr);
 
 struct LLVMBlockAddressInfo {
   // Get the next tag index
@@ -79,7 +84,7 @@ private:
   // name) pair so it can be patched later.
   llvm::DenseMap<mlir::LLVM::BlockAddressOp, cir::BlockAddrInfoAttr>
       unresolvedBlockAddressOp;
-  int32_t blockTagOpIndex;
+  int32_t blockTagOpIndex = 0;
 };
 
 mlir::LogicalResult lowerToConstrainedFPIntrinsic(
@@ -91,7 +96,7 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
 template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
-    const mlir::TypeConverter &typeConverter,
+    cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,
     mlir::ConversionPatternRewriter &rewriter,
     llvm::StringRef constrainedMnemonic, bool hasRoundingMode);
 

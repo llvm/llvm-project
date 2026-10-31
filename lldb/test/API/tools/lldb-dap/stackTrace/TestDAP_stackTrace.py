@@ -229,7 +229,6 @@ class TestDAP_stackTrace(DAPTestCaseBase):
             0, len(stack_frames), "verify zero frames with startFrame out of bounds"
         )
 
-    @skipIfWindows
     def test_function_name_with_args(self):
         """Test that a stack frame's name includes its argument values."""
         program = self.getBuildArtifact("a.out")
@@ -248,7 +247,6 @@ class TestDAP_stackTrace(DAPTestCaseBase):
         frame = thread_ctx.top_frame().frame
         self.assertEqual(frame.name, "recurse(x=1)")
 
-    @skipIfWindows
     def test_stack_frame_format(self):
         """
         Test the StackFrameFormat options.
@@ -279,7 +277,6 @@ class TestDAP_stackTrace(DAPTestCaseBase):
         frame = thread_ctx.top_frame(format=format)
         self.assertEqual(frame.name, "a.out recurse")
 
-    @skipIfWindows
     def test_stack_frame_module_id(self) -> None:
         """Test that each stack frame's moduleId matches the loaded module's id."""
         program = self.getBuildArtifact("a.out")
@@ -327,18 +324,30 @@ class TestDAP_stackTrace(DAPTestCaseBase):
         )
         thread_id = self.expect_not_none(stop_event.body.threadId)
         stack_frames = session.stack_trace(thread_id).body.stackFrames
+        module_id = self.expect_not_none(stack_frames[0].moduleId)
 
+        # Get the sole compile unit id for main.c
         ids = {
             frame.compileUnitId
             for frame in stack_frames
-            if frame.compileUnitId is not None
+            if (
+                frame.moduleId == module_id
+                and frame.compileUnitId is not None
+                and frame.source.name == "main.c"
+            )
         }
         self.assertEqual(len(ids), 1, f"expected a single compile unit, got: {ids}")
         compile_unit_id = ids.pop()
         self.assertEqual(stack_frames[0].compileUnitId, compile_unit_id)
 
-        expected = CompileUnit(id=compile_unit_id, compileUnitPath=source)
-        module_id = self.expect_not_none(stack_frames[0].moduleId)
+        # Confirm there are no other frames with the same compile unit id as main.c
+        for frame in stack_frames:
+            if frame.compileUnitId == compile_unit_id:
+                self.assertEqual(frame.source.name, "main.c")
+
+        expected = CompileUnit(
+            id=compile_unit_id, compileUnitPath=source, language="c11"
+        )
 
         response = session.send_request(CompileUnitsArgs(moduleId=module_id)).result()
         all_units = response.body.compileUnits

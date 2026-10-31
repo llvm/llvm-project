@@ -107,6 +107,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
   initializeMVEVPTBlockPass(Registry);
+  initializeThumb2ITBlockPass(Registry);
   initializeMVETPAndVPTOptimisationsPass(Registry);
   initializeMVETailPredicationPass(Registry);
   initializeARMLowOverheadLoopsPass(Registry);
@@ -152,29 +153,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL)
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(Options.MCOptions.ABIName), TT, CPU, FS,
-          Options, getEffectiveRelocModel(TT, RM),
-          getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
-
-  // Default to triple-appropriate EABI
-  if (Options.EABIVersion == EABI::Default ||
-      Options.EABIVersion == EABI::Unknown) {
-    // musl is compatible with glibc with regard to EABI version
-    if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-         TargetTriple.getEnvironment() == Triple::MuslEABI ||
-         TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-         TargetTriple.getEnvironment() == Triple::OpenHOS) &&
-        !(TargetTriple.isOSWindows() || TargetTriple.isOSDarwin()))
-      this->Options.EABIVersion = EABI::GNU;
-    else
-      this->Options.EABIVersion = EABI::EABI5;
-  }
 
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
@@ -238,21 +220,14 @@ FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
   // An explicit "float-abi" module flag always wins, even for AAPCS16.
   if (auto *Val = dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi")))
     return *FloatABI::parseABIType(Val->getString());
-
-  // With no explicit ABI, an explicit -target-abi=aapcs16 forces hard float
-  // even on triples whose default float ABI is soft (the triple default only
-  // detects AAPCS16 when it is the triple's own default ABI).
-  if (TargetABI == ARM::ARM_ABI_AAPCS16)
-    return FloatABI::Hard;
-  // Otherwise fall back to the ABI implied by the target triple.
-  return M.getTargetTriple().getDefaultFloatABI();
+  return M.getTargetTriple().getDefaultFloatABI(getTargetABIName(M));
 }
 
 ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
   // Consistency of "target-abi" and -target-abi is validated elsewhere.
   if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     return ARM::computeTargetABI(TargetTriple, MD->getString());
-  return TargetABI;
+  return ARM::computeTargetABI(TargetTriple, Options.MCOptions.getABIName());
 }
 
 const ARMSubtarget *
@@ -371,6 +346,9 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreRegAlloc() override;
+  bool isMachinePipelinerEnabled() const override {
+    return getOptLevel() == CodeGenOptLevel::Aggressive;
+  }
   void addPreSched2() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -410,10 +388,7 @@ std::unique_ptr<CSEConfigBase> ARMPassConfig::getCSEConfig() const {
 }
 
 void ARMPassConfig::addIRPasses() {
-  if (TM->Options.ThreadModel == ThreadModel::Single)
-    addPass(createLowerAtomicPass());
-  else
-    addPass(createAtomicExpandLegacyPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
@@ -521,9 +496,6 @@ bool ARMPassConfig::addGlobalInstructionSelect() {
 
 void ARMPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (getOptLevel() == CodeGenOptLevel::Aggressive)
-      addPass(&MachinePipelinerID);
-
     addPass(createMVETPAndVPTOptimisationsPass());
 
     addPass(createMLxExpansionPass());
@@ -617,7 +589,7 @@ void ARMPassConfig::addPreEmitPass2() {
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addPass(createCFGuardLongjmpPass());
+    addPass(createCFGuardLongjmpLegacyPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsLegacy());
   }

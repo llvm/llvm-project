@@ -19,6 +19,7 @@
 #include "flang/Common/reference-counted.h"
 #include "flang/Common/restorer.h"
 #include "flang/Support/Fortran-features.h"
+#include "llvm/ADT/StringRef.h"
 #include <cstddef>
 #include <cstring>
 #include <forward_list>
@@ -112,9 +113,9 @@ constexpr MessageFixedText operator""_en_US(const char str[], std::size_t n) {
 
 // The construction of a MessageFormattedText uses a MessageFixedText
 // as a vsnprintf() formatting string that is applied to the
-// following arguments.  CharBlock, std::string, and std::string_view
-// argument values are also supported; they are automatically converted
-// into char pointers that are suitable for '%s' formatting.
+// following arguments.  CharBlock, std::string, std::string_view, and
+// llvm::StringRef argument values are also supported; they are automatically
+// converted into char pointers that are suitable for '%s' formatting.
 class MessageFormattedText {
 public:
   template <typename... A>
@@ -159,6 +160,7 @@ private:
   const char *Convert(const std::string_view &);
   const char *Convert(std::string_view &&);
   const char *Convert(CharBlock);
+  const char *Convert(llvm::StringRef);
   std::intmax_t Convert(std::int64_t x) { return x; }
   std::uintmax_t Convert(std::uint64_t x) { return x; }
 

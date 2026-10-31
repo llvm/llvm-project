@@ -21,9 +21,9 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v5
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_cmpx_le_u32 exec, 1, v8
-; CHECK-NEXT:  buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:0
-; CHECK-NEXT:  s_mov_b64 exec s[4:5]
+; CHECK-NEXT:    v_cmpx_le_u32_e64 exec, 1, v8
+; CHECK-NEXT:  buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
+; CHECK-NEXT:  s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %rsrc = load <4 x i32>, ptr addrspace(5) %buf_desc_ptr, align 16
@@ -31,7 +31,7 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
   %exec = call i64 @llvm.amdgcn.ballot.i64(i1 true)
 
   %result = call <4 x float> asm sideeffect
-    "v_cmpx_le_u32 exec, 1, $4\0Abuffer_load_dwordx4 $0, $1, $2, 0 offen offset:$3\0As_mov_b64 exec $5",
+    "v_cmpx_le_u32_e64 exec, 1, $4\0Abuffer_load_dwordx4 $0, $1, $2, 0 offen offset:$3\0As_mov_b64 exec, $5",
     "=v,v,s,n,v,s,0,~{memory}"
     (i32 0, <4 x i32> %rsrc, i32 0, i32 1, i64 %exec, <4 x float> zeroinitializer)
 
@@ -102,7 +102,7 @@ define amdgpu_kernel void @inlineasm_and_waterfall_same_value(ptr addrspace(1) %
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v4
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    s_add_u32 s12, s0, 100
+; CHECK-NEXT:    s_add_u32 s12, s0, 0x64
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v0, s[10:11]
@@ -132,7 +132,7 @@ define amdgpu_kernel void @inlineasm_and_waterfall_same_value(ptr addrspace(1) %
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
 
-  %asm_result = call i32 asm sideeffect "s_add_u32 $0, $1, 100", "=s,s"(i32 %tid)
+  %asm_result = call i32 asm sideeffect "s_add_u32 $0, $1, 0x64", "=s,s"(i32 %tid)
 
   %desc_ptr = getelementptr <4 x i32>, ptr addrspace(1) %descriptors, i32 %tid
   %desc = load <4 x i32>, ptr addrspace(1) %desc_ptr

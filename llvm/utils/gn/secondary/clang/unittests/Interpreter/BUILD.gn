@@ -14,6 +14,7 @@ unittest("ClangReplInterpreterTests") {
   ]
   sources = [
     "CodeCompletionTest.cpp",
+    "DeviceOffloadTest.cpp",
     "IncrementalCompilerBuilderTest.cpp",
     "IncrementalProcessingTest.cpp",
     "InterpreterExtensionsTest.cpp",
@@ -31,4 +32,5 @@ unittest("ClangReplInterpreterTests") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]
   }
+  configs -= [ "//llvm/utils/gn/build:no_exported_symbols" ]
 }

@@ -7,6 +7,7 @@
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
 ; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
+; CHECK-NEXT:   avoid-vxrm                       - Instructions that use VXRM should be avoided.
 ; CHECK-NEXT:   b                                - 'B' (the collection of the Zba, Zbb, Zbs extensions).
 ; CHECK-NEXT:   c                                - 'C' (Compressed Instructions).
 ; CHECK-NEXT:   conditional-cmv-fusion           - Enable branch+c.mv fusion.
@@ -26,14 +27,19 @@
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
 ; CHECK-NEXT:   experimental-smcsps              - 'Smcsps' (Conditional Stack Pointer Swap at Machine Level).
 ; CHECK-NEXT:   experimental-smehv               - 'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level).
+; CHECK-NEXT:   experimental-smidctrl            - 'Smidctrl' (Interrupt Domain Control Interface at Machine Level).
 ; CHECK-NEXT:   experimental-smijt               - 'Smijt' (Interrupt Jump Table at Machine Level).
 ; CHECK-NEXT:   experimental-smip                - 'Smip' (Support for Interrupt Handler Push/Pop at Machine Level).
+; CHECK-NEXT:   experimental-smnip               - 'Smnip' (Nested Interrupt Preemption Support at Machine Level).
 ; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-sscsps              - 'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssehv               - 'Ssehv' (Synchronous Exception Hardware Vectoring at Supervisor Level).
+; CHECK-NEXT:   experimental-ssidctrl            - 'Ssidctrl' (Interrupt Domain Control Interface at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssijt               - 'Ssijt' (Interrupt Jump Table at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssip                - 'Ssip' (Support for Interrupt Handler Push/Pop at Supervisor Level).
+; CHECK-NEXT:   experimental-ssnip               - 'Ssnip' (Nested Interrupt Preemption Support at Supervisor Level).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
+; CHECK-NEXT:   experimental-xqccmi              - 'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table).
 ; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
 ; CHECK-NEXT:   experimental-xsfsclic            - 'XSfsclic' (SiFive CLIC Supervisor-mode CSRs).
@@ -146,8 +152,10 @@
 ; CHECK-NEXT:   rva20u64                         - RISC-V rva20u64 profile.
 ; CHECK-NEXT:   rva22s64                         - RISC-V rva22s64 profile.
 ; CHECK-NEXT:   rva22u64                         - RISC-V rva22u64 profile.
+; CHECK-NEXT:   rva23p1s64                       - RISC-V rva23p1s64 profile.
 ; CHECK-NEXT:   rva23s64                         - RISC-V rva23s64 profile.
 ; CHECK-NEXT:   rva23u64                         - RISC-V rva23u64 profile.
+; CHECK-NEXT:   rvb23p1s64                       - RISC-V rvb23p1s64 profile.
 ; CHECK-NEXT:   rvb23s64                         - RISC-V rvb23s64 profile.
 ; CHECK-NEXT:   rvb23u64                         - RISC-V rvb23u64 profile.
 ; CHECK-NEXT:   rvi20u32                         - RISC-V rvi20u32 profile.

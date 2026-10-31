@@ -61,6 +61,7 @@ protected:
   friend class Function;           // For LLVMTy.
   friend class CallBase;           // For LLVMTy.
   friend class ConstantInt;        // For LLVMTy.
+  friend class ConstantExpr;       // For LLVMTy.
   friend class ConstantArray;      // For LLVMTy.
   friend class ConstantStruct;     // For LLVMTy.
   friend class ConstantVector;     // For LLVMTy.
@@ -317,6 +318,11 @@ public:
 
   static bool classof(const Type *From) {
     return isa<llvm::PointerType>(From->LLVMTy);
+  }
+
+  /// Return the address space of the Pointer type.
+  inline unsigned getAddressSpace() const {
+    return cast<llvm::PointerType>(LLVMTy)->getAddressSpace();
   }
 };
 

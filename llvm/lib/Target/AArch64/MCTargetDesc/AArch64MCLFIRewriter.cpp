@@ -17,20 +17,16 @@
 #include "Utils/AArch64BaseInfo.h"
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/MC/MCSymbol.h"
 
 using namespace llvm;
-
-static cl::opt<bool>
-    LFIGuardElim("aarch64-lfi-guard-elim", cl::Hidden,
-                 cl::desc("Enable the LFI guard elimination optimization"),
-                 cl::init(true));
 
 namespace llvm::AArch64 {
 struct LFIVariantEntry {
@@ -95,6 +91,12 @@ static constexpr unsigned LFITPOffset = 2;
 // Byte offset from the sandbox base register where the syscall handler address
 // is stored (negative because it is below the sandbox base).
 static constexpr int LFISyscallOffset = -8;
+
+AArch64MCLFIRewriter::AArch64MCLFIRewriter(MCContext &Ctx,
+                                           std::unique_ptr<MCRegisterInfo> &&RI,
+                                           std::unique_ptr<MCInstrInfo> &&II)
+    : MCLFIRewriter(Ctx, std::move(RI), std::move(II)),
+      CLOpts(AArch64_MC::getCLOpts(Ctx.getTargetOptions())) {}
 
 static bool isSyscall(const MCInst &Inst) {
   return Inst.getOpcode() == AArch64::SVC;
@@ -298,13 +300,13 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
   return {};
 }
 
-void AArch64MCLFIRewriter::onLabel(const MCSymbol *, MCStreamer &Out) {
+void AArch64MCLFIRewriter::onLabel(const MCSymbol *Symbol, MCStreamer &Out) {
   if (Guard)
     return;
 
   // Flush a deferred LR guard before the label, since the label is a potential
   // branch target and code reached through it may use LR for control flow.
-  if (DeferredLRGuard && LastSTI) {
+  if (DeferredLRGuard && LastSTI && !Symbol->isTemporary()) {
     emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
     DeferredLRGuard = false;
   }
@@ -342,7 +344,7 @@ void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
                                        const MCSubtargetInfo &STI) {
   // If x28 already holds the guarded value of Src, this guard is redundant and
   // can be skipped.
-  if (LFIGuardElim && Dest == LFIAddrReg && ActiveGuardReg == Src)
+  if (CLOpts.lfi_guard_elim && Dest == LFIAddrReg && ActiveGuardReg == Src)
     return;
 
   // add Dest, LFIBaseReg, W(Src), uxtw

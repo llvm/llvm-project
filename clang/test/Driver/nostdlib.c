@@ -6,7 +6,7 @@
 // Most of the toolchains would check for -nostartfiles and -nostdlib
 // in a short-circuiting boolean expression, so if both of the preceding
 // options were present, the second would warn about being unused.
-// RUN: %clang -### -Wno-liblto -nostartfiles -nostdlib --target=i386-apple-darwin %s \
+// RUN: %clang -### -Wno-liblto -nostartfiles -nostdlib --target=i386-apple-darwin --no-xcselect %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=ARGSCLAIMED
 // ARGSCLAIMED-NOT: warning:
 

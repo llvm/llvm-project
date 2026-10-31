@@ -1,7 +1,7 @@
 # We do not support the call site info for the target now, so we use the experimental option (-emit-call-site-info -debug-entry-values).
 
-# RUN: llc -emit-call-site-info -debug-entry-values -run-pass=livedebugvalues -o - %s | FileCheck %s
-# RUN: llc -emit-call-site-info -debug-entry-values -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -debug-entry-values -run-pass=live-debug-values -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -debug-entry-values -force-instr-ref-livedebugvalues=1 -run-pass=live-debug-values -o - %s | FileCheck %s
 
 # Verify that the entry values for the input parameters are inserted after the
 # bundles which contains the registers' clobbering instructions (the calls to
@@ -91,7 +91,7 @@ body:             |
     }
     BUNDLE implicit-def dead $r0, implicit-def $d15, implicit-def $r30, implicit-def $r31, implicit-def $pc, implicit-def $r29, implicit killed $r30, implicit killed $framekey, debug-location !19 {
       $r0 = A2_tfrsi 1, debug-location !19
-      $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def dead $pc, implicit internal killed $r0, debug-location !19
+      $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit internal killed $r0, debug-location !19
     }
 
 ...

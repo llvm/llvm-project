@@ -8,6 +8,7 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -100,15 +101,21 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
                       LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_X:
     return std::tuple(WorkItemIDX ? &WorkItemIDX : nullptr,
-                      &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
+                      &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_Y:
     return std::tuple(WorkItemIDY ? &WorkItemIDY : nullptr,
-                      &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
+                      &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_Z:
     return std::tuple(WorkItemIDZ ? &WorkItemIDZ : nullptr,
-                      &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
+                      &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   }
   llvm_unreachable("unexpected preloaded value type");
+}
+
+MCRegister
+AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CallingConv::ID CC) {
+  return AMDGPU::isChainCC(CC) ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                               : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
 }
 
 AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {

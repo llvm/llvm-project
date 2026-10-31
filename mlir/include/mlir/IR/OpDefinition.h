@@ -123,7 +123,9 @@ public:
   }
 
   /// Dump this operation.
-  void dump() { state->dump(); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump();
+#endif
 
   /// The source location the operation was defined or derived from.
   Location getLoc() { return state->getLoc(); }
@@ -1567,11 +1569,7 @@ namespace op_definition_impl {
 /// trait types `Traits`.
 template <template <typename T> class... Traits>
 inline bool hasTrait(TypeID traitID) {
-  TypeID traitIDs[] = {TypeID::get<Traits>()...};
-  for (unsigned i = 0, e = sizeof...(Traits); i != e; ++i)
-    if (traitIDs[i] == traitID)
-      return true;
-  return false;
+  return ((traitID == TypeID::get<Traits>()) || ...);
 }
 template <>
 inline bool hasTrait<>(TypeID traitID) {
@@ -1647,7 +1645,12 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 template <typename... Ts>
 LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
                          SmallVectorImpl<OpFoldResult> &results) {
-  return success((succeeded(foldTrait<Ts>(op, operands, results)) || ...));
+  // Reuse one no-op specialization for traits without a folder.
+  return success(
+      (succeeded(
+           foldTrait<std::conditional_t<detect_has_any_fold_trait<Ts>::value,
+                                        Ts, void>>(op, operands, results)) ||
+       ...));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1680,7 +1683,11 @@ LogicalResult verifyTrait(Operation *op) {
 /// Given a set of traits, return the result of verifying the given operation.
 template <typename... Ts>
 LogicalResult verifyTraits(Operation *op) {
-  return success((succeeded(verifyTrait<Ts>(op)) && ...));
+  // Avoid instantiating an identical no-op verifier for each absent hook.
+  return success(
+      (succeeded(verifyTrait<std::conditional_t<
+                     detect_has_verify_trait<Ts>::value, Ts, void>>(op)) &&
+       ...));
 }
 
 /// Verify the given trait if it provides a region verifier.
@@ -1696,7 +1703,12 @@ LogicalResult verifyRegionTrait(Operation *op) {
 /// given operation.
 template <typename... Ts>
 LogicalResult verifyRegionTraits(Operation *op) {
-  return success((succeeded(verifyRegionTrait<Ts>(op)) && ...));
+  // Avoid instantiating an identical no-op verifier for each absent hook.
+  return success(
+      (succeeded(
+           verifyRegionTrait<std::conditional_t<
+               detect_has_verify_region_trait<Ts>::value, Ts, void>>(op)) &&
+       ...));
 }
 } // namespace op_definition_impl
 
@@ -1944,7 +1956,7 @@ private:
   using VerifyInvariantsFn = LogicalResult (*)(Operation *);
 
   /// Return the internal implementations of each of the OperationName hooks.
-  static FoldHookFn getFoldHookFn() {
+  static constexpr FoldHookFn getFoldHookFn() {
     // If the operation is single result and defines a `fold` method.
     if constexpr (llvm::is_one_of<OpTrait::OneResult<ConcreteType>,
                                   Traits<ConcreteType>...>::value &&
@@ -2017,11 +2029,11 @@ private:
     return result;
   }
 
-  static HasTraitFn getHasTraitFn() {
+  static constexpr HasTraitFn getHasTraitFn() {
     return
         [](TypeID id) { return op_definition_impl::hasTrait<Traits...>(id); };
   }
-  static PrintAssemblyFn getPrintAssemblyFn() {
+  static constexpr PrintAssemblyFn getPrintAssemblyFn() {
     if constexpr (detect_has_print<ConcreteType>::value)
       return [](Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
         OpState::printOpName(op, p, defaultDialect);
@@ -2122,7 +2134,7 @@ private:
         failed(op_definition_impl::verifyTraits<Traits<ConcreteType>...>(op)) ||
         failed(cast<ConcreteType>(op).verify()));
   }
-  static VerifyInvariantsFn getVerifyInvariantsFn() {
+  static constexpr VerifyInvariantsFn getVerifyInvariantsFn() {
     return &verifyInvariants;
   }
   /// Implementation of `VerifyRegionInvariantsFn` OperationName hook.
@@ -2134,15 +2146,14 @@ private:
             op)) ||
         failed(cast<ConcreteType>(op).verifyRegions()));
   }
-  static VerifyInvariantsFn getVerifyRegionInvariantsFn() {
+  static constexpr VerifyInvariantsFn getVerifyRegionInvariantsFn() {
     return &verifyRegionInvariants;
   }
 
   static constexpr bool hasNoDataMembers() {
-    // Checking that the derived class does not define any member by comparing
-    // its size to an ad-hoc EmptyOp.
-    class EmptyOp : public Op<EmptyOp, Traits...> {};
-    return sizeof(ConcreteType) == sizeof(EmptyOp);
+    // Compare with the existing base instead of instantiating the traits again
+    // for an otherwise unused operation type.
+    return sizeof(ConcreteType) == sizeof(Op);
   }
 
   /// Allow access to internal implementation methods.

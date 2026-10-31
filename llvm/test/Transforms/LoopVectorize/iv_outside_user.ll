@@ -767,7 +767,6 @@ define i32 @postinc_sub(i32 %k)  {
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[K]], 1
 ; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
 ; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
-; TAILFOLD-NEXT:    [[TMP0:%.*]] = sub i32 [[K]], [[K]]
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -777,7 +776,7 @@ define i32 @postinc_sub(i32 %k)  {
 ; TAILFOLD:       [[MIDDLE_BLOCK]]:
 ; TAILFOLD-NEXT:    br label %[[FOR_END:.*]]
 ; TAILFOLD:       [[FOR_END]]:
-; TAILFOLD-NEXT:    ret i32 [[TMP0]]
+; TAILFOLD-NEXT:    ret i32 0
 ;
 entry:
   br label %for.body

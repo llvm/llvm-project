@@ -1,7 +1,7 @@
 ; Check we cannot dereference a barrier GV.
 
-; RUN: not --crash llc -O0 -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s                       2>&1  | FileCheck -check-prefixes=DAGISEL %s
-; RUN: not         llc -O0 -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s  2>&1  | FileCheck -check-prefixes=GISEL %s
+; RUN: not --crash llc -O0 -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa < %s 2>&1  | FileCheck -check-prefixes=DAGISEL %s
+; RUN: not         llc -O0 -global-isel=1 -mtriple=amdgpu12.50-amd-amdhsa < %s 2>&1  | FileCheck -check-prefixes=GISEL %s
 
 ; TODO: It'd be nicer to have a Verifier diagnostic for this.
 

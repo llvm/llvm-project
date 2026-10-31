@@ -6,6 +6,10 @@
 ; RUN:   -vplan-print-after='combine|simplify' -vplan-print-after=printFinalVPlan \
 ; RUN:   2>&1 | FileCheck %s -DBEFORE_OR_AFTER=after --check-prefix=CHECK \
 ; RUN:           --implicit-check-not "VPlan after"
+; RUN: opt -passes=loop-vectorize -disable-output  -force-vector-width=4  < %s \
+; RUN:   -vplan-print-after='nomatch,combine|simplify,printFinalVPlan' \
+; RUN:   2>&1 | FileCheck %s -DBEFORE_OR_AFTER=after --check-prefix=CHECK \
+; RUN:           --implicit-check-not "VPlan after"
 
 ; These two just to exercise the pass numbering skipping. Can't really check if
 ; it's done as we don't print anything, but at least make sure we don't crash.

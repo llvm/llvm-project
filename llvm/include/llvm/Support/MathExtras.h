@@ -457,6 +457,11 @@ constexpr T divideNearest(U Numerator, V Denominator) {
          (Mod > (static_cast<T>(Denominator) - 1) / 2);
 }
 
+/// Returns (\p X * \p Y) / \p Z rounded by round-half-up, like divideNearest.
+/// The product is computed in 128 bits, so it never overflows. Saturates to
+/// the maximum uint64_t value if the result does not fit in 64 bits.
+LLVM_ABI uint64_t mulDivNearest(uint64_t X, uint64_t Y, uint64_t Z);
+
 /// Returns the next integer (mod 2**nbits) that is greater than or equal to
 /// \p Value and is a multiple of \p Align. \p Align must be non-zero.
 ///
@@ -717,7 +722,7 @@ AddOverflow(T X, T Y) {
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, bool> AddOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(X, Y, &Result);
 #else
@@ -754,7 +759,7 @@ SubOverflow(T X, T Y) {
 /// Subtract two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, bool> SubOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_sub_overflow)
   return __builtin_sub_overflow(X, Y, &Result);
 #else
@@ -798,7 +803,7 @@ MulOverflow(T X, T Y) {
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, bool> MulOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(X, Y, &Result);
 #else

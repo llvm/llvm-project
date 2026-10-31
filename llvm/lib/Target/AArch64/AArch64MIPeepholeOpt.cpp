@@ -301,7 +301,12 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   if (MI.getOperand(2).getSubReg())
     return false;
 
-  MachineInstr *SrcMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
+  Register DefReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
+  if (!DefReg.isVirtual() || !SrcReg.isVirtual())
+    return false;
+
+  MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
   if (!SrcMI)
     return false;
 
@@ -344,8 +349,6 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
     return false;
 
-  Register DefReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(2).getReg();
   MRI->replaceRegWith(DefReg, SrcReg);
   MRI->clearKillFlags(SrcReg);
   LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
@@ -567,9 +570,10 @@ bool AArch64MIPeepholeOptImpl::checkMovImmInstr(MachineInstr &MI,
 
   // If the MOV has multiple uses, do not split the immediate because it causes
   // more instructions.
-  if (!MRI->hasOneUse(MovMI->getOperand(0).getReg()))
+  if (!MRI->hasOneNonDBGUse(MovMI->getOperand(0).getReg()))
     return false;
-  if (SubregToRegMI && !MRI->hasOneUse(SubregToRegMI->getOperand(0).getReg()))
+  if (SubregToRegMI &&
+      !MRI->hasOneNonDBGUse(SubregToRegMI->getOperand(0).getReg()))
     return false;
 
   // It is OK to perform this peephole optimization.
@@ -648,10 +652,27 @@ bool AArch64MIPeepholeOptImpl::splitTwoPartImm(MachineInstr &MI,
     MI.getOperand(0).setReg(DstReg);
   }
 
+  auto SalvageDebugUses = [&](Register Reg, int64_t Val) {
+    for (MachineOperand &MO : make_early_inc_range(MRI->use_operands(Reg))) {
+      MachineInstr &DbgMI = *MO.getParent();
+      if (!DbgMI.isDebugValue())
+        continue;
+      // An immediate cannot express a value in memory at that address.
+      if (DbgMI.isNonListDebugValue() && DbgMI.isIndirectDebugValue())
+        DbgMI.setDebugValueUndef();
+      else
+        MO.ChangeToImmediate(Val);
+    }
+  };
+
   // Record the MIs need to be removed.
   MI.eraseFromParent();
-  if (SubregToRegMI)
+  if (SubregToRegMI) {
+    SalvageDebugUses(SubregToRegMI->getOperand(0).getReg(), Imm);
     SubregToRegMI->eraseFromParent();
+  }
+  SalvageDebugUses(MovMI->getOperand(0).getReg(),
+                   MovMI->getOperand(1).getImm());
   MovMI->eraseFromParent();
 
   return true;
@@ -755,7 +776,6 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
                 TII->get(TargetOpcode::COPY), NewSrc)
             .addReg(SrcReg, getKillRegState(SrcKill));
         SrcReg = NewSrc;
-        SrcKill = true;
       }
     } else if (!AArch64::GPR64RegClass.contains(SrcReg)) {
       return false;
@@ -918,7 +938,7 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
     if (SrcMI->getOpcode() != AArch64::SBFMXri ||
         SrcMI->getOperand(2).getImm() != 0 ||
         SrcMI->getOperand(3).getImm() != 31)
-      return AArch64::NoRegister;
+      return Register();
     return SrcMI->getOperand(1).getReg();
   };
   // Look for SUBREG_TO_REG(ORRWrr(WZR, COPY(X.sub_32)))
@@ -926,16 +946,16 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
     if (SrcMI->getOpcode() != AArch64::SUBREG_TO_REG ||
         SrcMI->getOperand(2).getImm() != AArch64::sub_32 ||
         !MRI->hasOneNonDBGUse(SrcMI->getOperand(1).getReg()))
-      return AArch64::NoRegister;
+      return Register();
     MachineInstr *Orr = MRI->getUniqueVRegDef(SrcMI->getOperand(1).getReg());
     if (!Orr || Orr->getOpcode() != AArch64::ORRWrr ||
         Orr->getOperand(1).getReg() != AArch64::WZR ||
         !MRI->hasOneNonDBGUse(Orr->getOperand(2).getReg()))
-      return AArch64::NoRegister;
+      return Register();
     MachineInstr *Cpy = MRI->getUniqueVRegDef(Orr->getOperand(2).getReg());
     if (!Cpy || Cpy->getOpcode() != AArch64::COPY ||
         Cpy->getOperand(1).getSubReg() != AArch64::sub_32)
-      return AArch64::NoRegister;
+      return Register();
     DeadInstrs.insert(Orr);
     return Cpy->getOperand(1).getReg();
   };

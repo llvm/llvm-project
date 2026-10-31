@@ -55,8 +55,14 @@ MinidumpParser::GetRawStream(StreamType stream_type) {
 }
 
 UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
-  auto cv_record =
-      GetData().slice(module->CvRecord.RVA, module->CvRecord.DataSize);
+  llvm::Expected<llvm::ArrayRef<uint8_t>> expected_cv_record =
+      GetMinidumpFile().getRawData(module->CvRecord);
+  if (!expected_cv_record) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Modules), expected_cv_record.takeError(),
+                   "Failed to read the CodeView record: {0}");
+    return UUID();
+  }
+  llvm::ArrayRef<uint8_t> cv_record = *expected_cv_record;
 
   // Read the CV record signature
   const llvm::support::ulittle32_t *signature = nullptr;
@@ -96,9 +102,15 @@ llvm::ArrayRef<minidump::Thread> MinidumpParser::GetThreads() {
 
 llvm::ArrayRef<uint8_t>
 MinidumpParser::GetThreadContext(const LocationDescriptor &location) {
-  if (location.RVA + location.DataSize > GetData().size())
+  // Use getRawData to widen the two 32-bit fields and check for overflow.
+  llvm::Expected<llvm::ArrayRef<uint8_t>> expected_context =
+      GetMinidumpFile().getRawData(location);
+  if (!expected_context) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), expected_context.takeError(),
+                   "Failed to read the thread context: {0}");
     return {};
-  return GetData().slice(location.RVA, location.DataSize);
+  }
+  return *expected_context;
 }
 
 llvm::ArrayRef<uint8_t>

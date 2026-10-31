@@ -6,7 +6,7 @@
 // RUN: not llvm-mc -triple=amdgpu11.00 -show-encoding %s | FileCheck %s --check-prefixes=GFX8PLUS,GFX11
 // RUN: not llvm-mc -triple=amdgpu12.00 -show-encoding %s | FileCheck %s --check-prefixes=GFX8PLUS,GFX12XX,GFX12
 // RUN: not llvm-mc -triple=amdgpu12.50 -mattr=+real-true16 -show-encoding %s | FileCheck %s --check-prefixes=GFX8PLUS,GFX12XX,GFX1250,GFX1250-ASM
-// RUN: not llvm-mc -triple=amdgpu12.50 -mattr=+real-true16 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgpu12.50 -mattr=+real-true16 -disassemble -show-encoding | FileCheck %s --check-prefixes=GFX8PLUS,GFX12XX,GFX1250,GFX1250-DIS
+// RUN: not llvm-mc -triple=amdgpu12.50 -mattr=+real-true16 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgpu12.50 -mattr=+real-true16 -disassemble -show-encoding | FileCheck -strict-whitespace %s --check-prefixes=GFX8PLUS,GFX12XX,GFX1250,GFX1250-DIS
 // RUN: not llvm-mc -triple=amdgpu9.0a -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX90A
 // RUN: not llvm-mc -triple=amdgpu9.08 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX908
 // RUN: not llvm-mc -triple=amdgpu9.4 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX940
@@ -237,8 +237,8 @@ v_cos_f16_e32 v5.l, lit(1.0)
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
 // NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx600): v_cos_f16
 
-v_tanh_bf16 v5.l, 1.0
-// GFX1250: v_tanh_bf16_e32 v5.l, 1.0               ; encoding: [0xf2,0x94,0x0a,0x7e]
+v_tanh_bf16_e64 v5.l, 1.0 op_sel:[1,0]
+// GFX1250: v_tanh_bf16_e64 v5.l, 1.0 op_sel:[1,0]  ; encoding: [0x05,0x08,0xca,0xd5,0xf2,0x00,0x01,0x02]
 // NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx704): v_tanh_bf16
 // NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_tanh_bf16
 // NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_tanh_bf16
@@ -304,7 +304,7 @@ v_dot2_f32_f16 v5, v1, lit(1.0), v2
 // NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (gfx802): v_dot2_f32_f16
 
 v_cvt_pk_fp8_f16 v1.l, 1.0
-// GFX1250: v_cvt_pk_fp8_f16_e64 v1.l, 0x3c00           ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
+// GFX1250: v_cvt_pk_fp8_f16_e64 v1.l, 0x3c00       ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
 // NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx704): v_cvt_pk_fp8_f16
 // NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
 // NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
@@ -313,8 +313,8 @@ v_cvt_pk_fp8_f16 v1.l, 1.0
 // NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (gfx802): v_cvt_pk_fp8_f16
 
 v_cvt_pk_fp8_f16 v1.l, lit(1.0)
-// GFX1250-ASM: v_cvt_pk_fp8_f16_e64 v1.l, lit(0x3c00)      ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
-// GFX1250-DIS: v_cvt_pk_fp8_f16_e64 v1.l, 0x3c00           ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
+// GFX1250-ASM: v_cvt_pk_fp8_f16_e64 v1.l, lit(0x3c00)  ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
+// GFX1250-DIS: v_cvt_pk_fp8_f16_e64 v1.l, 0x3c00       ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x00,0x3c,0x00,0x00]
 // NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx704): v_cvt_pk_fp8_f16
 // NOGFX11: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
 // NOGFX12: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
@@ -713,8 +713,8 @@ v_cos_f16_e32 v5.l, lit(1)
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
 // NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx600): v_cos_f16
 
-v_tanh_bf16 v5.l, 1
-// GFX1250: v_tanh_bf16_e32 v5.l, 1                 ; encoding: [0x81,0x94,0x0a,0x7e]
+v_tanh_bf16_e64 v5.l, 1 op_sel:[1,0]
+// GFX1250: v_tanh_bf16_e64 v5.l, 1 op_sel:[1,0]    ; encoding: [0x05,0x08,0xca,0xd5,0x81,0x00,0x01,0x02]
 // NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx704): v_tanh_bf16
 // NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_tanh_bf16
 // NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_tanh_bf16
@@ -780,7 +780,7 @@ v_dot2_f32_f16 v5, v1, lit(1), v2
 // NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (gfx802): v_dot2_f32_f16
 
 v_cvt_pk_fp8_f16 v1.l, 1
-// GFX1250: v_cvt_pk_fp8_f16_e64 v1.l, 1                ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
+// GFX1250: v_cvt_pk_fp8_f16_e64 v1.l, 1            ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
 // NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx704): v_cvt_pk_fp8_f16
 // NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
 // NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
@@ -789,8 +789,8 @@ v_cvt_pk_fp8_f16 v1.l, 1
 // NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (gfx802): v_cvt_pk_fp8_f16
 
 v_cvt_pk_fp8_f16 v1.l, lit(1)
-// GFX1250-ASM: v_cvt_pk_fp8_f16_e64 v1.l, lit(0x1)         ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
-// GFX1250-DIS: v_cvt_pk_fp8_f16_e64 v1.l, 1                ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
+// GFX1250-ASM: v_cvt_pk_fp8_f16_e64 v1.l, lit(0x1)     ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
+// GFX1250-DIS: v_cvt_pk_fp8_f16_e64 v1.l, 1            ; encoding: [0x01,0x00,0x72,0xd7,0xff,0x00,0x01,0x02,0x01,0x00,0x00,0x00]
 // NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx704): v_cvt_pk_fp8_f16
 // NOGFX11: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1100): v_cvt_pk_fp8_f16
 // NOGFX12: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx1200): v_cvt_pk_fp8_f16
