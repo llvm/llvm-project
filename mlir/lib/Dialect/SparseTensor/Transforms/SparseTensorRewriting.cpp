@@ -1544,14 +1544,14 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     // that sparse iteration will emit before creating the writer.
     Value zero = constantIndex(rewriter, loc, 0);
     Value one = constantIndex(rewriter, loc, 1);
-    auto count = ForeachOp::create(
-        rewriter, loc, src, ValueRange{zero},
-        [one](OpBuilder &builder, Location loc, ValueRange, Value,
-              ValueRange iterArgs) {
-          Value next = arith::AddIOp::create(builder, loc, iterArgs.front(),
-                                             one);
-          sparse_tensor::YieldOp::create(builder, loc, next);
-        });
+    auto count =
+        ForeachOp::create(rewriter, loc, src, ValueRange{zero},
+                          [one](OpBuilder &builder, Location loc, ValueRange,
+                                Value, ValueRange iterArgs) {
+                            Value next = arith::AddIOp::create(
+                                builder, loc, iterArgs.front(), one);
+                            sparse_tensor::YieldOp::create(builder, loc, next);
+                          });
     Value numEntries = count.getResult(0);
 
     // Allocate a temporary buffer for storing dimension-sizes/coordinates.
