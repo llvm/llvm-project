@@ -558,13 +558,12 @@ define double @test_load_used_by_other_load_scev_low_trip_count(ptr %ptr.a, ptr 
 ; I64-NEXT:    br label %[[OUTER_LOOP]]
 ; I64:       [[OUTER_LOOP]]:
 ; I64-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP28:%.*]], %[[OUTER_LOOP_LOOPEXIT]] ]
-; I64-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x double> poison, double [[ACCUM]], i64 0
-; I64-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; I64-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; I64-NEXT:    br i1 [[COND]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; I64:       [[INNER_LOOP_PREHEADER]]:
 ; I64-NEXT:    br label %[[INNER_LOOP:.*]]
 ; I64:       [[INNER_LOOP]]:
+; I64-NEXT:    [[BROADCAST_SPLAT2:%.*]] = insertelement <2 x double> poison, double [[ACCUM]], i32 1
 ; I64-NEXT:    [[TMP0:%.*]] = load double, ptr [[PTR_A]], align 8
 ; I64-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 0.000000e+00
 ; I64-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
