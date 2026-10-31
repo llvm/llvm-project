@@ -489,10 +489,60 @@ void tools::addDirectoryList(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+static void addLinkerDebugNamesOption(const ToolChain &TC, const ArgList &Args,
+                                      ArgStringList &CmdArgs) {
+  if (!TC.getTriple().isOSBinFormatELF() ||
+      Args.hasArg(options::OPT_r, options::OPT_s))
+    return;
+
+  if (const Arg *A = Args.getLastArg(
+          options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
+          options::OPT_gpubnames, options::OPT_gno_pubnames)) {
+    if (!A->getOption().matches(options::OPT_gpubnames) ||
+        !TC.supportsDebugInfoOption(A))
+      return;
+  } else {
+    llvm::codegenoptions::DebugInfoKind DebugInfoKind =
+        llvm::codegenoptions::NoDebugInfo;
+    if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
+      DebugInfoKind = llvm::codegenoptions::DebugInfoConstructor;
+      if (TC.supportsDebugInfoOption(A) &&
+          A->getOption().matches(options::OPT_gN_Group))
+        DebugInfoKind = debugLevelToInfoKind(*A);
+    }
+    TC.adjustDebugInfoKind(DebugInfoKind, Args);
+    if (DebugInfoKind <= llvm::codegenoptions::DebugLineTablesOnly)
+      return;
+
+    const Arg *SplitDwarfArg =
+        Args.getLastArg(options::OPT_gsplit_dwarf, options::OPT_gsplit_dwarf_EQ,
+                        options::OPT_gno_split_dwarf);
+    if (SplitDwarfArg &&
+        !SplitDwarfArg->getOption().matches(options::OPT_gno_split_dwarf) &&
+        TC.supportsDebugInfoOption(SplitDwarfArg))
+      return;
+
+    if (Args.hasFlag(options::OPT_fdebug_types_section,
+                     options::OPT_fno_debug_types_section, false) ||
+        Args.hasFlag(options::OPT_gdwarf64, options::OPT_gdwarf32, false))
+      return;
+
+    if (std::min(getDwarfVersion(TC, Args), TC.getMaxDwarfVersion()) < 5)
+      return;
+  }
+
+  bool LinkerIsLLD = false;
+  (void)TC.GetLinkerPath(&LinkerIsLLD);
+  if (LinkerIsLLD)
+    CmdArgs.push_back("--debug-names");
+}
+
 void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
                             const ArgList &Args, ArgStringList &CmdArgs,
                             const JobAction &JA) {
   const Driver &D = TC.getDriver();
+
+  addLinkerDebugNamesOption(TC, Args, CmdArgs);
 
   // Add extra linker input arguments which are not treated as inputs
   // (constructed via -Xarch_).
@@ -1059,7 +1109,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const bool IsOSAIX = Triple.isOSAIX();
   const bool IsAMDGCN = Triple.isAMDGCN();
   StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ);
-  const char *LinkerPath = Args.MakeArgString(ToolChain.GetLinkerPath());
+  bool LinkerIsLLD = false;
+  (void)ToolChain.GetLinkerPath(&LinkerIsLLD);
   const Driver &D = ToolChain.getDriver();
   const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
                                      options::OPT_fno_fat_lto_objects, false);
@@ -1075,9 +1126,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     Input = Inputs.begin();
   }
 
-  if (Linker != "lld" && Linker != "lld-link" &&
-      llvm::sys::path::filename(LinkerPath) != "ld.lld" &&
-      llvm::sys::path::stem(LinkerPath) != "ld.lld" && !Triple.isOSOpenBSD()) {
+  if (!LinkerIsLLD && Linker != "lld" && Linker != "lld-link" &&
+      !Triple.isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.

@@ -4181,6 +4181,13 @@ Generate debug info for preprocessor macros. This flag is discarded when
 Do not generate debug info for preprocessor macros (default).
 :::
 
+:::{option} -gpubnames, -gno-pubnames
+
+Enable or disable generation of DWARF name index sections (`.debug_names` in DWARF v5, or `.debug_pubnames` and `.debug_pubtypes` in earlier DWARF versions).
+When linking with `ld.lld` on ELF targets, the driver also passes `--debug-names` to merge input `.debug_names` sections when **-gpubnames** is enabled on the link command line (either explicitly, or by default with DWARF v5 or later at `-g2` and above without **-gsplit-dwarf**, **-fdebug-types-section**, **-gdwarf64**, **-r**, or **-s**).
+Use **-gno-pubnames** to disable name table generation and linker `.debug_names` merging.
+:::
+
 #### Controlling Debugger "Tuning"
 
 While Clang generally emits standard DWARF debug info (<http://dwarfstd.org>),

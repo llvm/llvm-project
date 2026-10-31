@@ -1386,6 +1386,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### DWARF Support in Clang
 
+- When linking with `ld.lld` on ELF targets, the Clang driver now passes `--debug-names` to merge `.debug_names` sections when `-gpubnames` is in effect on the link command line (either explicitly, or by default with DWARF v5 or later at `-g2` and above without `-gsplit-dwarf`, `-fdebug-types-section`, `-gdwarf64`, `-r`, or `-s`).
+  This can be disabled with `-gno-pubnames` (or `-gno-gnu-pubnames`), or at link time only with `-Wl,--no-debug-names`.
+
 ### Floating Point Support in Clang
 
 ### Fixed Point Support in Clang
