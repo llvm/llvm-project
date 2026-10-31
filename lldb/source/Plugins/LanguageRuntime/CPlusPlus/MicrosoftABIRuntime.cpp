@@ -367,6 +367,7 @@ GetOffsetOfBaseFromAST(clang::ASTContext &ast,
               /*checkpoints=*/current.checkpoints.drop_back(),
               /*found_target=*/found_target,
           });
+          continue;
         }
       } else if (found_target) {
         return offset;
