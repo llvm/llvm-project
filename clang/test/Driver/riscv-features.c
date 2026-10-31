@@ -48,6 +48,11 @@
 // FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "+unaligned-vector-mem"
 // NO-FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "-unaligned-vector-mem"
 
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mvector-index-load-overlap 2>&1 | FileCheck %s -check-prefix=VECTOR-INDEX-LOAD-OVERLAP
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-vector-index-load-overlap 2>&1 | FileCheck %s -check-prefix=NO-VECTOR-INDEX-LOAD-OVERLAP
+// VECTOR-INDEX-LOAD-OVERLAP: "-target-feature" "-no-vector-index-load-overlap"
+// NO-VECTOR-INDEX-LOAD-OVERLAP: "-target-feature" "+no-vector-index-load-overlap"
+
 // RUN: %clang --target=riscv32-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
 // RUN: %clang --target=riscv32-unknown-elf -fasynchronous-unwind-tables -### %s 2>&1 | FileCheck %s -check-prefix=UWTABLE
 // RUN: %clang --target=riscv64-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
