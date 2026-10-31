@@ -33,6 +33,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/ValueTracking.h"
 #include "AIREmulateF64.h"
 #include "AIR.h"
 #include "llvm/ADT/StringExtras.h"
@@ -927,6 +928,26 @@ Function *EmulateF64::emulation(StringRef Key, FunctionType *FT) {
   return F;
 }
 
+/// The integer operand of a conversion to double, as i32 when it is wider and
+/// value tracking proves it fits (signed or unsigned as the conversion reads
+/// it): the emulation of a 32-bit conversion is exact and inline, the 64-bit
+/// one a soft-f64 library call (the texture sampler's channels and sizes are
+/// int64_t that hold 32 bits).
+static Value *narrowIntToDouble(Value *X, bool Signed, Instruction *Before) {
+  auto *IT = dyn_cast<IntegerType>(X->getType());
+  if (!IT || IT->getBitWidth() <= 32)
+    return X;
+  const DataLayout &DL = Before->getModule()->getDataLayout();
+  unsigned W = IT->getBitWidth();
+  bool Fits = Signed ? ComputeNumSignBits(X, DL, nullptr, Before) > W - 32
+                     : computeKnownBits(X, DL, nullptr, Before)
+                               .countMinLeadingZeros() >= W - 32;
+  if (!Fits)
+    return X;
+  return new TruncInst(X, Type::getInt32Ty(X->getContext()), "",
+                       Before->getIterator());
+}
+
 void EmulateF64::replaceWithEmulation(Instruction &I, StringRef Key,
                                       ArrayRef<Value *> Args) {
   SmallVector<Type *, 4> Tys;
@@ -1212,6 +1233,19 @@ void EmulateF64::replaceOperations(Function &F) {
         Args.push_back(A);
         Tys.push_back(A->getType());
       }
+      if ((Name.starts_with("llvm.experimental.constrained.sitofp") ||
+           Name.starts_with("llvm.experimental.constrained.uitofp")) &&
+          CI->getType()->getScalarType()->isDoubleTy() && !Args.empty()) {
+        Args[0] = narrowIntToDouble(
+            Args[0], Name.starts_with("llvm.experimental.constrained.sitofp"),
+            CI);
+        Tys[0] = Args[0]->getType();
+        // (the intrinsic's name is overloaded on the source type)
+        if (Tys[0]->isIntegerTy(32))
+          Name = Name.starts_with("llvm.experimental.constrained.sitofp")
+                     ? "llvm.experimental.constrained.sitofp.f64.i32"
+                     : "llvm.experimental.constrained.uitofp.f64.i32";
+      }
       std::string Key =
           ("call:" + Name + "|" + doubleMask(CI->getType(), Tys) + MD).str();
       // bfloat is computed in float where the function keeps float
@@ -1248,6 +1282,8 @@ void EmulateF64::replaceOperations(Function &F) {
     if (isDoubleOp(I)) {
       // "inst:<opcode>[:<predicate>]|<double mask>"
       SmallVector<Value *, 3> Ops(I.operands());
+      if (isa<SIToFPInst>(I) || isa<UIToFPInst>(I))
+        Ops[0] = narrowIntToDouble(Ops[0], isa<SIToFPInst>(I), &I);
       SmallVector<Type *, 3> Tys;
       for (Value *O : Ops)
         Tys.push_back(O->getType());
@@ -1807,7 +1843,29 @@ void EmulateF64::emulate(Function &F, StringRef Key) {
                A[0]->getType()->getIntegerBitWidth() <= 64) {
       bool Signed = B2 == "sitofp";
       Value *X = Signed ? B.CreateSExt(A[0], I64) : B.CreateZExt(A[0], I64);
-      R = RLib(Signed ? "__air_f64_from_i64" : "__air_f64_from_u64", I64, {X});
+      // An integer of at most 53 bits is a double exactly, in every rounding:
+      // built inline from its leading zeros (sign, exponent 1086 - zeros, the
+      // bits below the leading one) instead of the library's 64-bit
+      // conversion (texel channels and texture sizes in the texture sampler).
+      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+      bool Fits = Signed ? ComputeNumSignBits(X, DL) >= 12
+                         : computeKnownBits(X, DL).countMinLeadingZeros() >= 11;
+      if (Fits) {
+        Value *Neg = Signed ? B.CreateICmpSLT(X, B.getInt64(0)) : B.getFalse();
+        Value *Mag = Signed ? B.CreateSelect(Neg, B.CreateNeg(X), X) : X;
+        Value *LZ = B.CreateBinaryIntrinsic(Intrinsic::ctlz, Mag, B.getTrue());
+        // the leading one shifted out: (Mag << LZ) << 1, then the top 52 bits
+        Value *Frac = B.CreateLShr(B.CreateShl(B.CreateShl(Mag, LZ), 1), 12);
+        Value *Exp = B.CreateShl(B.CreateSub(B.getInt64(1086), LZ), 52);
+        Value *Bits = B.CreateOr(B.CreateOr(Exp, Frac),
+                                 B.CreateSelect(Neg, B.getInt64(SignBit),
+                                                B.getInt64(0)));
+        R = B.CreateSelect(B.CreateICmpEQ(Mag, B.getInt64(0)), B.getInt64(0),
+                           Bits);
+      } else {
+        R = RLib(Signed ? "__air_f64_from_i64" : "__air_f64_from_u64", I64,
+                 {X});
+      }
     } else if (B2 == "fpext") {
       Value *X = A[0];
       if (X->getType()->isBFloatTy())
