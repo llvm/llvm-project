@@ -959,6 +959,14 @@ getFuncName(const SampleProfileMap::value_type &Val) {
   return Val.second.getContext().toString();
 }
 
+static bool useMD5(const StringMap<InstrProfWriter::ProfilingData> &) {
+  return false;
+}
+
+static bool useMD5(const SampleProfileMap &M) {
+  return M.getAttributes().UseMD5;
+}
+
 template <typename T> static Error filterFunctions(T &ProfileMap) {
   bool hasFilter = !FuncNameFilter.empty();
   bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
@@ -987,15 +995,15 @@ template <typename T> static Error filterFunctions(T &ProfileMap) {
   std::string MD5Name = std::to_string(llvm::MD5Hash(FuncNameFilter));
   std::string NegativeMD5Name =
       std::to_string(llvm::MD5Hash(FuncNameNegativeFilter));
+  bool IsMD5 = useMD5(ProfileMap);
 
   ProfileMap.remove_if([&](const auto &Entry) {
     const auto &FuncName = getFuncName(Entry);
     // Negative filter has higher precedence than positive filter.
-    return (hasNegativeFilter &&
-            (NegativePattern.match(FuncName) ||
-             (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
-           (hasFilter && !(Pattern.match(FuncName) ||
-                           (FunctionSamples::UseMD5 && MD5Name == FuncName)));
+    return (hasNegativeFilter && (NegativePattern.match(FuncName) ||
+                                  (IsMD5 && NegativeMD5Name == FuncName))) ||
+           (hasFilter &&
+            !(Pattern.match(FuncName) || (IsMD5 && MD5Name == FuncName)));
   });
 
   llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions "
@@ -1290,7 +1298,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   auto checkSampleProfileHasFUnique = [&Reader]() {
     for (const auto &PD : Reader->getProfiles()) {
       auto &FContext = PD.second.getContext();
-      if (FContext.toString().find(FunctionSamples::UniqSuffix) !=
+      if (FContext.toString().find(SampleProfileAttributes::UniqSuffix) !=
           std::string::npos) {
         return true;
       }
@@ -1324,7 +1332,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     }
 
     // This name should have a static linkage.
-    size_t PostfixPos = NewName.find(FunctionSamples::UniqSuffix);
+    size_t PostfixPos = NewName.find(SampleProfileAttributes::UniqSuffix);
     bool ProfileHasFUnique = (PostfixPos != StringRef::npos);
 
     // If sample profile and instrumented profile do not agree on symbol
@@ -1404,16 +1412,16 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   // Note that goo's count will remain in bar.cc;bar() as it does not have an
   // entry in InstrProfile.
   llvm::StringMap<std::pair<uint64_t, uint64_t>> FlattenSampleMap;
-  auto BuildMaxSampleMap = [&FlattenSampleMap, &StaticFuncMap,
-                            &InstrProfileMap](const FunctionSamples &FS,
-                                              const StringRef &RootName) {
+  auto BuildMaxSampleMap = [&FlattenSampleMap, &StaticFuncMap, &InstrProfileMap,
+                            &Reader](const FunctionSamples &FS,
+                                     const StringRef &RootName) {
     auto BuildMaxSampleMapImpl = [&](const FunctionSamples &FS,
                                      const StringRef &RootName,
                                      auto &BuildImpl) -> void {
       std::string NameStr = FS.getFunction().str();
       const StringRef Name = NameStr;
       const StringRef *NewRootName = &RootName;
-      uint64_t EntrySample = FS.getHeadSamplesEstimate();
+      uint64_t EntrySample = Reader->getAttributes().getHeadSamplesEstimate(FS);
       uint64_t MaxBodySample = FS.getMaxCountInside(/* SkipCallSite*/ true);
 
       auto It = InstrProfileMap.find(Name);
@@ -1738,14 +1746,22 @@ static Error mergeSampleProfile(const WeightedFileVector &Inputs,
            Input.Filename);
 
     SampleProfileMap &Profiles = Reader->getProfiles();
+    const SampleProfileAttributes &ReaderAttrs = Profiles.getAttributes();
     if (ProfileIsProbeBased &&
-        ProfileIsProbeBased != FunctionSamples::ProfileIsProbeBased)
+        ProfileIsProbeBased != ReaderAttrs.ProfileIsProbeBased)
       return makeError(
           "cannot merge probe-based profile with non-probe-based profile");
-    ProfileIsProbeBased = FunctionSamples::ProfileIsProbeBased;
-    if (ProfileIsCS && ProfileIsCS != FunctionSamples::ProfileIsCS)
+    ProfileIsProbeBased = ReaderAttrs.ProfileIsProbeBased;
+    if (ProfileIsCS && ProfileIsCS != ReaderAttrs.ProfileIsCS)
       return makeError("cannot merge CS profile with non-CS profile");
-    ProfileIsCS = FunctionSamples::ProfileIsCS;
+    ProfileIsCS = ReaderAttrs.ProfileIsCS;
+    SampleProfileAttributes &ProfAttrs = ProfileMap.getAttributes();
+    ProfAttrs.ProfileIsProbeBased = ReaderAttrs.ProfileIsProbeBased;
+    ProfAttrs.ProfileIsCS = ReaderAttrs.ProfileIsCS;
+    ProfAttrs.ProfileIsPreInlined |= ReaderAttrs.ProfileIsPreInlined;
+    ProfAttrs.ProfileIsFS |= ReaderAttrs.ProfileIsFS;
+    ProfAttrs.UseMD5 = ReaderAttrs.UseMD5;
+    ProfAttrs.HasUniqSuffix |= ReaderAttrs.HasUniqSuffix;
     for (SampleProfileMap::iterator I = Profiles.begin(), E = Profiles.end();
          I != E; ++I) {
       sampleprof_error Result = sampleprof_error::success;
@@ -1787,12 +1803,13 @@ static Error mergeSampleProfile(const WeightedFileVector &Inputs,
   }
 
   if (ProfileLayout == llvm::sampleprof::SPL_Flat) {
-    ProfileConverter::flattenProfile(ProfileMap, FunctionSamples::ProfileIsCS);
-    ProfileIsCS = FunctionSamples::ProfileIsCS = false;
+    ProfileConverter::flattenProfile(ProfileMap,
+                                     ProfileMap.getAttributes().ProfileIsCS);
+    ProfileIsCS = ProfileMap.getAttributes().ProfileIsCS = false;
   } else if (ProfileIsCS && ProfileLayout == llvm::sampleprof::SPL_Nest) {
     ProfileConverter CSConverter(ProfileMap);
     CSConverter.convertCSProfiles();
-    ProfileIsCS = FunctionSamples::ProfileIsCS = false;
+    ProfileIsCS = ProfileMap.getAttributes().ProfileIsCS = false;
   }
 
   if (Error E = filterFunctions(ProfileMap))
@@ -3375,7 +3392,7 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
     PrintValues.emplace_back(
         HotFuncInfo(Func.getContext().toString(), Func.getTotalSamples(),
                     TotalSamplePercent, FuncPair.second.second,
-                    Func.getHeadSamplesEstimate()));
+                    Profiles.getAttributes().getHeadSamplesEstimate(Func)));
   }
   dumpHotFunctionList(ColumnTitle, ColumnOffset, PrintValues, HotFuncCount,
                       Profiles.size(), HotFuncSample, ProfileTotalSample,

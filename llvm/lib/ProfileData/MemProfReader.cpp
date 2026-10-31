@@ -640,7 +640,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
         // particularly for callsite frames.
         if (KeepSymbolName) {
           StringRef CanonicalName =
-              sampleprof::FunctionSamples::getCanonicalFnName(
+              sampleprof::SampleProfileAttributes().getCanonicalFnName(
                   DIFrame.FunctionName);
           GuidToSymbolName.insert({Guid, CanonicalName.str()});
         }

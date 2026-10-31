@@ -71,10 +71,11 @@ static cl::opt<unsigned> SalvageStaleProfileMaxCallsites(
 
 void SampleProfileMatcher::findIRAnchors(const Function &F,
                                          AnchorMap &IRAnchors) const {
+  const SampleProfileAttributes &ProfAttrs = Reader.getAttributes();
   // For inlined code, recover the original callsite and callee by finding the
   // top-level inline frame. e.g. For frame stack "main:1 @ foo:2 @ bar:3", the
   // top-level frame is "main:1", the callsite is "1" and the callee is "foo".
-  auto FindTopLevelInlinedCallsite = [](const DILocation *DIL) {
+  auto FindTopLevelInlinedCallsite = [&ProfAttrs](const DILocation *DIL) {
     assert((DIL && DIL->getInlinedAt()) && "No inlined callsite");
     const DILocation *PrevDIL = nullptr;
     do {
@@ -82,16 +83,15 @@ void SampleProfileMatcher::findIRAnchors(const Function &F,
       DIL = DIL->getInlinedAt();
     } while (DIL->getInlinedAt());
 
-    LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(
-        DIL, FunctionSamples::ProfileIsFS);
+    LineLocation Callsite = ProfAttrs.getCallSiteIdentifier(DIL);
     StringRef CalleeName = PrevDIL->getSubprogramLinkageName();
     return std::make_pair(Callsite, FunctionId(CalleeName));
   };
 
-  auto GetCanonicalCalleeName = [](const CallBase *CB) {
+  auto GetCanonicalCalleeName = [&ProfAttrs](const CallBase *CB) {
     StringRef CalleeName = UnknownIndirectCallee;
     if (Function *Callee = CB->getCalledFunction())
-      CalleeName = FunctionSamples::getCanonicalFnName(Callee->getName());
+      CalleeName = ProfAttrs.getCanonicalFnName(Callee->getName());
     return CalleeName;
   };
 
@@ -102,7 +102,7 @@ void SampleProfileMatcher::findIRAnchors(const Function &F,
       if (!DIL)
         continue;
 
-      if (FunctionSamples::ProfileIsProbeBased) {
+      if (ProfAttrs.ProfileIsProbeBased) {
         if (auto Probe = extractProbe(I)) {
           // Flatten inlined IR for the matching.
           if (DIL->getInlinedAt()) {
@@ -129,8 +129,7 @@ void SampleProfileMatcher::findIRAnchors(const Function &F,
         if (DIL->getInlinedAt()) {
           IRAnchors.emplace(FindTopLevelInlinedCallsite(DIL));
         } else {
-          LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(
-              DIL, FunctionSamples::ProfileIsFS);
+          LineLocation Callsite = ProfAttrs.getCallSiteIdentifier(DIL);
           StringRef CalleeName = GetCanonicalCalleeName(dyn_cast<CallBase>(&I));
           IRAnchors.emplace(Callsite, FunctionId(CalleeName));
         }
@@ -217,8 +216,7 @@ bool SampleProfileMatcher::isProfileUnused(const FunctionId &ProfileFuncName) {
   // module. Check if the function name exists in the pseudo_probe descriptors.
   return (SymbolMap->find(ProfileFuncName) == SymbolMap->end()) &&
          (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
-          !FunctionSamples::ProfileIsProbeBased ||
-          !ProfileFuncName.isStringRef() ||
+          !Reader.profileIsProbeBased() || !ProfileFuncName.isStringRef() ||
           (ProbeManager->getDesc(ProfileFuncName.stringRef()) == nullptr));
 }
 
@@ -437,7 +435,7 @@ void SampleProfileMatcher::runStaleProfileMatching(
         continue;
 
       FunctionId NewAnchor(
-          FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
+          Reader.getAttributes().getCanonicalFnName(IR.second.stringRef()));
       auto R = FuncProfileMatchCache.find({Callee, NewAnchor});
       if (R != FuncProfileMatchCache.end() && R->second)
         continue;
@@ -504,10 +502,9 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
     return;
   // For probe-based profiles, run matching only when profile checksum is
   // mismatched.
-  bool ChecksumMismatch = FunctionSamples::ProfileIsProbeBased &&
+  bool ChecksumMismatch = Reader.profileIsProbeBased() &&
                           !ProbeManager->profileIsValid(F, *FSForMatching);
-  bool RunCFGMatching =
-      !FunctionSamples::ProfileIsProbeBased || ChecksumMismatch;
+  bool RunCFGMatching = !Reader.profileIsProbeBased() || ChecksumMismatch;
   bool RunCGMatching = SalvageUnusedProfile;
   // For imported functions, the checksum metadata(pseudo_probe_desc) are
   // dropped, so we leverage function attribute(profile-checksum-mismatch) to
@@ -533,7 +530,8 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     const LocToLocMap *IRToProfileLocationMap) {
   bool IsPostMatch = IRToProfileLocationMap != nullptr;
   auto &CallsiteMatchStates =
-      FuncCallsiteMatchStates[FunctionSamples::getCanonicalFnName(F.getName())];
+      FuncCallsiteMatchStates[Reader.getAttributes().getCanonicalFnName(
+          F.getName())];
 
   auto MapIRLocToProfileLoc = [&](const LineLocation &IRLoc) {
     // IRToProfileLocationMap is null in pre-match phrase.
@@ -730,7 +728,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
       countCallGraphRecoveredSamples(*FS, CallGraphRecoveredProfiles);
 
     // Checksum mismatch is only used in pseudo-probe mode.
-    if (FunctionSamples::ProfileIsProbeBased)
+    if (Reader.profileIsProbeBased())
       countMismatchedFuncSamples(*FS, true);
 
     // Count mismatches and samples for calliste.
@@ -739,7 +737,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   }
 
   if (ReportProfileStaleness) {
-    if (FunctionSamples::ProfileIsProbeBased) {
+    if (Reader.profileIsProbeBased()) {
       errs() << "(" << NumStaleProfileFunc << "/" << TotalProfiledFunc
              << ") of functions' profile are invalid and ("
              << MismatchedFunctionSamples << "/" << TotalFunctionSamples
@@ -770,7 +768,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
     MDBuilder MDB(Ctx);
 
     SmallVector<std::pair<StringRef, uint64_t>> ProfStatsVec;
-    if (FunctionSamples::ProfileIsProbeBased) {
+    if (Reader.profileIsProbeBased()) {
       ProfStatsVec.emplace_back("NumStaleProfileFunc", NumStaleProfileFunc);
       ProfStatsVec.emplace_back("TotalProfiledFunc", TotalProfiledFunc);
       ProfStatsVec.emplace_back("MismatchedFunctionSamples",
@@ -801,7 +799,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
 
 void SampleProfileMatcher::findFunctionsWithoutProfile() {
   // TODO: Support MD5 profile.
-  if (FunctionSamples::UseMD5)
+  if (Reader.useMD5())
     return;
 
   for (auto &F : M) {
@@ -810,7 +808,8 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
     if (F.isDeclaration())
       continue;
 
-    StringRef CanonFName = FunctionSamples::getCanonicalFnName(F.getName());
+    StringRef CanonFName =
+        Reader.getAttributes().getCanonicalFnName(F.getName());
     const auto *FS = getFlattenedSamplesFor(F);
     if (FS)
       continue;
@@ -920,6 +919,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
 
   unsigned MatchCount = 0;
   SampleProfileMap NewlyLoadedProfiles;
+  NewlyLoadedProfiles.getAttributes() = Reader.getAttributes();
   for (auto &[BaseName, ProfId] : CandidateByBaseName) {
     if (!isProfileUnused(ProfId))
       continue;
@@ -941,7 +941,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
   // subsequent LCS-based CG matching.
   if (!NewlyLoadedProfiles.empty())
     ProfileConverter::flattenProfile(NewlyLoadedProfiles, FlattenedProfiles,
-                                     FunctionSamples::ProfileIsCS);
+                                     Reader.profileIsCS());
 
   NumDirectProfileMatch += MatchCount;
   LLVM_DEBUG(dbgs() << "Direct basename matching found " << MatchCount
@@ -982,9 +982,10 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
     // CG matching steps.
     if (FSForMatching) {
       SampleProfileMap TempProfiles;
+      TempProfiles.getAttributes() = Reader.getAttributes();
       TempProfiles.create(FSForMatching->getFunction()).merge(*FSForMatching);
       ProfileConverter::flattenProfile(TempProfiles, FlattenedProfiles,
-                                       FunctionSamples::ProfileIsCS);
+                                       Reader.profileIsCS());
       FSForMatching = getFlattenedSamplesFor(ProfFunc);
     }
     LLVM_DEBUG({
@@ -1004,7 +1005,7 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
 
   // For probe-based function, we first trust the checksum info. If the checksum
   // doesn't match, we continue checking for similarity.
-  if (FunctionSamples::ProfileIsProbeBased) {
+  if (Reader.profileIsProbeBased()) {
     const auto *FuncDesc = ProbeManager->getDesc(IRFunc);
     if (FuncDesc &&
         !ProbeManager->profileIsHashMismatched(*FuncDesc, *FSForMatching)) {
@@ -1103,7 +1104,7 @@ void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
 
 void SampleProfileMatcher::runOnModule() {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
-                                   FunctionSamples::ProfileIsCS);
+                                   Reader.profileIsCS());
   // Disable SalvageUnusedProfile if the module has an extremely large number of
   // functions to limit compile time.
   SalvageUnusedProfile =

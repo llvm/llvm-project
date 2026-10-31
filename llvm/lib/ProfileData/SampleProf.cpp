@@ -43,12 +43,6 @@ static cl::opt<bool> GenerateMergedBaseProfiles(
 
 namespace llvm {
 namespace sampleprof {
-std::atomic<bool> FunctionSamples::ProfileIsProbeBased;
-std::atomic<bool> FunctionSamples::ProfileIsCS;
-std::atomic<bool> FunctionSamples::ProfileIsPreInlined;
-std::atomic<bool> FunctionSamples::UseMD5;
-std::atomic<bool> FunctionSamples::HasUniqSuffix = true;
-std::atomic<bool> FunctionSamples::ProfileIsFS;
 
 std::error_code
 serializeTypeMap(const TypeCountMap &Map,
@@ -279,14 +273,14 @@ void sampleprof::sortFuncProfiles(
   });
 }
 
-unsigned FunctionSamples::getOffset(const DILocation *DIL) {
+unsigned SampleProfileAttributes::getOffset(const DILocation *DIL) {
   return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
          0xffff;
 }
 
-LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
-                                                    bool ProfileIsFS) {
-  if (FunctionSamples::ProfileIsProbeBased) {
+LineLocation
+SampleProfileAttributes::getCallSiteIdentifier(const DILocation *DIL) const {
+  if (ProfileIsProbeBased) {
     // In a pseudo-probe based profile, a callsite is simply represented by the
     // ID of the probe associated with the call instruction. The probe ID is
     // encoded in the Discriminator field of the call instruction's debug
@@ -297,12 +291,13 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
   } else {
     unsigned Discriminator =
         ProfileIsFS ? DIL->getDiscriminator() : DIL->getBaseDiscriminator();
-    return LineLocation(FunctionSamples::getOffset(DIL), Discriminator);
+    return LineLocation(SampleProfileAttributes::getOffset(DIL), Discriminator);
   }
 }
 
-const FunctionSamples *FunctionSamples::findFunctionSamples(
-    const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper,
+const FunctionSamples *SampleProfileAttributes::findFunctionSamples(
+    const FunctionSamples &FS, const DILocation *DIL,
+    SampleProfileReaderItaniumRemapper *Remapper,
     const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
     const {
   assert(DIL);
@@ -314,20 +309,18 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
     StringRef Name = PrevDIL->getScope()->getSubprogram()->getLinkageName();
     if (Name.empty())
       Name = PrevDIL->getScope()->getSubprogram()->getName();
-    S.emplace_back(FunctionSamples::getCallSiteIdentifier(
-                       DIL, FunctionSamples::ProfileIsFS),
-                   Name);
+    S.emplace_back(getCallSiteIdentifier(DIL), Name);
     PrevDIL = DIL;
   }
 
   if (S.size() == 0)
-    return this;
-  const FunctionSamples *FS = this;
-  for (int i = S.size() - 1; i >= 0 && FS != nullptr; i--) {
-    FS = FS->findFunctionSamplesAt(S[i].first, S[i].second, Remapper,
-                                   FuncNameToProfNameMap);
+    return &FS;
+  const FunctionSamples *CurFS = &FS;
+  for (int i = S.size() - 1; i >= 0 && CurFS != nullptr; i--) {
+    CurFS = findFunctionSamplesAt(*CurFS, S[i].first, S[i].second, Remapper,
+                                  FuncNameToProfNameMap);
   }
-  return FS;
+  return CurFS;
 }
 
 void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
@@ -343,35 +336,35 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
   }
 }
 
-const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
-    const LineLocation &Loc, StringRef CalleeName,
+const FunctionSamples *SampleProfileAttributes::findFunctionSamplesAt(
+    const FunctionSamples &FS, const LineLocation &Loc, StringRef CalleeName,
     SampleProfileReaderItaniumRemapper *Remapper,
     const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
     const {
   CalleeName = getCanonicalFnName(CalleeName);
 
-  auto I = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
-  if (I == CallsiteSamples.end())
+  const auto *FSMap = FS.findFunctionSamplesMapAt(Loc);
+  if (!FSMap)
     return nullptr;
-  auto FS = I->second.find(getRepInFormat(CalleeName));
-  if (FS != I->second.end())
-    return &FS->second;
+  auto It = FSMap->find(getRepInFormat(CalleeName));
+  if (It != FSMap->end())
+    return &It->second;
 
   if (FuncNameToProfNameMap && !FuncNameToProfNameMap->empty()) {
     auto R = FuncNameToProfNameMap->find(FunctionId(CalleeName));
     if (R != FuncNameToProfNameMap->end()) {
       CalleeName = R->second.stringRef();
-      auto FS = I->second.find(getRepInFormat(CalleeName));
-      if (FS != I->second.end())
-        return &FS->second;
+      auto It = FSMap->find(getRepInFormat(CalleeName));
+      if (It != FSMap->end())
+        return &It->second;
     }
   }
 
   if (Remapper) {
     if (auto NameInProfile = Remapper->lookUpNameInProfile(CalleeName)) {
-      auto FS = I->second.find(getRepInFormat(*NameInProfile));
-      if (FS != I->second.end())
-        return &FS->second;
+      auto It = FSMap->find(getRepInFormat(*NameInProfile));
+      if (It != FSMap->end())
+        return &It->second;
     }
   }
   // If we cannot find exact match of the callee name, return the FS with
@@ -381,7 +374,7 @@ const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     return nullptr;
   uint64_t MaxTotalSamples = 0;
   const FunctionSamples *R = nullptr;
-  for (const auto &NameFS : I->second)
+  for (const auto &NameFS : *FSMap)
     if (NameFS.second.getTotalSamples() >= MaxTotalSamples) {
       MaxTotalSamples = NameFS.second.getTotalSamples();
       R = &NameFS.second;
@@ -498,7 +491,8 @@ void ProfileSymbolList::dump(raw_ostream &OS) const {
 ProfileConverter::FrameNode *
 ProfileConverter::FrameNode::getOrCreateChildFrame(const LineLocation &CallSite,
                                                    FunctionId CalleeName) {
-  uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
+  uint64_t Hash =
+      SampleProfileAttributes::getCallSiteHash(CalleeName, CallSite);
   auto It = AllChildFrames.find(Hash);
   if (It != AllChildFrames.end()) {
     assert(It->second.FuncName == CalleeName &&

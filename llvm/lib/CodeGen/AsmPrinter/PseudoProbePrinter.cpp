@@ -50,7 +50,7 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
     auto Name = InlinedAt->getSubprogramLinkageName();
     // Strip Coroutine suffixes from CoroSplit Pass, since pseudo probes are
     // generated in an earlier stage.
-    Name = FunctionSamples::getCanonicalCoroFnName(Name);
+    Name = SampleProfileAttributes::getCanonicalCoroFnName(Name);
     // Use caching to avoid redundant md5 computation for build speed.
     uint64_t &CallerGuid = NameGuidMap[Name];
     if (!CallerGuid)

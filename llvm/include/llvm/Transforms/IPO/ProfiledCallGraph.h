@@ -65,10 +65,10 @@ public:
   // Constructor for non-CS profile.
   ProfiledCallGraph(SampleProfileMap &ProfileMap,
                     uint64_t IgnoreColdCallThreshold = 0) {
-    assert(!FunctionSamples::ProfileIsCS &&
+    assert(!ProfileMap.getAttributes().ProfileIsCS &&
            "CS flat profile is not handled here");
     for (const auto &Samples : ProfileMap) {
-      addProfiledCalls(Samples.second);
+      addProfiledCalls(Samples.second, ProfileMap.getAttributes());
     }
 
     // Trim edges with weight up to `IgnoreColdCallThreshold`. This aims
@@ -110,7 +110,9 @@ public:
         if (!CalleeSamples || !CallerSamples) {
           Weight = 0;
         } else {
-          uint64_t CalleeEntryCount = CalleeSamples->getHeadSamplesEstimate();
+          uint64_t CalleeEntryCount =
+              ContextTracker.getAttributes().getHeadSamplesEstimate(
+                  *CalleeSamples);
           uint64_t CallsiteCount = 0;
           LineLocation Callsite = Callee->getCallSiteLoc();
           if (auto CallTargets = CallerSamples->findCallTargetMapAt(Callsite)) {
@@ -166,7 +168,8 @@ private:
     }
   }
 
-  void addProfiledCalls(const FunctionSamples &Samples) {
+  void addProfiledCalls(const FunctionSamples &Samples,
+                        const SampleProfileAttributes &ProfAttrs) {
     addProfiledFunction(Samples.getFunction());
 
     for (const auto &Sample : Samples.getBodySamples()) {
@@ -179,9 +182,10 @@ private:
     for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
       for (const auto &InlinedSamples : CallsiteSamples.second) {
         addProfiledFunction(InlinedSamples.first);
-        addProfiledCall(Samples.getFunction(), InlinedSamples.first,
-                        InlinedSamples.second.getHeadSamplesEstimate());
-        addProfiledCalls(InlinedSamples.second);
+        addProfiledCall(
+            Samples.getFunction(), InlinedSamples.first,
+            ProfAttrs.getHeadSamplesEstimate(InlinedSamples.second));
+        addProfiledCalls(InlinedSamples.second, ProfAttrs);
       }
     }
   }
