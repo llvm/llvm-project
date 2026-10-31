@@ -59,11 +59,11 @@
 
 ; CHECK: declare <2 x double> @_ZGVnN2v_tgamma(<2 x double>) [[ATTRS]]
 
-; CHECK: declare <2 x double> @_ZGVnN2vl8_modf(<2 x double>, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG:#[0-9]+]]
+; CHECK: declare <2 x double> @_ZGVnN2vl8_modf(<2 x double>, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG:#[0-9]+]]
 
-; CHECK: declare void @_ZGVnN2vl8l8_sincos(<2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVnN2vl8l8_sincos(<2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVnN2vl8l8_sincospi(<2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVnN2vl8l8_sincospi(<2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <2 x double> @_ZGVnN2vv_atan2(<2 x double>, <2 x double>) [[ATTRS]]
 
@@ -145,11 +145,11 @@
 
 ; CHECK: declare <4 x float> @_ZGVnN4v_tgammaf(<4 x float>) [[ATTRS]]
 
-; CHECK: declare <4 x float> @_ZGVnN4vl4_modff(<4 x float>, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare <4 x float> @_ZGVnN4vl4_modff(<4 x float>, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVnN4vl4l4_sincosf(<4 x float>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVnN4vl4l4_sincosf(<4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVnN4vl4l4_sincospif(<4 x float>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVnN4vl4l4_sincospif(<4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <4 x float> @_ZGVnN4vv_atan2f(<4 x float>, <4 x float>) [[ATTRS]]
 
@@ -333,17 +333,17 @@
 
 ; CHECK: declare <vscale x 4 x float> @_ZGVsMxvvv_fmaf(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x i1>) [[ATTRS]]
 
-; CHECK: declare <vscale x 4 x float> @_ZGVsNxvl4_modff(<vscale x 4 x float>, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare <vscale x 4 x float> @_ZGVsNxvl4_modff(<vscale x 4 x float>, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVsNxvl4l4_sincosf(<vscale x 4 x float>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVsNxvl4l4_sincosf(<vscale x 4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVsNxvl4l4_sincospif(<vscale x 4 x float>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVsNxvl4l4_sincospif(<vscale x 4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare <vscale x 2 x double> @_ZGVsNxvl8_modf(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare <vscale x 2 x double> @_ZGVsNxvl8_modf(<vscale x 2 x double>, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVsNxvl8l8_sincos(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVsNxvl8l8_sincos(<vscale x 2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVsNxvl8l8_sincospi(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVsNxvl8l8_sincospi(<vscale x 2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
 
 ; CHECK: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes [[ATTRS_PTR_ARG]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
