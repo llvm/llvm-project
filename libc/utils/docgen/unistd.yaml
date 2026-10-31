@@ -517,6 +517,8 @@ functions:
     in-latest-posix: ""
   confstr:
     in-latest-posix: ""
+  copy_file_range:
+    in-latest-posix: ""
   crypt:
     in-latest-posix: ""
   dup:

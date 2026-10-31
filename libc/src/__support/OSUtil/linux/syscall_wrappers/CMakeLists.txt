@@ -1531,6 +1531,22 @@ add_header_library(
 )
 
 add_header_library(
+  copy_file_range
+  HDRS
+    copy_file_range.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   prlimit
   HDRS
     prlimit.h
