@@ -1499,3 +1499,492 @@ TEST(IntegerPolyhedronTest, truncateEqualityRegressionTest) {
   set.truncate(snapshot);
   EXPECT_EQ(set.getNumEqualities(), 0u);
 }
+
+static IntegerPolyhedron universe(unsigned numDims, unsigned numSymbols = 0) {
+  return IntegerPolyhedron::getUniverse(
+      PresburgerSpace::getSetSpace(numDims, numSymbols));
+}
+
+static IntegerPolyhedron empty(unsigned numDims, unsigned numSymbols = 0) {
+  return IntegerPolyhedron(IntegerRelation::getEmpty(
+      PresburgerSpace::getSetSpace(numDims, numSymbols)));
+}
+
+/// Computes the gist of `set` in the context of `context`, checks the gist
+/// invariants (see `expectGistInvariants`), checks that gist is idempotent
+/// (computing the gist of the result again yields the same constraints), and,
+/// if provided, checks that the result is equal to `expected` and has
+/// `expectedNumConstraints` constraints. Returns the gist.
+static IntegerPolyhedron
+expectGist(const IntegerPolyhedron &set, const IntegerPolyhedron &context,
+           std::optional<IntegerPolyhedron> expected = std::nullopt,
+           std::optional<unsigned> expectedNumConstraints = std::nullopt) {
+  IntegerPolyhedron contextCopy = context;
+  IntegerPolyhedron gist = set;
+  gist.gist(context);
+  // The context is never modified.
+  EXPECT_TRUE(context.isObviouslyEqual(contextCopy));
+  expectGistInvariants(set, context, gist);
+  IntegerPolyhedron gistAgain = gist;
+  gistAgain.gist(context);
+  EXPECT_TRUE(gistAgain.isObviouslyEqual(gist))
+      << "gist is not idempotent: " << gist << "became " << gistAgain
+      << "in context " << context;
+  if (expected)
+    EXPECT_TRUE(gist.isEqual(*expected))
+        << "gist " << gist << "of set " << set << "in context " << context
+        << "is not equal to the expected " << *expected;
+  if (expectedNumConstraints)
+    EXPECT_EQ(gist.getNumConstraints(), *expectedNumConstraints)
+        << "gist " << gist << "of set " << set << "in context " << context;
+  return gist;
+}
+
+static IntegerPolyhedron
+expectGist(StringRef set, StringRef context,
+           std::optional<StringRef> expected = std::nullopt,
+           std::optional<unsigned> expectedNumConstraints = std::nullopt) {
+  std::optional<IntegerPolyhedron> expectedPoly;
+  if (expected)
+    expectedPoly = parseIntegerPolyhedron(*expected);
+  return expectGist(parseIntegerPolyhedron(set),
+                    parseIntegerPolyhedron(context), expectedPoly,
+                    expectedNumConstraints);
+}
+
+TEST(IntegerPolyhedronTest, gistDropsConstraintImpliedByContext) {
+  // Constraints of the set that are implied by the context are removed.
+  expectGist("(x, y) : (x >= 0, -x + 10 >= 0, y >= 0)", "(x, y) : (x >= 0)",
+             "(x, y) : (-x + 10 >= 0, y >= 0)", 2);
+}
+
+TEST(IntegerPolyhedronTest, gistDropsConstraintImpliedByContextAndRest) {
+  // x + y >= 2 is implied by x >= 1 and y >= 1, but y >= 1 is not implied by
+  // x >= 1 and x + y >= 2.
+  expectGist("(x, y) : (x + y - 2 >= 0, y - 1 >= 0)", "(x, y) : (x - 1 >= 0)",
+             "(x, y) : (y - 1 >= 0)");
+}
+
+TEST(IntegerPolyhedronTest, gistKeepsConstraintNotImpliedByContext) {
+  // Nothing is redundant.
+  expectGist("(x) : (x - 5 >= 0)", "(x) : (x - 1 >= 0)", "(x) : (x - 5 >= 0)",
+             1);
+}
+
+TEST(IntegerPolyhedronTest, gistDropsShiftedCopyOfContextConstraint) {
+  // x >= 0 is a relaxed (shifted) copy of the context constraint x >= 5.
+  expectGist(parseIntegerPolyhedron("(x) : (x >= 0)"),
+             parseIntegerPolyhedron("(x) : (x - 5 >= 0)"), universe(1), 0);
+}
+
+TEST(IntegerPolyhedronTest, gistKeepsTighterShiftedConstraint) {
+  expectGist("(x) : (x - 5 >= 0)", "(x) : (x >= 0)", "(x) : (x - 5 >= 0)", 1);
+}
+
+TEST(IntegerPolyhedronTest, gistDropsShiftedCopyWithMultipleVars) {
+  expectGist("(x, y) : (x - 2*y - 1 >= 0, -x + 2*y + 10 >= 0)",
+             "(x, y) : (x - 2*y - 4 >= 0)", "(x, y) : (-x + 2*y + 10 >= 0)", 1);
+}
+
+TEST(IntegerPolyhedronTest, gistDropsConstraintImpliedRationally) {
+  // 2x >= 1 implies x >= 0 (even rationally, x >= 1/2 > 0).
+  expectGist("(x) : (x >= 0, -x + 3 >= 0)", "(x) : (2*x - 1 >= 0)",
+             "(x) : (-x + 3 >= 0)", 1);
+}
+
+TEST(IntegerPolyhedronTest, gistEqualitiesReducedByContextEqualities) {
+  // From the ISL test suite. The set is the single point (1, -1, 3); in the
+  // context (a = 1, b + c = 2), only b = -1 is needed.
+  expectGist("(a, b, c) : (a - 1 == 0, b + 1 == 0, c - 3 == 0)",
+             "(a, b, c) : (a - 1 == 0, b + c - 2 == 0, b + 1 >= 0, "
+             "-b + 2 >= 0)",
+             "(a, b, c) : (b + 1 == 0)", 1);
+}
+
+TEST(IntegerPolyhedronTest, gistEqualityNotImpliedIsKept) {
+  // From the ISL test suite. The context implies a <= b, but not a == b;
+  // nothing is redundant.
+  expectGist("(a, b, c) : (a - b == 0, a - 10 >= 0)",
+             "(a, b, c) : (c - a >= 0, b - c >= 0, c - 2 >= 0)",
+             "(a, b, c) : (a - b == 0, a - 10 >= 0)", 2);
+}
+
+TEST(IntegerPolyhedronTest, gistPromotesImplicitEquality) {
+  // From the ISL test suite. Implicit equality: i >= 0 together with the
+  // context i <= 0 gives i = 0.
+  IntegerPolyhedron gist =
+      expectGist("(i, j) : (i >= 0, i + j >= 0)", "(i, j) : (-i >= 0)",
+                 "(i, j) : (i == 0, j >= 0)", 2);
+  EXPECT_EQ(gist.getNumEqualities(), 1u);
+  EXPECT_EQ(gist.getNumInequalities(), 1u);
+}
+
+TEST(IntegerPolyhedronTest, gistPromotedEqualityEliminatesLastVariable) {
+  // After promoting x - y >= 0 to an equality, the last variable (y) is
+  // eliminated from the remaining constraints in favor of the first (x).
+  IntegerPolyhedron gist =
+      expectGist("(x, y) : (x - y >= 0, x + y >= 0)", "(x, y) : (-x + y >= 0)",
+                 "(x, y) : (x - y == 0, x >= 0)", 2);
+  EXPECT_THAT(gist.getInequality(0), ElementsAre(1, 0, 0));
+}
+
+TEST(IntegerPolyhedronTest, gistEmptyIntersectionYieldsEmpty) {
+  // From the ISL test suite. The intersection with the context is empty.
+  expectGist(parseIntegerPolyhedron(
+                 "(a, b, q, p) : (a == 0, b == 0, q + 5 >= 0, -q + 5 >= 0, "
+                 "p >= 0)"),
+             parseIntegerPolyhedron("(a, b, q, p) : (b - a - 1 >= 0)"),
+             empty(4));
+}
+
+TEST(IntegerPolyhedronTest, gistRewritesUsingContextEquality) {
+  // The context equality is used to rewrite the constraint. The last variable
+  // (y) is eliminated in favor of the first (x), following ISL, so the result
+  // is x >= 1 rather than the equivalent (in the context) y >= 1.
+  expectGist("(x, y) : (2*x + y - 1 >= 0)", "(x, y) : (x - y == 0)",
+             "(x, y) : (x - 1 >= 0)", 1);
+}
+
+TEST(IntegerPolyhedronTest, gistContextEqualityOnUninvolvedVarsDoesNotLeak) {
+  // Context equalities that only involve variables not involved in the set
+  // are not used, so no constraints on y and z are introduced.
+  IntegerPolyhedron gist =
+      expectGist(parseIntegerPolyhedron("(x, y, z) : (x >= 0)"),
+                 parseIntegerPolyhedron("(x, y, z) : (y - z == 0, x - 1 >= 0)"),
+                 universe(3), 0);
+  EXPECT_EQ(gist.getNumVars(), 3u);
+}
+
+TEST(IntegerPolyhedronTest, gistInconsistentAffineHullsYieldEmpty) {
+  // The set is empty (a would have to be both odd and even), which is only
+  // detected after combining its equalities.
+  expectGist(parseIntegerPolyhedron(
+                 "(a, b, c) : (2*b - a - 1 == 0, 2*c - a - 2 == 0)"),
+             parseIntegerPolyhedron("(a, b, c) : (2*c - a - 2 == 0)"),
+             empty(3));
+}
+
+/// The set used by the trivial-case tests below.
+static IntegerPolyhedron getTrivialCasesSet() {
+  return parseIntegerPolyhedron(
+      "(x, y)[N] : (x >= 0, -x + N >= 0, y - x >= 0)");
+}
+
+TEST(IntegerPolyhedronTest, gistUniverseContextKeepsIrredundantSet) {
+  // The universe context does not simplify anything.
+  IntegerPolyhedron set = getTrivialCasesSet();
+  expectGist(set, universe(2, 1), set, 3);
+}
+
+TEST(IntegerPolyhedronTest, gistSelfYieldsUniverse) {
+  // A set in its own context is the universe.
+  IntegerPolyhedron set = getTrivialCasesSet();
+  expectGist(set, set, universe(2, 1), 0);
+}
+
+TEST(IntegerPolyhedronTest, gistEmptySetStaysEmpty) {
+  IntegerPolyhedron gist = expectGist(empty(2, 1), getTrivialCasesSet());
+  EXPECT_TRUE(gist.isObviouslyEmpty());
+}
+
+TEST(IntegerPolyhedronTest, gistObviouslyEmptyContextYieldsUniverse) {
+  // Anything in an empty context is the universe.
+  expectGist(getTrivialCasesSet(), empty(2, 1), universe(2, 1), 0);
+}
+
+TEST(IntegerPolyhedronTest, gistEmptySetInEmptyContextYieldsUniverse) {
+  // From the ISL test suite.
+  expectGist(empty(2, 1), empty(2, 1), universe(2, 1), 0);
+}
+
+TEST(IntegerPolyhedronTest, gistUniverseStaysUniverse) {
+  expectGist(universe(2, 1), getTrivialCasesSet(), universe(2, 1), 0);
+}
+
+TEST(IntegerPolyhedronTest, gistAliasedSelfYieldsUniverse) {
+  // A set in its own context, passed as the same object.
+  IntegerPolyhedron self = getTrivialCasesSet();
+  self.gist(self);
+  EXPECT_EQ(self.getNumConstraints(), 0u);
+}
+
+TEST(IntegerPolyhedronTest,
+     gistUniverseContextEqualsRemoveRedundantConstraints) {
+  // In the universe context, gist behaves like removeRedundantConstraints.
+  IntegerPolyhedron redundant =
+      parseIntegerPolyhedron("(x, y) : (x >= 0, y >= 0, x + y >= 0)");
+  IntegerPolyhedron removed = redundant;
+  removed.removeRedundantConstraints();
+  IntegerPolyhedron gist = expectGist(redundant, universe(2), redundant);
+  EXPECT_EQ(gist.getNumConstraints(), removed.getNumConstraints());
+  EXPECT_EQ(gist.getNumConstraints(), 2u);
+}
+
+TEST(IntegerPolyhedronTest, gistRationallyEmptyContextYieldsEmpty) {
+  // Only an obviously empty context yields the universe. A context that is
+  // found to be empty later yields the empty set, since the intersection with
+  // the context is empty.
+  expectGist(parseIntegerPolyhedron("(x) : (x >= 0)"),
+             parseIntegerPolyhedron("(x) : (x - 1 >= 0, -x >= 0)"), empty(1));
+}
+
+TEST(IntegerPolyhedronTest, gistContextEmptyAfterGcdTighteningYieldsEmpty) {
+  // The context is rationally non-empty (x = 1/2) but has no integer points,
+  // which GCD tightening of the context reveals.
+  expectGist(parseIntegerPolyhedron("(x) : (x >= 0)"),
+             parseIntegerPolyhedron("(x) : (2*x - 1 >= 0, -2*x + 1 >= 0)"),
+             empty(1));
+}
+
+TEST(IntegerPolyhedronTest, gistContextWithInconsistentEqualitiesYieldsEmpty) {
+  expectGist(parseIntegerPolyhedron("(x) : (x >= 0)"),
+             parseIntegerPolyhedron("(x) : (x == 0, x - 1 == 0)"), empty(1));
+}
+
+TEST(IntegerPolyhedronTest, gistSymbolicContextBound) {
+  expectGist("(x)[N] : (x >= 0, N - x >= 0)", "(x)[N] : (N - 10 >= 0, x >= 0)",
+             "(x)[N] : (N - x >= 0)", 1);
+}
+
+TEST(IntegerPolyhedronTest, gistSymbolOnlyContextKeepsSet) {
+  expectGist("(x)[N] : (x >= 0, -x + N >= 0)", "(x)[N] : (N >= 0)",
+             "(x)[N] : (x >= 0, -x + N >= 0)", 2);
+}
+
+TEST(IntegerPolyhedronTest, gistContextEqualityOnSymbolIsSubstituted) {
+  // The context equality N = 5 is substituted into the constraints.
+  IntegerPolyhedron gist = expectGist("(x)[N] : (x - N >= 0, -x + N + 5 >= 0)",
+                                      "(x)[N] : (N - 5 == 0)",
+                                      "(x)[N] : (x - 5 >= 0, -x + 10 >= 0)", 2);
+  EXPECT_TRUE(isColumnZero(gist, 1));
+}
+
+TEST(IntegerPolyhedronTest, gistDropsSharedDivisionDefinition) {
+  // From the ISL test suite. The context defines the same division as the
+  // set; the set's constraint on it becomes redundant and the local is
+  // dropped.
+  IntegerPolyhedron gist = expectGist(
+      "(x)[n] : (x - n == 0, x - 32*(x floordiv 32) == 0)",
+      "(x)[n] : (x - 32*(x floordiv 32) == 0)", "(x)[n] : (x - n == 0)", 1);
+  EXPECT_EQ(gist.getNumLocalVars(), 0u);
+}
+
+TEST(IntegerPolyhedronTest, gistDropsContextOnlyLocals) {
+  // From the ISL test suite. The local of the context is not introduced into
+  // the set.
+  IntegerPolyhedron gist =
+      expectGist("(a, b, c) : (a - 1 >= 0, -a + 15 >= 0)",
+                 "(a, b, c) : (a - 1 >= 0, -c + 30 >= 0, "
+                 "32*((a - 1) floordiv 16) - 2*a - 2*b + c + 62 >= 0, "
+                 "b >= 0)",
+                 "(a, b, c) : (-a + 15 >= 0)", 1);
+  EXPECT_EQ(gist.getNumLocalVars(), 0u);
+}
+
+TEST(IntegerPolyhedronTest, gistKeepsUnrelatedLocalAndZeroColumn) {
+  // From the ISL test suite. No constraints on i6 are introduced in the gist,
+  // even though the context equality involves i6.
+  StringRef set = "(i4, i6)[t1] : (-5*((1530 - 4*t1 - 5*i4) floordiv 20) - t1 "
+                  "+ 381 >= 0, -i4 + 1 >= 0)";
+  IntegerPolyhedron gist =
+      expectGist(set,
+                 "(i4, i6)[t1] : (i6 - t1 - 5*((i6 - t1) floordiv 5) == 0, "
+                 "-i6 + 6 >= 0, i6 - 3 >= 0)",
+                 set);
+  EXPECT_TRUE(isColumnZero(gist, 1));
+  EXPECT_EQ(gist.getNumLocalVars(), 1u);
+}
+
+TEST(IntegerPolyhedronTest, gistDropsOnlySharedDivision) {
+  // Only the division shared with the context is dropped.
+  IntegerPolyhedron gist =
+      expectGist("(n, i, j, k) : (i - 3*(i floordiv 3) - 2 == 0, "
+                 "j - 4*(j floordiv 4) - 2 == 0)",
+                 "(n, i, j, k) : (j - 4*(j floordiv 4) - 2 == 0)",
+                 "(n, i, j, k) : (i - 3*(i floordiv 3) - 2 == 0)");
+  EXPECT_EQ(gist.getNumLocalVars(), 1u);
+}
+
+TEST(IntegerPolyhedronTest, gistStrideAndSymbolEqualityYieldEmpty) {
+  // From the ISL test suite. The intersection with the context is empty:
+  // x = 2 mod 3 and x = 3M.
+  expectGist(parseIntegerPolyhedron("(x)[M] : (x - 3*(x floordiv 3) - 2 == 0)"),
+             parseIntegerPolyhedron("(x)[M] : (x - 3*M == 0)"), empty(1, 1));
+}
+
+TEST(IntegerPolyhedronTest, gistRestoresDivisionDefinitionOfUsedLocal) {
+  // The division constraints of a local shared with the context are kept if
+  // the local is still used, so that the result is meaningful on its own.
+  IntegerPolyhedron gist = expectGist("(x) : ((x floordiv 2) - 3 >= 0)",
+                                      "(x) : (x - 2*(x floordiv 2) >= 0)",
+                                      "(x) : ((x floordiv 2) - 3 >= 0)", 3);
+  EXPECT_EQ(gist.getNumLocalVars(), 1u);
+}
+
+TEST(IntegerPolyhedronTest, gistRestoresNestedDivisionDefinitions) {
+  // Nested divisions: restoring the definition of the outer division makes
+  // the inner division used again, so its definition is restored too.
+  IntegerPolyhedron gist =
+      expectGist("(x) : (((x floordiv 2) floordiv 2) - 1 >= 0)",
+                 "(x) : (x - 4*((x floordiv 2) floordiv 2) >= 0)",
+                 "(x) : (((x floordiv 2) floordiv 2) - 1 >= 0)", 5);
+  EXPECT_EQ(gist.getNumLocalVars(), 2u);
+}
+
+TEST(IntegerPolyhedronTest, gistEmptyContextYieldsUniverseWithoutLocals) {
+  // An obviously empty context yields the universe without locals.
+  IntegerPolyhedron gist =
+      expectGist(parseIntegerPolyhedron("(x) : ((x floordiv 2) - 3 >= 0)"),
+                 empty(1), universe(1), 0);
+  EXPECT_EQ(gist.getNumLocalVars(), 0u);
+}
+
+// The following cases, from the ISL test suite, have a division in the set
+// that is different from the one in the context. Only the invariants are
+// checked.
+// TODO: ISL additionally simplifies stride (equality) constraints using the
+// equalities of the context (gist_strides), which would give `a - c == 0`,
+// `(a - c == 0, a - 3*(a floordiv 3) == 0)` and `x - 2*(x floordiv 2) == 0`
+// respectively.
+TEST(IntegerPolyhedronTest, gistStrideWithEqualityInvariantsOnly) {
+  expectGist("(a, b, c) : (a - 2*(a floordiv 2) == 0, a - c == 0)",
+             "(a, b, c) : (b - 2*(b floordiv 2) == 0, b - c == 0)");
+}
+
+TEST(IntegerPolyhedronTest, gistPartialStrideWithEqualityInvariantsOnly) {
+  expectGist("(a, b, c) : (a - 6*(a floordiv 6) == 0, a - c == 0)",
+             "(a, b, c) : (b - 2*(b floordiv 2) == 0, b - c == 0)");
+}
+
+TEST(IntegerPolyhedronTest, gistStrideDividingContextStrideInvariantsOnly) {
+  expectGist("(x) : (x - 6*(x floordiv 6) == 0)",
+             "(x) : (x - 3*(x floordiv 3) == 0)");
+}
+
+/// Check that `gist` has the same intersection with `context` as `set`, by
+/// checking which integer points in [-2, 12] are contained in each.
+static void expectSameIntersection1D(const IntegerPolyhedron &set,
+                                     const IntegerPolyhedron &context,
+                                     const IntegerPolyhedron &gist) {
+  IntegerPolyhedron setAndContext = set.intersect(context);
+  IntegerPolyhedron gistAndContext = gist.intersect(context);
+  for (int64_t i = -2; i <= 12; ++i)
+    EXPECT_EQ(containsPointNoLocal(setAndContext, {i}),
+              containsPointNoLocal(gistAndContext, {i}))
+        << "at point " << i;
+}
+
+/// Returns the set `(i) : exists e0, e1 : 3*e1 - 2*e0 - 1 >= 0,
+/// -8*e1 + 5*i - 5*e0 - 1 >= 0, 2*e1 - 2*i + 5*e0 - 1 >= 0` (from the ISL
+/// test suite), optionally with the bounds 0 <= i <= 10, where the locals e0
+/// and e1 have no division representation.
+static IntegerPolyhedron getNonDivLocalsSet(bool bounded) {
+  IntegerPolyhedron set = parseIntegerPolyhedron(
+      bounded ? "(i, e0, e1) : (3*e1 - 2*e0 - 1 >= 0, -8*e1 + 5*i - 5*e0 - 1 "
+                ">= 0, 2*e1 - 2*i + 5*e0 - 1 >= 0, i >= 0, -i + 10 >= 0)"
+              : "(i, e0, e1) : (3*e1 - 2*e0 - 1 >= 0, -8*e1 + 5*i - 5*e0 - 1 "
+                ">= 0, 2*e1 - 2*i + 5*e0 - 1 >= 0)");
+  set.convertToLocal(VarKind::SetDim, 1, 3);
+  EXPECT_FALSE(set.hasOnlyDivLocals());
+  return set;
+}
+
+/// Returns the context `(i) : exists a, b : 2*b - 2*i + 5*a - 1 >= 0,
+/// 5*i - 5*a - 8*b - 1 >= 0, 3*b - 2*a - 1 >= 0` (from the ISL test suite),
+/// whose locals have no division representation and which implies i >= 1
+/// (even rationally).
+static IntegerPolyhedron getNonDivLocalsContext() {
+  IntegerPolyhedron context = parseIntegerPolyhedron(
+      "(i, a, b) : (2*b - 2*i + 5*a - 1 >= 0, 5*i - 5*a - 8*b - 1 >= 0, "
+      "3*b - 2*a - 1 >= 0)");
+  context.convertToLocal(VarKind::SetDim, 1, 3);
+  return context;
+}
+
+TEST(IntegerPolyhedronTest, gistNonDivLocalsKept) {
+  // From the ISL test suite. Locals without a division representation.
+  IntegerPolyhedron set = getNonDivLocalsSet(/*bounded=*/false);
+  IntegerPolyhedron context = parseIntegerPolyhedron("(i) : (i >= 0)");
+  IntegerPolyhedron gist = set;
+  gist.gist(context);
+  EXPECT_EQ(gist.getNumConstraints(), 3u);
+  EXPECT_EQ(gist.getNumLocalVars(), 2u);
+  expectSameIntersection1D(set, context, gist);
+}
+
+TEST(IntegerPolyhedronTest, gistNonDivLocalsBoundsDropped) {
+  // From the ISL test suite. The bounds on i are implied by the context.
+  IntegerPolyhedron set = getNonDivLocalsSet(/*bounded=*/true);
+  IntegerPolyhedron context =
+      parseIntegerPolyhedron("(i) : (i >= 0, -i + 10 >= 0)");
+  IntegerPolyhedron gist = set;
+  gist.gist(context);
+  EXPECT_EQ(gist.getNumConstraints(), 3u);
+  expectSameIntersection1D(set, context, gist);
+}
+
+TEST(IntegerPolyhedronTest, gistNonDivLocalContextKeepsStrongerBound) {
+  // From the ISL test suite. i >= 100 is not implied by the context.
+  expectGist(parseIntegerPolyhedron("(i) : (i - 100 >= 0)"),
+             getNonDivLocalsContext(),
+             parseIntegerPolyhedron("(i) : (i - 100 >= 0)"), 1);
+}
+
+TEST(IntegerPolyhedronTest, gistNonDivLocalContextImpliesBound) {
+  // From the ISL test suite. i >= 0 is implied by the context.
+  expectGist(parseIntegerPolyhedron("(i) : (i >= 0)"), getNonDivLocalsContext(),
+             universe(1), 0);
+}
+
+TEST(IntegerPolyhedronTest, gistIntegerOnlyRedundancyWithStrideDropped) {
+  // x >= 2 is not implied by x >= 1 rationally, but it is implied for even x.
+  expectGist(
+      parseIntegerPolyhedron("(x) : (x - 2 >= 0)"),
+      parseIntegerPolyhedron("(x) : (x - 2*(x floordiv 2) == 0, x - 1 >= 0)"),
+      universe(1), 0);
+}
+
+TEST(IntegerPolyhedronTest, gistIntegerOnlyRedundancyDropped) {
+  // The rational point (1.2, 1.2) lies in the context but violates
+  // x + y <= 2, while all integer points of the context satisfy it.
+  expectGist(parseIntegerPolyhedron("(x, y) : (2 - x - y >= 0)"),
+             parseIntegerPolyhedron("(x, y) : (x >= 0, y >= 0, "
+                                    "6 - 2*x - 3*y >= 0, 6 - 3*x - 2*y >= 0)"),
+             universe(2), 0);
+}
+
+TEST(IntegerPolyhedronTest, gistIntegerExactBoxEnumeration) {
+  // A larger system: check the intersection with the context by enumerating
+  // all points of the box [0, 10]^3 that contains the set.
+  IntegerPolyhedron set = parseIntegerPolyhedron(
+      "(x, y, z) : (x >= 0, -x + 10 >= 0, y >= 0, -y + 10 >= 0, "
+      "z >= 0, -z + 10 >= 0, x + y - z >= 0, x - y + z + 5 >= 0, "
+      "-x + y + z + 3 >= 0, x + y + z - 4 >= 0)");
+  IntegerPolyhedron context =
+      parseIntegerPolyhedron("(x, y, z) : (x - 1 >= 0, y - 2 >= 0, z - 1 >= 0, "
+                             "-x - y - z + 25 >= 0, 2*x - 3*y + 7 >= 0)");
+  IntegerPolyhedron gist = expectGist(set, context);
+  IntegerPolyhedron setAndContext = set.intersect(context);
+  IntegerPolyhedron gistAndContext = gist.intersect(context);
+  for (int64_t x = 0; x <= 10; ++x)
+    for (int64_t y = 0; y <= 10; ++y)
+      for (int64_t z = 0; z <= 10; ++z)
+        EXPECT_EQ(containsPointNoLocal(setAndContext, {x, y, z}),
+                  containsPointNoLocal(gistAndContext, {x, y, z}))
+            << "at point (" << x << ", " << y << ", " << z << ")";
+}
+
+TEST(IntegerPolyhedronTest, gistStrideInCoarserStrideInvariantsOnly) {
+  // Stride constraints from the ISL test suite. Only the invariants are
+  // checked.
+  // TODO: ISL's gist_strides would give `x - 128*(x floordiv 128) == 0`.
+  expectGist("(x) : (x - 3200*(x floordiv 3200) == 0)",
+             "(x) : (x - 10000*(x floordiv 10000) == 0)");
+}
+
+TEST(IntegerPolyhedronTest, gistStrideInFinerStrideUnchanged) {
+  // From the ISL test suite; the set is unchanged in ISL too.
+  expectGist("(x) : (x - 3200*(x floordiv 3200) == 0)",
+             "(x) : (x - 10*(x floordiv 10) == 0)",
+             "(x) : (x - 3200*(x floordiv 3200) == 0)");
+}

@@ -671,6 +671,47 @@ public:
   /// removing redundant constraints.
   void simplify();
 
+  /// Simplify `this` in the context of `context`: replace `this` by a relation
+  /// that has the same intersection with `context` as `this`, but that is as
+  /// simple as possible. Outside of `context`, the result may differ from
+  /// `this`, so the result is only meaningful together with `context`.
+  ///
+  /// Constraints of `this` that are implied by `context` together with the
+  /// remaining constraints of `this` are removed, and the remaining constraints
+  /// may be rewritten using the equalities of `context`. The result has at
+  /// most as many constraints as `this`, except that the constraints defining
+  /// a division (local variable) that is still used in the result are restored
+  /// if they were removed, so that the local keeps its meaning. The result
+  /// never has more local variables than `this`, and it does not involve any
+  /// variable that `this` does not involve; in particular, local variables of
+  /// `context` are never introduced into `this`.
+  ///
+  /// If `context` is obviously empty (see `isObviouslyEmpty`), `this` becomes
+  /// the universe. Otherwise, if the intersection of `this` and `context` is
+  /// found to be empty (including when `context` itself turns out to be
+  /// empty), `this` becomes empty. Redundancy of inequalities is
+  /// integer-exact: an inequality is removed if no integer point of the
+  /// context and the remaining constraints violates it. Equalities are removed
+  /// using rational reasoning (Simplex), GCD tightening and Gaussian
+  /// elimination, so some equalities that are only redundant over the integers
+  /// may be kept.
+  ///
+  /// The spaces of `this` and `context` must be compatible; their local
+  /// variables are aligned internally and may differ.
+  ///
+  /// This is a port of ISL's `isl_basic_map_gist`, with the following
+  /// deviations, due to the current lack of support in FPL for ISL
+  /// functionality.
+  ///
+  /// - no stride simplification (missing `isl_set_get_stride_info`);
+  /// - implicit equalities of the context are not detected (missing affine hull
+  ///   computation).
+  /// - no variable compression (missing isl_mat_variable_compression); the
+  ///   equalities are handled by Simplex and `reduceUsingEqualities` instead;
+  /// - the constraints are only partitioned into those involving locals and
+  ///   those that do not, rather than fully sorted;
+  void gist(const IntegerRelation &context);
+
   /// Converts variables of kind srcKind in the range [varStart, varLimit) to
   /// variables of kind dstKind. If `pos` is given, the variables are placed at
   /// position `pos` of dstKind, otherwise they are placed after all the other
@@ -956,6 +997,13 @@ protected:
   /// be inconsistent, `this` becomes empty.
   void reduceUsingEqualities(const IntegerRelation &eqs);
 
+  /// Implementation detail of `gist`. Precondition: `ctx` has the same space
+  /// as `this` with the local variables aligned (see `mergeLocalVars`), both
+  /// have GCD-tightened and normalized constraints, and the trivial cases have
+  /// already been handled. The result may contain unused local variables,
+  /// which `gist` removes.
+  void gistAligned(const IntegerRelation &ctx);
+
   /// Returns false if the fields corresponding to various variable counts, or
   /// equality/inequality buffer sizes aren't consistent; true otherwise. This
   /// is meant to be used within an assert internally.
@@ -1107,7 +1155,6 @@ public:
   /// return `this \ set`.
   PresburgerSet subtract(const PresburgerSet &other) const;
 };
-
 } // namespace presburger
 } // namespace mlir
 
