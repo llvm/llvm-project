@@ -759,8 +759,30 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
                                        BF.createBasicBlock());
       BinaryBasicBlock *TrampolineBB = FunctionTrampolines.back().second.get();
       const uint64_t OldBBEnd = BB ? BB->getOutputEndAddress() : 0;
+
+      // Trampolines anchored to the same block are inserted after it in
+      // creation order. Place the new trampoline after the existing ones, which
+      // only move by the size delta of BB.
+      uint64_t OldTrampolinesEnd = OldBBEnd;
+      // Pre-population creates the first trampoline for each block with no net
+      // size growth, so there are no existing trampolines to scan in that case.
+      if (BB && Offset + TrampolineSize != 0) {
+        for (auto &[AnchorBB, Trampoline] : FunctionTrampolines) {
+          if (AnchorBB != BB || Trampoline.get() == TrampolineBB)
+            continue;
+          OldTrampolinesEnd =
+              std::max(OldTrampolinesEnd, Trampoline->getOutputEndAddress());
+          Trampoline->setOutputStartAddress(
+              Trampoline->getOutputStartAddress() + Offset);
+          Trampoline->setOutputEndAddress(Trampoline->getOutputEndAddress() +
+                                          Offset);
+        }
+      }
+
       if (BB && Offset)
         BB->setOutputEndAddress(OldBBEnd + Offset);
+      const uint64_t TrampolineAddress =
+          BB ? OldTrampolinesEnd + Offset : FragmentSize;
       Offset += TrampolineSize;
 
       MCInst Inst;
@@ -775,8 +797,6 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       if (TargetBB)
         TrampolineBB->addSuccessor(TargetBB, Count);
       TrampolineBB->setExecutionCount(Count);
-      const uint64_t TrampolineAddress =
-          BB ? BB->getOutputEndAddress() : FragmentSize;
       TrampolineBB->setOutputStartAddress(TrampolineAddress);
       TrampolineBB->setOutputEndAddress(TrampolineAddress + TrampolineSize);
       TrampolineBB->setFragmentNum(FF.getFragmentNum());
@@ -804,9 +824,9 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       if (!BB)
         return TrampolineBB;
 
-      // Update offsets for blocks after BB.
+      // Update offsets for blocks after BB and its trampolines.
       for (BinaryBasicBlock *IBB : FF)
-        adjustBasicBlockAddress(IBB, OldBBEnd, Offset);
+        adjustBasicBlockAddress(IBB, OldTrampolinesEnd, Offset);
 
       // Update offsets for trampolines in this fragment that are placed after
       // the new trampoline. Note that trampoline blocks are not part of the
@@ -816,9 +836,10 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
         BinaryBasicBlock *IBB = Pair.second.get();
         if (IBB->getFragmentNum() != TrampolineBB->getFragmentNum())
           continue;
-        if (IBB == TrampolineBB)
+        // BB's trampolines, including the new one, are already placed.
+        if (Pair.first == BB)
           continue;
-        adjustBasicBlockAddress(IBB, OldBBEnd, Offset);
+        adjustBasicBlockAddress(IBB, OldTrampolinesEnd, Offset);
       }
 
       return TrampolineBB;
