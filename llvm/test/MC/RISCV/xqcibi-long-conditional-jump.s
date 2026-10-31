@@ -12,7 +12,8 @@ test:
 
 # CHECK-INST:         qc.beqi     a0, 0xa, 0x8
 # CHECK-INST-NEXT:    jal     zero, 0x1458
-# CHECK-INST-RELAX:         qc.beqi     a0, 0xa, 0x8
+# CHECK-INST-RELAX:         qc.beqi     a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.bnei a0, 10, .L1
 .fill 1300, 4, 0
@@ -21,7 +22,8 @@ test:
 
 # CHECK-INST:         qc.bnei     a0, 0x6, 0x1462
 # CHECK-INST-NEXT:    jal     zero, 0x28b2
-# CHECK-INST-RELAX:         qc.bnei     a0, 0x6, 0x1462
+# CHECK-INST-RELAX:         qc.bnei     a0, 0x6, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.beqi a0, 6, .L2
 .fill 1300, 4, 0
@@ -30,7 +32,8 @@ test:
 
 # CHECK-INST:         qc.bgei     a0, 0xd, 0x28bc
 # CHECK-INST-NEXT:    jal     zero, 0x3d0c
-# CHECK-INST-RELAX:         qc.bgei     a0, 0xd, 0x28bc
+# CHECK-INST-RELAX:         qc.bgei     a0, 0xd, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.blti a0, 13, .L3
 .fill 1300, 4, 0
@@ -39,7 +42,8 @@ test:
 
 # CHECK-INST:         qc.blti     a0, 0x1, 0x3d16
 # CHECK-INST-NEXT:    jal     zero, 0x5166
-# CHECK-INST-RELAX:         qc.blti     a0, 0x1, 0x3d16
+# CHECK-INST-RELAX:         qc.blti     a0, 0x1, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.bgei a0, 1, .L4
 .fill 1300, 4, 0
@@ -48,7 +52,8 @@ test:
 
 # CHECK-INST:         qc.bgeui    a0, 0x5, 0x5170
 # CHECK-INST-NEXT:    jal     zero, 0x65c0
-# CHECK-INST-RELAX:         qc.bgeui    a0, 0x5, 0x5170
+# CHECK-INST-RELAX:         qc.bgeui    a0, 0x5, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.bltui a0, 5, .L5
 .fill 1300, 4, 0
@@ -57,7 +62,8 @@ test:
 
 # CHECK-INST:         qc.bltui    a0, 0xc, 0x65ca
 # CHECK-INST-NEXT:    jal     zero, 0x7a1a
-# CHECK-INST-RELAX:         qc.bltui    a0, 0xc, 0x65ca
+# CHECK-INST-RELAX:         qc.bltui    a0, 0xc, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.bgeui a0, 12, .L6
 .fill 1300, 4, 0
@@ -122,7 +128,8 @@ test:
 
 # CHECK-INST:         qc.beqi    a0, 0xa, 0xf44c
 # CHECK-INST-NEXT:    jal     zero, 0x1089c
-# CHECK-INST-RELAX:         qc.beqi    a0, 0xa, 0xf44c
+# CHECK-INST-RELAX:         qc.beqi    a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.e.bnei a0, 10, .L13
 .fill 1300, 4, 0
@@ -131,7 +138,8 @@ test:
 
 # CHECK-INST:         qc.bnei    a0, 0xa, 0x108a6
 # CHECK-INST-NEXT:    jal     zero, 0x11cf6
-# CHECK-INST-RELAX:         qc.bnei    a0, 0xa, 0x108a6
+# CHECK-INST-RELAX:         qc.bnei    a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.e.beqi a0, 10, .L14
 .fill 1300, 4, 0
@@ -140,7 +148,8 @@ test:
 
 # CHECK-INST:         qc.bgei    a0, 0xa, 0x11d00
 # CHECK-INST-NEXT:    jal     zero, 0x13150
-# CHECK-INST-RELAX:         qc.bgei    a0, 0xa, 0x11d00
+# CHECK-INST-RELAX:         qc.bgei    a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.e.blti a0, 10, .L15
 .fill 1300, 4, 0
@@ -149,7 +158,8 @@ test:
 
 # CHECK-INST:         qc.blti    a0, 0xa, 0x1315a
 # CHECK-INST-NEXT:    jal     zero, 0x145aa
-# CHECK-INST-RELAX:         qc.blti    a0, 0xa, 0x1315a
+# CHECK-INST-RELAX:         qc.blti    a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.e.bgei a0, 10, .L16
 .fill 1300, 4, 0
@@ -158,7 +168,8 @@ test:
 
 # CHECK-INST:         qc.bgeui    a0, 0xa, 0x145b4
 # CHECK-INST-NEXT:    jal     zero, 0x15a04
-# CHECK-INST-RELAX:         qc.bgeui    a0, 0xa, 0x145b4
+# CHECK-INST-RELAX:         qc.bgeui    a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.e.bltui a0, 10, .L17
 .fill 1300, 4, 0
@@ -167,7 +178,8 @@ test:
 
 # CHECK-INST:         qc.bltui    a0, 0xa, 0x15a0e
 # CHECK-INST-NEXT:    jal     zero, 0x16e5e
-# CHECK-INST-RELAX:         qc.bltui    a0, 0xa, 0x15a0e
+# CHECK-INST-RELAX:         qc.bltui    a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
    qc.e.bgeui a0, 10, .L18
 .fill 1300, 4, 0

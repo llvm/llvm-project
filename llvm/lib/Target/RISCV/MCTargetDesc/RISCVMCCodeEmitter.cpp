@@ -74,7 +74,8 @@ public:
 
   void expandQCLongCondBrImm(const MCInst &MI, SmallVectorImpl<char> &CB,
                              SmallVectorImpl<MCFixup> &Fixups,
-                             const MCSubtargetInfo &STI, unsigned Size) const;
+                             const MCSubtargetInfo &STI,
+                             unsigned BranchSize) const;
 
   void expandPseudoQCAccess(const MCInst &MI, SmallVectorImpl<char> &CB,
                             SmallVectorImpl<MCFixup> &Fixups,
@@ -403,21 +404,25 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
     }
   }
 
-  uint32_t Offset;
+  unsigned Offset = UseCompressedBr ? 2 : 4;
+  size_t SkipFixupIndex = Fixups.size();
+  MCSymbol *Skip = Ctx.createNamedTempSymbol("branch_skip");
+  const MCExpr *SkipExpr =
+      MCSpecifierExpr::create(Skip, RISCV::S_BRANCH_SKIP, Ctx);
+
   if (UseCompressedBr) {
     unsigned InvOpc =
         Opcode == RISCV::PseudoLongBNE ? RISCV::C_BEQZ : RISCV::C_BNEZ;
-    MCInst TmpInst = MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(6);
+    MCInst TmpInst = MCInstBuilder(InvOpc).addReg(SrcReg1).addExpr(SkipExpr);
     uint16_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
     support::endian::write<uint16_t>(CB, Binary, llvm::endianness::little);
-    Offset = 2;
   } else {
     unsigned InvOpc = getInvertedBranchOp(Opcode);
     MCInst TmpInst =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addOperand(Src2).addImm(8);
+        MCInstBuilder(InvOpc).addReg(SrcReg1).addOperand(Src2).addExpr(
+            SkipExpr);
     uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
     support::endian::write(CB, Binary, llvm::endianness::little);
-    Offset = 4;
   }
 
   // Save the number fixups.
@@ -434,8 +439,11 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
 
   if (SrcSymbol.isExpr()) {
     addFixup(Fixups, Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal);
-    if (STI.hasFeature(RISCV::FeatureRelax))
+    if (STI.hasFeature(RISCV::FeatureRelax) &&
+        STI.getTargetTriple().isOSBinFormatELF()) {
+      Fixups[SkipFixupIndex].setLinkerRelaxable();
       Fixups.back().setLinkerRelaxable();
+    }
   }
 }
 
@@ -445,25 +453,27 @@ void RISCVMCCodeEmitter::expandQCLongCondBrImm(const MCInst &MI,
                                                SmallVectorImpl<char> &CB,
                                                SmallVectorImpl<MCFixup> &Fixups,
                                                const MCSubtargetInfo &STI,
-                                               unsigned Size) const {
+                                               unsigned BranchSize) const {
   MCRegister SrcReg1 = MI.getOperand(0).getReg();
   auto BrImm = MI.getOperand(1).getImm();
   MCOperand SrcSymbol = MI.getOperand(2);
   unsigned Opcode = MI.getOpcode();
   uint32_t Offset;
   unsigned InvOpc = getInvertedBranchOp(Opcode);
-  // Emit inverted conditional branch with offset:
-  // 8 (QC.BXXX(4) + JAL(4))
-  // or
-  // 10 (QC.E.BXXX(6) + JAL(4)).
-  if (Size == 4) {
+  size_t SkipFixupIndex = Fixups.size();
+  MCSymbol *Skip = Ctx.createNamedTempSymbol("branch_skip");
+  const MCExpr *SkipExpr =
+      MCSpecifierExpr::create(Skip, RISCV::S_BRANCH_SKIP, Ctx);
+
+  // Emit an inverted conditional branch targeting the symbol after the JAL.
+  if (BranchSize == 4) {
     MCInst TmpBr =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(BrImm).addImm(8);
+        MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(BrImm).addExpr(SkipExpr);
     uint32_t BrBinary = getBinaryCodeForInstr(TmpBr, Fixups, STI);
     support::endian::write(CB, BrBinary, llvm::endianness::little);
   } else {
     MCInst TmpBr =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(BrImm).addImm(10);
+        MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(BrImm).addExpr(SkipExpr);
     uint64_t BrBinary =
         getBinaryCodeForInstr(TmpBr, Fixups, STI) & 0xffff'ffff'ffffu;
     SmallVector<char, 8> Encoding;
@@ -473,7 +483,7 @@ void RISCVMCCodeEmitter::expandQCLongCondBrImm(const MCInst &MI,
     Encoding.truncate(6);
     CB.append(Encoding);
   }
-  Offset = Size;
+  Offset = BranchSize;
   // Save the number fixups.
   size_t FixupStartIndex = Fixups.size();
   // Emit an unconditional jump to the destination.
@@ -485,8 +495,13 @@ void RISCVMCCodeEmitter::expandQCLongCondBrImm(const MCInst &MI,
   Fixups.resize(FixupStartIndex);
   if (SrcSymbol.isExpr()) {
     addFixup(Fixups, Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal);
-    if (STI.hasFeature(RISCV::FeatureRelax))
+    // The JAL is always 4 bytes. Keep it fixed-size after a 6-byte QC.E branch,
+    // whose skip target would require an unsupported vendor relocation.
+    if (BranchSize == 4 && STI.hasFeature(RISCV::FeatureRelax) &&
+        STI.getTargetTriple().isOSBinFormatELF()) {
+      Fixups[SkipFixupIndex].setLinkerRelaxable();
       Fixups.back().setLinkerRelaxable();
+    }
   }
 }
 
@@ -788,6 +803,11 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   assert(MO.isExpr() &&
          "getImmOpValue expects only expressions or immediates");
   const MCExpr *Expr = MO.getExpr();
+  const auto *SpecifierExpr = dyn_cast<MCSpecifierExpr>(Expr);
+  bool IsBranchSkip =
+      SpecifierExpr && SpecifierExpr->getSpecifier() == RISCV::S_BRANCH_SKIP;
+  if (IsBranchSkip)
+    Expr = SpecifierExpr->getSubExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
 
   // `RelaxCandidate` must be set to `true` in two cases:
@@ -923,11 +943,13 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
 
   assert(FixupKind != RISCV::fixup_riscv_invalid && "Unhandled expression!");
 
-  addFixup(Fixups, 0, Expr, FixupKind);
+  // Preserve the marker for the backend, while using the ordinary branch
+  // encoder to choose the fixup kind.
+  addFixup(Fixups, 0, MO.getExpr(), FixupKind);
   // If linker relaxation is enabled and supported by this relocation, set a bit
   // so that the assembler knows the size of the instruction is not fixed/known,
   // and the relocation will need a R_RISCV_RELAX relocation.
-  if (EnableRelax && RelaxCandidate)
+  if (EnableRelax && RelaxCandidate && !IsBranchSkip)
     Fixups.back().setLinkerRelaxable();
   ++MCNumFixups;
 

@@ -8,6 +8,7 @@
 
 #include "RISCVAsmBackend.h"
 #include "RISCVFixupKinds.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -24,6 +25,11 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+static bool isBranchSkipFixup(const MCFixup &Fixup) {
+  const auto *Expr = dyn_cast<MCSpecifierExpr>(Fixup.getValue());
+  return Expr && Expr->getSpecifier() == RISCV::S_BRANCH_SKIP;
+}
 
 RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  bool Is64Bit, bool IsLittleEndian,
@@ -726,10 +732,26 @@ const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
   return nullptr;
 }
 
-std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
+std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &F,
                                                    MCFixup &Fixup,
                                                    MCValue &Target,
                                                    uint64_t &Value) {
+  if (Target.getSpecifier() == RISCV::S_BRANCH_SKIP) {
+    // The fragment and fixup offset are only available after encoding. Bind
+    // the generated symbol here, resolving the displacement unless the JAL
+    // can be relaxed by the linker.
+    auto *Skip = const_cast<MCSymbol *>(Target.getAddSym());
+    assert(Skip && !Target.getSubSym() && !Target.getConstant());
+    Target.setSpecifier(RISCV::S_None);
+    unsigned SkipSize = getFixupKindInfo(Fixup.getKind()).TargetSize / 8 + 4;
+    assert(Fixup.getOffset() + SkipSize <= F.getSize() &&
+           "Branch skip label is outside its fragment");
+    Skip->setFragment(const_cast<MCFragment *>(&F));
+    Skip->setOffset(Fixup.getOffset() + SkipSize);
+    Asm->registerSymbol(*Skip);
+    Value = Fixup.isLinkerRelaxable() ? 0 : SkipSize;
+    return !Fixup.isLinkerRelaxable();
+  }
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
@@ -847,6 +869,11 @@ static bool relaxableFixupNeedsRelocation(const MCFixupKind Kind) {
 bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target, uint64_t &FixedValue,
                                bool IsResolved) {
+  // A resolved skip fixup spans only the fixed-size branch and JAL. Other
+  // linker-relaxable instructions in the fragment do not affect its value.
+  if (IsResolved && isBranchSkipFixup(Fixup))
+    return true;
+
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
     assert(Target.getSpecifier() == 0 &&
@@ -991,6 +1018,8 @@ public:
     const MCFixup *AUIPCFixup;
     const MCFragment *AUIPCDF;
     const MCFixupKind FKind = Fixup.getKind();
+    if (isBranchSkipFixup(Fixup))
+      return RISCVAsmBackend::evaluateFixup(F, Fixup, Target, Value);
     if ((FKind == RISCV::fixup_riscv_pcrel_lo12_i) ||
         (FKind == RISCV::fixup_riscv_pcrel_lo12_s)) {
       AUIPCFixup =

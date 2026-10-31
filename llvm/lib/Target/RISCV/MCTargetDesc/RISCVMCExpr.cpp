@@ -48,6 +48,8 @@ StringRef RISCV::getSpecifierName(Specifier S) {
   switch (S) {
   case RISCV::S_None:
     llvm_unreachable("not used as %specifier()");
+  case RISCV::S_BRANCH_SKIP:
+    return "branch_skip";
   case RISCV::S_LO:
     return "lo";
   case ELF::R_RISCV_HI20:

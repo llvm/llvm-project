@@ -48,6 +48,8 @@ enum {
   // Refer to them using Specifier constants.
   S_QC_ABS20,
   S_QC_ACCESS,
+  // Internal marker for a branch target bound after encoding its JAL.
+  S_BRANCH_SKIP,
 };
 
 Specifier parseSpecifierName(StringRef name);
