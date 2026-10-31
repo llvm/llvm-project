@@ -8,6 +8,7 @@
 
 #include "DXILRemoveUnusedResources.h"
 #include "DirectX.h"
+#include "MCTargetDesc/DirectXMCOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
@@ -24,13 +25,6 @@
 
 #define DEBUG_TYPE "dxil-remove-unused-resources"
 
-// Hidden option to disable the pass to make it easier to test
-// other passes related to DXIL resources using llc.
-static llvm::cl::opt<bool> DisableDXILRemoveUnusedResources(
-    "disable-dxil-remove-unused-resources",
-    llvm::cl::desc("Disable dxil-remove-unused-resources pass"),
-    llvm::cl::init(false), llvm::cl::Hidden);
-
 using namespace llvm;
 
 static bool isResourceHandleCreation(Intrinsic::ID ID) {
@@ -44,7 +38,10 @@ static bool isResourceHandleCreation(Intrinsic::ID ID) {
 // stores the initialized handle into a global variable that does not have
 // external linkage and that is not used anywhere else in the module.
 static bool removeUnusedResources(Function &F) {
-  if (DisableDXILRemoveUnusedResources)
+  if (!F.getContext()
+           .getLibraryOptions()
+           .get<DirectXMCOptions>()
+           .remove_unused_resources)
     return false;
 
   SmallVector<Instruction *> DeadInstr;

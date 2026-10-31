@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMDirectXDesc
   LINK_COMPONENTS
   DirectXInfo
   MC
+  Option
   Support
   TargetParser
 
