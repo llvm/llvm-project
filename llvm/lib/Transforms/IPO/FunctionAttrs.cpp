@@ -1712,7 +1712,8 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
               return false;
 
             if (MaybeAlign Align = Attrs.getRetAlignment())
-              if (RetVal->getPointerAlignment(DL) < *Align)
+              if (!RetVal->getType()->isPointerTy() ||
+                  RetVal->getPointerAlignment(DL) < *Align)
                 return false;
 
             Attribute Attr = Attrs.getRetAttr(Attribute::Range);

@@ -238,3 +238,19 @@ define nonnull align 16 ptr @nonnull_align_only_align(ptr noundef align 16 %p) {
 ;
   ret ptr %p
 }
+
+define align 16 <2 x ptr> @vec_align(<2 x ptr> noundef %p) {
+; CHECK-LABEL: define align 16 <2 x ptr> @vec_align(
+; CHECK-SAME: <2 x ptr> noundef returned [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <2 x ptr> [[P]]
+;
+  ret <2 x ptr> %p
+}
+
+define range(i32 0, 10) <2 x i32> @vec_range(<2 x i32> noundef %x) {
+; CHECK-LABEL: define range(i32 0, 10) <2 x i32> @vec_range(
+; CHECK-SAME: <2 x i32> noundef returned [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <2 x i32> [[X]]
+;
+  ret <2 x i32> %x
+}
