@@ -472,6 +472,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Errors for invalid element types during instantiation of an `ext_vector_type`
+  now include a source location, including in alias templates. (#GH229300)
+
 - Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope
   tentative definitions of structure types which contain a field marked with
   the `require_explicit_initialization` attribute. (#GH232483)

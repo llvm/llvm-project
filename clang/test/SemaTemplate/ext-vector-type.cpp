@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: not %clang_cc1 -std=c++11 -fsyntax-only -fno-caret-diagnostics %s 2>&1 | FileCheck %s
 template<typename T, unsigned Length> 
 struct make1 { 
   typedef T __attribute__((ext_vector_type(Length))) type; 
@@ -92,3 +93,30 @@ namespace Deduction {
   int array2[X0<float2>::value == 2? 1 : -1];
   int array3[X0<float4>::value == 3? 1 : -1];
 }
+
+// The primary error should retain a source location, independently of the
+// template instantiation notes.
+struct S {};
+
+template <class T> struct Parenthesized {
+  typedef T (Type)
+      // CHECK: :[[#@LINE-1]]:13: error: invalid vector element type 'S'
+      __attribute__((ext_vector_type(4))); // expected-error@-2 {{invalid vector element type 'S'}}
+};
+Parenthesized<S> parenthesized; // expected-note {{in instantiation of template class 'Parenthesized<S>' requested here}}
+
+template <class T>
+// CHECK: :[[#@LINE+1]]:1: error: invalid vector element type 'S'
+using Alias = T __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'S'}}
+Alias<S> alias; // expected-note {{in instantiation of template type alias 'Alias' requested here}}
+Alias<int> valid_alias;
+
+// The source location must also survive conversion from a dependent-sized
+// vector to a fixed-size vector whose element type is still dependent.
+template <int N> struct TwoStage {
+  template <class T>
+  // CHECK: :[[#@LINE+1]]:3: error: invalid vector element type 'S'
+  using Type = T __attribute__((ext_vector_type(N))); // expected-error {{invalid vector element type 'S'}}
+};
+TwoStage<4>::Type<S> two_stage; // expected-note {{in instantiation of template type alias 'Type' requested here}}
+TwoStage<4>::Type<int> valid_two_stage;
