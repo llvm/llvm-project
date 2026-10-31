@@ -2054,6 +2054,13 @@ public:
   /// by the target, this can lead to cleaner code generation.
   LLVM_ABI bool preferPredicatedReductionSelect() const;
 
+  /// Return true if the loop vectorizer should seed vector reduction
+  /// accumulators with the reduction's identity value and apply the start
+  /// value after the final reduction. This takes the start value off the
+  /// loop's dependency chain, at the cost of one scalar operation after the
+  /// loop.
+  LLVM_ABI bool preferReductionStartAfterLoop() const;
+
   /// Return true if the loop vectorizer should consider vectorizing an
   /// otherwise scalar epilogue loop if the loop already has been vectorized
   /// processing \p Iters scalar iterations per vector iteration.

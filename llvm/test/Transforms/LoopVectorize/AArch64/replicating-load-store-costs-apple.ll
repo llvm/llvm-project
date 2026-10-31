@@ -936,13 +936,12 @@ define i32 @test_or_reduction_with_stride_2(i32 %scale, ptr %src) {
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 48, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP68]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_PH]] ]
-; CHECK-NEXT:    [[TMP83:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[SCALE]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT5:%.*]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i32> [ [[TMP83]], %[[VEC_EPILOG_PH]] ], [ [[TMP80:%.*]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <2 x i32> [ zeroinitializer, %[[VEC_EPILOG_PH]] ], [ [[TMP80:%.*]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[TMP84:%.*]] = shl i64 [[INDEX3]], 1
 ; CHECK-NEXT:    [[TMP85:%.*]] = add i64 [[TMP84]], 2
 ; CHECK-NEXT:    [[TMP86:%.*]] = getelementptr [32 x i8], ptr [[SRC]], i64 [[TMP84]]
@@ -959,6 +958,7 @@ define i32 @test_or_reduction_with_stride_2(i32 %scale, ptr %src) {
 ; CHECK-NEXT:    br i1 [[TMP81]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[SCALAR_PH]], !llvm.loop [[LOOP25:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP82:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP80]])
+; CHECK-NEXT:    [[RDX_START:%.*]] = or i32 [[TMP82]], [[BC_MERGE_RDX]]
 ; CHECK-NEXT:    br i1 true, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ;

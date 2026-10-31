@@ -1193,6 +1193,8 @@ public:
 
   virtual bool preferPredicatedReductionSelect() const { return false; }
 
+  virtual bool preferReductionStartAfterLoop() const { return false; }
+
   virtual bool preferEpilogueVectorization(ElementCount Iters) const {
     // We consider epilogue vectorization unprofitable for targets that
     // don't consider interleaving beneficial (eg. MVE).
