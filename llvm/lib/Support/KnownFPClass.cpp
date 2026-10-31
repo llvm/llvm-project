@@ -594,6 +594,12 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
 
   Known.propagateNonSNaN(KnownLHS, KnownRHS);
 
+  // NaN is generated from 0.0 * inf and inf * 0.0.
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+      (KnownRHS.isKnownNeverInfinity() || KnownLHS.isKnownNever(fcZero)) &&
+      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNever(fcZero)))
+    Known.knownNot(fcNan);
+
   // Infinity may be produced from two non-zero inputs.
   if ((KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf) ||
        KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf)) &&
@@ -629,12 +635,6 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
       (KnownLHS.isKnownNever(fcNegFinite) ||
        KnownRHS.isKnownNever(fcPosFinite)))
     Known.knownNot(fcNegZero);
-
-  // 0 * +/-inf => NaN
-  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-      (KnownRHS.isKnownNeverInfinity() || KnownLHS.isKnownNever(fcZero)) &&
-      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNever(fcZero)))
-    Known.knownNot(fcNan);
 
   return applyOutputDenormalMode(Known, Mode);
 }
@@ -682,12 +682,11 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS_,
 
   Known.propagateNonSNaN(KnownLHS, KnownRHS);
 
-  // Only 0/0, Inf/Inf produce NaN.
+  // NaN is generated from 0.0 / 0.0 and inf / inf.
   if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
       (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
-      (KnownLHS.isKnownNever(fcZero) || KnownRHS.isKnownNever(fcZero))) {
+      (KnownLHS.isKnownNever(fcZero) || KnownRHS.isKnownNever(fcZero)))
     Known.knownNot(fcNan);
-  }
 
   // Infinity may be produced from non-zero / finite.
   if ((KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf) ||
