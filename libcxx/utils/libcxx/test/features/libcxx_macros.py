@@ -37,6 +37,9 @@ macros = {
     "_LIBCPP_PSTL_BACKEND_STATPART": "libcpp-pstl-backend-statpart",
     "_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE": "libcpp-abi-use-small-deque-block-size",
     "_LIBCPP_ABI_COMPACT_LOCALE_ID": "libcpp-abi-compact-locale-id",
+    "_LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT": "libcpp-abi-no-random-device-compatibility-layout",
+    "_LIBCPP_USING_ARC4_RANDOM": "libcpp-using-arc4-random",
+    "_LIBCPP_USING_DEV_RANDOM": "libcpp-using-dev-random",
 }
 for macro, feature in macros.items():
     features.append(
