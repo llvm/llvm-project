@@ -73,3 +73,29 @@ Task test_await_ref() {
   Awaiter a;
   int &r = co_await a;
 }
+
+// CIR-LABEL: cir.func coroutine {{.*}} @_Z14test_await_valv
+// OGCG-LABEL: define dso_local void @_Z14test_await_valv
+Task test_await_val() {
+  // CIR: %[[V_ADDR:.*]] = cir.alloca "v" align(4) init : !cir.ptr<!s32i>
+  // CIR: cir.await(user, ready : {
+  // CIR:   %[[READY:.*]] = cir.call @_ZN7Awaiter11await_readyEv(%{{.*}}) : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.bool{{.*}})
+  // CIR:   cir.condition(%[[READY]])
+  // CIR: }, suspend : {
+  // CIR:   cir.call @_ZN7Awaiter13await_suspendESt16coroutine_handleIvE(%{{.*}})
+  // CIR:   cir.coro.suspend_point
+  // CIR: }, resume : {
+  // CIR:   %[[RES:.*]] = cir.call @_ZN7Awaiter12await_resumeEv(%{{.*}}) nothrow : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.ptr<!s32i>{{.*}})
+  // CIR:   %[[LOAD:.*]] = cir.load align(4) %[[RES]] : !cir.ptr<!s32i>, !s32i
+  // CIR:   cir.store %[[LOAD]], %[[TMP_ADDR:.*]] : !s32i, !cir.ptr<!s32i>
+  // CIR:   cir.yield
+  // CIR: },)
+  // CIR: %[[LOADED_VAL:.*]] = cir.load %[[TMP_ADDR]] : !cir.ptr<!s32i>, !s32i
+  // CIR: cir.store align(4) %[[LOADED_VAL]], %[[V_ADDR]] : !s32i, !cir.ptr<!s32i>
+
+  // OGCG: %[[RES_OGCG:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN7Awaiter12await_resumeEv(ptr {{.*}})
+  // OGCG: %[[VAL_OGCG:.*]] = load i32, ptr %[[RES_OGCG]], align 4
+  // OGCG: store i32 %[[VAL_OGCG]], ptr %{{.*}}, align 4
+  Awaiter a;
+  int v = co_await a;
+}
