@@ -38,6 +38,7 @@
 ///
 /// Hazards handled: forbidden slots for MIPSR6, FPU slots for MIPS3 and below,
 /// load delay slots for MIPS1.
+/// HI/LO writes after mfhi/mflo are handled for MIPS4 and below.
 ///
 /// A forbidden slot hazard occurs when a compact branch instruction is executed
 /// and the adjacent instruction in memory is a control transfer instruction
@@ -87,6 +88,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -723,46 +725,36 @@ static void emitGPDisp(MachineFunction &F, const MipsInstrInfo *TII) {
 
 template <typename Pred, typename Safe>
 bool MipsBranchExpansion::handleMFLOSlot(Pred Predicate, Safe SafeInSlot) {
+  // Instructions needed between a read and an unsafe instruction.
+  constexpr unsigned MinDistance = 2;
   bool Changed = false;
-  bool hasPendingMFLO = false;
+  const MachineInstr *LastRead = nullptr;
+  // Real instructions issued since LastRead, saturated at MinDistance.
+  unsigned Distance = 0;
 
-  for (MachineFunction::iterator FI = MFp->begin(); FI != MFp->end(); ++FI) {
-    for (Iter I = FI->begin(); I != FI->end(); ++I) {
-
-      if (!Predicate(*I) && !hasPendingMFLO) {
+  // Walk every instruction, delay slots included, in layout order.
+  // Distance carries across blocks.
+  // Only a fall-through can arrive below MinDistance.
+  for (MachineBasicBlock &MBB : *MFp) {
+    for (MachineInstr &MI : MBB.instrs()) {
+      if (MI.isBundle() || MI.isTransient())
         continue;
+
+      if (LastRead && Distance < MinDistance && !SafeInSlot(MI, *LastRead)) {
+        // Pad before the bundle so that a delay slot stays with its branch.
+        Iter Pos(getBundleStart(MI.getIterator()));
+        for (; Distance < MinDistance; ++Distance) {
+          TII->insertNop(MBB, Pos, MI.getDebugLoc());
+          ++NumInsertedNops;
+        }
+        Changed = true;
       }
 
-      Iter IInSlot;
-      bool LastInstInFunction =
-          std::next(I) == FI->end() && std::next(FI) == MFp->end();
-      // We need process several situations:
-      // mflo is last instruction, do not process;
-      // mflo + div, add two nop between them;
-      // mflo + none-div + none-div, do not process;
-      // mflo + none-div + div, add nop between none-div and div.
-      if (!LastInstInFunction) {
-        std::pair<Iter, bool> Res = getNextMachineInstr(std::next(I), &*FI);
-        LastInstInFunction |= Res.second;
-        IInSlot = Res.first;
-        if (LastInstInFunction)
-          continue;
-        if (!SafeInSlot(*IInSlot, *I)) {
-          Changed = true;
-          TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
-              ->bundleWithPred();
-          NumInsertedNops++;
-          if (IsMFLOMFHI(I->getOpcode())) {
-            TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())
-                ->bundleWithPred();
-            NumInsertedNops++;
-          }
-          if (hasPendingMFLO)
-            hasPendingMFLO = false;
-        } else if (hasPendingMFLO)
-          hasPendingMFLO = false;
-        else if (IsMFLOMFHI(I->getOpcode()))
-          hasPendingMFLO = true;
+      if (Predicate(MI)) {
+        LastRead = &MI;
+        Distance = 0;
+      } else if (Distance < MinDistance) {
+        ++Distance;
       }
     }
   }
@@ -807,13 +799,19 @@ bool MipsBranchExpansion::handleSlot(Pred Predicate, Safe SafeInSlot) {
 }
 
 bool MipsBranchExpansion::handleMFLO() {
-  // mips1-4 require a minimum of 2 instructions between a mflo/mfhi
-  // and the next mul/div instruction.
+  // mips1-4 need two instructions between a mflo/mfhi and a HI/LO write.
   if (STI->hasMips32() || STI->hasMips5())
     return false;
 
+  // insertNop does not support MIPS16 mode.
+  if (STI->inMips16Mode())
+    return false;
+
+  // Inline assembly is opaque: it counts as both a read and a write.
   return handleMFLOSlot(
-      [this](auto &I) -> bool { return TII->IsMfloOrMfhi(I); },
+      [this](auto &I) -> bool {
+        return I.isInlineAsm() || TII->IsMfloOrMfhi(I);
+      },
       [this](auto &IInSlot, auto &I) -> bool {
         return TII->SafeAfterMflo(IInSlot);
       });
