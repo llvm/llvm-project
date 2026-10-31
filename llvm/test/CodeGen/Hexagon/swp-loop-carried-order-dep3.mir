@@ -95,12 +95,12 @@ body:             |
     %5:intregs = PHI %0, %bb.1, %8, %bb.3
     %6:intregs = PHI %17, %bb.1, %7, %bb.3
     %18:intregs = A2_add %5, %6
-    S2_storeri_io %2, -4, killed %18 :: (store (s32) into %ir.cgep18, !tbaa !5)
+    S2_storeri_io %2, -4, %18 :: (store (s32) into %ir.cgep18, !tbaa !5)
     %7:intregs = nuw nsw A2_addi %6, 1
     %8:intregs = L2_loadri_io %2, 0 :: (load (s32) from %ir.lsr.iv15, !tbaa !5)
     %19:intregs = L2_loadri_io %4, 0 :: (load (s32) from %ir.lsr.iv, !tbaa !5)
-    %20:intregs = nsw A2_add killed %19, %8
-    %10:intregs = S2_storeri_pi %4, 4, killed %20 :: (store (s32) into %ir.lsr.iv, !tbaa !5)
+    %20:intregs = nsw A2_add %19, %8
+    %10:intregs = S2_storeri_pi %4, 4, %20 :: (store (s32) into %ir.lsr.iv, !tbaa !5)
     %11:intregs = A2_addi %2, 4
     ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
     J2_jump %bb.2, implicit-def $pc

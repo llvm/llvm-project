@@ -60,18 +60,18 @@ body:             |
     %1:intregs = COPY $r1
     %2:intregs = COPY $r0
     %3:predregs = C2_cmpeqi %2, 0
-    J2_jumpt killed %3, %bb.2, implicit-def dead $pc
+    J2_jumpt %3, %bb.2, implicit-def dead $pc
     J2_jump %bb.1, implicit-def dead $pc
 
   bb.1.loop.preheader:
     successors: %bb.3(0x80000000)
 
     %4:intregs = A2_tfrsi 1056964608
-    %5:hvxvr = V6_lvsplatw killed %4
+    %5:hvxvr = V6_lvsplatw %4
     %6:intregs = A2_tfrsi 1065353216
-    %7:hvxvr = V6_lvsplatw killed %6
+    %7:hvxvr = V6_lvsplatw %6
     %8:intregs = A2_tfrsi 1073741824
-    %9:hvxvr = V6_lvsplatw killed %8
+    %9:hvxvr = V6_lvsplatw %8
     %10:intregs = A2_addi %2, 31
     %11:intregs = S2_lsr_i_r %10, 5
     %12:intregs = COPY %11
@@ -90,10 +90,10 @@ body:             |
     %18:hvxvr = V6_vaddw %7, %17
     %19:hvxvr = V6_vaddw %5, %17
     %20:hvxvr = V6_vaddw %9, %17
-    %21:hvxvr = V6_vaddw %18, killed %19
-    %22:hvxvr = V6_vaddw %18, killed %20
-    %23:hvxvr = V6_vaddw killed %22, killed %21
-    %16:intregs = V6_vS32b_pi %15, 128, killed %23 :: (store (s1024) into %ir.lsr.iv)
+    %21:hvxvr = V6_vaddw %18, %19
+    %22:hvxvr = V6_vaddw %18, %20
+    %23:hvxvr = V6_vaddw %22, %21
+    %16:intregs = V6_vS32b_pi %15, 128, %23 :: (store (s1024) into %ir.lsr.iv)
     ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
     J2_jump %bb.2, implicit-def dead $pc
 

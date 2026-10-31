@@ -56,9 +56,9 @@ body:             |
     successors: %bb.2(0x04000000), %bb.1(0x7c000000)
 
     %1:intregs = L2_loadri_io %0, 0
-    %2:intregs = L2_loadrub_io killed %1, 0
+    %2:intregs = L2_loadrub_io %1, 0
     %3:intregs = PS_loadriabs 0
-    S2_storerb_io killed %3, 0, killed %2
+    S2_storerb_io %3, 0, %2
     ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
 
   bb.2:
