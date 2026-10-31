@@ -467,3 +467,201 @@ declare i32 @llvm.riscv.asub.i32(i32, i32)
 declare i32 @llvm.riscv.asubu.u32(i32, i32)
 declare <8 x i8> @llvm.riscv.pasub.v8i8(<8 x i8>, <8 x i8>)
 declare <8 x i8> @llvm.riscv.pasubu.v8i8(<8 x i8>, <8 x i8>)
+
+; The operands are known to be extended from a narrower type, so the subtract
+; can't overflow in the narrower type. The unsigned difference can be negative,
+; so the result is sign extended.
+
+define <4 x i16> @narrow_zero_bits_ashr(<4 x i16> %x, <4 x i16> %y) {
+; RV32-LABEL: narrow_zero_bits_ashr:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pncvt.b a2, a2
+; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pasubu.b a0, a0, a2
+; RV32-NEXT:    pwcvt.b a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: narrow_zero_bits_ashr:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasubu.b a0, a0, a1
+; RV64-NEXT:    pzext.h.b a0, a0
+; RV64-NEXT:    psext.h.b a0, a0
+; RV64-NEXT:    ret
+  %a = and <4 x i16> %x, splat (i16 255)
+  %b = and <4 x i16> %y, splat (i16 255)
+  %d = sub <4 x i16> %a, %b
+  %r = ashr <4 x i16> %d, splat (i16 1)
+  ret <4 x i16> %r
+}
+
+define <4 x i16> @narrow_sign_bits_ashr(<4 x i16> %x, <4 x i16> %y) {
+; RV32-LABEL: narrow_sign_bits_ashr:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pncvt.b a2, a2
+; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pasub.b a0, a0, a2
+; RV32-NEXT:    pwcvt.b a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: narrow_sign_bits_ashr:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasub.b a0, a0, a1
+; RV64-NEXT:    pzext.h.b a0, a0
+; RV64-NEXT:    psext.h.b a0, a0
+; RV64-NEXT:    ret
+  %a = shl <4 x i16> %x, splat (i16 8)
+  %b = shl <4 x i16> %y, splat (i16 8)
+  %a.sext = ashr <4 x i16> %a, splat (i16 8)
+  %b.sext = ashr <4 x i16> %b, splat (i16 8)
+  %d = sub <4 x i16> %a.sext, %b.sext
+  %r = ashr <4 x i16> %d, splat (i16 1)
+  ret <4 x i16> %r
+}
+
+; The sign bit of the lshr result isn't demanded by the truncate.
+
+define <4 x i8> @narrow_zero_bits_lshr_trunc(<4 x i16> %x, <4 x i16> %y) {
+; RV32-LABEL: narrow_zero_bits_lshr_trunc:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pncvt.b a2, a2
+; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pasubu.b a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: narrow_zero_bits_lshr_trunc:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasubu.b a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
+; RV64-NEXT:    ret
+  %a = and <4 x i16> %x, splat (i16 255)
+  %b = and <4 x i16> %y, splat (i16 255)
+  %d = sub <4 x i16> %a, %b
+  %s = lshr <4 x i16> %d, splat (i16 1)
+  %r = trunc <4 x i16> %s to <4 x i8>
+  ret <4 x i8> %r
+}
+
+; The sign bit of the lshr result is demanded, so we can't use the narrow node.
+
+define <4 x i16> @narrow_zero_bits_lshr_no_trunc(<4 x i16> %x, <4 x i16> %y) {
+; RV32-LABEL: narrow_zero_bits_lshr_no_trunc:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pzext.dh.b a0, a0
+; RV32-NEXT:    pzext.dh.b a2, a2
+; RV32-NEXT:    psub.dh a0, a0, a2
+; RV32-NEXT:    psrli.dh a0, a0, 1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: narrow_zero_bits_lshr_no_trunc:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pzext.h.b a0, a0
+; RV64-NEXT:    pzext.h.b a1, a1
+; RV64-NEXT:    psub.h a0, a0, a1
+; RV64-NEXT:    psrli.h a0, a0, 1
+; RV64-NEXT:    ret
+  %a = and <4 x i16> %x, splat (i16 255)
+  %b = and <4 x i16> %y, splat (i16 255)
+  %d = sub <4 x i16> %a, %b
+  %r = lshr <4 x i16> %d, splat (i16 1)
+  ret <4 x i16> %r
+}
+
+; Only 1 leading zero in the operands is enough for the unsigned node.
+
+define <4 x i16> @narrow_one_zero_bit_ashr(<4 x i16> %x, <4 x i16> %y) {
+; RV32-LABEL: narrow_one_zero_bit_ashr:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a4, 8
+; RV32-NEXT:    addi a4, a4, -1
+; RV32-NEXT:    pmv.hs a4, a4
+; RV32-NEXT:    and a1, a1, a4
+; RV32-NEXT:    and a3, a3, a4
+; RV32-NEXT:    and a0, a0, a4
+; RV32-NEXT:    and a2, a2, a4
+; RV32-NEXT:    pasubu.dh a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: narrow_one_zero_bit_ashr:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a2, 8
+; RV64-NEXT:    addi a2, a2, -1
+; RV64-NEXT:    pmv.hs a2, a2
+; RV64-NEXT:    and a0, a0, a2
+; RV64-NEXT:    and a1, a1, a2
+; RV64-NEXT:    pasubu.h a0, a0, a1
+; RV64-NEXT:    ret
+  %a = and <4 x i16> %x, splat (i16 32767)
+  %b = and <4 x i16> %y, splat (i16 32767)
+  %d = sub <4 x i16> %a, %b
+  %r = ashr <4 x i16> %d, splat (i16 1)
+  ret <4 x i16> %r
+}
+
+; Operands that aren't known to be extended can overflow.
+
+define <4 x i16> @no_narrow_ashr(<4 x i16> %x, <4 x i16> %y) {
+; RV32-LABEL: no_narrow_ashr:
+; RV32:       # %bb.0:
+; RV32-NEXT:    psub.dh a0, a0, a2
+; RV32-NEXT:    psrai.dh a0, a0, 1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: no_narrow_ashr:
+; RV64:       # %bb.0:
+; RV64-NEXT:    psub.h a0, a0, a1
+; RV64-NEXT:    psrai.h a0, a0, 1
+; RV64-NEXT:    ret
+  %d = sub <4 x i16> %x, %y
+  %r = ashr <4 x i16> %d, splat (i16 1)
+  ret <4 x i16> %r
+}
+
+; Don't form an AVGSUBFLOOR node with a scalar constant operand unless it's
+; legal. i16 isn't legal for the scalar nodes. The constant is on the left
+; because (sub x, C) is canonicalized to (add x, -C).
+
+define i16 @narrow_scalar_constant(i16 %x) {
+; RV32-LABEL: narrow_scalar_constant:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 100
+; RV32-NEXT:    zext.b a0, a0
+; RV32-NEXT:    asubu a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: narrow_scalar_constant:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 100
+; RV64-NEXT:    zext.b a0, a0
+; RV64-NEXT:    sub a0, a1, a0
+; RV64-NEXT:    srai a0, a0, 1
+; RV64-NEXT:    ret
+  %a = and i16 %x, 255
+  %d = sub i16 100, %a
+  %r = ashr i16 %d, 1
+  ret i16 %r
+}
+
+; i8 and i16 aren't legal types so we don't narrow to them. On RV32 the
+; AVGSUBFLOORU node is created for i32, which is legal. It isn't legal on RV64.
+
+define i16 @narrow_scalar_illegal_type(i16 %x, i16 %y) {
+; RV32-LABEL: narrow_scalar_illegal_type:
+; RV32:       # %bb.0:
+; RV32-NEXT:    zext.b a0, a0
+; RV32-NEXT:    zext.b a1, a1
+; RV32-NEXT:    asubu a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: narrow_scalar_illegal_type:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.b a0, a0
+; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    sub a0, a0, a1
+; RV64-NEXT:    srai a0, a0, 1
+; RV64-NEXT:    ret
+  %a = and i16 %x, 255
+  %b = and i16 %y, 255
+  %d = sub i16 %a, %b
+  %r = ashr i16 %d, 1
+  ret i16 %r
+}

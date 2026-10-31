@@ -20275,17 +20275,6 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
   switch (Op.getOpcode()) {
   default:
     return SDValue();
-  case ISD::SUB:
-    // PASUB/PASUBU: shift amount must be 1
-    if (ShAmtVal != 1)
-      return SDValue();
-    if (LHSIsSExt && RHSIsSExt)
-      Opc = ISD::AVGSUBFLOORS;
-    else if (LHSIsZExt && RHSIsZExt)
-      Opc = ISD::AVGSUBFLOORU;
-    else
-      return SDValue();
-    break;
   case ISD::MUL:
     // MULH*/MULHR*: shift amount must be element size, only for i16/i32. The
     // exception is the RV64 v8i8 MULHSU which is built from multiply halves.
