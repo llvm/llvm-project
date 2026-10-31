@@ -601,3 +601,16 @@ entry:
   %s = mul <4 x i128> %d, %e
   ret <4 x i128> %s
 }
+
+; Both factors are in [-16, -1], so their product fits in nine bits.
+define i32 @negative_mul_known_zero(i32 %a, i32 %b) {
+; CHECK-LABEL: negative_mul_known_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+  %x = or i32 %a, -16
+  %y = or i32 %b, -16
+  %mul = mul i32 %x, %y
+  %shift = lshr i32 %mul, 9
+  ret i32 %shift
+}

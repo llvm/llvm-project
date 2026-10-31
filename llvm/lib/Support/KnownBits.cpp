@@ -1046,9 +1046,15 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   // Conservatively, M active bits * N active bits results in M + N bits in the
   // result. But if we know a value is a power-of-2 for example, then this
   // computes one more leading zero.
-  // TODO: This could be generalized to number of sign bits (negative numbers).
+  // TODO: Handle operands with different signs.
   APInt UMaxLHS = LHS.getMaxValue();
   APInt UMaxRHS = RHS.getMaxValue();
+  // For two negative operands, bound the positive product using their maximum
+  // magnitudes. Negation in APInt also handles the signed minimum value.
+  if (LHS.isNegative() && RHS.isNegative()) {
+    UMaxLHS = -LHS.getSignedMinValue();
+    UMaxRHS = -RHS.getSignedMinValue();
+  }
 
   // For leading zeros in the result to be valid, the unsigned max product must
   // fit in the bitwidth (it must not overflow).

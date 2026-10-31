@@ -1116,6 +1116,27 @@ TEST(KnownBitsTest, ConcatBits) {
   }
 }
 
+TEST(KnownBitsTest, MulNegativeOperands) {
+  for (unsigned Bits : {8, 32, 65, 128}) {
+    KnownBits LHS(Bits), RHS(Bits);
+    // [-16, -1] * [-8, -1] is in [1, 128]. The maximum product fits
+    // unsigned i8, even though it does not fit signed i8.
+    LHS.One.setHighBits(Bits - 4);
+    RHS.One.setHighBits(Bits - 3);
+    KnownBits Product = KnownBits::mul(LHS, RHS);
+    EXPECT_EQ(Product.Zero, APInt::getHighBitsSet(Bits, Bits - 8));
+    EXPECT_TRUE(Product.One.isZero());
+
+    // [-16, -1] * [-16, -1] is in [1, 256]. For i8 the unsigned
+    // maximum product overflows, so no leading zeros can be inferred.
+    RHS.One = LHS.One;
+    Product = KnownBits::mul(LHS, RHS);
+    unsigned LeadingZeros = Bits > 9 ? Bits - 9 : 0;
+    EXPECT_EQ(Product.Zero, APInt::getHighBitsSet(Bits, LeadingZeros));
+    EXPECT_TRUE(Product.One.isZero());
+  }
+}
+
 TEST(KnownBitsTest, MulExhaustive) {
   for (unsigned Bits : {1, 4}) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
