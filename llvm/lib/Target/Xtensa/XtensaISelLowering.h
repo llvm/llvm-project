@@ -54,6 +54,19 @@ public:
   FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
                              bool ForCodeSize) const override;
 
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                             std::optional<unsigned> ByteOffset
+                                 = std::nullopt) const override;
+
+  /// Xtensa reads constant pool entries with L32R, which loads the *contents*
+  /// of a PC-relative literal. There is no instruction that materializes the
+  /// address of a literal, so a constant pool base plus a variable offset
+  /// cannot be selected. Keep DAGCombiner from turning a select of two FP
+  /// constants into such an indexed constant pool load.
+  bool reduceSelectOfFPConstantLoads(EVT CmpOpVT) const override {
+    return false;
+  }
+
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
