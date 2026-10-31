@@ -85,7 +85,7 @@ public:
   }
 
   /// \returns key for the specified \p KeyData.
-  static inline const KeyTy &getKey(const KeyDataTy &KeyData) {
+  static inline decltype(auto) getKey(const KeyDataTy &KeyData) {
     return KeyData.getKey();
   }
 

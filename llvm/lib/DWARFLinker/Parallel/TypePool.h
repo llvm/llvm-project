@@ -141,50 +141,24 @@ protected:
       : Children(&Allocator) {}
 };
 
-class TypeEntryInfo {
-public:
-  /// \returns Hash value for the specified \p Key.
-  static inline uint64_t getHashValue(const StringRef &Key) {
-    return xxh3_64bits(Key);
-  }
-
-  /// \returns true if both \p LHS and \p RHS are equal.
-  static inline bool isEqual(const StringRef &LHS, const StringRef &RHS) {
-    return LHS == RHS;
-  }
-
-  /// \returns key for the specified \p KeyData.
-  static inline StringRef getKey(const TypeEntry &KeyData) {
-    return KeyData.getKey();
-  }
-
-  /// \returns newly created object of KeyDataTy type.
-  static inline TypeEntry *
-  create(const StringRef &Key,
-         llvm::parallel::PerThreadBumpPtrAllocator &Allocator) {
-    return TypeEntry::create(Key, Allocator);
-  }
-};
-
 /// TypePool keeps type descriptors which contain partially cloned DIE
 /// correspinding to each type. Types are identified by names.
 class TypePool
     : ConcurrentHashTableByPtr<StringRef, TypeEntry,
-                               llvm::parallel::PerThreadBumpPtrAllocator,
-                               TypeEntryInfo> {
+                               llvm::parallel::PerThreadBumpPtrAllocator> {
 public:
   TypePool()
       : ConcurrentHashTableByPtr<StringRef, TypeEntry,
-                                 llvm::parallel::PerThreadBumpPtrAllocator,
-                                 TypeEntryInfo>(Allocator) {
+                                 llvm::parallel::PerThreadBumpPtrAllocator>(
+            Allocator) {
     Root = TypeEntry::create("", Allocator);
     Root->getValue().store(TypeEntryBody::create(Allocator));
   }
 
   TypeEntry *insert(StringRef Name) {
-    return ConcurrentHashTableByPtr<StringRef, TypeEntry,
-                                    llvm::parallel::PerThreadBumpPtrAllocator,
-                                    TypeEntryInfo>::insert(Name)
+    return ConcurrentHashTableByPtr<
+               StringRef, TypeEntry,
+               llvm::parallel::PerThreadBumpPtrAllocator>::insert(Name)
         .first;
   }
 

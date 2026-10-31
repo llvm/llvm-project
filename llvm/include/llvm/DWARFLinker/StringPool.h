@@ -22,45 +22,19 @@ namespace dwarf_linker {
 /// and a string body which is placed right after StringEntry.
 using StringEntry = StringMapEntry<EmptyStringSetTag>;
 
-class StringPoolEntryInfo {
-public:
-  /// \returns Hash value for the specified \p Key.
-  static inline uint64_t getHashValue(const StringRef &Key) {
-    return xxh3_64bits(Key);
-  }
-
-  /// \returns true if both \p LHS and \p RHS are equal.
-  static inline bool isEqual(const StringRef &LHS, const StringRef &RHS) {
-    return LHS == RHS;
-  }
-
-  /// \returns key for the specified \p KeyData.
-  static inline StringRef getKey(const StringEntry &KeyData) {
-    return KeyData.getKey();
-  }
-
-  /// \returns newly created object of KeyDataTy type.
-  static inline StringEntry *
-  create(const StringRef &Key,
-         llvm::parallel::PerThreadBumpPtrAllocator &Allocator) {
-    return StringEntry::create(Key, Allocator);
-  }
-};
-
 class StringPool
-    : public ConcurrentHashTableByPtr<StringRef, StringEntry,
-                                      llvm::parallel::PerThreadBumpPtrAllocator,
-                                      StringPoolEntryInfo> {
+    : public ConcurrentHashTableByPtr<
+          StringRef, StringEntry, llvm::parallel::PerThreadBumpPtrAllocator> {
 public:
   StringPool()
       : ConcurrentHashTableByPtr<StringRef, StringEntry,
-                                 llvm::parallel::PerThreadBumpPtrAllocator,
-                                 StringPoolEntryInfo>(Allocator) {}
+                                 llvm::parallel::PerThreadBumpPtrAllocator>(
+            Allocator) {}
 
   StringPool(size_t InitialSize)
       : ConcurrentHashTableByPtr<StringRef, StringEntry,
-                                 llvm::parallel::PerThreadBumpPtrAllocator,
-                                 StringPoolEntryInfo>(Allocator, InitialSize) {}
+                                 llvm::parallel::PerThreadBumpPtrAllocator>(
+            Allocator, InitialSize) {}
 
   llvm::parallel::PerThreadBumpPtrAllocator &getAllocatorRef() {
     return Allocator;
