@@ -290,6 +290,7 @@ class DynamicValueTestCase(TestBase):
         )
 
     @expectedFailureWindows  # Can't read the RTTI locator and A is a virtual base of B, so AST strategy fails.
+    @expectedFailureAll(archs=["arm$"])  # Minidump saving not implemented
     @skipIf(archs=["arm64e"])  # arm64e incompatible with minidump
     @skipIfWasm  # No core file format for Wasm
     def test_from_core_file(self):
