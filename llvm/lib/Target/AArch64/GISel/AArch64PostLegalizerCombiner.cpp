@@ -343,7 +343,7 @@ void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
 bool matchTruncOrToADDHN(MachineInstr &MI, MachineRegisterInfo &MRI,
                          GISelValueTracking *VT, Register Dst, Register Or,
                          Register Src0, Register Src1) {
-  if (!MRI.hasOneUse(Or))
+  if (!MRI.hasOneNonDBGUse(Or))
     return false;
 
   LLT DstTy = MRI.getType(Dst);
@@ -543,7 +543,7 @@ void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
                                   Register Src, MachineRegisterInfo &MRI) {
-  if (!MRI.hasOneUse(Sub))
+  if (!MRI.hasOneNonDBGUse(Sub))
     return false;
   if (getIConstantVRegValWithLookThrough(Src, MRI))
     return false;
