@@ -4368,14 +4368,13 @@ define i32 @atomicrmw_add_i32(ptr %ptr, i32 %rhs) {
 define i32 @atomicrmw_xchg_i32(ptr %ptr, i32 %rhs) {
 ; CHECK-NOLSE-O1-LABEL: atomicrmw_xchg_i32:
 ; CHECK-NOLSE-O1:       ; %bb.0:
-; CHECK-NOLSE-O1-NEXT:    mov x8, x0
 ; CHECK-NOLSE-O1-NEXT:  LBB51_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NOLSE-O1-NEXT:    ldxr w0, [x8]
-; CHECK-NOLSE-O1-NEXT:    stxr w9, w1, [x8]
+; CHECK-NOLSE-O1-NEXT:    ldxr w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    stxr w9, w1, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB51_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
+; CHECK-NOLSE-O1-NEXT:    mov w0, w8
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: atomicrmw_xchg_i32:
@@ -6338,13 +6337,11 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB70_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
 ; CHECK-NOLSE-O1-NEXT:    mov w1, w9
-; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB70_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
 ; CHECK-NOLSE-O1-NEXT:    mov w1, w9
-; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i8:
@@ -6446,13 +6443,11 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB71_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
 ; CHECK-NOLSE-O1-NEXT:    mov w1, w9
-; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB71_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
 ; CHECK-NOLSE-O1-NEXT:    mov w1, w9
-; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i16:
@@ -6553,13 +6548,11 @@ define { i32, i1 } @cmpxchg_i32(ptr %ptr, i32 %desired, i32 %new) {
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB72_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
 ; CHECK-NOLSE-O1-NEXT:    mov w1, w9
-; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB72_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
 ; CHECK-NOLSE-O1-NEXT:    mov w1, w9
-; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i32:

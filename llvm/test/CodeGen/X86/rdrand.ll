@@ -106,15 +106,15 @@ define void @loop(ptr %p, i32 %n) nounwind {
 ; X64-NEXT:    testl %esi, %esi
 ; X64-NEXT:    je .LBB3_3
 ; X64-NEXT:  # %bb.1: # %while.body.preheader
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    movl %esi, %esi
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_2: # %while.body
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    rdrandl %edx
-; X64-NEXT:    movl %edx, (%rdi,%rcx,4)
-; X64-NEXT:    incq %rcx
-; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    rdrandl %ecx
+; X64-NEXT:    movl %ecx, (%rdi,%rax,4)
+; X64-NEXT:    incq %rax
+; X64-NEXT:    cmpl %eax, %esi
 ; X64-NEXT:    jne .LBB3_2
 ; X64-NEXT:  .LBB3_3: # %while.end
 ; X64-NEXT:    retq

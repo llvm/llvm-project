@@ -183,7 +183,6 @@ define <1 x i64> @reduce_add_v4i32_zext_ret_v1i64(<4 x i32> %x) {
 ; CHECK-GI-LABEL: reduce_add_v4i32_zext_ret_v1i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    uaddlv d0, v0.4s
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %xx = zext <4 x i32> %x to <4 x i64>
@@ -392,7 +391,6 @@ define <1 x i64> @reduce_add_v4i32_sext_ret_v1i64(<4 x i32> %x) {
 ; CHECK-GI-LABEL: reduce_add_v4i32_sext_ret_v1i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    saddlv d0, v0.4s
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %xx = sext <4 x i32> %x to <4 x i64>
