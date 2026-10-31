@@ -10433,18 +10433,25 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
 
-  // If the input is known to be non-negative and SINT_TO_FP is legal then use
-  // it.
-  if (Node->getFlags().hasNonNeg() &&
+  // A custom signed conversion may scalarize. Prefer the packed unsigned
+  // expansion unless the operand has enough sign bits for a narrower signed
+  // conversion.
+  bool HasVectorUIntExpansion =
+      SrcVT.isVector() && SrcVT.getScalarType() == MVT::i64 &&
+      DstVT.getScalarType() == MVT::f64 &&
+      isOperationLegalOrCustom(ISD::SRL, SrcVT) &&
+      isOperationLegalOrCustom(ISD::FADD, DstVT) &&
+      isOperationLegalOrCustom(ISD::FSUB, DstVT) &&
+      isOperationLegalOrCustomOrPromote(ISD::OR, SrcVT) &&
+      isOperationLegalOrCustomOrPromote(ISD::AND, SrcVT);
+  bool PreferUnsignedExpansion =
+      HasVectorUIntExpansion && isOperationCustom(ISD::SINT_TO_FP, SrcVT) &&
+      DAG.ComputeNumSignBits(Src) < SrcVT.getScalarSizeInBits() - 31;
+
+  if (Node->getFlags().hasNonNeg() && !PreferUnsignedExpansion &&
       isOperationLegalOrCustom(ISD::SINT_TO_FP, SrcVT)) {
-    SDValue Signed = DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), DstVT, Src);
-    // Custom lowering may decline this source/destination combination.
-    if (isOperationCustom(ISD::SINT_TO_FP, SrcVT))
-      Signed = LowerOperation(Signed, DAG);
-    if (Signed) {
-      Result = Signed;
-      return true;
-    }
+    Result = DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), DstVT, Src);
+    return true;
   }
 
   if (SrcVT.getScalarType() != MVT::i64 || DstVT.getScalarType() != MVT::f64)
@@ -10452,11 +10459,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
 
   // Only expand vector types if we have the appropriate vector bit
   // operations.
-  if (SrcVT.isVector() && (!isOperationLegalOrCustom(ISD::SRL, SrcVT) ||
-                           !isOperationLegalOrCustom(ISD::FADD, DstVT) ||
-                           !isOperationLegalOrCustom(ISD::FSUB, DstVT) ||
-                           !isOperationLegalOrCustomOrPromote(ISD::OR, SrcVT) ||
-                           !isOperationLegalOrCustomOrPromote(ISD::AND, SrcVT)))
+  if (SrcVT.isVector() && !HasVectorUIntExpansion)
     return false;
 
   SDLoc dl(SDValue(Node, 0));

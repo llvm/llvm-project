@@ -160,7 +160,7 @@ define <2 x double> @test_with_nneg_v2i64(<2 x i64> %x) {
 ; AVX512DQ-NOVL-LABEL: test_with_nneg_v2i64:
 ; AVX512DQ-NOVL:       ## %bb.0:
 ; AVX512DQ-NOVL-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512DQ-NOVL-NEXT:    vcvtqq2pd %zmm0, %zmm0
+; AVX512DQ-NOVL-NEXT:    vcvtuqq2pd %zmm0, %zmm0
 ; AVX512DQ-NOVL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NOVL-NEXT:    vzeroupper
 ; AVX512DQ-NOVL-NEXT:    retq
@@ -283,7 +283,7 @@ define <4 x double> @test_with_nneg_v4i64(<4 x i64> %x) {
 ; AVX512DQ-NOVL-LABEL: test_with_nneg_v4i64:
 ; AVX512DQ-NOVL:       ## %bb.0:
 ; AVX512DQ-NOVL-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512DQ-NOVL-NEXT:    vcvtqq2pd %zmm0, %zmm0
+; AVX512DQ-NOVL-NEXT:    vcvtuqq2pd %zmm0, %zmm0
 ; AVX512DQ-NOVL-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512DQ-NOVL-NEXT:    retq
   %r = uitofp nneg <4 x i64> %x to <4 x double>
@@ -379,7 +379,7 @@ define <2 x double> @test_known_sign_v2i64(<2 x i64> %x) {
 ; AVX512DQ-NOVL-LABEL: test_known_sign_v2i64:
 ; AVX512DQ-NOVL:       ## %bb.0:
 ; AVX512DQ-NOVL-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512DQ-NOVL-NEXT:    vcvtqq2pd %zmm0, %zmm0
+; AVX512DQ-NOVL-NEXT:    vcvtuqq2pd %zmm0, %zmm0
 ; AVX512DQ-NOVL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512DQ-NOVL-NEXT:    vzeroupper
 ; AVX512DQ-NOVL-NEXT:    retq
