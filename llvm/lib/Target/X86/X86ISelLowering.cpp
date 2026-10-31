@@ -1053,6 +1053,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL,                MVT::v8i16, Legal);
     setOperationAction(ISD::AVGCEILU,           MVT::v16i8, Legal);
     setOperationAction(ISD::AVGCEILU,           MVT::v8i16, Legal);
+    setOperationAction(ISD::CTLZ,               MVT::v4i32, Custom);
 
     if (!Subtarget.is64Bit()) {
       setOperationAction(ISD::MULHU,            MVT::v2i64, Custom);
@@ -29776,6 +29777,9 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
   // Decompose 512-bit ops into smaller 256-bit ops.
   if (VT.is512BitVector() && !Subtarget.hasBWI())
     return splitVectorIntUnary(Op, DAG, DL);
+
+  if (VT == MVT::v4i32 && !Subtarget.hasSSSE3())
+    return DAG.getTargetLoweringInfo().expandCTLZWithFP(Op.getNode(), DAG);
 
   assert(Subtarget.hasSSSE3() && "Expected SSSE3 support for PSHUFB");
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
