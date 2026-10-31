@@ -226,7 +226,13 @@ void lto::DTLTO::buildCommonRemoteCompilerOptions() {
     Ops.push_back("-ffunction-sections");
   if (C.Options.DataSections)
     Ops.push_back("-fdata-sections");
-  if (C.PTO && C.PTO->LoopInterchange)
+  // An unset PTO means the defaults of the backend's LLVMContext, which copies
+  // C.LibraryOptions.
+  cl::LibraryOptionsContext NoLibraryOptions;
+  if (C.PTO ? C.PTO->LoopInterchange
+            : PipelineTuningOptions(C.LibraryOptions ? *C.LibraryOptions
+                                                     : NoLibraryOptions)
+                  .LoopInterchange)
     Ops.push_back("-floop-interchange");
 
   if (C.RelocModel == Reloc::PIC_)
