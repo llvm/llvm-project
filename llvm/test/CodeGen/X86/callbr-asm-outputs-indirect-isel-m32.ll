@@ -115,5 +115,44 @@ split:
   %1 = call i64 @llvm.callbr.landingpad.i64(i64 %0)
   ret i64 %1
 }
+; A double in a pair of general-purpose registers, which the indirect target
+; reassembles.
+define double @double_in_gprs(i64 %x) {
+  ; CHECK-LABEL: name: double_in_gprs
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1, align 16)
+  ; CHECK-NEXT:   [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32_norex2 = COPY [[MOV32rm]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32_norex2 = COPY [[MOV32rm1]]
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef:GR32_NOREX2, def %1, def %2, reguse tiedto:$0, [[COPY]](tied-def 3), [[COPY1]](tied-def 4), imm, %bb.2
+  ; CHECK-NEXT:   MOV32mr %stack.0, 1, $noreg, 4, $noreg, %2 :: (store (s32) into %stack.0 + 4, basealign 8)
+  ; CHECK-NEXT:   MOV32mr %stack.0, 1, $noreg, 0, $noreg, %1 :: (store (s32) into %stack.0, align 8)
+  ; CHECK-NEXT:   [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.0)
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.cleanup:
+  ; CHECK-NEXT:   [[LD_Fp064_:%[0-9]+]]:rfp64 = nofpexcept LD_Fp064 implicit-def dead $fpsw, implicit $fpcw
+  ; CHECK-NEXT:   RET 0, [[LD_Fp064_]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT:   MOV32mr %stack.1, 1, $noreg, 0, $noreg, %1 :: (store (s32) into %stack.1, align 8)
+  ; CHECK-NEXT:   MOV32mr %stack.1, 1, $noreg, 4, $noreg, %2 :: (store (s32) into %stack.1 + 4, basealign 8)
+  ; CHECK-NEXT:   [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.1)
+  ; CHECK-NEXT:   RET 0, [[LD_Fp64m1]]
+entry:
+  %direct = callbr double asm "", "=r,0,!i"(i64 %x)
+          to label %cleanup [label %z.split]
+
+cleanup:
+  ret double 0.000000e+00
+
+z.split:
+  %indirect = call double @llvm.callbr.landingpad.f64(double %direct)
+  ret double %indirect
+}
+
 declare i64 @llvm.callbr.landingpad.i64(i64)
+declare double @llvm.callbr.landingpad.f64(double)
 declare { i8, i32 } @llvm.callbr.landingpad.sl_i8i32s({ i8, i32 })

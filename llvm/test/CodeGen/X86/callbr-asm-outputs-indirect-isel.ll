@@ -368,3 +368,118 @@ c:
 declare i64 @llvm.callbr.landingpad.i64(i64)
 declare i32 @llvm.callbr.landingpad.i32(i32)
 declare { i32, i32 } @llvm.callbr.landingpad.sl_i32i32s({ i32, i32 })
+
+; A float in a general-purpose register, which the indirect target bitcasts
+; from the register the INLINEASM_BR defines.
+define float @float_in_gpr(i32 %x) {
+  ; CHECK-LABEL: name: float_in_gpr
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; CHECK-NEXT:   liveins: $edi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32_norex2 = COPY [[COPY]]
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef:GR32_NOREX2, def %2, reguse:GR32_NOREX2, [[COPY1]], imm, %bb.2
+  ; CHECK-NEXT:   [[MOVDI2SSrr:%[0-9]+]]:fr32 = MOVDI2SSrr %2
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.cleanup:
+  ; CHECK-NEXT:   [[FsFLD0SS:%[0-9]+]]:fr32 = FsFLD0SS
+  ; CHECK-NEXT:   $xmm0 = COPY [[FsFLD0SS]]
+  ; CHECK-NEXT:   RET 0, $xmm0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT:   [[MOVDI2SSrr1:%[0-9]+]]:fr32 = MOVDI2SSrr %2
+  ; CHECK-NEXT:   $xmm0 = COPY [[MOVDI2SSrr1]]
+  ; CHECK-NEXT:   RET 0, $xmm0
+entry:
+  %direct = callbr float asm "", "=r,r,!i"(i32 %x)
+          to label %cleanup [label %z.split]
+
+cleanup:
+  ret float 0.000000e+00
+
+z.split:
+  %indirect = call float @llvm.callbr.landingpad.f32(float %direct)
+  ret float %indirect
+}
+
+; Likewise for a double, next to an integer output.
+define double @double_and_i32_in_gprs(i64 %x) {
+  ; CHECK-LABEL: name: double_and_i32_in_gprs
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; CHECK-NEXT:   liveins: $rdi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64_norex2 = COPY [[COPY]]
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef:GR64_NOREX2, def %3, regdef:GR32_NOREX2, def %4, reguse:GR64_NOREX2, [[COPY1]], imm, %bb.2
+  ; CHECK-NEXT:   [[MOV64toSDrr:%[0-9]+]]:fr64 = MOV64toSDrr %3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY %4
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.cleanup:
+  ; CHECK-NEXT:   [[FsFLD0SD:%[0-9]+]]:fr64 = FsFLD0SD
+  ; CHECK-NEXT:   $xmm0 = COPY [[FsFLD0SD]]
+  ; CHECK-NEXT:   RET 0, $xmm0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT:   [[MOV64toSDrr1:%[0-9]+]]:fr64 = MOV64toSDrr %3
+  ; CHECK-NEXT:   [[CVTSI2SDrr:%[0-9]+]]:fr64 = CVTSI2SDrr %4
+  ; CHECK-NEXT:   [[ADDSDrr:%[0-9]+]]:fr64 = nofpexcept ADDSDrr [[MOV64toSDrr1]], [[CVTSI2SDrr]], implicit $mxcsr
+  ; CHECK-NEXT:   $xmm0 = COPY [[ADDSDrr]]
+  ; CHECK-NEXT:   RET 0, $xmm0
+entry:
+  %direct = callbr { double, i32 } asm "", "=r,=r,r,!i"(i64 %x)
+          to label %cleanup [label %z.split]
+
+cleanup:
+  ret double 0.000000e+00
+
+z.split:
+  %indirect = call { double, i32 } @llvm.callbr.landingpad.sl_f64i32s({ double, i32 } %direct)
+  %d = extractvalue { double, i32 } %indirect, 0
+  %i = extractvalue { double, i32 } %indirect, 1
+  %f = sitofp i32 %i to double
+  %sum = fadd double %d, %f
+  ret double %sum
+}
+
+; Likewise for an output in a specific physical register, which is live into
+; the indirect target.
+define float @float_in_eax(i32 %x) {
+  ; CHECK-LABEL: name: float_in_eax
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; CHECK-NEXT:   liveins: $edi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32_norex2 = COPY [[COPY]]
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef, implicit-def $eax, reguse:GR32_NOREX2, [[COPY1]], imm, %bb.2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY $eax
+  ; CHECK-NEXT:   [[MOVDI2SSrr:%[0-9]+]]:fr32 = MOVDI2SSrr [[COPY2]]
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.cleanup:
+  ; CHECK-NEXT:   [[FsFLD0SS:%[0-9]+]]:fr32 = FsFLD0SS
+  ; CHECK-NEXT:   $xmm0 = COPY [[FsFLD0SS]]
+  ; CHECK-NEXT:   RET 0, $xmm0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT:   liveins: $eax
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $eax
+  ; CHECK-NEXT:   [[MOVDI2SSrr1:%[0-9]+]]:fr32 = MOVDI2SSrr [[COPY3]]
+  ; CHECK-NEXT:   $xmm0 = COPY [[MOVDI2SSrr1]]
+  ; CHECK-NEXT:   RET 0, $xmm0
+entry:
+  %direct = callbr float asm "", "={eax},r,!i"(i32 %x)
+          to label %cleanup [label %z.split]
+
+cleanup:
+  ret float 0.000000e+00
+
+z.split:
+  %indirect = call float @llvm.callbr.landingpad.f32(float %direct)
+  ret float %indirect
+}

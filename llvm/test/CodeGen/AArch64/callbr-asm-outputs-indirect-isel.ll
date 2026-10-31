@@ -31,14 +31,14 @@ define i32 @test0() {
   ; CHECK-NEXT: bb.2.direct:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000), %bb.3(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"# $0", attdialect, regdef:GPR32common, def %7, imm, %bb.3
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32all = COPY %7
+  ; CHECK-NEXT:   INLINEASM_BR &"# $0", attdialect, regdef:GPR32common, def %6, imm, %bb.3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32all = COPY %6
   ; CHECK-NEXT:   B %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.direct.indirect_crit_edge (label-must-be-emitted, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32all = COPY %7
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32all = COPY %6
   ; CHECK-NEXT:   B %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.direct2:
@@ -549,6 +549,42 @@ same:                                             ; preds = %entry.same_crit_edg
 }
 
 ; Function Attrs: nounwind
+; The flags register that a flag output is read from is live into the
+; indirect target.
+define i32 @flag_output() {
+  ; CHECK-LABEL: name: flag_output
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   INLINEASM_BR &"", maystore attdialect, regdef, implicit-def $nzcv, imm, %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $wzr
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY]], [[COPY]], 1, implicit $nzcv
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[CSINCWr]]
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.direct:
+  ; CHECK-NEXT:   $w0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.indirect (inlineasm-br-indirect-target):
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
+  ; CHECK-NEXT:   [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], [[COPY2]], 1, implicit $nzcv
+  ; CHECK-NEXT:   $w0 = COPY [[CSINCWr1]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+entry:
+  %out = callbr i32 asm "", "={@cceq},!i"()
+          to label %direct [label %indirect]
+
+direct:
+  ret i32 %out
+
+indirect:
+  %0 = call i32 @llvm.callbr.landingpad.i32(i32 %out)
+  ret i32 %0
+}
+
 declare i32 @llvm.callbr.landingpad.i32(i32) #0
 
 ; Function Attrs: nounwind

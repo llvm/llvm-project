@@ -17,6 +17,19 @@ b:
   ret void
 }
 
+
+; The indirect target reads only the direct output.
+; ERROR: error: callbr cannot store indirect output for constraint 'r' on its indirect paths
+define i32 @indirect_reg_output_with_direct_output(ptr %p) {
+entry:
+  %r = callbr i32 asm "", "=r,=*r,!i"(ptr elementtype(i32) %p)
+          to label %a [label %b]
+a:
+  ret i32 %r
+b:
+  ret i32 %r
+}
+
 ;--- ok.ll
 ; Without indirect targets, the store is on the only path.
 ; OK-LABEL: no_indirect_targets:
