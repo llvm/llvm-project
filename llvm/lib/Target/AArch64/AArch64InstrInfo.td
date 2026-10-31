@@ -3348,6 +3348,21 @@ def STZGloop
     : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn2), (ins i64imm:$sz, GPR64sp:$Rn),
              [], "@earlyclobber $Rn2,@earlyclobber $Rm" >,
       Sched<[WriteAdr, WriteST]>;
+
+// A variant of STGloop_wback where the size is in the register $Rsz, which may
+// be zero. $Rn must be 16-byte aligned and $Rsz a multiple of 16. $Rsz is used
+// as the loop counter, so it is written back to $Rsz_wback.
+def STGloop_var_wback
+    : Pseudo<(outs GPR64common:$Rsz_wback, GPR64sp:$Rn_wback),
+             (ins GPR64common:$Rsz, GPR64sp:$Rn),
+             [], "$Rsz = $Rsz_wback,$Rn = $Rn_wback" >,
+      Sched<[WriteAdr, WriteST]>;
+
+def STZGloop_var_wback
+    : Pseudo<(outs GPR64common:$Rsz_wback, GPR64sp:$Rn_wback),
+             (ins GPR64common:$Rsz, GPR64sp:$Rn),
+             [], "$Rsz = $Rsz_wback,$Rn = $Rn_wback" >,
+      Sched<[WriteAdr, WriteST]>;
 }
 
 } // Predicates = [HasMTE]

@@ -327,10 +327,30 @@ static SDValue EmitUnrolledSetTag(SelectionDAG &DAG, const SDLoc &dl,
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForSetTag(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Addr,
     SDValue Size, MachinePointerInfo DstPtrInfo, bool ZeroData) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  const EVT ResTys[] = {MVT::i64, MVT::i64, MVT::Other};
+
+  // A size that is not known at compile time, which may be zero, is handled by
+  // a loop that counts it down.
+  if (!isa<ConstantSDNode>(Size)) {
+    MachineMemOperand *BaseMemOperand =
+        MF.getMachineMemOperand(DstPtrInfo, MachineMemOperand::MOStore,
+                                LocationSize::afterPointer(), Align(16));
+    unsigned Opcode =
+        ZeroData ? AArch64::STZGloop_var_wback : AArch64::STGloop_var_wback;
+    SDValue Ops[] = {Size, Addr, Chain};
+    SDNode *St = DAG.getMachineNode(Opcode, dl, ResTys, Ops);
+    DAG.setNodeMemRefs(cast<MachineSDNode>(St), {BaseMemOperand});
+    return SDValue(St, 2);
+  }
+
   uint64_t ObjSize = Size->getAsZExtVal();
   assert(ObjSize % 16 == 0);
+  // There is nothing to tag. EmitUnrolledSetTag would return an empty
+  // TokenFactor, which drops the incoming chain.
+  if (ObjSize == 0)
+    return Chain;
 
-  MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *BaseMemOperand = MF.getMachineMemOperand(
       DstPtrInfo, MachineMemOperand::MOStore, ObjSize, Align(16));
 
@@ -339,8 +359,6 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForSetTag(
   if (!UseSetTagRangeLoop)
     return EmitUnrolledSetTag(DAG, dl, Chain, Addr, ObjSize, BaseMemOperand,
                               ZeroData);
-
-  const EVT ResTys[] = {MVT::i64, MVT::i64, MVT::Other};
 
   unsigned Opcode;
   if (Addr.getOpcode() == ISD::FrameIndex) {

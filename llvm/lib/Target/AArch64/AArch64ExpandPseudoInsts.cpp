@@ -78,6 +78,9 @@ private:
   bool expandSetTagLoop(MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator MBBI,
                         MachineBasicBlock::iterator &NextMBBI);
+  bool expandSetTagLoopVar(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI,
+                           MachineBasicBlock::iterator &NextMBBI);
   bool expandSVESpillFill(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, unsigned Opc,
                           unsigned N);
@@ -863,6 +866,107 @@ bool AArch64ExpandPseudoImpl::expandSetTagLoop(
   computeAndAddLiveIns(LiveRegs, *LoopBB);
   DoneBB->clearLiveIns();
   computeAndAddLiveIns(LiveRegs, *DoneBB);
+
+  return true;
+}
+
+/// Expand STGloop_var_wback / STZGloop_var_wback into a loop. Unlike for
+/// STGloop_wback, the size may be zero. The address must be 16-byte aligned, as
+/// STG requires, and the size must be a multiple of 16, which expandSetTagLoop
+/// asserts but cannot be checked here since it is in a register:
+///
+///     tbz  xSize, #4, Check
+///     stg  xAddr, [xAddr], #16
+///     sub  xSize, xSize, #16
+///   Check:
+///     cbz  xSize, Done
+///   Loop:
+///     st2g xAddr, [xAddr], #32
+///     subs xSize, xSize, #32
+///     b.ne Loop
+///   Done:
+bool AArch64ExpandPseudoImpl::expandSetTagLoopVar(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  Register SizeReg = MI.getOperand(0).getReg();
+  Register AddressReg = MI.getOperand(1).getReg();
+  assert(MI.getOperand(2).getReg() == SizeReg &&
+         MI.getOperand(3).getReg() == AddressReg);
+
+  MachineFunction *MF = MBB.getParent();
+
+  bool ZeroData = MI.getOpcode() == AArch64::STZGloop_var_wback;
+  const unsigned OpCode1 =
+      ZeroData ? AArch64::STZGPostIndex : AArch64::STGPostIndex;
+  const unsigned OpCode2 =
+      ZeroData ? AArch64::STZ2GPostIndex : AArch64::ST2GPostIndex;
+
+  auto OddBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto CheckBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto LoopBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  MF->insert(++MBB.getIterator(), OddBB);
+  MF->insert(++OddBB->getIterator(), CheckBB);
+  MF->insert(++CheckBB->getIterator(), LoopBB);
+  MF->insert(++LoopBB->getIterator(), DoneBB);
+
+  BuildMI(OddBB, DL, TII->get(OpCode1))
+      .addDef(AddressReg)
+      .addReg(AddressReg)
+      .addReg(AddressReg)
+      .addImm(1)
+      .cloneMemRefs(MI)
+      .setMIFlags(MI.getFlags());
+  BuildMI(OddBB, DL, TII->get(AArch64::SUBXri))
+      .addDef(SizeReg)
+      .addReg(SizeReg)
+      .addImm(16)
+      .addImm(0);
+
+  BuildMI(CheckBB, DL, TII->get(AArch64::CBZX)).addReg(SizeReg).addMBB(DoneBB);
+
+  BuildMI(LoopBB, DL, TII->get(OpCode2))
+      .addDef(AddressReg)
+      .addReg(AddressReg)
+      .addReg(AddressReg)
+      .addImm(2)
+      .cloneMemRefs(MI)
+      .setMIFlags(MI.getFlags());
+  BuildMI(LoopBB, DL, TII->get(AArch64::SUBSXri))
+      .addDef(SizeReg)
+      .addReg(SizeReg)
+      .addImm(16 * 2)
+      .addImm(0);
+  BuildMI(LoopBB, DL, TII->get(AArch64::Bcc))
+      .addImm(AArch64CC::NE)
+      .addMBB(LoopBB)
+      .addReg(AArch64::NZCV, RegState::Implicit | RegState::Kill);
+
+  DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
+  DoneBB->transferSuccessors(&MBB);
+
+  // The size is a multiple of 16, so if bit 4 is set it is an odd multiple and
+  // the OddBB peels one granule to make it a multiple of 32 for the st2g loop.
+  const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
+  BuildMI(&MBB, DL, TII->get(AArch64::TBZW))
+      .addReg(TRI.getSubReg(SizeReg, AArch64::sub_32))
+      .addImm(4)
+      .addMBB(CheckBB);
+
+  MBB.addSuccessor(OddBB);
+  MBB.addSuccessor(CheckBB);
+  OddBB->addSuccessor(CheckBB);
+  CheckBB->addSuccessor(LoopBB);
+  CheckBB->addSuccessor(DoneBB);
+  LoopBB->addSuccessor(LoopBB);
+  LoopBB->addSuccessor(DoneBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+  fullyRecomputeLiveIns({DoneBB, LoopBB, CheckBB, OddBB});
 
   return true;
 }
@@ -1757,6 +1861,9 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case AArch64::STGloop_wback:
   case AArch64::STZGloop_wback:
     return expandSetTagLoop(MBB, MBBI, NextMBBI);
+  case AArch64::STGloop_var_wback:
+  case AArch64::STZGloop_var_wback:
+    return expandSetTagLoopVar(MBB, MBBI, NextMBBI);
   case AArch64::STGloop:
   case AArch64::STZGloop:
     report_fatal_error(
