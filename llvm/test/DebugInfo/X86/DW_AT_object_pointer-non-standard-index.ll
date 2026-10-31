@@ -3,7 +3,7 @@
 ; of the subprogram (which isn't something the major compilers do,
 ; but is not mandated by DWARF).
 
-; RUN: llc -mtriple=x86_64-apple-darwin -debugger-tune=lldb -dwarf-version=5 -filetype=obj < %s | \
+; RUN: llc -mtriple=x86_64-apple-darwin -dwarf-version=5 -filetype=obj < %s | \
 ; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK: DW_TAG_class_type

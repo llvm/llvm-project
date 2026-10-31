@@ -184,6 +184,10 @@ Makes programs 10x faster by doing Special New Thing.
   GNU-vs-EABI distinction is now derived entirely from the target triple's
   environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
 
+* Removed `TargetOptions::DebuggerTuning` and the `llc`/`opt`
+  `-debugger-tune=` flag. The debugger to tune debug info for is now
+  controlled by setting the `"debugger-tuning"` module flag.
+
 * Replaced `TargetOptions::EnableMachineFunctionSplitter` with
   `TargetOptions::FunctionSplitting`, and the `-split-machine-functions` and
   `-enable-split-machine-functions` flags with

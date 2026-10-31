@@ -73,15 +73,6 @@
 // O2: -plugin-opt=O2
 // O3: -plugin-opt=O3
 
-// -flto passes along an explicit debugger tuning argument.
-// RUN: %clang --target=x86_64-unknown-linux -### %s -flto -glldb 2> %t
-// RUN: FileCheck -check-prefix=CHECK-TUNING-LLDB < %t %s
-// RUN: %clang --target=x86_64-unknown-linux -### %s -flto -g 2> %t
-// RUN: FileCheck -check-prefix=CHECK-NO-TUNING < %t %s
-//
-// CHECK-TUNING-LLDB:   "-plugin-opt=-debugger-tune=lldb"
-// CHECK-NO-TUNING-NOT: "-plugin-opt=-debugger-tune
-//
 // -flto=auto and -flto=jobserver pass along -flto=full
 // RUN: %clang --target=x86_64-unknown-linux -### %s -flto=auto 2>&1 | FileCheck --check-prefix=FLTO-AUTO %s
 // RUN: %clang --target=x86_64-unknown-linux -### %s -flto=jobserver 2>&1 | FileCheck --check-prefix=FLTO-JOBSERVER %s

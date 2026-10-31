@@ -1,5 +1,5 @@
 
-; RUN: llc -o - %s -filetype=obj -O0 -debugger-tune=lldb -generate-type-units -mtriple=x86_64-unknown-linux-gnu | llvm-dwarfdump -debug-types - | FileCheck %s
+; RUN: llc -o - %s -filetype=obj -O0 -generate-type-units -mtriple=x86_64-unknown-linux-gnu | llvm-dwarfdump -debug-types - | FileCheck %s
 
 ; struct foo {
 ; } f;

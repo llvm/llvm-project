@@ -1,5 +1,5 @@
 ; XFAIL: target={{.*}}-aix{{.*}}
-; RUN: %llc_dwarf -debugger-tune=lldb -accel-tables=Dwarf -filetype=obj -o %t %s
+; RUN: %llc_dwarf -accel-tables=Dwarf -filetype=obj -o %t %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck %s
 ; RUN: llvm-dwarfdump -debug-names -verify %t | FileCheck --check-prefix=VERIFY %s
 
@@ -9,7 +9,7 @@
 ; VERIFY: No errors
 
 !llvm.dbg.cu = !{!10}
-!llvm.module.flags = !{!14, !15}
+!llvm.module.flags = !{!14, !15, !21}
 !llvm.ident = !{!20}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -21,3 +21,4 @@
 !14 = !{i32 7, !"Dwarf Version", i32 5}
 !15 = !{i32 2, !"Debug Info Version", i32 3}
 !20 = !{!"blah"}
+!21 = !{i32 2, !"debugger-tuning", !"lldb"}

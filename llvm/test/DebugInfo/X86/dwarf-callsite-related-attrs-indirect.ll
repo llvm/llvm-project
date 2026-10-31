@@ -2,7 +2,7 @@
 ; __attribute__((disable_tail_calls)) void call_reg(void (*f)()) { f(); }
 ; __attribute__((disable_tail_calls)) void call_mem(void (**f)()) { (*f)(); }
 
-; RUN: llc -mtriple=x86_64 -debugger-tune=lldb < %s -filetype=obj -o %t.o
+; RUN: llc -mtriple=x86_64 < %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump %t.o -o - | FileCheck %s -check-prefix=OBJ -implicit-check-not=DW_TAG_call_site -implicit-check-not=DW_AT_call_target
 ; RUN: llvm-dwarfdump -verify %t.o 2>&1 | FileCheck %s -check-prefix=VERIFY
 ; RUN: llvm-dwarfdump -statistics %t.o | FileCheck %s -check-prefix=STATS

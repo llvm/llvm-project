@@ -7,9 +7,11 @@
 ; TODO: Use -filetype-obj and llvm-dwarfdump when the obj mode is supported.
 ; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff < %s | FileCheck --check-prefix=DBX --implicit-check-not DW_FROM_strp %s
 
-; We can override defaults.
-; RUN: llc -mtriple=powerpc64le-unknown-linux -filetype=obj -debugger-tune=dbx < %s | llvm-dwarfdump -debug-info --show-form - | FileCheck --check-prefix=DBX %s --implicit-check-not DW_FROM_strp
-; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff -debugger-tune=gdb < %s | FileCheck --check-prefix=GDB %s --implicit-check-not DW_FORM_string
+; We can override defaults via the "debugger-tuning" module flag.
+; RUN: sed 's/TUNE_PLACEHOLDER/dbx/' %s \
+; RUN:   | llc -mtriple=powerpc64le-unknown-linux -filetype=obj | llvm-dwarfdump -debug-info --show-form - | FileCheck --check-prefix=DBX %s --implicit-check-not DW_FROM_strp
+; RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s \
+; RUN:   | llc -mtriple=powerpc64-ibm-aix-xcoff | FileCheck --check-prefix=GDB %s --implicit-check-not DW_FORM_string
 
 ; GDB: DW_FORM_strp
 ; DBX: DW_FORM_string
@@ -23,7 +25,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5, !6, !100}
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
@@ -33,6 +35,7 @@ entry:
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 2}
 !6 = !{i32 7, !"PIC Level", i32 2}
+!100 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}
 !7 = !{!"clang version 12.0.0"}
 !8 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 1, type: !9, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)

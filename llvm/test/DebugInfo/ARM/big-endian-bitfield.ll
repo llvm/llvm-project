@@ -1,4 +1,4 @@
-; RUN: llc -O0 -filetype=obj -mtriple=armeb-none-freebsd -debugger-tune=lldb %s -o - \
+; RUN: llc -O0 -filetype=obj -mtriple=armeb-none-freebsd %s -o - \
 ; RUN: | llvm-dwarfdump -v --debug-info - | FileCheck %s
 ; Generated from:
 ;   struct S {
@@ -16,7 +16,7 @@ target datalayout = "E-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 @s = common global %struct.S zeroinitializer, align 4, !dbg !0
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!13, !14, !15}
+!llvm.module.flags = !{!13, !14, !15, !17}
 !llvm.ident = !{!16}
 
 !0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -52,4 +52,5 @@ target datalayout = "E-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 ; CHECK-NOT:  DW_TAG
 ; CHECK:      DW_AT_data_bit_offset      [DW_FORM_data1]	(0x10)
 !16 = !{!"clang version 3.9.0 (trunk 267633)"}
+!17 = !{i32 2, !"debugger-tuning", !"lldb"}
 
