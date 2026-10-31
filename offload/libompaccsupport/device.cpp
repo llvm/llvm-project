@@ -845,7 +845,7 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
 
-  if (Device.submitDataToFreshMemory(*AllocOrErr, &LocalKLE,
+  if (Device.submitDataIndependently(*AllocOrErr, &LocalKLE,
                                      sizeof(KernelLaunchEnvironmentTy),
                                      AsyncInfo, "KernelLaunchEnv"))
     return createError(ErrorCode::BackendFailure,
