@@ -510,6 +510,10 @@ private:
   Value allocatePrivatizeHeapStorage(acc::PrivatizeOp privatize,
                                      MemRefType baseTy,
                                      ValueRange mappedDynamicSizes);
+  /// Place static privatize storage of a block routine in a workgroup
+  /// attribution of its own; returns null if over the routine slot budget.
+  Value allocateRoutineSharedSlot(acc::PrivatizeOp privatize, MemRefType baseTy,
+                                  gpu::GPUFuncOp gpuFuncOp);
   /// Clone and lower an `scf.execute_region`.
   void processExecuteRegion(scf::ExecuteRegionOp op);
   /// Lower `acc.reduction_accumulate`.
@@ -758,6 +762,11 @@ private:
 
   // Reusable privatize broadcast slots per type; disabled for kernels.
   llvm::DenseMap<Type, Value> privatizeBroadcastCache;
+
+  // Routine workgroup slots add to the shared memory of every calling kernel,
+  // which is sized elsewhere, so keep them small.
+  static constexpr int64_t kMaxRoutineSharedSlotBytes = 256;
+  int64_t routineSharedSlotBytes = 0;
 
   int64_t staticBlockDimX = 1024;
   int64_t staticBlockDimY = 1024;
@@ -3070,6 +3079,66 @@ Value ACCCGToGPULowering::allocatePrivatizeHeapStorage(
   return mem;
 }
 
+Value ACCCGToGPULowering::allocateRoutineSharedSlot(acc::PrivatizeOp privatize,
+                                                    MemRefType baseTy,
+                                                    gpu::GPUFuncOp gpuFuncOp) {
+  Location loc = privatize.getLoc();
+  Type elemTy = baseTy.getElementType();
+  if (!baseTy.hasStaticShape() || !baseTy.getLayout().isIdentity() ||
+      baseTy.getMemorySpace() || isa<BaseMemRefType>(elemTy))
+    return {};
+  // Query without a diagnostic: an unsized type keeps the heap path.
+  std::optional<acc::TypeSizeAndAlignment> sizeAndAlignment =
+      accSupport.getTypeSizeAndAlignment(
+          elemTy, computeRegion->getParentOfType<ModuleOp>());
+  if (!sizeAndAlignment)
+    return {};
+  int64_t bytes =
+      sizeAndAlignment->first.getFixedValue() * baseTy.getNumElements();
+  if (bytes <= 0 || routineSharedSlotBytes + bytes > kMaxRoutineSharedSlotBytes)
+    return {};
+  // Activations of a recursive routine would share the slot.
+  StringRef funcName = gpuFuncOp.getName();
+  bool callsItself =
+      gpuFuncOp
+          .walk([&](CallOpInterface call) {
+            auto callee =
+                dyn_cast_if_present<SymbolRefAttr>(call.getCallableForCallee());
+            return callee && callee.getLeafReference() == funcName
+                       ? WalkResult::interrupt()
+                       : WalkResult::advance();
+          })
+          .wasInterrupted();
+  if (callsItself)
+    return {};
+  routineSharedSlotBytes += bytes;
+
+  auto workgroupAS = gpu::AddressSpaceAttr::get(
+      rewriter.getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());
+  MemRefType slotTy =
+      MemRefType::get(baseTy.getShape(), baseTy.getElementType(),
+                      MemRefLayoutAttrInterface{}, workgroupAS);
+  Value slot = gpuFuncOp.addWorkgroupAttribution(slotTy, loc);
+  gpuFuncOp.setWorkgroupAttributionAttr(
+      gpuFuncOp.getNumWorkgroupAttributions() - 1,
+      LLVM::LLVMDialect::getAlignAttrName(), rewriter.getI32IntegerAttr(16));
+  Value mem = castPointerLikeTypeIfNeeded(rewriter, loc, slot, baseTy);
+  Block *slotBlock = rewriter.getInsertionBlock();
+  if (slotBlock->mightHaveTerminator()) {
+    // The next call of the routine rewrites the slot; wait for every reader.
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(slotBlock->getTerminator());
+    createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
+                           rewriter.getContext(),
+                           {mlir::acc::GPUParallelDimAttr::threadYDim(
+                               rewriter.getContext())}));
+  }
+  mapping.map(privatize.getResult(), mem);
+  if (!privatize->getParentOfType<acc::ComputeRegionOp>())
+    rewriter.replaceOp(privatize, mem);
+  return mem;
+}
+
 Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   LLVM_DEBUG(llvm::dbgs() << "processing privatize: ";
              privatize->print(llvm::dbgs()); llvm::dbgs() << "\n");
@@ -3146,6 +3215,7 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   //   variables at routine level are shared across ThreadY threads (single
   //   slot)
   bool needsWorkgroupBarrier = false;
+  bool isBlockRoutine = false;
   if (isInsideACCSpecializedRoutine(computeRegion)) {
     FunctionOpInterface funcOp =
         computeRegion->getParentOfType<FunctionOpInterface>();
@@ -3161,6 +3231,7 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
       needsWorkgroupBarrier = true;
     } else if (routineParDim.isAnyBlock()) {
       needsWorkgroupBarrier = true;
+      isBlockRoutine = true;
     }
   }
 
@@ -3189,6 +3260,13 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
     // is unknown. Heap-allocate in both cases so a large runtime extent
     // cannot overflow the stack. Each lane still owns its own copy.
     return allocatePrivatizeHeapStorage(privatize, baseTy, mappedDynamicSizes);
+  }
+
+  // A block routine runs once per block, so a small static private shared by
+  // its threads can live in a workgroup slot instead of a broadcast heap copy.
+  if (isBlockRoutine && !threadYIsActive && mappedDynamicSizes.empty()) {
+    if (Value slot = allocateRoutineSharedSlot(privatize, baseTy, gpuFuncOp))
+      return slot;
   }
 
   // Predication - when threadYIsActive, don't predicate on ThreadY dimension
