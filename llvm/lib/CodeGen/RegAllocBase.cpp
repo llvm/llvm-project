@@ -118,22 +118,12 @@ void RegAllocBase::allocatePhysRegs() {
     MCRegister AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);
 
     if (AvailablePhysReg == ~0u) {
-      // selectOrSplit failed to find a register!
-      // Probably caused by an inline asm.
-      MachineInstr *MI = nullptr;
-      for (MachineInstr &MIR : MRI->reg_instructions(VirtReg->reg())) {
-        MI = &MIR;
-        if (MI->isInlineAsm())
-          break;
-      }
-
-      const TargetRegisterClass *RC = MRI->getRegClass(VirtReg->reg());
-      AvailablePhysReg = getErrorAssignment(*RC, MI);
-
-      // Keep going after reporting the error.
-      cleanupFailedVReg(VirtReg->reg(), AvailablePhysReg, SplitVRegs);
-    } else if (AvailablePhysReg)
+      // selectOrSplit failed to find a register! Probably caused by an inline
+      // asm. Keep going after reporting the error.
+      assignFailedVirtReg(VirtReg->reg(), *RegClassInfo, *LIS, *VRM);
+    } else if (AvailablePhysReg) {
       Matrix->assign(*VirtReg, AvailablePhysReg);
+    }
 
     for (Register Reg : SplitVRegs) {
       assert(LIS->hasInterval(Reg));
@@ -169,8 +159,17 @@ void RegAllocBase::postOptimization() {
   DeadRemats.clear();
 }
 
-void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
-                                     SmallVectorImpl<Register> &SplitRegs) {
+static void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
+                              MCRegister PhysReg, LiveIntervals *LIS,
+                              const VirtRegMap &VRM);
+
+/// Perform cleanups on a register that failed to allocate. This hacks on the
+/// liveness in order to avoid spurious verifier errors in later passes.
+static void cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
+                              LiveIntervals *LIS, const VirtRegMap &VRM) {
+  MachineRegisterInfo *MRI = &VRM.getRegInfo();
+  const TargetRegisterInfo *TRI = &VRM.getTargetRegInfo();
+
   // We still should produce valid IR. Kill all the uses and reduce the live
   // ranges so that we don't think it's possible to introduce kill flags later
   // which will fail the verifier.
@@ -178,7 +177,7 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
     if (MO.readsReg())
       MO.setIsUndef(true);
     if (MO.isDef())
-      cleanupFailedDefs(*MO.getParent(), FailedReg, PhysReg);
+      cleanupFailedDefs(*MO.getParent(), FailedReg, PhysReg, LIS, VRM);
   }
 
   if (!MRI->isReserved(PhysReg)) {
@@ -200,8 +199,13 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
   LIS->removeInterval(FailedReg);
 }
 
-void RegAllocBase::cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
-                                     MCRegister PhysReg) {
+/// Add the defs of \p FailedReg on \p MI to the \p PhysReg regunit live ranges,
+/// and make the defs of \p PhysReg on \p MI consistently dead or live.
+static void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
+                              MCRegister PhysReg, LiveIntervals *LIS,
+                              const VirtRegMap &VRM) {
+  const MachineRegisterInfo *MRI = &VRM.getRegInfo();
+  const TargetRegisterInfo *TRI = &VRM.getTargetRegInfo();
   auto IsErrorDef = [=](const MachineOperand &MO) {
     return MO.getReg() == FailedReg || MO.getReg() == PhysReg;
   };
@@ -228,8 +232,8 @@ void RegAllocBase::cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
         if (LR && !LR->liveAt(DefIdx))
           LR->createDeadDef(DefIdx, LIS->getVNInfoAllocator());
       }
-    } else if (Reg.isVirtual() && VRM->hasPhys(Reg)) {
-      MCRegister AssignedReg = VRM->getPhys(Reg);
+    } else if (Reg.isVirtual() && VRM.hasPhys(Reg)) {
+      MCRegister AssignedReg = VRM.getPhys(Reg);
       if (MO.getSubReg())
         AssignedReg = TRI->getSubReg(AssignedReg, MO.getSubReg());
       if (AssignedReg == PhysReg)
@@ -263,10 +267,13 @@ void RegAllocBase::enqueue(const LiveInterval *LI) {
   }
 }
 
-MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
-                                           const MachineInstr *CtxMI) {
-  MachineFunction &MF = VRM->getMachineFunction();
-
+/// Query a physical register to use as a filler in contexts where the
+/// allocation has failed. This will raise an error, but not abort the
+/// compilation.
+static MCPhysReg getErrorAssignment(MachineFunction &MF,
+                                    const RegisterClassInfo &RCI,
+                                    const TargetRegisterClass &RC,
+                                    const MachineInstr *CtxMI) {
   // Avoid printing the error for every single instance of the register. It
   // would be better if this were per register class.
   bool EmitError = !MF.getProperties().hasFailedRegAlloc();
@@ -276,7 +283,7 @@ MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
   const Function &Fn = MF.getFunction();
   LLVMContext &Context = Fn.getContext();
 
-  ArrayRef<MCPhysReg> AllocOrder = RegClassInfo->getOrder(&RC);
+  ArrayRef<MCPhysReg> AllocOrder = RCI.getOrder(&RC);
   if (AllocOrder.empty()) {
     // If the allocation order is empty, it likely means all registers in the
     // class are reserved. We still to need to pick something, so look at the
@@ -305,4 +312,24 @@ MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
   }
 
   return AllocOrder.front();
+}
+
+MCRegister llvm::assignFailedVirtReg(Register VirtReg,
+                                     const RegisterClassInfo &RCI,
+                                     LiveIntervals &LIS, VirtRegMap &VRM) {
+  // Report the error on the instruction that needs the register, which is
+  // probably an inline asm.
+  MachineRegisterInfo &MRI = VRM.getRegInfo();
+  MachineInstr *MI = nullptr;
+
+  for (MachineInstr &MIR : MRI.reg_instructions(VirtReg)) {
+    MI = &MIR;
+    if (MI->isInlineAsm())
+      break;
+  }
+
+  MCRegister PhysReg = getErrorAssignment(VRM.getMachineFunction(), RCI,
+                                          *MRI.getRegClass(VirtReg), MI);
+  cleanupFailedVReg(VirtReg, PhysReg, &LIS, VRM);
+  return PhysReg;
 }

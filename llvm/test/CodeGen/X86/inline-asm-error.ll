@@ -1,9 +1,11 @@
 ; RUN: not llc -mtriple=i686-- -regalloc=fast < %s 2> %t1
 ; RUN: not llc -mtriple=i686-- -regalloc=basic      < %s 2> %t2
 ; RUN: not llc -mtriple=i686-- -regalloc=greedy     < %s 2> %t3
+; RUN: not llc -mtriple=i686-- -regalloc=pbqp       < %s 2> %t4
 ; RUN: FileCheck %s < %t1
 ; RUN: FileCheck %s < %t2
 ; RUN: FileCheck %s < %t3
+; RUN: FileCheck %s < %t4
 
 ; The register allocator must fail on this function.
 ; CHECK: error: inline assembly requires more registers than available
