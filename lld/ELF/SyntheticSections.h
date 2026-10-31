@@ -56,9 +56,13 @@ public:
 
   SmallVector<EhInputSection *, 0> sections;
   size_t numFdes = 0;
-  SmallVector<size_t, 0> firstFdes;
   // FDE pointer encoding of each output CIE, keyed by its output offset.
   llvm::DenseMap<uint32_t, uint8_t> fdeEncodings;
+
+  struct FdeData {
+    int64_t pcRel;
+    int64_t fdeVARel;
+  };
 
   void iterateFDEWithLSDA(llvm::function_ref<void(InputSection &)> fn);
 
@@ -78,16 +82,11 @@ public:
   void finalizeContents() override;
   bool updateAllocSize(Ctx &) override;
 
+  // Cached FDE data computed by updateAllocSize, used by
+  // EhFrameSection::writeTo.
+  SmallVector<EhFrameSection::FdeData, 0> fdes;
   bool large = false; // Whether to use sdata8 encoding.
   size_t size = 0;
-
-private:
-  struct FdeData {
-    int64_t pcRel;
-    int64_t fdeVARel;
-  };
-  template <class Fn> void forEachFde(Fn fn);
-  SmallVector<FdeData, 0> getFdeData();
 };
 
 class GotSection final : public SyntheticSection {
