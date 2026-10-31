@@ -385,7 +385,8 @@ public:
           if (const auto *Func = dyn_cast_if_present<FunctionDecl>(FD))
             IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
-                                           MovedExpr, ExpiryLoc, ExprChain, IsMain);
+                                           MovedExpr, ExpiryLoc, ExprChain,
+                                           IsMain);
         } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF))
           // A borrow is still held by the object (e.g. captured via
           // lifetime_capture_by_this) when the captured local goes out of
