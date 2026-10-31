@@ -31,6 +31,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/FunctionLocalMetadata.h"
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/InlineAsm.h"
@@ -276,6 +277,15 @@ void LLParser::dropUnknownMetadataReferences() {
   llvm::erase_if(PendingDbgInsts,
                  [](const auto &E) { return std::get<2>(E)->isTemporary(); });
 
+  for (auto &[FLContext, TempScopes] : FLForwardRefScopes) {
+    llvm::erase_if(TempScopes,
+                   [](const auto &E) { return std::get<1>(E)->isTemporary(); });
+  }
+  for (auto &[FLContext, TempFLContexts] : FLForwardRefFLMDs) {
+    llvm::erase_if(TempFLContexts,
+                   [](const auto &E) { return std::get<1>(E)->isTemporary(); });
+  }
+
   for (const auto &[ID, Info] : make_early_inc_range(ForwardRefMDNodes)) {
     // Check whether there is only a single use left, which would be in our
     // own NumberedMetadata.
@@ -437,6 +447,17 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       return error(Loc, "invalid !dbg metadata");
   }
   PendingDbgInsts.clear();
+
+  // Apply pending scopes/FLContext references.
+  for (auto &[FLContext, TempScopes] : FLForwardRefScopes)
+    for (auto [ScopeIdx, TempScope] : TempScopes)
+      FLContext->Scopes[ScopeIdx].Scope = dyn_cast<DILocalScope>(TempScope);
+  FLForwardRefScopes.clear();
+  for (auto &[FLContext, TempFLContexts] : FLForwardRefFLMDs)
+    for (auto [InlinedCallIdx, TempFLContext] : TempFLContexts)
+      FLContext->InlinedCalls[InlinedCallIdx].InlineeContext =
+          dyn_cast<MDFunctionLocalContext>(TempFLContext);
+  FLForwardRefFLMDs.clear();
 
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
@@ -5201,6 +5222,13 @@ struct MDField : public MDFieldImpl<Metadata *> {
   MDField(bool AllowNull = true) : ImplTy(nullptr), AllowNull(AllowNull) {}
 };
 
+// Similar to MDField, but will only accept MDNode arguments (!<num>).
+struct MDNodeField : public MDFieldImpl<MDNode *> {
+  bool AllowNull;
+
+  MDNodeField(bool AllowNull = true) : ImplTy(nullptr), AllowNull(AllowNull) {}
+};
+
 struct MDStringField : public MDFieldImpl<MDString *> {
   enum class EmptyIs {
     Null,  //< Allow empty input string, map to nullptr
@@ -5659,6 +5687,24 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDBoolField &Result) {
 }
 
 template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDNodeField &Result) {
+  if (Lex.getKind() == lltok::kw_null) {
+    if (!Result.AllowNull)
+      return tokError("'" + Name + "' cannot be null");
+    Lex.Lex();
+    Result.assign(nullptr);
+    return false;
+  }
+
+  MDNode *MD;
+  if (parseMDNode(MD))
+    return true;
+
+  Result.assign(MD);
+  return false;
+}
+
+template <>
 bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDField &Result) {
   if (Lex.getKind() == lltok::kw_null) {
     if (!Result.AllowNull)
@@ -5787,7 +5833,9 @@ bool LLParser::parseMDFieldsImplBody(ParserTy ParseField) {
 
 template <class ParserTy>
 bool LLParser::parseMDFieldsImpl(ParserTy ParseField, LocTy &ClosingLoc) {
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  assert((Lex.getKind() == lltok::MetadataVar ||
+          Lex.getKind() == lltok::FLMDType) &&
+         "Expected metadata type name");
   Lex.Lex();
 
   if (parseToken(lltok::lparen, "expected '(' here"))
@@ -5846,8 +5894,153 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
 #define GET_OR_DISTINCT(CLASS, ARGS)                                           \
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
 
+bool LLParser::parseFLMDEntry(LocTy Loc, FLScope &Result, uint32_t Index,
+                              MDFunctionLocalContext *Context) {
+  if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "scope")
+    return tokError("expected !!scope");
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(scope, MDNodeField, (/* AllowNull */ false));
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+  DILocalScope *ValidScope = dyn_cast_or_null<DILocalScope>(scope.Val);
+  // If this is a forward reference, track it elsewhere, as FLScope does not use
+  // a tracking metadata ref.
+  if (!ValidScope && scope.Val->isTemporary()) {
+    FLForwardRefScopes.try_emplace(Context).first->second.emplace_back(
+        Index, scope.Val);
+  }
+  Result = FLScope(ValidScope);
+  return false;
+}
+
+bool LLParser::parseFLMDEntry(LocTy Loc, FLSrcLoc &Result, uint32_t Index,
+                              MDFunctionLocalContext *Context) {
+  if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "srcLoc")
+    return tokError("expected !!srcLoc");
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(line, LineField, );                                                 \
+  OPTIONAL(column, ColumnField, );                                             \
+  REQUIRED(scope, MDUnsignedField, (0, UINT16_MAX - 1));
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+  Result = FLSrcLoc(line.Val, column.Val, scope.Val);
+  return false;
+}
+
+bool LLParser::parseFLMDEntry(LocTy Loc, FLInlinedCall &Result, uint32_t Index,
+                              MDFunctionLocalContext *Context) {
+  if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "inlinedCall")
+    return tokError("expected !!inlinedCall");
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(srcLoc, MDUnsignedField, (0, UINT32_MAX - 1));                      \
+  OPTIONAL(inlinedAt, MDUnsignedField, (0, UINT16_MAX - 1));                   \
+  OPTIONAL(uniquable, MDBoolField, (false));                                   \
+  REQUIRED(inlineeContext, MDNodeField, (/* AllowNull */ false));
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+  // There isn't a valid unsigned default value for FLIndex fields, so manually
+  // check the 'Seen' field to check whether we want to use them.
+  FLIndex<FLSrcLoc> ActualSrcLoc;
+  if (srcLoc.Seen)
+    ActualSrcLoc = FLIndex<FLSrcLoc>(srcLoc.Val);
+  FLIndex<FLInlinedCall> ActualInlinedAt;
+  if (inlinedAt.Seen)
+    ActualInlinedAt = FLIndex<FLInlinedCall>(inlinedAt.Val);
+  MDFunctionLocalContext *ValidInlineeContext =
+      dyn_cast_or_null<MDFunctionLocalContext>(inlineeContext.Val);
+  if (!ValidInlineeContext && inlineeContext.Val->isTemporary()) {
+    FLForwardRefFLMDs.try_emplace(Context).first->second.emplace_back(
+        Index, inlineeContext.Val);
+  }
+  Result = FLInlinedCall(ActualSrcLoc, ActualInlinedAt, ValidInlineeContext,
+                         uniquable.Val);
+  return false;
+}
+
+template <class FLMDTy>
+bool LLParser::parseFLMDStorage(LocTy Loc, SmallVectorImpl<FLMDTy> &Result,
+                                MDFunctionLocalContext *Context) {
+  if (parseToken(lltok::lsquare, "expected '[' at FLMD storage field"))
+    return true;
+
+  // Empty storage array.
+  if (Lex.getKind() == lltok::rsquare) {
+    Lex.Lex();
+    return false;
+  }
+  uint32_t EntryIndex = 0;
+  FLMDTy NextEntry;
+  if (parseFLMDEntry(Loc, NextEntry, EntryIndex++, Context))
+    return true;
+  Result.push_back(NextEntry);
+  while (Lex.getKind() != lltok::rsquare) {
+    if (parseToken(lltok::comma, "expected ',' between FLMD storage entries"))
+      return true;
+    // For ergonomic reasons, we allow a trailing comma in storage arrays.
+    if (Lex.getKind() == lltok::rsquare)
+      break;
+    if (parseFLMDEntry(Loc, NextEntry, EntryIndex++, Context))
+      return true;
+    Result.push_back(NextEntry);
+  }
+  Lex.Lex();
+  return false;
+}
+
+/// parseMDFunctionLocalContext:
+///   ::= !MDFunctionLocalContext(nonDebug: false, scopes: [...],
+///                               srcLocs: [...], inlinedCalls: [...])
 bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
-  return tokError("!MDFunctionLocalContext parsing not yet implemented");
+  if (!IsDistinct)
+    return tokError("missing 'distinct', required for "
+                    "!MDFunctionLocalContext()");
+  // There is an awkward order of operations here: we don't have all the
+  // constructor arguments for MDFunctionLocalContext yet (missing NonDebug),
+  // but the storage field parsing logic is much simpler if we can pass a valid
+  // context to the parser, so we use a deferred approach.
+  MDFunctionLocalContext *FLMD = MDFunctionLocalContext::getDistinct(Context);
+  MDBoolField NonDebug(false);
+  bool SeenScopes = false;
+  SmallVector<FLScope> ScopesStorage;
+  bool SeenSrcLocs = false;
+  SmallVector<FLSrcLoc> SrcLocsStorage;
+  bool SeenInlinedCalls = false;
+  SmallVector<FLInlinedCall> InlinedCallsStorage;
+  auto ParseStorageField = [&](StringRef Name, bool &Seen, auto &Storage) {
+    if (Seen)
+      return tokError("field '" + Name +
+                      "' cannot be specified more than once");
+    Seen = true;
+
+    LocTy Loc = Lex.getLoc();
+    Lex.Lex();
+    return parseFLMDStorage(Loc, Storage, FLMD);
+  };
+  LocTy ClosingLoc;
+  if (parseMDFieldsImpl(
+          [&]() {
+            StringRef Label = Lex.getStrVal();
+            if (Label == "nonDebug")
+              return parseMDField("nonDebug", NonDebug);
+            if (Label == "scopes")
+              return ParseStorageField("scopes", SeenScopes, ScopesStorage);
+            if (Label == "srcLocs")
+              return ParseStorageField("srcLocs", SeenSrcLocs, SrcLocsStorage);
+            if (Label == "inlinedCalls")
+              return ParseStorageField("inlinedCalls", SeenInlinedCalls,
+                                       InlinedCallsStorage);
+            return tokError(Twine("invalid field '") + Label + "'");
+          },
+          ClosingLoc))
+    return true;
+
+  // Write to FLMD fields directly to construct it efficiently.
+  FLMD->setNonDebug(NonDebug.Val);
+  FLMD->SrcLocs.append(SrcLocsStorage);
+  FLMD->Scopes.append(ScopesStorage);
+  FLMD->InlinedCalls.append(InlinedCallsStorage);
+  Result = FLMD;
+  return false;
 }
 
 /// parseDILocationFields:
