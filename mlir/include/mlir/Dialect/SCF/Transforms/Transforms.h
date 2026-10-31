@@ -106,6 +106,17 @@ LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
 LogicalResult peelForLoopFirstIteration(RewriterBase &rewriter, ForOp forOp,
                                         scf::ForOp &partialIteration);
 
+/// Rewrite `partialIteration`, the partial iteration created by
+/// `peelForLoopAndSimplifyBounds` or `peelForLoopFirstIteration`, into an
+/// scf.if. The body runs if the lower bound is less than the upper bound, with
+/// the induction variable replaced by the lower bound. Otherwise the init args
+/// are forwarded. Returns the new scf.if.
+///
+/// Note: `partialIteration` must run at most once. Peeling guarantees this;
+/// it is not checked here.
+IfOp convertPartialIterationToIf(RewriterBase &rewriter,
+                                 ForOp partialIteration);
+
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
 ///                                             step (%arg4, %arg5)
