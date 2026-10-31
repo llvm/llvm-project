@@ -16224,8 +16224,13 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
              Bitwidth > Op->getType()->getScalarSizeInBits()) {
         Type *NarrowTy = IntegerType::get(SE.getContext(), Bitwidth);
         auto *NarrowExt = SE.getZeroExtendExpr(Op, NarrowTy);
-        if (const SCEV *S = Map.lookup(NarrowExt))
+        if (const SCEV *S = Map.lookup(NarrowExt)) {
+          APInt OpMax = APInt::getLowBitsSet(
+              Bitwidth, Op->getType()->getScalarSizeInBits());
+          if (SE.getUnsignedRangeMax(S).ugt(OpMax))
+            S = SE.getUMinExpr(S, SE.getConstant(OpMax));
           return SE.getZeroExtendExpr(S, Ty);
+        }
         Bitwidth = Bitwidth / 2;
       }
 
