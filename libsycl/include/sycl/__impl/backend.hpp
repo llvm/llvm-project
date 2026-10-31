@@ -20,12 +20,20 @@
 
 #include <type_traits>
 
+// SYCL 2020 4.1.1. Backend macros.
+// See libsycl/docs/extensions/sycl_ext_oneapi_backend_level_zero.md.
+// SYCL_EXT_ONEAPI_BACKEND_LEVEL_ZERO is left undefined until version 1 of the
+// extension is fully implemented, see libsycl/docs/index.md.
+// #define SYCL_EXT_ONEAPI_BACKEND_LEVEL_ZERO 1
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-// SYCL 2020 4.1. Backends.
+// SYCL 2020 4.1. Backends and SYCL 2020 6.3.7. Adding a backend.
 enum class backend : unsigned char {
   opencl = 0,
-  level_zero,
+  ext_oneapi_level_zero,
+  // cuda
+  // hip
 };
 
 namespace detail {

@@ -19,7 +19,7 @@ class Kernel1;
 bool check(backend Backend) {
   switch (Backend) {
   case backend::opencl:
-  case backend::level_zero:
+  case backend::ext_oneapi_level_zero:
     return true;
   default:
     return false;
