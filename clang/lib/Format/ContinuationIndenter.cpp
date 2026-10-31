@@ -926,7 +926,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // In "AlwaysBreak" or "BlockIndent" mode, enforce wrapping directly after the
   // parenthesis by disallowing any further line breaks if there is no line
   // break after the opening parenthesis. Don't break if it doesn't conserve
-  // columns.
+  // columns, unless the style option applies and a break is allowed.
   auto IsOpeningBracket = [&](const FormatToken &Tok) {
     auto IsStartOfBracedList = [&]() {
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
@@ -950,6 +950,26 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     }
     return false;
   };
+
+  auto ShouldBreakAfterOpeningBracket = [&](const FormatToken &Tok) {
+    assert(IsOpeningBracket(Tok));
+
+    // Corresponds to BreakAfterOpenBracketBracedList.
+    if (Tok.is(tok::l_brace))
+      return true;
+
+    const auto *Previous = Tok.Previous;
+    if (!Previous)
+      return false;
+
+    // Corresponds to BreakAfterOpenBracketIf, BreakAfterOpenBracketLoop,
+    // BreakAfterOpenBracketSwitch, BreakAfterOpenBracketFunction.
+    return Previous->isIf() || Previous->isLoop(Style) ||
+           Previous->is(tok::kw_switch) ||
+           (!Previous->is(TT_CastRParen) &&
+            !(Style.isJavaScript() && Tok.is(Keywords.kw_await)));
+  };
+
   auto IsFunctionCallParen = [](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
@@ -1004,7 +1024,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
            Next->is(TT_FunctionDeclarationLParen) || IsFunctionCallParen(*Next);
   };
   if (IsOpeningBracket(Previous) &&
-      State.Column > getNewLineColumn(State).Total &&
+      (State.Column > getNewLineColumn(State).Total ||
+       // Only forbid later breaks if a break here is possible to prevent
+       // alternatives from being blocked.
+       (ShouldBreakAfterOpeningBracket(Previous) && canBreak(State))) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
