@@ -66,6 +66,7 @@ extern "C" void body(int);
 // IR-NEXT:    store i32 [[ADD8]], ptr [[DOTFLOOR_0_IV_I]], align 4
 // IR-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
 // IR:       [[FOR_END9]]:
+// IR-NEXT:    store i32 6, ptr [[I]], align 4
 // IR-NEXT:    ret void
 //
 void remainder_6_tile_4(void) {
@@ -150,6 +151,7 @@ void remainder_6_tile_4(void) {
 // IR-NEXT:    store i32 [[ADD15]], ptr [[DOTFLOOR_0_IV_I]], align 4
 // IR-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
 // IR:       [[FOR_END16]]:
+// IR-NEXT:    store i32 6, ptr [[I]], align 4
 // IR-NEXT:    ret void
 //
 void nested_inner_j(int n) {
