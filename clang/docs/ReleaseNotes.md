@@ -984,6 +984,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed a regression where the rewritten comparison operator was not instantiated properly. (#GH104720)
 
+- Fixed a crash when a defaulted comparison operator of a union with no variant members was called. (#GH140368)
+
 - Fixed an assertion failure when a parenthesized structured binding declarator
   was followed by a function declarator and body (e.g. ``([a, b])() {}``).
   (#GH218144, #GH193687)
