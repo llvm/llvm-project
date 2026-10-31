@@ -784,3 +784,235 @@ for.cond.cleanup:                                 ; preds = %for.cond1.preheader
   ret i64 %add17
 }
 
+; Minimal mutual reductions over the same four loads. Each reduction alone
+; is vectorized (see the two functions below), but together each one is
+; charged extracts for the scalars the other still uses, so neither is
+; vectorized.
+define i64 @mutual_v4i32(ptr %x) {
+; CHECK-LABEL: @mutual_v4i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 2
+; CHECK-NEXT:    [[X2:%.*]] = load i32, ptr [[P2]], align 4
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load i32, ptr [[P3]], align 4
+; CHECK-NEXT:    [[SQ0:%.*]] = mul i32 [[X0]], [[X0]]
+; CHECK-NEXT:    [[SQ1:%.*]] = mul i32 [[X1]], [[X1]]
+; CHECK-NEXT:    [[SQ2:%.*]] = mul i32 [[X2]], [[X2]]
+; CHECK-NEXT:    [[SQ3:%.*]] = mul i32 [[X3]], [[X3]]
+; CHECK-NEXT:    [[S1:%.*]] = add i32 [[X0]], [[X1]]
+; CHECK-NEXT:    [[S2:%.*]] = add i32 [[S1]], [[X2]]
+; CHECK-NEXT:    [[S3:%.*]] = add i32 [[S2]], [[X3]]
+; CHECK-NEXT:    [[M1:%.*]] = add i32 [[SQ0]], [[SQ1]]
+; CHECK-NEXT:    [[M2:%.*]] = add i32 [[M1]], [[SQ2]]
+; CHECK-NEXT:    [[M3:%.*]] = add i32 [[M2]], [[SQ3]]
+; CHECK-NEXT:    [[S_EXT:%.*]] = zext i32 [[S3]] to i64
+; CHECK-NEXT:    [[M_EXT:%.*]] = zext i32 [[M3]] to i64
+; CHECK-NEXT:    [[M_SHL:%.*]] = shl nuw i64 [[M_EXT]], 32
+; CHECK-NEXT:    [[R:%.*]] = or i64 [[M_SHL]], [[S_EXT]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  %x0 = load i32, ptr %x, align 4
+  %p1 = getelementptr inbounds i32, ptr %x, i64 1
+  %x1 = load i32, ptr %p1, align 4
+  %p2 = getelementptr inbounds i32, ptr %x, i64 2
+  %x2 = load i32, ptr %p2, align 4
+  %p3 = getelementptr inbounds i32, ptr %x, i64 3
+  %x3 = load i32, ptr %p3, align 4
+  %sq0 = mul i32 %x0, %x0
+  %sq1 = mul i32 %x1, %x1
+  %sq2 = mul i32 %x2, %x2
+  %sq3 = mul i32 %x3, %x3
+  %s1 = add i32 %x0, %x1
+  %s2 = add i32 %s1, %x2
+  %s3 = add i32 %s2, %x3
+  %m1 = add i32 %sq0, %sq1
+  %m2 = add i32 %m1, %sq2
+  %m3 = add i32 %m2, %sq3
+  %s.ext = zext i32 %s3 to i64
+  %m.ext = zext i32 %m3 to i64
+  %m.shl = shl nuw i64 %m.ext, 32
+  %r = or i64 %m.shl, %s.ext
+  ret i64 %r
+}
+
+define i32 @add_only_v4i32(ptr %x) {
+; CHECK-LABEL: @add_only_v4i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+entry:
+  %x0 = load i32, ptr %x, align 4
+  %p1 = getelementptr inbounds i32, ptr %x, i64 1
+  %x1 = load i32, ptr %p1, align 4
+  %p2 = getelementptr inbounds i32, ptr %x, i64 2
+  %x2 = load i32, ptr %p2, align 4
+  %p3 = getelementptr inbounds i32, ptr %x, i64 3
+  %x3 = load i32, ptr %p3, align 4
+  %s1 = add i32 %x0, %x1
+  %s2 = add i32 %s1, %x2
+  %s3 = add i32 %s2, %x3
+  ret i32 %s3
+}
+
+define i32 @sq_only_v4i32(ptr %x) {
+; CHECK-LABEL: @sq_only_v4i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  %x0 = load i32, ptr %x, align 4
+  %p1 = getelementptr inbounds i32, ptr %x, i64 1
+  %x1 = load i32, ptr %p1, align 4
+  %p2 = getelementptr inbounds i32, ptr %x, i64 2
+  %x2 = load i32, ptr %p2, align 4
+  %p3 = getelementptr inbounds i32, ptr %x, i64 3
+  %x3 = load i32, ptr %p3, align 4
+  %sq0 = mul i32 %x0, %x0
+  %sq1 = mul i32 %x1, %x1
+  %sq2 = mul i32 %x2, %x2
+  %sq3 = mul i32 %x3, %x3
+  %m1 = add i32 %sq0, %sq1
+  %m2 = add i32 %m1, %sq2
+  %m3 = add i32 %m2, %sq3
+  ret i32 %m3
+}
+
+; Same pattern with 16 lanes: one reduction becomes a single wide vector and
+; the other stays scalar, fed by extracts from that vector.
+define i64 @mutual_v16i32(ptr %x) {
+; CHECK-LABEL: @mutual_v16i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <16 x i32> [[TMP0]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x i32> [[TMP0]], i64 1
+; CHECK-NEXT:    [[S1:%.*]] = add i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i32> [[TMP0]], i64 2
+; CHECK-NEXT:    [[S2:%.*]] = add i32 [[S1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x i32> [[TMP0]], i64 3
+; CHECK-NEXT:    [[S3:%.*]] = add i32 [[S2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <16 x i32> [[TMP0]], i64 4
+; CHECK-NEXT:    [[S4:%.*]] = add i32 [[S3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x i32> [[TMP0]], i64 5
+; CHECK-NEXT:    [[S5:%.*]] = add i32 [[S4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x i32> [[TMP0]], i64 6
+; CHECK-NEXT:    [[S6:%.*]] = add i32 [[S5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x i32> [[TMP0]], i64 7
+; CHECK-NEXT:    [[S7:%.*]] = add i32 [[S6]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i32> [[TMP0]], i64 8
+; CHECK-NEXT:    [[S8:%.*]] = add i32 [[S7]], [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i32> [[TMP0]], i64 9
+; CHECK-NEXT:    [[S9:%.*]] = add i32 [[S8]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <16 x i32> [[TMP0]], i64 10
+; CHECK-NEXT:    [[S10:%.*]] = add i32 [[S9]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <16 x i32> [[TMP0]], i64 11
+; CHECK-NEXT:    [[S11:%.*]] = add i32 [[S10]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x i32> [[TMP0]], i64 12
+; CHECK-NEXT:    [[S12:%.*]] = add i32 [[S11]], [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x i32> [[TMP0]], i64 13
+; CHECK-NEXT:    [[S13:%.*]] = add i32 [[S12]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <16 x i32> [[TMP0]], i64 14
+; CHECK-NEXT:    [[S14:%.*]] = add i32 [[S13]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <16 x i32> [[TMP0]], i64 15
+; CHECK-NEXT:    [[S15:%.*]] = add i32 [[S14]], [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP1]])
+; CHECK-NEXT:    [[S_EXT:%.*]] = zext i32 [[S15]] to i64
+; CHECK-NEXT:    [[M_EXT:%.*]] = zext i32 [[TMP18]] to i64
+; CHECK-NEXT:    [[M_SHL:%.*]] = shl nuw i64 [[M_EXT]], 32
+; CHECK-NEXT:    [[R:%.*]] = or i64 [[M_SHL]], [[S_EXT]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  %x0 = load i32, ptr %x, align 4
+  %p1 = getelementptr inbounds i32, ptr %x, i64 1
+  %x1 = load i32, ptr %p1, align 4
+  %p2 = getelementptr inbounds i32, ptr %x, i64 2
+  %x2 = load i32, ptr %p2, align 4
+  %p3 = getelementptr inbounds i32, ptr %x, i64 3
+  %x3 = load i32, ptr %p3, align 4
+  %p4 = getelementptr inbounds i32, ptr %x, i64 4
+  %x4 = load i32, ptr %p4, align 4
+  %p5 = getelementptr inbounds i32, ptr %x, i64 5
+  %x5 = load i32, ptr %p5, align 4
+  %p6 = getelementptr inbounds i32, ptr %x, i64 6
+  %x6 = load i32, ptr %p6, align 4
+  %p7 = getelementptr inbounds i32, ptr %x, i64 7
+  %x7 = load i32, ptr %p7, align 4
+  %p8 = getelementptr inbounds i32, ptr %x, i64 8
+  %x8 = load i32, ptr %p8, align 4
+  %p9 = getelementptr inbounds i32, ptr %x, i64 9
+  %x9 = load i32, ptr %p9, align 4
+  %p10 = getelementptr inbounds i32, ptr %x, i64 10
+  %x10 = load i32, ptr %p10, align 4
+  %p11 = getelementptr inbounds i32, ptr %x, i64 11
+  %x11 = load i32, ptr %p11, align 4
+  %p12 = getelementptr inbounds i32, ptr %x, i64 12
+  %x12 = load i32, ptr %p12, align 4
+  %p13 = getelementptr inbounds i32, ptr %x, i64 13
+  %x13 = load i32, ptr %p13, align 4
+  %p14 = getelementptr inbounds i32, ptr %x, i64 14
+  %x14 = load i32, ptr %p14, align 4
+  %p15 = getelementptr inbounds i32, ptr %x, i64 15
+  %x15 = load i32, ptr %p15, align 4
+  %sq0 = mul i32 %x0, %x0
+  %sq1 = mul i32 %x1, %x1
+  %sq2 = mul i32 %x2, %x2
+  %sq3 = mul i32 %x3, %x3
+  %sq4 = mul i32 %x4, %x4
+  %sq5 = mul i32 %x5, %x5
+  %sq6 = mul i32 %x6, %x6
+  %sq7 = mul i32 %x7, %x7
+  %sq8 = mul i32 %x8, %x8
+  %sq9 = mul i32 %x9, %x9
+  %sq10 = mul i32 %x10, %x10
+  %sq11 = mul i32 %x11, %x11
+  %sq12 = mul i32 %x12, %x12
+  %sq13 = mul i32 %x13, %x13
+  %sq14 = mul i32 %x14, %x14
+  %sq15 = mul i32 %x15, %x15
+  %s1 = add i32 %x0, %x1
+  %s2 = add i32 %s1, %x2
+  %s3 = add i32 %s2, %x3
+  %s4 = add i32 %s3, %x4
+  %s5 = add i32 %s4, %x5
+  %s6 = add i32 %s5, %x6
+  %s7 = add i32 %s6, %x7
+  %s8 = add i32 %s7, %x8
+  %s9 = add i32 %s8, %x9
+  %s10 = add i32 %s9, %x10
+  %s11 = add i32 %s10, %x11
+  %s12 = add i32 %s11, %x12
+  %s13 = add i32 %s12, %x13
+  %s14 = add i32 %s13, %x14
+  %s15 = add i32 %s14, %x15
+  %m1 = add i32 %sq0, %sq1
+  %m2 = add i32 %m1, %sq2
+  %m3 = add i32 %m2, %sq3
+  %m4 = add i32 %m3, %sq4
+  %m5 = add i32 %m4, %sq5
+  %m6 = add i32 %m5, %sq6
+  %m7 = add i32 %m6, %sq7
+  %m8 = add i32 %m7, %sq8
+  %m9 = add i32 %m8, %sq9
+  %m10 = add i32 %m9, %sq10
+  %m11 = add i32 %m10, %sq11
+  %m12 = add i32 %m11, %sq12
+  %m13 = add i32 %m12, %sq13
+  %m14 = add i32 %m13, %sq14
+  %m15 = add i32 %m14, %sq15
+  %s.ext = zext i32 %s15 to i64
+  %m.ext = zext i32 %m15 to i64
+  %m.shl = shl nuw i64 %m.ext, 32
+  %r = or i64 %m.shl, %s.ext
+  ret i64 %r
+}
+
