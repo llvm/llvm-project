@@ -108,6 +108,84 @@ define i8 @shl1_nsw_not_exact(i8 %x, i8 %y) {
   ret i8 %div
 }
 
+define i8 @select_pow2(i8 %x, i1 %c) {
+; CHECK-LABEL: @select_pow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i8 2, i8 4
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %d = select i1 %c, i8 4, i8 16
+  %div = sdiv exact i8 %x, %d
+  ret i8 %div
+}
+
+define i8 @select_pow2_signmask(i8 %x, i1 %c) {
+; CHECK-LABEL: @select_pow2_signmask(
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i8 4, i8 -128
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[D]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %d = select i1 %c, i8 4, i8 -128
+  %div = sdiv exact i8 %x, %d
+  ret i8 %div
+}
+
+define i16 @zext_shl1(i16 %x, i8 %y) {
+; CHECK-LABEL: @zext_shl1(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i8 [[Y:%.*]] to i16
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i16 [[DIV]]
+;
+  %s = shl nuw i8 1, %y
+  %z = zext i8 %s to i16
+  %div = sdiv exact i16 %x, %z
+  ret i16 %div
+}
+
+define i8 @shl4_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl4_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %s = shl nsw i8 4, %y
+  %div = sdiv exact i8 %x, %s
+  ret i8 %div
+}
+
+define <2 x i8> @shl4_nsw_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @shl4_nsw_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], splat (i8 2)
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact <2 x i8> [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[DIV]]
+;
+  %s = shl nsw <2 x i8> splat (i8 4), %y
+  %div = sdiv exact <2 x i8> %x, %s
+  ret <2 x i8> %div
+}
+
+define i8 @lshr_exact_pow2(i8 %x, i8 %y) {
+; CHECK-LABEL: @lshr_exact_pow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 6, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %s = lshr exact i8 64, %y
+  %div = sdiv exact i8 %x, %s
+  ret i8 %div
+}
+
+define i8 @lshr_exact_signmask(i8 %x, i8 %y) {
+; CHECK-LABEL: @lshr_exact_signmask(
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 -128, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %s = lshr exact i8 -128, %y
+  %div = sdiv exact i8 %x, %s
+  ret i8 %div
+}
+
 define i8 @prove_exact_with_high_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @prove_exact_with_high_mask(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 2
