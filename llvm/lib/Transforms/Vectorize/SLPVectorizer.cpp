@@ -529,10 +529,9 @@ public:
     HasRuntimeCheckableBlockers = false;
     HasNonCheckableMemBlocker = false;
     RTChecksFinalized = false;
-    for (auto &Iter : BlocksSchedules) {
-      BlockScheduling *BS = Iter.second.get();
+    for (BlockScheduling *BS : TreeBlocksSchedules)
       BS->clear();
-    }
+    TreeBlocksSchedules.clear();
     MinBWs.clear();
     ReductionBitWidth = 0;
     BaseGraphSize = 1;
@@ -3908,6 +3907,7 @@ private:
       clearDirectDependencies();
       MemoryDependencies.clear();
       ControlDependencies.clear();
+      IsRegisteredAsDependent = false;
     }
 
     /// Clears all direct dependencies only, except for control and memory
@@ -3951,6 +3951,14 @@ private:
     void addControlDependency(ScheduleData *Dep) {
       ControlDependencies.push_back(Dep);
     }
+    /// Marks this instruction as added to the memory and control dependencies
+    /// of the instructions it depends on. \returns the previous state.
+    bool setRegisteredAsDependent() {
+      return std::exchange(IsRegisteredAsDependent, true);
+    }
+    /// Gets/sets if the instruction may write to memory.
+    bool mayWriteToMemory() const { return MayWriteToMemory; }
+    void setMayWriteToMemory(bool MayWrite) { MayWriteToMemory = MayWrite; }
     /// Gets/sets the next load/store instruction in the block.
     ScheduleData *getNextLoadStore() const { return NextLoadStore; }
     void setNextLoadStore(ScheduleData *Next) { NextLoadStore = Next; }
@@ -3994,6 +4002,15 @@ private:
     /// for scheduling.
     /// Note that this is negative as long as Dependencies is not calculated.
     int UnscheduledDeps = InvalidDeps;
+
+    /// True if this instruction is in the memory and control dependencies of
+    /// the instructions it depends on. The recalculation of the direct
+    /// dependencies finds the same instructions, so they are not added twice.
+    bool IsRegisteredAsDependent = false;
+
+    /// True if the instruction may write to memory. Set for the instructions
+    /// in the list of memory accessing instructions.
+    bool MayWriteToMemory = false;
   };
 
 #ifndef NDEBUG
@@ -4011,6 +4028,8 @@ private:
     bool IsValid = true;
     /// The TreeEntry that this instruction corresponds to.
     TreeEntry *TE = nullptr;
+    /// The member, which had unscheduled dependencies last time.
+    mutable unsigned UnscheduledMember = 0;
     ScheduleBundle(bool IsValid)
         : ScheduleEntity(Kind::ScheduleBundle), IsValid(IsValid) {}
 
@@ -4050,6 +4069,25 @@ private:
       return Sum;
     }
 
+    /// Returns true if some member of the bundle has unscheduled dependencies
+    /// or no calculated dependencies. The search starts from the member found
+    /// last time, the members get scheduled mostly in order, so the bundle is
+    /// checked in the amortized constant time.
+    bool hasUnscheduledDeps() const {
+      auto HasUnscheduledDeps = [](const ScheduleEntity *SE) {
+        return SE->getUnscheduledDeps() != 0;
+      };
+      auto *Start = std::next(Bundle.begin(), UnscheduledMember);
+      auto *It = std::find_if(Start, Bundle.end(), HasUnscheduledDeps);
+      if (It == Bundle.end()) {
+        It = std::find_if(Bundle.begin(), Start, HasUnscheduledDeps);
+        if (It == Start)
+          return false;
+      }
+      UnscheduledMember = std::distance(Bundle.begin(), It);
+      return true;
+    }
+
     /// Returns true if the dependency information has been calculated.
     /// Note that depenendency validity can vary between instructions within
     /// a single bundle.
@@ -4063,7 +4101,7 @@ private:
     /// unscheduled depending instructions/bundles.
     bool isReady() const {
       assert(*this && "bundle must not be empty");
-      return unscheduledDepsInBundle() == 0 && !isScheduled();
+      return !isScheduled() && !hasUnscheduledDeps();
     }
 
     /// Returns the bundle of scheduling data, associated with the current
@@ -4255,6 +4293,7 @@ private:
       ReadyInsts.clear();
       RecalcCopyableOperandDeps.clear();
       IgnoredMemDeps.clear();
+      RegionScheduleData.clear();
       ScheduleStart = nullptr;
       ScheduleEnd = nullptr;
       FirstLoadStoreInRegion = nullptr;
@@ -4699,6 +4738,26 @@ private:
     void schedule(const BoUpSLP &R, const InstructionsState &S,
                   const EdgeInfo &EI, ScheduleEntity *Data,
                   ReadyListType &ReadyList) {
+      // The lanes of the scalars of the big tree entries are collected once,
+      // otherwise the search for the lanes of each bundle member is linear.
+      DenseMap<const TreeEntry *,
+               SmallDenseMap<const Value *, SmallVector<unsigned, 1>>>
+          TreeEntryLanes;
+      auto GetLanes = [&](const TreeEntry *TE, const Value *V) {
+        constexpr unsigned SmallTreeEntrySize = 16;
+        SmallVector<unsigned, 1> Lanes;
+        if (TE->Scalars.size() <= SmallTreeEntrySize) {
+          for (auto [Lane, Scalar] : enumerate(TE->Scalars))
+            if (Scalar == V)
+              Lanes.push_back(Lane);
+          return Lanes;
+        }
+        auto [It, Inserted] = TreeEntryLanes.try_emplace(TE);
+        if (Inserted)
+          for (auto [Lane, Scalar] : enumerate(TE->Scalars))
+            It->second[Scalar].push_back(Lane);
+        return It->second.lookup(V);
+      };
       auto ProcessBundleMember = [&](ScheduleEntity *BundleMember,
                                      ArrayRef<ScheduleBundle *> Bundles) {
         // Handle the def-use chain dependencies.
@@ -4720,7 +4779,7 @@ private:
             }
             if (!Bundles.empty()) {
               for (ScheduleBundle *Bundle : Bundles) {
-                if (Bundle->unscheduledDepsInBundle() == 0) {
+                if (!Bundle->hasUnscheduledDeps()) {
                   assert(!Bundle->isScheduled() &&
                          "already scheduled bundle gets ready");
                   ReadyList.insert(Bundle);
@@ -4852,7 +4911,9 @@ private:
             SmallPtrSet<Value *, 4> ParentsUniqueUsers;
             // Need to search for the lane since the tree entry can be
             // reordered.
-            auto *It = find(Bundle->getTreeEntry()->Scalars, In);
+            SmallVector<unsigned, 1> InLanes =
+                GetLanes(Bundle->getTreeEntry(), In);
+            assert(!InLanes.empty() && "Couldn't find extract lane");
             bool IsNonSchedulableWithParentPhiNode =
                 Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
                 Bundle->getTreeEntry()->UserTreeIndex &&
@@ -4861,10 +4922,7 @@ private:
                     TreeEntry::SplitVectorize &&
                 Bundle->getTreeEntry()->UserTreeIndex.UserTE->getOpcode() ==
                     Instruction::PHI;
-            do {
-              int Lane =
-                  std::distance(Bundle->getTreeEntry()->Scalars.begin(), It);
-              assert(Lane >= 0 && "Lane not set");
+            for (int Lane : InLanes) {
               if (isa<StoreInst, InsertValueInst>(In) &&
                   !Bundle->getTreeEntry()->ReorderIndices.empty())
                 Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
@@ -4923,9 +4981,7 @@ private:
               // If parent node is schedulable, it will be handled correctly.
               if (Bundle->getTreeEntry()->isCopyableElement(In))
                 break;
-              It = std::find(std::next(It),
-                             Bundle->getTreeEntry()->Scalars.end(), In);
-            } while (It != Bundle->getTreeEntry()->Scalars.end());
+            }
           }
           // A copyable element absorbed into its user modeling (e.g. a
           // copyable fmul turned into fmuladd(a, b, -0.0)) does not appear in
@@ -5045,10 +5101,7 @@ private:
         auto *SD = dyn_cast<ScheduleData>(BundleMember);
         if (!SD)
           return;
-        SmallPtrSet<const ScheduleData *, 4> VisitedMemory;
         for (ScheduleData *MemoryDep : SD->getMemoryDependencies()) {
-          if (!VisitedMemory.insert(MemoryDep).second)
-            continue;
           // There are no more unscheduled dependencies after decrementing,
           // so we can put the dependent instruction into the ready list.
           LLVM_DEBUG(dbgs() << "SLP:   check for readiness (mem): "
@@ -5056,10 +5109,7 @@ private:
           DecrUnsched(MemoryDep);
         }
         // Handle the control dependencies.
-        SmallPtrSet<const ScheduleData *, 4> VisitedControl;
         for (ScheduleData *Dep : SD->getControlDependencies()) {
-          if (!VisitedControl.insert(Dep).second)
-            continue;
           // There are no more unscheduled dependencies after decrementing,
           // so we can put the dependent instruction into the ready list.
           LLVM_DEBUG(dbgs()
@@ -5251,11 +5301,13 @@ private:
                           ScheduleData *NextLoadStore);
 
     /// Updates the dependency information of a bundle and of all instructions/
-    /// bundles which depend on the original bundle.
+    /// bundles which depend on the original bundle. \p IsRootStoreBundle is
+    /// true if \p Bundle is the root bundle of stores in a new region.
     void calculateDependencies(ScheduleBundle &Bundle, bool InsertInReadyList,
                                BoUpSLP *SLP,
                                const SmallPtrSetImpl<Value *> &ExpandedOps,
-                               ArrayRef<ScheduleData *> ControlDeps = {});
+                               ArrayRef<ScheduleData *> ControlDeps = {},
+                               bool IsRootStoreBundle = false);
 
     /// Sets all instruction in the scheduling region to un-scheduled.
     void resetSchedule();
@@ -5276,6 +5328,9 @@ private:
     /// Note that the mapping survives during all vectorization iterations, i.e.
     /// ScheduleData structures are recycled.
     SmallDenseMap<Instruction *, ScheduleData *> ScheduleDataMap;
+
+    /// The ScheduleData in the scheduling region.
+    SmallVector<ScheduleData *> RegionScheduleData;
 
     /// Attaches ScheduleCopyableData to EdgeInfo (UserTreeEntry + operand
     /// number) and the operand instruction, represented as copyable element.
@@ -5396,6 +5451,10 @@ private:
 
   /// Attaches the BlockScheduling structures to basic blocks.
   MapVector<BasicBlock *, std::unique_ptr<BlockScheduling>> BlocksSchedules;
+
+  /// The BlockScheduling structures, used by the current tree. The others have
+  /// no scheduling data to clear.
+  SmallSetVector<BlockScheduling *, 4> TreeBlocksSchedules;
 
   /// Performs the "real" scheduling. Done before vectorization is actually
   /// performed in a basic block.
@@ -6243,7 +6302,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
 
   Order.clear();
   // Check the order of pointer operands or that all pointers are the same.
-  bool IsSorted = sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, Order);
+  bool IsSorted = Cache.sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, Order);
 
   auto *VecTy = dyn_cast<VectorType>(getWidenedType(ScalarTy, Sz));
   if (!VecTy)
@@ -6355,10 +6414,15 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     // across the per-V comparisons below and getUnderlyingObject walks
     // GEP/cast chains.
     const Value *FrontUO = getUnderlyingObject(PointerOps.front());
-    if (static_cast<unsigned>(count_if(
+    // The pointers are built as a vector, not as a splat plus GEP, if they are
+    // not GEPs of the same base. The same for all the slices below.
+    const bool IsPtrsBuildVector =
+        static_cast<unsigned>(count_if(
             PointerOps, IsaPred<GetElementPtrInst>)) < PointerOps.size() - 1 ||
-        any_of(PointerOps,
-               [&](Value *V) { return getUnderlyingObject(V) != FrontUO; }))
+        any_of(
+            PointerOps,
+            [&](Value *V) { return getUnderlyingObject(V) != FrontUO; });
+    if (IsPtrsBuildVector)
       VectorGEPCost +=
           getScalarizationOverhead(TTI, Opts.slp_revec, PtrScalarTy, PtrVecTy,
                                    DemandedElts, /*Insert=*/true,
@@ -6462,12 +6526,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
                               CostKind, ScalarTy, SubVecTy)
                       .second;
         if (LS == LoadsState::ScatterVectorize) {
-          if (static_cast<unsigned>(
-                  count_if(PointerOps, IsaPred<GetElementPtrInst>)) <
-                  PointerOps.size() - 1 ||
-              any_of(PointerOps, [&](Value *V) {
-                return getUnderlyingObject(V) != FrontUO;
-              }))
+          if (IsPtrsBuildVector)
             VectorGEPCost += getScalarizationOverhead(
                 TTI, Opts.slp_revec, ScalarTy, SubVecTy,
                 APInt::getAllOnes(SliceVF),
@@ -9779,7 +9838,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     }
 
     // Check the order of pointer operands.
-    if (llvm::sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, CurrentOrder)) {
+    if (Cache.sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, CurrentOrder)) {
       Value *Ptr0;
       Value *PtrN;
       if (CurrentOrder.empty()) {
@@ -10088,6 +10147,12 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
     ReuseShuffleIndices.emplace_back(Res.first->second);
     if (Res.second)
       UniqueValues.emplace_back(V);
+  }
+  // All the values are unique and there are no tail poisons to drop.
+  if (UniqueValues.size() == VL.size() &&
+      !isa<PoisonValue>(UniqueValues.back())) {
+    ReuseShuffleIndices.clear();
+    return true;
   }
 
   // Check if we need to schedule the scalars. If no, can keep original scalars
@@ -12581,6 +12646,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     BSRef = std::make_unique<BlockScheduling>(BB, Opts.slp_schedule_budget);
 
   BlockScheduling &BS = *BSRef;
+  TreeBlocksSchedules.insert(&BS);
 
   SetVector<Value *> UniqueValues(llvm::from_range, VL);
   std::optional<ScheduleBundle *> BundlePtr =
@@ -27649,10 +27715,21 @@ void BoUpSLP::optimizeGatherSequence() {
                                                SM1.size() - LastUndefsCnt),
                                 SI1->getType()->getElementType());
   };
-  // Perform O(N^2) search over the gather/shuffle sequences and merge identical
-  // instructions. TODO: We can further optimize this scan if we split the
-  // instructions into different buckets based on the insert lane.
-  SmallVector<Instruction *, 16> Visited;
+  // Search over the gather/shuffle sequences and merge identical instructions.
+  // Only the instructions with the same opcode, type and constant lane can be
+  // merged, so the search is limited to the bucket of such instructions.
+  auto GetBucket = [](const Instruction *I) {
+    const Value *Lane = nullptr;
+    if (isa<InsertElementInst>(I))
+      Lane = I->getOperand(2);
+    else if (isa<ExtractElementInst>(I))
+      Lane = I->getOperand(1);
+    return std::make_tuple(I->getOpcode(), I->getType(),
+                           dyn_cast_if_present<Constant>(Lane));
+  };
+  SmallDenseMap<std::tuple<unsigned, Type *, const Constant *>,
+                SmallVector<Instruction *>>
+      Visited;
   for (auto I = CSEWorkList.begin(), E = CSEWorkList.end(); I != E; ++I) {
     assert(*I &&
            (I == CSEWorkList.begin() || !DT->dominates(*I, *std::prev(I))) &&
@@ -27669,7 +27746,8 @@ void BoUpSLP::optimizeGatherSequence() {
       // Check if we can replace this instruction with any of the
       // visited instructions.
       bool Replaced = false;
-      for (Instruction *&V : Visited) {
+      SmallVectorImpl<Instruction *> &Bucket = Visited[GetBucket(&In)];
+      for (Instruction *&V : Bucket) {
         SmallVector<int> NewMask;
         if (IsIdenticalOrLessDefined(&In, V, NewMask) &&
             DT->dominates(V->getParent(), In.getParent())) {
@@ -27697,8 +27775,8 @@ void BoUpSLP::optimizeGatherSequence() {
         }
       }
       if (!Replaced) {
-        assert(!is_contained(Visited, &In));
-        Visited.push_back(&In);
+        assert(!is_contained(Bucket, &In));
+        Bucket.push_back(&In);
       }
     }
   }
@@ -27965,12 +28043,21 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
 
   // The lanes cannot depend on each other, so the bundle with the operand of
   // another member is never scheduled.
-  if (!HasCopyables &&
-      any_of(make_isa_range<Instruction>(VL), [&](Instruction *I) {
-        return any_of(I->operand_values(),
-                      [&](const Value *Op) { return is_contained(VL, Op); });
-      }))
-    return std::nullopt;
+  if (!HasCopyables) {
+    // The lanes of the big bundles are searched in the set, the linear search
+    // is cheaper for the small bundles.
+    constexpr unsigned SmallBundleSize = 16;
+    SmallPtrSet<const Value *, 8> Lanes;
+    if (VL.size() > SmallBundleSize)
+      Lanes.insert_range(VL);
+    auto IsLane = [&](const Value *Op) {
+      return Lanes.empty() ? is_contained(VL, Op) : Lanes.contains(Op);
+    };
+    if (any_of(make_isa_range<Instruction>(VL), [&](Instruction *I) {
+          return any_of(I->operand_values(), IsLane);
+        }))
+      return std::nullopt;
+  }
 
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
@@ -28110,7 +28197,10 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << Bundle << " in block "
                         << BB->getName() << "\n");
       calculateDependencies(Bundle, /*InsertInReadyList=*/!ReSchedule, SLP,
-                            ExpandedOps, ControlDependentMembers);
+                            ExpandedOps, ControlDependentMembers,
+                            /*IsRootStoreBundle=*/!EI && !OldScheduleEnd &&
+                                S.getOpcode() == Instruction::Store &&
+                                ControlDependentMembers.empty());
     } else if (!ControlDependentMembers.empty()) {
       ScheduleBundle Invalid = ScheduleBundle::invalid();
       calculateDependencies(Invalid, /*InsertInReadyList=*/!ReSchedule, SLP,
@@ -28349,6 +28439,7 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
     assert(!isInSchedulingRegion(*SD) &&
            "new ScheduleData already in scheduling region");
     SD->init(SchedulingRegionID, I);
+    RegionScheduleData.push_back(SD);
 
     auto CanIgnoreLoad = [](const Instruction *I) {
       const auto *LI = dyn_cast<LoadInst>(I);
@@ -28373,12 +28464,14 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
         FirstLoadStoreInRegion = SD;
       }
       CurrentLoadStore = SD;
+      SD->setMayWriteToMemory(I->mayWriteToMemory());
     }
 
-    if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
-        match(I, m_Intrinsic<Intrinsic::stackrestore>()))
+    if (!RegionHasStackSave &&
+        (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
+         match(I, m_Intrinsic<Intrinsic::stackrestore>())))
       RegionHasStackSave = true;
-    if (I->mayThrow())
+    if (!RegionHasMayThrow && I->mayThrow())
       RegionHasMayThrow = true;
   }
   if (NextLoadStore) {
@@ -28392,7 +28485,7 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
 void BoUpSLP::BlockScheduling::calculateDependencies(
     ScheduleBundle &Bundle, bool InsertInReadyList, BoUpSLP *SLP,
     const SmallPtrSetImpl<Value *> &ExpandedOps,
-    ArrayRef<ScheduleData *> ControlDeps) {
+    ArrayRef<ScheduleData *> ControlDeps, bool IsRootStoreBundle) {
   SmallVector<ScheduleEntity *> WorkList;
   auto ProcessNode = [&](ScheduleEntity *SE) {
     if (auto *CD = dyn_cast<ScheduleCopyableData>(SE)) {
@@ -28482,10 +28575,10 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         continue;
       if (ScheduleData *UseSD = getScheduleData(U)) {
         // The operand is a copyable element - skip.
-        unsigned &NumOps = UserToNumOps.try_emplace(U, 0).first->getSecond();
-        ++NumOps;
-        if (areAllOperandsReplacedByCopyableData(
-                cast<Instruction>(U), BundleMember->getInst(), *SLP, NumOps))
+        if (!ScheduleCopyableDataMap.empty() &&
+            areAllOperandsReplacedByCopyableData(cast<Instruction>(U),
+                                                 BundleMember->getInst(), *SLP,
+                                                 ++UserToNumOps[U]))
           continue;
         unsigned ExtraDeps = 1;
         // Increment twice, since the operand was expanded in binop.
@@ -28514,6 +28607,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         WorkList.push_back(UseSD);
     }
 
+    const bool IsRegistered = BundleMember->setRegisteredAsDependent();
     SmallPtrSet<const Instruction *, 4> Visited;
     auto MakeControlDependent = [&](Instruction *I) {
       // Do not mark control dependent twice.
@@ -28521,7 +28615,8 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         return;
       auto *DepDest = getScheduleData(I);
       assert(DepDest && "must be in schedule window");
-      DepDest->addControlDependency(BundleMember);
+      if (!IsRegistered)
+        DepDest->addControlDependency(BundleMember);
       BundleMember->incDependencies();
       if (!DepDest->isScheduled())
         BundleMember->incrementUnscheduledDeps(1);
@@ -28617,6 +28712,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
     unsigned NumAliased = 0;
     unsigned DistToSrc = 1;
     bool IsNonSimpleSrc = !SrcLoc.Ptr || !isSimple(SrcInst);
+    const bool HasVersionCheck = SLP->VersionedBlockCheckedPairs.contains(BB);
 
     for (ScheduleData *DepDest = NextLoadStore; DepDest;
          DepDest = DepDest->getNextLoadStore()) {
@@ -28630,7 +28726,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
       //    It's important for the loop break condition (see below) to
       //    check this limit even between two read-only instructions.
       Instruction *DepInst = DepDest->getInst();
-      bool MayConflict = SrcMayWrite || DepInst->mayWriteToMemory();
+      bool MayConflict = SrcMayWrite || DepDest->mayWriteToMemory();
       if (DistToSrc >= MaxMemDepDistance ||
           (MayConflict && (IsNonSimpleSrc || NumAliased >= AliasedCheckLimit ||
                            SLP->isAliased(SrcLoc, SrcInst, DepInst)))) {
@@ -28647,10 +28743,10 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
           // A dependency dropped during buildTree() must stay dropped on every
           // later recomputation (e.g. the final scheduleBlock()), independent
           // of the current mode, so the schedule remains consistent.
-          if (IgnoredMemDeps.contains(Key)) {
+          if (!IgnoredMemDeps.empty() && IgnoredMemDeps.contains(Key)) {
             Dropped = true;
-          } else if (SLP->isCoveredByExistingVersionCheck(BB, SrcInst,
-                                                          DepInst)) {
+          } else if (HasVersionCheck && SLP->isCoveredByExistingVersionCheck(
+                                            BB, SrcInst, DepInst)) {
             // This block is the fast path of an earlier versioning whose
             // runtime check already proved these bases disjoint, so the
             // dependency can be dropped without emitting a new check.
@@ -28684,7 +28780,8 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
           // (e.g. between non-overlapping stores to the same base) that would
           // block scheduling of an otherwise versionable region.
           NumAliased++;
-          DepDest->addMemoryDependency(BundleMember);
+          if (!IsRegistered)
+            DepDest->addMemoryDependency(BundleMember);
           BundleMember->incDependencies();
           if (!DepDest->isScheduled())
             BundleMember->incrementUnscheduledDeps(1);
@@ -28715,6 +28812,25 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
 
   assert((Bundle || !ControlDeps.empty()) &&
          "expected at least one instruction to schedule");
+  // The root store bundle of a new region, whose members depend on each other,
+  // never gets ready and the region is dropped together with the tree. The
+  // dependencies of the remaining instructions are calculated only if the
+  // blockers found in the region may still allow a retry with runtime alias
+  // checks.
+  if (IsRootStoreBundle) {
+    for_each(Bundle.getBundle(), ProcessNode);
+    if (any_of(Bundle.getBundle(),
+               [](const ScheduleEntity *SE) {
+                 const auto *SD = dyn_cast<ScheduleData>(SE);
+                 return SD && !SD->getMemoryDependencies().empty();
+               }) &&
+        (SLP->isTryingRuntimeAliasChecks() ||
+         !SLP->Opts.slp_vectorize_with_runtime_alias_checks ||
+         SLP->hasNonCheckableMemBlocker() ||
+         SLP->runtimeChecksFailedForBlock(BB) ||
+         !SLP->canVersionBlockForRuntimeChecks(BB)))
+      return;
+  }
   if (Bundle)
     WorkList.push_back(Bundle.getBundle().front());
   WorkList.append(ControlDeps.begin(), ControlDeps.end());
@@ -28740,8 +28856,9 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
     }
     for (ScheduleBundle *Bundle :
          make_filter_range(Bundles, [&](ScheduleBundle *Bundle) {
-           return !Bundle->hasValidDependencies() &&
-                  Visited.insert(Bundle).second;
+           // The visited bundles already have the valid dependencies.
+           return Visited.insert(Bundle).second &&
+                  !Bundle->hasValidDependencies();
          })) {
       assert(isInSchedulingRegion(*Bundle) &&
              "ScheduleData not in scheduling region");
@@ -28764,15 +28881,10 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
 void BoUpSLP::BlockScheduling::resetSchedule() {
   assert(ScheduleStart &&
          "tried to reset schedule on block which has not been scheduled");
-  for_each(ScheduleDataMap, [&](auto &P) {
-    if (BB != P.first->getParent())
-      return;
-    ScheduleData *SD = P.second;
-    if (isInSchedulingRegion(*SD)) {
-      SD->setScheduled(/*Scheduled=*/false);
-      SD->resetUnscheduledDeps();
-    }
-  });
+  for (ScheduleData *SD : RegionScheduleData) {
+    SD->setScheduled(/*Scheduled=*/false);
+    SD->resetUnscheduledDeps();
+  }
   for_each(ScheduleCopyableDataMapByInst, [&](auto &P) {
     for_each(P.second, [&](ScheduleCopyableData *SD) {
       if (isInSchedulingRegion(*SD)) {
@@ -28781,12 +28893,12 @@ void BoUpSLP::BlockScheduling::resetSchedule() {
       }
     });
   });
-  for_each(ScheduledBundles, [&](auto &P) {
-    for_each(P.second, [&](ScheduleBundle *Bundle) {
-      if (isInSchedulingRegion(*Bundle))
-        Bundle->setScheduled(/*Scheduled=*/false);
-    });
-  });
+  // Reset the bundles, attached to the instructions, i.e. with at least one
+  // non-copyable element.
+  for (const std::unique_ptr<ScheduleBundle> &Bundle : ScheduledBundlesList)
+    if (any_of(Bundle->getBundle(), IsaPred<ScheduleData>) &&
+        isInSchedulingRegion(*Bundle))
+      Bundle->setScheduled(/*Scheduled=*/false);
   // Reset schedule data for copyable elements.
   for (auto &P : ScheduleCopyableDataMap) {
     if (isInSchedulingRegion(*P.second)) {
@@ -29721,6 +29833,15 @@ void BoUpSLP::computeMinimumValueSizes() {
     // we can truncate the roots to this narrower type.
     auto IsNotPoison = [](Value *Root) { return !isa<PoisonValue>(Root); };
     for (Value *Root : make_filter_range(E.Scalars, IsNotPoison)) {
+      // The root, whose demanded bits fit into the current width, does not
+      // change it.
+      unsigned BitWidth2 = std::numeric_limits<unsigned>::max();
+      if (auto *I = dyn_cast<Instruction>(Root)) {
+        APInt Mask = DB->getDemandedBits(I);
+        BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+        if (BitWidth2 <= MaxBitWidth)
+          continue;
+      }
       unsigned NumSignBits = ComputeNumSignBits(Root, *DL, AC, nullptr, DT);
       TypeSize NumTypeBits =
           DL->getTypeSizeInBits(Root->getType()->getScalarType());
@@ -29742,16 +29863,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       //        type larger to ensure correctness.
       if (!IsKnownPositive)
         ++BitWidth1;
-
-      auto *I = dyn_cast<Instruction>(Root);
-      if (!I) {
-        MaxBitWidth = std::max(BitWidth1, MaxBitWidth);
-        continue;
-      }
-      APInt Mask = DB->getDemandedBits(I);
-      unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
-      MaxBitWidth =
-          std::max<unsigned>(std::min(BitWidth1, BitWidth2), MaxBitWidth);
+      MaxBitWidth = std::max(std::min(BitWidth1, BitWidth2), MaxBitWidth);
     }
 
     if (MaxBitWidth < 8 && MaxBitWidth > 1)
@@ -35818,13 +35930,13 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     // save compile time.
     if (++Level < Opts->slp_recursion_max_depth)
       for (auto *Op : Inst->operand_values())
-        if (VisitedInstrs.insert(Op).second)
-          if (auto *I = dyn_cast<Instruction>(Op))
-            // Do not try to vectorize CmpInst operands,  this is done
-            // separately.
-            if (!isa<PHINode, CmpInst, InsertElementInst, InsertValueInst>(I) &&
-                !R.isDeleted(I) && I->getParent() == BB)
-              Stack.emplace(I, Level);
+        if (auto *I = dyn_cast<Instruction>(Op);
+            I && VisitedInstrs.insert(I).second)
+          // Do not try to vectorize CmpInst operands,  this is done
+          // separately.
+          if (!isa<PHINode, CmpInst, InsertElementInst, InsertValueInst>(I) &&
+              !R.isDeleted(I) && I->getParent() == BB)
+            Stack.emplace(I, Level);
   }
   return Res;
 }
@@ -37338,11 +37450,12 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
   SmallDenseMap<Value *, unsigned> SeedGroups;
   PoorThroughputOpCache PoorThroughputCache;
   for (Instruction &I : make_filter_range(*BB, [&](Instruction &I) {
-         return !R.isDeleted(&I) && I.hasOneUse() && !R.isEphemeralValue(&I) &&
-                !R.isVectorized(&I) && !R.isAnalyzedScalar(&I) &&
+         return I.hasOneUse() && !R.isDeleted(&I) &&
                 isValidElementType(getValueType(&I, Opts->slp_revec),
                                    Opts->slp_revec) &&
-                isOnceUsedSeed(&I) && !isNonVectorizableInst(*Opts, &I, TLI) &&
+                isOnceUsedSeed(&I) && !R.isEphemeralValue(&I) &&
+                !R.isVectorized(&I) && !R.isAnalyzedScalar(&I) &&
+                !isNonVectorizableInst(*Opts, &I, TLI) &&
                 !R.hasResolvedUser(&I);
        })) {
     // The poor-throughput ops are seeded on their own, with the different
@@ -37534,9 +37647,14 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   };
 
   bool SameParent = true;
+  // The number of the leading stored values, which are the binary operators or
+  // the simple loads with the opcode and the parent of the first one. The list
+  // grows by one store per call, so each value is checked only once.
+  unsigned NumSameOpcodeValues = 0;
   auto AreCompatibleStores = [&](ArrayRef<StoreInst *> VL, StoreInst *V1) {
     if (VL.empty()) {
       SameParent = true;
+      NumSameOpcodeValues = 0;
       return true;
     }
     StoreInst *V2 = VL.back();
@@ -37565,6 +37683,21 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
       if (I1 && !I2)
         return false;
       SameParent &= I1 && I2 && I1->getParent() == I2->getParent();
+      // The binary operators or the simple loads with the same opcode from the
+      // same block are always compatible.
+      auto *I0 = dyn_cast<Instruction>(VL.front()->getValueOperand());
+      auto IsSameOpcodeValue = [&](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        return I && I0 && I->getOpcode() == I0->getOpcode() &&
+               I->getParent() == I0->getParent() &&
+               isa<BinaryOperator, LoadInst>(I) && isSimple(I);
+      };
+      while (NumSameOpcodeValues < VL.size() &&
+             IsSameOpcodeValue(VL[NumSameOpcodeValues]->getValueOperand()))
+        ++NumSameOpcodeValues;
+      if (NumSameOpcodeValues == VL.size() &&
+          IsSameOpcodeValue(V1->getValueOperand()))
+        return true;
       SmallVector<Value *> NewVL(VL.size() + 1);
       for (auto [SI, V] : zip(VL, NewVL))
         V = SI->getValueOperand();
@@ -37600,16 +37733,14 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
       return false;
     Type *Ty = SIs.front()->getValueOperand()->getType();
     Value *Base = SIs.front()->getPointerOperand();
-    SmallVector<int64_t> Offsets;
-    Offsets.reserve(SIs.size());
-    for (StoreInst *SI : SIs) {
-      if (std::optional<int64_t> Off =
-              getPointersDiff(Ty, Base, Ty, SI->getPointerOperand(), *DL, *SE))
-        Offsets.push_back(*Off);
-    }
-    sort(Offsets);
-    return any_of(seq<size_t>(1, Offsets.size()), [&](size_t I) {
-      return Offsets[I] - Offsets[I - 1] == 1 || Offsets[I] == Offsets[I - 1];
+    // The search stops at the first store at the same or the adjacent address
+    // of a previous one.
+    SmallDenseSet<int64_t, 16> Offsets;
+    return any_of(SIs, [&](StoreInst *SI) {
+      std::optional<int64_t> Off =
+          getPointersDiff(Ty, Base, Ty, SI->getPointerOperand(), *DL, *SE);
+      return Off && (!Offsets.insert(*Off).second ||
+                     Offsets.contains(*Off - 1) || Offsets.contains(*Off + 1));
     });
   };
 
