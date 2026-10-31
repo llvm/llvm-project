@@ -186,6 +186,8 @@ defm : BoolField<"aarch64-slh-loads", "true",
   "Sanitize loads from memory">;
 
 // AArch64StackTagging.cpp
+defm : BoolField<"stack-tagging-dynamic-allocas", "true",
+  "Instrument dynamic allocas">;
 defm : OptionalBoolField<"stack-tagging-merge-init",
   "merge stack variable initializers with tagging when possible">;
 defm : ValueField<"stack-tagging-merge-init-scan-limit", "unsigned", "40",

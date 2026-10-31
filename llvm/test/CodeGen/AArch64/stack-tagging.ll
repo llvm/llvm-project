@@ -136,11 +136,13 @@ l:
 }
 
 ; CHECK-LABEL: define void @DynamicAllocas(
-; CHECK-NOT: @llvm.aarch64.irg.sp
-; CHECK:     %x = alloca i32, i32 %cnt, align 4
-; CHECK-NOT: @llvm.aarch64.irg.sp
-; CHECK:     alloca i32, align 4
-; CHECK-NOT: @llvm.aarch64.irg.sp
+; CHECK:     %basetag = call ptr @llvm.aarch64.irg.sp(i64 0)
+; CHECK:     %x = alloca i8, i64 {{.*}}, align 16
+; CHECK:     %x.tag = call ptr @llvm.aarch64.tagp.p0(ptr %x, ptr %basetag, i64 0)
+; CHECK:     %y = alloca i8, i64 {{.*}}, align 16
+; CHECK:     %y.tag = call ptr @llvm.aarch64.tagp.p0(ptr %y, ptr %basetag, i64 1)
+; CHECK:     call void @use32(ptr %x.tag)
+; CHECK:     call void @use32(ptr %y.tag)
 ; CHECK:     ret void
 
 define void @DoubleEnd(i32 %b) sanitize_memtag {
