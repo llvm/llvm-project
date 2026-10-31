@@ -9,6 +9,7 @@
 #include "canonicalize-directives.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/PluginDirectives.h"
 
 namespace Fortran::semantics {
 
@@ -30,6 +31,35 @@ public:
   void Post(parser::SpecificationPart &spec);
   bool Pre(parser::ExecutionPart &x);
 
+  // A directive defined by a plugin for the loop that follows it, after the
+  // declarations, is a declaration construct: move it to the start of the
+  // execution part, where it is checked like the others.
+  bool Pre(parser::MainProgram &x) {
+    MovePluginLoopDirectives(std::get<parser::SpecificationPart>(x.t),
+        std::get<parser::ExecutionPart>(x.t).v);
+    return true;
+  }
+  bool Pre(parser::FunctionSubprogram &x) {
+    MovePluginLoopDirectives(std::get<parser::SpecificationPart>(x.t),
+        std::get<parser::ExecutionPart>(x.t).v);
+    return true;
+  }
+  bool Pre(parser::SubroutineSubprogram &x) {
+    MovePluginLoopDirectives(std::get<parser::SpecificationPart>(x.t),
+        std::get<parser::ExecutionPart>(x.t).v);
+    return true;
+  }
+  bool Pre(parser::SeparateModuleSubprogram &x) {
+    MovePluginLoopDirectives(std::get<parser::SpecificationPart>(x.t),
+        std::get<parser::ExecutionPart>(x.t).v);
+    return true;
+  }
+  bool Pre(parser::BlockConstruct &x) {
+    MovePluginLoopDirectives(std::get<parser::BlockSpecificationPart>(x.t).v,
+        std::get<parser::Block>(x.t));
+    return true;
+  }
+
   // Ensure that directives associated with constructs appear accompanying the
   // construct.
   void Post(parser::Block &block);
@@ -38,6 +68,13 @@ private:
   // Ensure that loop directives appear immediately before a loop.
   void CheckLoopDirective(parser::CompilerDirective &dir, parser::Block &block,
       std::list<parser::ExecutionPartConstruct>::iterator it);
+  // Ensure that a directive a plugin defines for a loop appears immediately
+  // before a DO or DO WHILE loop.
+  void CheckPluginLoopDirective(parser::CompilerDirective &dir,
+      parser::Block &block,
+      std::list<parser::ExecutionPartConstruct>::iterator it);
+  void MovePluginLoopDirectives(
+      parser::SpecificationPart &spec, parser::Block &block);
 
   parser::Messages &messages_;
 
@@ -53,9 +90,21 @@ bool CanonicalizeDirectives(
   return !messages.AnyFatalError();
 }
 
+// A directive defined by a plugin whose subject is the loop that follows it.
+static bool IsPluginLoopDirective(const parser::CompilerDirective &dir) {
+  if (const auto *plugin{
+          std::get_if<parser::CompilerDirective::Plugin>(&dir.u)}) {
+    const auto &[prefix, keyword, args]{plugin->t};
+    const common::PluginDirectiveSpec *spec{
+        common::lookupPluginDirective(prefix.ToString(), keyword.ToString())};
+    return spec && spec->subject == common::PluginDirectiveSubject::Loop;
+  }
+  return false;
+}
+
 static bool IsExecutionDirective(const parser::CompilerDirective &dir) {
-  return std::holds_alternative<parser::CompilerDirective::VectorAlways>(
-             dir.u) ||
+  return IsPluginLoopDirective(dir) ||
+      std::holds_alternative<parser::CompilerDirective::VectorAlways>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::VectorLength>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::Unroll>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(dir.u) ||
@@ -71,6 +120,39 @@ static bool IsExecutionDirective(const parser::CompilerDirective &dir) {
       std::holds_alternative<parser::CompilerDirective::Simd>(dir.u);
 }
 
+// The directive of a declaration construct, if it is one.
+static common::Indirection<parser::CompilerDirective> *GetCompilerDirective(
+    parser::DeclarationConstruct &x) {
+  if (auto *spec{std::get_if<parser::SpecificationConstruct>(&x.u)}) {
+    return std::get_if<common::Indirection<parser::CompilerDirective>>(
+        &spec->u);
+  }
+  return nullptr;
+}
+
+void CanonicalizationOfDirectives::MovePluginLoopDirectives(
+    parser::SpecificationPart &spec, parser::Block &block) {
+  auto &decls{std::get<std::list<parser::DeclarationConstruct>>(spec.t)};
+  // The directives after the last declaration.
+  auto it{decls.end()};
+  while (it != decls.begin() && GetCompilerDirective(*std::prev(it))) {
+    --it;
+  }
+  auto first{block.begin()};
+  while (it != decls.end()) {
+    common::Indirection<parser::CompilerDirective> *dir{
+        GetCompilerDirective(*it)};
+    if (IsPluginLoopDirective(dir->value())) {
+      block.insert(first,
+          parser::ExecutionPartConstruct{
+              parser::ExecutableConstruct{std::move(*dir)}});
+      it = decls.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
 void CanonicalizationOfDirectives::Post(parser::SpecificationPart &spec) {
   auto &list{
       std::get<std::list<common::Indirection<parser::CompilerDirective>>>(
@@ -81,6 +163,20 @@ void CanonicalizationOfDirectives::Post(parser::SpecificationPart &spec) {
       it = list.erase(it);
     } else {
       ++it;
+    }
+  }
+  // A directive for a loop that is still among the declarations has no loop
+  // to follow: other declarations do, or the scope has no execution part.
+  for (parser::DeclarationConstruct &decl :
+      std::get<std::list<parser::DeclarationConstruct>>(spec.t)) {
+    if (auto *dir{GetCompilerDirective(decl)};
+        dir && IsPluginLoopDirective(dir->value())) {
+      const auto &[prefix, keyword, args]{
+          std::get<parser::CompilerDirective::Plugin>(dir->value().u).t};
+      messages_.Say(dir->value().source,
+          "A DO or DO WHILE loop must follow the '%s %s' directive"_err_en_US,
+          parser::ToUpperCaseLetters(prefix.ToString()),
+          parser::ToUpperCaseLetters(keyword.ToString()));
     }
   }
 }
@@ -117,6 +213,25 @@ void CanonicalizationOfDirectives::CheckLoopDirective(
   }
 }
 
+void CanonicalizationOfDirectives::CheckPluginLoopDirective(
+    parser::CompilerDirective &dir, parser::Block &block,
+    std::list<parser::ExecutionPartConstruct>::iterator it) {
+  // Skip over this and other compiler directives
+  while (it != block.end() && parser::Unwrap<parser::CompilerDirective>(*it)) {
+    ++it;
+  }
+  const parser::DoConstruct *loop{
+      it == block.end() ? nullptr : parser::Unwrap<parser::DoConstruct>(*it)};
+  if (!loop || loop->IsDoConcurrent()) {
+    const auto &[prefix, keyword, args]{
+        std::get<parser::CompilerDirective::Plugin>(dir.u).t};
+    messages_.Say(dir.source,
+        "A DO or DO WHILE loop must follow the '%s %s' directive"_err_en_US,
+        parser::ToUpperCaseLetters(prefix.ToString()),
+        parser::ToUpperCaseLetters(keyword.ToString()));
+  }
+}
+
 void CanonicalizationOfDirectives::Post(parser::Block &block) {
   for (auto it{block.begin()}; it != block.end(); ++it) {
     if (auto *dir{parser::Unwrap<parser::CompilerDirective>(*it)}) {
@@ -147,6 +262,11 @@ void CanonicalizationOfDirectives::Post(parser::Block &block) {
               },
               [&](parser::CompilerDirective::Simd &) {
                 CheckLoopDirective(*dir, block, it);
+              },
+              [&](parser::CompilerDirective::Plugin &) {
+                if (IsPluginLoopDirective(*dir)) {
+                  CheckPluginLoopDirective(*dir, block, it);
+                }
               },
               [&](auto &) {}},
           dir->u);
