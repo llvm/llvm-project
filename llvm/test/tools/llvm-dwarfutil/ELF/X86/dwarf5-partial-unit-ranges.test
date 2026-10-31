@@ -1,0 +1,113 @@
+## Check that both linkers rebuild the DW_AT_ranges of a DW_TAG_partial_unit
+## root from the linked range, as for a DW_TAG_compile_unit. The root covers
+## foo1, foo2 and foo3, but only foo2 is linked. The input has DW_AT_addr_base
+## because the linker does not add a missing one.
+
+## DW_TAG_compile_unit root.
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
+# RUN: llvm-dwarfutil %t.cu.o %t.cu.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefixes=CHECK,CU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.cu.classic
+# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu.parallel | FileCheck %s --check-prefixes=CHECK,CU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.cu.parallel
+
+## DW_TAG_partial_unit root.
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
+# RUN: llvm-dwarfutil %t.pu.o %t.pu.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefixes=CHECK,PU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.pu.classic
+# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu.parallel | FileCheck %s --check-prefixes=CHECK,PU --implicit-check-not=DW_TAG_subprogram
+# RUN: llvm-dwarfdump --verify %t.pu.parallel
+
+## The root's range is foo2's.
+# CU: DW_TAG_compile_unit
+# PU: DW_TAG_partial_unit
+# CHECK:        DW_AT_producer ("by_hand")
+# CHECK-NEXT:   DW_AT_name ("U1")
+# CHECK-NEXT:   DW_AT_ranges (0x0000000c
+# CHECK-NEXT:      [0x0000000000001140, 0x0000000000001150))
+# CHECK:        DW_TAG_subprogram
+# CHECK-NEXT:     DW_AT_name ("foo2")
+# CHECK-NEXT:     DW_AT_low_pc (0x0000000000001140)
+# CHECK-NEXT:     DW_AT_high_pc (0x0000000000001150)
+
+## The root's range list is one DW_RLE_start_length entry for [0x1130, 0x1160).
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x30
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+  - Name:            .debug_addr
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0c000000050008003011000000000000"
+  - Name:            .debug_rnglists
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "1300000005000800000000000730110000000000003000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_sec_offset
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+          - Attribute: DW_AT_addr_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U1
+            - Value: 0xc
+            - Value: 0x8
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x0
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: 0x1140
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: foo3
+            - Value: 0x0
+            - Value: 0x10
+        - AbbrCode: 0
+...
