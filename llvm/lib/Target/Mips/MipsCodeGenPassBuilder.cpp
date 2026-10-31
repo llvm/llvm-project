@@ -10,6 +10,10 @@
 #include "MipsAsmPrinter.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
 
@@ -31,7 +35,16 @@ public:
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
   void addIRPasses(PassManagerWrapper &PMW) override;
+
   Error addInstSelector(PassManagerWrapper &PMW) override;
+
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
@@ -54,6 +67,36 @@ void MipsCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 Error MipsCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   addMachineFunctionPass(Mips16ISelDAGPass(getTM(), getOptLevel()), PMW);
   addMachineFunctionPass(MipsSEISelDAGPass(getTM(), getOptLevel()), PMW);
+  return Error::success();
+}
+
+Error MipsCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
+void MipsCodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(MipsPreLegalizerCombinerPass(), PMW);
+}
+
+Error MipsCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
+}
+
+void MipsCodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
+  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
+  addMachineFunctionPass(MipsPostLegalizerCombinerPass(IsOptNone), PMW);
+}
+
+Error MipsCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(RegBankSelectPass(), PMW);
+  return Error::success();
+}
+
+Error MipsCodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
   return Error::success();
 }
 
