@@ -12,7 +12,9 @@ define i32 @reduce_add_sub_shl(ptr %p, ptr %q, ptr %out) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 0>, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 5, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> [[TMP7]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[TMP0]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze <8 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i32> [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP9]], i64 0
 ; CHECK-NEXT:    store volatile i32 [[TMP3]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP9]], i64 1

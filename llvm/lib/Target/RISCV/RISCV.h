@@ -304,11 +304,25 @@ public:
 FunctionPass *createRISCVPostLegalizerCombinerLegacyPass();
 void initializeRISCVPostLegalizerCombinerLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVO0PreLegalizerCombiner();
-void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);
+class RISCVO0PreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<RISCVO0PreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
-FunctionPass *createRISCVPreLegalizerCombiner();
-void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
+FunctionPass *createRISCVO0PreLegalizerCombinerLegacyPass();
+void initializeRISCVO0PreLegalizerCombinerLegacyPass(PassRegistry &);
+
+class RISCVPreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<RISCVPreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVPreLegalizerCombinerLegacyPass();
+void initializeRISCVPreLegalizerCombinerLegacyPass(PassRegistry &);
 
 class RISCVPromoteConstantPass
     : public OptionalPassInfoMixin<RISCVPromoteConstantPass> {

@@ -322,13 +322,14 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
                                          Type *LoadTy, IRBuilderBase &Builder,
                                          const DataLayout &DL) {
   LLVMContext &Ctx = SrcVal->getType()->getContext();
+  Type *SrcTy = SrcVal->getType();
 
-  // If two pointers are in the same address space, they have the same size,
-  // so we don't need to do any truncation, etc. This avoids introducing
-  // ptrtoint instructions for pointers that may be non-integral.
-  if (SrcVal->getType()->isPointerTy() && LoadTy->isPointerTy() &&
-      cast<PointerType>(SrcVal->getType())->getAddressSpace() ==
-          cast<PointerType>(LoadTy)->getAddressSpace()) {
+  // If two pointers or pointer vectors have the same size and address space,
+  // we don't need to do any truncation, etc. This avoids introducing
+  // ptrtoint, which drops provenance and is invalid for non-integral pointers.
+  if (SrcTy->isPtrOrPtrVectorTy() && LoadTy->isPtrOrPtrVectorTy() &&
+      SrcTy->getPointerAddressSpace() == LoadTy->getPointerAddressSpace() &&
+      DL.getTypeSizeInBits(SrcTy) == DL.getTypeSizeInBits(LoadTy)) {
     return SrcVal;
   }
 
@@ -360,7 +361,6 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   else
     ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
 
-  Type *SrcTy = SrcVal->getType();
   // Integers drop provenance, and one poison bit poisons the whole value.
   if (SrcTy->isByteOrByteVectorTy() ||
       (SrcTy->isPtrOrPtrVectorTy() && LoadTy->isByteOrByteVectorTy())) {

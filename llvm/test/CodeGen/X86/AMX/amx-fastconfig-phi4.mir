@@ -51,7 +51,7 @@ body:             |
   ; CHECK-NEXT:   MOVUPSmr %stack.1, 1, $noreg, 48, $noreg, [[V_SET0_]] :: (store (s512) into %stack.1 + 48, align 4)
   ; CHECK-NEXT:   MOV8mi %stack.1, 1, $noreg, 0, $noreg, 1 :: (store (s512) into %stack.1, align 4)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   %r0:gr16 = MOV16ri 64
   ; CHECK-NEXT:   %c0:gr16 = MOV16ri 16
   ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.1, align 4)
@@ -71,7 +71,7 @@ body:             |
   ; CHECK-NEXT:   [[MOV16ri:%[0-9]+]]:gr16 = MOV16ri 64
   ; CHECK-NEXT:   [[MOV16ri1:%[0-9]+]]:gr16 = MOV16ri 16
   ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.1, align 4)
-  ; CHECK-NEXT:   [[PTILEZEROV:%[0-9]+]]:tile = PTILEZEROV killed [[MOV16ri1]], killed [[MOV16ri]]
+  ; CHECK-NEXT:   [[PTILEZEROV:%[0-9]+]]:tile = PTILEZEROV [[MOV16ri1]], [[MOV16ri]]
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -115,7 +115,7 @@ body:             |
     liveins: $edi
 
     %12:gr32 = COPY $edi
-    %13:gr32 = COPY killed %12
+    %13:gr32 = COPY %12
     %r0:gr16 = MOV16ri 64
     %c0:gr16 = MOV16ri 16
     %t0:tile = PTILEZEROV %r0, %c0
@@ -127,7 +127,7 @@ body:             |
   bb.1:
     %17:gr16 = MOV16ri 64
     %18:gr16 = MOV16ri 16
-    %1:tile = PTILEZEROV killed %18, killed %17
+    %1:tile = PTILEZEROV %18, %17
     JMP_1 %bb.3
 
   bb.2:
@@ -135,12 +135,12 @@ body:             |
     %5:tile = PHI %t0, %bb.0, %3, %bb.3, %2, %bb.2
     %25:gr16 = MOV16ri 64
     %26:gr16 = MOV16ri 16
-    %4:tile = PTILEZEROV killed %26, killed %25
+    %4:tile = PTILEZEROV %26, %25
     TEST8ri %16, 1, implicit-def $eflags
     JCC_1 %bb.2, 5, implicit $eflags
 
   bb.3:
     %23:gr16 = MOV16ri 64
     %24:gr16 = MOV16ri 16
-    %3:tile = PTILEZEROV killed %24, killed %23
+    %3:tile = PTILEZEROV %24, %23
     JMP_1 %bb.2
