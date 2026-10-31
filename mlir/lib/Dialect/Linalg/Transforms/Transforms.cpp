@@ -1667,6 +1667,24 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
   rewriter.inlineRegionBefore(op->getRegion(0), newOp.getRegion(),
                               newOp.getRegion().begin());
 
+  // Keep index semantics consistent with the compressed iteration domain. Only
+  // visit this body's indices: nested LinalgOps have their own loop dimensions.
+  for (IndexOp indexOp :
+       llvm::make_early_inc_range(newOp.getBody()->getOps<IndexOp>())) {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(indexOp);
+    if (llvm::is_contained(loopDimsToRemove, indexOp.getDim())) {
+      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(indexOp, 0);
+    } else {
+      unsigned droppedDims =
+          llvm::count_if(loopDimsToRemove,
+                         [&](unsigned dim) { return dim < indexOp.getDim(); });
+      if (droppedDims != 0)
+        rewriter.replaceOpWithNewOp<IndexOp>(indexOp,
+                                             indexOp.getDim() - droppedDims);
+    }
+  }
+
   // Try to specialize the generic back to a named op only if the input was
   // already a specialized (named) op.
   LinalgOp resultOp = newOp;

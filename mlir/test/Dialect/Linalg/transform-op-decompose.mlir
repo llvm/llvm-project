@@ -272,6 +272,58 @@ func.func @batchless_conv_2d_hwc_hwcf(%input: tensor<1x14x8xf32>, %filter: tenso
   return %0 : tensor<1x12x16xf32>
 }
 
+// Dropping oh and kh must replace their indices by zero and renumber every
+// remaining index from (oh, ow, f, kh, kw, c) to (ow, f, kw, c).
+// CHECK-LABEL: @batchless_conv_2d_hwc_hwcf_indices
+func.func @batchless_conv_2d_hwc_hwcf_indices(%input: tensor<1x3x1xi32>, %filter: tensor<1x1x1x2xi32>, %init: tensor<1x3x2xi32>) -> tensor<1x3x2xi32> {
+  // CHECK: %[[CONV:.+]] = linalg.generic
+  // CHECK-SAME: indexing_maps = [#[[$CONV_I]], #[[$CONV_F]], #[[$CONV_O]]]
+  // CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction", "reduction"]
+  // CHECK: ^bb0(%[[IN:.+]]: i32, %[[FILTER:.+]]: i32, %[[ACC:.+]]: i32):
+  // CHECK-NEXT: %[[OH:.+]] = arith.constant 0 : index
+  // CHECK-NEXT: %[[OW:.+]] = linalg.index 0 : index
+  // CHECK-NEXT: %[[F:.+]] = linalg.index 1 : index
+  // CHECK-NEXT: %[[KH:.+]] = arith.constant 0 : index
+  // CHECK-NEXT: %[[KW:.+]] = linalg.index 2 : index
+  // CHECK-NEXT: %[[C:.+]] = linalg.index 3 : index
+  // CHECK-NEXT: %[[S0:.+]] = arith.addi %[[OH]], %[[OW]] : index
+  // CHECK-NEXT: %[[S1:.+]] = arith.addi %[[S0]], %[[F]] : index
+  // CHECK-NEXT: %[[S2:.+]] = arith.addi %[[S1]], %[[KH]] : index
+  // CHECK-NEXT: %[[S3:.+]] = arith.addi %[[S2]], %[[KW]] : index
+  // CHECK-NEXT: %[[S4:.+]] = arith.addi %[[S3]], %[[C]] : index
+  // CHECK-NEXT: %[[POSITION:.+]] = arith.index_cast %[[S4]] : index to i32
+  // CHECK-NEXT: %[[PRODUCT:.+]] = arith.muli %[[IN]], %[[FILTER]] : i32
+  // CHECK-NEXT: %[[SUM:.+]] = arith.addi %[[ACC]], %[[PRODUCT]] : i32
+  // CHECK-NEXT: %[[VALUE:.+]] = arith.addi %[[SUM]], %[[POSITION]] : i32
+  // CHECK-NEXT: linalg.yield %[[VALUE]] : i32
+  // CHECK: %[[RESULT:.+]] = tensor.insert_slice %[[CONV]]
+  // CHECK: return %[[RESULT]] : tensor<1x3x2xi32>
+  %result = linalg.generic {
+    indexing_maps = [#map_conv_i, #map_conv_f, #map_conv_o],
+    iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]
+  } ins(%input, %filter : tensor<1x3x1xi32>, tensor<1x1x1x2xi32>)
+    outs(%init : tensor<1x3x2xi32>) {
+  ^bb0(%a: i32, %b: i32, %acc: i32):
+    %oh = linalg.index 0 : index
+    %ow = linalg.index 1 : index
+    %f = linalg.index 2 : index
+    %kh = linalg.index 3 : index
+    %kw = linalg.index 4 : index
+    %c = linalg.index 5 : index
+    %s0 = arith.addi %oh, %ow : index
+    %s1 = arith.addi %s0, %f : index
+    %s2 = arith.addi %s1, %kh : index
+    %s3 = arith.addi %s2, %kw : index
+    %s4 = arith.addi %s3, %c : index
+    %position = arith.index_cast %s4 : index to i32
+    %product = arith.muli %a, %b : i32
+    %sum = arith.addi %acc, %product : i32
+    %value = arith.addi %sum, %position : i32
+    linalg.yield %value : i32
+  } -> tensor<1x3x2xi32>
+  return %result : tensor<1x3x2xi32>
+}
+
 #map_dw_i = affine_map<(oh, ow, c, kh, kw) -> (oh + kh, ow + kw, c)>
 #map_dw_f = affine_map<(oh, ow, c, kh, kw) -> (kh, kw, c)>
 #map_dw_o = affine_map<(oh, ow, c, kh, kw) -> (oh, ow, c)>
@@ -409,6 +461,81 @@ module attributes {transform.with_named_sequence} {
 
     %2 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %3 = transform.structured.decompose_interface %2 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+#input_map = affine_map<(oh, ow, f, kh, kw, c) -> (oh + kh, ow + kw, c)>
+#filter_map = affine_map<(oh, ow, f, kh, kw, c) -> (kh, kw, c, f)>
+#output_map = affine_map<(oh, ow, f, kh, kw, c) -> (oh, ow, f)>
+#inner_map = affine_map<(i, j) -> (i, j)>
+
+// Here ow and kw are removed instead. The nested generic's own index 1 must
+// remain unchanged, while its use of the captured outer f index is updated.
+// CHECK-LABEL: @batchless_conv_2d_nested_indices
+func.func @batchless_conv_2d_nested_indices(%input: tensor<3x1x1xi32>, %filter: tensor<1x1x1x2xi32>, %init: tensor<3x1x2xi32>, %nested_init: tensor<2x2xi32>) -> tensor<3x1x2xi32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[CONV:.+]] = linalg.generic
+  // CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction", "reduction"]
+  // CHECK: ^bb0(%[[IN:.+]]: i32, %[[FILTER:.+]]: i32, %[[ACC:.+]]: i32):
+  // CHECK-NEXT: %[[OH:.+]] = linalg.index 0 : index
+  // CHECK-NEXT: %[[OW:.+]] = arith.constant 0 : index
+  // CHECK-NEXT: %[[F:.+]] = linalg.index 1 : index
+  // CHECK-NEXT: %[[SPATIAL:.+]] = arith.addi %[[OH]], %[[OW]] : index
+  // CHECK-NEXT: %[[POSITION:.+]] = arith.index_cast %[[SPATIAL]] : index to i32
+  // CHECK-NEXT: %[[INNER:.+]] = linalg.generic
+  // CHECK-SAME: iterator_types = ["parallel", "parallel"]
+  // CHECK: ^bb0
+  // CHECK-NEXT: %[[INNER_INDEX:.+]] = linalg.index 1 : index
+  // CHECK-NEXT: %[[WITH_F:.+]] = arith.addi %[[INNER_INDEX]], %[[F]] : index
+  // CHECK-NEXT: %[[INNER_VALUE:.+]] = arith.index_cast %[[WITH_F]] : index to i32
+  // CHECK-NEXT: linalg.yield %[[INNER_VALUE]] : i32
+  // CHECK: %[[EXTRACTED:.+]] = tensor.extract %[[INNER]]
+  // CHECK-NEXT: %[[PRODUCT:.+]] = arith.muli %[[IN]], %[[FILTER]] : i32
+  // CHECK-NEXT: %[[SUM:.+]] = arith.addi %[[ACC]], %[[PRODUCT]] : i32
+  // CHECK-NEXT: %[[INDEXED:.+]] = arith.addi %[[SUM]], %[[POSITION]] : i32
+  // CHECK-NEXT: %[[VALUE:.+]] = arith.subi %[[INDEXED]], %[[EXTRACTED]] : i32
+  // CHECK-NEXT: linalg.yield %[[VALUE]] : i32
+  // CHECK: %[[RESULT:.+]] = tensor.insert_slice %[[CONV]]
+  // CHECK: return %[[RESULT]] : tensor<3x1x2xi32>
+  %result = linalg.generic {
+    decompose_target,
+    indexing_maps = [#input_map, #filter_map, #output_map],
+    iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]
+  } ins(%input, %filter : tensor<3x1x1xi32>, tensor<1x1x1x2xi32>)
+    outs(%init : tensor<3x1x2xi32>) {
+  ^bb0(%a: i32, %b: i32, %acc: i32):
+    %oh = linalg.index 0 : index
+    %ow = linalg.index 1 : index
+    %f = linalg.index 2 : index
+    %spatial = arith.addi %oh, %ow : index
+    %position = arith.index_cast %spatial : index to i32
+    %inner = linalg.generic {
+      indexing_maps = [#inner_map], iterator_types = ["parallel", "parallel"]
+    } outs(%nested_init : tensor<2x2xi32>) {
+    ^bb0(%unused: i32):
+      %inner_index = linalg.index 1 : index
+      %with_f = arith.addi %inner_index, %f : index
+      %inner_value = arith.index_cast %with_f : index to i32
+      linalg.yield %inner_value : i32
+    } -> tensor<2x2xi32>
+    %extracted = tensor.extract %inner[%c0, %c1] : tensor<2x2xi32>
+    %product = arith.muli %a, %b : i32
+    %sum = arith.addi %acc, %product : i32
+    %indexed = arith.addi %sum, %position : i32
+    %value = arith.subi %indexed, %extracted : i32
+    linalg.yield %value : i32
+  } -> tensor<3x1x2xi32>
+  return %result : tensor<3x1x2xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %target = transform.structured.match attributes{decompose_target} in %root : (!transform.any_op) -> !transform.any_op
+    %decomposed = transform.structured.decompose %target : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
