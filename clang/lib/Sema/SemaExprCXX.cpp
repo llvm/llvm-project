@@ -7636,7 +7636,7 @@ static void MaybeDecrementCount(
   if ((IsCompoundAssign || isIncrementDecrementUnaryOp) &&
       VD->getType().isVolatileQualified())
     return;
-  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
+  auto iter = RefsMinusAssignments.find(Sema::getUnusedButSetKey(VD));
   if (iter == RefsMinusAssignments.end())
     return;
   iter->getSecond()--;

@@ -165,3 +165,71 @@ void f9() {
   ExtSetInMethod e;
   e.set();
 }
+
+// Regression tests for static data members of class templates in an
+// anonymous namespace. namespace. Since every instantiation of a member are
+// tracked as one, a read anywhere in the source counts as a use.
+namespace {
+  // Set in the template and read through an instantiation.
+  template <int N> struct TmplCounted {
+    static int live;
+    TmplCounted() { ++live; }
+  };
+  template <int N> int TmplCounted<N>::live = 0;
+
+  // Read only in an uninstantiated member function.
+  template <int N> struct TmplUninstReader {
+    static int x;
+    void set() { x = 1; }
+    int get() { return x; }
+  };
+  template <int N> int TmplUninstReader<N>::x = 0;
+
+  // Set but never read in any of its instantiations, but diagnosed only once.
+  template <int N> struct TmplSetOnly {
+    static int x; // expected-warning {{variable 'x' set but not used}}
+    void set() { x = 1; }
+  };
+  template <int N> int TmplSetOnly<N>::x = 0;
+
+  // Explicit specializations get tracked separately from the template.
+  template <int N> struct TmplExplicit {
+    static int x;
+    void set() { x = 1; }
+  };
+  template <int N> int TmplExplicit<N>::x = 0;
+  template <> int TmplExplicit<1>::x = 1;
+  template <> int TmplExplicit<2>::x = 2; // expected-warning {{variable 'x' set but not used}}
+}
+
+int f10() {
+  TmplCounted<0> c;
+  (void)c;
+  TmplUninstReader<0>{}.set();
+  TmplSetOnly<0>{}.set();
+  TmplSetOnly<1>{}.set();
+  TmplSetOnly<2>{}.set();
+  TmplExplicit<0>{}.set();
+  TmplExplicit<1>{}.set();
+  TmplExplicit<2>{}.set();
+  return TmplCounted<0>::live + TmplExplicit<0>::x + TmplExplicit<1>::x;
+}
+
+// FIXME: These are truly unused but we do not warn.
+namespace {
+  template <class T> struct TmplDepType {
+    static T x;
+    void set() { x = T(); }
+  };
+  template <class T> T TmplDepType<T>::x;
+
+  template <int N> struct TmplSetViaInst {
+    static int x;
+  };
+  template <int N> int TmplSetViaInst<N>::x = 0;
+}
+
+void f11() {
+  TmplDepType<int>{}.set();
+  TmplSetViaInst<0>::x = 1;
+}

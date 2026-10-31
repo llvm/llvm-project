@@ -2227,6 +2227,14 @@ void Sema::DiagnoseUnusedDecl(const NamedDecl *D, DiagReceiverTy DiagReceiver) {
   DiagReceiver(DiagLoc, PDiag(DiagID) << D << Hint << SourceRange(DiagLoc));
 }
 
+const VarDecl *Sema::getUnusedButSetKey(const VarDecl *VD) {
+  VD = VD->getCanonicalDecl();
+  if (VD->isFileVarDecl())
+    if (const VarDecl *P = VD->getTemplateInstantiationPattern())
+      return P->getCanonicalDecl();
+  return VD;
+}
+
 void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
                                     DiagReceiverTy DiagReceiver) {
   // If it's not referenced, it can't be set. If it has the Cleanup attribute,
@@ -2270,7 +2278,7 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
   if (VD->hasAttr<ObjCPreciseLifetimeAttr>() && Ty->isObjCObjectPointerType())
     return;
 
-  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
+  auto iter = RefsMinusAssignments.find(getUnusedButSetKey(VD));
   if (iter == RefsMinusAssignments.end())
     return;
 
@@ -2357,7 +2365,7 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
       if (auto *VD = dyn_cast<VarDecl>(D);
           VD && !VD->isInternalLinkageFileVar()) {
         DiagnoseUnusedButSetDecl(VD, addDiag);
-        RefsMinusAssignments.erase(VD->getCanonicalDecl());
+        RefsMinusAssignments.erase(getUnusedButSetKey(VD));
       }
     }
 
