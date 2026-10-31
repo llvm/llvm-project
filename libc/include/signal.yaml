@@ -57,6 +57,13 @@ functions:
     arguments:
       - type: pid_t
       - type: int
+  - name: killpg 
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: pid_t
+      - type: int 
   - name: raise
     standards:
       - stdc
