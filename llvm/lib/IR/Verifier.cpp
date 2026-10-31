@@ -7631,6 +7631,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
 
   // Target-specific intrinsic call checks.
+  verifyAArch64IntrinsicCall(*this, ID, Call);
   verifyAMDGPUIntrinsicCall(*this, ID, Call);
   verifyNVVMIntrinsicCall(*this, ID, Call);
 }
