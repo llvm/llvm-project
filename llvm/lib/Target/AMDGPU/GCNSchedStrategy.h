@@ -353,7 +353,12 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   RegionPressureMap RegionLiveOuts;
 
   // Return current region pressure.
-  GCNRegPressure getRealRegPressure(unsigned RegionIdx) const;
+  /// \returns the maximum pressure of region \p RegionIdx. If set, \p
+  /// PressureCallback is called with the pressure of every program point of
+  /// the region.
+  GCNRegPressure getRealRegPressure(unsigned RegionIdx,
+                                    std::function<void(const GCNRegPressure &)>
+                                        PressureCallback = nullptr) const;
 
   // Compute and cache live-ins and pressure for all regions in block.
   void computeBlockPressure(unsigned RegionIdx, const MachineBasicBlock *MBB);
