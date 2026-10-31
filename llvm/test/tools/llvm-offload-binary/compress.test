@@ -8,6 +8,20 @@
 # RUN: llvm-offload-binary -o %t.neg --compress --compression-format=zstd --compression-level=-5 --image=file=%s,arch=abc,triple=x-y-z
 # RUN: llvm-offload-binary %t.neg --image=file=%t.neg.out,arch=abc,triple=x-y-z
 # RUN: diff %s %t.neg.out
+# RUN: llvm-offload-binary -o %t.fast --compress --compression-format=zstd --compression-level=-10 --image=file=%s,arch=abc,triple=x-y-z
+# RUN: llvm-offload-binary %t.fast --image=file=%t.fast.out,arch=abc,triple=x-y-z
+# RUN: diff %s %t.fast.out
+
+# RUN: not llvm-offload-binary -o %t.nfmt --compress --compression-level=12 --image=file=%s,arch=abc,triple=x-y-z 2>&1 | FileCheck %s --check-prefix=NEED-FORMAT
+# RUN: llvm-offload-binary -o %t.l12 --compress --compression-format=zstd --compression-level=12 --image=file=%s,arch=abc,triple=x-y-z
+# RUN: llvm-offload-binary %t.l12 --image=file=%t.l12.out,arch=abc,triple=x-y-z
+# RUN: diff %s %t.l12.out
+# RUN: not llvm-offload-binary -o %t.bad --compress --compression-format=zstd --compression-level=100 --image=file=%s,arch=abc,triple=x-y-z 2>&1 | FileCheck %s --check-prefix=BAD-LEVEL
+# RUN: not llvm-offload-binary -o %t.low --compress --compression-format=zstd --compression-level=-200000 --image=file=%s,arch=abc,triple=x-y-z 2>&1 | FileCheck %s --check-prefix=BAD-LOW
+
+# NEED-FORMAT: --compression-level requires --compression-format
+# BAD-LEVEL: invalid zstd compression level 100; expected a value in [-131072, 22]
+# BAD-LOW: invalid zstd compression level -200000; expected a value in [-131072, 22]
 
 # RUN: llvm-offload-binary -o %t.u --image=file=%s,arch=abc,triple=x-y-z
 # RUN: cat %t %t.u > %t.concat
