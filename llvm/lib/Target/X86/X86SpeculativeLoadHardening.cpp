@@ -703,11 +703,10 @@ X86SpeculativeLoadHardeningImpl::tracePredStateThroughCFG(
           if (!LiveEFLAGS)
             CheckingMBB.addLiveIn(X86::EFLAGS);
 
-          // Now insert the cmovs to implement the checks.
-          auto InsertPt = CheckingMBB.begin();
-          assert((InsertPt == CheckingMBB.end() || !InsertPt->isPHI()) &&
-                 "Should never have a PHI in the initial checking block as it "
-                 "always has a single predecessor!");
+          // Now insert the cmovs to implement the checks. The checking block
+          // has a single predecessor, but it may still start with PHIs (with a
+          // single incoming value); the checks go after them.
+          auto InsertPt = CheckingMBB.SkipPHIsAndLabels(CheckingMBB.begin());
 
           // We will wire each cmov to each other, but need to start with the
           // incoming pred state.
