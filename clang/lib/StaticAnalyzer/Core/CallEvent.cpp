@@ -25,6 +25,7 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
@@ -253,6 +254,22 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   if (!argumentsMayEscape())
     findPtrToConstParams(PreserveArgs, *this);
 
+  const auto *LCtx = getStackFrame();
+  const Decl *CallerDecl = LCtx->getDecl();
+  const Decl *CalleeDecl = getDecl();
+
+  // Establish self-recursion context
+  bool IsSelfRecursive = CallerDecl && CalleeDecl && CallerDecl == CalleeDecl;
+  std::unique_ptr<ExprMutationAnalyzer> MutationAnalyzer;
+
+  if (IsSelfRecursive && CalleeDecl->hasBody()) {
+    MutationAnalyzer = std::make_unique<ExprMutationAnalyzer>(
+        *CalleeDecl->getBody(),
+        LCtx->getAnalysisDeclContext()->getASTContext());
+  }
+
+  ArrayRef<ParmVarDecl *> Params = parameters();
+
   // We should not preserve the contents of the region pointed by "this" when
   // constructing the object, even if an argument refers to it.
   const auto *ThisRegionBaseOrNull = getThisRegionBaseOrNull(*this);
@@ -274,7 +291,19 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
       }
     }
 
-    ValuesToInvalidate.push_back(getArgSVal(Idx));
+    SVal ArgVal = getArgSVal(Idx);
+
+    // Omit non-mutated recursive pointers from the invalidation queue
+    if (IsSelfRecursive && MutationAnalyzer && Idx < Params.size()) {
+      const ParmVarDecl *Param = Params[Idx];
+      if (Param && Param->getType()->isPointerType()) {
+        if (!MutationAnalyzer->isMutated(Param)) {
+          continue;
+        }
+      }
+    }
+
+    ValuesToInvalidate.push_back(ArgVal);
 
     // If a function accepts an object by argument (which would of course be a
     // temporary that isn't lifetime-extended), invalidate the object itself,
