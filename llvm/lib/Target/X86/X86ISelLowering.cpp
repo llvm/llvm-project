@@ -32485,7 +32485,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // Attempt to use GFNI gf2p8affine to rotate vXi8 by an uniform constant.
-  if (IsCstSplat && Subtarget.hasGFNI() && VT.getScalarType() == MVT::i8 &&
+  if (IsCstSplat && EltSizeInBits == 8 && Subtarget.hasGFNI() &&
       DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
     uint64_t RotAmt = CstSplatValue.urem(EltSizeInBits);
     SDValue Mask = getGFNICtrlMask(Opcode, DAG, DL, VT, RotAmt);
@@ -32497,23 +32497,23 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && (Subtarget.hasXOP() || !Subtarget.hasAVX2()))
     return splitVectorIntBinary(Op, DAG, DL);
 
-  // rotl(x,7) -> pavgb(x, 0 - (x & 1))
-  if (EltSizeInBits == 8 && IsCstSplat &&
-      CstSplatValue.urem(EltSizeInBits) == 7 && IsROTL &&
-      !Subtarget.hasAVX512()) {
-    SDValue One = DAG.getConstant(1, DL, VT);
-    SDValue LSB = DAG.getNode(ISD::AND, DL, VT, R, One);
-    SDValue Neg = DAG.getNegative(LSB, DL, VT);
-    return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
-  }
+  if (IsROTL && IsCstSplat && EltSizeInBits == 8 && !Subtarget.hasAVX512()) {
+    unsigned RotAmt = CstSplatValue.urem(EltSizeInBits);
 
-  // rotl(x,1) -> sub(add(x, x), icmp_slt(x, 0))
-  if (IsROTL && EltSizeInBits == 8 && IsCstSplat &&
-      CstSplatValue.urem(EltSizeInBits) == 1 && !Subtarget.hasAVX512()) {
-    SDValue Double = DAG.getNode(ISD::ADD, DL, VT, R, R);
-    SDValue Zero = DAG.getConstant(0, DL, VT);
-    SDValue CmpNeg = DAG.getSetCC(DL, VT, R, Zero, ISD::SETLT);
-    return DAG.getNode(ISD::SUB, DL, VT, Double, CmpNeg);
+    // rotl(x,7) -> pavgb(x, 0 - (x & 1))
+    if (RotAmt == 7) {
+      SDValue One = DAG.getConstant(1, DL, VT);
+      SDValue LSB = DAG.getNode(ISD::AND, DL, VT, R, One);
+      SDValue Neg = DAG.getNegative(LSB, DL, VT);
+      return DAG.getNode(ISD::AVGCEILU, DL, VT, R, Neg);
+    }
+    // rotl(x,1) -> sub(add(x, x), icmp_slt(x, 0))
+    if (RotAmt == 1) {
+      SDValue Double = DAG.getNode(ISD::ADD, DL, VT, R, R);
+      SDValue Zero = DAG.getConstant(0, DL, VT);
+      SDValue CmpNeg = DAG.getSetCC(DL, VT, R, Zero, ISD::SETLT);
+      return DAG.getNode(ISD::SUB, DL, VT, Double, CmpNeg);
+    }
   }
 
   // Rotate by an uniform constant - expand back to shifts.
