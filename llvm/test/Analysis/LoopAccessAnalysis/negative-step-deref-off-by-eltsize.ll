@@ -270,3 +270,207 @@ exit.early:
 exit.done:
   ret void
 }
+
+; Reverse loop from a symbolic start; the last iteration accesses A itself.
+; Blocked: the start, A + 4 * n, is not known to be u>= A.
+;
+; TODO: LAA should use A as the low bound.
+;
+; Pseudocode:
+;   // A, B: at least 8 i32s dereferenceable each, n in [0, 7]
+;   for (i64 i = n; i >= 0; --i) {
+;     i32 l = A[i];
+;     B[i] = 0;
+;     if (l == 0) break;
+;   }
+
+define void @reverse_symbolic_start(ptr dereferenceable(32) %A, ptr dereferenceable(32) %B, i3 %n) {
+; CHECK-LABEL: 'reverse_symbolic_start'
+; CHECK-NEXT:    loop.header:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: null High: (4 + (4 * (zext i3 %n to i64))<nuw><nsw> + %B))
+; CHECK-NEXT:            Member: {((4 * (zext i3 %n to i64))<nuw><nsw> + %B),+,-4}<nw><%loop.header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: null High: (4 + (4 * (zext i3 %n to i64))<nuw><nsw> + %A))
+; CHECK-NEXT:            Member: {((4 * (zext i3 %n to i64))<nuw><nsw> + %A),+,-4}<nw><%loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %n.ext = zext i3 %n to i64
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ %n.ext, %entry ], [ %iv.dec, %loop.latch ]
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %l = load i32, ptr %gep.A, align 4
+  store i32 0, ptr %gep.B, align 4
+  %uncntable = icmp eq i32 %l, 0
+  br i1 %uncntable, label %exit.early, label %loop.latch
+
+loop.latch:
+  %iv.dec = add nsw i64 %iv, -1
+  %ec = icmp eq i64 %iv, 0
+  br i1 %ec, label %exit.done, label %loop.header
+
+exit.early:
+  ret void
+
+exit.done:
+  ret void
+}
+
+; As above, but n is bounded only by the loop guard n u< 8.
+; Blocked: as above, and for a negative step LAA does not apply the loop guards
+; to the start offset.
+;
+; TODO: LAA should use A as the low bound.
+;
+; Pseudocode:
+;   // A, B: at least 8 i32s dereferenceable each
+;   if (n u>= 8) return;
+;   for (i64 i = n; i >= 0; --i) {
+;     i32 l = A[i];
+;     B[i] = 0;
+;     if (l == 0) break;
+;   }
+
+define void @reverse_guarded_start(ptr dereferenceable(32) %A, ptr dereferenceable(32) %B, i64 %n) {
+; CHECK-LABEL: 'reverse_guarded_start'
+; CHECK-NEXT:    loop.header:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: null High: (4 + (4 * %n) + %B))
+; CHECK-NEXT:            Member: {((4 * %n) + %B),+,-4}<%loop.header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: null High: (4 + (4 * %n) + %A))
+; CHECK-NEXT:            Member: {((4 * %n) + %A),+,-4}<%loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %guard = icmp ult i64 %n, 8
+  br i1 %guard, label %loop.header, label %exit.done
+
+loop.header:
+  %iv = phi i64 [ %n, %entry ], [ %iv.dec, %loop.latch ]
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  %l = load i32, ptr %gep.A, align 4
+  store i32 0, ptr %gep.B, align 4
+  %uncntable = icmp eq i32 %l, 0
+  br i1 %uncntable, label %exit.early, label %loop.latch
+
+loop.latch:
+  %iv.dec = add nsw i64 %iv, -1
+  %ec = icmp eq i64 %iv, 0
+  br i1 %ec, label %exit.done, label %loop.header
+
+exit.early:
+  ret void
+
+exit.done:
+  ret void
+}
+
+; Reverse loop over an array with a 16-byte header. The deref size,
+; 16 + 4 * len, and the start offset, 12 + 4 * n, are related only through the
+; loop guards.
+; Blocked: as above, and SCEV does not prove 12 + 4 * n u<= 16 + 4 * len.
+;
+; TODO: LAA should use A + 16 as the low bound.
+;
+; Pseudocode:
+;   // A: 16 + 4 * len bytes dereferenceable, A->data at offset 16
+;   if (n == 0 || n - 1 u>= A->len) return;
+;   for (i64 i = n - 1; i >= 0; --i) {
+;     i32 l = A->data[i];
+;     B[i] = 0;
+;     if (l == 0) break;
+;   }
+
+define void @reverse_array_guarded_length(ptr %A, ptr %B, i32 %n) {
+; CHECK-LABEL: 'reverse_array_guarded_length'
+; CHECK-NEXT:    loop.header:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv.dec
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.A = getelementptr inbounds nuw i32, ptr %data, i64 %iv.dec
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: null High: ((4 * (zext i32 %n to i64))<nuw><nsw> + %B))
+; CHECK-NEXT:            Member: {(-4 + (4 * (zext i32 %n to i64))<nuw><nsw> + %B),+,-4}<nw><%loop.header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: null High: (16 + (4 * (zext i32 %n to i64))<nuw><nsw> + %A))
+; CHECK-NEXT:            Member: {(12 + (4 * (zext i32 %n to i64))<nuw><nsw> + %A),+,-4}<nw><%loop.header>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %n.zero = icmp eq i32 %n, 0
+  br i1 %n.zero, label %exit.done, label %check
+
+check:
+  %n.ext = zext i32 %n to i64
+  %len.gep = getelementptr inbounds nuw i8, ptr %A, i64 8
+  %len = load i32, ptr %len.gep, align 4
+  %len.ext = zext i32 %len to i64
+  %len.bytes = shl nuw nsw i64 %len.ext, 2
+  %deref = add nuw nsw i64 %len.bytes, 16
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %A, i64 %deref) ]
+  %data = getelementptr inbounds nuw i8, ptr %A, i64 16
+  %n.dec = add i32 %n, -1
+  %in.bounds = icmp ult i32 %n.dec, %len
+  br i1 %in.bounds, label %loop.header, label %exit.done
+
+loop.header:
+  %iv = phi i64 [ %n.ext, %check ], [ %iv.dec, %loop.latch ]
+  %iv.dec = add nsw i64 %iv, -1
+  %gep.A = getelementptr inbounds nuw i32, ptr %data, i64 %iv.dec
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv.dec
+  %l = load i32, ptr %gep.A, align 4
+  store i32 0, ptr %gep.B, align 4
+  %uncntable = icmp eq i32 %l, 0
+  br i1 %uncntable, label %exit.early, label %loop.latch
+
+loop.latch:
+  %ec = icmp eq i64 %iv.dec, 0
+  br i1 %ec, label %exit.done, label %loop.header
+
+exit.early:
+  ret void
+
+exit.done:
+  ret void
+}
