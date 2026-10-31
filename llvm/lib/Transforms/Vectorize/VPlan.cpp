@@ -1204,7 +1204,7 @@ VPlan *VPlan::duplicate() {
   }
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan =
-      new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader, getIndexType());
+      new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader, VF.getType());
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);

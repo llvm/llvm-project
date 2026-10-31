@@ -4976,11 +4976,13 @@ public:
   VPlan(Loop *L, Type *IdxTy);
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
-  /// wrapping \p ScalarHeaderBB and vector loop index of type \p IdxTy.
-  VPlan(BasicBlock *ScalarHeaderBB, Type *IdxTy)
+  /// wrapping \p ScalarHeaderBB and vector loop index of type \p IdxTy. The
+  /// scalar header is left empty; callers that need recipes for the
+  /// instructions in \p ScalarHeaderBB must create them themselves.
+  VPlan(BasicBlock *ScalarHeaderBB, Type *IdxTy = nullptr)
       : VectorTripCount(IdxTy), VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
     setEntry(createVPBasicBlock("preheader"));
-    ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
+    ScalarHeader = createEmptyVPIRBasicBlock(ScalarHeaderBB);
   }
 
   LLVM_ABI_FOR_TEST ~VPlan();
@@ -5340,7 +5342,10 @@ public:
   }
 
   /// The type of the canonical induction variable of the vector loop.
-  Type *getIndexType() const { return VF.getType(); }
+  Type *getIndexType() const {
+    assert(VF.getType() && "plan has no vector loop index type");
+    return VF.getType();
+  }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
