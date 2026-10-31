@@ -49,8 +49,7 @@ define i32 @oeq_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.eq.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
 
-; R5900:         c.eq.s $f12, $f13
-; R5900:         bc1f
+; R5900:         jal __eqsf2
 
 ; 32-CMP-DAG:    cmp.eq.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -85,8 +84,7 @@ define i32 @ogt_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ule.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
-; R5900:         c.olt.s $f13, $f12
-; R5900:         bc1f
+; R5900:         jal __gtsf2
 
 ; 32-CMP-DAG:    cmp.lt.s $[[T0:f[0-9]+]], $f14, $f12
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -121,8 +119,7 @@ define i32 @oge_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ult.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
-; R5900:         c.ole.s $f13, $f12
-; R5900:         bc1f
+; R5900:         jal __gesf2
 
 ; 32-CMP-DAG:    cmp.le.s $[[T0:f[0-9]+]], $f14, $f12
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -157,8 +154,7 @@ define i32 @olt_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.olt.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
 
-; R5900:         c.olt.s $f12, $f13
-; R5900:         bc1f
+; R5900:         jal __ltsf2
 
 ; 32-CMP-DAG:    cmp.lt.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -193,8 +189,7 @@ define i32 @ole_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ole.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
 
-; R5900:         c.ole.s $f12, $f13
-; R5900:         bc1f
+; R5900:         jal __lesf2
 
 ; 32-CMP-DAG:    cmp.le.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -229,9 +224,8 @@ define i32 @one_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ueq.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
-; R5900:         c.olt.s $f12, $f13
-; R5900:         bc1t
-; R5900:         c.olt.s $f13, $f12
+; R5900:         jal __eqsf2
+; R5900:         jal __unordsf2
 
 ; 32-CMP-DAG:    cmp.ueq.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -269,8 +263,7 @@ define i32 @ord_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.un.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
-; R5900:         c.eq.s $f13, $f13
-; R5900:         c.eq.s $f12, $f12
+; R5900:         jal __unordsf2
 
 ; 32-CMP-DAG:    cmp.un.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -308,8 +301,8 @@ define i32 @ueq_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ueq.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
 
-; R5900:         c.olt.s $f12, $f13
-; R5900:         c.olt.s $f13, $f12
+; R5900:         jal __unordsf2
+; R5900:         jal __eqsf2
 
 ; 32-CMP-DAG:    cmp.ueq.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -344,8 +337,7 @@ define i32 @ugt_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ole.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
-; R5900:         c.ole.s $f12, $f13
-; R5900:         bc1t
+; R5900:         jal __lesf2
 
 ; 32-CMP-DAG:    cmp.ult.s $[[T0:f[0-9]+]], $f14, $f12
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -380,8 +372,7 @@ define i32 @uge_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.olt.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
-; R5900:         c.olt.s $f12, $f13
-; R5900:         bc1t
+; R5900:         jal __ltsf2
 
 ; 32-CMP-DAG:    cmp.ule.s $[[T0:f[0-9]+]], $f14, $f12
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -416,8 +407,7 @@ define i32 @ult_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ult.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
 
-; R5900:         c.ole.s $f13, $f12
-; R5900:         bc1t
+; R5900:         jal __gesf2
 
 ; 32-CMP-DAG:    cmp.ult.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -452,8 +442,7 @@ define i32 @ule_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.ule.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
 
-; R5900:         c.olt.s $f13, $f12
-; R5900:         bc1t
+; R5900:         jal __gtsf2
 
 ; 32-CMP-DAG:    cmp.ule.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -488,8 +477,7 @@ define i32 @une_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.eq.s $f12, $f13
 ; 64-C:          movt $2, $zero, $fcc0
 
-; R5900:         c.eq.s $f12, $f13
-; R5900:         bc1t
+; R5900:         jal __nesf2
 
 ; 32-CMP-DAG:    cmp.eq.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]
@@ -527,10 +515,7 @@ define i32 @uno_f32(float %a, float %b) nounwind {
 ; 64-C-DAG:      c.un.s $f12, $f13
 ; 64-C:          movf $2, $zero, $fcc0
 
-; R5900:         c.eq.s $f13, $f13
-; R5900:         bc1f
-; R5900:         c.eq.s $f12, $f12
-; R5900:         bc1f
+; R5900:         jal __unordsf2
 
 ; 32-CMP-DAG:    cmp.un.s $[[T0:f[0-9]+]], $f12, $f14
 ; 32-CMP-DAG:    mfc1 $[[T1:[0-9]+]], $[[T0]]

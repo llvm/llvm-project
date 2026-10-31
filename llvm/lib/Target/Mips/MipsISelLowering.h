@@ -362,6 +362,12 @@ using TargetRegisterClass = MCRegisterClass;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFSETCC(SDValue Op, SelectionDAG &DAG) const;
+
+    // On the `R5900`, lowers an f32 SETCC whose predicate is NaN-aware to a
+    // compiler-rt libcall and an integer compare. Returns SDValue() for
+    // anything else.
+    SDValue lowerR5900SoftFPCmp(SDValue SetCC, SelectionDAG &DAG) const;
+
     SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
