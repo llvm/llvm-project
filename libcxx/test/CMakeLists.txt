@@ -9,7 +9,11 @@ set(libcxx_test_suite_install_targets cxx-headers cxx cxx-modules)
 if (LIBCXX_CXX_ABI STREQUAL "libcxxabi")
   list(APPEND libcxx_test_suite_install_targets cxxabi-headers cxxabi)
 endif()
-if (LIBCXXABI_USE_LLVM_UNWINDER AND TARGET unwind)
+if (TARGET unwind)
+  # Install libunwind for the test suite whenever it's built, even if libc++abi
+  # itself isn't configured to use it for exceptions: std::stacktrace's default
+  # implementation calls _Unwind_Backtrace/_Unwind_GetIPInfo directly, so test
+  # configs that link against libunwind need it available in the install tree.
   list(APPEND libcxx_test_suite_install_targets unwind-headers unwind)
 endif()
 foreach(target IN LISTS libcxx_test_suite_install_targets)
