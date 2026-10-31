@@ -393,18 +393,22 @@ const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
 LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 #endif
 
-std::error_code ProfileSymbolList::read(const uint8_t *Data,
-                                        uint64_t ListSize) {
-  // Scan forward to see how many elements we expect.
-  reserve(std::min<uint64_t>(ProfileSymbolListCutOff,
-                             std::count(Data, Data + ListSize, 0)));
+std::error_code ProfileSymbolList::read(const uint8_t *Data, uint64_t ListSize,
+                                        const DenseSet<StringRef> *Filter) {
+  if (Filter)
+    reserve(Filter->size());
+  else
+    // Scan forward to see how many elements we expect.
+    reserve(std::min<uint64_t>(ProfileSymbolListCutOff,
+                               std::count(Data, Data + ListSize, 0)));
 
   const char *ListStart = reinterpret_cast<const char *>(Data);
   uint64_t Size = 0;
   uint64_t StrNum = 0;
   while (Size < ListSize && StrNum < ProfileSymbolListCutOff) {
     StringRef Str(ListStart + Size);
-    add(Str);
+    if (!Filter || Filter->contains(Str))
+      add(Str);
     Size += Str.size() + 1;
     StrNum++;
   }
