@@ -732,6 +732,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
 
+- Fixed false-positive `-Wconstant-conversion` diagnostics for values in
+  unreachable branches of conditional expressions, including signed `char`
+  array initializers. (#GH223923)
+
 - Clang now diagnoses passing wrong vector type as a mask to `__builtin_shufflevector`. (#GH218132)
 
 - `-Wdelete-abstract-non-virtual-dtor` and `-Wdelete-non-abstract-non-virtual-dtor`
