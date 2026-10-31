@@ -9,7 +9,7 @@ end
 
 subroutine f01
   real :: x
-!ERROR: Invalid reduction operator in TASK_REDUCTION clause.
+!ERROR: Invalid reduction operator in TASK_REDUCTION clause
 !$omp taskgroup task_reduction(.not.: x)
 !$omp end taskgroup
 end

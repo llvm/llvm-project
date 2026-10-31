@@ -791,8 +791,7 @@ bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 bool AreSameModuleSymbol(const Symbol &, const Symbol &);
 
 parser::CharBlock MakeNameFromOperator(
-    const parser::DefinedOperator::IntrinsicOperator &op,
-    SemanticsContext &context);
+    const parser::DefinedOperator::IntrinsicOperator &op);
 parser::CharBlock MangleSpecialFunctions(parser::CharBlock name);
 std::string MangleDefinedOperator(parser::CharBlock name);
 

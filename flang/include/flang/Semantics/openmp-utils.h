@@ -280,6 +280,11 @@ struct MetadirectiveCandidateSet {
   const parser::OmpDirectiveSpecification *fallback{nullptr};
 };
 
+const parser::OmpContextSelector *GetContextSelector(
+    const parser::OmpClause &clause);
+const parser::OmpDirectiveSpecification *GetDirectiveVariant(
+    const parser::OmpClause &clause);
+
 /// Build the statically applicable candidates for a METADIRECTIVE.
 ///
 /// Returns std::nullopt when a selector is malformed or uses a feature that
