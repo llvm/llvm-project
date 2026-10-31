@@ -732,11 +732,11 @@ func.func @partial_read_2d(%v: vector<4x8xf32>, %pad: f32) -> vector<2x4xf32> {
 
 // -----
 
-// CHECK-LABEL: func.func @partial_read_dynamic_index
+// CHECK-LABEL: func.func @negative_partial_read_dynamic_index
 // CHECK: memref.alloca
 // CHECK: vector.transfer_write
 // CHECK: vector.transfer_read
-func.func @partial_read_dynamic_index(%v: vector<8xf32>, %pad: f32, %offset: index) -> vector<4xf32> {
+func.func @negative_partial_read_dynamic_index(%v: vector<8xf32>, %pad: f32, %offset: index) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
@@ -746,11 +746,11 @@ func.func @partial_read_dynamic_index(%v: vector<8xf32>, %pad: f32, %offset: ind
 
 // -----
 
-// CHECK-LABEL: func.func @partial_read_negative_index
+// CHECK-LABEL: func.func @negative_partial_read_negative_index
 // CHECK: memref.alloca
 // CHECK: vector.transfer_write
 // CHECK: vector.transfer_read
-func.func @partial_read_negative_index(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+func.func @negative_partial_read_negative_index(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c-1 = arith.constant -1 : index
   %a = memref.alloca() : memref<8xf32>
@@ -761,11 +761,11 @@ func.func @partial_read_negative_index(%v: vector<8xf32>, %pad: f32) -> vector<4
 
 // -----
 
-// CHECK-LABEL: func.func @partial_read_exceeds_extent
+// CHECK-LABEL: func.func @negative_partial_read_exceeds_extent
 // CHECK: memref.alloca
 // CHECK: vector.transfer_write
 // CHECK: vector.transfer_read
-func.func @partial_read_exceeds_extent(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+func.func @negative_partial_read_exceeds_extent(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c6 = arith.constant 6 : index
   %a = memref.alloca() : memref<8xf32>
@@ -776,11 +776,11 @@ func.func @partial_read_exceeds_extent(%v: vector<8xf32>, %pad: f32) -> vector<4
 
 // -----
 
-// CHECK-LABEL: func.func @partial_read_large_index
+// CHECK-LABEL: func.func @negative_partial_read_large_index
 // CHECK: memref.alloca
 // CHECK: vector.transfer_write
 // CHECK: vector.transfer_read
-func.func @partial_read_large_index(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+func.func @negative_partial_read_large_index(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c9223372036854775807 = arith.constant 9223372036854775807 : index
   %a = memref.alloca() : memref<8xf32>
@@ -807,14 +807,14 @@ func.func @partial_read_static_bounds(%v: vector<8xf32>, %pad: f32) -> vector<4x
 
 // -----
 
-// CHECK-LABEL: func.func @partial_read_masked
+// CHECK-LABEL: func.func @partial_read_with_mask
 // CHECK-SAME: (%[[V:.*]]: vector<8xf32>, %[[PAD:.*]]: f32, %[[MASK:.*]]: vector<4xi1>)
 // CHECK-NOT: memref.alloca
 // CHECK: %[[SLICE:.*]] = vector.extract_strided_slice %[[V]] offsets = [2], sizes = [4], strides = [1]
 // CHECK: %[[PADDING:.*]] = vector.broadcast %[[PAD]] : f32 to vector<4xf32>
 // CHECK: %[[R:.*]] = arith.select %[[MASK]], %[[SLICE]], %[[PADDING]] : vector<4xi1>, vector<4xf32>
 // CHECK: return %[[R]]
-func.func @partial_read_masked(%v: vector<8xf32>, %pad: f32, %mask: vector<4xi1>) -> vector<4xf32> {
+func.func @partial_read_with_mask(%v: vector<8xf32>, %pad: f32, %mask: vector<4xi1>) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %a = memref.alloca() : memref<8xf32>
@@ -825,11 +825,11 @@ func.func @partial_read_masked(%v: vector<8xf32>, %pad: f32, %mask: vector<4xi1>
 
 // -----
 
-// CHECK-LABEL: func.func @partial_read_transpose
+// CHECK-LABEL: func.func @negative_partial_read_transpose_map
 // CHECK: memref.alloca
 // CHECK: vector.transfer_write
 // CHECK: vector.transfer_read
-func.func @partial_read_transpose(%v: vector<4x8xf32>, %pad: f32) -> vector<2x4xf32> {
+func.func @negative_partial_read_transpose_map(%v: vector<4x8xf32>, %pad: f32) -> vector<2x4xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<4x8xf32>
   vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
@@ -839,11 +839,11 @@ func.func @partial_read_transpose(%v: vector<4x8xf32>, %pad: f32) -> vector<2x4x
 
 // -----
 
-// CHECK-LABEL: func.func @partial_read_broadcast
+// CHECK-LABEL: func.func @negative_partial_read_broadcast_map
 // CHECK: memref.alloca
 // CHECK: vector.transfer_write
 // CHECK: vector.transfer_read
-func.func @partial_read_broadcast(%v: vector<4x8xf32>, %pad: f32) -> vector<4xf32> {
+func.func @negative_partial_read_broadcast_map(%v: vector<4x8xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<4x8xf32>
   vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<4x8xf32>, memref<4x8xf32>
@@ -874,14 +874,14 @@ func.func @partial_read_before_write(%v: vector<8xf32>, %pad: f32) -> (vector<4x
 // -----
 
 // Static aliases provide their own sub-vector; the read extracts within it.
-// CHECK-LABEL: func.func @partial_read_static_alias
+// CHECK-LABEL: func.func @subview_static_partial_read
 // CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
 // CHECK-NOT: memref.alloca
 // CHECK-NOT: memref.subview
 // CHECK: %[[ALIAS:.*]] = vector.extract_strided_slice %[[V]] offsets = [2], sizes = [4], strides = [1]
 // CHECK: %[[R:.*]] = vector.extract_strided_slice %[[ALIAS]] offsets = [1], sizes = [2], strides = [1]
 // CHECK: return %[[R]]
-func.func @partial_read_static_alias(%v: vector<8xf32>, %pad: f32) -> vector<2xf32> {
+func.func @subview_static_partial_read(%v: vector<8xf32>, %pad: f32) -> vector<2xf32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %a = memref.alloca() : memref<8xf32>
@@ -894,7 +894,7 @@ func.func @partial_read_static_alias(%v: vector<8xf32>, %pad: f32) -> vector<2xf
 // -----
 
 // Each slice reads the current loop-carried vector.
-// CHECK-LABEL: func.func @partial_read_loop
+// CHECK-LABEL: func.func @partial_buffer_in_loop
 // CHECK-NOT: memref.alloca
 // CHECK: %[[LOOP:.*]] = scf.for {{.*}} iter_args(%[[IT:.*]] = %{{.*}}) -> (vector<8xf32>)
 // CHECK: %[[SLICE:.*]] = vector.extract_strided_slice %[[IT]] offsets = [2], sizes = [4], strides = [1]
@@ -903,7 +903,7 @@ func.func @partial_read_static_alias(%v: vector<8xf32>, %pad: f32) -> vector<2xf
 // CHECK: scf.yield %[[FULL]]
 // CHECK: %[[RESULT:.*]] = vector.extract_strided_slice %[[LOOP]] offsets = [2], sizes = [4], strides = [1]
 // CHECK: return %[[RESULT]]
-func.func @partial_read_loop(%v: vector<8xf32>, %pad: f32, %lb: index, %ub: index, %step: index) -> vector<4xf32> {
+func.func @partial_buffer_in_loop(%v: vector<8xf32>, %pad: f32, %lb: index, %ub: index, %step: index) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %a = memref.alloca() : memref<8xf32>
@@ -944,7 +944,7 @@ func.func @partial_read_branch(%a0: vector<8xf32>, %a1: vector<8xf32>, %pad: f32
 // -----
 
 // A dynamic subview's slot value represents its parent, not its runtime shape.
-// CHECK-LABEL: func.func @partial_read_dynamic_alias
+// CHECK-LABEL: func.func @subview_dynamic_partial_read
 // CHECK-SAME: (%[[V:.*]]: vector<8xf32>, %[[PAD:.*]]: f32, %[[SIZE:.*]]: index)
 // CHECK-NOT: memref.alloca
 // CHECK-NOT: memref.subview
@@ -954,7 +954,7 @@ func.func @partial_read_branch(%a0: vector<8xf32>, %a1: vector<8xf32>, %pad: f32
 // CHECK: %[[PADDING:.*]] = vector.broadcast %[[PAD]] : f32 to vector<4xf32>
 // CHECK: %[[R:.*]] = arith.select %[[MASK]], %[[SLICE]], %[[PADDING]] : vector<4xi1>, vector<4xf32>
 // CHECK: return %[[R]]
-func.func @partial_read_dynamic_alias(%v: vector<8xf32>, %pad: f32, %size: index) -> vector<4xf32> {
+func.func @subview_dynamic_partial_read(%v: vector<8xf32>, %pad: f32, %size: index) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
@@ -966,11 +966,11 @@ func.func @partial_read_dynamic_alias(%v: vector<8xf32>, %pad: f32, %size: index
 // -----
 
 // Scalable transfers keep the whole-buffer requirement.
-// CHECK-LABEL: func.func @partial_read_scalable
+// CHECK-LABEL: func.func @negative_partial_read_scalable
 // CHECK: memref.alloca
 // CHECK: vector.transfer_write
 // CHECK: vector.transfer_read
-func.func @partial_read_scalable(%v: vector<[8]xf32>, %pad: f32) -> vector<[4]xf32> {
+func.func @negative_partial_read_scalable(%v: vector<[8]xf32>, %pad: f32) -> vector<[4]xf32> {
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
   %scale = vector.vscale
@@ -984,13 +984,13 @@ func.func @partial_read_scalable(%v: vector<[8]xf32>, %pad: f32) -> vector<[4]xf
 // -----
 
 // A slice may span lanes written through an alias and untouched parent lanes.
-// CHECK-LABEL: func.func @partial_read_after_alias_write
+// CHECK-LABEL: func.func @subview_static_partial_read_after_write
 // CHECK-SAME: (%[[INIT:.*]]: vector<8xf32>, %[[V:.*]]: vector<4xf32>,
 // CHECK-NOT: memref.alloca
 // CHECK: %[[MERGED:.*]] = vector.insert_strided_slice %[[V]], %[[INIT]] offsets = [2], strides = [1]
 // CHECK: %[[R:.*]] = vector.extract_strided_slice %[[MERGED]] offsets = [1], sizes = [4], strides = [1]
 // CHECK: return %[[R]]
-func.func @partial_read_after_alias_write(%init: vector<8xf32>, %v: vector<4xf32>, %pad: f32) -> vector<4xf32> {
+func.func @subview_static_partial_read_after_write(%init: vector<8xf32>, %v: vector<4xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %a = memref.alloca() : memref<8xf32>
@@ -1004,12 +1004,12 @@ func.func @partial_read_after_alias_write(%init: vector<8xf32>, %v: vector<4xf32
 // -----
 
 // Static containment also proves bounds for a whole-slot read.
-// CHECK-LABEL: func.func @whole_read_static_bounds
+// CHECK-LABEL: func.func @whole_buffer_read_static_bounds
 // CHECK-SAME: (%[[V:.*]]: vector<8xf32>,
 // CHECK-NOT: memref.alloca
 // CHECK-NOT: vector.transfer
 // CHECK: return %[[V]]
-func.func @whole_read_static_bounds(%v: vector<8xf32>, %pad: f32) -> vector<8xf32> {
+func.func @whole_buffer_read_static_bounds(%v: vector<8xf32>, %pad: f32) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
@@ -1020,7 +1020,7 @@ func.func @whole_read_static_bounds(%v: vector<8xf32>, %pad: f32) -> vector<8xf3
 // -----
 
 // The view may end inside the slice; combine its extent with the read mask.
-// CHECK-LABEL: func.func @partial_read_dynamic_alias_masked
+// CHECK-LABEL: func.func @subview_dynamic_partial_read_with_mask
 // CHECK-SAME: (%[[V:.*]]: vector<8xf32>, %[[PAD:.*]]: f32, %[[SIZE:.*]]: index, %[[OPMASK:.*]]: vector<4xi1>)
 // CHECK-NOT: memref.alloca
 // CHECK-NOT: memref.subview
@@ -1031,7 +1031,7 @@ func.func @whole_read_static_bounds(%v: vector<8xf32>, %pad: f32) -> vector<8xf3
 // CHECK: %[[PADDING:.*]] = vector.broadcast %[[PAD]] : f32 to vector<4xf32>
 // CHECK: %[[R:.*]] = arith.select %[[MASK]], %[[SLICE]], %[[PADDING]] : vector<4xi1>, vector<4xf32>
 // CHECK: return %[[R]]
-func.func @partial_read_dynamic_alias_masked(%v: vector<8xf32>, %pad: f32, %size: index, %mask: vector<4xi1>) -> vector<4xf32> {
+func.func @subview_dynamic_partial_read_with_mask(%v: vector<8xf32>, %pad: f32, %size: index, %mask: vector<4xi1>) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %a = memref.alloca() : memref<8xf32>
@@ -1043,7 +1043,7 @@ func.func @partial_read_dynamic_alias_masked(%v: vector<8xf32>, %pad: f32, %size
 
 // -----
 
-// CHECK-LABEL: func.func @partial_read_dynamic_alias_2d
+// CHECK-LABEL: func.func @subview_dynamic_partial_read_2d
 // CHECK-SAME: (%[[V:.*]]: vector<4x8xf32>, %[[PAD:.*]]: f32, %[[SIZE:.*]]: index)
 // CHECK-NOT: memref.alloca
 // CHECK-NOT: memref.subview
@@ -1054,7 +1054,7 @@ func.func @partial_read_dynamic_alias_masked(%v: vector<8xf32>, %pad: f32, %size
 // CHECK: %[[PADDING:.*]] = vector.broadcast %[[PAD]] : f32 to vector<2x4xf32>
 // CHECK: %[[R:.*]] = arith.select %[[MASK]], %[[SLICE]], %[[PADDING]] : vector<2x4xi1>, vector<2x4xf32>
 // CHECK: return %[[R]]
-func.func @partial_read_dynamic_alias_2d(%v: vector<4x8xf32>, %pad: f32, %size: index) -> vector<2x4xf32> {
+func.func @subview_dynamic_partial_read_2d(%v: vector<4x8xf32>, %pad: f32, %size: index) -> vector<2x4xf32> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -1068,7 +1068,7 @@ func.func @partial_read_dynamic_alias_2d(%v: vector<4x8xf32>, %pad: f32, %size: 
 // -----
 
 // A constant-zero size still has a dynamic memref type and pads every lane.
-// CHECK-LABEL: func.func @partial_read_empty_dynamic_alias
+// CHECK-LABEL: func.func @subview_dynamic_partial_read_empty_extent
 // CHECK-SAME: (%[[V:.*]]: vector<8xf32>, %[[PAD:.*]]: f32)
 // CHECK-NOT: memref.alloca
 // CHECK-NOT: memref.subview
@@ -1079,7 +1079,7 @@ func.func @partial_read_dynamic_alias_2d(%v: vector<4x8xf32>, %pad: f32, %size: 
 // CHECK: %[[PADDING:.*]] = vector.broadcast %[[PAD]] : f32 to vector<4xf32>
 // CHECK: %[[R:.*]] = arith.select %[[MASK]], %[[SLICE]], %[[PADDING]] : vector<4xi1>, vector<4xf32>
 // CHECK: return %[[R]]
-func.func @partial_read_empty_dynamic_alias(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+func.func @subview_dynamic_partial_read_empty_extent(%v: vector<8xf32>, %pad: f32) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %a = memref.alloca() : memref<8xf32>
@@ -1092,11 +1092,11 @@ func.func @partial_read_empty_dynamic_alias(%v: vector<8xf32>, %pad: f32) -> vec
 // -----
 
 // Runtime padding does not allow extracting beyond the parent slot vector.
-// CHECK-LABEL: func.func @partial_read_dynamic_alias_exceeds_parent
+// CHECK-LABEL: func.func @negative_subview_dynamic_partial_read_exceeds_parent
 // CHECK: memref.alloca
 // CHECK: memref.subview
 // CHECK: vector.transfer_read
-func.func @partial_read_dynamic_alias_exceeds_parent(%v: vector<8xf32>, %pad: f32, %size: index) -> vector<4xf32> {
+func.func @negative_subview_dynamic_partial_read_exceeds_parent(%v: vector<8xf32>, %pad: f32, %size: index) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c6 = arith.constant 6 : index
   %a = memref.alloca() : memref<8xf32>
@@ -1109,11 +1109,11 @@ func.func @partial_read_dynamic_alias_exceeds_parent(%v: vector<8xf32>, %pad: f3
 // -----
 
 // Nonzero offsets in a dynamic subview are not supported by the alias model.
-// CHECK-LABEL: func.func @partial_read_offset_dynamic_alias
+// CHECK-LABEL: func.func @negative_subview_dynamic_partial_read_nonzero_offset
 // CHECK: memref.alloca
 // CHECK: memref.subview
 // CHECK: vector.transfer_read
-func.func @partial_read_offset_dynamic_alias(%v: vector<8xf32>, %pad: f32, %size: index) -> vector<4xf32> {
+func.func @negative_subview_dynamic_partial_read_nonzero_offset(%v: vector<8xf32>, %pad: f32, %size: index) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
@@ -1125,12 +1125,12 @@ func.func @partial_read_offset_dynamic_alias(%v: vector<8xf32>, %pad: f32, %size
 // -----
 
 // Mem2Reg cannot promote accesses through the vector.mask region.
-// CHECK-LABEL: func.func @partial_read_mask_region
+// CHECK-LABEL: func.func @negative_partial_read_mask_region
 // CHECK: memref.alloca
 // CHECK: vector.transfer_write
 // CHECK: vector.mask
 // CHECK-SAME: vector.transfer_read
-func.func @partial_read_mask_region(%v: vector<8xf32>, %pad: f32, %mask: vector<4xi1>) -> vector<4xf32> {
+func.func @negative_partial_read_mask_region(%v: vector<8xf32>, %pad: f32, %mask: vector<4xi1>) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %a = memref.alloca() : memref<8xf32>

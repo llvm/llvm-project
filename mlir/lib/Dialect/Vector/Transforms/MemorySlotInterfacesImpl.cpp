@@ -100,9 +100,7 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
 static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
     TransferReadOp readOp, const MemorySlot &slot,
     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
-  if (!isTransferSlotAccess(
-          cast<VectorTransferOpInterface>(readOp.getOperation()), slot,
-          blockingUses) ||
+  if (!isTransferSlotAccess(readOp, slot, blockingUses) ||
       !readOp.getPermutationMap().isIdentity())
     return failure();
 
@@ -113,10 +111,8 @@ static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
       readType.getElementType() != slotType.getElementType())
     return failure();
 
-  if (!memref::isDynamicSubViewSlot(slot.ptr) &&
-      readOp.getShapedType().getShape() != slotType.getShape())
-    return failure();
-
+  // Alloca and static subview slots match the memref shape; dynamic subview
+  // slots cover the whole parent vector, with runtime bounds handled by a mask.
   SmallVector<int64_t> offsets;
   for (auto [index, size, extent] : llvm::zip_equal(
            readOp.getIndices(), readType.getShape(), slotType.getShape())) {
