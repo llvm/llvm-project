@@ -674,9 +674,27 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
       isConstant = true;
     else if (flag == "managed")
       isManaged = true;
-    else if (flag == "normalized")
+    else if (flag == "normalized") {
+      if (*kind != CUDADeviceVarKind::Texture) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "'normalized' is only valid for Texture");
+        return {};
+      }
       normalized = true;
-    else if (flag == "surface_type" || flag == "texture_type") {
+    } else if (flag == "surface_type") {
+      if (*kind != CUDADeviceVarKind::Surface) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "'surface_type' is only valid for Surface");
+        return {};
+      }
+      if (parser.parseEqual() || parser.parseInteger(surfTexType))
+        return {};
+    } else if (flag == "texture_type") {
+      if (*kind != CUDADeviceVarKind::Texture) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "'texture_type' is only valid for Texture");
+        return {};
+      }
       if (parser.parseEqual() || parser.parseInteger(surfTexType))
         return {};
     } else {
