@@ -59790,11 +59790,13 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
 
   // Keep the packed unsigned expansion when a signed conversion is not
   // directly legal and the operand cannot narrow to a signed i32 conversion.
+  // Extended types must be legalized before querying conversion legality.
   // Strict conversions cannot use that expansion.
   if (!IsStrict && InVT.isVector() && InVT.getScalarType() == MVT::i64 &&
       VT.getScalarType() == MVT::f64 &&
-      !isLegalConversion(InVT.getSimpleVT(), VT.getSimpleVT(), true,
-                         Subtarget) &&
+      (!InVT.isSimple() || !VT.isSimple() ||
+       !isLegalConversion(InVT.getSimpleVT(), VT.getSimpleVT(), true,
+                          Subtarget)) &&
       DAG.ComputeNumSignBits(Op0) < InVT.getScalarSizeInBits() - 31)
     return SDValue();
 
