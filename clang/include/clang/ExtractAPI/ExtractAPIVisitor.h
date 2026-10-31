@@ -125,10 +125,6 @@ public:
 
   bool VisitObjCCategoryDecl(const ObjCCategoryDecl *Decl);
 
-  bool shouldDeclBeIncluded(const Decl *Decl) const;
-
-  const RawComment *fetchRawCommentForDecl(const Decl *Decl) const;
-
 protected:
   /// Collect API information for the enum constants and associate with the
   /// parent enum.

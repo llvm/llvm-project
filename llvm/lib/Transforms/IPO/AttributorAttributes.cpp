@@ -39,6 +39,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Assumptions.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -10470,6 +10471,20 @@ struct AANoUndefReturned final
     : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl> {
   AANoUndefReturned(const IRPosition &IRP, Attributor &A)
       : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>::initialize(A);
+    if (isAtFixpoint())
+      return;
+
+    // Returning a value that violates a return attribute, e.g., nonnull, is
+    // poison.
+    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
+    AttributeSet RetAttrs =
+        getAssociatedFunction()->getAttributes().getRetAttrs();
+    if (any_of(RetAttrs, [&](Attribute Attr) { return AM.contains(Attr); }))
+      indicatePessimisticFixpoint();
+  }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }

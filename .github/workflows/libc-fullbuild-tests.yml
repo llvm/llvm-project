@@ -47,6 +47,15 @@ jobs:
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
             build_fuzzing_tests: ON
+          - name: linux-x86_64-Release-Asserts
+            os: llvm-premerge-linux-32-runners
+            build_type: Release
+            assertions: ON
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
+            linker: lld-23
+            target: x86_64-unknown-linux-llvm
+            include_scudo: ON
           - name: linux-x86_64-MinSizeRel
             os: llvm-premerge-linux-32-runners
             build_type: MinSizeRel
@@ -190,6 +199,10 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=/__w/llvm-project/llvm-project/install
           -DLIBC_COMPILE_OPTIONS_NATIVE=''
         "
+
+        if [[ "${{ matrix.assertions }}" == "ON" ]]; then
+          export CMAKE_FLAGS="$CMAKE_FLAGS -DLLVM_ENABLE_ASSERTIONS=ON"
+        fi
 
         if [[ "${{ matrix.testing }}" != "SKIP" ]]; then
           export CMAKE_FLAGS="$CMAKE_FLAGS

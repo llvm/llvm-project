@@ -835,3 +835,16 @@ void BoolVecUsage() {
   constexpr auto k = ~FourBoolsExtVec{true, false, true, false};
   static_assert(k[0] == false && k[1] == true && k[2] == false && k[3] == true, "");
 }
+
+// GH159905
+constexpr FourCharsVecSize ShiftVec(FourCharsVecSize a, int b) {
+  return (FourCharsVecSize)((int)a << b);
+}
+
+void VecToIntegralUsage() {
+  static_assert((int)FourCharsVecSize{1, 2, 3, 4} == 0x04030201, "");
+  static_assert((__int128)FourIntsVecSize{1, 2, 3, 4} ==
+                    (((__int128)0x400000003 << 64) | 0x200000001), "");
+  static_assert((__int128)FourFloatsVecSize{1.0f, 0, 0, 0} == 0x3f800000, "");
+  static_assert(ShiftVec(FourCharsVecSize{1, 0, 0, 0}, 8)[1] == 1, "");
+}

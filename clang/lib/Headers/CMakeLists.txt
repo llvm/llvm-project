@@ -11,6 +11,7 @@ set(core_files
   inttypes.h
   iso646.h
   limits.h
+  meta
   module.modulemap
   stdalign.h
   stdarg.h

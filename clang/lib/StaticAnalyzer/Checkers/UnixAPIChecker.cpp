@@ -74,9 +74,6 @@ public:
   UnixAPIMisuseChecker(const ASTContext &Ctx, const Preprocessor &PP)
       : Val_O_CREAT(getCreateFlagValue(Ctx, PP)) {}
 
-  void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &Mgr,
-                    BugReporter &BR) const;
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
   void CheckOpen(CheckerContext &C, const CallEvent &Call) const;

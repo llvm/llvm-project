@@ -288,13 +288,13 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
-; MUBUF-NEXT:    ; def s[68:83]
+; MUBUF-NEXT:    ; def s[36:51]
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; def s[52:67]
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
-; MUBUF-NEXT:    ; def s[36:51]
+; MUBUF-NEXT:    ; def s[68:83]
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; def s[4:19]
@@ -306,13 +306,13 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 ; MUBUF-NEXT:    ; def s[28:29]
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
-; MUBUF-NEXT:    ; use s[68:83]
+; MUBUF-NEXT:    ; use s[36:51]
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; use s[52:67]
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
-; MUBUF-NEXT:    ; use s[36:51]
+; MUBUF-NEXT:    ; use s[68:83]
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; use s[20:27]
@@ -388,13 +388,13 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; def s[52:67]
+; FLATSCR-NEXT:    ; def s[16:31]
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def s[36:51]
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; def s[16:31]
+; FLATSCR-NEXT:    ; def s[52:67]
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def s[0:15]
@@ -406,15 +406,15 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 ; FLATSCR-NEXT:    ; def s[88:89]
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; use s[52:67]
+; FLATSCR-NEXT:    ; use s[16:31]
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 16
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; use s[36:51]
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; use s[16:31]
+; FLATSCR-NEXT:    ; use s[52:67]
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 16
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; use s[72:79]
 ; FLATSCR-NEXT:    ;;#ASMEND

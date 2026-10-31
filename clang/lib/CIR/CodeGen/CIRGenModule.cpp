@@ -1518,20 +1518,24 @@ static void emitUsed(CIRGenModule &cgm, StringRef name,
 
   CIRGenBuilderTy &builder = cgm.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
+  cir::PointerType voidPtrTy = builder.getVoidPtrTy(
+      cgm.getTypes().getPointerAddressSpace(cgm.getASTContext().VoidTy));
+
   llvm::SmallVector<mlir::Attribute> usedArray;
   usedArray.resize(list.size());
   for (auto [i, op] : llvm::enumerate(list)) {
     usedArray[i] = cir::GlobalViewAttr::get(
-        cgm.voidPtrTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
+        voidPtrTy, mlir::FlatSymbolRefAttr::get(op.getNameAttr()));
   }
 
-  cir::ArrayType arrayTy = cir::ArrayType::get(cgm.voidPtrTy, usedArray.size());
+  cir::ArrayType arrayTy = cir::ArrayType::get(voidPtrTy, usedArray.size());
 
   cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&cgm.getMLIRContext(), usedArray));
 
-  cir::GlobalOp gv = cgm.createGlobalOp(loc, name, arrayTy,
-                                        /*isConstant=*/false);
+  cir::GlobalOp gv = cgm.createGlobalOp(
+      loc, name, arrayTy, /*isConstant=*/false,
+      cgm.getDataLayout().getDefaultGlobalsAddrSpace(&cgm.getMLIRContext()));
   gv.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
   gv.setInitialValueAttr(initAttr);
   gv.setSectionAttr(builder.getStringAttr("llvm.metadata"));

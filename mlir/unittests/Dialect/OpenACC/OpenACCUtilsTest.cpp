@@ -1637,8 +1637,14 @@ struct AccessibleNotInDeviceMemoryModel
   Type getElementType(Type pointer) const {
     return cast<VectorType>(pointer).getElementType();
   }
-  bool isDeviceAccessible(Type pointer, Value var) const { return true; }
-  bool isInDeviceMemory(Type pointer, Value var) const { return false; }
+  bool isDeviceAccessible(Type pointer, Value var,
+                          SymbolTableCollection *symbolTables) const {
+    return true;
+  }
+  bool isInDeviceMemory(Type pointer, Value var,
+                        SymbolTableCollection *symbolTables) const {
+    return false;
+  }
 };
 } // namespace
 

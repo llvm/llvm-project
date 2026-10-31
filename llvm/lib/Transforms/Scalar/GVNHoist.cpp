@@ -91,7 +91,6 @@ namespace llvm {
 
 using BBSideEffectsSet = DenseMap<const BasicBlock *, bool>;
 using SmallVecInsn = SmallVector<Instruction *, 4>;
-using SmallVecImplInsn = SmallVectorImpl<Instruction *>;
 
 // Each element of a hoisting list contains the basic block where to hoist and
 // a list of instructions to be hoisted.

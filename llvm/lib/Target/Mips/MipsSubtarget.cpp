@@ -305,8 +305,8 @@ void MipsSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
     for (unsigned I = 0; I != std::size(HardFloatLibCalls); ++I) {
       assert((I == 0 || HardFloatLibCalls[I - 1] < HardFloatLibCalls[I]) &&
              "Array not sorted!");
-      RTLIB::Libcall LC =
-          RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(HardFloatLibCalls[I]);
+      RTLIB::Libcall LC = Info.getRuntimeLibcallsInfo().getLibcallFromImpl(
+          HardFloatLibCalls[I]);
       Info.setLibcallImpl(LC, HardFloatLibCalls[I]);
     }
   }

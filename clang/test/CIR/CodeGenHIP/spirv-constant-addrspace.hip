@@ -31,7 +31,8 @@ __constant__ int tab[2] = {1, 2};
 __device__ int dev = 3;
 
 // Functions live in the program address space 4.
-// LLVM-DAG: @llvm.used = {{.*}}ptr addrspace(4) @_Z7used_fnv
+// CIR-DAG: cir.global "private" appending target_address_space(1) @llvm.used = #cir.const_array<[#cir.global_view<@_Z7used_fnv> : !cir.ptr<!void, target_address_space(4)>]> : !cir.array<!cir.ptr<!void, target_address_space(4)> x 1>
+// LLVM-DAG: @llvm.used = appending addrspace(1) global [1 x ptr addrspace(4)] [ptr addrspace(4) @_Z7used_fnv], section "llvm.metadata"
 __attribute__((used)) __device__ void used_fn() {}
 
 // CIR-LABEL: cir.func{{.*}} @_Z10static_fmti

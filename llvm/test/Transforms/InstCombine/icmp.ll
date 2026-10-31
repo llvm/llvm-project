@@ -1305,6 +1305,30 @@ define zeroext i1 @cmpabs2(i64 %val) {
   ret i1 %tobool
 }
 
+define zeroext i1 @cmp_posorneg_eq1(i64 %val, i1 %cond) {
+; CHECK-LABEL: define zeroext i1 @cmp_posorneg_eq1(
+; CHECK-SAME: i64 [[VAL:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %sub = sub i64 0, %val
+  %val.or.sub = select i1 %cond, i64 %sub, i64 %val
+  %tobool = icmp eq i64 %val.or.sub, 0
+  ret i1 %tobool
+}
+
+define zeroext i1 @cmp_posorneg_eq2(i64 %val, i1 %cond) {
+; CHECK-LABEL: define zeroext i1 @cmp_posorneg_eq2(
+; CHECK-SAME: i64 [[VAL:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %sub = sub i64 0, %val
+  %val.or.sub = select i1 %cond, i64 %val, i64 %sub
+  %tobool = icmp eq i64 %val.or.sub, 0
+  ret i1 %tobool
+}
+
 define i1 @abs_intrin_eq_zero(i8 %x) {
 ; CHECK-LABEL: define i1 @abs_intrin_eq_zero(
 ; CHECK-SAME: i8 [[X:%.*]]) {

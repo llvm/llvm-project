@@ -10,34 +10,20 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Frontend/Directive/Version.h"
 #include "llvm/Support/Compiler.h"
 
 #include <limits>
 #include <tuple>
 
 namespace llvm::directive {
-
-struct VersionRange {
-  static constexpr int MaxValue = std::numeric_limits<int>::max();
-  // The default "Version" value in get<Lang><Enum>Name() is 0, include that
-  // in the maximum range.
-  int Min = 0;
-  int Max = MaxValue;
-
-  constexpr bool operator<(const VersionRange &R) const {
-    return std::tie(Min, Max) < std::tie(R.Min, R.Max);
-  }
-  constexpr bool isValid() const { return Min <= Max; }
-};
-
 struct Spelling {
   StringRef Name;
   VersionRange Versions;
 };
 
 LLVM_ABI StringRef FindName(llvm::iterator_range<const Spelling *>,
-                            unsigned Version);
-
+                            Version Version);
 } // namespace llvm::directive
 
 #endif // LLVM_FRONTEND_DIRECTIVE_SPELLING_H

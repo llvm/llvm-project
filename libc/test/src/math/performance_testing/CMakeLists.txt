@@ -98,6 +98,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
+    libc.src.errno.errno
 )
 
 add_perf_binary(

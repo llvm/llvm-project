@@ -38,11 +38,3 @@ def testPolynomialApproximation():
     # CHECK-LABEL: TEST: testPolynomialApproximation
     # CHECK: apply_patterns
     # CHECK: transform.apply_patterns.math.polynomial_approximation{{$}}
-
-
-@run_apply_patterns
-def testPolynomialApproximationAvx2():
-    math.ApplyPolynomialApproximationPatternsOp(enable_avx2=True)
-    # CHECK-LABEL: TEST: testPolynomialApproximationAvx2
-    # CHECK: apply_patterns
-    # CHECK: transform.apply_patterns.math.polynomial_approximation enable_avx2

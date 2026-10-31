@@ -30,7 +30,7 @@ body: |
     %0:gr64 = COPY killed $rdi
     %1:gr32 = COPY killed $esi
     dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
-    dead $rax = SUBREG_TO_REG killed %1, %subreg.sub_32bit
+    dead $rax = SUBREG_TO_REG %1, %subreg.sub_32bit
     RET 0
 ...
 ---
@@ -63,7 +63,7 @@ body: |
     %0:gr64 = COPY killed $rdi
     %1:gr32 = COPY killed $esi
     dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
-    dead %3:gr64 = SUBREG_TO_REG killed %1, %subreg.sub_32bit
+    dead %3:gr64 = SUBREG_TO_REG %1, %subreg.sub_32bit
     RET 0
 ...
 ---
@@ -93,7 +93,7 @@ body: |
     %0:gr64 = COPY killed $rdi
     %1:gr32 = COPY killed $esi
     dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
-    dead $eax = COPY killed %1
+    dead $eax = COPY %1
     RET 0
 ...
 ---
@@ -125,6 +125,6 @@ body: |
     %0:gr64 = COPY killed $rdi
     %1:gr32 = COPY killed $esi
     dead %2:gr32 = IMUL32rm %1, %0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from `ptr undef`, align 4)
-    dead %3:gr32 = COPY killed %1
+    dead %3:gr32 = COPY %1
     RET 0
 ...

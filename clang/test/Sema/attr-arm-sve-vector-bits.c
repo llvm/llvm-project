@@ -76,6 +76,8 @@ typedef svint8_t non_int_size2 __attribute__((arm_sve_vector_bits("256"))); // e
 
 typedef __clang_svint8x2_t svint8x2_t;
 typedef __clang_svfloat32x3_t svfloat32x3_t;
+typedef __clang_svboolx2_t svboolx2_t;
+typedef __clang_svboolx4_t svboolx4_t;
 
 // Attribute must be attached to a single SVE vector or predicate type.
 typedef void *badtype1 __attribute__((arm_sve_vector_bits(N)));         // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'void *'}}
@@ -83,6 +85,8 @@ typedef int badtype2 __attribute__((arm_sve_vector_bits(N)));           // expec
 typedef float badtype3 __attribute__((arm_sve_vector_bits(N)));         // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'float'}}
 typedef svint8x2_t badtype4 __attribute__((arm_sve_vector_bits(N)));    // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'svint8x2_t' (aka '__clang_svint8x2_t')}}
 typedef svfloat32x3_t badtype5 __attribute__((arm_sve_vector_bits(N))); // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'svfloat32x3_t' (aka '__clang_svfloat32x3_t')}}
+typedef svboolx2_t badtype6 __attribute__((arm_sve_vector_bits(N)));    // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'svboolx2_t' (aka '__clang_svboolx2_t')}}
+typedef svboolx4_t badtype7 __attribute__((arm_sve_vector_bits(N)));    // expected-error {{'arm_sve_vector_bits' attribute applied to non-SVE type 'svboolx4_t' (aka '__clang_svboolx4_t')}}
 
 // Attribute only applies to typedefs.
 svint8_t non_typedef_type __attribute__((arm_sve_vector_bits(N)));  // expected-error {{'arm_sve_vector_bits' attribute only applies to typedefs}}

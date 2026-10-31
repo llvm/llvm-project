@@ -70,10 +70,9 @@ Protocol](https://github.com/microsoft/debug-adapter-protocol/issues) to check
 if there already is a proposal serving your use case. If so, try to take
 inspiration from it. If not, consider opening an upstream issue.
 
-To avoid naming collisions with potential future extensions of the Debug
-Adapter protocol, all non-standard extensions should use the prefix
-`$__lldb_` in their JSON property names. See
-[LLDB-DAP Extensions](./lldbdap-extensions.md) for more details.
+To avoid naming collisions with future versions of the Debug Adapter
+Protocol, follow the naming rules in
+[LLDB-DAP Extensions](./lldbdap-extensions.md#naming-rules).
 
 ### Debugging the Debug Adapter Protocol
 

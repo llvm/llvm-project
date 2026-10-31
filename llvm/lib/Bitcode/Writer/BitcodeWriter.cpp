@@ -118,10 +118,6 @@ static cl::opt<bool> PreserveBitcodeUseListOrder(
     "preserve-bc-uselistorder", cl::Hidden, cl::init(true),
     cl::desc("Preserve use-list order when writing LLVM bitcode."));
 
-namespace llvm {
-extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
-}
-
 namespace {
 
 /// These are manifest constants used by the bitcode writer. They do not need to

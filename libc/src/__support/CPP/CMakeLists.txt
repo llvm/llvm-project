@@ -42,7 +42,11 @@ add_header_library(
   HDRS
     functional.h
   DEPENDS
+    .type_traits
+    .utility
     libc.hdr.stdint_proxy
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(

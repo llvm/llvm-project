@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Support/BinaryStream.h"
-#include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -33,10 +32,6 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
-
-namespace {
-typedef FixedStreamArray<support::ulittle32_t> ulittle_array;
-} // end anonymous namespace
 
 PDBFile::PDBFile(StringRef Path, std::unique_ptr<BinaryStream> PdbFileBuffer,
                  BumpPtrAllocator &Allocator)

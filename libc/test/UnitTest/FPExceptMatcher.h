@@ -25,7 +25,7 @@ class FPExceptMatcher : public Matcher<bool> {
   bool exceptionRaised;
 
 public:
-  explicit FPExceptMatcher(cpp::function<void(void)> func);
+  explicit FPExceptMatcher(cpp::function_ref<void(void)> func);
 
   bool match([[maybe_unused]] bool unused) { return exceptionRaised; }
 

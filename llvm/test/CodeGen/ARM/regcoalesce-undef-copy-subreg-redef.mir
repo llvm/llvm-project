@@ -50,7 +50,7 @@ body:             |
     %3:gpr = COPY killed $r2
     %2:gpr = COPY killed $r1
     %1:gpr = COPY killed $r0
-    TSTri killed %3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    TSTri %3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
     Bcc %bb.2, 0 /* CC::eq */, killed $cpsr
     B %bb.1
 
@@ -62,23 +62,23 @@ body:             |
 
     ; The COPY of an undef value below feeds the dsub_1 partial redef. After the
     ; copy is eliminated, that redef must become a read-undef def.
-    %5:dpr = VSETLNi32 undef %5, killed %1, 0, 14 /* CC::al */, $noreg
-    %7:dpr = COPY killed %5
-    %7:dpr = VSETLNi32 %7, killed %2, 1, 14 /* CC::al */, $noreg
+    %5:dpr = VSETLNi32 undef %5, %1, 0, 14 /* CC::al */, $noreg
+    %7:dpr = COPY %5
+    %7:dpr = VSETLNi32 %7, %2, 1, 14 /* CC::al */, $noreg
     undef %8.dsub_0:qpr = COPY undef %9:dpr
-    %8.dsub_1:qpr = COPY killed %7
+    %8.dsub_1:qpr = COPY %7
     %11:gpr = MOVi 1, 14 /* CC::al */, $noreg, $noreg
     %12:dpr = COPY %8.dsub_0
-    %13:dpr = COPY killed %12
-    %13:dpr = VSETLNi32 %13, killed %11, 0, 14 /* CC::al */, $noreg
+    %13:dpr = COPY %12
+    %13:dpr = VSETLNi32 %13, %11, 0, 14 /* CC::al */, $noreg
     %14:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
-    %15:qpr = COPY killed %8
+    %15:qpr = COPY %8
     %15.dsub_0:qpr = COPY %13
-    %16:dpr = COPY killed %13
-    %17:dpr = COPY killed %16
-    %17:dpr = VSETLNi32 %17, killed %14, 1, 14 /* CC::al */, $noreg
-    %18:qpr = COPY killed %15
-    %18.dsub_0:qpr = COPY killed %17
-    VST1q64 killed %4, 0, killed %18, 14 /* CC::al */, $noreg
+    %16:dpr = COPY %13
+    %17:dpr = COPY %16
+    %17:dpr = VSETLNi32 %17, %14, 1, 14 /* CC::al */, $noreg
+    %18:qpr = COPY %15
+    %18.dsub_0:qpr = COPY %17
+    VST1q64 %4, 0, %18, 14 /* CC::al */, $noreg
     B %bb.1
 ...

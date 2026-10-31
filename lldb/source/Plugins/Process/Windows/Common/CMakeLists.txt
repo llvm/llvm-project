@@ -28,6 +28,7 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
     lldbHost
     lldbInterpreter
     lldbPluginDynamicLoaderWindowsDYLD
+    lldbPluginRegisterNative
     lldbSymbol
     lldbTarget
     ws2_32

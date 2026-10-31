@@ -53,6 +53,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -113,6 +114,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "arm-isel"
 
@@ -2142,6 +2144,17 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   RegsToPassVector RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
+
+  // A musttail call in a variadic function must receive the caller's unnamed
+  // register arguments unchanged.  The forwarded set is disjoint from the named
+  // arguments handled below.
+  if (isVarArg && CLI.CB && CLI.CB->isMustTailCall()) {
+    const auto &Forwards = AFI->getForwardedMustTailRegParms();
+    for (const ForwardedRegister &F : Forwards) {
+      SDValue Val = DAG.getCopyFromReg(Chain, dl, F.VReg, F.VT);
+      RegsToPass.push_back(std::make_pair(F.PReg, Val));
+    }
+  }
 
   // If we are doing a tail-call, any byval arguments will be written to stack
   // space which was used for incoming arguments. If any the values being used
@@ -4470,6 +4483,30 @@ SDValue ARMTargetLowering::LowerFormalArguments(
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
           "secure entry function must not be variadic", dl.getDebugLoc()));
+    }
+  }
+
+  // A variadic function that forwards through a musttail call needs its unnamed
+  // register arguments modelled as live, so the allocator does not use one as
+  // scratch.  This must run after the va_list save area above, which consumes
+  // the same registers, and is deliberately *not* predicated on hasVAStart():
+  // a forwarding thunk never calls va_start.
+  if (isVarArg && MFI.hasMustTailInVarArgFunc()) {
+    // getRemainingRegParmsForType() walks the assign function until an argument
+    // lands in memory, so the convention must have a stack fallback.  GHC and
+    // the Windows CFGuard check stub assign to registers only and would run off
+    // the end of their tables; neither supports variadic arguments anyway.
+    CallingConv::ID EffCC = getEffectiveCallingConv(CallConv, isVarArg);
+    if (EffCC != CallingConv::GHC && EffCC != CallingConv::CFGuard_Check) {
+      // Only the core registers can hold an unnamed argument:
+      // getEffectiveCallingConv() degrades every VFP convention to ARM_AAPCS
+      // when isVarArg is set.
+      SmallVector<MVT, 1> RegParmTypes;
+      RegParmTypes.push_back(MVT::i32);
+      SmallVectorImpl<ForwardedRegister> &Forwards =
+          AFI->getForwardedMustTailRegParms();
+      CCInfo.analyzeMustTailForwardedRegisters(
+          Forwards, RegParmTypes, CCAssignFnForCall(CallConv, isVarArg));
     }
   }
 
@@ -15438,6 +15475,35 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
 /// Target-specific dag combine xforms for ARMISD::BUILD_VECTOR.
 static SDValue
 PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+
+  // Fold buildvector(extractelt(bitcast(build_vector(a,b,_,_))),
+  //                  extractelt(bitcast(build_vector(_,_,c,d))))
+  //   -> bitcast(build_vector(a,b,c,d))
+  if (VT.getScalarSizeInBits() == 64 && N->getNumOperands() == 2) {
+    auto IsExtractFromBuildVec = [](SDValue V, SDValue &BV, int64_t &Lane) {
+      if (!sd_match(V, m_ExtractElt(m_Value(BV), m_ConstInt(Lane))))
+        return false;
+      while (BV.getOpcode() == ISD::BITCAST)
+        BV = BV.getOperand(0);
+      return BV.getOpcode() == ARMISD::BUILD_VECTOR &&
+             BV.getNumOperands() == 4 &&
+             BV.getValueType().getScalarSizeInBits() == 32;
+    };
+    SDValue BV1, BV2;
+    int64_t Lane1, Lane2;
+    if (IsExtractFromBuildVec(N->getOperand(0), BV1, Lane1) &&
+        IsExtractFromBuildVec(N->getOperand(1), BV2, Lane2))
+      return DAG.getBitcast(
+          VT, DAG.getNode(
+                  ARMISD::BUILD_VECTOR, N, MVT::v4f32,
+                  DAG.getBitcast(MVT::f32, BV1->getOperand(Lane1 * 2 + 0)),
+                  DAG.getBitcast(MVT::f32, BV1->getOperand(Lane1 * 2 + 1)),
+                  DAG.getBitcast(MVT::f32, BV2->getOperand(Lane2 * 2 + 0)),
+                  DAG.getBitcast(MVT::f32, BV2->getOperand(Lane2 * 2 + 1))));
+  }
+
   // ARMISD::BUILD_VECTOR is introduced when legalizing ISD::BUILD_VECTOR.
   // At that time, we may have inserted bitcasts from integer to float.
   // If these bitcasts have survived DAGCombine, change the lowering of this
@@ -15450,7 +15516,6 @@ PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   //    1.1. Vector is used only once.
   //    1.2. Use is a bit convert to an integer type.
   // 2. The size of its operands are 32-bits (64-bits are not legal).
-  EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
 
   // Check 1.1. and 2.
@@ -15490,7 +15555,6 @@ PerformARMBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (NumOfBitCastedElts <= NumOfRelevantElts / 2)
     return SDValue();
 
-  SelectionDAG &DAG = DCI.DAG;
   // Create the new vector type.
   EVT VecVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElts);
   // Check if the type is legal.
@@ -21433,6 +21497,14 @@ ARMTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
   if (VT == MVT::f64 && Subtarget->hasFP64())
     return ARM_AM::getFP64Imm(Imm) != -1 ? FPImmAction::Legal
                                          : FPImmAction::ConstantPool;
+  return FPImmAction::ConstantPool;
+}
+
+TargetLowering::FPImmAction
+ARMTargetLowering::getFPImmAction(const APFloat &Imm, LLT Ty,
+                                  bool ForCodeSize) const {
+  if (Subtarget->useSoftFloat() || !Subtarget->hasVFP2Base())
+    return FPImmAction::Bitcast;
   return FPImmAction::ConstantPool;
 }
 

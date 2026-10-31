@@ -83,7 +83,7 @@ void AVRPassConfig::addIRPasses() {
   // Expand instructions like
   //   %result = shl i32 %n, %amount
   // to a loop so that library calls are avoided.
-  addPass(createAVRShiftExpandPass());
+  addPass(createAVRShiftExpandLegacyPass());
   addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
@@ -96,7 +96,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeAVRAsmPrinterPass(PR);
   initializeAVRExpandPseudoPass(PR);
-  initializeAVRShiftExpandPass(PR);
+  initializeAVRShiftExpandLegacyPass(PR);
   initializeAVRDAGToDAGISelLegacyPass(PR);
 }
 
@@ -126,7 +126,7 @@ MachineFunctionInfo *AVRTargetMachine::createMachineFunctionInfo(
 
 bool AVRPassConfig::addInstSelector() {
   // Install an instruction selector.
-  addPass(createAVRISelDag(getAVRTargetMachine(), getOptLevel()));
+  addPass(createAVRISelDagLegacyPass(getAVRTargetMachine(), getOptLevel()));
   // Create the frame analyzer pass used by the PEI pass.
   addPass(createAVRFrameAnalyzerPass());
 

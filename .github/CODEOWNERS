@@ -12,6 +12,9 @@
 # Maintainers.md files in the the respective subproject directories.
 
 /libc/ @llvm/reviewers-libc
+/libc/**/*math* @lntue
+/libc/**/FPUtil/ @lntue
+/libc/**/*complex* @lntue
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind

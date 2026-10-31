@@ -133,13 +133,11 @@ uint64_t test_abs_u64(int64_t a) { return __riscv_abs_u64(a); }
 #endif
 
 // CHECK-LABEL: test_sati_i32:
-// RV32:        sati{{[[:space:]]}}
-// RV64:        psati.w
+// CHECK:       sati{{[[:space:]]}}
 int32_t test_sati_i32(int32_t a) { return __riscv_sati_i32(a, 16); }
 
 // CHECK-LABEL: test_usati_u32:
-// RV32:        usati{{[[:space:]]}}
-// RV64:        pusati.w
+// CHECK:       usati{{[[:space:]]}}
 uint32_t test_usati_u32(int32_t a) { return __riscv_usati_u32(a, 16); }
 
 #if __riscv_xlen == 64

@@ -1461,6 +1461,10 @@ protected:
       m_active_frame_providers_by_thread;
   lldb::StackFrameListSP m_prev_frames_sp; ///< The previous stack frames from
                                            ///the last time this thread stopped.
+  /// The unwinder frame list from the last time this thread stopped. New
+  /// unwinder frame lists take their previous frames from here rather than
+  /// from m_prev_frames_sp.
+  lldb::StackFrameListSP m_prev_unwinder_frames_sp;
   std::optional<lldb::addr_t>
       m_prev_framezero_pc; ///< Frame 0's PC the last
                            /// time this thread was stopped.

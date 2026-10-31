@@ -1243,3 +1243,41 @@ let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
   def : MipsPat<(brcond (i32 (setule GPR32:$rs, GPR32:$rt)), bb:$offset),
                 (BGEUC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
 }
+
+class JumpLinkR6<Instruction JumpInst, DAGOperand Opnd> :
+  PseudoSE<(outs), (ins calltarget:$target), []>,
+  PseudoInstExpansion<(JumpInst Opnd:$target)> {
+  let isCall = 1;
+  let isTerminator = 0;
+  let isReturn = 0;
+  let isBarrier = 0;
+  let hasDelaySlot = 0;
+  let isCTI = 1;
+  list<Register> Defs = [R31];
+}
+
+class TailCallR6<Instruction JumpInst, DAGOperand Opnd> :
+  PseudoSE<(outs), (ins calltarget:$target), []>,
+  PseudoInstExpansion<(JumpInst Opnd:$target)> {
+  let isCall = 1;
+  let isTerminator = 1;
+  let isReturn = 1;
+  let isBarrier = 1;
+  let hasDelaySlot = 0;
+  let isCTI = 1;
+  list<Register> Defs = [R1];
+}
+
+def JAL_R6 : JumpLinkR6<BALC, brtarget26>, ISA_MIPS32R6;
+def TAILCALL_R6 : TailCallR6<BC, brtarget26>, ISA_MIPS32R6;
+
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
+                (JAL_R6 texternalsym:$dst)>, ISA_MIPS32R6;
+  def : MipsPat<(MipsJmpLink (i32 tglobaladdr:$dst)),
+                (JAL_R6 tglobaladdr:$dst)>, ISA_MIPS32R6;
+  def : MipsPat<(MipsTailCall (i32 tglobaladdr:$dst)),
+                (TAILCALL_R6 tglobaladdr:$dst)>, ISA_MIPS32R6;
+  def : MipsPat<(MipsTailCall (i32 texternalsym:$dst)),
+                (TAILCALL_R6 texternalsym:$dst)>, ISA_MIPS32R6;
+}

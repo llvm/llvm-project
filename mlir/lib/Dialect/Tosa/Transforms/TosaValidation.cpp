@@ -1349,6 +1349,16 @@ LogicalResult checkErrorIfRescale(Operation *op) {
   if (outWidth == 32 && outputUnsigned)
     return op->emitOpError() << "i32 output type cannot be unsigned.";
 
+  // ERROR_IF(zp != 0 && !is_same<in_t, i8_t>)
+  // ERROR_IF(zp != 0 && zp != 32768 && is_same<in_t, u16_t>)
+  if (FailureOr<int64_t> maybeIZp = rescale.getInputZeroPoint();
+      succeeded(maybeIZp) && rescale.verifyInputZeroPoint(*maybeIZp).failed())
+    return failure();
+
+  if (FailureOr<int64_t> maybeOZp = rescale.getOutputZeroPoint();
+      succeeded(maybeOZp) && rescale.verifyOutputZeroPoint(*maybeOZp).failed())
+    return failure();
+
   return success();
 }
 
@@ -1411,6 +1421,45 @@ LogicalResult checkErrorIfSlice(Operation *op) {
            << kInferableDimSize
            << ") which "
               "does not conform to the TOSA specification";
+
+  // ERROR_IF(any(start < 0))
+  if (hasStartValues &&
+      llvm::any_of(startValues, [](int64_t v) { return v < 0; }))
+    return op->emitOpError("start values must be non-negative, got [")
+           << startValues << "]";
+
+  // ERROR_IF(any(size <= 0))
+  if (hasSizeValues &&
+      llvm::any_of(sizeValues, [](int64_t v) { return v <= 0; }))
+    return op->emitOpError("size values must be > 0, got [")
+           << sizeValues << "]";
+
+  // MLIR-specific: output shape must match the size values.
+  if (hasSizeValues) {
+    const auto outputType = sliceOp.getOutput().getType();
+    if (const auto rankedOutput = dyn_cast<RankedTensorType>(outputType)) {
+      if (failed(verifyCompatibleShape(rankedOutput.getShape(), sizeValues)))
+        return op->emitOpError(
+                   "expected output shape to match size values, got ")
+               << outputType << " vs [" << sizeValues << "]";
+    }
+  }
+
+  // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
+  // get_innermost_block_size<in_out_t>() != 0)
+  if (hasStartValues && !startValues.empty()) {
+    auto elemType = getElementTypeOrSelf(sliceOp.getInput1().getType());
+    if (auto blockScaledType = dyn_cast<BlockScaledType>(elemType)) {
+      const int64_t startBlock = startValues.back();
+      const int64_t scaleBlock =
+          BlockShapeAttr::getBlockShapeValue(blockScaledType.getBlockShape());
+      if (startBlock % scaleBlock != 0)
+        return op->emitOpError(
+                   "expected start innermost block size to match data type "
+                   "for block scaled input, got start block=")
+               << startBlock << ", scale block=" << scaleBlock;
+    }
+  }
 
   return success();
 }
@@ -1699,23 +1748,23 @@ void TosaValidation::runOnOperation() {
     // Some uses of TOSA rely on the constant operands of particular
     // operations.
     if (failed(applyConstantOperandCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // do level checks
     if (failed(applyLevelCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // check additional attribute restrictions
     if (failed(applyAttributeCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // do variable type checks
     if (failed(applyVariableCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // do error if checks
     if (strictOpSpecAlignment && failed(applyErrorIfCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
   });
 }
 } // namespace

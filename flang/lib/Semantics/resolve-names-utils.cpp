@@ -558,9 +558,31 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
     CHECK(context_.AnyFatalError());
     return;
   }
-  // For rank-1 bounds, emit N ShapeSpecs each wrapping a scalar
-  // RankOneBoundElement that extracts element [dim] from the rank-1
-  // expression.  This makes all downstream consumers see scalar bounds.
+  // For rank-1 bounds, emit N ShapeSpecs.  A bound whose rank-1 base folded
+  // to a constant array is stored as that dimension's constant element,
+  // exactly as if written dims(1),dims(2),...: every consumer then sees an
+  // ordinary explicit-shape bound (EQUIVALENCE offsets, LBOUND/UBOUND folding,
+  // static-shape lowering).  A non-constant base is wrapped in a scalar
+  // RankOneBoundElement that extracts element [dim]; that wrapper is
+  // intentionally left unfolded so the mod-file writer can round-trip the
+  // original whole-array bound.  The shape records which side(s) were written
+  // as a rank-1 array so the writer can reproduce the declared form even when
+  // a constant base has been folded away.
+  auto isRankOne{[](const Bound &bound) {
+    const auto &expr{bound.GetExplicit()};
+    return expr && expr->Rank() > 0;
+  }};
+  arraySpec_.set_rankOneBounds(
+      result->lbound && isRankOne(*result->lbound), isRankOne(result->ubound));
+  auto elementOf{[](const SubscriptIntExpr &base, int dim) {
+    if (const auto *constant{
+            evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(base)}) {
+      return SubscriptIntExpr{evaluate::Constant<evaluate::SubscriptInteger>{
+          constant->values().at(dim)}};
+    }
+    return SubscriptIntExpr{
+        evaluate::RankOneBoundElement{common::Clone(base), dim}};
+  }};
   int numDims = static_cast<int>(result->numDims);
   if (numDims == 0) {
     // A zero-size bounds array declares a scalar (rank 0); leave arraySpec_
@@ -580,8 +602,7 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
     MaybeSubscriptIntExpr ubExpr;
     if (auto &ubOrig = result->ubound.GetExplicit()) {
       if (ubOrig->Rank() > 0) {
-        ubExpr = SubscriptIntExpr{
-            evaluate::RankOneBoundElement{common::Clone(*ubOrig), dim}};
+        ubExpr = elementOf(*ubOrig, dim);
       } else {
         ubExpr = common::Clone(*ubOrig);
       }
@@ -591,8 +612,7 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
     if (result->lbound) {
       if (auto &lbOrig = result->lbound->GetExplicit()) {
         if (lbOrig->Rank() > 0) {
-          lbExpr = SubscriptIntExpr{
-              evaluate::RankOneBoundElement{common::Clone(*lbOrig), dim}};
+          lbExpr = elementOf(*lbOrig, dim);
         } else {
           lbExpr = common::Clone(*lbOrig);
         }
@@ -1017,6 +1037,18 @@ public:
   bool operator()(const Symbol &x) {
     if (MapSymbol(x)) {
       DIE("SymbolMapper hit symbol outside SymbolRef");
+    }
+    return false;
+  }
+  // The originating array recorded as a RankOneBoundElement's provenance is
+  // not part of the expression tree that Traverse visits, so it must be
+  // remapped here explicitly; otherwise a copied dummy's bound would still
+  // name the interface's array and the module writer would order the body's
+  // declarations against the wrong symbol.
+  bool operator()(const evaluate::RankOneBoundElement &x) {
+    (*this)(x.base());
+    if (const auto &array{x.originatingArray()}) {
+      (*this)(*array);
     }
     return false;
   }

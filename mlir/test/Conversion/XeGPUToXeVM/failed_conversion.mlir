@@ -76,6 +76,82 @@ gpu.module @test_kernel {
 
 // -----
 
+// A non-extension consumer cannot hoist widening above an i4 shuffle.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_non_extension(%a: vector<4xi4>) -> vector<4xi4> {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %a unpack : vector<4xi4>
+    gpu.return %0 : vector<4xi4>
+  }
+}
+
+// -----
+
+// Mixed signed and unsigned extensions cannot share one widened shuffle.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_mixed_uses(%a: vector<2xi8>) -> (vector<4xi32>, vector<4xi32>) {
+    %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %nibbles pack : vector<4xi4>
+    %unsigned = arith.extui %0 : vector<4xi4> to vector<4xi32>
+    %signed = arith.extsi %0 : vector<4xi4> to vector<4xi32>
+    gpu.return %unsigned, %signed : vector<4xi32>, vector<4xi32>
+  }
+}
+
+// -----
+
+// An escaping narrow use of an intermediate mover prevents shared widening.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_shape_cast_multiple_uses(%a: vector<2xi8>) -> (vector<1x4xi32>, vector<1x4xi4>) {
+    %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %nibbles unpack : vector<4xi4>
+    %shaped = vector.shape_cast %0 : vector<4xi4> to vector<1x4xi4>
+    %extended = arith.extui %shaped : vector<1x4xi4> to vector<1x4xi32>
+    gpu.return %extended, %shaped : vector<1x4xi32>, vector<1x4xi4>
+  }
+}
+
+// -----
+
+// Mixed signedness is also rejected across scalar-extract/broadcast fan-out.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_mixed_broadcasts(%a: vector<2xi8>) -> (vector<4xi32>, vector<4xi32>) {
+    %nibbles = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %shuffled = xegpu.lane_shuffle %nibbles unpack : vector<4xi4>
+    %e0 = vector.extract %shuffled[0] : i4 from vector<4xi4>
+    %e1 = vector.extract %shuffled[1] : i4 from vector<4xi4>
+    %b0 = vector.broadcast %e0 : i4 to vector<4xi4>
+    %b1 = vector.broadcast %e1 : i4 to vector<4xi4>
+    %unsigned = arith.extui %b0 : vector<4xi4> to vector<4xi32>
+    %signed = arith.extsi %b1 : vector<4xi4> to vector<4xi32>
+    gpu.return %unsigned, %signed : vector<4xi32>, vector<4xi32>
+  }
+}
+
+// -----
+
+// Even with a single extension consumer, widening sixteen i4 elements to i8
+// would exceed the byte shuffle's 64-bit fragment limit.
+
+gpu.module @test_kernel {
+  gpu.func @lane_shuffle_i4_ext_too_wide(%a: vector<8xi8>) -> vector<16xi32> {
+    %nibbles = vector.bitcast %a : vector<8xi8> to vector<16xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.lane_shuffle' that was explicitly marked illegal}}
+    %0 = xegpu.lane_shuffle %nibbles pack : vector<16xi4>
+    %extended = arith.extui %0 : vector<16xi4> to vector<16xi32>
+    gpu.return %extended : vector<16xi32>
+  }
+}
+
+// -----
+
 // Verify that a xegpu.lane_shuffle fragment wider than 64 bits is rejected.
 
 gpu.module @test_kernel {

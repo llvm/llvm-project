@@ -27,6 +27,14 @@ namespace sandboxir {
 
 #define DEBUG_PREFIX_LOCAL DEBUG_PREFIX "LoadStoreVec: "
 
+/// \returns true if \p Ty is a pointer, or a vector of pointers, in a
+/// non-integral address space, which has no stable integer representation.
+static bool isNonIntegralPtr(Type *Ty, const DataLayout &DL) {
+  Type *ScalarTy = Ty->getScalarType();
+  return ScalarTy->isPointerTy() &&
+         DL.isNonIntegralAddressSpace(ScalarTy->getPointerAddressSpace());
+}
+
 std::optional<Type *> LoadStoreVec::canVectorize(BndlRef<Instruction *> Bndl) {
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
              VecUtils::dump(Bndl));
@@ -64,9 +72,6 @@ bool LoadStoreVec::acceptOrRevert() {
 }
 
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
-  if (!VecUtils::areConsecutive<LoadInst, Instruction>(
-          Loads, A->getScalarEvolution(), *DL))
-    return nullptr;
   if (!canVectorize(Loads))
     return nullptr;
 
@@ -74,16 +79,18 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
   Align LdAlign = VecUtils::getVecAlignment(Loads);
   auto LdWhereIt = std::next(VecUtils::getLowest(Loads)->getIterator());
-  return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  auto *VecL =
+      LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+  Utils::propagateMetadata(VecL, Loads);
+  return VecL;
 }
 
 Constant *LoadStoreVec::getEquivalentConstantWithType(Constant *C,
                                                       Type *DestTy) {
-  // A non-integral pointer has no fixed ptrtoint/inttoptr width.
-  if (DestTy->isPointerTy())
-    assert(!DL->isNonIntegralAddressSpace(DestTy->getPointerAddressSpace()) &&
-           "DestTy has no fixed size");
   Type *SrcTy = C->getType();
+  // A non-integral pointer has no fixed ptrtoint/inttoptr representation.
+  if (isNonIntegralPtr(SrcTy, *DL) || isNonIntegralPtr(DestTy, *DL))
+    return nullptr;
   if (SrcTy == DestTy)
     return C;
 
@@ -208,9 +215,6 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
 }
 
 bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
-  if (!VecUtils::areConsecutive<StoreInst, Instruction>(
-          Stores, A->getScalarEvolution(), *DL))
-    return false;
   if (!canVectorize(Stores))
     return false;
   SmallVector<Value *, 4> Operands;
@@ -269,7 +273,8 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   Value *StPtr = cast<StoreInst>(Stores[0])->getPointerOperand();
   Align StAlign = VecUtils::getVecAlignment(Stores);
   auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
-  StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  auto *VecS = StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
+  Utils::propagateMetadata(VecS, Stores);
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
   if (AllLoads)
@@ -281,9 +286,6 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
 
 LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
                                        Region &Rgn) {
-  if (!VecUtils::areConsecutive<LoadInst, Instruction>(
-          Loads, A->getScalarEvolution(), *DL))
-    return nullptr;
   auto VecTy = canVectorize(Loads);
   if (!VecTy)
     return nullptr;

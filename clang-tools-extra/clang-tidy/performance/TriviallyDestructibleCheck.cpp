@@ -20,12 +20,6 @@ namespace clang::tidy::performance {
 
 namespace {
 
-// We use isOutOfLine() to find out-of-line defaulted destructor definitions.
-// This is more robust than !isFirstDecl() because with C++20 modules, when a
-// class is visible through both a header include and a module import, its
-// declarations may appear multiple times in the redeclaration chain.
-AST_MATCHER(CXXMethodDecl, isOutOfLine) { return Node.isOutOfLine(); }
-
 AST_MATCHER_P(CXXRecordDecl, hasBase, Matcher<QualType>, InnerMatcher) {
   return llvm::any_of(Node.bases(), [&](const CXXBaseSpecifier &BaseSpec) {
     return InnerMatcher.matches(BaseSpec.getType(), Finder, Builder);
@@ -34,6 +28,10 @@ AST_MATCHER_P(CXXRecordDecl, hasBase, Matcher<QualType>, InnerMatcher) {
 
 } // namespace
 
+// We use isOutOfLine() to find out-of-line defaulted destructor definitions.
+// This is more robust than !isFirstDecl() because with C++20 modules, when a
+// class is visible through both a header include and a module import, its
+// declarations may appear multiple times in the redeclaration chain.
 void TriviallyDestructibleCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxDestructorDecl(

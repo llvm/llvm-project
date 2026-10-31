@@ -813,7 +813,6 @@ inline constexpr uint8_t BYTE_OFFSET_8 = 0x02;
 
 // Populate the relocation entries.
 void GOFFObjectFile::setRelocationData(const uint8_t *RldRecord) {
-  SmallVector<uint8_t, 8> RelocationData;
   int DataIndex = 6;
   uint16_t DataLength;
   RLDRecord::getDataLength(RldRecord, DataLength);

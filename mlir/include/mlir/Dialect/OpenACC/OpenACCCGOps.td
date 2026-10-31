@@ -559,6 +559,7 @@ def OpenACC_GPUAsyncTokenType : Type<
 def OpenACC_ComputeRegionOp
     : OpenACC_Op<"compute_region",
                  [OffloadRegionOpInterface, AffineScope,
+                  AutomaticAllocationScope,
                   HasParallelRegion, RecursiveMemoryEffects,
                   SingleBlockImplicitTerminator<"YieldOp">,
                   IsolatedFromAbove, AttrSizedOperandSegments]> {

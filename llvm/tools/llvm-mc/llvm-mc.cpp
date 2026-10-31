@@ -336,13 +336,15 @@ static int fillCommandLineSymbols(MCAsmParser &Parser) {
     auto Val = Pair.second;
 
     if (Sym.empty() || Val.empty()) {
-      WithColor::error() << "defsym must be of the form: sym=value: " << I
-                         << "\n";
+      Parser.getSourceManager().PrintMessage(
+          SMLoc(), SourceMgr::DK_Error,
+          "defsym must be of the form: sym=value: " + I);
       return 1;
     }
     int64_t Value;
     if (Val.getAsInteger(0, Value)) {
-      WithColor::error() << "value is not an integer: " << Val << "\n";
+      Parser.getSourceManager().PrintMessage(SMLoc(), SourceMgr::DK_Error,
+                                             "value is not an integer: " + Val);
       return 1;
     }
     Parser.getContext().setSymbolValue(Parser.getStreamer(), Sym, Value);
@@ -350,18 +352,18 @@ static int fillCommandLineSymbols(MCAsmParser &Parser) {
   return 0;
 }
 
-static int AssembleInput(const char *ProgName, const Target *TheTarget,
-                         SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
-                         MCAsmInfo &MAI, MCSubtargetInfo &STI,
-                         MCInstrInfo &MCII, MCTargetOptions const &MCOptions) {
+static int AssembleInput(const Target *TheTarget, SourceMgr &SrcMgr,
+                         MCContext &Ctx, MCStreamer &Str, MCAsmInfo &MAI,
+                         MCSubtargetInfo &STI, MCInstrInfo &MCII,
+                         MCTargetOptions const &MCOptions) {
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
   if (!TAP) {
-    WithColor::error(errs(), ProgName)
-        << "this target does not support assembly parsing.\n";
+    SrcMgr.PrintMessage(SMLoc(), SourceMgr::DK_Error,
+                        "this target does not support assembly parsing.");
     return 1;
   }
 
@@ -665,8 +667,8 @@ int main(int argc, char **argv) {
     Res = AsLexInput(SrcMgr, *MAI, Out->os());
     break;
   case AC_Assemble:
-    Res = AssembleInput(ProgName, TheTarget, SrcMgr, Ctx, *Str, *MAI, *STI,
-                        *MCII, MCOptions);
+    Res = AssembleInput(TheTarget, SrcMgr, Ctx, *Str, *MAI, *STI, *MCII,
+                        MCOptions);
     break;
   case AC_MDisassemble:
   case AC_CDisassemble:
