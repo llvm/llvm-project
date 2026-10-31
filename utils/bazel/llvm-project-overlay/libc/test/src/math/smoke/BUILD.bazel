@@ -332,6 +332,9 @@ math_test(
 math_test(
     name = "daddf128",
     hdrs = ["AddTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(

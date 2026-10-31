@@ -206,6 +206,13 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "daddf128",
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
+)
+
+math_mpfr_test(
     name = "daddl",
     hdrs = ["AddTest.h"],
 )

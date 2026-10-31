@@ -570,6 +570,7 @@ else()
       libc.src.__support.math.copysignf80
       libc.src.__support.math.copysignf16
       libc.src.__support.math.copysignl
+      libc.src.__support.math.daddf128
       libc.src.__support.math.ddivf128
       libc.src.__support.math.ddivl
       libc.src.__support.math.dmulf128

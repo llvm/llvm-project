@@ -6544,6 +6544,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.daddf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.properties.os
 )
 
