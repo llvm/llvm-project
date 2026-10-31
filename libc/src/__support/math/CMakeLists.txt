@@ -1080,6 +1080,16 @@ add_header_library(
 )
 
 add_header_library(
+  fmaximum_numf80
+  HDRS
+    fmaximum_numf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   fmaximum_numl
   HDRS
     fmaximum_numl.h
@@ -1403,6 +1413,16 @@ add_header_library(
     libc.src.__support.macros.config
   FLAGS
     MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fminimum_numf80
+  HDRS
+    fminimum_numf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.macros.config
 )
 
 add_header_library(
