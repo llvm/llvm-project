@@ -123,6 +123,7 @@ public:
   bool GetSteppingRunsAllThreads() const;
   Args GetAlwaysRunThreadNames() const;
   FollowForkMode GetFollowForkMode() const;
+  ForkDebugMode GetForkDebugMode() const;
   bool TrackMemoryCacheChanges() const;
   bool GetUseDelayedBreakpoints() const;
 
