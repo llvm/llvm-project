@@ -179,6 +179,49 @@ class MockAcceleratorActionsTestCase(TestBase):
         self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
+    @skipIfRemote
+    @add_test_categories(["llgs"])
+    def test_actions_from_native_stop_reply(self):
+        """Actions in the initial native vRun stop reply are not lost."""
+        self.set_mock_env("LLDB_MOCK_ACCELERATOR_NATIVE_STOP_ACTIONS", "1")
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.check_accelerator_breakpoint_stop(
+            process, "mock_gpu_accelerator_native_stop_action", hit_count=1
+        )
+
+    @skipIfRemote
+    @add_test_categories(["llgs"])
+    def test_actions_from_accelerator_stop_reply(self):
+        """Actions on the accelerator connection run in the CPU process."""
+        self.set_mock_env("LLDB_MOCK_ACCELERATOR_PROCESS_STOP_ACTIONS", "1")
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.check_accelerator_breakpoint_stop(
+            process, "mock_gpu_accelerator_initialize", hit_count=1
+        )
+
+        # Connecting the accelerator process parses its stop reply and routes
+        # the requested breakpoint through the group's CPU target.
+        process.Continue()
+        self.check_accelerator_breakpoint_stop(
+            process, "mock_gpu_accelerator_connect", hit_count=1
+        )
+        self.assertEqual(self.dbg.GetNumTargets(), 2)
+
+        process.Continue()
+        self.check_accelerator_breakpoint_stop(
+            process, "mock_gpu_accelerator_process_stop_action", hit_count=1
+        )
+
     def run_expecting_failed_connection(self):
         """Run the inferior through its breakpoints, asserting the connection is
         attempted at the connection hook but no accelerator target is created

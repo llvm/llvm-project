@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -520,12 +521,18 @@ private:
                                 lldb::user_id_t break_id,
                                 lldb::user_id_t break_loc_id);
 
-  /// Tracks the last action identifier handled per accelerator plugin so the
-  /// same actions are not processed more than once. Accelerator actions can
-  /// arrive in a stop reply packet, and if the debugger re-requests the stop
-  /// reply with a '?' packet we can be handed the same actions again; this
-  /// guards against handling them (e.g. setting the same breakpoints) twice.
-  std::map<std::string, int64_t> m_processed_accelerator_actions;
+  /// Tracks every action identifier accepted for each accelerator plugin so
+  /// replaying older actions cannot repeat their side effects. An action is
+  /// recorded before it is executed, giving action delivery at-most-once
+  /// semantics even when handling fails partway through. The set is cleared
+  /// before a new process connection, so it is bounded by that connection.
+  std::set<std::pair<std::string, int64_t>> m_processed_accelerator_actions;
+
+  /// Serializes deduplication and all target mutations performed by actions
+  /// arriving from the native and accelerator communication threads. This is
+  /// recursive because a synchronous accelerator connection can route its
+  /// initial actions back to the CPU process on the same thread.
+  std::recursive_mutex m_accelerator_actions_mutex;
 
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;
