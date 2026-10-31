@@ -34,6 +34,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -337,7 +338,12 @@ static cl::opt<bool> AnnotateSampleProfileInlinePhase(
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
-}
+// Defined in llvm/lib/ProfileData/InstrProf.cpp. Shared with the IRPGO
+// pipeline so that one knob controls whether vtable profiles are consumed.
+extern cl::opt<bool> EnableVTableProfileUse;
+// Defined in llvm/lib/Analysis/IndirectCallPromotionAnalysis.cpp.
+extern cl::opt<unsigned> MaxNumVTableAnnotations;
+} // namespace llvm
 
 namespace {
 
@@ -489,6 +495,14 @@ public:
 protected:
   bool runOnFunction(Function &F, ModuleAnalysisManager &AM);
   bool emitAnnotations(Function &F);
+  // Annotate `IPVK_VTableTarget` value profile metadata on the vtable load
+  // instruction feeding the indirect call \p CB, using the vtable type
+  // samples recorded in the profile for the load's own debug location.
+  // \p Factor prorates the counts (e.g. by a pseudo-probe distribution
+  // factor). Returns true if \p CB is a virtual call whose vtable load is
+  // found, regardless of whether metadata was attached.
+  bool updateVTableTypeProfMetadata(CallBase &CB, float Factor,
+                                    SmallPtrSetImpl<Instruction *> &Visited);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I) override;
   const FunctionSamples *findCalleeFunctionSamples(const CallBase &I) const;
   const FunctionSamples *
@@ -1593,6 +1607,69 @@ GetSortedValueDataFromCallTargets(const SampleRecord::CallTargetMap &M) {
   return R;
 }
 
+bool SampleProfileLoader::updateVTableTypeProfMetadata(
+    CallBase &CB, float Factor, SmallPtrSetImpl<Instruction *> &Visited) {
+  Instruction *VPtr = PGOIndirectCallVisitor::tryGetVTableInstruction(&CB);
+  if (!VPtr)
+    return false;
+  // A vtable load can feed several virtual calls; handle it once.
+  if (!Visited.insert(VPtr).second)
+    return true;
+
+  // llvm-profgen attributes vtable accesses to the debug location of the
+  // vtable load instruction itself (line offset + base discriminator), which
+  // is not necessarily the same location as the virtual call it feeds. Look
+  // up the type samples using the load's location and inline stack.
+  const DebugLoc &DLoc = VPtr->getDebugLoc();
+  if (!DLoc)
+    return true;
+  const DILocation *DIL = DLoc;
+  const FunctionSamples *FS = findFunctionSamples(*VPtr);
+  if (!FS)
+    return true;
+
+  const TypeCountMap *TypeCounts = FS->findCallsiteTypeSamplesAt(LineLocation(
+      FunctionSamples::getOffset(DIL), DIL->getBaseDiscriminator()));
+  if (!TypeCounts || TypeCounts->empty()) {
+    if (OverwriteExistingWeights)
+      VPtr->setMetadata(LLVMContext::MD_prof, nullptr);
+    return true;
+  }
+
+  // Unlike indirect-call targets, vtable accesses are recorded on the load in
+  // the caller even when the callee was inlined in the profiled binary, so
+  // there is no need to fold inlinee head samples into the total.
+  SmallVector<InstrProfValueData, 4> VTableData;
+  uint64_t Sum = 0;
+  for (const auto &[Type, Count] : *TypeCounts) {
+    uint64_t C = Count;
+    if (Factor < 1)
+      C = static_cast<uint64_t>(C * Factor);
+    if (C == 0)
+      continue;
+    // Match IRPGO's encoding: a vtable is identified by the GUID of its
+    // symbol, which for sample profiles is the MD5 hash of the vtable name.
+    VTableData.emplace_back(InstrProfValueData{Type.getHashCode(), C});
+    Sum += C;
+  }
+  if (VTableData.empty())
+    return true;
+
+  llvm::stable_sort(
+      VTableData, [](const InstrProfValueData &L, const InstrProfValueData &R) {
+        return std::tie(L.Count, L.Value) > std::tie(R.Count, R.Value);
+      });
+
+  uint32_t MaxMDCount =
+      std::min(VTableData.size(),
+               static_cast<size_t>(MaxNumVTableAnnotations.getValue()));
+  if (MaxMDCount == 0)
+    return true;
+  annotateValueSite(*CB.getModule(), *VPtr, VTableData, Sum, IPVK_VTableTarget,
+                    MaxMDCount);
+  return true;
+}
+
 // Generate MD_prof metadata for every branch instruction using the
 // edge weights computed during propagation.
 void SampleProfileLoader::generateMDProfMetadata(Function &F) {
@@ -1601,6 +1678,10 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
   LLVM_DEBUG(dbgs() << "\nPropagation complete. Setting branch weights\n");
   LLVMContext &Ctx = F.getContext();
   MDBuilder MDB(Ctx);
+  // Vtable loads whose type profile has been handled in this function. A
+  // single vtable load may feed multiple virtual calls (e.g., after CSE), so
+  // annotate it once.
+  SmallPtrSet<Instruction *, 8> AnnotatedVTableLoads;
   for (auto &BI : F) {
     BasicBlock *BB = &BI;
 
@@ -1617,19 +1698,26 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (!FS)
             continue;
           auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
+          // Prorate the callsite counts based on the pre-ICP distribution
+          // factor to reflect what is already done to the callsite before
+          // ICP, such as calliste cloning.
+          float ProbeFactor = 1.0f;
+          if (FunctionSamples::ProfileIsProbeBased) {
+            if (std::optional<PseudoProbe> Probe = extractProbe(I))
+              ProbeFactor = Probe->Factor;
+          }
+          // Vtable type profiles live on the vtable load rather than the call.
+          // Annotate it independently of the call-target profile below, since
+          // the profile may carry one without the other.
+          if (EnableVTableProfileUse)
+            updateVTableTypeProfMetadata(cast<CallBase>(I), ProbeFactor,
+                                         AnnotatedVTableLoads);
           ErrorOr<SampleRecord::CallTargetMap> T =
               FS->findCallTargetMapAt(CallSite);
           if (!T || T.get().empty())
             continue;
-          if (FunctionSamples::ProfileIsProbeBased) {
-            // Prorate the callsite counts based on the pre-ICP distribution
-            // factor to reflect what is already done to the callsite before
-            // ICP, such as calliste cloning.
-            if (std::optional<PseudoProbe> Probe = extractProbe(I)) {
-              if (Probe->Factor < 1)
-                T = SampleRecord::adjustCallTargets(T.get(), Probe->Factor);
-            }
-          }
+          if (ProbeFactor < 1)
+            T = SampleRecord::adjustCallTargets(T.get(), ProbeFactor);
           SmallVector<InstrProfValueData, 2> SortedCallTargets =
               GetSortedValueDataFromCallTargets(T.get());
           uint64_t Sum = 0;
@@ -1662,6 +1750,12 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
         if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
           if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
+            // Also drop stale vtable type profiles on the vtable load feeding
+            // this cold virtual call.
+            if (Instruction *VPtr =
+                    PGOIndirectCallVisitor::tryGetVTableInstruction(
+                        &cast<CallBase>(I)))
+              VPtr->setMetadata(LLVMContext::MD_prof, nullptr);
           } else {
             setBranchWeights(I, ArrayRef<uint32_t>{uint32_t(0)},
                              /*IsExpected=*/false);
