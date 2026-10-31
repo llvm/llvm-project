@@ -10748,6 +10748,17 @@ public:
       OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
       bool AllowExplicit, bool AllowResultConversion = true);
 
+  /// Adds a conversion functions as candidate to the overload set,
+  /// in the case that  no candidate function is viable and
+  /// the initializer is a parenthesized expression-list containing
+  /// a single element or a braced-init-list containing a single element,
+  /// and the cv-unqualified type U of that element is neither the same class
+  /// as, nor a derived class of, the cv-unqualified type T of the object being
+  /// initialized [over.match.ctor]
+  void AddConversionFunctionCandidate(Expr *Initializer, QualType DestType,
+                                      OverloadCandidateSet &CandidateSet,
+                                      bool AllowExplicit);
+
   /// AddSurrogateCandidate - Adds a "surrogate" candidate function that
   /// converts the given @c Object to a function pointer via the
   /// conversion function @c Conversion, and then attempts to call it
