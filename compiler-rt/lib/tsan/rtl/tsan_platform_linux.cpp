@@ -96,8 +96,8 @@ namespace __tsan {
 static void InitializeLongjmpSpMangling();
 // libc stores rotl(sp ^ longjmp_xor_key, longjmp_rot) in jmp_buf.
 // Both values are zero when the stack pointer is stored unchanged.
-static uptr longjmp_xor_key;
-static uptr longjmp_rot;
+static atomic_uintptr_t longjmp_xor_key;
+static atomic_uintptr_t longjmp_rot;
 #  endif
 
 // Runtime detected VMA size.
@@ -500,21 +500,24 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
 // Reverse operation of libc stack pointer mangling
 static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #    if CALIBRATE_LONGJMP_SP
+  uptr xor_key = atomic_load(&longjmp_xor_key, memory_order_acquire);
 #      if SANITIZER_ANDROID
-  if (longjmp_xor_key == 0) {
+  if (xor_key == 0) {
     // bionic libc initialization process: __libc_init_globals ->
     // __libc_init_vdso (calls strcmp) -> __libc_init_setjmp_cookie. strcmp is
     // intercepted by TSan, so during TSan initialization the setjmp_cookie
     // remains uninitialized. On Android, longjmp_xor_key must be set on first
     // use.
     InitializeLongjmpSpMangling();
-    CHECK_NE(longjmp_xor_key, 0);
+    xor_key = atomic_load(&longjmp_xor_key, memory_order_relaxed);
+    CHECK_NE(xor_key, 0);
   }
 #      endif
+  uptr rot = atomic_load(&longjmp_rot, memory_order_relaxed);
   uptr sp = mangled_sp;
-  if (longjmp_rot)
-    sp = (sp >> longjmp_rot) | (sp << (sizeof(uptr) * 8 - longjmp_rot));
-  return sp ^ longjmp_xor_key;
+  if (rot)
+    sp = (sp >> rot) | (sp << (sizeof(uptr) * 8 - rot));
+  return sp ^ xor_key;
 #    else
   // The BSDs do not mangle the stack pointer in jmp_buf.
   return mangled_sp;
@@ -617,11 +620,11 @@ static void InitializeLongjmpSpMangling() {
   const uptr r2 = (m2 >> kRot) | (m2 << (kBits - kRot));
   if ((m1 ^ sp1) == (m2 ^ sp2)) {
     // This includes the identity scheme when the key is zero.
-    longjmp_xor_key = m1 ^ sp1;
-    longjmp_rot = 0;
+    atomic_store(&longjmp_rot, 0, memory_order_relaxed);
+    atomic_store(&longjmp_xor_key, m1 ^ sp1, memory_order_release);
   } else if ((r1 ^ sp1) == (r2 ^ sp2)) {
-    longjmp_xor_key = r1 ^ sp1;
-    longjmp_rot = kRot;
+    atomic_store(&longjmp_rot, kRot, memory_order_relaxed);
+    atomic_store(&longjmp_xor_key, r1 ^ sp1, memory_order_release);
   } else {
     Printf("ThreadSanitizer: unrecognized jmp_buf pointer mangling scheme\n");
     CHECK(0);
