@@ -55,7 +55,7 @@ class SSPLayoutInfo {
   // A prologue is generated.
   bool HasPrologue = false;
 
-  // IR checking code is generated.
+  // IR checking code is generated for the returns.
   bool HasIRCheck = false;
 
 public:

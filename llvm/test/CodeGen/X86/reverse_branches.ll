@@ -38,14 +38,14 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    movq %rsp, %r15
 ; CHECK-NEXT:    jmp LBB0_1
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_6: ## %for.inc9
+; CHECK-NEXT:  LBB0_7: ## %for.inc9
 ; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    incl %ebx
 ; CHECK-NEXT:  LBB0_1: ## %for.cond
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ## Child Loop BB0_3 Depth 2
 ; CHECK-NEXT:    cmpl $999, %ebx ## imm = 0x3E7
-; CHECK-NEXT:    jg LBB0_7
+; CHECK-NEXT:    jg LBB0_8
 ; CHECK-NEXT:  ## %bb.2: ## %for.cond1.preheader
 ; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $-1, %ebp
@@ -57,7 +57,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    incl %ebp
 ; CHECK-NEXT:    cmpl $999, %ebp ## imm = 0x3E7
-; CHECK-NEXT:    jg LBB0_6
+; CHECK-NEXT:    jg LBB0_7
 ; CHECK-NEXT:  ## %bb.4: ## %for.body3
 ; CHECK-NEXT:    ## in Loop: Header=BB0_3 Depth=2
 ; CHECK-NEXT:    addq $1002, %r12 ## imm = 0x3EA
@@ -69,70 +69,75 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    movq %r13, %rdi
 ; CHECK-NEXT:    je LBB0_3
 ; CHECK-NEXT:    jmp LBB0_5
-; CHECK-NEXT:  LBB0_7: ## %for.end11
+; CHECK-NEXT:  LBB0_8: ## %for.end11
 ; CHECK-NEXT:    leaq L_.str2(%rip), %rdi
 ; CHECK-NEXT:    callq _puts
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rsp, %rcx
-; CHECK-NEXT:    jmp LBB0_8
+; CHECK-NEXT:    jmp LBB0_9
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_15: ## %for.inc38
-; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
+; CHECK-NEXT:  LBB0_17: ## %for.inc38
+; CHECK-NEXT:    ## in Loop: Header=BB0_9 Depth=1
 ; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:  LBB0_8: ## %for.cond14
+; CHECK-NEXT:  LBB0_9: ## %for.cond14
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
-; CHECK-NEXT:    ## Child Loop BB0_10 Depth 2
-; CHECK-NEXT:    ## Child Loop BB0_12 Depth 3
+; CHECK-NEXT:    ## Child Loop BB0_11 Depth 2
+; CHECK-NEXT:    ## Child Loop BB0_13 Depth 3
 ; CHECK-NEXT:    cmpl $999, %eax ## imm = 0x3E7
-; CHECK-NEXT:    jg LBB0_16
-; CHECK-NEXT:  ## %bb.9: ## %for.cond18.preheader
-; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
+; CHECK-NEXT:    jg LBB0_18
+; CHECK-NEXT:  ## %bb.10: ## %for.cond18.preheader
+; CHECK-NEXT:    ## in Loop: Header=BB0_9 Depth=1
 ; CHECK-NEXT:    movq %rcx, %rdx
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    jmp LBB0_10
+; CHECK-NEXT:    jmp LBB0_11
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_14: ## %exit
-; CHECK-NEXT:    ## in Loop: Header=BB0_10 Depth=2
+; CHECK-NEXT:  LBB0_15: ## %exit
+; CHECK-NEXT:    ## in Loop: Header=BB0_11 Depth=2
 ; CHECK-NEXT:    addq %rsi, %r8
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    decq %rsi
 ; CHECK-NEXT:    addq $1001, %rdx ## imm = 0x3E9
 ; CHECK-NEXT:    cmpq $-1000, %r8 ## imm = 0xFC18
 ; CHECK-NEXT:    jne LBB0_5
-; CHECK-NEXT:  LBB0_10: ## %for.cond18
-; CHECK-NEXT:    ## Parent Loop BB0_8 Depth=1
+; CHECK-NEXT:  LBB0_11: ## %for.cond18
+; CHECK-NEXT:    ## Parent Loop BB0_9 Depth=1
 ; CHECK-NEXT:    ## => This Loop Header: Depth=2
-; CHECK-NEXT:    ## Child Loop BB0_12 Depth 3
+; CHECK-NEXT:    ## Child Loop BB0_13 Depth 3
 ; CHECK-NEXT:    cmpl $999, %edi ## imm = 0x3E7
-; CHECK-NEXT:    jg LBB0_15
-; CHECK-NEXT:  ## %bb.11: ## %for.body20
-; CHECK-NEXT:    ## in Loop: Header=BB0_10 Depth=2
+; CHECK-NEXT:    jg LBB0_17
+; CHECK-NEXT:  ## %bb.12: ## %for.body20
+; CHECK-NEXT:    ## in Loop: Header=BB0_11 Depth=2
 ; CHECK-NEXT:    movq $-1000, %r8 ## imm = 0xFC18
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_12: ## %do.body.i
-; CHECK-NEXT:    ## Parent Loop BB0_8 Depth=1
-; CHECK-NEXT:    ## Parent Loop BB0_10 Depth=2
+; CHECK-NEXT:  LBB0_13: ## %do.body.i
+; CHECK-NEXT:    ## Parent Loop BB0_9 Depth=1
+; CHECK-NEXT:    ## Parent Loop BB0_11 Depth=2
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    cmpb $120, 1000(%rdx,%r8)
-; CHECK-NEXT:    je LBB0_14
-; CHECK-NEXT:  ## %bb.13: ## %do.cond.i
-; CHECK-NEXT:    ## in Loop: Header=BB0_12 Depth=3
+; CHECK-NEXT:    je LBB0_15
+; CHECK-NEXT:  ## %bb.14: ## %do.cond.i
+; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=3
 ; CHECK-NEXT:    incq %r8
-; CHECK-NEXT:    jne LBB0_12
+; CHECK-NEXT:    jne LBB0_13
 ; CHECK-NEXT:  LBB0_5: ## %if.then
 ; CHECK-NEXT:    leaq L_str4(%rip), %rdi
 ; CHECK-NEXT:    callq _puts
+; CHECK-NEXT:    movq ___stack_chk_guard@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    jne LBB0_16
+; CHECK-NEXT:  ## %bb.6: ## %SP_return
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq _exit
-; CHECK-NEXT:  LBB0_16: ## %for.end40
+; CHECK-NEXT:  LBB0_18: ## %for.end40
 ; CHECK-NEXT:    leaq L_.str3(%rip), %rdi
 ; CHECK-NEXT:    callq _puts
 ; CHECK-NEXT:    movq ___stack_chk_guard@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    jne LBB0_18
-; CHECK-NEXT:  ## %bb.17: ## %for.end40
+; CHECK-NEXT:    jne LBB0_20
+; CHECK-NEXT:  ## %bb.19: ## %for.end40
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $1001016, %rsp ## imm = 0xF4638
 ; CHECK-NEXT:    popq %rbx
@@ -142,7 +147,9 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB0_18: ## %for.end40
+; CHECK-NEXT:  LBB0_20: ## %for.end40
+; CHECK-NEXT:    callq ___stack_chk_fail
+; CHECK-NEXT:  LBB0_16: ## %CallStackCheckFailBlk
 ; CHECK-NEXT:    callq ___stack_chk_fail
 entry:
   %strs = alloca [1000 x [1001 x i8]], align 16
