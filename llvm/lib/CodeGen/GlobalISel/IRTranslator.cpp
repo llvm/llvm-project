@@ -1031,7 +1031,15 @@ int IRTranslatorImpl::getOrCreateFrameIndex(const AllocaInst &AI) {
   uint64_t Size = TySize.getKnownMinValue();
 
   // Always allocate at least one byte.
-  Size = std::max<uint64_t>(Size, 1u);
+  if (Size == 0) {
+    Size = 1;
+    // The frame object links to original AllocaInst for alias analysis, so
+    // adjust that as well.
+    auto &MutableAI = const_cast<AllocaInst &>(AI);
+    MutableAI.setAllocatedType(Type::getInt8Ty(AI.getContext()));
+    MutableAI.setOperand(
+        0, ConstantInt::get(MutableAI.getArraySize()->getType(), 1));
+  }
 
   int &FI = MapEntry->second;
   FI = MF->getFrameInfo().CreateStackObject(Size, AI.getAlign(), false, &AI);
