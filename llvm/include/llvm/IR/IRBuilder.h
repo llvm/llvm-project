@@ -125,6 +125,7 @@ protected:
   MDNode *DefaultFPMathTag = nullptr;
   FastMathFlags FMF;
 
+  bool CanonicalizeGEPs = false;
   bool IsFPConstrained = false;
   fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
   RoundingMode DefaultConstrainedRounding = RoundingMode::Dynamic;
@@ -343,6 +344,8 @@ public:
   void setDefaultOperandBundles(ArrayRef<OperandBundleDef> OpBundles) {
     DefaultOperandBundles = OpBundles;
   }
+
+  void enableGEPCanonicalization() { CanonicalizeGEPs = true; }
 
   //===--------------------------------------------------------------------===//
   // RAII helpers.
@@ -2008,13 +2011,9 @@ public:
         });
   }
 
-  Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                   const Twine &Name = "",
-                   GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
-    if (auto *V = Folder.FoldGEP(getDataLayout(), Ty, Ptr, IdxList, NW))
-      return V;
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList, NW), Name);
-  }
+  LLVM_ABI Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                            const Twine &Name = "",
+                            GEPNoWrapFlags NW = GEPNoWrapFlags::none());
 
   Value *CreateInBoundsGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                            const Twine &Name = "") {
@@ -2091,13 +2090,35 @@ public:
 
   Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",
                       GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name, NW);
+    Type *Ty = getInt8Ty();
+    if (auto *V = Folder.FoldGEP(getDataLayout(), Ty, Ptr, Offset, NW))
+      return V;
+    return Insert(GetElementPtrInst::Create(Ty, Ptr, Offset, NW), Name);
   }
 
   Value *CreateInBoundsPtrAdd(Value *Ptr, Value *Offset,
                               const Twine &Name = "") {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name,
-                     GEPNoWrapFlags::inBounds());
+    return CreatePtrAdd(Ptr, Offset, Name, GEPNoWrapFlags::inBounds());
+  }
+
+  Value *CreateScaledPtrAdd(Value *Ptr, uint64_t Scale, Value *Offset,
+                            const Twine &Name = "",
+                            GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    if (Scale == 1)
+      return CreatePtrAdd(Ptr, Offset, Name, NW);
+
+    Type *Ty = ArrayType::get(getInt8Ty(), Scale);
+    if (auto *V = Folder.FoldGEP(getDataLayout(), Ty, Ptr, Offset, NW))
+      return V;
+    return Insert(GetElementPtrInst::Create(Ty, Ptr, Offset, NW), Name);
+  }
+
+  Value *CreateScaledPtrAdd(Value *Ptr, TypeSize Scale, Value *Offset,
+                            const Twine &Name = "",
+                            GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    if (Scale.isScalable())
+      Offset = CreateMul(CreateVScale(Offset->getType()), Offset);
+    return CreateScaledPtrAdd(Ptr, Scale.getKnownMinValue(), Offset, Name, NW);
   }
 
   //===--------------------------------------------------------------------===//
