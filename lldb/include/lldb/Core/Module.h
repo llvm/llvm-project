@@ -596,11 +596,16 @@ public:
   /// enable the ObjectFile plugins to read the header of the object file
   /// without going back to the process.
   ///
+  /// If \a disable_memory_symtab_caching is true, the symbol table for the
+  /// object file will not be loaded from or saved to the index cache, even if
+  /// caching of memory modules is enabled.
+  ///
   /// \return
   ///     The object file loaded from memory or nullptr, if the operation
   ///     failed (see the `error` for more information in that case).
   ObjectFile *GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                   lldb::addr_t header_addr, Status &error,
+                                  bool disable_memory_symtab_caching,
                                   size_t size_to_read = 512);
 
   /// Get the module's symbol file
@@ -1047,10 +1052,15 @@ public:
   /// \param[in] memory_module
   ///     True if this binary exists only in memory.
   ///
+  /// \param[in] disable_memory_symtab_caching
+  ///     If true, ignore the setting that enables the index cache for memory
+  ///     modules.
+  ///
   /// \returns
   ///   If caching is enabled in the lldb settings, return a pointer to the data
   ///   file cache. If caching is not enabled, return NULL.
-  static DataFileCache *GetIndexCache(bool memory_module);
+  static DataFileCache *
+  GetIndexCache(bool memory_module, bool disable_memory_symtab_caching = false);
 
 protected:
   // Member Variables

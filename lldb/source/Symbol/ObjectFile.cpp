@@ -158,7 +158,8 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
 ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
                                     const ProcessSP &process_sp,
                                     lldb::addr_t header_addr,
-                                    WritableDataBufferSP data_sp) {
+                                    WritableDataBufferSP data_sp,
+                                    bool disable_memory_symtab_caching) {
   ObjectFileSP object_file_sp;
 
   if (module_sp) {
@@ -173,8 +174,9 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
       if (!cbs.create_memory_callback)
         continue;
-      object_file_sp.reset(cbs.create_memory_callback(module_sp, data_sp,
-                                                      process_sp, header_addr));
+      object_file_sp.reset(cbs.create_memory_callback(
+          module_sp, data_sp, process_sp, header_addr,
+          disable_memory_symtab_caching));
       if (object_file_sp.get())
         return object_file_sp;
     }
@@ -256,7 +258,8 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
       m_type(eTypeInvalid), m_strata(eStrataInvalid),
       m_file_offset(file_offset), m_length(length),
       m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(),
-      m_memory_addr(LLDB_INVALID_ADDRESS), m_sections_up(), m_symtab_up(),
+      m_memory_addr(LLDB_INVALID_ADDRESS),
+      m_disable_memory_symtab_caching(false), m_sections_up(), m_symtab_up(),
       m_symtab_once_up(new llvm::once_flag()) {
   if (file_spec_ptr)
     m_file = *file_spec_ptr;
@@ -283,8 +286,8 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
     : ModuleChild(module_sp), m_file(), m_type(eTypeInvalid),
       m_strata(eStrataInvalid), m_file_offset(0), m_length(0),
       m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(process_sp),
-      m_memory_addr(header_addr), m_sections_up(), m_symtab_up(),
-      m_symtab_once_up(new llvm::once_flag()) {
+      m_memory_addr(header_addr), m_disable_memory_symtab_caching(false),
+      m_sections_up(), m_symtab_up(), m_symtab_once_up(new llvm::once_flag()) {
   if (header_extractor_sp && header_extractor_sp->HasData())
     m_data_nsp = header_extractor_sp;
   Log *log = GetLog(LLDBLog::Object);
@@ -800,7 +803,7 @@ Symtab *ObjectFile::GetSymtab(bool can_create) {
     // not be able to access the symbol table contents since all APIs in Symtab
     // are protected by a mutex in the Symtab object itself.
     llvm::call_once(*m_symtab_once_up, [&]() {
-      Symtab *symtab = new Symtab(this);
+      Symtab *symtab = new Symtab(this, m_disable_memory_symtab_caching);
       std::lock_guard<std::recursive_mutex> symtab_guard(symtab->GetMutex());
       m_symtab_up.reset(symtab);
       if (!m_symtab_up->LoadFromCache()) {

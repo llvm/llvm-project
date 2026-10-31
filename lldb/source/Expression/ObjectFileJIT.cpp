@@ -51,10 +51,10 @@ ObjectFile *ObjectFileJIT::CreateInstance(const lldb::ModuleSP &module_sp,
   return nullptr;
 }
 
-ObjectFile *ObjectFileJIT::CreateMemoryInstance(const lldb::ModuleSP &module_sp,
-                                                WritableDataBufferSP data_sp,
-                                                const ProcessSP &process_sp,
-                                                lldb::addr_t header_addr) {
+ObjectFile *ObjectFileJIT::CreateMemoryInstance(
+    const lldb::ModuleSP &module_sp, WritableDataBufferSP data_sp,
+    const ProcessSP &process_sp, lldb::addr_t header_addr,
+    bool disable_memory_symtab_caching) {
   // JIT'ed object file is backed by the ObjectFileJITDelegate, never read from
   // memory
   return nullptr;

@@ -32,7 +32,7 @@ public:
 
   enum Visibility { eVisibilityAny, eVisibilityExtern, eVisibilityPrivate };
 
-  Symtab(ObjectFile *objfile);
+  Symtab(ObjectFile *objfile, bool disable_memory_symtab_caching);
   ~Symtab();
 
   void PreloadSymbols();
@@ -284,6 +284,7 @@ protected:
   bool m_name_indexes_computed = false;
   bool m_loaded_from_cache = false;
   bool m_saved_to_cache = false;
+  bool m_disable_memory_symtab_caching = false;
 
 private:
   UniqueCStringMap<uint32_t> &

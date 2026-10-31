@@ -106,9 +106,11 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
                             file, file_offset, length);
 }
 
-lldb_private::ObjectFile *ObjectFileCOFF::CreateMemoryInstance(
-    const ModuleSP &module_sp, WritableDataBufferSP data_sp,
-    const ProcessSP &process_sp, addr_t header) {
+lldb_private::ObjectFile *
+ObjectFileCOFF::CreateMemoryInstance(const ModuleSP &module_sp,
+                                     WritableDataBufferSP data_sp,
+                                     const ProcessSP &process_sp, addr_t header,
+                                     bool disable_memory_symtab_caching) {
   // FIXME: do we need to worry about construction from a memory region?
   return nullptr;
 }

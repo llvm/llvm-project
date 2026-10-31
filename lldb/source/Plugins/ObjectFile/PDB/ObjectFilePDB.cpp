@@ -104,10 +104,10 @@ ObjectFile *ObjectFilePDB::CreateInstance(const ModuleSP &module_sp,
   return objfile_up.release();
 }
 
-ObjectFile *ObjectFilePDB::CreateMemoryInstance(const ModuleSP &module_sp,
-                                                WritableDataBufferSP data_sp,
-                                                const ProcessSP &process_sp,
-                                                addr_t header_addr) {
+ObjectFile *ObjectFilePDB::CreateMemoryInstance(
+    const ModuleSP &module_sp, WritableDataBufferSP data_sp,
+    const ProcessSP &process_sp, addr_t header_addr,
+    bool disable_memory_symtab_caching) {
   return nullptr;
 }
 

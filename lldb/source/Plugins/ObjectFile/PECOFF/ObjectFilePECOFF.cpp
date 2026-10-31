@@ -243,7 +243,8 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(
 
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
-    const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
+    const lldb::ProcessSP &process_sp, lldb::addr_t header_addr,
+    bool disable_memory_symtab_caching) {
   if (!data_sp)
     return nullptr;
   DataExtractorSP extractor_sp =
@@ -252,6 +253,7 @@ ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
     return nullptr;
   auto objfile_up = std::make_unique<ObjectFilePECOFF>(
       module_sp, data_sp, process_sp, header_addr);
+  objfile_up->SetDisableMemorySymtabCaching(disable_memory_symtab_caching);
   if (objfile_up.get() && objfile_up->ParseHeader()) {
     return objfile_up.release();
   }

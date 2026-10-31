@@ -56,7 +56,8 @@ typedef ObjectFile *(*ObjectFileCreateInstance)(
     lldb::offset_t file_offset, lldb::offset_t length);
 typedef ObjectFile *(*ObjectFileCreateMemoryInstance)(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
-    const lldb::ProcessSP &process_sp, lldb::addr_t offset);
+    const lldb::ProcessSP &process_sp, lldb::addr_t offset,
+    bool disable_memory_symtab_caching);
 typedef bool (*ObjectFileSaveCore)(const lldb::ProcessSP &process_sp,
                                    lldb_private::SaveCoreOptions &options,
                                    Status &error);

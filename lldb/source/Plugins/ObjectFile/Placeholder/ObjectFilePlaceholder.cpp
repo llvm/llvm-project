@@ -30,7 +30,8 @@ ObjectFilePlaceholder::ObjectFilePlaceholder(
                  /*length*/ 0, /*data_sp*/ nullptr, /*data_offset*/ 0),
       m_arch(module_spec.GetArchitecture()), m_uuid(module_spec.GetUUID()),
       m_base(base), m_size(size) {
-  m_symtab_up = std::make_unique<lldb_private::Symtab>(this);
+  m_symtab_up = std::make_unique<lldb_private::Symtab>(
+      this, m_disable_memory_symtab_caching);
 }
 
 void ObjectFilePlaceholder::CreateSections(

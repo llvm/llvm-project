@@ -97,7 +97,8 @@ ObjectFile *ObjectFileBreakpad::CreateInstance(const ModuleSP &module_sp,
 
 ObjectFile *ObjectFileBreakpad::CreateMemoryInstance(
     const ModuleSP &module_sp, WritableDataBufferSP data_sp,
-    const ProcessSP &process_sp, addr_t header_addr) {
+    const ProcessSP &process_sp, addr_t header_addr,
+    bool disable_memory_symtab_caching) {
   return nullptr;
 }
 
