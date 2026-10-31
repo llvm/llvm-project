@@ -2173,6 +2173,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
+  // Unwinding through a callee that tail-calls with a different stack-arg size
+  // only works on Win64 if this frame is found via a frame pointer.
+  if (!isTailCall && Subtarget.isTargetWin64() && ShouldGuaranteeTCO &&
+      canGuaranteeTCO(CallConv))
+    X86Info->setForceFramePointer(true);
+
   assert(!(isVarArg && canGuaranteeTCO(CallConv)) &&
          "Var args not supported with calling convention fastcc, ghc or hipe");
 
@@ -2318,6 +2324,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SmallVector<std::pair<Register, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
+  SmallVector<std::pair<Register, EVT>, 4> TailCallKeepLive;
 
   // The next loop assumes that the locations are in the same order of the
   // input arguments.
@@ -2510,6 +2517,19 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SmallVector<SDValue, 8> MemOpChains2;
     SDValue FIN;
     int FI = 0;
+
+    // Route a value through a vreg that the tail call also uses, so it stays
+    // live until the terminator and its store can be sunk there.
+    auto KeepLive = [&](SDValue InChain, SDValue Val) {
+      EVT VT = Val.getValueType();
+      Register VR = MF.getRegInfo().createVirtualRegister(
+          getRegClassFor(VT.getSimpleVT()));
+      SDValue CopyTo = DAG.getCopyToReg(InChain, dl, VR, Val);
+      SDValue CopyFrom = DAG.getCopyFromReg(CopyTo, dl, VR, VT);
+      TailCallKeepLive.emplace_back(VR, VT);
+      return std::make_pair(CopyFrom.getValue(1), CopyFrom);
+    };
+
     for (unsigned I = 0, OutsIndex = 0, E = ArgLocs.size(); I != E;
          ++I, ++OutsIndex) {
       CCValAssign &VA = ArgLocs[I];
@@ -2548,8 +2568,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         }
       } else {
         // Store relative to framepointer.
+        SDValue StoreChain = Chain;
+        if (Subtarget.isTargetWin64() && FPDiff && Offset < 0 &&
+            Offset + (int64_t)OpSize > -(int64_t)RegInfo->getSlotSize())
+          std::tie(StoreChain, Arg) = KeepLive(Chain, Arg);
         MemOpChains2.push_back(DAG.getStore(
-            Chain, dl, Arg, FIN,
+            StoreChain, dl, Arg, FIN,
             MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI)));
       }
     }
@@ -2624,6 +2648,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // into the call.
   for (const auto &[Reg, N] : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
+
+  for (const auto &[Reg, VT] : TailCallKeepLive)
+    Ops.push_back(DAG.getRegister(Reg, VT));
 
   // Add a register mask operand representing the call-preserved registers.
   const uint32_t *Mask = [&]() {

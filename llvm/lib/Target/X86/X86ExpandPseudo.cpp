@@ -27,6 +27,7 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
@@ -439,12 +440,33 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       MIB = BuildMI(MBB, MBBI, DL,
                     TII->get(STI->is64Bit() ? X86::RETI64 : X86::RETI32))
                 .addImm(StackAdj);
+    } else if (STI->is64Bit()) {
+      // A ret can only handle immediates as big as 2**16-1. If we need to pop
+      // off bytes before the return address, we must do it manually. On Win64
+      // with unwind info this sequence isn't one the unwinder can follow, so
+      // emitEpilogue has already moved the return address instead.
+      if (STI->isTargetWin64() &&
+          MBB.getParent()->getFunction().needsUnwindTableEntry())
+        MBB.getParent()->getContext().reportError(
+            SMLoc(), "Unexpected attempt to use pop/push to handle a "
+                     "callee-pop return of more than 65535 bytes on win64");
+      unsigned Reg = TRI->findDeadCallerSavedReg(MBB, MBBI);
+      if (!Reg) {
+        MBB.getParent()->getContext().reportError(
+            SMLoc(), "Can't find a scratch register to pop more than 65535 "
+                     "bytes on return");
+        Reg = X86::RCX;
+      }
+      BuildMI(MBB, MBBI, DL, TII->get(X86::POP64r))
+          .addReg(Reg, RegState::Define);
+      X86FL->emitSPUpdate(MBB, MBBI, DL, StackAdj, /*InEpilogue=*/true);
+      BuildMI(MBB, MBBI, DL, TII->get(X86::PUSH64r)).addReg(Reg);
+      MIB = BuildMI(MBB, MBBI, DL, TII->get(X86::RET64));
     } else {
-      assert(!STI->is64Bit() &&
-             "shouldn't need to do this for x86_64 targets!");
       // A ret can only handle immediates as big as 2**16-1.  If we need to pop
       // off bytes before the return address, we must do it manually.
-      BuildMI(MBB, MBBI, DL, TII->get(X86::POP32r)).addReg(X86::ECX, RegState::Define);
+      BuildMI(MBB, MBBI, DL, TII->get(X86::POP32r))
+          .addReg(X86::ECX, RegState::Define);
       X86FL->emitSPUpdate(MBB, MBBI, DL, StackAdj, /*InEpilogue=*/true);
       BuildMI(MBB, MBBI, DL, TII->get(X86::PUSH32r)).addReg(X86::ECX);
       MIB = BuildMI(MBB, MBBI, DL, TII->get(X86::RET32));
