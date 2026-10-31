@@ -2520,7 +2520,8 @@ static mlir::LogicalResult lowerCallAttributes(
 
   for (mlir::NamedAttribute attr : op->getDiscardableAttrs()) {
     if (attr.getName() == CIRDialect::getNoUnwindAttrName() ||
-        attr.getName() == CIRDialect::getNoReturnAttrName())
+        attr.getName() == CIRDialect::getNoReturnAttrName() ||
+        attr.getName() == CIRDialect::getCallConvLoweredAttrName())
       continue;
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
     result.discardableAttrs.push_back(attr);

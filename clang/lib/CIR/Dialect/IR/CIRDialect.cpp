@@ -1528,6 +1528,10 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
         parser.getCurrentLocation(),
         "functions with multiple return types are not supported");
 
+  if (parser.parseOptionalKeyword("call_conv_lowered").succeeded())
+    result.addAttribute(CIRDialect::getCallConvLoweredAttrName(),
+                        mlir::UnitAttr::get(parser.getContext()));
+
   result.addTypes(resultTypes);
 
   if (parser.resolveOperands(ops, argTypes, opsLoc, result.operands))
@@ -1619,6 +1623,7 @@ static void printCallCommon(mlir::Operation *op,
       CIRDialect::getNoThrowAttrName(),
       CIRDialect::getNoUnwindAttrName(),
       CIRDialect::getWillReturnAttrName(),
+      CIRDialect::getCallConvLoweredAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName(),
       "res_attrs",
       "arg_attrs",
@@ -1657,6 +1662,9 @@ static void printCallCommon(mlir::Operation *op,
         mlir::ArrayAttr::get(op->getContext(), shimmedArgAttrs),
         /*isVariadic=*/false, op->getResultTypes(), resAttrs);
   }
+
+  if (op->hasAttr(CIRDialect::getCallConvLoweredAttrName()))
+    printer << " call_conv_lowered";
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
@@ -2882,6 +2890,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
+  mlir::StringAttr callConvLoweredNameAttr =
+      getCallConvLoweredAttrName(state.name);
   mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
   mlir::StringAttr alignmentNameAttr = getAlignmentAttrName(state.name);
   mlir::StringAttr preferredAlignmentNameAttr =
@@ -3129,6 +3139,10 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       annotationsAttr)
     state.addAttribute(annotationsNameAttr, annotationsAttr);
 
+  if (parser.parseOptionalKeyword(callConvLoweredNameAttr).succeeded())
+    state.addAttribute(callConvLoweredNameAttr,
+                       parser.getBuilder().getUnitAttr());
+
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   llvm::SMLoc attrsLoc = parser.getCurrentLocation();
@@ -3328,6 +3342,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << ' ';
     p.printAttribute(annotations);
   }
+
+  if (getCallConvLowered())
+    p << " call_conv_lowered";
 
   // Every other declared attribute is printed by the syntax above.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;

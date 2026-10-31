@@ -55,7 +55,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_empty() {
+  // CHECK: cir.func{{.*}} @take_empty() call_conv_lowered {
   // CHECK-NEXT: cir.return
   // LLVM: define void @take_empty()
 
@@ -94,7 +94,7 @@ module attributes {
     cir.return %0 : !s32i
   }
 
-  // CHECK: cir.func{{.*}} @take_empty_blob() -> !s32i {
+  // CHECK: cir.func{{.*}} @take_empty_blob() -> !s32i call_conv_lowered {
   // LLVM: define i32 @take_empty_blob()
 
   // An empty return is dropped to void, and the local slot survives.
@@ -104,7 +104,7 @@ module attributes {
     cir.return %1 : !rec_E
   }
 
-  // CHECK: cir.func{{.*}} @ret_empty() {
+  // CHECK: cir.func{{.*}} @ret_empty() call_conv_lowered {
   // CHECK: cir.alloca "r" align(1) : !cir.ptr<!rec_E>
   // CHECK: cir.return{{$}}
   // LLVM: define void @ret_empty()
@@ -176,7 +176,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_empty_mem() {
+  // CHECK: cir.func{{.*}} @take_empty_mem() call_conv_lowered {
   // CHECK-NEXT: cir.return
   // LLVM: define void @take_empty_mem()
 
@@ -229,7 +229,7 @@ module attributes {
     cir.return %1 : !rec_EMed
   }
 
-  // CHECK: cir.func{{.*}} @ret_empty_med() {
+  // CHECK: cir.func{{.*}} @ret_empty_med() call_conv_lowered {
   // CHECK: cir.return{{$}}
   // LLVM: define void @ret_empty_med()
 

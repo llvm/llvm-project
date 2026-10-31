@@ -30,7 +30,7 @@ VoidTask silly_task() {
   co_await std::suspend_always();
 }
 
-// CIR: cir.func coroutine {{.*}} @_Z10silly_taskv() attributes
+// CIR: cir.func coroutine {{.*}} @_Z10silly_taskv() call_conv_lowered attributes
 // CIR-NEXT: %[[VoidTaskAddr:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[VoidTask]]>
 // CIR-NEXT: %[[SavedFrameAddr:.*]] = cir.alloca "__coro_frame_addr" {{.*}} : !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT: %[[VoidPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} : !cir.ptr<![[VoidPromisse]]>
@@ -387,7 +387,7 @@ folly::coro::Task<int> byRef(const std::string& s) {
   co_return s.size();
 }
 
-// CIR:  cir.func coroutine {{.*}} @_Z5byRefRKSt6string(%[[ARG:.*]]: !cir.ptr<![[StdString]]> {{.*}}) attributes
+// CIR:  cir.func coroutine {{.*}} @_Z5byRefRKSt6string(%[[ARG:.*]]: !cir.ptr<![[StdString]]> {{.*}}) call_conv_lowered attributes
 // CIR:    %[[IntTaskAddr:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[IntTask]]>
 // CIR:    %[[AllocaParam:.*]] = cir.alloca "s" {{.*}} init const : !cir.ptr<!cir.ptr<![[StdString]]>>
 // CIR:    %[[SavedFrameAddr:.*]]  = cir.alloca "__coro_frame_addr" {{.*}} : !cir.ptr<!cir.ptr<!void>>
@@ -484,7 +484,7 @@ folly::coro::Task<void> silly_coro() {
 // Make sure we properly handle OnFallthrough coro body sub stmt and
 // check there are not multiple co_returns emitted.
 
-// CIR: cir.func coroutine {{.*}} @_Z10silly_corov() attributes
+// CIR: cir.func coroutine {{.*}} @_Z10silly_corov() call_conv_lowered attributes
 // CIR: cir.coroutine initialSuspend : {
 // CIR:   cir.await(init, ready : {
 // CIR:   }, suspend : {
@@ -535,7 +535,7 @@ folly::coro::Task<void> yield1() {
   co_yield t;
 }
 
-// CIR: cir.func coroutine {{.*}} @_Z6yield1v() attributes
+// CIR: cir.func coroutine {{.*}} @_Z6yield1v() call_conv_lowered attributes
 
 // Prologue allocas (still present in output)
 // CIR-DAG: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[VoidTask]]>
@@ -700,7 +700,7 @@ folly::coro::Task<int> go1() {
   co_return co_await task;
 }
 
-// CIR: cir.func coroutine {{.*}} @_Z3go1v() attributes
+// CIR: cir.func coroutine {{.*}} @_Z3go1v() call_conv_lowered attributes
 // CIR: %[[IntTaskAddr:.*]] = cir.alloca "task" {{.*}} init : !cir.ptr<![[IntTask]]>
 // CIR: %[[OneAddr:.*]] = cir.alloca "ref.tmp1" align(4) init : !cir.ptr<!s32i>
 
@@ -799,7 +799,7 @@ folly::coro::Task<int> go1_lambda() {
   co_return co_await task;
 }
 
-// CIR: cir.func coroutine {{.*}} @_Z10go1_lambdav() attributes
+// CIR: cir.func coroutine {{.*}} @_Z10go1_lambdav() call_conv_lowered attributes
 // CIR: cir.coroutine initialSuspend : {
 // CIR:   cir.await(init, ready : {
 // CIR:   }, suspend : {
@@ -824,7 +824,7 @@ folly::coro::Task<int> go1_lambda() {
 // CIR:   },)
 // CIR: }, destroy : {
 
-// CIR: cir.func coroutine {{.*}} @_ZZ10go1_lambdavENK3$_0clEv{{.*}}) attributes
+// CIR: cir.func coroutine {{.*}} @_ZZ10go1_lambdavENK3$_0clEv{{.*}}) call_conv_lowered attributes
 // CIR: cir.coroutine initialSuspend : {
 // CIR:   cir.await(init, ready : {
 // CIR:   }, suspend : {
@@ -912,7 +912,7 @@ folly::coro::Task<int> go4() {
   co_return co_await std::move(task);
 }
 
-// CIR: cir.func coroutine {{.*}} @_Z3go4v() attributes
+// CIR: cir.func coroutine {{.*}} @_Z3go4v() call_conv_lowered attributes
 // CIR: cir.coroutine initialSuspend : {
 // CIR:   cir.await(init, ready : {
 // CIR:   }, suspend : {

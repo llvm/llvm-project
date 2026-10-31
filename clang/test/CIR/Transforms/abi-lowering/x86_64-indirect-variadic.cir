@@ -100,7 +100,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK-LABEL: cir.func {{.*}}@indirect_empty(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s32i) {
+  // CHECK-LABEL: cir.func {{.*}}@indirect_empty(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s32i) call_conv_lowered {
   // CHECK-NOT: cir.cast bitcast %arg0
   // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %arg2) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
 

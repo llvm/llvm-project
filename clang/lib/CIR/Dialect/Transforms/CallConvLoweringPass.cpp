@@ -1049,6 +1049,8 @@ void CallConvLoweringPass::runOnOperation() {
   llvm::MapVector<cir::FuncOp, FunctionClassification> classifications;
   bool anyFailed = false;
   moduleOp.walk([&](cir::FuncOp f) {
+    if (f.getCallConvLowered())
+      return;
     // A complete type is required at any call or definition, so only a
     // declaration can carry an incomplete-by-value parameter or return type,
     // and no translation unit can ever call or define it with real argument
@@ -1089,7 +1091,8 @@ void CallConvLoweringPass::runOnOperation() {
     if (!call)
       return;
     cir::FuncOp callee = lookupCallee(op, symbolTable);
-    if (!callee)
+    if (!callee || callee.getCallConvLowered() ||
+        op->hasAttr(cir::CIRDialect::getCallConvLoweredAttrName()))
       return;
     callers[callee].push_back(op);
 
@@ -1186,6 +1189,10 @@ void CallConvLoweringPass::runOnOperation() {
         assert(classifiesSamePrefix(fc, *callFc) &&
                "a call site's declared parameters must be classified the same "
                "way as the callee's");
+
+        if (callFc->needsRewrite())
+          callOp->setAttr(cir::CIRDialect::getCallConvLoweredAttrName(),
+                          UnitAttr::get(ctx));
       }
       if (hasIndirectSlot(*callFc))
         widenForArgMemory(cast<cir::CIRCallOpInterface>(callOp));
@@ -1196,6 +1203,9 @@ void CallConvLoweringPass::runOnOperation() {
     }
     for (cir::GetGlobalOp addrOp : addressTakers.lookup(func))
       rewriteCtx.rewriteFunctionAddress(addrOp, func, builder);
+
+    if (fc.needsRewrite())
+      func.setCallConvLowered(true);
   }
 
   // Rewrite indirect call sites.  The callee is opaque, so classify from the
@@ -1206,7 +1216,8 @@ void CallConvLoweringPass::runOnOperation() {
   // cached as the next one to visit.
   SmallVector<cir::CIRCallOpInterface> indirectCalls;
   moduleOp.walk([&](cir::CIRCallOpInterface c) {
-    if (c.isIndirect())
+    if (c.isIndirect() &&
+        !c->hasAttr(cir::CIRDialect::getCallConvLoweredAttrName()))
       indirectCalls.push_back(c);
   });
   for (cir::CIRCallOpInterface c : indirectCalls) {
@@ -1218,6 +1229,10 @@ void CallConvLoweringPass::runOnOperation() {
     }
     if (hasIndirectSlot(*fc))
       widenForArgMemory(c);
+
+    if (fc->needsRewrite())
+      c->setAttr(cir::CIRDialect::getCallConvLoweredAttrName(),
+                 UnitAttr::get(ctx));
     if (failed(rewriteCtx.rewriteCallSite(c.getOperation(), *fc, builder))) {
       signalPassFailure();
       return;
