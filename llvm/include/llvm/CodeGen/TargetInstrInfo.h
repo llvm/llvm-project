@@ -1700,6 +1700,16 @@ public:
     llvm_unreachable("target did not implement shouldClusterMemOps()");
   }
 
+  /// Return whether branch layout optimizations should consider swapping the
+  /// true and false successors of a conditional branch in MBB by reversing its
+  /// condition. Targets may prefer a particular branch layout even when the
+  /// condition can be reversed.
+  /// This does not restrict predicate inversions that leave the successors in
+  /// the same order, such as reusing an inverted comparison during MachineCSE.
+  virtual bool shouldSwapBranchTargets(const MachineBasicBlock &MBB) const {
+    return true;
+  }
+
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
   virtual bool

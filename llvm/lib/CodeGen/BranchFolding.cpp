@@ -559,7 +559,8 @@ static void FixTail(MachineBasicBlock *CurMBB, MachineBasicBlock *SuccBB,
   if (I != MF->end() && !TII->analyzeBranch(*CurMBB, TBB, FBB, Cond, true)) {
     MachineBasicBlock *NextBB = &*I;
     if (TBB == NextBB && !Cond.empty() && !FBB) {
-      if (!TII->reverseBranchCondition(Cond)) {
+      if (TII->shouldSwapBranchTargets(*CurMBB) &&
+          !TII->reverseBranchCondition(Cond)) {
         TII->removeBranch(*CurMBB);
         TII->insertBranch(*CurMBB, SuccBB, nullptr, Cond, dl);
         return;
@@ -1204,7 +1205,8 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
         // branch.
         SmallVector<MachineOperand, 4> NewCond(Cond);
         if (!Cond.empty() && TBB == IBB) {
-          if (TII->reverseBranchCondition(NewCond))
+          if (!TII->shouldSwapBranchTargets(*PBB) ||
+              TII->reverseBranchCondition(NewCond))
             continue;
           // This is the QBB case described above
           if (!FBB) {
@@ -1567,7 +1569,8 @@ ReoptimizeBlock:
     // fall-through.
     if (PriorTBB == MBB) {
       SmallVector<MachineOperand, 4> NewPriorCond(PriorCond);
-      if (!TII->reverseBranchCondition(NewPriorCond)) {
+      if (TII->shouldSwapBranchTargets(PrevBB) &&
+          !TII->reverseBranchCondition(NewPriorCond)) {
         DebugLoc Dl = PrevBB.findBranchDebugLoc();
         TII->removeBranch(PrevBB);
         TII->insertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, Dl);
@@ -1618,7 +1621,8 @@ ReoptimizeBlock:
       if (DoTransform) {
         // Reverse the branch so we will fall through on the previous true cond.
         SmallVector<MachineOperand, 4> NewPriorCond(PriorCond);
-        if (!TII->reverseBranchCondition(NewPriorCond)) {
+        if (TII->shouldSwapBranchTargets(PrevBB) &&
+            !TII->reverseBranchCondition(NewPriorCond)) {
           LLVM_DEBUG(dbgs() << "\nMoving MBB: " << *MBB
                             << "To make fallthrough to: " << *PriorTBB << "\n");
 
@@ -1684,7 +1688,8 @@ ReoptimizeBlock:
     //    Loop: xxx; jncc Loop; jmp Out
     if (CurTBB && CurFBB && CurFBB == MBB && CurTBB != MBB) {
       SmallVector<MachineOperand, 4> NewCond(CurCond);
-      if (!TII->reverseBranchCondition(NewCond)) {
+      if (TII->shouldSwapBranchTargets(*MBB) &&
+          !TII->reverseBranchCondition(NewCond)) {
         DebugLoc Dl = MBB->findBranchDebugLoc();
         TII->removeBranch(*MBB);
         TII->insertBranch(*MBB, CurFBB, CurTBB, NewCond, Dl);
