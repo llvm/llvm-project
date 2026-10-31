@@ -621,6 +621,24 @@ func.func @vector_constant_mask() -> vector<16x16xi1> {
 
 // -----
 
+func.func @vector_constant_mask_no_rank_mismatch() -> vector<16x16xi1> {
+  %0 = vector.constant_mask [8, 8] : vector<16x16xi1>
+  return %0 : vector<16x16xi1>
+}
+
+// CHECK-LABEL: func @vector_constant_mask_no_rank_mismatch
+// CHECK-SAME: () -> vector<16x16xi1>
+//       CHECK:   %[[EMPTY:.*]] = arith.constant dense<false> : vector<8x8xi1>
+//       CHECK:   %[[ACC:.*]] = arith.constant dense<false> : vector<16x16xi1>
+//       CHECK:   %[[FULL:.*]] = arith.constant dense<true> : vector<8x8xi1>
+//       CHECK:   %[[INS00:.*]] = vector.insert_strided_slice %[[FULL]], %[[ACC]] offsets = [0, 0], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[INS01:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS00]] offsets = [0, 8], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[INS10:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS01]] offsets = [8, 0], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[INS11:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS10]] offsets = [8, 8], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   return %[[INS11]] : vector<16x16xi1>
+
+// -----
+
 func.func @vector_constant_mask_rank_mismatch() -> vector<2x8x8xi1> {
   %0 = vector.constant_mask [1, 8, 8] : vector<2x8x8xi1>
   return %0 : vector<2x8x8xi1>
