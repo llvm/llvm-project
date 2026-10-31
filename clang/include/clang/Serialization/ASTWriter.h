@@ -543,6 +543,13 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
+  /// Adjustment from a local range to the corresponding loaded range. Zero
+  /// means the range has no loaded copy.
+  ///
+  /// Unlike the adjustment vectors above, this vector is indexed by range, so
+  /// entry \c I corresponds to \c NonAffectingRanges[I].
+  std::vector<int64_t> NonAffectingRedirectAdjustments;
+
   /// A list of classes in named modules which need to emit the VTable in
   /// the corresponding object file.
   llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
@@ -552,10 +559,22 @@ private:
   /// during \c SourceManager serialization.
   void computeNonAffectingInputFiles();
 
+  /// Walks \p Loc up the include and expansion hierarchy to the nearest
+  /// location in a file this module file still writes entries for. A local
+  /// entry must not name a parent whose locations were reused, or the entry
+  /// becomes unreachable from this module file's root.
+
   /// Some affecting files can be included from files that are not affecting.
   /// This function erases source locations pointing into such files.
   SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,
                                         const SrcMgr::FileInfo &File);
+
+  /// Returns \p Loc in a loaded copy of its file, or an invalid location if it
+  /// cannot be redirected, which includes any macro or already loaded one.
+  SourceLocation getRedirectedLocation(SourceLocation Loc) const;
+
+  /// Returns the first non-affecting range whose end is not before \p Offset.
+  unsigned getNonAffectingRangeLowerBound(SourceLocation::UIntTy Offset) const;
 
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
@@ -566,6 +585,11 @@ private:
   /// Returns an adjusted \c SourceLocation, accounting for any non-affecting
   /// input files.
   SourceLocation getAdjustedLocation(SourceLocation Loc) const;
+
+  /// Returns \p Loc adjusted for non-affecting input files, but never
+  /// redirected at a copy in a loaded module file. For values a reader
+  /// resolves against this module file rather than in the global source space.
+  SourceLocation getAdjustedLocalLocation(SourceLocation Loc) const;
   /// Returns an adjusted \c SourceRange, accounting for any non-affecting input
   /// files.
   SourceRange getAdjustedRange(SourceRange Range) const;
@@ -769,6 +793,9 @@ public:
   /// Emit a source location, delta encoded against \p Chain.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          SourceLocationEncoding::Chain &Chain);
+
+  /// Emit a source location that stays local to this module file.
+  void AddLocalSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
 
   /// Return the raw encodings for source locations.
   SourceLocationEncoding::RawLocEncoding
