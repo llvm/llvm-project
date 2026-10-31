@@ -2910,6 +2910,7 @@ namespace {
     Sema::AssociatedNamespaceSet &Namespaces;
     Sema::AssociatedClassSet &Classes;
     SourceLocation InstantiationLoc;
+    Sema::AssociatedClassSet ClassesWithVisitedTemplateArguments;
 
   private:
     Sema::AssociatedClassSet ClassesTransitive;
@@ -3089,9 +3090,11 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
     // Add the associated namespace for this class.
     CollectEnclosingNamespace(Result.Namespaces, Ctx);
 
-    const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-    for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
-      addAssociatedClassesAndNamespaces(Result, TemplateArgs[I]);
+    if (Result.ClassesWithVisitedTemplateArguments.insert(Class)) {
+      const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
+      for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
+        addAssociatedClassesAndNamespaces(Result, TemplateArgs[I]);
+    }
   }
 
   // Add the class itself. If we've already transitively visited this class,
