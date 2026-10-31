@@ -94,7 +94,8 @@ static constexpr auto misplacedOpenACCDeclareAtFileScope{
     lookAhead(
         some(skipStuffBeforeStatement >> "!$ACC "_sptok >>
             Parser<OpenACCStandaloneDeclarativeConstruct>{} / endOfLine) >>
-        skipStuffBeforeStatement >> maybe(label) >>
+        skipStuffBeforeStatement >> !statement(typeDeclarationStmt) >>
+        maybe(label) >>
         (validFunctionStmt >> ok ||
             skipMany(prefixSpec) >> "SUBROUTINE"_tok >> name >>
                 maybe(parenthesized(optionalList(dummyArg))) >>
