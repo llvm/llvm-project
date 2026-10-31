@@ -235,8 +235,7 @@ public:
   const DeclTypeSpec *FindType(const DeclTypeSpec &) const;
   const DeclTypeSpec &MakeNumericType(TypeCategory, KindExpr &&kind);
   const DeclTypeSpec &MakeLogicalType(KindExpr &&kind);
-  const DeclTypeSpec &MakeCharacterType(
-      ParamValue &&length, KindExpr &&kind = KindExpr{0});
+  const DeclTypeSpec &MakeCharacterType(ParamValue &&length, KindExpr &&kind);
   DeclTypeSpec &MakeDerivedType(DeclTypeSpec::Category, DerivedTypeSpec &&);
   const DeclTypeSpec &MakeTypeStarType();
   const DeclTypeSpec &MakeClassStarType();

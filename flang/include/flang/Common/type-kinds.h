@@ -28,6 +28,30 @@ static constexpr int RealKinds[] FORTRAN_REAL_KINDS;
 static constexpr int LogicalKinds[] FORTRAN_LOGICAL_KINDS;
 static constexpr int CharacterKinds[] FORTRAN_CHARACTER_KINDS;
 
+/// Iterable lists of valid kinds for each TypeCategory.
+template <TypeCategory CAT> struct KindsByType;
+template <> struct KindsByType<TypeCategory::Integer> {
+  static inline constexpr int kinds[] FORTRAN_INTEGER_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Unsigned> {
+  static inline constexpr int kinds[] FORTRAN_UNSIGNED_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Real> {
+  static inline constexpr int kinds[] FORTRAN_REAL_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Complex> {
+  static inline constexpr int kinds[] FORTRAN_REAL_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Logical> {
+  static inline constexpr int kinds[] FORTRAN_LOGICAL_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Character> {
+  static inline constexpr int kinds[] FORTRAN_CHARACTER_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Derived> {
+  static inline constexpr int kinds[]{0};
+};
+
 static constexpr int maxKind{16};
 
 template <typename T, std::size_t N>

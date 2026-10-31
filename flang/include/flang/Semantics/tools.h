@@ -765,20 +765,6 @@ void WarnOnDeferredLengthCharacterScalar(SemanticsContext &, const SomeExpr *,
 
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
-template <typename R, typename T>
-std::optional<R> GetConstExpr(SemanticsContext &semanticsContext, const T &x) {
-  using DefaultCharConstantType = evaluate::Ascii;
-  if (const auto *expr{GetExpr(semanticsContext, x)}) {
-    const auto foldExpr{evaluate::Fold(
-        semanticsContext.foldingContext(), common::Clone(*expr))};
-    if constexpr (std::is_same_v<R, std::string>) {
-      return evaluate::GetScalarConstantValue<DefaultCharConstantType>(
-          foldExpr);
-    }
-  }
-  return std::nullopt;
-}
-
 // Returns "m" for a module, "m:sm" for a submodule.
 std::string GetModuleOrSubmoduleName(const Symbol &);
 

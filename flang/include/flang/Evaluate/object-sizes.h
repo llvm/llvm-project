@@ -37,6 +37,14 @@
 #error This header must not be included into the object-size-probe executable itself (in particular, integer-value-impl.h, real-value-impl.h, character-value-impl.h); it would cause a dependency cycle in incremental builds.
 #endif
 
+// libstdc++ before GCC 8 does not make std::variant trivially copyable, hence
+// neither IntegerValueImpl nor RealValueImpl.
+#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 8
+#define FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL 0
+#else
+#define FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL 1
+#endif
+
 #if __has_include(<flang/Evaluate/object-sizes-generated.h>)
 // Measured object sizes
 #include <flang/Evaluate/object-sizes-generated.h>

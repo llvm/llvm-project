@@ -13,6 +13,7 @@
 #include "flang/Evaluate/object-sizes.h"
 #include "flang/Evaluate/target.h"
 #include "llvm/Support/Compiler.h"
+#include <cstddef>
 
 // Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
 // to leak out of <math.h>.
@@ -33,11 +34,19 @@ public:
   using Word = IntegerValue;
 
   RealValue();
+#if FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL
+  ~RealValue() = default;
+  RealValue(const RealValue &) = default;
+  RealValue(RealValue &&) = default;
+  RealValue &operator=(const RealValue &) = default;
+  RealValue &operator=(RealValue &&) = default;
+#else
   ~RealValue();
   RealValue(const RealValue &);
   RealValue(RealValue &&);
   RealValue &operator=(const RealValue &);
   RealValue &operator=(RealValue &&);
+#endif
 
   RealValue(int kind, const RealValue &v) : RealValue(v) {
     CHECK(kind == v.kind());
@@ -159,7 +168,7 @@ public:
       RealValue &correction,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
-  IntegerValue EXPONENT() const;
+  IntegerValue EXPONENT(int kind) const;
 
   static RealValue EPSILON(int kind);
 
@@ -238,13 +247,10 @@ private:
   static ValueWithRealFlags<RealValue> FromImpl(
       ValueWithRealFlags<RealValueImpl> &&x);
 
-  RealValueImpl &impl() { return *reinterpret_cast<RealValueImpl *>(this); }
-  const RealValueImpl &impl() const {
-    return *reinterpret_cast<const RealValueImpl *>(this);
-  }
+  RealValueImpl &impl();
+  const RealValueImpl &impl() const;
 
-  [[maybe_unused]] alignas(
-      detail::kRealObjectAlign) char opaque_[detail::kRealObjectSize];
+  alignas(detail::kRealObjectAlign) std::byte opaque_[detail::kRealObjectSize];
 };
 
 } // namespace Fortran::evaluate::value

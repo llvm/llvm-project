@@ -178,7 +178,7 @@ public:
       RealValueImpl &correction,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
-  IntegerValue EXPONENT() const;
+  IntegerValue EXPONENT(int kind) const;
 
   // Conversion from an integer facade (REAL()).
   static ValueWithRealFlags<RealValueImpl> FromInteger(int kind,
