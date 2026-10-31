@@ -27,6 +27,13 @@ if(TARGET omp)
   set(OMP_DEPEND omp)
 endif()
 
+get_filename_component(LIBOFFLOAD_API_INCLUDE_DIR
+  ${CMAKE_CURRENT_BINARY_DIR}/../liboffload/API ABSOLUTE)
+set(LIBOFFLOAD_DEPEND)
+if(TARGET LLVMOffload)
+  set(LIBOFFLOAD_DEPEND LLVMOffload)
+endif()
+
 if(TARGET omptarget)
   string(REGEX MATCHALL "([^\\ ]+\\ |[^\\ ]+$)" SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}")
   foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
@@ -35,7 +42,8 @@ if(TARGET omptarget)
     add_offload_testsuite(check-libomptarget-${CURRENT_TARGET}
       "Running libomptarget tests"
       ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET}
-      DEPENDS omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
+      DEPENDS omptarget ${OMP_DEPEND} ${LIBOFFLOAD_DEPEND}
+              ${LIBOMPTARGET_TESTED_PLUGINS}
       ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
     list(APPEND LIBOMPTARGET_LIT_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET})
 
@@ -51,7 +59,8 @@ if(TARGET omptarget)
     "Running libomptarget tests"
     ${LIBOMPTARGET_LIT_TESTSUITES}
     EXCLUDE_FROM_CHECK_ALL
-    DEPENDS ${OFFLOAD_TOOLS} omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
+    DEPENDS ${OFFLOAD_TOOLS} omptarget ${OMP_DEPEND} ${LIBOFFLOAD_DEPEND}
+            ${LIBOMPTARGET_TESTED_PLUGINS}
     ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 else()
   message(STATUS "Skipping libomptarget lit suites because libomptarget was not built.")
