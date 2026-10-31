@@ -1,0 +1,4 @@
+## Test that DEFINE and REDEFINE substitutions are expanded in RUN lines.
+
+# RUN: cp %S/Inputs/define.c %t.c && %update_cc_test_checks %t.c
+# RUN: diff -u %S/Inputs/define.c.expected %t.c
