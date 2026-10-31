@@ -347,14 +347,14 @@ define i64 @fptoui_f16toi64(half %x) #0 {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    callq __extendhfsf2@PLT
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:    comiss %xmm2, %xmm0
-; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    comiss %xmm1, %xmm0
+; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    jb .LBB9_2
 ; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    movaps %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm2
 ; SSE2-NEXT:  .LBB9_2:
-; SSE2-NEXT:    subss %xmm1, %xmm0
+; SSE2-NEXT:    subss %xmm2, %xmm0
 ; SSE2-NEXT:    cvttss2si %xmm0, %rcx
 ; SSE2-NEXT:    setae %al
 ; SSE2-NEXT:    movzbl %al, %eax
@@ -369,14 +369,14 @@ define i64 @fptoui_f16toi64(half %x) #0 {
 ; F16C-NEXT:    movzwl %ax, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    vmovss {{.*#+}} xmm2 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
-; F16C-NEXT:    vcomiss %xmm2, %xmm0
-; F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; F16C-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
+; F16C-NEXT:    vcomiss %xmm1, %xmm0
+; F16C-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; F16C-NEXT:    jb .LBB9_2
 ; F16C-NEXT:  # %bb.1:
-; F16C-NEXT:    vmovaps %xmm2, %xmm1
+; F16C-NEXT:    vmovaps %xmm1, %xmm2
 ; F16C-NEXT:  .LBB9_2:
-; F16C-NEXT:    vsubss %xmm1, %xmm0, %xmm0
+; F16C-NEXT:    vsubss %xmm2, %xmm0, %xmm0
 ; F16C-NEXT:    vcvttss2si %xmm0, %rcx
 ; F16C-NEXT:    setae %al
 ; F16C-NEXT:    movzbl %al, %eax

@@ -313,27 +313,27 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; CHECK-NEXT:    notq %rdi
 ; CHECK-NEXT:    andq %r8, %rdi
 ; CHECK-NEXT:    orq %r15, %rdi
-; CHECK-NEXT:    movq -96(%rsp,%rbx), %r15
-; CHECK-NEXT:    movq -88(%rsp,%rbx), %r8
-; CHECK-NEXT:    shldq %cl, %r8, %r14
+; CHECK-NEXT:    movq -96(%rsp,%rbx), %r8
+; CHECK-NEXT:    movq -88(%rsp,%rbx), %r15
+; CHECK-NEXT:    shldq %cl, %r15, %r14
 ; CHECK-NEXT:    movq -32(%rsp,%rbx), %r12
 ; CHECK-NEXT:    movq -24(%rsp,%rbx), %rbx
 ; CHECK-NEXT:    shldq %cl, %rbx, %r11
 ; CHECK-NEXT:    notq %r11
 ; CHECK-NEXT:    andq %r10, %r11
 ; CHECK-NEXT:    orq %r14, %r11
-; CHECK-NEXT:    movq %r15, %r10
+; CHECK-NEXT:    movq %r8, %r10
 ; CHECK-NEXT:    shlq %cl, %r10
 ; CHECK-NEXT:    movq %r12, %r14
 ; CHECK-NEXT:    shlq %cl, %r14
 ; CHECK-NEXT:    notq %r14
 ; CHECK-NEXT:    andq %rsi, %r14
 ; CHECK-NEXT:    orq %r10, %r14
-; CHECK-NEXT:    shldq %cl, %r15, %r8
+; CHECK-NEXT:    shldq %cl, %r8, %r15
 ; CHECK-NEXT:    shldq %cl, %r12, %rbx
 ; CHECK-NEXT:    notq %rbx
 ; CHECK-NEXT:    andq %rdx, %rbx
-; CHECK-NEXT:    orq %r8, %rbx
+; CHECK-NEXT:    orq %r15, %rbx
 ; CHECK-NEXT:    movq %r11, 16(%rax)
 ; CHECK-NEXT:    movq %rbx, 8(%rax)
 ; CHECK-NEXT:    movq %r14, (%rax)

@@ -77,8 +77,8 @@ define <4 x i1> @and_ord_vec(<4 x float> %a, <4 x float> %b) {
 ; X86-NEXT:    sahf
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    fucompp
-; X86-NEXT:    setnp %dh
-; X86-NEXT:    shlb $2, %dh
+; X86-NEXT:    setnp %dl
+; X86-NEXT:    shlb $2, %dl
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
 ; X86-NEXT:    fnstsw %ax
@@ -86,19 +86,19 @@ define <4 x i1> @and_ord_vec(<4 x float> %a, <4 x float> %b) {
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fucompp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    setnp %dl
-; X86-NEXT:    shlb $3, %dl
-; X86-NEXT:    orb %dh, %dl
+; X86-NEXT:    setnp %dh
+; X86-NEXT:    shlb $3, %dh
+; X86-NEXT:    orb %dl, %dh
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    setnp %dh
+; X86-NEXT:    setnp %dl
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setnp %al
 ; X86-NEXT:    addb %al, %al
-; X86-NEXT:    orb %dh, %al
 ; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    orb %dh, %al
 ; X86-NEXT:    movb %al, (%ecx)
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    popl %ecx
@@ -136,8 +136,8 @@ define <4 x i1> @or_uno_vec(<4 x float> %a, <4 x float> %b) {
 ; X86-NEXT:    sahf
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    fucompp
-; X86-NEXT:    setp %dh
-; X86-NEXT:    shlb $2, %dh
+; X86-NEXT:    setp %dl
+; X86-NEXT:    shlb $2, %dl
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
 ; X86-NEXT:    fnstsw %ax
@@ -145,19 +145,19 @@ define <4 x i1> @or_uno_vec(<4 x float> %a, <4 x float> %b) {
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fucompp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    setp %dl
-; X86-NEXT:    shlb $3, %dl
-; X86-NEXT:    orb %dh, %dl
+; X86-NEXT:    setp %dh
+; X86-NEXT:    shlb $3, %dh
+; X86-NEXT:    orb %dl, %dh
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    setp %dh
+; X86-NEXT:    setp %dl
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setp %al
 ; X86-NEXT:    addb %al, %al
-; X86-NEXT:    orb %dh, %al
 ; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    orb %dh, %al
 ; X86-NEXT:    movb %al, (%ecx)
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    popl %ecx

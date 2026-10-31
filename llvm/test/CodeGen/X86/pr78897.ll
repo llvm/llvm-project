@@ -169,23 +169,23 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X86-AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
 ; X86-AVX2-NEXT:    vmovd %xmm1, %edx
-; X86-AVX2-NEXT:    movl $286331152, %ecx # imm = 0x11111110
-; X86-AVX2-NEXT:    mulxl %ecx, %edi, %esi
-; X86-AVX2-NEXT:    vpextrd $1, %xmm1, %eax
+; X86-AVX2-NEXT:    movl $286331152, %eax # imm = 0x11111110
+; X86-AVX2-NEXT:    mulxl %eax, %esi, %ecx
+; X86-AVX2-NEXT:    vpextrd $1, %xmm1, %edi
 ; X86-AVX2-NEXT:    imull $286331153, %edx, %ebx # imm = 0x11111111
-; X86-AVX2-NEXT:    addl %esi, %ebx
-; X86-AVX2-NEXT:    imull $286331152, %eax, %esi # imm = 0x11111110
-; X86-AVX2-NEXT:    addl %ebx, %esi
-; X86-AVX2-NEXT:    vmovd %edi, %xmm1
+; X86-AVX2-NEXT:    addl %ecx, %ebx
+; X86-AVX2-NEXT:    imull $286331152, %edi, %ecx # imm = 0x11111110
+; X86-AVX2-NEXT:    addl %ebx, %ecx
+; X86-AVX2-NEXT:    vmovd %esi, %xmm1
 ; X86-AVX2-NEXT:    xorl $286331153, %edx # imm = 0x11111111
-; X86-AVX2-NEXT:    mulxl %ecx, %edi, %ecx
-; X86-AVX2-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; X86-AVX2-NEXT:    xorl $17895697, %eax # imm = 0x1111111
-; X86-AVX2-NEXT:    imull $286331153, %edx, %edx # imm = 0x11111111
-; X86-AVX2-NEXT:    addl %ecx, %edx
-; X86-AVX2-NEXT:    imull $286331152, %eax, %eax # imm = 0x11111110
-; X86-AVX2-NEXT:    addl %edx, %eax
-; X86-AVX2-NEXT:    vmovd %edi, %xmm2
+; X86-AVX2-NEXT:    mulxl %eax, %esi, %eax
+; X86-AVX2-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
+; X86-AVX2-NEXT:    xorl $17895697, %edi # imm = 0x1111111
+; X86-AVX2-NEXT:    imull $286331153, %edx, %ecx # imm = 0x11111111
+; X86-AVX2-NEXT:    addl %eax, %ecx
+; X86-AVX2-NEXT:    imull $286331152, %edi, %eax # imm = 0x11111110
+; X86-AVX2-NEXT:    addl %ecx, %eax
+; X86-AVX2-NEXT:    vmovd %esi, %xmm2
 ; X86-AVX2-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
 ; X86-AVX2-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
 ; X86-AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm1

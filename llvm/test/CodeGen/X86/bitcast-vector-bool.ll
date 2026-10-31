@@ -1142,29 +1142,29 @@ define i64 @bitcast_v128i8_to_v2i64(<128 x i8> %a0) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
-; AVX1-NEXT:    vpmovmskb %xmm2, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %eax, %edx
-; AVX1-NEXT:    vpmovmskb %xmm3, %eax
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
 ; AVX1-NEXT:    vpmovmskb %xmm2, %ecx
 ; AVX1-NEXT:    shll $16, %ecx
 ; AVX1-NEXT:    orl %eax, %ecx
-; AVX1-NEXT:    shlq $32, %rcx
-; AVX1-NEXT:    orq %rdx, %rcx
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %edx
+; AVX1-NEXT:    vpmovmskb %xmm3, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
+; AVX1-NEXT:    vpmovmskb %xmm2, %edx
 ; AVX1-NEXT:    shll $16, %edx
 ; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    shlq $32, %rdx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %eax, %ecx
 ; AVX1-NEXT:    vpmovmskb %xmm1, %esi
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    shll $16, %eax
 ; AVX1-NEXT:    orl %esi, %eax
 ; AVX1-NEXT:    shlq $32, %rax
-; AVX1-NEXT:    orq %rdx, %rax
-; AVX1-NEXT:    addq %rcx, %rax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    addq %rdx, %rax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

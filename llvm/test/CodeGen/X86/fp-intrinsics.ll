@@ -1406,14 +1406,14 @@ define i64 @f20u64(double %x) #0 {
 ;
 ; SSE-LABEL: f20u64:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
-; SSE-NEXT:    comisd %xmm2, %xmm0
-; SSE-NEXT:    xorpd %xmm1, %xmm1
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
+; SSE-NEXT:    comisd %xmm1, %xmm0
+; SSE-NEXT:    xorpd %xmm2, %xmm2
 ; SSE-NEXT:    jb .LBB25_2
 ; SSE-NEXT:  # %bb.1: # %entry
-; SSE-NEXT:    movapd %xmm2, %xmm1
+; SSE-NEXT:    movapd %xmm1, %xmm2
 ; SSE-NEXT:  .LBB25_2: # %entry
-; SSE-NEXT:    subsd %xmm1, %xmm0
+; SSE-NEXT:    subsd %xmm2, %xmm0
 ; SSE-NEXT:    cvttsd2si %xmm0, %rcx
 ; SSE-NEXT:    setae %al
 ; SSE-NEXT:    movzbl %al, %eax
@@ -1423,14 +1423,14 @@ define i64 @f20u64(double %x) #0 {
 ;
 ; AVX1-LABEL: f20u64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
-; AVX1-NEXT:    vcomisd %xmm2, %xmm0
-; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
+; AVX1-NEXT:    vcomisd %xmm1, %xmm0
+; AVX1-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    jb .LBB25_2
 ; AVX1-NEXT:  # %bb.1: # %entry
-; AVX1-NEXT:    vmovapd %xmm2, %xmm1
+; AVX1-NEXT:    vmovapd %xmm1, %xmm2
 ; AVX1-NEXT:  .LBB25_2: # %entry
-; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vsubsd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vcvttsd2si %xmm0, %rcx
 ; AVX1-NEXT:    setae %al
 ; AVX1-NEXT:    movzbl %al, %eax

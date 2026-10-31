@@ -852,37 +852,37 @@ define <4 x i64> @test_ext_v4i64(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 define <64 x i8> @test_fixed_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
 ; SSE-LABEL: test_fixed_v64i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm10
-; SSE-NEXT:    pxor %xmm4, %xmm10
-; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; SSE-NEXT:    movdqa %xmm10, %xmm11
-; SSE-NEXT:    pandn %xmm8, %xmm11
-; SSE-NEXT:    pcmpeqd %xmm9, %xmm9
-; SSE-NEXT:    pavgb %xmm9, %xmm10
-; SSE-NEXT:    pxor %xmm11, %xmm10
+; SSE-NEXT:    movdqa %xmm0, %xmm8
+; SSE-NEXT:    pxor %xmm4, %xmm8
+; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; SSE-NEXT:    movdqa %xmm8, %xmm10
+; SSE-NEXT:    pandn %xmm9, %xmm10
+; SSE-NEXT:    pcmpeqd %xmm11, %xmm11
+; SSE-NEXT:    pavgb %xmm11, %xmm8
+; SSE-NEXT:    pxor %xmm10, %xmm8
 ; SSE-NEXT:    pand %xmm4, %xmm0
-; SSE-NEXT:    paddb %xmm10, %xmm0
+; SSE-NEXT:    paddb %xmm8, %xmm0
 ; SSE-NEXT:    movdqa %xmm1, %xmm4
 ; SSE-NEXT:    pxor %xmm5, %xmm4
-; SSE-NEXT:    movdqa %xmm4, %xmm10
-; SSE-NEXT:    pandn %xmm8, %xmm10
-; SSE-NEXT:    pavgb %xmm9, %xmm4
-; SSE-NEXT:    pxor %xmm10, %xmm4
+; SSE-NEXT:    movdqa %xmm4, %xmm8
+; SSE-NEXT:    pandn %xmm9, %xmm8
+; SSE-NEXT:    pavgb %xmm11, %xmm4
+; SSE-NEXT:    pxor %xmm8, %xmm4
 ; SSE-NEXT:    pand %xmm5, %xmm1
 ; SSE-NEXT:    paddb %xmm4, %xmm1
 ; SSE-NEXT:    movdqa %xmm2, %xmm4
 ; SSE-NEXT:    pxor %xmm6, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, %xmm5
-; SSE-NEXT:    pandn %xmm8, %xmm5
-; SSE-NEXT:    pavgb %xmm9, %xmm4
+; SSE-NEXT:    pandn %xmm9, %xmm5
+; SSE-NEXT:    pavgb %xmm11, %xmm4
 ; SSE-NEXT:    pxor %xmm5, %xmm4
 ; SSE-NEXT:    pand %xmm6, %xmm2
 ; SSE-NEXT:    paddb %xmm4, %xmm2
 ; SSE-NEXT:    movdqa %xmm3, %xmm4
 ; SSE-NEXT:    pxor %xmm7, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, %xmm5
-; SSE-NEXT:    pandn %xmm8, %xmm5
-; SSE-NEXT:    pavgb %xmm9, %xmm4
+; SSE-NEXT:    pandn %xmm9, %xmm5
+; SSE-NEXT:    pavgb %xmm11, %xmm4
 ; SSE-NEXT:    pxor %xmm5, %xmm4
 ; SSE-NEXT:    pand %xmm7, %xmm3
 ; SSE-NEXT:    paddb %xmm4, %xmm3
@@ -957,37 +957,37 @@ define <64 x i8> @test_fixed_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
 define <64 x i8> @test_ext_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
 ; SSE-LABEL: test_ext_v64i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm10
-; SSE-NEXT:    pxor %xmm4, %xmm10
-; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; SSE-NEXT:    movdqa %xmm10, %xmm11
-; SSE-NEXT:    pandn %xmm8, %xmm11
-; SSE-NEXT:    pcmpeqd %xmm9, %xmm9
-; SSE-NEXT:    pavgb %xmm9, %xmm10
-; SSE-NEXT:    pxor %xmm11, %xmm10
+; SSE-NEXT:    movdqa %xmm0, %xmm8
+; SSE-NEXT:    pxor %xmm4, %xmm8
+; SSE-NEXT:    movdqa {{.*#+}} xmm9 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; SSE-NEXT:    movdqa %xmm8, %xmm10
+; SSE-NEXT:    pandn %xmm9, %xmm10
+; SSE-NEXT:    pcmpeqd %xmm11, %xmm11
+; SSE-NEXT:    pavgb %xmm11, %xmm8
+; SSE-NEXT:    pxor %xmm10, %xmm8
 ; SSE-NEXT:    pand %xmm4, %xmm0
-; SSE-NEXT:    paddb %xmm10, %xmm0
+; SSE-NEXT:    paddb %xmm8, %xmm0
 ; SSE-NEXT:    movdqa %xmm1, %xmm4
 ; SSE-NEXT:    pxor %xmm5, %xmm4
-; SSE-NEXT:    movdqa %xmm4, %xmm10
-; SSE-NEXT:    pandn %xmm8, %xmm10
-; SSE-NEXT:    pavgb %xmm9, %xmm4
-; SSE-NEXT:    pxor %xmm10, %xmm4
+; SSE-NEXT:    movdqa %xmm4, %xmm8
+; SSE-NEXT:    pandn %xmm9, %xmm8
+; SSE-NEXT:    pavgb %xmm11, %xmm4
+; SSE-NEXT:    pxor %xmm8, %xmm4
 ; SSE-NEXT:    pand %xmm5, %xmm1
 ; SSE-NEXT:    paddb %xmm4, %xmm1
 ; SSE-NEXT:    movdqa %xmm2, %xmm4
 ; SSE-NEXT:    pxor %xmm6, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, %xmm5
-; SSE-NEXT:    pandn %xmm8, %xmm5
-; SSE-NEXT:    pavgb %xmm9, %xmm4
+; SSE-NEXT:    pandn %xmm9, %xmm5
+; SSE-NEXT:    pavgb %xmm11, %xmm4
 ; SSE-NEXT:    pxor %xmm5, %xmm4
 ; SSE-NEXT:    pand %xmm6, %xmm2
 ; SSE-NEXT:    paddb %xmm4, %xmm2
 ; SSE-NEXT:    movdqa %xmm3, %xmm4
 ; SSE-NEXT:    pxor %xmm7, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, %xmm5
-; SSE-NEXT:    pandn %xmm8, %xmm5
-; SSE-NEXT:    pavgb %xmm9, %xmm4
+; SSE-NEXT:    pandn %xmm9, %xmm5
+; SSE-NEXT:    pavgb %xmm11, %xmm4
 ; SSE-NEXT:    pxor %xmm5, %xmm4
 ; SSE-NEXT:    pand %xmm7, %xmm3
 ; SSE-NEXT:    paddb %xmm4, %xmm3

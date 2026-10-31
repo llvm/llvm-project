@@ -79,10 +79,10 @@ define <8 x float> @recip_v8f32(<8 x float> %n, <8 x float> %d) #2 {
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl %r9d, %ebp
-; CHECK-NEXT:    movl %r8d, %r12d
-; CHECK-NEXT:    movl %ecx, %r13d
-; CHECK-NEXT:    movl %edx, %r14d
+; CHECK-NEXT:    movl %r9d, %r14d
+; CHECK-NEXT:    movl %r8d, %r13d
+; CHECK-NEXT:    movl %ecx, %r12d
+; CHECK-NEXT:    movl %edx, %ebp
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r15d
@@ -90,39 +90,39 @@ define <8 x float> @recip_v8f32(<8 x float> %n, <8 x float> %d) #2 {
 ; CHECK-NEXT:    movl %eax, %edi
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %r14d, %edi
+; CHECK-NEXT:    movl %ebp, %edi
 ; CHECK-NEXT:    movl %r15d, %esi
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, (%rsp) # 4-byte Spill
-; CHECK-NEXT:    movl %r13d, %edi
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    callq __divsf3@PLT
-; CHECK-NEXT:    movl %eax, %r13d
 ; CHECK-NEXT:    movl %r12d, %edi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
 ; CHECK-NEXT:    callq __divsf3@PLT
-; CHECK-NEXT:    movl %eax, %r15d
-; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    callq __divsf3@PLT
-; CHECK-NEXT:    movl %eax, %ebp
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, %r12d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
+; CHECK-NEXT:    movl %r13d, %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    callq __divsf3@PLT
+; CHECK-NEXT:    movl %eax, %r15d
+; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, %r14d
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
 ; CHECK-NEXT:    callq __divsf3@PLT
+; CHECK-NEXT:    movl %eax, %r13d
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    callq __divsf3@PLT
+; CHECK-NEXT:    movl %eax, %ebp
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, 28(%rbx)
-; CHECK-NEXT:    movl %r14d, 24(%rbx)
-; CHECK-NEXT:    movl %r12d, 20(%rbx)
-; CHECK-NEXT:    movl %ebp, 16(%rbx)
+; CHECK-NEXT:    movl %ebp, 24(%rbx)
+; CHECK-NEXT:    movl %r13d, 20(%rbx)
+; CHECK-NEXT:    movl %r14d, 16(%rbx)
 ; CHECK-NEXT:    movl %r15d, 12(%rbx)
-; CHECK-NEXT:    movl %r13d, 8(%rbx)
+; CHECK-NEXT:    movl %r12d, 8(%rbx)
 ; CHECK-NEXT:    movl (%rsp), %eax # 4-byte Reload
 ; CHECK-NEXT:    movl %eax, 4(%rbx)
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
@@ -153,16 +153,16 @@ define <16 x float> @recip_v16f32(<16 x float> %n, <16 x float> %d) #0 {
 ; CHECK-NEXT:    movl %r9d, %r15d
 ; CHECK-NEXT:    movl %r8d, %ebp
 ; CHECK-NEXT:    movl %ecx, %r12d
-; CHECK-NEXT:    movl %edx, %r13d
+; CHECK-NEXT:    movl %edx, %r14d
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r14d
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r13d
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
 ; CHECK-NEXT:    movl %eax, %edi
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %r13d, %edi
-; CHECK-NEXT:    movl %r14d, %esi
+; CHECK-NEXT:    movl %r14d, %edi
+; CHECK-NEXT:    movl %r13d, %esi
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %r12d, %edi
@@ -345,8 +345,8 @@ define <16 x float> @rsqrt_v16f32(<16 x float> %x) #1 {
 ; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r13d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r12d
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r15d
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r12d
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ebp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-NEXT:    callq sqrtf@PLT
@@ -354,10 +354,10 @@ define <16 x float> @rsqrt_v16f32(<16 x float> %x) #1 {
 ; CHECK-NEXT:    movl %ebp, %edi
 ; CHECK-NEXT:    callq sqrtf@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %r15d, %edi
+; CHECK-NEXT:    movl %r12d, %edi
 ; CHECK-NEXT:    callq sqrtf@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %r12d, %edi
+; CHECK-NEXT:    movl %r15d, %edi
 ; CHECK-NEXT:    callq sqrtf@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %r13d, %edi
@@ -380,7 +380,7 @@ define <16 x float> @rsqrt_v16f32(<16 x float> %x) #1 {
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-NEXT:    callq sqrtf@PLT
-; CHECK-NEXT:    movl %eax, %r12d
+; CHECK-NEXT:    movl %eax, %r15d
 ; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    callq sqrtf@PLT
 ; CHECK-NEXT:    movl %eax, %r14d
@@ -389,7 +389,7 @@ define <16 x float> @rsqrt_v16f32(<16 x float> %x) #1 {
 ; CHECK-NEXT:    movl %eax, %ebp
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq sqrtf@PLT
-; CHECK-NEXT:    movl %eax, %r15d
+; CHECK-NEXT:    movl %eax, %r12d
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq sqrtf@PLT
 ; CHECK-NEXT:    movl %eax, %r13d
@@ -404,7 +404,7 @@ define <16 x float> @rsqrt_v16f32(<16 x float> %x) #1 {
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl $1065353216, %edi # imm = 0x3F800000
-; CHECK-NEXT:    movl %r15d, %esi
+; CHECK-NEXT:    movl %r12d, %esi
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl $1065353216, %edi # imm = 0x3F800000
@@ -416,7 +416,7 @@ define <16 x float> @rsqrt_v16f32(<16 x float> %x) #1 {
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl $1065353216, %edi # imm = 0x3F800000
-; CHECK-NEXT:    movl %r12d, %esi
+; CHECK-NEXT:    movl %r15d, %esi
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl $1065353216, %edi # imm = 0x3F800000
@@ -438,7 +438,7 @@ define <16 x float> @rsqrt_v16f32(<16 x float> %x) #1 {
 ; CHECK-NEXT:    movl $1065353216, %edi # imm = 0x3F800000
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Reload
 ; CHECK-NEXT:    callq __divsf3@PLT
-; CHECK-NEXT:    movl %eax, %r12d
+; CHECK-NEXT:    movl %eax, %ebp
 ; CHECK-NEXT:    movl $1065353216, %edi # imm = 0x3F800000
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Reload
 ; CHECK-NEXT:    callq __divsf3@PLT
@@ -454,16 +454,16 @@ define <16 x float> @rsqrt_v16f32(<16 x float> %x) #1 {
 ; CHECK-NEXT:    movl $1065353216, %edi # imm = 0x3F800000
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Reload
 ; CHECK-NEXT:    callq __divsf3@PLT
-; CHECK-NEXT:    movl %eax, %ebp
+; CHECK-NEXT:    movl %eax, %r12d
 ; CHECK-NEXT:    movl $1065353216, %edi # imm = 0x3F800000
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Reload
 ; CHECK-NEXT:    callq __divsf3@PLT
 ; CHECK-NEXT:    movl %eax, 60(%rbx)
-; CHECK-NEXT:    movl %ebp, 56(%rbx)
+; CHECK-NEXT:    movl %r12d, 56(%rbx)
 ; CHECK-NEXT:    movl %r14d, 52(%rbx)
 ; CHECK-NEXT:    movl %r15d, 48(%rbx)
 ; CHECK-NEXT:    movl %r13d, 44(%rbx)
-; CHECK-NEXT:    movl %r12d, 40(%rbx)
+; CHECK-NEXT:    movl %ebp, 40(%rbx)
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; CHECK-NEXT:    movl %eax, 36(%rbx)
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
@@ -546,9 +546,9 @@ define <8 x float> @sqrt_v8f32(<8 x float> %x) #1 {
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl %r9d, %r13d
+; CHECK-NEXT:    movl %r9d, %r14d
 ; CHECK-NEXT:    movl %r8d, %r12d
-; CHECK-NEXT:    movl %ecx, %r14d
+; CHECK-NEXT:    movl %ecx, %r13d
 ; CHECK-NEXT:    movl %edx, %r15d
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ebp
@@ -558,15 +558,15 @@ define <8 x float> @sqrt_v8f32(<8 x float> %x) #1 {
 ; CHECK-NEXT:    movl %r15d, %edi
 ; CHECK-NEXT:    callq sqrtf@PLT
 ; CHECK-NEXT:    movl %eax, (%rsp) # 4-byte Spill
-; CHECK-NEXT:    movl %r14d, %edi
-; CHECK-NEXT:    callq sqrtf@PLT
-; CHECK-NEXT:    movl %eax, %r14d
-; CHECK-NEXT:    movl %r12d, %edi
-; CHECK-NEXT:    callq sqrtf@PLT
-; CHECK-NEXT:    movl %eax, %r12d
 ; CHECK-NEXT:    movl %r13d, %edi
 ; CHECK-NEXT:    callq sqrtf@PLT
 ; CHECK-NEXT:    movl %eax, %r13d
+; CHECK-NEXT:    movl %r12d, %edi
+; CHECK-NEXT:    callq sqrtf@PLT
+; CHECK-NEXT:    movl %eax, %r12d
+; CHECK-NEXT:    movl %r14d, %edi
+; CHECK-NEXT:    callq sqrtf@PLT
+; CHECK-NEXT:    movl %eax, %r14d
 ; CHECK-NEXT:    movl %ebp, %edi
 ; CHECK-NEXT:    callq sqrtf@PLT
 ; CHECK-NEXT:    movl %eax, %ebp
@@ -578,9 +578,9 @@ define <8 x float> @sqrt_v8f32(<8 x float> %x) #1 {
 ; CHECK-NEXT:    movl %eax, 28(%rbx)
 ; CHECK-NEXT:    movl %r15d, 24(%rbx)
 ; CHECK-NEXT:    movl %ebp, 20(%rbx)
-; CHECK-NEXT:    movl %r13d, 16(%rbx)
+; CHECK-NEXT:    movl %r14d, 16(%rbx)
 ; CHECK-NEXT:    movl %r12d, 12(%rbx)
-; CHECK-NEXT:    movl %r14d, 8(%rbx)
+; CHECK-NEXT:    movl %r13d, 8(%rbx)
 ; CHECK-NEXT:    movl (%rsp), %eax # 4-byte Reload
 ; CHECK-NEXT:    movl %eax, 4(%rbx)
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload

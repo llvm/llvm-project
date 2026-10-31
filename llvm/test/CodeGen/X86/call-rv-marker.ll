@@ -117,11 +117,14 @@ lpad:                                             ; preds = %entry
 
 define void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: rv_marker_4
-; CHECK:         pushq   %rbx
+; CHECK:         pushq   %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    subq    $16, %rsp
+; CHECK-NEXT:    pushq   %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    pushq   %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    .cfi_offset %r14, -16
 ; CHECK-NEXT: Ltmp3:
 ; CHECK-NEXT:    callq   _foo1
 ; CHECK-NEXT:    movq    %rax, %rdi

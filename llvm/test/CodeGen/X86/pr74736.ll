@@ -5,23 +5,23 @@
 define void @main(<16 x i32> %0, i32 %1) {
 ; SSE-LABEL: main:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movd %edi, %xmm4
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = [0,1,0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm4[2,0]
-; SSE-NEXT:    paddd %xmm0, %xmm0
+; SSE-NEXT:    movd %edi, %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm4 = [0,1,0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm0[2,0]
+; SSE-NEXT:    paddd %xmm4, %xmm4
 ; SSE-NEXT:    paddd %xmm1, %xmm1
 ; SSE-NEXT:    paddd %xmm3, %xmm3
 ; SSE-NEXT:    paddd %xmm2, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[0,1,1,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,0],xmm1[1,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[0,1,1,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[3,0],xmm1[1,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,2],xmm1[1,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,0],xmm2[1,0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[1,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,0],xmm3[1,0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[1,3]
-; SSE-NEXT:    xorps %xmm2, %xmm0
-; SSE-NEXT:    xorps %xmm4, %xmm1
+; SSE-NEXT:    xorps %xmm2, %xmm4
 ; SSE-NEXT:    xorps %xmm0, %xmm1
+; SSE-NEXT:    xorps %xmm4, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]

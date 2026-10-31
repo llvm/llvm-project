@@ -50,9 +50,9 @@ define <2 x i128> @PR233186(<2 x i128> %x, <2 x i128> %a) nounwind {
 ; AVX2-NEXT:    movq %r9, %r10
 ; AVX2-NEXT:    movq %rcx, %r9
 ; AVX2-NEXT:    movq %rdi, %rax
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; AVX2-NEXT:    movl %r10d, %ecx
 ; AVX2-NEXT:    shrdq %cl, %rdx, %rsi
 ; AVX2-NEXT:    movl %edi, %ecx
@@ -68,11 +68,11 @@ define <2 x i128> @PR233186(<2 x i128> %x, <2 x i128> %a) nounwind {
 ; AVX2-NEXT:    cmovneq %rdx, %rsi
 ; AVX2-NEXT:    cmovneq %r14, %rdx
 ; AVX2-NEXT:    cmpq $128, %r10
-; AVX2-NEXT:    sbbq $0, %rbx
+; AVX2-NEXT:    sbbq $0, %r11
 ; AVX2-NEXT:    cmovaeq %r14, %rsi
 ; AVX2-NEXT:    cmovaeq %r14, %rdx
 ; AVX2-NEXT:    cmpq $128, %rdi
-; AVX2-NEXT:    sbbq $0, %r11
+; AVX2-NEXT:    sbbq $0, %rbx
 ; AVX2-NEXT:    cmovaeq %r14, %r9
 ; AVX2-NEXT:    cmovaeq %r14, %r8
 ; AVX2-NEXT:    movq %r8, 24(%rax)

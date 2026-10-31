@@ -678,55 +678,30 @@ define <64 x i8> @_mm512_packus_epi16_manual(<32 x i16> %a, <32 x i16> %b) nounw
 }
 
 define <8 x i16> @_mm_packus_epi32_manual(<4 x i32> %a, <4 x i32> %b) nounwind {
-; X86-SSE2-LABEL: _mm_packus_epi32_manual:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm2
-; X86-SSE2-NEXT:    pand %xmm1, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm1
-; X86-SSE2-NEXT:    pand %xmm1, %xmm0
-; X86-SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535]
-; X86-SSE2-NEXT:    movdqa %xmm1, %xmm4
-; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm4
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm4
-; X86-SSE2-NEXT:    por %xmm4, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm1
-; X86-SSE2-NEXT:    por %xmm2, %xmm1
-; X86-SSE2-NEXT:    pslld $16, %xmm1
-; X86-SSE2-NEXT:    psrad $16, %xmm1
-; X86-SSE2-NEXT:    pslld $16, %xmm0
-; X86-SSE2-NEXT:    psrad $16, %xmm0
-; X86-SSE2-NEXT:    packssdw %xmm1, %xmm0
-; X86-SSE2-NEXT:    retl
-;
-; X64-SSE2-LABEL: _mm_packus_epi32_manual:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pxor %xmm2, %xmm2
-; X64-SSE2-NEXT:    movdqa %xmm1, %xmm3
-; X64-SSE2-NEXT:    pcmpgtd %xmm2, %xmm3
-; X64-SSE2-NEXT:    pand %xmm1, %xmm3
-; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X64-SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
-; X64-SSE2-NEXT:    pand %xmm1, %xmm0
-; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,65535]
-; X64-SSE2-NEXT:    movdqa %xmm2, %xmm4
-; X64-SSE2-NEXT:    pcmpgtd %xmm0, %xmm4
-; X64-SSE2-NEXT:    pxor %xmm1, %xmm4
-; X64-SSE2-NEXT:    por %xmm4, %xmm0
-; X64-SSE2-NEXT:    pcmpgtd %xmm3, %xmm2
-; X64-SSE2-NEXT:    pxor %xmm1, %xmm2
-; X64-SSE2-NEXT:    por %xmm3, %xmm2
-; X64-SSE2-NEXT:    pslld $16, %xmm2
-; X64-SSE2-NEXT:    psrad $16, %xmm2
-; X64-SSE2-NEXT:    pslld $16, %xmm0
-; X64-SSE2-NEXT:    psrad $16, %xmm0
-; X64-SSE2-NEXT:    packssdw %xmm2, %xmm0
-; X64-SSE2-NEXT:    retq
+; SSE2-LABEL: _mm_packus_epi32_manual:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm3
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,65535]
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSE2-NEXT:    pxor %xmm1, %xmm4
+; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    pcmpgtd %xmm3, %xmm2
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
+; SSE2-NEXT:    pslld $16, %xmm2
+; SSE2-NEXT:    psrad $16, %xmm2
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    packssdw %xmm2, %xmm0
+; SSE2-NEXT:    ret{{[l|q]}}
 ;
 ; SSE4-LABEL: _mm_packus_epi32_manual:
 ; SSE4:       # %bb.0:
@@ -798,46 +773,46 @@ define <16 x i16> @_mm256_packus_epi32_manual(<8 x i32> %a, <8 x i32> %b) nounwi
 ;
 ; X64-SSE2-LABEL: _mm256_packus_epi32_manual:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pxor %xmm5, %xmm5
-; X64-SSE2-NEXT:    movdqa %xmm2, %xmm4
-; X64-SSE2-NEXT:    pcmpgtd %xmm5, %xmm4
-; X64-SSE2-NEXT:    pand %xmm2, %xmm4
+; X64-SSE2-NEXT:    pxor %xmm4, %xmm4
+; X64-SSE2-NEXT:    movdqa %xmm2, %xmm5
+; X64-SSE2-NEXT:    pcmpgtd %xmm4, %xmm5
+; X64-SSE2-NEXT:    pand %xmm2, %xmm5
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; X64-SSE2-NEXT:    pcmpgtd %xmm5, %xmm2
+; X64-SSE2-NEXT:    pcmpgtd %xmm4, %xmm2
 ; X64-SSE2-NEXT:    pand %xmm2, %xmm0
-; X64-SSE2-NEXT:    movdqa %xmm3, %xmm6
-; X64-SSE2-NEXT:    pcmpgtd %xmm5, %xmm6
-; X64-SSE2-NEXT:    pand %xmm3, %xmm6
-; X64-SSE2-NEXT:    movdqa %xmm1, %xmm2
-; X64-SSE2-NEXT:    pcmpgtd %xmm5, %xmm2
-; X64-SSE2-NEXT:    pand %xmm2, %xmm1
-; X64-SSE2-NEXT:    pcmpeqd %xmm5, %xmm5
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
 ; X64-SSE2-NEXT:    movdqa %xmm3, %xmm2
-; X64-SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
-; X64-SSE2-NEXT:    pxor %xmm5, %xmm2
-; X64-SSE2-NEXT:    por %xmm2, %xmm1
-; X64-SSE2-NEXT:    movdqa %xmm3, %xmm2
-; X64-SSE2-NEXT:    pcmpgtd %xmm6, %xmm2
-; X64-SSE2-NEXT:    pxor %xmm5, %xmm2
-; X64-SSE2-NEXT:    por %xmm6, %xmm2
-; X64-SSE2-NEXT:    movdqa %xmm3, %xmm6
-; X64-SSE2-NEXT:    pcmpgtd %xmm0, %xmm6
-; X64-SSE2-NEXT:    pxor %xmm5, %xmm6
-; X64-SSE2-NEXT:    por %xmm6, %xmm0
+; X64-SSE2-NEXT:    pcmpgtd %xmm4, %xmm2
+; X64-SSE2-NEXT:    pand %xmm3, %xmm2
+; X64-SSE2-NEXT:    movdqa %xmm1, %xmm3
 ; X64-SSE2-NEXT:    pcmpgtd %xmm4, %xmm3
-; X64-SSE2-NEXT:    pxor %xmm5, %xmm3
-; X64-SSE2-NEXT:    por %xmm4, %xmm3
-; X64-SSE2-NEXT:    pslld $16, %xmm3
-; X64-SSE2-NEXT:    psrad $16, %xmm3
+; X64-SSE2-NEXT:    pand %xmm3, %xmm1
+; X64-SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
+; X64-SSE2-NEXT:    movdqa %xmm4, %xmm6
+; X64-SSE2-NEXT:    pcmpgtd %xmm1, %xmm6
+; X64-SSE2-NEXT:    pxor %xmm3, %xmm6
+; X64-SSE2-NEXT:    por %xmm6, %xmm1
+; X64-SSE2-NEXT:    movdqa %xmm4, %xmm6
+; X64-SSE2-NEXT:    pcmpgtd %xmm2, %xmm6
+; X64-SSE2-NEXT:    pxor %xmm3, %xmm6
+; X64-SSE2-NEXT:    por %xmm2, %xmm6
+; X64-SSE2-NEXT:    movdqa %xmm4, %xmm2
+; X64-SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; X64-SSE2-NEXT:    pxor %xmm3, %xmm2
+; X64-SSE2-NEXT:    por %xmm2, %xmm0
+; X64-SSE2-NEXT:    pcmpgtd %xmm5, %xmm4
+; X64-SSE2-NEXT:    pxor %xmm3, %xmm4
+; X64-SSE2-NEXT:    por %xmm5, %xmm4
+; X64-SSE2-NEXT:    pslld $16, %xmm4
+; X64-SSE2-NEXT:    psrad $16, %xmm4
 ; X64-SSE2-NEXT:    pslld $16, %xmm0
 ; X64-SSE2-NEXT:    psrad $16, %xmm0
-; X64-SSE2-NEXT:    packssdw %xmm3, %xmm0
-; X64-SSE2-NEXT:    pslld $16, %xmm2
-; X64-SSE2-NEXT:    psrad $16, %xmm2
+; X64-SSE2-NEXT:    packssdw %xmm4, %xmm0
+; X64-SSE2-NEXT:    pslld $16, %xmm6
+; X64-SSE2-NEXT:    psrad $16, %xmm6
 ; X64-SSE2-NEXT:    pslld $16, %xmm1
 ; X64-SSE2-NEXT:    psrad $16, %xmm1
-; X64-SSE2-NEXT:    packssdw %xmm2, %xmm1
+; X64-SSE2-NEXT:    packssdw %xmm6, %xmm1
 ; X64-SSE2-NEXT:    retq
 ;
 ; X86-SSE4-LABEL: _mm256_packus_epi32_manual:
@@ -893,93 +868,93 @@ define <32 x i16> @_mm512_packus_epi32_manual(<16 x i32> %a, <16 x i32> %b) noun
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm6
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE2-NEXT:    movdqa 56(%ebp), %xmm4
-; X86-SSE2-NEXT:    movdqa 40(%ebp), %xmm0
+; X86-SSE2-NEXT:    movdqa 56(%ebp), %xmm3
+; X86-SSE2-NEXT:    movdqa 40(%ebp), %xmm4
 ; X86-SSE2-NEXT:    movdqa 24(%ebp), %xmm5
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
-; X86-SSE2-NEXT:    movdqa %xmm5, %xmm7
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm7
-; X86-SSE2-NEXT:    pand %xmm5, %xmm7
-; X86-SSE2-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    pxor %xmm7, %xmm7
+; X86-SSE2-NEXT:    movdqa %xmm5, %xmm0
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm0
+; X86-SSE2-NEXT:    pand %xmm5, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm5
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
-; X86-SSE2-NEXT:    pand %xmm5, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm5
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
-; X86-SSE2-NEXT:    pand %xmm0, %xmm5
-; X86-SSE2-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm0
-; X86-SSE2-NEXT:    pand %xmm0, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm0
-; X86-SSE2-NEXT:    pand %xmm4, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm6, %xmm4
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm4
-; X86-SSE2-NEXT:    pand %xmm4, %xmm6
-; X86-SSE2-NEXT:    movdqa %xmm6, (%esp) # 16-byte Spill
-; X86-SSE2-NEXT:    movdqa 72(%ebp), %xmm4
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm7
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm7
-; X86-SSE2-NEXT:    pand %xmm4, %xmm7
-; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm4
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm5
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
-; X86-SSE2-NEXT:    pand %xmm4, %xmm5
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm6
-; X86-SSE2-NEXT:    pcmpgtd %xmm5, %xmm6
-; X86-SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm6
-; X86-SSE2-NEXT:    por %xmm5, %xmm6
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm5
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm5
-; X86-SSE2-NEXT:    por %xmm7, %xmm5
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm7
-; X86-SSE2-NEXT:    movdqa (%esp), %xmm3 # 16-byte Reload
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm7
-; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm7
-; X86-SSE2-NEXT:    por %xmm7, %xmm3
-; X86-SSE2-NEXT:    movdqa %xmm3, (%esp) # 16-byte Spill
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm7
-; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm7
-; X86-SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm7
-; X86-SSE2-NEXT:    por %xmm0, %xmm7
+; X86-SSE2-NEXT:    pand %xmm5, %xmm1
 ; X86-SSE2-NEXT:    movdqa %xmm4, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm0
-; X86-SSE2-NEXT:    por %xmm0, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm0
-; X86-SSE2-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm3 # 16-byte Reload
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm0
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm0
+; X86-SSE2-NEXT:    pand %xmm4, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    movdqa %xmm2, %xmm4
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm4
+; X86-SSE2-NEXT:    pand %xmm4, %xmm2
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm4
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm4
+; X86-SSE2-NEXT:    pand %xmm3, %xmm4
+; X86-SSE2-NEXT:    movdqa %xmm6, %xmm3
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm3
+; X86-SSE2-NEXT:    pand %xmm3, %xmm6
+; X86-SSE2-NEXT:    movdqa %xmm6, (%esp) # 16-byte Spill
+; X86-SSE2-NEXT:    movdqa 72(%ebp), %xmm3
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm0
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm0
+; X86-SSE2-NEXT:    pand %xmm3, %xmm0
+; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm3
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm5
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm5
+; X86-SSE2-NEXT:    pand %xmm3, %xmm5
+; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm5, %xmm6
+; X86-SSE2-NEXT:    pcmpeqd %xmm7, %xmm7
+; X86-SSE2-NEXT:    pxor %xmm7, %xmm6
+; X86-SSE2-NEXT:    por %xmm5, %xmm6
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm5
+; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm5
+; X86-SSE2-NEXT:    pxor %xmm7, %xmm5
+; X86-SSE2-NEXT:    por %xmm0, %xmm5
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm0
+; X86-SSE2-NEXT:    movdqa (%esp), %xmm7 # 16-byte Reload
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm0
 ; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    por %xmm3, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm3
-; X86-SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
-; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3
-; X86-SSE2-NEXT:    por %xmm3, %xmm1
-; X86-SSE2-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm3 # 16-byte Reload
-; X86-SSE2-NEXT:    pcmpgtd %xmm3, %xmm4
+; X86-SSE2-NEXT:    por %xmm0, %xmm7
+; X86-SSE2-NEXT:    movdqa %xmm7, (%esp) # 16-byte Spill
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm0
+; X86-SSE2-NEXT:    pcmpgtd %xmm4, %xmm0
+; X86-SSE2-NEXT:    pcmpeqd %xmm7, %xmm7
+; X86-SSE2-NEXT:    pxor %xmm7, %xmm0
+; X86-SSE2-NEXT:    por %xmm4, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm4
+; X86-SSE2-NEXT:    pcmpgtd %xmm2, %xmm4
+; X86-SSE2-NEXT:    pxor %xmm7, %xmm4
+; X86-SSE2-NEXT:    por %xmm4, %xmm2
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm4
+; X86-SSE2-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm4
 ; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4
-; X86-SSE2-NEXT:    por %xmm3, %xmm4
-; X86-SSE2-NEXT:    pslld $16, %xmm4
-; X86-SSE2-NEXT:    psrad $16, %xmm4
+; X86-SSE2-NEXT:    por %xmm7, %xmm4
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm7
+; X86-SSE2-NEXT:    pcmpgtd %xmm1, %xmm7
+; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm7
+; X86-SSE2-NEXT:    por %xmm7, %xmm1
+; X86-SSE2-NEXT:    movdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
+; X86-SSE2-NEXT:    pcmpgtd %xmm7, %xmm3
+; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3
+; X86-SSE2-NEXT:    por %xmm7, %xmm3
+; X86-SSE2-NEXT:    pslld $16, %xmm3
+; X86-SSE2-NEXT:    psrad $16, %xmm3
 ; X86-SSE2-NEXT:    pslld $16, %xmm1
 ; X86-SSE2-NEXT:    psrad $16, %xmm1
-; X86-SSE2-NEXT:    packssdw %xmm4, %xmm1
-; X86-SSE2-NEXT:    pslld $16, %xmm0
-; X86-SSE2-NEXT:    psrad $16, %xmm0
+; X86-SSE2-NEXT:    packssdw %xmm3, %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm4
+; X86-SSE2-NEXT:    psrad $16, %xmm4
 ; X86-SSE2-NEXT:    pslld $16, %xmm2
 ; X86-SSE2-NEXT:    psrad $16, %xmm2
-; X86-SSE2-NEXT:    packssdw %xmm0, %xmm2
-; X86-SSE2-NEXT:    pslld $16, %xmm7
-; X86-SSE2-NEXT:    psrad $16, %xmm7
+; X86-SSE2-NEXT:    packssdw %xmm4, %xmm2
+; X86-SSE2-NEXT:    pslld $16, %xmm0
+; X86-SSE2-NEXT:    psrad $16, %xmm0
 ; X86-SSE2-NEXT:    movdqa (%esp), %xmm3 # 16-byte Reload
 ; X86-SSE2-NEXT:    pslld $16, %xmm3
 ; X86-SSE2-NEXT:    psrad $16, %xmm3
-; X86-SSE2-NEXT:    packssdw %xmm7, %xmm3
+; X86-SSE2-NEXT:    packssdw %xmm0, %xmm3
 ; X86-SSE2-NEXT:    pslld $16, %xmm5
 ; X86-SSE2-NEXT:    psrad $16, %xmm5
 ; X86-SSE2-NEXT:    pslld $16, %xmm6
@@ -995,79 +970,79 @@ define <32 x i16> @_mm512_packus_epi32_manual(<16 x i32> %a, <16 x i32> %b) noun
 ;
 ; X64-SSE2-LABEL: _mm512_packus_epi32_manual:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pxor %xmm11, %xmm11
+; X64-SSE2-NEXT:    pxor %xmm10, %xmm10
 ; X64-SSE2-NEXT:    movdqa %xmm4, %xmm8
-; X64-SSE2-NEXT:    pcmpgtd %xmm11, %xmm8
+; X64-SSE2-NEXT:    pcmpgtd %xmm10, %xmm8
 ; X64-SSE2-NEXT:    pand %xmm4, %xmm8
 ; X64-SSE2-NEXT:    movdqa %xmm0, %xmm4
-; X64-SSE2-NEXT:    pcmpgtd %xmm11, %xmm4
+; X64-SSE2-NEXT:    pcmpgtd %xmm10, %xmm4
 ; X64-SSE2-NEXT:    pand %xmm4, %xmm0
 ; X64-SSE2-NEXT:    movdqa %xmm5, %xmm9
-; X64-SSE2-NEXT:    pcmpgtd %xmm11, %xmm9
+; X64-SSE2-NEXT:    pcmpgtd %xmm10, %xmm9
 ; X64-SSE2-NEXT:    pand %xmm5, %xmm9
 ; X64-SSE2-NEXT:    movdqa %xmm1, %xmm4
-; X64-SSE2-NEXT:    pcmpgtd %xmm11, %xmm4
+; X64-SSE2-NEXT:    pcmpgtd %xmm10, %xmm4
 ; X64-SSE2-NEXT:    pand %xmm4, %xmm1
-; X64-SSE2-NEXT:    movdqa %xmm6, %xmm10
-; X64-SSE2-NEXT:    pcmpgtd %xmm11, %xmm10
-; X64-SSE2-NEXT:    pand %xmm6, %xmm10
+; X64-SSE2-NEXT:    movdqa %xmm6, %xmm11
+; X64-SSE2-NEXT:    pcmpgtd %xmm10, %xmm11
+; X64-SSE2-NEXT:    pand %xmm6, %xmm11
 ; X64-SSE2-NEXT:    movdqa %xmm2, %xmm4
-; X64-SSE2-NEXT:    pcmpgtd %xmm11, %xmm4
+; X64-SSE2-NEXT:    pcmpgtd %xmm10, %xmm4
 ; X64-SSE2-NEXT:    pand %xmm4, %xmm2
-; X64-SSE2-NEXT:    movdqa %xmm7, %xmm5
-; X64-SSE2-NEXT:    pcmpgtd %xmm11, %xmm5
-; X64-SSE2-NEXT:    pand %xmm7, %xmm5
+; X64-SSE2-NEXT:    movdqa %xmm7, %xmm6
+; X64-SSE2-NEXT:    pcmpgtd %xmm10, %xmm6
+; X64-SSE2-NEXT:    pand %xmm7, %xmm6
 ; X64-SSE2-NEXT:    movdqa %xmm3, %xmm4
-; X64-SSE2-NEXT:    pcmpgtd %xmm11, %xmm4
+; X64-SSE2-NEXT:    pcmpgtd %xmm10, %xmm4
 ; X64-SSE2-NEXT:    pand %xmm4, %xmm3
 ; X64-SSE2-NEXT:    pcmpeqd %xmm7, %xmm7
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [65535,65535,65535,65535]
-; X64-SSE2-NEXT:    movdqa %xmm6, %xmm4
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [65535,65535,65535,65535]
+; X64-SSE2-NEXT:    movdqa %xmm5, %xmm4
 ; X64-SSE2-NEXT:    pcmpgtd %xmm3, %xmm4
 ; X64-SSE2-NEXT:    pxor %xmm7, %xmm4
 ; X64-SSE2-NEXT:    por %xmm4, %xmm3
-; X64-SSE2-NEXT:    movdqa %xmm6, %xmm4
-; X64-SSE2-NEXT:    pcmpgtd %xmm5, %xmm4
+; X64-SSE2-NEXT:    movdqa %xmm5, %xmm4
+; X64-SSE2-NEXT:    pcmpgtd %xmm6, %xmm4
 ; X64-SSE2-NEXT:    pxor %xmm7, %xmm4
-; X64-SSE2-NEXT:    por %xmm5, %xmm4
-; X64-SSE2-NEXT:    movdqa %xmm6, %xmm5
-; X64-SSE2-NEXT:    pcmpgtd %xmm2, %xmm5
-; X64-SSE2-NEXT:    pxor %xmm7, %xmm5
-; X64-SSE2-NEXT:    por %xmm5, %xmm2
-; X64-SSE2-NEXT:    movdqa %xmm6, %xmm5
-; X64-SSE2-NEXT:    pcmpgtd %xmm10, %xmm5
-; X64-SSE2-NEXT:    pxor %xmm7, %xmm5
-; X64-SSE2-NEXT:    por %xmm10, %xmm5
-; X64-SSE2-NEXT:    movdqa %xmm6, %xmm10
+; X64-SSE2-NEXT:    por %xmm6, %xmm4
+; X64-SSE2-NEXT:    movdqa %xmm5, %xmm6
+; X64-SSE2-NEXT:    pcmpgtd %xmm2, %xmm6
+; X64-SSE2-NEXT:    pxor %xmm7, %xmm6
+; X64-SSE2-NEXT:    por %xmm6, %xmm2
+; X64-SSE2-NEXT:    movdqa %xmm5, %xmm6
+; X64-SSE2-NEXT:    pcmpgtd %xmm11, %xmm6
+; X64-SSE2-NEXT:    pxor %xmm7, %xmm6
+; X64-SSE2-NEXT:    por %xmm11, %xmm6
+; X64-SSE2-NEXT:    movdqa %xmm5, %xmm10
 ; X64-SSE2-NEXT:    pcmpgtd %xmm1, %xmm10
 ; X64-SSE2-NEXT:    pxor %xmm7, %xmm10
 ; X64-SSE2-NEXT:    por %xmm10, %xmm1
-; X64-SSE2-NEXT:    movdqa %xmm6, %xmm10
+; X64-SSE2-NEXT:    movdqa %xmm5, %xmm10
 ; X64-SSE2-NEXT:    pcmpgtd %xmm9, %xmm10
 ; X64-SSE2-NEXT:    pxor %xmm7, %xmm10
 ; X64-SSE2-NEXT:    por %xmm9, %xmm10
-; X64-SSE2-NEXT:    movdqa %xmm6, %xmm9
+; X64-SSE2-NEXT:    movdqa %xmm5, %xmm9
 ; X64-SSE2-NEXT:    pcmpgtd %xmm0, %xmm9
 ; X64-SSE2-NEXT:    pxor %xmm7, %xmm9
 ; X64-SSE2-NEXT:    por %xmm9, %xmm0
-; X64-SSE2-NEXT:    pcmpgtd %xmm8, %xmm6
-; X64-SSE2-NEXT:    pxor %xmm7, %xmm6
-; X64-SSE2-NEXT:    por %xmm8, %xmm6
-; X64-SSE2-NEXT:    pslld $16, %xmm6
-; X64-SSE2-NEXT:    psrad $16, %xmm6
+; X64-SSE2-NEXT:    pcmpgtd %xmm8, %xmm5
+; X64-SSE2-NEXT:    pxor %xmm7, %xmm5
+; X64-SSE2-NEXT:    por %xmm8, %xmm5
+; X64-SSE2-NEXT:    pslld $16, %xmm5
+; X64-SSE2-NEXT:    psrad $16, %xmm5
 ; X64-SSE2-NEXT:    pslld $16, %xmm0
 ; X64-SSE2-NEXT:    psrad $16, %xmm0
-; X64-SSE2-NEXT:    packssdw %xmm6, %xmm0
+; X64-SSE2-NEXT:    packssdw %xmm5, %xmm0
 ; X64-SSE2-NEXT:    pslld $16, %xmm10
 ; X64-SSE2-NEXT:    psrad $16, %xmm10
 ; X64-SSE2-NEXT:    pslld $16, %xmm1
 ; X64-SSE2-NEXT:    psrad $16, %xmm1
 ; X64-SSE2-NEXT:    packssdw %xmm10, %xmm1
-; X64-SSE2-NEXT:    pslld $16, %xmm5
-; X64-SSE2-NEXT:    psrad $16, %xmm5
+; X64-SSE2-NEXT:    pslld $16, %xmm6
+; X64-SSE2-NEXT:    psrad $16, %xmm6
 ; X64-SSE2-NEXT:    pslld $16, %xmm2
 ; X64-SSE2-NEXT:    psrad $16, %xmm2
-; X64-SSE2-NEXT:    packssdw %xmm5, %xmm2
+; X64-SSE2-NEXT:    packssdw %xmm6, %xmm2
 ; X64-SSE2-NEXT:    pslld $16, %xmm4
 ; X64-SSE2-NEXT:    psrad $16, %xmm4
 ; X64-SSE2-NEXT:    pslld $16, %xmm3

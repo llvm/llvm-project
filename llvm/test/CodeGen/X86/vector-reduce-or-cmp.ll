@@ -2138,15 +2138,15 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) nounwind {
 ; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm0
 ; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-SSE4-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE4-NEXT:    movd %xmm1, %ecx
-; X86-SSE4-NEXT:    pextrb $4, %xmm1, %eax
-; X86-SSE4-NEXT:    andb $1, %al
-; X86-SSE4-NEXT:    addb %al, %al
-; X86-SSE4-NEXT:    subb %cl, %al
-; X86-SSE4-NEXT:    pextrb $8, %xmm1, %ecx
+; X86-SSE4-NEXT:    movd %xmm1, %eax
+; X86-SSE4-NEXT:    pextrb $4, %xmm1, %ecx
 ; X86-SSE4-NEXT:    andb $1, %cl
-; X86-SSE4-NEXT:    shlb $2, %cl
-; X86-SSE4-NEXT:    orb %al, %cl
+; X86-SSE4-NEXT:    addb %cl, %cl
+; X86-SSE4-NEXT:    subb %al, %cl
+; X86-SSE4-NEXT:    pextrb $8, %xmm1, %eax
+; X86-SSE4-NEXT:    andb $1, %al
+; X86-SSE4-NEXT:    shlb $2, %al
+; X86-SSE4-NEXT:    orb %cl, %al
 ; X86-SSE4-NEXT:    je .LBB30_2
 ; X86-SSE4-NEXT:  # %bb.1: # %bb3
 ; X86-SSE4-NEXT:    xorl %eax, %eax
@@ -2185,15 +2185,15 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) nounwind {
 ; X86-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vmovd %xmm0, %ecx
-; X86-AVX1-NEXT:    vpextrb $4, %xmm0, %eax
-; X86-AVX1-NEXT:    andb $1, %al
-; X86-AVX1-NEXT:    addb %al, %al
-; X86-AVX1-NEXT:    subb %cl, %al
-; X86-AVX1-NEXT:    vpextrb $8, %xmm0, %ecx
+; X86-AVX1-NEXT:    vmovd %xmm0, %eax
+; X86-AVX1-NEXT:    vpextrb $4, %xmm0, %ecx
 ; X86-AVX1-NEXT:    andb $1, %cl
-; X86-AVX1-NEXT:    shlb $2, %cl
-; X86-AVX1-NEXT:    orb %al, %cl
+; X86-AVX1-NEXT:    addb %cl, %cl
+; X86-AVX1-NEXT:    subb %al, %cl
+; X86-AVX1-NEXT:    vpextrb $8, %xmm0, %eax
+; X86-AVX1-NEXT:    andb $1, %al
+; X86-AVX1-NEXT:    shlb $2, %al
+; X86-AVX1-NEXT:    orb %cl, %al
 ; X86-AVX1-NEXT:    je .LBB30_2
 ; X86-AVX1-NEXT:  # %bb.1: # %bb3
 ; X86-AVX1-NEXT:    xorl %eax, %eax
@@ -2232,15 +2232,15 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) nounwind {
 ; X86-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X86-AVX2-NEXT:    vmovd %xmm0, %ecx
-; X86-AVX2-NEXT:    vpextrb $4, %xmm0, %eax
-; X86-AVX2-NEXT:    andb $1, %al
-; X86-AVX2-NEXT:    addb %al, %al
-; X86-AVX2-NEXT:    subb %cl, %al
-; X86-AVX2-NEXT:    vpextrb $8, %xmm0, %ecx
+; X86-AVX2-NEXT:    vmovd %xmm0, %eax
+; X86-AVX2-NEXT:    vpextrb $4, %xmm0, %ecx
 ; X86-AVX2-NEXT:    andb $1, %cl
-; X86-AVX2-NEXT:    shlb $2, %cl
-; X86-AVX2-NEXT:    orb %al, %cl
+; X86-AVX2-NEXT:    addb %cl, %cl
+; X86-AVX2-NEXT:    subb %al, %cl
+; X86-AVX2-NEXT:    vpextrb $8, %xmm0, %eax
+; X86-AVX2-NEXT:    andb $1, %al
+; X86-AVX2-NEXT:    shlb $2, %al
+; X86-AVX2-NEXT:    orb %cl, %al
 ; X86-AVX2-NEXT:    je .LBB30_2
 ; X86-AVX2-NEXT:  # %bb.1: # %bb3
 ; X86-AVX2-NEXT:    xorl %eax, %eax

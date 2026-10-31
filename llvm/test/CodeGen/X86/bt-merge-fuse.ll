@@ -209,16 +209,16 @@ define i1 @no_fuse_diff_pos_or(ptr %word, i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    movl %esi, %edi
 ; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:  .LBB4_2:
-; X86-NEXT:    movl (%edx), %ebx
-; X86-NEXT:    movl 4(%edx), %ecx
-; X86-NEXT:    orl %ecx, %edi
-; X86-NEXT:    orl %ebx, %esi
+; X86-NEXT:    movl (%edx), %ecx
+; X86-NEXT:    movl 4(%edx), %ebx
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    orl %ecx, %esi
 ; X86-NEXT:    testb $32, %al
 ; X86-NEXT:    jne .LBB4_4
 ; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %ebx, %ecx
+; X86-NEXT:    movl %ecx, %ebx
 ; X86-NEXT:  .LBB4_4:
-; X86-NEXT:    btl %eax, %ecx
+; X86-NEXT:    btl %eax, %ebx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    movl %esi, (%edx)
 ; X86-NEXT:    movl %edi, 4(%edx)
@@ -312,16 +312,16 @@ define i1 @no_fuse_diff_pos_and(ptr %word, i64 %a, i64 %b) nounwind {
 ; X86-NEXT:  .LBB6_2:
 ; X86-NEXT:    notl %edi
 ; X86-NEXT:    notl %esi
-; X86-NEXT:    movl (%edx), %ebx
-; X86-NEXT:    movl 4(%edx), %ecx
-; X86-NEXT:    andl %ecx, %edi
-; X86-NEXT:    andl %ebx, %esi
+; X86-NEXT:    movl (%edx), %ecx
+; X86-NEXT:    movl 4(%edx), %ebx
+; X86-NEXT:    andl %ebx, %edi
+; X86-NEXT:    andl %ecx, %esi
 ; X86-NEXT:    testb $32, %al
 ; X86-NEXT:    jne .LBB6_4
 ; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %ebx, %ecx
+; X86-NEXT:    movl %ecx, %ebx
 ; X86-NEXT:  .LBB6_4:
-; X86-NEXT:    btl %eax, %ecx
+; X86-NEXT:    btl %eax, %ebx
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    movl %esi, (%edx)
 ; X86-NEXT:    movl %edi, 4(%edx)

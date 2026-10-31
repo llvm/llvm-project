@@ -158,47 +158,47 @@ define <2 x i64> @srem_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m) {
 define <4 x i64> @srem_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; SSE2-LABEL: srem_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[2,2,3,3]
-; SSE2-NEXT:    pslld $31, %xmm6
-; SSE2-NEXT:    psrad $31, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,2,3,3]
+; SSE2-NEXT:    pslld $31, %xmm5
+; SSE2-NEXT:    psrad $31, %xmm5
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,1,1]
 ; SSE2-NEXT:    pslld $31, %xmm4
 ; SSE2-NEXT:    psrad $31, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [1,1]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [1,1]
 ; SSE2-NEXT:    pand %xmm4, %xmm2
-; SSE2-NEXT:    pandn %xmm7, %xmm4
+; SSE2-NEXT:    pandn %xmm6, %xmm4
 ; SSE2-NEXT:    por %xmm2, %xmm4
 ; SSE2-NEXT:    movq %xmm4, %rcx
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    cqto
 ; SSE2-NEXT:    idivq %rcx
+; SSE2-NEXT:    movq %rdx, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
+; SSE2-NEXT:    movq %xmm4, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    cqto
+; SSE2-NEXT:    idivq %rcx
 ; SSE2-NEXT:    movq %rdx, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[2,3,2,3]
-; SSE2-NEXT:    movq %xmm2, %rcx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm5[2,3,2,3]
-; SSE2-NEXT:    movq %xmm2, %rax
-; SSE2-NEXT:    cqto
-; SSE2-NEXT:    idivq %rcx
-; SSE2-NEXT:    movq %rdx, %xmm2
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; SSE2-NEXT:    pand %xmm6, %xmm3
-; SSE2-NEXT:    pandn %xmm7, %xmm6
-; SSE2-NEXT:    por %xmm3, %xmm6
-; SSE2-NEXT:    movq %xmm6, %rcx
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; SSE2-NEXT:    pand %xmm5, %xmm3
+; SSE2-NEXT:    pandn %xmm6, %xmm5
+; SSE2-NEXT:    por %xmm3, %xmm5
+; SSE2-NEXT:    movq %xmm5, %rcx
 ; SSE2-NEXT:    movq %xmm1, %rax
 ; SSE2-NEXT:    cqto
 ; SSE2-NEXT:    idivq %rcx
-; SSE2-NEXT:    movq %rdx, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[2,3,2,3]
-; SSE2-NEXT:    movq %xmm3, %rcx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    movq %rdx, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[2,3,2,3]
+; SSE2-NEXT:    movq %xmm0, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    cqto
 ; SSE2-NEXT:    idivq %rcx
-; SSE2-NEXT:    movq %rdx, %xmm1
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    movq %rdx, %xmm0
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: srem_v4i64:
@@ -495,9 +495,9 @@ define <2 x i128> @srem_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; SSE42-NEXT:    pushq %rbx
 ; SSE42-NEXT:    pushq %rax
 ; SSE42-NEXT:    movdqa %xmm0, %xmm1
-; SSE42-NEXT:    movq %r9, %r12
+; SSE42-NEXT:    movq %r9, %r15
 ; SSE42-NEXT:    movq %rdx, %r14
-; SSE42-NEXT:    movq %rsi, %r15
+; SSE42-NEXT:    movq %rsi, %r12
 ; SSE42-NEXT:    movq %rdi, %rbx
 ; SSE42-NEXT:    movups {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pextrd $2, %xmm0, %eax
@@ -518,16 +518,16 @@ define <2 x i128> @srem_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; SSE42-NEXT:    xorl %ecx, %ecx
 ; SSE42-NEXT:    testb $1, %bpl
 ; SSE42-NEXT:    movl $1, %eax
-; SSE42-NEXT:    cmovneq %r12, %rax
-; SSE42-NEXT:    movq %rdx, %r12
+; SSE42-NEXT:    cmovneq %r15, %rax
+; SSE42-NEXT:    movq %rdx, %r15
 ; SSE42-NEXT:    cmovneq {{[0-9]+}}(%rsp), %rcx
-; SSE42-NEXT:    movq %r15, %rdi
+; SSE42-NEXT:    movq %r12, %rdi
 ; SSE42-NEXT:    movq %r14, %rsi
 ; SSE42-NEXT:    movq %rax, %rdx
 ; SSE42-NEXT:    callq __modti3@PLT
 ; SSE42-NEXT:    movq %rdx, 8(%rbx)
 ; SSE42-NEXT:    movq %rax, (%rbx)
-; SSE42-NEXT:    movq %r12, 24(%rbx)
+; SSE42-NEXT:    movq %r15, 24(%rbx)
 ; SSE42-NEXT:    movq %r13, 16(%rbx)
 ; SSE42-NEXT:    movq %rbx, %rax
 ; SSE42-NEXT:    addq $8, %rsp
@@ -548,9 +548,9 @@ define <2 x i128> @srem_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; AVX2-NEXT:    pushq %r12
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    pushq %rax
-; AVX2-NEXT:    movq %r9, %r12
-; AVX2-NEXT:    movq %rdx, %r14
-; AVX2-NEXT:    movq %rsi, %r15
+; AVX2-NEXT:    movq %r9, %r14
+; AVX2-NEXT:    movq %rdx, %r15
+; AVX2-NEXT:    movq %rsi, %r12
 ; AVX2-NEXT:    movq %rdi, %rbx
 ; AVX2-NEXT:    vpextrd $2, %xmm0, %eax
 ; AVX2-NEXT:    andl $1, %eax
@@ -569,18 +569,18 @@ define <2 x i128> @srem_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    testb $1, %bpl
 ; AVX2-NEXT:    movl $1, %r8d
-; AVX2-NEXT:    cmovneq %r12, %r8
-; AVX2-NEXT:    movq %rax, %r12
+; AVX2-NEXT:    cmovneq %r14, %r8
+; AVX2-NEXT:    movq %rax, %r14
 ; AVX2-NEXT:    movq %rdx, %r13
 ; AVX2-NEXT:    cmovneq {{[0-9]+}}(%rsp), %rcx
-; AVX2-NEXT:    movq %r15, %rdi
-; AVX2-NEXT:    movq %r14, %rsi
+; AVX2-NEXT:    movq %r12, %rdi
+; AVX2-NEXT:    movq %r15, %rsi
 ; AVX2-NEXT:    movq %r8, %rdx
 ; AVX2-NEXT:    callq __modti3@PLT
 ; AVX2-NEXT:    movq %rdx, 8(%rbx)
 ; AVX2-NEXT:    movq %rax, (%rbx)
 ; AVX2-NEXT:    movq %r13, 24(%rbx)
-; AVX2-NEXT:    movq %r12, 16(%rbx)
+; AVX2-NEXT:    movq %r14, 16(%rbx)
 ; AVX2-NEXT:    movq %rbx, %rax
 ; AVX2-NEXT:    addq $8, %rsp
 ; AVX2-NEXT:    popq %rbx
@@ -600,9 +600,9 @@ define <2 x i128> @srem_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; AVX512-NEXT:    pushq %r12
 ; AVX512-NEXT:    pushq %rbx
 ; AVX512-NEXT:    pushq %rax
-; AVX512-NEXT:    movq %r9, %r12
+; AVX512-NEXT:    movq %r9, %r15
 ; AVX512-NEXT:    movq %rdx, (%rsp) # 8-byte Spill
-; AVX512-NEXT:    movq %rsi, %r15
+; AVX512-NEXT:    movq %rsi, %r12
 ; AVX512-NEXT:    movq %rdi, %rbx
 ; AVX512-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmovq2m %xmm0, %k0
@@ -625,9 +625,9 @@ define <2 x i128> @srem_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    testb $1, %r14b
 ; AVX512-NEXT:    movl $1, %edx
-; AVX512-NEXT:    cmovneq %r12, %rdx
+; AVX512-NEXT:    cmovneq %r15, %rdx
 ; AVX512-NEXT:    cmovneq {{[0-9]+}}(%rsp), %rcx
-; AVX512-NEXT:    movq %r15, %rdi
+; AVX512-NEXT:    movq %r12, %rdi
 ; AVX512-NEXT:    movq (%rsp), %rsi # 8-byte Reload
 ; AVX512-NEXT:    callq __modti3@PLT
 ; AVX512-NEXT:    movq %rdx, 8(%rbx)
@@ -651,21 +651,21 @@ define <2 x i128> @srem_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 define <3 x i10> @srem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SSE2-LABEL: srem_v3i10:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %esi, %xmm1
-; SSE2-NEXT:    movd %edi, %xmm0
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    movd %edx, %xmm1
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    movd %r8d, %xmm1
+; SSE2-NEXT:    movd %esi, %xmm0
+; SSE2-NEXT:    movd %edi, %xmm1
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    movd %edx, %xmm0
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE2-NEXT:    movd %r8d, %xmm0
 ; SSE2-NEXT:    movd %ecx, %xmm2
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; SSE2-NEXT:    movd %r9d, %xmm3
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    pslld $22, %xmm3
 ; SSE2-NEXT:    psrad $22, %xmm3
 ; SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    movdqa %xmm1, %xmm4
 ; SSE2-NEXT:    pslld $22, %xmm4
 ; SSE2-NEXT:    psrad $22, %xmm4
 ; SSE2-NEXT:    cvtdq2ps %xmm4, %xmm4
@@ -674,14 +674,14 @@ define <3 x i10> @srem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SSE2-NEXT:    pmuludq %xmm3, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; SSE2-NEXT:    pmuludq %xmm3, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE2-NEXT:    psubd %xmm2, %xmm0
-; SSE2-NEXT:    pextrw $2, %xmm0, %edx
-; SSE2-NEXT:    pextrw $4, %xmm0, %ecx
-; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pmuludq %xmm3, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; SSE2-NEXT:    psubd %xmm2, %xmm1
+; SSE2-NEXT:    pextrw $2, %xmm1, %edx
+; SSE2-NEXT:    pextrw $4, %xmm1, %ecx
+; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    # kill: def $dx killed $dx killed $edx
 ; SSE2-NEXT:    # kill: def $cx killed $cx killed $ecx

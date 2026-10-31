@@ -522,33 +522,33 @@ define <16 x i32> @pext_v16i32(<16 x i32> %val, <16 x i32> %mask) nounwind {
 ; AVX2-SLOW-NEXT:    vpxor %ymm2, %ymm11, %ymm7
 ; AVX2-SLOW-NEXT:    vpsrld $1, %ymm11, %ymm12
 ; AVX2-SLOW-NEXT:    vpor %ymm7, %ymm12, %ymm7
-; AVX2-SLOW-NEXT:    vpand %ymm7, %ymm8, %ymm12
-; AVX2-SLOW-NEXT:    vpxor %ymm7, %ymm12, %ymm7
-; AVX2-SLOW-NEXT:    vpsrld $2, %ymm12, %ymm8
-; AVX2-SLOW-NEXT:    vpor %ymm7, %ymm8, %ymm7
+; AVX2-SLOW-NEXT:    vpand %ymm7, %ymm8, %ymm8
+; AVX2-SLOW-NEXT:    vpxor %ymm7, %ymm8, %ymm7
+; AVX2-SLOW-NEXT:    vpsrld $2, %ymm8, %ymm12
+; AVX2-SLOW-NEXT:    vpor %ymm7, %ymm12, %ymm7
 ; AVX2-SLOW-NEXT:    vpand %ymm7, %ymm9, %ymm9
 ; AVX2-SLOW-NEXT:    vpxor %ymm7, %ymm9, %ymm7
-; AVX2-SLOW-NEXT:    vpsrld $4, %ymm9, %ymm8
-; AVX2-SLOW-NEXT:    vpor %ymm7, %ymm8, %ymm7
-; AVX2-SLOW-NEXT:    vpand %ymm7, %ymm10, %ymm8
-; AVX2-SLOW-NEXT:    vpxor %ymm7, %ymm8, %ymm7
-; AVX2-SLOW-NEXT:    vpsrld $8, %ymm8, %ymm10
-; AVX2-SLOW-NEXT:    vpor %ymm7, %ymm10, %ymm7
+; AVX2-SLOW-NEXT:    vpsrld $4, %ymm9, %ymm12
+; AVX2-SLOW-NEXT:    vpor %ymm7, %ymm12, %ymm7
+; AVX2-SLOW-NEXT:    vpand %ymm7, %ymm10, %ymm10
+; AVX2-SLOW-NEXT:    vpxor %ymm7, %ymm10, %ymm7
+; AVX2-SLOW-NEXT:    vpsrld $8, %ymm10, %ymm12
+; AVX2-SLOW-NEXT:    vpor %ymm7, %ymm12, %ymm7
 ; AVX2-SLOW-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpand %ymm0, %ymm11, %ymm2
 ; AVX2-SLOW-NEXT:    vpxor %ymm2, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpsrld $1, %ymm2, %ymm2
 ; AVX2-SLOW-NEXT:    vpor %ymm2, %ymm0, %ymm0
-; AVX2-SLOW-NEXT:    vpand %ymm0, %ymm12, %ymm2
+; AVX2-SLOW-NEXT:    vpand %ymm0, %ymm8, %ymm2
 ; AVX2-SLOW-NEXT:    vpxor %ymm2, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpsrld $2, %ymm2, %ymm2
 ; AVX2-SLOW-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpxor %ymm4, %ymm3, %ymm2
-; AVX2-SLOW-NEXT:    vpaddd %ymm2, %ymm2, %ymm10
-; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm4, %ymm10, %ymm2
+; AVX2-SLOW-NEXT:    vpaddd %ymm2, %ymm2, %ymm8
+; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm4, %ymm8, %ymm2
 ; AVX2-SLOW-NEXT:    vpand %ymm0, %ymm9, %ymm9
-; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm4, %ymm10, %ymm11
-; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm10, %ymm12
+; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm4, %ymm8, %ymm11
+; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm8, %ymm12
 ; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm5, %ymm12, %ymm13
 ; AVX2-SLOW-NEXT:    vpxor %ymm0, %ymm9, %ymm0
 ; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm5, %ymm12, %ymm12
@@ -556,43 +556,43 @@ define <16 x i32> @pext_v16i32(<16 x i32> %val, <16 x i32> %mask) nounwind {
 ; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm2 = ymm11[0],ymm2[0],ymm11[1],ymm2[1],ymm11[4],ymm2[4],ymm11[5],ymm2[5]
 ; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm11 = ymm12[0],ymm13[0],ymm12[1],ymm13[1],ymm12[4],ymm13[4],ymm12[5],ymm13[5]
 ; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm2 = ymm2[0],ymm11[0],ymm2[1],ymm11[1],ymm2[4],ymm11[4],ymm2[5],ymm11[5]
-; AVX2-SLOW-NEXT:    vpandn %ymm10, %ymm2, %ymm10
-; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm4, %ymm10, %ymm11
+; AVX2-SLOW-NEXT:    vpandn %ymm8, %ymm2, %ymm11
+; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm4, %ymm11, %ymm8
 ; AVX2-SLOW-NEXT:    vpor %ymm0, %ymm9, %ymm0
-; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm4, %ymm10, %ymm9
-; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm10, %ymm12
+; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm4, %ymm11, %ymm9
+; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm11, %ymm12
 ; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm5, %ymm12, %ymm13
-; AVX2-SLOW-NEXT:    vpand %ymm0, %ymm8, %ymm14
-; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm5, %ymm12, %ymm8
-; AVX2-SLOW-NEXT:    vpxor %ymm0, %ymm14, %ymm0
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm9 = ymm9[0],ymm11[0],ymm9[1],ymm11[1],ymm9[4],ymm11[4],ymm9[5],ymm11[5]
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm8 = ymm8[0],ymm13[0],ymm8[1],ymm13[1],ymm8[4],ymm13[4],ymm8[5],ymm13[5]
+; AVX2-SLOW-NEXT:    vpand %ymm0, %ymm10, %ymm10
+; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm5, %ymm12, %ymm12
+; AVX2-SLOW-NEXT:    vpxor %ymm0, %ymm10, %ymm0
 ; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm8 = ymm9[0],ymm8[0],ymm9[1],ymm8[1],ymm9[4],ymm8[4],ymm9[5],ymm8[5]
-; AVX2-SLOW-NEXT:    vpandn %ymm10, %ymm8, %ymm9
-; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm4, %ymm9, %ymm10
-; AVX2-SLOW-NEXT:    vpsrld $8, %ymm14, %ymm11
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm9 = ymm12[0],ymm13[0],ymm12[1],ymm13[1],ymm12[4],ymm13[4],ymm12[5],ymm13[5]
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm8 = ymm8[0],ymm9[0],ymm8[1],ymm9[1],ymm8[4],ymm9[4],ymm8[5],ymm9[5]
+; AVX2-SLOW-NEXT:    vpandn %ymm11, %ymm8, %ymm9
+; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm4, %ymm9, %ymm11
+; AVX2-SLOW-NEXT:    vpsrld $8, %ymm10, %ymm10
 ; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm4, %ymm9, %ymm12
 ; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm9, %ymm13
 ; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm5, %ymm13, %ymm14
-; AVX2-SLOW-NEXT:    vpor %ymm0, %ymm11, %ymm0
-; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm5, %ymm13, %ymm11
-; AVX2-SLOW-NEXT:    vpand %ymm7, %ymm0, %ymm13
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm7 = ymm12[0],ymm10[0],ymm12[1],ymm10[1],ymm12[4],ymm10[4],ymm12[5],ymm10[5]
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm10 = ymm11[0],ymm14[0],ymm11[1],ymm14[1],ymm11[4],ymm14[4],ymm11[5],ymm14[5]
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm7 = ymm7[0],ymm10[0],ymm7[1],ymm10[1],ymm7[4],ymm10[4],ymm7[5],ymm10[5]
-; AVX2-SLOW-NEXT:    vpandn %ymm9, %ymm7, %ymm9
-; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm4, %ymm9, %ymm10
-; AVX2-SLOW-NEXT:    vpand %ymm6, %ymm13, %ymm6
-; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm4, %ymm9, %ymm11
+; AVX2-SLOW-NEXT:    vpor %ymm0, %ymm10, %ymm0
+; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm5, %ymm13, %ymm10
+; AVX2-SLOW-NEXT:    vpand %ymm7, %ymm0, %ymm7
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm11 = ymm12[0],ymm11[0],ymm12[1],ymm11[1],ymm12[4],ymm11[4],ymm12[5],ymm11[5]
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm10 = ymm10[0],ymm14[0],ymm10[1],ymm14[1],ymm10[4],ymm14[4],ymm10[5],ymm14[5]
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm10 = ymm11[0],ymm10[0],ymm11[1],ymm10[1],ymm11[4],ymm10[4],ymm11[5],ymm10[5]
+; AVX2-SLOW-NEXT:    vpandn %ymm9, %ymm10, %ymm9
+; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm4, %ymm9, %ymm11
+; AVX2-SLOW-NEXT:    vpand %ymm6, %ymm7, %ymm6
+; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm4, %ymm9, %ymm7
 ; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm9, %ymm12
 ; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm5, %ymm12, %ymm13
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm10 = ymm11[0],ymm10[0],ymm11[1],ymm10[1],ymm11[4],ymm10[4],ymm11[5],ymm10[5]
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm7 = ymm7[0],ymm11[0],ymm7[1],ymm11[1],ymm7[4],ymm11[4],ymm7[5],ymm11[5]
 ; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm5, %ymm12, %ymm11
 ; AVX2-SLOW-NEXT:    vpxor %ymm6, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpsrld $16, %ymm6, %ymm6
 ; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm11 = ymm11[0],ymm13[0],ymm11[1],ymm13[1],ymm11[4],ymm13[4],ymm11[5],ymm13[5]
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm10 = ymm10[0],ymm11[0],ymm10[1],ymm11[1],ymm10[4],ymm11[4],ymm10[5],ymm11[5]
-; AVX2-SLOW-NEXT:    vpandn %ymm9, %ymm10, %ymm9
+; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} ymm7 = ymm7[0],ymm11[0],ymm7[1],ymm11[1],ymm7[4],ymm11[4],ymm7[5],ymm11[5]
+; AVX2-SLOW-NEXT:    vpandn %ymm9, %ymm7, %ymm9
 ; AVX2-SLOW-NEXT:    vpclmulqdq $17, %ymm4, %ymm9, %ymm11
 ; AVX2-SLOW-NEXT:    vpor %ymm6, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpclmulqdq $0, %ymm4, %ymm9, %ymm4
@@ -610,13 +610,13 @@ define <16 x i32> @pext_v16i32(<16 x i32> %val, <16 x i32> %mask) nounwind {
 ; AVX2-SLOW-NEXT:    vpxor %ymm6, %ymm5, %ymm5
 ; AVX2-SLOW-NEXT:    vpsrld $2, %ymm6, %ymm8
 ; AVX2-SLOW-NEXT:    vpor %ymm5, %ymm8, %ymm5
-; AVX2-SLOW-NEXT:    vpand %ymm5, %ymm7, %ymm7
-; AVX2-SLOW-NEXT:    vpxor %ymm7, %ymm5, %ymm5
-; AVX2-SLOW-NEXT:    vpsrld $4, %ymm7, %ymm8
-; AVX2-SLOW-NEXT:    vpor %ymm5, %ymm8, %ymm5
 ; AVX2-SLOW-NEXT:    vpand %ymm5, %ymm10, %ymm8
 ; AVX2-SLOW-NEXT:    vpxor %ymm5, %ymm8, %ymm5
-; AVX2-SLOW-NEXT:    vpsrld $8, %ymm8, %ymm9
+; AVX2-SLOW-NEXT:    vpsrld $4, %ymm8, %ymm9
+; AVX2-SLOW-NEXT:    vpor %ymm5, %ymm9, %ymm5
+; AVX2-SLOW-NEXT:    vpand %ymm5, %ymm7, %ymm7
+; AVX2-SLOW-NEXT:    vpxor %ymm7, %ymm5, %ymm5
+; AVX2-SLOW-NEXT:    vpsrld $8, %ymm7, %ymm9
 ; AVX2-SLOW-NEXT:    vpor %ymm5, %ymm9, %ymm5
 ; AVX2-SLOW-NEXT:    vpand %ymm3, %ymm1, %ymm1
 ; AVX2-SLOW-NEXT:    vpand %ymm2, %ymm1, %ymm2
@@ -627,11 +627,11 @@ define <16 x i32> @pext_v16i32(<16 x i32> %val, <16 x i32> %mask) nounwind {
 ; AVX2-SLOW-NEXT:    vpxor %ymm2, %ymm1, %ymm1
 ; AVX2-SLOW-NEXT:    vpsrld $2, %ymm2, %ymm2
 ; AVX2-SLOW-NEXT:    vpor %ymm2, %ymm1, %ymm1
-; AVX2-SLOW-NEXT:    vpand %ymm7, %ymm1, %ymm2
+; AVX2-SLOW-NEXT:    vpand %ymm1, %ymm8, %ymm2
 ; AVX2-SLOW-NEXT:    vpxor %ymm2, %ymm1, %ymm1
 ; AVX2-SLOW-NEXT:    vpsrld $4, %ymm2, %ymm2
 ; AVX2-SLOW-NEXT:    vpor %ymm2, %ymm1, %ymm1
-; AVX2-SLOW-NEXT:    vpand %ymm1, %ymm8, %ymm2
+; AVX2-SLOW-NEXT:    vpand %ymm7, %ymm1, %ymm2
 ; AVX2-SLOW-NEXT:    vpxor %ymm2, %ymm1, %ymm1
 ; AVX2-SLOW-NEXT:    vpsrld $8, %ymm2, %ymm2
 ; AVX2-SLOW-NEXT:    vpor %ymm2, %ymm1, %ymm1

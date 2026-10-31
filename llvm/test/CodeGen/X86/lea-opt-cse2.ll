@@ -10,15 +10,15 @@ define void @foo(ptr nocapture %ctx, i32 %n) local_unnamed_addr #0 {
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_1: # %loop
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movl (%rdi), %ecx
-; X64-NEXT:    movl 16(%rdi), %eax
-; X64-NEXT:    leal 1(%rcx,%rax), %ecx
-; X64-NEXT:    movl %ecx, 12(%rdi)
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movl 16(%rdi), %ecx
+; X64-NEXT:    leal 1(%rax,%rcx), %eax
+; X64-NEXT:    movl %eax, 12(%rdi)
 ; X64-NEXT:    decl %esi
 ; X64-NEXT:    jne .LBB0_1
 ; X64-NEXT:  # %bb.2: # %exit
-; X64-NEXT:    addl %eax, %ecx
-; X64-NEXT:    movl %ecx, 16(%rdi)
+; X64-NEXT:    addl %ecx, %eax
+; X64-NEXT:    movl %eax, 16(%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: foo:

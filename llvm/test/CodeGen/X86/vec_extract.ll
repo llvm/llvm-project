@@ -112,21 +112,21 @@ define i64 @pr150117(<31 x i8> %a0) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shll $8, %edx
-; X86-NEXT:    orl %ebx, %edx
-; X86-NEXT:    shll $8, %edi
-; X86-NEXT:    orl %esi, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    shll $8, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    shll $8, %esi
+; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    orl %edi, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    shll $24, %esi
-; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    movd %esi, %xmm0
-; X86-NEXT:    pinsrw $2, %edx, %xmm0
+; X86-NEXT:    orl %esi, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shll $24, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movd %edx, %xmm0
+; X86-NEXT:    pinsrw $2, %ebx, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shll $8, %ecx
 ; X86-NEXT:    orl %eax, %ecx
