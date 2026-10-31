@@ -211,9 +211,8 @@ namespace {
         MostDerivedLength = I + 1;
         IsArray = false;
       } else {
-        // Path[I] describes a base class.
-        ArraySize = 0;
-        IsArray = false;
+        // Path[I] describes a base class. The base is part of the current
+        // most-derived object, so preserve its array information.
       }
     }
     return MostDerivedLength;
@@ -4700,10 +4699,11 @@ static bool AreElementsOfSameArray(QualType ObjType,
   if (A.Entries.size() != B.Entries.size())
     return false;
 
-  bool IsArray = A.MostDerivedIsArrayElement;
-  if (IsArray && A.MostDerivedPathLength != A.Entries.size())
-    // A is a subobject of the array element.
-    return false;
+  // A base-class subobject of an array element is not itself an element of
+  // that array. Treat it as a non-array object, while retaining the array
+  // information for casts back to the most-derived type.
+  bool IsArray = A.MostDerivedIsArrayElement &&
+                 A.MostDerivedPathLength == A.Entries.size();
 
   // If A (and B) designates an array element, the last entry will be the array
   // index. That doesn't have to match. Otherwise, we're in the 'implicit array
