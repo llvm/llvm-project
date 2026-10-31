@@ -4290,7 +4290,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             // where the record type contains an allocatable.
             if (!isPointer &&
                 (hasDefaultMapper ||
-                 (requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
+                 (requiresImplicitDefaultDeclareMapper(
+                     converter, firOpBuilder, *typeSpec,
+                     enableImplicitDefaultMapperAllocatableMembers)))) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -4300,7 +4302,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                       [&](std::string &mapperIdName,
                           llvm::StringRef memberName) {
                         defaultMangler(converter, mapperIdName, memberName);
-                      });
+                      },
+                      enableImplicitDefaultMapperAllocatableMembers);
               } else {
                 mapperId = mlir::FlatSymbolRefAttr::get(
                     &converter.getMLIRContext(), mapperIdName);
