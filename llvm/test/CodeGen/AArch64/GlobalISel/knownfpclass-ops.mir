@@ -1073,8 +1073,8 @@ body:             |
   ; CHECK-NEXT: %x:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %sqrt:_ FPClasses:(nan pinf zero pnorm) SignBitKnown:?
   ; CHECK-NEXT: %one:_ FPClasses:(pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf zero psub pnorm) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf zero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf pzero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf pzero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
     %sqrt:_(f32) = G_FSQRT %x
@@ -1092,8 +1092,8 @@ body:             |
   ; CHECK-NEXT: %neg_x:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %sqrt:_ FPClasses:(nan pinf zero pnorm) SignBitKnown:?
   ; CHECK-NEXT: %neg_one:_ FPClasses:(nnorm) SignBitKnown:1
-  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf zero nsub nnorm) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf zero nsub nnorm) SignBitKnown:?
+  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf nzero nsub nnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf nzero nsub nnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
     %neg_x:_(f32) = G_FNEG %x

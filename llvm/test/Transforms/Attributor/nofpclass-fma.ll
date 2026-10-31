@@ -881,9 +881,9 @@ define half @ret_fma__pinf__nsub__nnorm__ieee_daz(half nofpclass(nan ninf zero s
 }
 
 define half @ret_fma__pinf__nsub__nnorm__ieee_dapz(half nofpclass(nan ninf zero sub norm) %arg0, half nofpclass(nan inf zero psub norm) %arg1, half nofpclass(nan inf zero sub pnorm) %arg2) #3 {
-; CHECK-LABEL: define nofpclass(snan) half @ret_fma__pinf__nsub__nnorm__ieee_dapz(
+; CHECK-LABEL: define nofpclass(snan pinf zero sub pnorm) half @ret_fma__pinf__nsub__nnorm__ieee_dapz(
 ; CHECK-SAME: half nofpclass(nan ninf zero sub norm) [[ARG0:%.*]], half nofpclass(nan inf zero psub norm) [[ARG1:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG2:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half nofpclass(nan ninf zero sub norm) [[ARG0]], half nofpclass(nan inf zero psub norm) [[ARG1]], half nofpclass(nan inf zero sub pnorm) [[ARG2]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan pinf zero sub pnorm) half @llvm.fma.f16(half nofpclass(nan ninf zero sub norm) [[ARG0]], half nofpclass(nan inf zero psub norm) [[ARG1]], half nofpclass(nan inf zero sub pnorm) [[ARG2]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
@@ -891,9 +891,9 @@ define half @ret_fma__pinf__nsub__nnorm__ieee_dapz(half nofpclass(nan ninf zero 
 }
 
 define half @ret_fma__pinf__nsub__nnorm__ieee_dynamic(half nofpclass(nan ninf zero sub norm) %arg0, half nofpclass(nan inf zero psub norm) %arg1, half nofpclass(nan inf zero sub pnorm) %arg2) #7 {
-; CHECK-LABEL: define nofpclass(snan) half @ret_fma__pinf__nsub__nnorm__ieee_dynamic(
+; CHECK-LABEL: define nofpclass(snan pinf zero sub pnorm) half @ret_fma__pinf__nsub__nnorm__ieee_dynamic(
 ; CHECK-SAME: half nofpclass(nan ninf zero sub norm) [[ARG0:%.*]], half nofpclass(nan inf zero psub norm) [[ARG1:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG2:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fma.f16(half nofpclass(nan ninf zero sub norm) [[ARG0]], half nofpclass(nan inf zero psub norm) [[ARG1]], half nofpclass(nan inf zero sub pnorm) [[ARG2]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan pinf zero sub pnorm) half @llvm.fma.f16(half nofpclass(nan ninf zero sub norm) [[ARG0]], half nofpclass(nan inf zero psub norm) [[ARG1]], half nofpclass(nan inf zero sub pnorm) [[ARG2]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fma.f16(half %arg0, half %arg1, half %arg2)
@@ -921,9 +921,9 @@ define half @ret_fmuladd__pinf__nsub__nnorm__ieee_daz(half nofpclass(nan ninf ze
 }
 
 define half @ret_fmuladd__pinf__nsub__nnorm__ieee_dapz(half nofpclass(nan ninf zero sub norm) %arg0, half nofpclass(nan inf zero psub norm) %arg1, half nofpclass(nan inf zero sub pnorm) %arg2) #3 {
-; CHECK-LABEL: define nofpclass(snan) half @ret_fmuladd__pinf__nsub__nnorm__ieee_dapz(
+; CHECK-LABEL: define nofpclass(snan pinf zero sub pnorm) half @ret_fmuladd__pinf__nsub__nnorm__ieee_dapz(
 ; CHECK-SAME: half nofpclass(nan ninf zero sub norm) [[ARG0:%.*]], half nofpclass(nan inf zero psub norm) [[ARG1:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG2:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fmuladd.f16(half nofpclass(nan ninf zero sub norm) [[ARG0]], half nofpclass(nan inf zero psub norm) [[ARG1]], half nofpclass(nan inf zero sub pnorm) [[ARG2]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan pinf zero sub pnorm) half @llvm.fmuladd.f16(half nofpclass(nan ninf zero sub norm) [[ARG0]], half nofpclass(nan inf zero psub norm) [[ARG1]], half nofpclass(nan inf zero sub pnorm) [[ARG2]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fmuladd.f16(half %arg0, half %arg1, half %arg2)
@@ -931,9 +931,9 @@ define half @ret_fmuladd__pinf__nsub__nnorm__ieee_dapz(half nofpclass(nan ninf z
 }
 
 define half @ret_fmuladd__pinf__nsub__nnorm__ieee_dynamic(half nofpclass(nan ninf zero sub norm) %arg0, half nofpclass(nan inf zero psub norm) %arg1, half nofpclass(nan inf zero sub pnorm) %arg2) #7 {
-; CHECK-LABEL: define nofpclass(snan) half @ret_fmuladd__pinf__nsub__nnorm__ieee_dynamic(
+; CHECK-LABEL: define nofpclass(snan pinf zero sub pnorm) half @ret_fmuladd__pinf__nsub__nnorm__ieee_dynamic(
 ; CHECK-SAME: half nofpclass(nan ninf zero sub norm) [[ARG0:%.*]], half nofpclass(nan inf zero psub norm) [[ARG1:%.*]], half nofpclass(nan inf zero sub pnorm) [[ARG2:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) half @llvm.fmuladd.f16(half nofpclass(nan ninf zero sub norm) [[ARG0]], half nofpclass(nan inf zero psub norm) [[ARG1]], half nofpclass(nan inf zero sub pnorm) [[ARG2]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan pinf zero sub pnorm) half @llvm.fmuladd.f16(half nofpclass(nan ninf zero sub norm) [[ARG0]], half nofpclass(nan inf zero psub norm) [[ARG1]], half nofpclass(nan inf zero sub pnorm) [[ARG2]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.fmuladd.f16(half %arg0, half %arg1, half %arg2)
