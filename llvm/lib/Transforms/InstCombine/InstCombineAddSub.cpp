@@ -1100,6 +1100,20 @@ static bool MatchMul(Value *E, Value *&Op, APInt &C) {
   return false;
 }
 
+// Matches masked multiplication expression (Op * C) & Mask where C and Mask are
+// constants. Returns the multiplication Value in EMul, constant mask in Mask,
+// constant value in C, and the other operand in Op. Returns true if such a
+// match is found.
+static bool MatchMaskedMul(Value *E, Value *&EMul, Value *&Op, APInt &C,
+                           APInt &Mask) {
+  const APInt *AI;
+  if (match(E, m_And(m_Value(EMul), m_APInt(AI))) && MatchMul(EMul, Op, C)) {
+    Mask = *AI;
+    return true;
+  }
+  return false;
+}
+
 // Matches remainder expression Op % C where C is a constant. Returns the
 // constant value in C and the other operand in Op. Returns the signedness of
 // the remainder operation in IsSigned. Returns true if such a match is
@@ -1191,9 +1205,11 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   auto FoldDivRem = [&](Value *DivSide, Value *RemSide) -> Value * {
     Value *Div, *Rem;
     APInt C1, C2;
-    if (!DivSide->hasOneUse() || !MatchMul(DivSide, Div, C1))
+    if (!DivSide->hasOneUse() && !RemSide->hasOneUse())
+      return nullptr;
+    if (!MatchMul(DivSide, Div, C1))
       Div = DivSide, C1 = APInt(I.getType()->getScalarSizeInBits(), 1);
-    if (!RemSide->hasOneUse() || !MatchMul(RemSide, Rem, C2))
+    if (!MatchMul(RemSide, Rem, C2))
       Rem = RemSide, C2 = APInt(I.getType()->getScalarSizeInBits(), 1);
     Value *DivOpV;
     APInt DivOpC;
@@ -1215,9 +1231,60 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
     }
     return nullptr;
   };
+  // Match I = (X / C0) * C1 + (((X % C0) * C2) & Mask).
+  auto FoldDivRemMasked = [&](Value *DivSide, Value *RemSide) -> Value * {
+    Value *Div, *Rem, *MaskedMul;
+    APInt C1, C2, Mask;
+    if (!DivSide->hasOneUse() && !RemSide->hasOneUse())
+      return nullptr;
+    if (!MatchMul(DivSide, Div, C1) ||
+        !MatchMaskedMul(RemSide, MaskedMul, Rem, C2, Mask))
+      return nullptr;
+    Value *DivOpV;
+    APInt DivOpC;
+    if (MatchRem(Rem, X, C0, IsSigned) &&
+        MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV &&
+        C0 == DivOpC &&
+        // Avoid unprofitable replacement of and with mul.
+        !(C1.isOne() && !IsSigned && DivOpC.isPowerOf2() && DivOpC != 2) &&
+        !Mask.isZero()) {
+      APInt NewC = C1 - C2 * C0;
+      if (!NewC.isZero() && !Rem->hasOneUse())
+        return nullptr;
+      if (!isGuaranteedNotToBeUndef(X, &AC, &I, &DT))
+        return nullptr;
+      // If the Mask has K trailing zeroes it must fulfil the following
+      // conditions in order for the transformation to be valid:
+      // 1. If a bit in MaskedMul at or above position K
+      //    is set, Mask must NOT be low at that position
+      // 2. Div * C1 can NOT have any bits set below K
+      KnownBits KBRem = computeKnownBits(MaskedMul, &I);
+      APInt PossibleSet = ~KBRem.Zero;
+      unsigned int K = Mask.countr_zero();
+      APInt Set = APInt::getBitsSetFrom(Mask.getBitWidth(), K);
+      bool HighBitsSet = (PossibleSet & Set & ~Mask).isZero();
+      if (!HighBitsSet ||
+          computeKnownBits(DivSide, &I).countMinTrailingZeros() < K)
+        return nullptr;
+      // Create mask guranteed to set bits K and above
+      APInt FinalMask = APInt::getBitsSetFrom(Mask.getBitWidth(), K);
+      Value *MulXC2 = Builder.CreateMul(X, ConstantInt::get(X->getType(), C2));
+      Value *Sum = MulXC2;
+      if (!NewC.isZero())
+        Sum = Builder.CreateAdd(
+            Builder.CreateMul(Div, ConstantInt::get(X->getType(), NewC)),
+            MulXC2);
+      return Builder.CreateAnd(Sum, FinalMask);
+    }
+    return nullptr;
+  };
   if (Value *V = FoldDivRem(LHS, RHS))
     return V;
   if (Value *V = FoldDivRem(RHS, LHS))
+    return V;
+  if (Value *V = FoldDivRemMasked(LHS, RHS))
+    return V;
+  if (Value *V = FoldDivRemMasked(RHS, LHS))
     return V;
 
   return nullptr;
