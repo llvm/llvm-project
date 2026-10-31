@@ -211,8 +211,9 @@ struct Config {
   /// with llvm-lto2.
   std::unique_ptr<raw_ostream> ResolutionFile;
 
-  /// Tunable parameters for passes in the default pipelines.
-  PipelineTuningOptions PTO;
+  /// Tunable parameters for passes in the default pipelines. If unset, the
+  /// backend reads them from the module's LLVMContext.
+  std::optional<PipelineTuningOptions> PTO;
 
   /// The following callbacks deal with tasks, which normally represent the
   /// entire optimization and code generation pipeline for what will become a

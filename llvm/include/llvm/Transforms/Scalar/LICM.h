@@ -45,14 +45,12 @@ namespace cl {
 class LibraryOptionsContext;
 } // namespace cl
 
-/// Returns -licm-mssa-optimization-cap of LibraryOptions, or its global value
-/// if null.
+/// Return -licm-mssa-optimization-cap.
 LLVM_ABI unsigned
-getLicmMssaOptCap(const cl::LibraryOptionsContext *LibraryOptions);
-/// Returns -licm-mssa-max-acc-promotion of LibraryOptions, or its global value
-/// if null.
+getLicmMssaOptCap(const cl::LibraryOptionsContext &LibraryOptions);
+/// Return -licm-mssa-max-acc-promotion.
 LLVM_ABI unsigned getLicmMssaNoAccForPromotionCap(
-    const cl::LibraryOptionsContext *LibraryOptions);
+    const cl::LibraryOptionsContext &LibraryOptions);
 
 struct LICMOptions {
   // Unset means the -licm-mssa-* value of the loop's LLVMContext.

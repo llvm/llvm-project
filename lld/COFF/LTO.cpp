@@ -57,7 +57,7 @@ std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
 lto::Config BitcodeCompiler::createConfig() {
   lto::Config c;
   c.LibraryOptions = &ctx.config.libraryOptions;
-  c.PTO = PipelineTuningOptions(c.LibraryOptions);
+  c.PTO.emplace(*c.LibraryOptions);
   c.Options = initTargetOptionsFromCodeGenFlags();
   c.Options.EmitAddrsig = true;
   for (StringRef C : ctx.config.mllvmOpts)
@@ -120,8 +120,8 @@ lto::Config BitcodeCompiler::createConfig() {
                               /*UseInputModulePath*/ true,
                               ctx.config.saveTempsArgs));
 
-  c.PTO.LoopVectorization = c.OptLevel > 1;
-  c.PTO.SLPVectorization = c.OptLevel > 1;
+  c.PTO->LoopVectorization = c.OptLevel > 1;
+  c.PTO->SLPVectorization = c.OptLevel > 1;
 
   return c;
 }

@@ -903,7 +903,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (TM)
     TM->setPGOOption(PGOOpt);
 
-  PipelineTuningOptions PTO(&LibraryOptions);
+  PipelineTuningOptions PTO(LibraryOptions);
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
   PTO.LoopInterchange = CodeGenOpts.InterchangeLoops;
   PTO.LoopFusion = CodeGenOpts.FuseLoops;
@@ -1380,18 +1380,18 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.SampleProfile = std::move(SampleProfile);
   const cl::LibraryOptionsContext &LibraryOptions =
       M->getContext().getLibraryOptions();
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
-  Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
-  Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
-  Conf.PTO.LoopFusion = CGOpts.FuseLoops;
+  PipelineTuningOptions &PTO = Conf.PTO.emplace(LibraryOptions);
+  PTO.LoopUnrolling = CGOpts.UnrollLoops;
+  PTO.LoopInterchange = CGOpts.InterchangeLoops;
+  PTO.LoopFusion = CGOpts.FuseLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
   // unrolling.
-  Conf.PTO.LoopInterleaving = CGOpts.UnrollLoops;
-  Conf.PTO.LoopVectorization = CGOpts.VectorizeLoop;
-  Conf.PTO.SLPVectorization = CGOpts.VectorizeSLP;
+  PTO.LoopInterleaving = CGOpts.UnrollLoops;
+  PTO.LoopVectorization = CGOpts.VectorizeLoop;
+  PTO.SLPVectorization = CGOpts.VectorizeSLP;
   // Only enable CGProfilePass when using integrated assembler, since
   // non-integrated assemblers don't recognize .cgprofile section.
-  Conf.PTO.CallGraphProfile = !CGOpts.DisableIntegratedAS;
+  PTO.CallGraphProfile = !CGOpts.DisableIntegratedAS;
 
   // Context sensitive profile.
   if (CGOpts.hasProfileCSIRInstr()) {

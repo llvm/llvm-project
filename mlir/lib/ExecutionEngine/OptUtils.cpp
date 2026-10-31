@@ -60,7 +60,7 @@ mlir::makeOptimizingTransformer(unsigned optLevel, unsigned sizeLevel,
     CGSCCAnalysisManager cgam;
     ModuleAnalysisManager mam;
 
-    PipelineTuningOptions tuningOptions(&m->getContext().getLibraryOptions());
+    PipelineTuningOptions tuningOptions(m->getContext().getLibraryOptions());
     tuningOptions.LoopUnrolling = true;
     tuningOptions.LoopInterleaving = true;
     tuningOptions.LoopVectorization = true;
