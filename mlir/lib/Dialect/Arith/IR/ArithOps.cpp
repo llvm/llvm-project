@@ -466,6 +466,23 @@ Value mlir::arith::getZeroConstant(OpBuilder &builder, Location loc,
 // AddIOp
 //===----------------------------------------------------------------------===//
 
+// Recompose a dividend from its signed quotient and remainder. Both
+// operations must use the same dividend and divisor.
+static Value recomposeSignedDividend(Value product, Value remainder) {
+  auto mul = product.getDefiningOp<arith::MulIOp>();
+  auto rem = remainder.getDefiningOp<arith::RemSIOp>();
+  if (!mul || !rem)
+    return {};
+
+  for (unsigned i = 0; i != 2; ++i) {
+    auto div = mul->getOperand(i).getDefiningOp<arith::DivSIOp>();
+    if (div && div.getLhs() == rem.getLhs() && div.getRhs() == rem.getRhs() &&
+        mul->getOperand(1 - i) == rem.getRhs())
+      return rem.getLhs();
+  }
+  return {};
+}
+
 OpFoldResult arith::AddIOp::fold(FoldAdaptor adaptor) {
   // addi(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
@@ -480,6 +497,12 @@ OpFoldResult arith::AddIOp::fold(FoldAdaptor adaptor) {
   if (auto sub = getRhs().getDefiningOp<SubIOp>())
     if (getLhs() == sub.getRhs())
       return sub.getLhs();
+
+  // addi(muli(divsi(x, d), d), remsi(x, d)) -> x
+  if (Value dividend = recomposeSignedDividend(getLhs(), getRhs()))
+    return dividend;
+  if (Value dividend = recomposeSignedDividend(getRhs(), getLhs()))
+    return dividend;
 
   return constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(),
