@@ -31,6 +31,8 @@ public:
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
+  const MCExpr *getDwarfSectionOffsetExpr(const MCSymbol *Sym, uint64_t Offset,
+                                          MCContext &Ctx) const override;
 };
 
 namespace SystemZ {
