@@ -181,6 +181,10 @@ TEST(MinimizeSourceToDependencyDirectivesTest, DefineMacroArguments) {
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("#define MACRO()", Out));
   EXPECT_STREQ("#define MACRO()\n", Out.data());
 
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      "#define MACRO(a, b)  ((a) + (b ))", Out));
+  EXPECT_STREQ("#define MACRO(a,b)((a)+(b))\n", Out.data());
+
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("#define MACRO(a, b...)", Out));
   EXPECT_STREQ("#define MACRO(a,b...)\n", Out.data());
@@ -210,6 +214,21 @@ TEST(MinimizeSourceToDependencyDirectivesTest, DefineInvalidMacroArguments) {
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives("#define MACRO(a * b)", Out));
   EXPECT_STREQ("#define MACRO(a*b)\n", Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     ObjectLikeMacroBodyStartsWithParen) {
+  SmallVector<char, 128> Out;
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      "#define NULL_PTR  ((void *)0)\n", Out));
+  EXPECT_STREQ("#define NULL_PTR ((void*)0)\n", Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      "#define FEATURE_ENABLED  (!A || (B && !C))\n", Out));
+  EXPECT_STREQ("#define FEATURE_ENABLED (!A||(B&&!C))\n", Out.data());
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      "#define WITH_COMMENT /*x*/ (-1)\n", Out));
+  EXPECT_STREQ("#define WITH_COMMENT (-1)\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, DefineHorizontalWhitespace) {
