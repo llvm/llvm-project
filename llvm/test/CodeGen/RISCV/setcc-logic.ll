@@ -1321,3 +1321,156 @@ define void @or_ule_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
 8:                                                ; preds = %8, %4
   ret void
 }
+
+define i1 @not_shared_icmp_sle(i32 signext %a, ptr %p) {
+; RV32I-LABEL: not_shared_icmp_sle:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a2, 1
+; RV32I-NEXT:    slli a2, a2, 11
+; RV32I-NEXT:    slt a2, a0, a2
+; RV32I-NEXT:    xori a0, a2, 1
+; RV32I-NEXT:    sb a2, 0(a1)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_shared_icmp_sle:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:    slli a2, a2, 11
+; RV64I-NEXT:    slt a2, a0, a2
+; RV64I-NEXT:    xori a0, a2, 1
+; RV64I-NEXT:    sb a2, 0(a1)
+; RV64I-NEXT:    ret
+  %cmp = icmp sle i32 %a, 2047
+  store i1 %cmp, ptr %p
+  %not = xor i1 %cmp, true
+  ret i1 %not
+}
+
+define i1 @not_shared_icmp_sle_multiple_uses(i32 signext %a, ptr %p, ptr %q) {
+; RV32I-LABEL: not_shared_icmp_sle_multiple_uses:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a3, 1
+; RV32I-NEXT:    slli a3, a3, 11
+; RV32I-NEXT:    slt a3, a0, a3
+; RV32I-NEXT:    xori a0, a3, 1
+; RV32I-NEXT:    sb a3, 0(a1)
+; RV32I-NEXT:    sw a3, 0(a2)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_shared_icmp_sle_multiple_uses:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a3, 1
+; RV64I-NEXT:    slli a3, a3, 11
+; RV64I-NEXT:    slt a3, a0, a3
+; RV64I-NEXT:    xori a0, a3, 1
+; RV64I-NEXT:    sb a3, 0(a1)
+; RV64I-NEXT:    sw a3, 0(a2)
+; RV64I-NEXT:    ret
+  %cmp = icmp sle i32 %a, 2047
+  store i1 %cmp, ptr %p
+  %ext = zext i1 %cmp to i32
+  store i32 %ext, ptr %q
+  %not = xor i1 %cmp, true
+  ret i1 %not
+}
+
+define i1 @not_single_use_icmp_sle(i32 signext %a) {
+; RV32I-LABEL: not_single_use_icmp_sle:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 2047
+; RV32I-NEXT:    slt a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_single_use_icmp_sle:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 2047
+; RV64I-NEXT:    slt a0, a1, a0
+; RV64I-NEXT:    ret
+  %cmp = icmp sle i32 %a, 2047
+  %not = xor i1 %cmp, true
+  ret i1 %not
+}
+
+define i1 @not_shared_icmp_ult_i64(i64 %a, ptr %p) {
+; RV32I-LABEL: not_shared_icmp_ult_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltiu a0, a0, 2047
+; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    and a1, a1, a0
+; RV32I-NEXT:    xori a0, a1, 1
+; RV32I-NEXT:    sb a1, 0(a2)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_shared_icmp_ult_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltiu a2, a0, 2047
+; RV64I-NEXT:    xori a0, a2, 1
+; RV64I-NEXT:    sb a2, 0(a1)
+; RV64I-NEXT:    ret
+  %cmp = icmp ult i64 %a, 2047
+  store i1 %cmp, ptr %p
+  %not = xor i1 %cmp, true
+  ret i1 %not
+}
+
+define i1 @not_shared_icmp_ult_i128(i128 %a, ptr %p) {
+; RV32I-LABEL: not_shared_icmp_ult_i128:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lw a2, 8(a0)
+; RV32I-NEXT:    lw a3, 12(a0)
+; RV32I-NEXT:    lw a4, 4(a0)
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    or a2, a2, a3
+; RV32I-NEXT:    or a2, a4, a2
+; RV32I-NEXT:    seqz a2, a2
+; RV32I-NEXT:    sltiu a0, a0, 2047
+; RV32I-NEXT:    and a2, a2, a0
+; RV32I-NEXT:    xori a0, a2, 1
+; RV32I-NEXT:    sb a2, 0(a1)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_shared_icmp_ult_i128:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltiu a0, a0, 2047
+; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    and a1, a1, a0
+; RV64I-NEXT:    xori a0, a1, 1
+; RV64I-NEXT:    sb a1, 0(a2)
+; RV64I-NEXT:    ret
+  %cmp = icmp ult i128 %a, 2047
+  store i1 %cmp, ptr %p
+  %not = xor i1 %cmp, true
+  ret i1 %not
+}
+
+define void @not_shared_icmp_eq_inverse_exists(i32 %c, ptr %p, ptr %q, ptr %r) {
+; RV32I-LABEL: not_shared_icmp_eq_inverse_exists:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    seqz a4, a0
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    sb a4, 0(a1)
+; RV32I-NEXT:    slli a1, a0, 4
+; RV32I-NEXT:    sb a0, 0(a2)
+; RV32I-NEXT:    sw a1, 0(a3)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: not_shared_icmp_eq_inverse_exists:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    seqz a4, a0
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    sb a4, 0(a1)
+; RV64I-NEXT:    slli a1, a0, 4
+; RV64I-NEXT:    sb a0, 0(a2)
+; RV64I-NEXT:    sw a1, 0(a3)
+; RV64I-NEXT:    ret
+  %eq = icmp eq i32 %c, 0
+  %ne = icmp ne i32 %c, 0
+  store i1 %eq, ptr %p
+  store i1 %ne, ptr %q
+  %not = xor i1 %eq, true
+  %z = zext i1 %not to i32
+  %sh = shl i32 %z, 4
+  store i32 %sh, ptr %r
+  ret void
+}

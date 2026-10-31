@@ -10671,11 +10671,38 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
       return Combined;
 
   // fold not (setcc x, y, cc) -> setcc x y !cc
-  // Avoid breaking: and (not(setcc x, y, cc), z) -> andn for vec
   unsigned N0Opcode = N0.getOpcode();
   SDValue LHS, RHS, CC;
-  if (TLI.isConstTrueVal(N1) &&
+  // Keep a shared comparison instead of materializing both condition codes.
+  // Scalar SETCCs with custom lowering or native i1 results may fold into
+  // flag-based instructions.
+  bool KeepNotOfSetCC = false;
+  if (N0Opcode == ISD::SETCC && !N0.hasOneUse()) {
+    EVT OpVT = N0.getOperand(0).getValueType();
+    if (OpVT.isScalarInteger())
+      OpVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), OpVT);
+    EVT XorVT = VT.isScalarInteger()
+                    ? TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT)
+                    : VT;
+    KeepNotOfSetCC =
+        (OpVT.isVector() ||
+         (XorVT != MVT::i1 && TLI.isOperationLegal(ISD::SETCC, OpVT))) &&
+        TLI.isOperationLegalOrCustom(ISD::XOR, XorVT);
+  }
+  // Folding the NOT can reuse an inverse comparison that already has users.
+  if (KeepNotOfSetCC && TLI.isConstTrueVal(N1)) {
+    ISD::CondCode NotCC =
+        ISD::getSetCCInverse(cast<CondCodeSDNode>(N0.getOperand(2))->get(),
+                             N0.getOperand(0).getValueType());
+    SDNode *Inverse = DAG.getNodeIfExists(
+        ISD::SETCC, N0->getVTList(),
+        {N0.getOperand(0), N0.getOperand(1), DAG.getCondCode(NotCC)},
+        N0->getFlags());
+    KeepNotOfSetCC = !Inverse || Inverse->use_empty();
+  }
+  if (!KeepNotOfSetCC && TLI.isConstTrueVal(N1) &&
       isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/ true) &&
+      // Avoid breaking: and (not(setcc x, y, cc), z) -> andn for vec
       !(VT.isVector() && TLI.hasAndNot(SDValue(N, 0)) && N->hasOneUse() &&
         N->use_begin()->getUser()->getOpcode() == ISD::AND)) {
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
