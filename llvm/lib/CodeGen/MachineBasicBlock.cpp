@@ -1704,6 +1704,16 @@ MachineBasicBlock::getProbabilityIterator(MachineBasicBlock::succ_iterator I) {
   return Probs.begin() + index;
 }
 
+/// Return true if \p MI does not affect the non-debug register liveness queried
+/// by computeRegisterLiveness and should not count towards its neighborhood.
+/// Debug instructions and pseudo probes are already skipped. CFI instructions
+/// should be skipped as well: they have no machine register operands, and
+/// without unwind tables their presence can depend on whether debug information
+/// is emitted.
+static bool isSkippedByLivenessQuery(const MachineInstr &MI) {
+  return MI.isDebugOrPseudoInstr() || MI.isCFIInstruction();
+}
+
 /// Return whether (physical) register "Reg" has been <def>ined and not <kill>ed
 /// as of just before "MI".
 ///
@@ -1720,7 +1730,7 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
   // Try searching forwards from Before, looking for reads or defs.
   const_iterator I(Before);
   for (; I != end() && N > 0; ++I) {
-    if (I->isDebugOrPseudoInstr())
+    if (isSkippedByLivenessQuery(*I))
       continue;
 
     --N;
@@ -1758,7 +1768,7 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
     do {
       --I;
 
-      if (I->isDebugOrPseudoInstr())
+      if (isSkippedByLivenessQuery(*I))
         continue;
 
       --N;
@@ -1790,9 +1800,9 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
     } while (I != begin() && N > 0);
   }
 
-  // If all the instructions before this in the block are debug instructions,
-  // skip over them.
-  while (I != begin() && std::prev(I)->isDebugOrPseudoInstr())
+  // If all the instructions before this in the block are skipped, skip over
+  // them.
+  while (I != begin() && isSkippedByLivenessQuery(*std::prev(I)))
     --I;
 
   // Did we get to the start of the block?
