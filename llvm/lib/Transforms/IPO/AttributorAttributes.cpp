@@ -10716,6 +10716,15 @@ struct AACallEdgesImpl : public AACallEdges {
   void trackStatistics() const override {}
 
 protected:
+  /// Return the callee of \p CB if it is a direct call whose callee has no
+  /// callback metadata. Such a call only calls its callee.
+  static Function *getOnlyCallee(const CallBase &CB) {
+    auto *Callee = dyn_cast<Function>(CB.getCalledOperand());
+    if (Callee && !Callee->hasMetadata(LLVMContext::MD_callback))
+      return Callee;
+    return nullptr;
+  }
+
   void addCalledFunction(Function *Fn, ChangeStatus &Change) {
     if (CalledFunctions.insert(Fn)) {
       Change = ChangeStatus::CHANGED;
@@ -10747,6 +10756,16 @@ private:
 struct AACallEdgesCallSite : public AACallEdgesImpl {
   AACallEdgesCallSite(const IRPosition &IRP, Attributor &A)
       : AACallEdgesImpl(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    // The only callee of a direct call without callbacks never changes.
+    if (Function *Callee = getOnlyCallee(cast<CallBase>(getAnchorValue()))) {
+      ChangeStatus Change = ChangeStatus::UNCHANGED;
+      addCalledFunction(Callee, Change);
+      indicateOptimisticFixpoint();
+    }
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Change = ChangeStatus::UNCHANGED;
@@ -10826,8 +10845,7 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
 
       // A direct call without callbacks only calls its callee; there is no
       // need for a call site attribute.
-      auto *Callee = dyn_cast<Function>(CB.getCalledOperand());
-      if (Callee && !Callee->hasMetadata(LLVMContext::MD_callback)) {
+      if (Function *Callee = getOnlyCallee(CB)) {
         addCalledFunction(Callee, Change);
         return true;
       }
