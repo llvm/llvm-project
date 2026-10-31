@@ -532,6 +532,12 @@ public:
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitBinaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitTernaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
+  void CollectTargetIntrinsicOperands(const CallInst &Call,
+                                      SmallVectorImpl<SDValue> &Ops,
+                                      SelectionDAG &DAG) const override;
+  void CollectTargetIntrinsicOperands(const CallBase &Call,
+                                      MachineInstrBuilder &MIB) const override;
+
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;

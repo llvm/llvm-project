@@ -1,3 +1,5 @@
+// RUN: llvm-tblgen -gen-global-isel -DVARIADIC_INTRINSIC -I %p/../../../include -I %p/../Common %s | FileCheck %s --check-prefix=TAIL
+// RUN: llvm-tblgen -gen-dag-isel -DVARIADIC_INTRINSIC -I %p/../../../include -I %p/../Common %s | FileCheck %s --check-prefix=DAG
 // RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common %s | FileCheck %s
 
 include "llvm/Target/Target.td"
@@ -53,3 +55,21 @@ def : Pat<(build_vector GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  // Label 0: @[[NEXT_OPCODE_LABEL]]
 // CHECK-NEXT:  GIM_Reject,
+
+#ifdef VARIADIC_INTRINSIC
+// Intrinsics may carry target-supplied operands after their fixed arguments.
+let TargetPrefix = "mytarget" in
+def int_mytarget_variadic : Intrinsic<[llvm_i32_ty],
+    [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+     llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+def VARIADIC : I<(outs GPR32:$dst),
+    (ins GPR32:$a, GPR32:$b, GPR32:$c, GPR32:$d, GPR32:$e,
+         GPR32:$f, GPR32:$g, GPR32:$h, GPR32:$i, variable_ops),
+    [(set GPR32:$dst, (int_mytarget_variadic GPR32:$a, GPR32:$b,
+        GPR32:$c, GPR32:$d, GPR32:$e, GPR32:$f, GPR32:$g,
+        GPR32:$h, GPR32:$i))]>;
+
+// DAG: TARGET_VAL(MyTarget::VARIADIC), 0|OPFL_Variadic10
+// TAIL: GIM_CheckNumOperandsGE, /*MI*/0, /*Expected*/11,
+// TAIL: GIR_CopyRemaining, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/11,
+#endif

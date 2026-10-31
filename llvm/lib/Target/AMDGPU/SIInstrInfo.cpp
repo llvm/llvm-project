@@ -5455,6 +5455,21 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
   return true;
 }
 
+std::optional<AMDGPU::MFMACDRegClass>
+SIInstrInfo::getMFMACDRegClass(const MachineInstr &MI) const {
+  if (isMAI(MI) &&
+      MI.getNumExplicitOperands() > MI.getDesc().getNumOperands()) {
+    const MachineOperand &Policy = MI.getOperand(MI.getDesc().getNumOperands());
+    if (Policy.isTargetIndex()) {
+      if (Policy.getIndex() == AMDGPU::TI_MFMA_CD_AGPR)
+        return AMDGPU::MFMACDRegClass::AGPR;
+      if (Policy.getIndex() == AMDGPU::TI_MFMA_CD_VGPR)
+        return AMDGPU::MFMACDRegClass::VGPR;
+    }
+  }
+  return std::nullopt;
+}
+
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
   uint32_t Opcode = MI.getOpcode();
@@ -5472,6 +5487,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
   if (SIInstrInfo::isGenericOpcode(Opcode))
     return true;
+
+  if (isMAI(MI) && MI.getDesc().isVariadic()) {
+    unsigned NumOperands = MI.getNumExplicitOperands();
+    unsigned NumFixed = MI.getDesc().getNumOperands();
+    if (NumOperands > NumFixed &&
+        (NumOperands != NumFixed + 1 || !getMFMACDRegClass(MI) ||
+         MI.getOperand(NumFixed).getOffset() != 0 ||
+         MI.getOperand(NumFixed).getTargetFlags() != 0)) {
+      ErrInfo = "Expected one MFMA C/D policy target-index operand.";
+      return false;
+    }
+  }
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
@@ -6930,7 +6957,8 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
               return false;
           }
         }
-      } else if (AMDGPU::isSISrcOperand(InstDesc.operands()[i]) &&
+      } else if (i < InstDesc.getNumOperands() &&
+                 AMDGPU::isSISrcOperand(InstDesc.operands()[i]) &&
                  !isInlineConstant(Op, InstDesc.operands()[i])) {
         // The same literal may be used multiple times.
         if (!UsedLiteral)
@@ -10476,6 +10504,10 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     unsigned LiteralSize = 4;
     for (int I = 0, E = MI.getNumExplicitOperands(); I != E; ++I) {
       const MachineOperand &Op = MI.getOperand(I);
+      // MFMA policy operands have no encoding or descriptor entry.
+      if (Op.isTargetIndex() && (Op.getIndex() == AMDGPU::TI_MFMA_CD_AGPR ||
+                                 Op.getIndex() == AMDGPU::TI_MFMA_CD_VGPR))
+        continue;
       const MCOperandInfo &OpInfo = Desc.operands()[I];
       if (!Op.isReg() && !isInlineConstant(Op, OpInfo)) {
         HasLiteral = true;
@@ -10565,7 +10597,9 @@ SIInstrInfo::getSerializableTargetIndices() const {
       {AMDGPU::TI_SCRATCH_RSRC_DWORD0, "amdgpu-scratch-rsrc-dword0"},
       {AMDGPU::TI_SCRATCH_RSRC_DWORD1, "amdgpu-scratch-rsrc-dword1"},
       {AMDGPU::TI_SCRATCH_RSRC_DWORD2, "amdgpu-scratch-rsrc-dword2"},
-      {AMDGPU::TI_SCRATCH_RSRC_DWORD3, "amdgpu-scratch-rsrc-dword3"}};
+      {AMDGPU::TI_SCRATCH_RSRC_DWORD3, "amdgpu-scratch-rsrc-dword3"},
+      {AMDGPU::TI_MFMA_CD_AGPR, "amdgpu-mfma-cd-agpr"},
+      {AMDGPU::TI_MFMA_CD_VGPR, "amdgpu-mfma-cd-vgpr"}};
   return ArrayRef(TargetIndices);
 }
 

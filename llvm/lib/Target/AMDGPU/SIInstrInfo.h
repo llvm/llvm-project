@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include <optional>
 
 #define GET_INSTRINFO_HEADER
 #include "AMDGPUGenInstrInfo.inc"
@@ -271,7 +272,12 @@ public:
     MO_ABS32_LO = 9,
     MO_ABS32_HI = 10,
     MO_ABS64 = 11,
+
   };
+
+  /// Return the explicit AGPR/VGPR constraint, or nullopt if none is present.
+  std::optional<AMDGPU::MFMACDRegClass>
+  getMFMACDRegClass(const MachineInstr &MI) const;
 
   explicit SIInstrInfo(const GCNSubtarget &ST);
 

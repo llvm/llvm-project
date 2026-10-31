@@ -13,6 +13,7 @@
 //
 
 #include "AMDGPUMCInstLower.h"
+#include "AMDGPU.h"
 #include "AMDGPUAsmPrinter.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
@@ -261,6 +262,10 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MCOpcode);
 
   for (const MachineOperand &MO : MI->explicit_operands()) {
+    // C/D constraints have been enforced by register allocation.
+    if (MO.isTargetIndex() && (MO.getIndex() == AMDGPU::TI_MFMA_CD_AGPR ||
+                               MO.getIndex() == AMDGPU::TI_MFMA_CD_VGPR))
+      continue;
     MCOperand MCOp;
     lowerOperand(MO, MCOp);
     OutMI.addOperand(MCOp);

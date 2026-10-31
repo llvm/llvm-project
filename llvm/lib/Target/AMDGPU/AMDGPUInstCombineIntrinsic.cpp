@@ -2270,8 +2270,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[0] = Src0;
     Args[1] = Src1;
 
-    Value *NewII = IC.Builder.CreateIntrinsic(
-        IID, {Src0->getType(), Src1->getType()}, Args, &II);
+    Value *NewII =
+        IC.Builder.CreateIntrinsic(IID, {Src0->getType(), Src1->getType()},
+                                   Args, &II, "", {}, [&](CallInst *NewCall) {
+                                     Attribute A = II.getAttributes().getFnAttr(
+                                         AMDGPU::MFMACDRegClassAttr);
+                                     if (A.isValid())
+                                       NewCall->addFnAttr(A);
+                                   });
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
   }
