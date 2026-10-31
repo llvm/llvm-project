@@ -103,6 +103,9 @@ private:
                           MachineBasicBlock::iterator MBBI,
                           MachineBasicBlock::iterator &NextMBBI,
                           bool IsTailCall);
+  bool expandMOVCF2GRViaFR(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI,
+                           MachineBasicBlock::iterator &NextMBBI);
   void annotateTableJump(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI);
 };
@@ -167,6 +170,8 @@ bool LoongArchPreRAExpandPseudo::expandMI(
   case LoongArch::PseudoTAIL_SMALL:
   case LoongArch::PseudoTAIL_LARGE:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
+  case LoongArch::PseudoMOVCF2GRViaFR:
+    return expandMOVCF2GRViaFR(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoBRIND:
     // If the PseudoBRIND is used to table jump, then emit a label to annotate
     // the `jr` instruction, and save the instructions.
@@ -943,6 +948,24 @@ bool LoongArchExpandPseudo::expandAddUpperImm(
       .addReg(DstReg, RegState::Kill | getRenamableRegState(Renamable));
 
   MBBI->eraseFromParent();
+  return true;
+}
+
+bool LoongArchPreRAExpandPseudo::expandMOVCF2GRViaFR(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register TmpReg =
+      MF->getRegInfo().createVirtualRegister(&LoongArch::FPR32RegClass);
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::MOVCF2FR_xS), TmpReg)
+      .addReg(MI.getOperand(1).getReg());
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::MOVFR2GR_S),
+          MI.getOperand(0).getReg())
+      .addReg(TmpReg);
+  MI.eraseFromParent();
   return true;
 }
 
