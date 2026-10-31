@@ -7007,7 +7007,8 @@ namespace {
 ///
 ///   vector<4x1x1xi1> --> vector<4x1xi1>
 ///
-static VectorType trimTrailingUnitDims(VectorType oldType) {
+static VectorType trimTrailingUnitDims(VectorType oldType,
+                                       bool allowRank0 = false) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
 
@@ -7021,7 +7022,7 @@ static VectorType trimTrailingUnitDims(VectorType oldType) {
 
   // Make sure we have at least 1 dimension.
   // TODO: Add support for 0-D vectors.
-  if (newShape.empty()) {
+  if (newShape.empty() && !allowRank0) {
     newShape = oldShape.take_back();
     newScalableDims = oldScalableDims.take_back();
   }
@@ -7034,7 +7035,8 @@ static VectorType trimTrailingUnitDims(VectorType oldType) {
 ///
 ///   vector<1x1x4xi1> --> vector<4x1xi1>
 ///
-static VectorType trimLeadingUnitDims(VectorType oldType) {
+static VectorType trimLeadingUnitDims(VectorType oldType,
+                                      bool allowRank0 = false) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
 
@@ -7049,7 +7051,7 @@ static VectorType trimLeadingUnitDims(VectorType oldType) {
 
   // Make sure we have at least 1 dimension.
   // TODO: Add support for 0-D vectors.
-  if (newShape.empty()) {
+  if (newShape.empty() && !allowRank0) {
     newShape = oldShape.take_back();
     newScalableDims = oldScalableDims.take_back();
   }
@@ -7097,9 +7099,10 @@ public:
     VectorType shapeOpResTy = shapeOp.getResultVectorType();
     VectorType shapeOpSrcTy = shapeOp.getSourceVectorType();
 
+    bool allowRank0 = shapeOpResTy.getRank() == 0;
     VectorType newVecType = (Side == UnitDimSide::Trailing)
-                                ? trimTrailingUnitDims(shapeOpSrcTy)
-                                : trimLeadingUnitDims(shapeOpSrcTy);
+                                ? trimTrailingUnitDims(shapeOpSrcTy, allowRank0)
+                                : trimLeadingUnitDims(shapeOpSrcTy, allowRank0);
 
     if (newVecType != shapeOpResTy) {
       return (Side == UnitDimSide::Trailing)
@@ -7120,12 +7123,17 @@ public:
                        shapeOp, "Non-leading-unit-dim dropping shape_cast Op");
     }
 
+    int64_t numMaskDimsToDrop = shapeOpResTy.getRank() == 0
+                                    ? shapeOpSrcTy.getRank() - 1
+                                    : numDimsToDrop;
+
     if (createMaskOp) {
       auto maskOperands = createMaskOp.getOperands();
 
-      auto maskOperandsToDrop = (Side == UnitDimSide::Trailing)
-                                    ? maskOperands.take_back(numDimsToDrop)
-                                    : maskOperands.take_front(numDimsToDrop);
+      auto maskOperandsToDrop =
+          (Side == UnitDimSide::Trailing)
+              ? maskOperands.take_back(numMaskDimsToDrop)
+              : maskOperands.take_front(numMaskDimsToDrop);
 
       // Check that every mask-dim-size to-be-dropped is constant and == 1. We
       // could also check for == 0, but that's left as a TODO.
@@ -7136,8 +7144,8 @@ public:
         return failure();
 
       auto newMaskOperands = (Side == UnitDimSide::Trailing)
-                                 ? maskOperands.drop_back(numDimsToDrop)
-                                 : maskOperands.drop_front(numDimsToDrop);
+                                 ? maskOperands.drop_back(numMaskDimsToDrop)
+                                 : maskOperands.drop_front(numMaskDimsToDrop);
       rewriter.replaceOpWithNewOp<vector::CreateMaskOp>(shapeOp, shapeOpResTy,
                                                         newMaskOperands);
       return success();
@@ -7148,8 +7156,8 @@ public:
 
       ArrayRef<int64_t> maskDimSizesToDrop =
           (Side == UnitDimSide::Trailing)
-              ? maskDimSizes.take_back(numDimsToDrop)
-              : maskDimSizes.take_front(numDimsToDrop);
+              ? maskDimSizes.take_back(numMaskDimsToDrop)
+              : maskDimSizes.take_front(numMaskDimsToDrop);
 
       // Check that every mask-dim-size to-be-dropped is constant and == 1. We
       // could also check for == 0, but that's left as a TODO.
@@ -7159,8 +7167,8 @@ public:
 
       ArrayRef<int64_t> newMaskDimSizes =
           (Side == UnitDimSide::Trailing)
-              ? maskDimSizes.drop_back(numDimsToDrop)
-              : maskDimSizes.drop_front(numDimsToDrop);
+              ? maskDimSizes.drop_back(numMaskDimsToDrop)
+              : maskDimSizes.drop_front(numMaskDimsToDrop);
       rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(shapeOp, shapeOpResTy,
                                                           newMaskDimSizes);
       return success();

@@ -3667,6 +3667,58 @@ func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1>{
 
 // -----
 
+// CHECK-LABEL:   func.func @fold_shape_cast_mask_to_0d_trailing() -> vector<i1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:           %[[CST:.*]] = arith.constant dense<true> : vector<i1>
+// CHECK:           return %[[CST]] : vector<i1>
+func.func @fold_shape_cast_mask_to_0d_trailing() -> vector<i1> {
+  %c1 = arith.constant 1 : index
+  %1 = vector.create_mask %c1, %c1 : vector<1x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x1xi1> to vector<i1>
+  return %2 : vector<i1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_mask_to_0d_trailing_dynamic(
+// CHECK-SAME:     %[[N:.*]]: index) -> vector<i1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:           %[[VAL:.*]] = vector.create_mask %[[N]] : vector<i1>
+// CHECK:           return %[[VAL]] : vector<i1>
+func.func @fold_shape_cast_mask_to_0d_trailing_dynamic(%n: index) -> vector<i1> {
+  %c1 = arith.constant 1 : index
+  %1 = vector.create_mask %n, %c1 : vector<1x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x1xi1> to vector<i1>
+  return %2 : vector<i1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_constant_mask_to_0d_trailing() -> vector<i1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:           %[[CST:.*]] = arith.constant dense<true> : vector<i1>
+// CHECK:           return %[[CST]] : vector<i1>
+func.func @fold_shape_cast_constant_mask_to_0d_trailing() -> vector<i1> {
+  %1 = vector.constant_mask [1, 1] : vector<1x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x1xi1> to vector<i1>
+  return %2 : vector<i1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @no_fold_shape_cast_mask_to_0d_dynamic_unknown(
+// CHECK-SAME:     %[[M:.*]]: index, %[[N:.*]]: index) -> vector<i1> {
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[M]], %[[N]] : vector<1x1xi1>
+// CHECK:           %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<1x1xi1> to vector<i1>
+// CHECK:           return %[[CAST]] : vector<i1>
+func.func @no_fold_shape_cast_mask_to_0d_dynamic_unknown(%m: index, %n: index) -> vector<i1> {
+  %mask = vector.create_mask %m, %n : vector<1x1xi1>
+  %cast = vector.shape_cast %mask : vector<1x1xi1> to vector<i1>
+  return %cast : vector<i1>
+}
+
+// -----
+
 // +---------------------------------------------------------------------------
 // Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Leading>
 // +---------------------------------------------------------------------------
@@ -3747,6 +3799,32 @@ func.func @fold_shape_cast_with_constant_mask_leading_unit() -> vector<4xi1>{
   %1 = vector.constant_mask [1, 1, 3] : vector<1x1x4xi1>
   %2 = vector.shape_cast %1 : vector<1x1x4xi1> to vector<4xi1>
   return %2 : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_mask_to_0d_leading_dynamic(
+// CHECK-SAME:     %[[N:.*]]: index) -> vector<i1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:           %[[VAL:.*]] = vector.create_mask %[[N]] : vector<i1>
+// CHECK:           return %[[VAL]] : vector<i1>
+func.func @fold_shape_cast_mask_to_0d_leading_dynamic(%n: index) -> vector<i1> {
+  %c1 = arith.constant 1 : index
+  %1 = vector.create_mask %c1, %n : vector<1x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x1xi1> to vector<i1>
+  return %2 : vector<i1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_constant_mask_to_0d_leading() -> vector<i1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:           %[[CST:.*]] = arith.constant dense<true> : vector<i1>
+// CHECK:           return %[[CST]] : vector<i1>
+func.func @fold_shape_cast_constant_mask_to_0d_leading() -> vector<i1> {
+  %1 = vector.constant_mask [1, 1] : vector<1x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x1xi1> to vector<i1>
+  return %2 : vector<i1>
 }
 
 // -----
