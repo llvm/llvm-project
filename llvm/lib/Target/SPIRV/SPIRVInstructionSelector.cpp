@@ -1634,8 +1634,6 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
     auto It = getOpVariableMBBIt(*I.getMF());
-    // An untyped pointer result type is only legal on OpUntypedVariableKHR,
-    // but not on OpVariable.
     const bool IsUntyped =
         PointerType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
     auto VarMIB =
@@ -1646,7 +1644,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
             .addUse(GR.getSPIRVTypeID(PointerType))
             .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
     if (IsUntyped)
-      VarMIB.addUse(GR.getSPIRVTypeID(PointeeTy)); // Data Type
+      VarMIB.addUse(GR.getSPIRVTypeID(PointeeTy));
     VarMIB.constrainAllUses(TII, TRI, RBI);
 
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
@@ -1667,7 +1665,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
           .constrainAllUses(TII, TRI, RBI);
     return true;
   }
-  return false;
+  llvm_unreachable("no extended instruction set available for frexp");
 }
 
 bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,

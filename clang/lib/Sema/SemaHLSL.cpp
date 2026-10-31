@@ -5392,6 +5392,23 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_frexp: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    if (CheckScalarOrVectorOrMatrix(&SemaRef, TheCall, SemaRef.Context.FloatTy,
+                                    0) ||
+        CheckScalarOrVectorOrMatrix(&SemaRef, TheCall, SemaRef.Context.FloatTy,
+                                    1) ||
+        CheckAllArgsHaveSameType(&SemaRef, TheCall))
+      return true;
+
+    if (CheckModifiableLValue(&SemaRef, TheCall, 1))
+      return true;
+
+    TheCall->setType(TheCall->getArg(0)->getType());
+    break;
+  }
   case Builtin::BI__builtin_hlsl_elementwise_splitdouble: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
