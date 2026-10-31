@@ -167,8 +167,8 @@ void test4() {
     typedef std::negative_binomial_distribution<T> D;
     typedef std::mt19937 G;
     G g;
-    D d(40, 1);
-    const int N = 1000;
+    D d(40, 0.9);
+    const int N = 1000000;
     std::vector<typename D::result_type> u;
     for (int i = 0; i < N; ++i)
     {
@@ -198,12 +198,10 @@ void test4() {
     double x_var = x_mean / d.p();
     double x_skew = (2 - d.p()) / std::sqrt(d.k() * (1 - d.p()));
     double x_kurtosis = 6. / d.k() + sqr(d.p()) / (d.k() * (1 - d.p()));
-    assert(mean == x_mean);
-    assert(var == x_var);
-    // assert(skew == x_skew);
-    (void)skew; (void)x_skew;
-    // assert(kurtosis == x_kurtosis);
-    (void)kurtosis; (void)x_kurtosis;
+    assert(std::abs((mean - x_mean) / x_mean) < 0.01);
+    assert(std::abs((var - x_var) / x_var) < 0.01);
+    assert(std::abs((skew - x_skew) / x_skew) < 0.02);
+    assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.08);
 }
 
 template <class T>
