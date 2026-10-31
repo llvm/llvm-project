@@ -1257,5 +1257,6 @@ void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
   renderLinePrefix(OS, ViewDepth);
   OS << tag("td", tag("pre", "Line")) << tag("td", tag("pre", "Count"));
   OS << tag("td", tag("pre", "Source" + Links));
-  renderLineSuffix(OS, ViewDepth);
+  // The header's cells are already closed, even if the view has subviews.
+  OS << "</tr>";
 }
