@@ -36,5 +36,13 @@ void func() {
   for (int i = 0; i < 7; ++i)
     ;
 
+  #pragma omp reverse
+  for (int i = {0}; i < 7; ++i)
+    ;
+
+  #pragma omp reverse
+  for (int i = {}; i < 7; ++i)
+    ;
+
 }
 

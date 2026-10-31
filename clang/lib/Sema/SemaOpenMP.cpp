@@ -6033,6 +6033,37 @@ static QualType getIntTypeForBitwidthOrBitInt(ASTContext &C, unsigned Bits,
   return Ty;
 }
 
+static Expr *buildInitListValue(Sema &SemaRef, Expr *E) {
+  auto *ILE = dyn_cast<InitListExpr>(E);
+  if (!ILE)
+    return E;
+  if (ILE->isTransparent())
+    return buildInitListValue(SemaRef, ILE->getInit(0));
+  QualType Ty = ILE->getType();
+  bool IsEmptyScalar = ILE->getNumInits() == 0 && Ty->isScalarType();
+  SourceLocation LBrace = ILE->getLBraceLoc();
+  if (!SemaRef.getLangOpts().CPlusPlus) {
+    if (!IsEmptyScalar)
+      return E;
+    ExprResult Zero = SemaRef.PerformImplicitConversion(
+        SemaRef.ActOnIntegerConstant(LBrace, 0).get(), Ty,
+        AssignmentAction::Converting);
+    return Zero.isUsable() ? Zero.get() : E;
+  }
+  InitListExpr *Syntactic = ILE->getSyntacticForm();
+  if ((!IsEmptyScalar && !Ty->isRecordType()) || !Syntactic)
+    return E;
+  Sema::TentativeAnalysisScope Trap(SemaRef);
+  ExprResult List = CaptureVars(SemaRef).TransformExpr(Syntactic);
+  if (List.isInvalid())
+    return E;
+  Expr *ListExpr = List.get();
+  ExprResult Value = SemaRef.BuildCXXTypeConstructExpr(
+      SemaRef.Context.getTrivialTypeSourceInfo(Ty, LBrace), LBrace, ListExpr,
+      ILE->getRBraceLoc(), /*ListInitialization=*/true);
+  return Value.isUsable() ? Value.get() : E;
+}
+
 static VarDecl *precomputeExpr(Sema &Actions,
                                SmallVectorImpl<Stmt *> &BodyStmts, Expr *E,
                                StringRef Name) {
@@ -6377,11 +6408,11 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
         llvm::APInt(Ctx.getIntWidth(LogicalTy), Direction, /*isSigned=*/true),
         LogicalTy, {});
   } else if (auto *IncBin = dyn_cast<BinaryOperator>(Inc)) {
+    Expr *IncRHS = buildInitListValue(SemaRef, IncBin->getRHS());
     if (IncBin->getOpcode() == BO_AddAssign) {
-      Step = IncBin->getRHS();
+      Step = IncRHS;
     } else if (IncBin->getOpcode() == BO_SubAssign) {
-      Step = AssertSuccess(
-          SemaRef.BuildUnaryOp(nullptr, {}, UO_Minus, IncBin->getRHS()));
+      Step = AssertSuccess(SemaRef.BuildUnaryOp(nullptr, {}, UO_Minus, IncRHS));
     } else
       llvm_unreachable("unhandled binary increment operator");
   } else if (auto *CondCXXOp = dyn_cast<CXXOperatorCallExpr>(Inc)) {
@@ -6395,11 +6426,12 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
           Ctx, llvm::APInt(Ctx.getIntWidth(LogicalTy), -1), LogicalTy, {});
       break;
     case OO_PlusEqual:
-      Step = CondCXXOp->getArg(1);
+      Step = buildInitListValue(SemaRef, CondCXXOp->getArg(1));
       break;
     case OO_MinusEqual:
-      Step = AssertSuccess(
-          SemaRef.BuildUnaryOp(nullptr, {}, UO_Minus, CondCXXOp->getArg(1)));
+      Step = AssertSuccess(SemaRef.BuildUnaryOp(
+          nullptr, {}, UO_Minus,
+          buildInitListValue(SemaRef, CondCXXOp->getArg(1))));
       break;
     default:
       llvm_unreachable("unhandled overloaded increment operator");
@@ -8879,6 +8911,7 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
          UB == nullptr && Step == nullptr && !TestIsLessOp && !TestIsStrictOp);
   if (!NewLCDecl || !NewLB || NewLB->containsErrors())
     return true;
+  NewLB = buildInitListValue(SemaRef, NewLB);
   LCDecl = getCanonicalDecl(NewLCDecl);
   LCRef = NewLCRefExpr;
   if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(NewLB))
@@ -8923,6 +8956,7 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
   assert(LCDecl != nullptr && LB != nullptr && Step == nullptr);
   if (!NewStep || NewStep->containsErrors())
     return true;
+  NewStep = buildInitListValue(SemaRef, NewStep);
   if (!NewStep->isValueDependent()) {
     // Check that the step is integer expression.
     SourceLocation StepLoc = NewStep->getBeginLoc();
