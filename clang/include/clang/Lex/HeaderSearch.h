@@ -792,6 +792,17 @@ public:
                                  unsigned *Offset = nullptr,
                                  StringRef OriginalModuleMapFile = StringRef());
 
+  /// Parse the module map \p File, without loading the modules.
+  /// Requires lazily loaded module maps.
+  ///
+  /// \param File The module map file.
+  /// \param IsSystem Whether this file is in a system header directory.
+  /// \param ImplicitlyDiscovered Whether this file was found by module map
+  ///        search.
+  /// \returns true if an error occurred, false otherwise.
+  bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
+                          bool ImplicitlyDiscovered);
+
   /// Collect the set of all known, top-level modules.
   ///
   /// \param Modules Will be filled with the set of known, top-level modules.
@@ -800,14 +811,29 @@ public:
   /// Load all known, top-level system modules.
   void loadTopLevelSystemModules();
 
+  /// Find the module map that defines the top-level module \p ModuleName,
+  /// without loading it.
+  /// Requires lazily loaded module maps.
+  ///
+  /// \param AllowExtraModuleMapSearch Whether we allow to search modulemaps
+  /// in subdirectories.
+  ///
+  /// \returns The module map file, or std::nullopt if not found.
+  OptionalFileEntryRef
+  lookupModuleMapFileForModule(StringRef ModuleName,
+                               bool AllowExtraModuleMapSearch = false);
+
 private:
   /// Lookup a module by name, with retry support for private counterparts of
   /// framework modules.
   ///
+  /// \param Load Whether to load the module.
+  ///
   /// \returns Whether the module was found.
   bool lookupModuleWithPrivateFallbacks(StringRef ModuleName,
                                         SourceLocation ImportLoc,
-                                        bool AllowExtraModuleMapSearch);
+                                        bool AllowExtraModuleMapSearch,
+                                        bool Load);
 
   /// Lookup a module with the given module name and search-name.
   ///
@@ -823,10 +849,12 @@ private:
   /// \param AllowExtraModuleMapSearch Whether we allow to search modulemaps
   /// in subdirectories.
   ///
+  /// \param Load Whether to load the module.
+  ///
   /// \returns Whether the module was found.
   bool lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
                         SourceLocation ImportLoc,
-                        bool AllowExtraModuleMapSearch = false);
+                        bool AllowExtraModuleMapSearch, bool Load);
 
   /// Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
@@ -861,9 +889,13 @@ private:
   Module *loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
                               bool IsSystem, bool ImplicitlyDiscovered);
 
-  /// Load all of the module maps within the immediate subdirectories
+  /// Parse the module map of the framework directory \p Dir.
+  void parseFrameworkModuleMap(DirectoryEntryRef Dir, bool IsSystem,
+                               bool ImplicitlyDiscovered, bool Load);
+
+  /// Parse all of the module maps within the immediate subdirectories
   /// of the given search directory.
-  void loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir);
+  void parseSubdirectoryModuleMaps(DirectoryLookup &SearchDir, bool Load);
 
   /// Diagnose headers that are a symlink and not covered by a module map.
   void diagnoseUncoveredSymlink(FileEntryRef File,

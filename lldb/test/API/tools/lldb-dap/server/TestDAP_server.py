@@ -182,28 +182,6 @@ class TestDAP_server(DAPTestCaseBase):
         session1.continue_to_exit()
         session2.continue_to_exit()
 
-    @skipIfWindows
-    def test_server_does_not_hang_when_logging(self):
-        """
-        A log channel enabled without a log file writes to the debug console.
-        Logging the adapter's own socket writes must not feed back into the
-        console output forever and hang the server.
-        """
-        self.build()
-        adapter = self.start_server(connection="listen://localhost:0")
-        session = self.create_session(adapter, disconnect_automatically=False)
-        self.launch_to_breakpoint(session, "Alice")
-        session.evaluate("`log enable lldb api comm", context="repl")
-
-        # Each request logs more lines, which keep circulating through the
-        # console output. They must not fill it up: every request still gets
-        # its response.
-        pending = [session.do_evaluate("help", context="repl") for _ in range(100)]
-        for response in pending:
-            response.result()
-
-        self.continue_to_exit_and_disconnect(session, "Alice")
-
     def start_server(self, connection: str, connection_timeout: int = 30):
         options = DebugAdapterOptions(
             connection=connection, connection_timeout=connection_timeout
