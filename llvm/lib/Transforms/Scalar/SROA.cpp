@@ -6306,6 +6306,23 @@ void SROA::clobberUse(Use &U) {
     }
 }
 
+/// Return the value a load of type \p Ty reads from bytes written by \p MSI,
+/// or nullptr if that value can't be expressed as a constant.
+static Constant *getMemSetValue(const MemSetInst &MSI, Type *Ty,
+                                const DataLayout &DL) {
+  auto *Byte = dyn_cast<ConstantInt>(MSI.getValue());
+  if (!Byte)
+    return nullptr;
+  if (Byte->isZero() && (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy() ||
+                         Ty->isPtrOrPtrVectorTy()))
+    return Constant::getNullValue(Ty);
+  if (Ty->isIntegerTy() &&
+      DL.getTypeSizeInBits(Ty) == DL.getTypeStoreSizeInBits(Ty))
+    return ConstantInt::get(
+        Ty, APInt::getSplat(Ty->getIntegerBitWidth(), Byte->getValue()));
+  return nullptr;
+}
+
 /// A basic LoadAndStorePromoter that does not remove store nodes.
 class BasicLoadAndStorePromoter : public LoadAndStorePromoter {
 public:
@@ -6329,7 +6346,19 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   // that do not overlap with any before them. The slices are sorted by
   // increasing beginOffset. We don't use AS.partitions(), as it will use a more
   // sophisticated algorithm that takes splittable slices into account.
+  // Constant-length memsets are kept out of that grouping and instead act as a
+  // store of their value in each slice range they fully cover.
   LLVM_DEBUG(dbgs() << "Attempting to propagate values on " << AI << "\n");
+  const DataLayout &DL = AI.getDataLayout();
+  auto IsForwardableMemSet = [](const Instruction *I) {
+    auto *MSI = dyn_cast<MemSetInst>(I);
+    return MSI && !MSI->isVolatile() && isa<ConstantInt>(MSI->getLength());
+  };
+  SmallVector<const Slice *, 4> MemSets;
+  for (const Slice &S : AS)
+    if (IsForwardableMemSet(cast<Instruction>(S.getUse()->getUser())))
+      MemSets.push_back(&S);
+
   bool AllSameAndValid = true;
   Type *PartitionType = nullptr;
   SmallVector<Instruction *> Insts;
@@ -6337,6 +6366,30 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   uint64_t EndOffset = 0;
 
   auto Flush = [&]() {
+    SmallVector<StoreInst *, 2> MemSetStores;
+    if (AllSameAndValid && !Insts.empty()) {
+      for (const Slice *M : MemSets) {
+        if (M->endOffset() <= BeginOffset || M->beginOffset() >= EndOffset)
+          continue;
+        auto &MSI = *cast<MemSetInst>(M->getUse()->getUser());
+        Constant *V = nullptr;
+        if (M->beginOffset() <= BeginOffset && EndOffset <= M->endOffset())
+          V = getMemSetValue(MSI, PartitionType, DL);
+        if (!V) {
+          LLVM_DEBUG(dbgs() << "Memset does not define range [" << BeginOffset
+                            << ", " << EndOffset << "): " << MSI << "\n");
+          AllSameAndValid = false;
+          break;
+        }
+        // LoadAndStorePromoter only treats stores as definitions, so model the
+        // memset with a store of the same bytes, removed again below.
+        IRBuilderTy IRB(MSI.getNextNode());
+        Value *Ptr = IRB.CreateInBoundsPtrAdd(
+            &AI, ConstantInt::get(DL.getIndexType(AI.getType()), BeginOffset));
+        MemSetStores.push_back(IRB.CreateStore(V, Ptr));
+        Insts.push_back(MemSetStores.back());
+      }
+    }
     if (AllSameAndValid && !Insts.empty()) {
       LLVM_DEBUG(dbgs() << "Propagate values on slice [" << BeginOffset << ", "
                         << EndOffset << ")\n");
@@ -6345,6 +6398,12 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
       Insts.push_back(&AI);
       BasicLoadAndStorePromoter Promoter(Insts, SSA, PartitionType);
       Promoter.run(Insts);
+    }
+    for (StoreInst *SI : MemSetStores) {
+      auto *Ptr = dyn_cast<Instruction>(SI->getPointerOperand());
+      SI->eraseFromParent();
+      if (Ptr && Ptr != &AI && Ptr->use_empty())
+        Ptr->eraseFromParent();
     }
     AllSameAndValid = true;
     PartitionType = nullptr;
@@ -6360,6 +6419,8 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
       });
       continue;
     }
+    if (IsForwardableMemSet(User))
+      continue;
     if (S.beginOffset() >= EndOffset) {
       Flush();
       BeginOffset = S.beginOffset();
