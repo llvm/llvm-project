@@ -164,14 +164,10 @@ void LivePhysRegs::addRegMaskPair(
   }
   for (; S.isValid(); ++S) {
     unsigned SI = S.getSubRegIndex();
-    if ((Mask & TRI->getSubRegIndexLaneMask(SI)).none())
-      continue;
-    // Add only this sub-register. addReg() would also add its sub-registers,
-    // which may be dead when just part of the register is live. The iterator
-    // visits them separately, so live ones are still added.
-    MCRegister SubReg = S.getSubReg();
-    if (!TRI->isConstantPhysReg(SubReg))
-      LiveRegs.insert(SubReg);
+    // Skip sub-registers that are only partly live, since addReg() would mark
+    // their dead lanes live too. Their live parts are added when visited.
+    if ((TRI->getSubRegIndexLaneMask(SI) & ~Mask).none())
+      addReg(S.getSubReg());
   }
 }
 

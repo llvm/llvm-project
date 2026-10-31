@@ -195,7 +195,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SLEEP 3
   ; GCN-NEXT:   S_NOP 0
