@@ -37,6 +37,7 @@
 #include "AGXTargetMachine.h"
 #include "Utils/AGXBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include <functional>
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -1646,6 +1647,49 @@ void LowerAIR::recoverAGXOperations(Function &F) {
     return II && (II->getIntrinsicID() == Intrinsic::fma ||
                   II->getIntrinsicID() == Intrinsic::fmuladd);
   };
+  // Whether a float cannot be denormal where the ALU flushes: made by an
+  // operation that flushes, a constant that is not denormal, or a choice
+  // among, sign change or absolute value of such values (selects and phis of
+  // a run of .ftz operations, which strict mode then flushes on the bits).
+  DenseMap<const Value *, bool> NoDenormalMemo;
+  std::function<bool(Value *, unsigned)> NoDenormalAt = [&](Value *V,
+                                                           unsigned Depth) {
+    if (FlushingArith(V))
+      return true;
+    // (a square root, or its reciprocal, of any float is normal, zero,
+    // infinite or NaN: the root of the least denormal is about 2^-74.5)
+    if (match(V, m_Intrinsic<Intrinsic::sqrt>(m_Value())) ||
+        match(V, m_Intrinsic<Intrinsic::agx_rsqrt>(m_Value())))
+      return true;
+    if (auto *C = dyn_cast<ConstantFP>(V))
+      return !C->getValueAPF().isDenormal();
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !I->getType()->isFloatTy() || Depth > 8)
+      return false;
+    if (auto It = NoDenormalMemo.find(I); It != NoDenormalMemo.end())
+      return It->second;
+    // (a cycle through phis is assumed free of denormals while it is checked:
+    // every value entering it is checked)
+    NoDenormalMemo[I] = true;
+    bool R = false;
+    Value *X;
+    if (auto *Sel = dyn_cast<SelectInst>(I))
+      R = NoDenormalAt(Sel->getTrueValue(), Depth + 1) &&
+          NoDenormalAt(Sel->getFalseValue(), Depth + 1);
+    else if (auto *Phi = dyn_cast<PHINode>(I))
+      R = all_of(Phi->incoming_values(),
+                 [&](Value *In) { return NoDenormalAt(In, Depth + 1); });
+    else if (match(I, m_FNeg(m_Value(X))) ||
+             match(I, m_Intrinsic<Intrinsic::fabs>(m_Value(X))))
+      R = NoDenormalAt(X, Depth + 1);
+    // (what was computed while this one was assumed free of denormals may be
+    // wrong when it is not)
+    if (!R)
+      NoDenormalMemo.clear();
+    NoDenormalMemo[I] = R;
+    return R;
+  };
+  auto NoDenormal = [&](Value *V) { return NoDenormalAt(V, 0); };
   for (Instruction &I : make_early_inc_range(instructions(F))) {
     IRBuilder<> B(&I);
     Type *Ty = I.getType();
@@ -1747,7 +1791,7 @@ void LowerAIR::recoverAGXOperations(Function &F) {
                                  m_SpecificInt(0x7fffffff), m_Deferred(Y))))
           Bits = Y;
         Value *A = nullptr;
-        bool Made = match(Bits, m_BitCast(m_Value(A))) && FlushingArith(A);
+        bool Made = match(Bits, m_BitCast(m_Value(A))) && NoDenormal(A);
         bool Read = !Sel->use_empty() && all_of(Sel->users(), [&](User *U) {
           auto *BC = dyn_cast<BitCastInst>(U);
           return BC && BC->getType()->isFloatTy() && !BC->use_empty() &&
@@ -1762,6 +1806,8 @@ void LowerAIR::recoverAGXOperations(Function &F) {
     R->takeName(&I);
     I.replaceAllUsesWith(R);
     RecursivelyDeleteTriviallyDeadInstructions(&I);
+    // (the memo's keys may be among the deleted)
+    NoDenormalMemo.clear();
   }
 }
 
