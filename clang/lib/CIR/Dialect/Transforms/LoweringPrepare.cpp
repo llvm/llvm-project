@@ -3498,6 +3498,13 @@ void LoweringPreparePass::runOnOperation() {
     // happen out here because the ctor and the CUDA dtor builder test the
     // attribute to decide whether a device-side binary exists at all.
     mlirModule->removeAttr(CIRDialect::getCUDADeviceBinaryAttrName());
+    // The kernels and device variables have been registered from these.
+    // Nothing after this pass reads them, so drop them to keep a second run
+    // of this pass from registering them again.
+    for (auto &entry : cudaKernelMap)
+      entry.getValue()->removeAttr(CUDAKernelNameAttr::getMnemonic());
+    for (auto &[global, regAttr] : cudaDeviceVars)
+      global->removeAttr(CUDAVarRegistrationInfoAttr::getMnemonic());
   }
 
   buildGlobalCtorDtorList();
