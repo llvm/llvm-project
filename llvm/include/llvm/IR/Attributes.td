@@ -437,6 +437,7 @@ def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
 def ProfileSampleAccurate : StrBoolAttr<"profile-sample-accurate">;
 def UseSampleProfile : StrBoolAttr<"use-sample-profile">;
 def LoaderReplaceable : StrBoolAttr<"loader-replaceable">;
+def InlineMemset : StrBoolAttr<"inline-memset">;
 
 // Attribute compatiblity rules are generated to check the attribute of the
 // caller and callee and decide whether inlining should be allowed. CompatRule
@@ -500,4 +501,5 @@ def : MergeRule<"adjustCallerStackProbes">;
 def : MergeRule<"adjustCallerStackProbeSize">;
 def : MergeRule<"adjustMinLegalVectorWidth">;
 def : MergeRule<"adjustNullPointerValidAttr">;
+def : MergeRule<"setOR<InlineMemsetAttr>">;
 def : MergeRule<"setAND<MustProgressAttr>">;

@@ -558,6 +558,9 @@ public:
 
   std::vector<std::string> DefaultFunctionAttrs;
 
+  /// List of string operations that should be inlined.
+  std::vector<std::string> InlineStringops;
+
   /// List of dynamic shared object files to be loaded as pass plugins.
   std::vector<std::string> PassPlugins;
 

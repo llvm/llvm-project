@@ -3317,6 +3317,17 @@ def finline_max_stacksize_EQ
       Group<f_Group>, Visibility<[ClangOption, CLOption, CC1Option]>,
       HelpText<"Suppress inlining of functions whose stack size exceeds the given value">,
       MarshallingInfoInt<CodeGenOpts<"InlineMaxStackSize">, "UINT_MAX">;
+def finline_stringops_EQ : CommaJoined<["-"], "finline-stringops=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Prevent compiler-generated out-of-line calls for specified memory operations (supported: memset)">,
+  MarshallingInfoStringVector<CodeGenOpts<"InlineStringops">>;
+def finline_stringops : Flag<["-"], "finline-stringops">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  Alias<finline_stringops_EQ>, AliasArgs<["memset"]>,
+  HelpText<"Inline string operations (equivalent to -finline-stringops=memset)">;
+def fno_inline_stringops : Flag<["-"], "fno-inline-stringops">,
+  Group<f_Group>, Visibility<[ClangOption]>,
+  HelpText<"Do not inline string operations">;
 defm jmc : BoolFOption<"jmc",
   CodeGenOpts<"JMCInstrument">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
