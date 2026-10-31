@@ -236,6 +236,11 @@ infrastructure are described first, followed by tool-specific sections.
   positives on `bsl::optional` and `bdlb::NullableValue` constructed from a
   value or returned by `bsl::make_optional`.
 
+- Improved {doc}`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by no longer reporting
+  uses of other fields after only one field was moved or forwarded, as in
+  `std::forward<T>(t).b`.
+
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
   unforwarded `auto&&` parameters in C++20 abbreviated function templates.

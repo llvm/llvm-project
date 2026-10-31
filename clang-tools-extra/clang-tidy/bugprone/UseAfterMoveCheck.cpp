@@ -67,7 +67,7 @@ public:
   UseAfterMoveFinder(ASTContext *TheContext,
                      llvm::ArrayRef<StringRef> InvalidationFunctions,
                      llvm::ArrayRef<StringRef> ReinitializationFunctions,
-                     const CXXRecordDecl *MovedAs);
+                     const CXXRecordDecl *MovedAs, const FieldDecl *MovedField);
 
   // Within the given code block, finds the first use of 'MovedVariable' that
   // occurs after 'MovingCall' (the expression that performs the move). If a
@@ -93,6 +93,7 @@ private:
   llvm::ArrayRef<StringRef> InvalidationFunctions;
   llvm::ArrayRef<StringRef> ReinitializationFunctions;
   const CXXRecordDecl *MovedAs;
+  const FieldDecl *MovedField;
   std::unique_ptr<ExprSequence> Sequence;
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
@@ -205,9 +206,10 @@ static StatementMatcher inDecltypeOrTemplateArg() {
 UseAfterMoveFinder::UseAfterMoveFinder(
     ASTContext *TheContext, llvm::ArrayRef<StringRef> InvalidationFunctions,
     llvm::ArrayRef<StringRef> ReinitializationFunctions,
-    const CXXRecordDecl *MovedAs)
+    const CXXRecordDecl *MovedAs, const FieldDecl *MovedField)
     : Context(TheContext), InvalidationFunctions(InvalidationFunctions),
-      ReinitializationFunctions(ReinitializationFunctions), MovedAs(MovedAs) {}
+      ReinitializationFunctions(ReinitializationFunctions), MovedAs(MovedAs),
+      MovedField(MovedField) {}
 
 std::optional<UseAfterMove>
 UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
@@ -424,6 +426,10 @@ void UseAfterMoveFinder::getDeclRefs(
             !MovedAs->hasMemberName(Member->getMemberDecl()->getIdentifier())) {
           continue;
         }
+        // Only one field was moved, e.g. `std::move(a).b`.
+        if (Member && MovedField && isa<FieldDecl>(Member->getMemberDecl()) &&
+            Member->getMemberDecl() != MovedField)
+          continue;
         if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block &&
             (Operator || !isSpecifiedAfterMove(DeclRef->getDecl())))
           // Ignore uses of a standard smart pointer or classes annotated as
@@ -433,13 +439,19 @@ void UseAfterMoveFinder::getDeclRefs(
       }
     };
 
+    // `std::move(a).b` only uses the field `b` of `a`.
+    const auto MovedFieldAccess = callExpr(
+        callee(functionDecl(hasAnyName("::std::move", "::std::forward"))),
+        hasParentIgnoringParenImpCasts(
+            memberExpr(unless(isArrow()), member(fieldDecl()))
+                .bind("member-expr")));
     const auto DeclRefMatcher =
         declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
                     unless(inDecltypeOrTemplateArg()),
                     unless(hasParentIgnoringParenImpCasts(
                         memberExpr(hasDeclaration(cxxDestructorDecl())))),
-                    optionally(hasParentIgnoringParenImpCasts(
-                        memberExpr().bind("member-expr"))))
+                    optionally(hasParentIgnoringParenImpCasts(anyOf(
+                        memberExpr().bind("member-expr"), MovedFieldAccess))))
             .bind("declref");
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
@@ -574,6 +586,8 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
           anyOf(hasParent(DerivedToBaseCast),
                 hasArgument(
                     0, traverse(TK_AsIs, expr(hasParent(DerivedToBaseCast)))))),
+      optionally(hasParentIgnoringParenImpCasts(memberExpr(
+          unless(isArrow()), member(fieldDecl().bind("moved-field"))))),
       anyOf(hasAncestor(compoundStmt(
                 hasParent(lambdaExpr().bind("containing-lambda")))),
             hasAncestor(functionDecl(
@@ -621,6 +635,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MoveDecl = Result.Nodes.getNodeAs<FunctionDecl>("move-decl");
   const auto *ParentCast =
       Result.Nodes.getNodeAs<ImplicitCastExpr>("optional-cast");
+  const auto *MovedField = Result.Nodes.getNodeAs<FieldDecl>("moved-field");
 
   if (!MovingCall || !MovingCall->getExprLoc().isValid())
     MovingCall = CallMove;
@@ -653,13 +668,18 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
 
   const CXXRecordDecl *MovedAs =
       ParentCast ? ParentCast->getType()->getAsCXXRecordDecl() : nullptr;
+  const MoveType Type = determineMoveType(MoveDecl);
+  // Other invalidation functions don't return the object itself, so a member
+  // access on their result says nothing about which part was invalidated.
+  if (Type == MoveType::Invalidation)
+    MovedField = nullptr;
 
   for (Stmt *CodeBlock : CodeBlocks) {
     UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions,
-                              ReinitializationFunctions, MovedAs);
+                              ReinitializationFunctions, MovedAs, MovedField);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
-      emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
-                     determineMoveType(MoveDecl), MoveDecl);
+      emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context, Type,
+                     MoveDecl);
   }
 }
 
