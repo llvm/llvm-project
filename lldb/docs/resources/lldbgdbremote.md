@@ -2382,6 +2382,9 @@ following keys and values:
   contain a `:` or a `;`. Use `hexname` if the thread
   name has special characters.
 * `hexname` - `ascii-hex` -  An ASCII hex string that contains the name of the thread
+* `stop_id` - `unsigned` -
+  Decimal 32-bit identifier for this process stop. The value advances each
+  time the process enters a stopped state.
 * `qaddr` - `hex` -
   Big endian hex value that contains the `libdispatch`
   queue address for the queue of the thread.

@@ -925,6 +925,9 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
   AppendThreadIDToResponse(response, process.GetID(), thread.GetID());
   response.PutChar(';');
 
+  // Identify this process stop so clients can correlate related protocol data.
+  response.Printf("stop_id:%" PRIu32 ";", process.GetStopID());
+
   // Include the thread name if there is one.
   const std::string thread_name = thread.GetName();
   if (!thread_name.empty()) {
