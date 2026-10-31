@@ -1715,6 +1715,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v2i32, Legal);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
+    setOperationAction(ISD::BITCAST, MVT::f64, Expand);
 
     // And we need to promote i64 loads/stores into vector load/store
     setOperationAction(ISD::LOAD, MVT::i64, Custom);
