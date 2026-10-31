@@ -160,7 +160,6 @@
 ; O2-NEXT:     fixup-statepoint-caller-saved
 ; O2-NEXT:     branch-folder
 ; O2-NEXT:     post-ra-pseudos
-; O2-NEXT:     block-placement
 ; O2-NEXT:     fentry-insert
 ; O2-NEXT:     xray-instrumentation
 ; O2-NEXT:     live-debug-values

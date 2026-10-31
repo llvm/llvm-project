@@ -19,6 +19,7 @@
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/FuncletLayout.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -103,7 +104,8 @@ public:
                 MachineCopyPropagationPass, TailDuplicatePass,
                 StackMapLivenessPass, PostRAMachineSinkingPass,
                 PostRASchedulerPass, FuncletLayoutPass, PatchableFunctionPass,
-                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass>();
+                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass,
+                MachineBlockPlacementPass>();
   }
 
   void addIRPasses(PassManagerWrapper &PMW) override;
