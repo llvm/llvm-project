@@ -162,6 +162,12 @@ static bool hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop,
                                   ICFLoopSafetyInfo *SafetyInfo,
                                   MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
                                   OptimizationRemarkEmitter *ORE);
+static bool hoistInvariantPHIAsSelect(PHINode *PN, Loop *CurLoop,
+                                      DominatorTree *DT, BasicBlock *HoistDest,
+                                      ICFLoopSafetyInfo *SafetyInfo,
+                                      MemorySSAUpdater &MSSAU,
+                                      ScalarEvolution *SE,
+                                      OptimizationRemarkEmitter *ORE);
 static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU);
@@ -678,6 +684,15 @@ bool llvm::hoistRegion(DomTreeNode *N, const LICMDependencies &Deps,
         continue;
       }
 
+      // Attempt to convert a loop-invariant phi into a select and hoist it.
+      if (auto *PN = dyn_cast<PHINode>(&I))
+        if (Opts.licm_phi_hoisting &&
+            hoistInvariantPHIAsSelect(PN, CurLoop, DT, Preheader, SafetyInfo,
+                                      MSSAU, SE, ORE)) {
+          Changed = true;
+          continue;
+        }
+
       auto IsInvariantStart = [&](Instruction &I) {
         using namespace PatternMatch;
         return I.use_empty() &&
@@ -735,6 +750,46 @@ getConstantInsertionIndex(InsertElementInst *Ins) {
           VecTy->getElementCount().getKnownMinValue()))
     return std::nullopt;
   return InsertedIdxCI->getValue().getLimitedValue();
+}
+
+/// If a phi's condition and incoming values are all loop invariant, the phi
+/// itself is invariant. We can replace it with a select and hoist the select.
+/// Currently this handles two entry phis whose condition can be found by
+/// GetIfCondition, but it can be extended to other patterns as well.
+static bool hoistInvariantPHIAsSelect(PHINode *PN, Loop *CurLoop,
+                                      DominatorTree *DT, BasicBlock *HoistDest,
+                                      ICFLoopSafetyInfo *SafetyInfo,
+                                      MemorySSAUpdater &MSSAU,
+                                      ScalarEvolution *SE,
+                                      OptimizationRemarkEmitter *ORE) {
+  if (PN->getNumIncomingValues() == 2) {
+    BasicBlock *IfTrue = nullptr;
+    BasicBlock *IfFalse = nullptr;
+
+    auto *BI = GetIfCondition(PN->getParent(), IfTrue, IfFalse);
+    if (BI && CurLoop->isLoopInvariant(BI->getCondition())) {
+      Value *Cond = BI->getCondition();
+      Value *TrueVal = PN->getIncomingValueForBlock(IfTrue);
+      Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
+
+      if (CurLoop->isLoopInvariant(TrueVal) &&
+          CurLoop->isLoopInvariant(FalseVal)) {
+        auto *Sel =
+            SelectInst::Create(Cond, TrueVal, FalseVal, PN->getName() + ".sel",
+                               PN->getParent()->getFirstNonPHIIt());
+        Sel->setDebugLoc(PN->getDebugLoc());
+        SafetyInfo->insertInstructionTo(Sel, PN->getParent());
+
+        PN->replaceAllUsesWith(Sel);
+        eraseInstruction(*PN, *SafetyInfo, MSSAU);
+
+        hoist(*Sel, DT, CurLoop, HoistDest, SafetyInfo, MSSAU, SE, ORE);
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 static bool hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop,
