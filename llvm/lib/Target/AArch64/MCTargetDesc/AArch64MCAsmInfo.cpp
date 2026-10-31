@@ -108,6 +108,8 @@ StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
   case AArch64::S_PLT:                 return "%pltpcrel";
   case AArch64::S_DTPREL:              return "%dtprel";
   case AArch64::S_FUNCINIT:            return "%funcinit";
+
+  case AArch64::S_COFF_SECREL:         return ":SECREL32:";
   default:
     llvm_unreachable("Invalid relocation specifier");
   }

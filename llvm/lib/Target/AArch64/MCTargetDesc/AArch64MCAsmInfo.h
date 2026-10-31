@@ -176,6 +176,9 @@ enum {
   S_MACHO_TLVPPAGE,
   S_MACHO_TLVPPAGEOFF,
 
+  // COFF relocation specifiers:
+  S_COFF_SECREL,
+
   S_INVALID  = 0xfff
   // clang-format on
 };

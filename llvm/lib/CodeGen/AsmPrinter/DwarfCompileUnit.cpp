@@ -276,7 +276,7 @@ void DwarfCompileUnit::addLocationAttribute(
       const MCSymbol *Sym = Asm->getSymbol(Global);
       // 16-bit platforms like MSP430 and AVR take this path, so sink this
       // assert to platforms that use it.
-      auto GetPointerSizedFormAndOp = [this]() {
+      auto GetPointerSizedFormAndOp = [this, Global]() {
         unsigned PointerSize = Asm->MAI.getCodePointerSize();
         assert((PointerSize == 4 || PointerSize == 8) &&
                "Add support for other sizes if necessary");
@@ -284,7 +284,13 @@ void DwarfCompileUnit::addLocationAttribute(
           dwarf::Form Form;
           dwarf::LocationAtom Op;
         };
-        return PointerSize == 4
+
+        bool UseFourByteConst =
+            PointerSize == 4 ||
+            (Global->isThreadLocal() &&
+             !Asm->getObjFileLowering().support64bitDebugThreadLocalLocation());
+
+        return UseFourByteConst
                    ? FormAndOp{dwarf::DW_FORM_data4, dwarf::DW_OP_const4u}
                    : FormAndOp{dwarf::DW_FORM_data8, dwarf::DW_OP_const8u};
       };
