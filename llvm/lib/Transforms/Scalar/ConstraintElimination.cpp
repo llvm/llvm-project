@@ -443,6 +443,10 @@ public:
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
 
+  /// Returns true if \p V is known to be non-positive, either because the
+  /// signed system implies it or because ValueTracking can prove it.
+  bool isKnownNonPositive(Value *V);
+
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
 
@@ -766,6 +770,14 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
     // Op0 - Op1 does not wrap signed if 0 <=s Op1 <=s Op0.
     if (Info.isKnownNonNegative(Op1) &&
         Info.doesHold(CmpInst::ICMP_SGE, Op0, Op1))
+      return true;
+  }
+
+  // A signed sum of operands with opposite signs cannot wrap.
+  if (Signed && Opcode == Instruction::Add) {
+    if (Info.isKnownNonNegative(Op0) && Info.isKnownNonPositive(Op1))
+      return true;
+    if (Info.isKnownNonPositive(Op0) && Info.isKnownNonNegative(Op1))
       return true;
   }
 
@@ -1268,6 +1280,13 @@ bool ConstraintInfo::isKnownNegative(Value *V) {
     return CI->isNegative();
   return ::isKnownNegative(V, DL) ||
          doesHold(CmpInst::ICMP_SLT, V, ConstantInt::get(V->getType(), 0));
+}
+
+bool ConstraintInfo::isKnownNonPositive(Value *V) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->getValue().isNonPositive();
+  return ::isKnownNegative(V, DL) ||
+         doesHold(CmpInst::ICMP_SLE, V, ConstantInt::get(V->getType(), 0));
 }
 
 bool ConstraintInfo::isKnownPositive(Value *V) {
