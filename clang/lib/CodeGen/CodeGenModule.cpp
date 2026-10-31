@@ -5254,7 +5254,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     // in this TU. For other architectures it is always emitted.
     bool ShouldEmitResolver = !getTriple().isAArch64();
     SmallVector<CodeGenFunction::FMVResolverOption, 10> Options;
-    llvm::DenseMap<llvm::Function *, const FunctionDecl *> DeclMap;
+    llvm::DenseMap<llvm::Function *, GlobalDecl> DeclMap;
 
     getContext().forEachMultiversionedFunctionVersion(
         FD, [&](const FunctionDecl *CurFD) {
@@ -5265,13 +5265,13 @@ void CodeGenModule::emitMultiVersionFunctions() {
             assert(getTarget().getTriple().isX86() && "Unsupported target");
             TA->getX86AddedFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
-            DeclMap.insert({Func, CurFD});
+            DeclMap.insert({Func, GlobalDecl(CurFD)});
             Options.emplace_back(Func, Feats, TA->getX86Architecture());
           } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
             if (TVA->isDefaultVersion() && IsDefined)
               ShouldEmitResolver = true;
             llvm::Function *Func = createFunction(CurFD);
-            DeclMap.insert({Func, CurFD});
+            DeclMap.insert({Func, GlobalDecl(CurFD)});
             char Delim = getTarget().getTriple().isAArch64() ? '+' : ',';
             TVA->getFeatures(Feats, Delim);
             Options.emplace_back(Func, Feats);
@@ -5282,7 +5282,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
               if (TC->isDefaultVersion(I) && IsDefined)
                 ShouldEmitResolver = true;
               llvm::Function *Func = createFunction(CurFD, I);
-              DeclMap.insert({Func, CurFD});
+              DeclMap.insert({Func, GlobalDecl(CurFD, I)});
               Feats.clear();
               if (getTarget().getTriple().isX86()) {
                 TC->getX86Feature(Feats, I);
@@ -5298,6 +5298,68 @@ void CodeGenModule::emitMultiVersionFunctions() {
         });
 
     if (!ShouldEmitResolver)
+      continue;
+
+    // The public entry point calls every version using the module ABI. Check
+    // vector values whose x86-64 calling convention changes with AVX or
+    // AVX-512 before creating the resolver. Use GlobalDecl so that each
+    // target_clones version is checked with its own features.
+    bool Reported = false;
+    if (getTriple().getArch() == llvm::Triple::x86_64 &&
+        getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver23) {
+      unsigned ModuleVectorBits =
+          getTarget().getABI() == "avx512" ? 512
+          : getTarget().getABI() == "avx" || getTarget().getABI() == "avx2"
+              ? 256
+              : 128;
+      for (const auto &Option : Options) {
+        GlobalDecl Version = DeclMap.lookup(Option.Function);
+        const auto *VersionFD = cast<FunctionDecl>(Version.getDecl());
+        const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(Version);
+        const auto *VersionType = VersionFD->getType()->getAs<FunctionType>();
+        bool UsesWin64ABI = getTriple().isOSWindowsOrUEFI() &&
+                            VersionType->getCallConv() != CC_X86_64SysV;
+        if (UsesWin64ABI ||
+            FI.getCallingConvention() == llvm::CallingConv::Win64)
+          continue;
+
+        llvm::StringMap<bool> Features;
+        getContext().getFunctionFeatureMap(Features, Version);
+        unsigned VersionVectorBits =
+            Features.lookup("avx512f")                          ? 512
+            : Features.lookup("avx") || Features.lookup("avx2") ? 256
+                                                                : 128;
+        VersionVectorBits = std::max(VersionVectorBits, ModuleVectorBits);
+        if (VersionVectorBits == ModuleVectorBits)
+          continue;
+
+        auto CheckType = [&](QualType Ty, SourceLocation Loc, bool IsParam) {
+          if (!Ty->isVectorType())
+            return false;
+          uint64_t Bits = getContext().getTypeSize(Ty);
+          if (Bits <= ModuleVectorBits || Bits > VersionVectorBits)
+            return false;
+          Diags.Report(Loc, diag::err_multiversion_resolver_abi)
+              << VersionFD << IsParam << Ty;
+          return true;
+        };
+
+        if (CheckType(VersionFD->getReturnType(), VersionFD->getLocation(),
+                      false)) {
+          Reported = true;
+          break;
+        }
+        for (const ParmVarDecl *P : VersionFD->parameters()) {
+          if (CheckType(P->getType(), P->getLocation(), true)) {
+            Reported = true;
+            break;
+          }
+        }
+        if (Reported)
+          break;
+      }
+    }
+    if (Reported)
       continue;
 
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
@@ -5338,7 +5400,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
               llvm::APInt LHS = llvm::AArch64::getCpuSupportsMask(RO.Features);
               return LHS.isSubsetOf(RHS);
             })) {
-          Diags.Report(DeclMap[I->Function]->getLocation(),
+          Diags.Report(DeclMap[I->Function].getDecl()->getLocation(),
                        diag::warn_unreachable_version)
               << I->Function->getName();
           assert(I->Function->user_empty() && "unexpected users");
