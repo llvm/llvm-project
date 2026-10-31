@@ -2131,6 +2131,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
 
   FunctionPassManager FPM;
+  // CS profile loading below can split critical edges. Clean up the CFG before
+  // InstCombine can sink instructions into the newly created blocks.
+  if (PGOOpt && PGOOpt->CSAction == PGOOptions::CSIRUse)
+    FPM.addPass(SimplifyCFGPass());
+
   // The IPO Passes may leave cruft around. Clean up after them.
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
