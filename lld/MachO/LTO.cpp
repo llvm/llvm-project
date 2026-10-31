@@ -85,20 +85,28 @@ static lto::Config createConfig() {
 }
 
 // If `originalPath` exists, hardlinks `path` to `originalPath`. If that fails,
-// or `originalPath` is not set, saves `buffer` to `path`.
-static void saveOrHardlinkBuffer(StringRef buffer, const Twine &path,
-                                 std::optional<StringRef> originalPath) {
+// or `originalPath` is not set, saves `buffer` to `path`. Returns the
+// modification time of the resulting file.
+static uint32_t saveOrHardlinkBuffer(StringRef buffer, StringRef path,
+                                     std::optional<StringRef> originalPath) {
   if (originalPath) {
+    fs::file_status originalStat, pathStat;
+    bool haveOriginal = !fs::status(*originalPath, originalStat);
+    bool havePath = !fs::status(path, pathStat, /*follow=*/false);
+    // A previous link already hardlinked `path` to the same cache entry.
+    if (haveOriginal && havePath && fs::equivalent(originalStat, pathStat))
+      return getModTime(originalStat);
     // Delete the hardlink if it exists. Otherwise, it is possible for the
     // create_hard_link to fail (as the hardlink exists already), and when
     // saveBuffer is subsequently called the hardlink'd file may get truncated
     // and reading from it causes a crash.
-    fs::remove(path);
-    auto err = fs::create_hard_link(*originalPath, path);
-    if (!err)
-      return;
+    if (havePath)
+      fs::remove(path);
+    if (haveOriginal && !fs::create_hard_link(*originalPath, path))
+      return getModTime(path);
   }
   saveBuffer(buffer, path);
+  return getModTime(path);
 }
 
 BitcodeCompiler::BitcodeCompiler() {
@@ -310,16 +318,14 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
       saveBuffer(objBuf,
                  config->outputFile + ((i == 0) ? "" : Twine(i)) + ".lto.o");
 
-    auto filePath = outputFilePath(i);
+    StringRef filePath = saver().save(outputFilePath(i).str());
     uint32_t modTime = 0;
-    if (!config->ltoObjPath.empty()) {
-      saveOrHardlinkBuffer(objBuf, filePath, cachePath);
-      modTime = getModTime(filePath);
-    }
-    ret.push_back(make<ObjFile>(
-        MemoryBufferRef(objBuf, saver().save(filePath.str())), modTime,
-        /*archiveName=*/"", /*lazy=*/false,
-        /*forceHidden=*/false, /*compatArch=*/true, /*builtFromBitcode=*/true));
+    if (!config->ltoObjPath.empty())
+      modTime = saveOrHardlinkBuffer(objBuf, filePath, cachePath);
+    ret.push_back(make<ObjFile>(MemoryBufferRef(objBuf, filePath), modTime,
+                                /*archiveName=*/"", /*lazy=*/false,
+                                /*forceHidden=*/false, /*compatArch=*/true,
+                                /*builtFromBitcode=*/true));
   }
 
   return ret;
