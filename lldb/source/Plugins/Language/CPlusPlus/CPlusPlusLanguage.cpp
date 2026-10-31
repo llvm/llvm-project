@@ -2559,7 +2559,12 @@ bool CPlusPlusLanguage::IsNilReference(ValueObject &valobj) {
     return false;
   bool canReadValue = true;
   bool isZero = valobj.GetValueAsUnsigned(0, &canReadValue) == 0;
-  return canReadValue && isZero;
+  // Address class 0 (default / flat) has no aperture; 0 is the NULL pointer.
+  // In an address space whose pointer value 0 maps to real memory (a flat
+  // aperture), a zero pointer is not a null reference.
+  if (!canReadValue || !isZero)
+    return false;
+  return valobj.GetPointerValue().address == 0;
 }
 
 bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {

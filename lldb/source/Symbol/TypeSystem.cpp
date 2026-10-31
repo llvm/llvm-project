@@ -94,6 +94,15 @@ CompilerType TypeSystem::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
   return CompilerType();
 }
 
+llvm::Expected<CompilerType>
+TypeSystem::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                                    lldb::addr_space_t address_space) {
+  return llvm::createStringError(
+      std::errc::invalid_argument,
+      "TypeSystem %s does not support address space modifiers",
+      GetPluginName().str().c_str());
+}
+
 CompilerType
 TypeSystem::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   return CompilerType();

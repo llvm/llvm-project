@@ -75,13 +75,14 @@ public:
 
 /// The implementation of lldb::Type's m_payload field for TypeSystemClang.
 class TypePayloadClang {
-  /// The payload is used for typedefs and ptrauth types.
+  /// The payload is used for typedefs, ptrauth types, and pointer types.
   /// For typedefs, the Layout is as follows:
   /// \verbatim
   /// bit 0..30 ... Owning Module ID.
   /// bit 31 ...... IsCompleteObjCClass.
   /// \endverbatim
   /// For ptrauth types, we store the PointerAuthQualifier as an opaque value.
+  /// For pointer types, we store the DWARF address class of the pointee.
   Type::Payload m_payload = 0;
 
 public:
@@ -725,6 +726,9 @@ public:
 
   bool HasPointerAuthQualifier(lldb::opaque_compiler_type_t type) override;
 
+  std::optional<lldb::addr_space_t>
+  GetTargetAddressSpace(lldb::opaque_compiler_type_t type) override;
+
   bool CanPassInRegisters(const CompilerType &type) override;
 
   bool SupportsLanguage(lldb::LanguageType language) override;
@@ -804,6 +808,10 @@ public:
 
   CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                   uint32_t payload) override;
+
+  llvm::Expected<CompilerType>
+  AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                          lldb::addr_space_t address_space) override;
 
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 

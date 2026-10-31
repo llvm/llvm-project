@@ -3750,6 +3750,16 @@ bool TypeSystemClang::HasPointerAuthQualifier(
   return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
+std::optional<lldb::addr_space_t>
+TypeSystemClang::GetTargetAddressSpace(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return std::nullopt;
+  clang::LangAS as = GetCanonicalQualType(type).getAddressSpace();
+  if (!clang::isTargetAddressSpace(as))
+    return std::nullopt;
+  return clang::toTargetAddressSpace(as);
+}
+
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
   if (auto *record_decl =
       TypeSystemClang::GetAsRecordDecl(type)) {
@@ -4684,6 +4694,38 @@ TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
     return GetType(result);
   }
   return CompilerType();
+}
+
+llvm::Expected<CompilerType>
+TypeSystemClang::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                                         lldb::addr_space_t address_space) {
+  if (!type)
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "invalid compiler type");
+  // In Clang's AST, an address space (__attribute__((address_space(N)))) is a
+  // qualifier on the pointee type T before GetPointerType() wraps it into a
+  // pointer, just like const in "const T *".
+  clang::QualType qual_type = GetQualType(type);
+  if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID) {
+    if (qual_type.hasAddressSpace())
+      return GetType(getASTContext().removeAddrSpaceQualType(qual_type));
+    return GetType(qual_type);
+  }
+  constexpr lldb::addr_space_t max_target_as =
+      clang::Qualifiers::MaxAddressSpace -
+      static_cast<unsigned>(clang::LangAS::FirstTargetAddressSpace);
+  if (address_space > max_target_as)
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "invalid address space %" PRIu64,
+                                   address_space);
+  clang::LangAS lang_as =
+      clang::getLangASFromTargetAS(static_cast<unsigned>(address_space));
+  if (qual_type.hasAddressSpace()) {
+    if (qual_type.getAddressSpace() == lang_as)
+      return GetType(qual_type);
+    qual_type = getASTContext().removeAddrSpaceQualType(qual_type);
+  }
+  return GetType(getASTContext().getAddrSpaceQualType(qual_type, lang_as));
 }
 
 CompilerType

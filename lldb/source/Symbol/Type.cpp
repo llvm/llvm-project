@@ -636,10 +636,20 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         m_name.Clear();
         break;
 
-      case eEncodingIsPointerUID:
-        m_compiler_type =
-            encoding_type->GetForwardCompilerType().GetPointerType();
+      case eEncodingIsPointerUID: {
+        CompilerType pointee_type = encoding_type->GetForwardCompilerType();
+        if (m_payload != LLDB_DEFAULT_ADDRESS_SPACE_ID) {
+          if (llvm::Expected<CompilerType> qualified_or_err =
+                  pointee_type.AddAddressSpaceModifier(m_payload))
+            pointee_type = *qualified_or_err;
+          else
+            LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols),
+                           qualified_or_err.takeError(),
+                           "Unable to add address space modifier: {0}");
+        }
+        m_compiler_type = pointee_type.GetPointerType();
         break;
+      }
 
       case eEncodingIsLValueReferenceUID:
         m_compiler_type =
@@ -700,9 +710,19 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
               GetSymbolFile()->GetDeclContextContainingUID(GetID()), m_payload);
           break;
 
-        case eEncodingIsPointerUID:
+        case eEncodingIsPointerUID: {
+          if (m_payload != LLDB_DEFAULT_ADDRESS_SPACE_ID) {
+            if (llvm::Expected<CompilerType> qualified_or_err =
+                    void_compiler_type.AddAddressSpaceModifier(m_payload))
+              void_compiler_type = *qualified_or_err;
+            else
+              LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols),
+                             qualified_or_err.takeError(),
+                             "Unable to add address space modifier: {0}");
+          }
           m_compiler_type = void_compiler_type.GetPointerType();
           break;
+        }
 
         case eEncodingIsLValueReferenceUID:
           m_compiler_type = void_compiler_type.GetLValueReferenceType();

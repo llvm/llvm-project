@@ -18,6 +18,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -1553,4 +1554,52 @@ TEST_F(TestTypeSystemClang, TestIsMemberDataPointerType) {
   // int — not a pointer at all
   EXPECT_FALSE(int_type.IsMemberDataPointerType());
   EXPECT_FALSE(int_type.IsMemberFunctionPointerType());
+}
+
+TEST_F(TestTypeSystemClang, TestAddressSpaceModifier) {
+  CompilerType invalid_type;
+  EXPECT_EQ(invalid_type.GetTargetAddressSpace(), std::nullopt);
+  EXPECT_THAT_EXPECTED(invalid_type.AddAddressSpaceModifier(3), llvm::Failed());
+
+  CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+  ASSERT_TRUE(int_type.IsValid());
+  EXPECT_EQ(int_type.GetTargetAddressSpace(), std::nullopt);
+
+  // Address space 0 is the default address space (no qualifier added).
+  llvm::Expected<CompilerType> zero_as_type =
+      int_type.AddAddressSpaceModifier(0);
+  ASSERT_THAT_EXPECTED(zero_as_type, llvm::Succeeded());
+  EXPECT_EQ(zero_as_type->GetTargetAddressSpace(), std::nullopt);
+
+  // Qualifying with a non-zero target address space records it on the type.
+  llvm::Expected<CompilerType> as3_int = int_type.AddAddressSpaceModifier(3);
+  ASSERT_THAT_EXPECTED(as3_int, llvm::Succeeded());
+  ASSERT_TRUE(as3_int->IsValid());
+  EXPECT_EQ(as3_int->GetTargetAddressSpace(),
+            std::optional<lldb::addr_space_t>(3U));
+
+  // Re-qualifying an already address-space-qualified type replaces the
+  // existing address space, and qualifying with 0 strips it.
+  llvm::Expected<CompilerType> re_qualified =
+      as3_int->AddAddressSpaceModifier(5);
+  ASSERT_THAT_EXPECTED(re_qualified, llvm::Succeeded());
+  EXPECT_EQ(re_qualified->GetTargetAddressSpace(),
+            std::optional<lldb::addr_space_t>(5U));
+
+  llvm::Expected<CompilerType> stripped =
+      re_qualified->AddAddressSpaceModifier(LLDB_DEFAULT_ADDRESS_SPACE_ID);
+  ASSERT_THAT_EXPECTED(stripped, llvm::Succeeded());
+  EXPECT_EQ(stripped->GetTargetAddressSpace(), std::nullopt);
+
+  // An out-of-range target address space returns an error.
+  EXPECT_THAT_EXPECTED(int_type.AddAddressSpaceModifier(UINT64_MAX),
+                       llvm::Failed());
+
+  // A pointer to an address-space-qualified type carries the qualifier on
+  // the pointee, while the pointer itself lives in the default space.
+  CompilerType ptr_to_as3_int = as3_int->GetPointerType();
+  ASSERT_TRUE(ptr_to_as3_int.IsPointerType());
+  EXPECT_EQ(ptr_to_as3_int.GetTargetAddressSpace(), std::nullopt);
+  EXPECT_EQ(ptr_to_as3_int.GetPointeeType().GetTargetAddressSpace(),
+            std::optional<lldb::addr_space_t>(3U));
 }
