@@ -1139,10 +1139,9 @@ struct YieldOpInterface
 
   AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
                                       const AnalysisState &state) const {
-    if (auto ifOp = dyn_cast<scf::IfOp>(op->getParentOp())) {
+    if (isa<scf::IfOp, scf::IndexSwitchOp>(op->getParentOp()))
       return {{op->getParentOp()->getResult(opOperand.getOperandNumber()),
                BufferRelation::Equivalent, /*isDefinite=*/false}};
-    }
     if (isa<scf::ExecuteRegionOp>(op->getParentOp()))
       return {{op->getParentOp()->getResult(opOperand.getOperandNumber()),
                BufferRelation::Equivalent}};
