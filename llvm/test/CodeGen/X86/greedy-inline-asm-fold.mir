@@ -447,6 +447,47 @@ body: |
     RET 0
 ...
 ---
+# The memoperands of an instruction describe all of its memory accesses, so
+# the stack slot's isn't added to an asm that accesses other memory without
+# memoperands, here through an "=m" output.
+#
+#   void rm_and_m(long a, long b, long c, long d, long e, long f, long g) {
+#     long x;
+#     asm volatile("" : "=m"(x) : "rm"(a), "r"(b), "r"(c), "r"(d), "r"(e),
+#                                 "r"(f), "r"(g) : CLOBBERS);
+#   }
+name: rm_and_m
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 8, alignment: 16, isImmutable: true }
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+    ; CHECK-LABEL: name: rm_and_m
+    ; CHECK: liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rdx
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr64 = COPY $rcx
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gr64 = COPY $r8
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gr64 = COPY $r9
+    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload maystore attdialect, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, mem:m ops:5, %stack.1, 1, $noreg, 0, $noreg, reguse:GR64, [[COPY]], reguse:GR64, [[COPY1]], reguse:GR64, [[COPY2]], reguse:GR64, [[COPY3]], reguse:GR64, [[COPY4]], reguse:GR64, [[MOV64rm]], clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15 :: (store unknown-size, align 1), (load (s64) from %stack.1)
+    ; CHECK-NEXT: RET 0
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    %6:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    INLINEASM &"", sideeffect maystore attdialect, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, reguse:GR64 foldable, %0, reguse:GR64, %1, reguse:GR64, %2, reguse:GR64, %3, reguse:GR64, %4, reguse:GR64, %5, reguse:GR64, %6, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
+    RET 0
+...
+---
 # A constant passed to an "rm" operand is spilled and folded rather than
 # rematerialized into a register, which would need a register that the asm
 # doesn't leave.
