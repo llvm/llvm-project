@@ -8,31 +8,57 @@
 declare i32 @llvm.get.rounding()
 
 define i32 @test_flt_rounds() nounwind {
-; X86-LABEL: test_flt_rounds:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $2, %esp
-; X86-NEXT:    fnstcw (%esp)
-; X86-NEXT:    movzwl (%esp), %ecx
-; X86-NEXT:    shrl $9, %ecx
-; X86-NEXT:    andb $6, %cl
-; X86-NEXT:    movl $45, %eax
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-NEXT:    shrl %cl, %eax
-; X86-NEXT:    andl $3, %eax
-; X86-NEXT:    addl $2, %esp
-; X86-NEXT:    retl
+; SDAG-X86-LABEL: test_flt_rounds:
+; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    subl $2, %esp
+; SDAG-X86-NEXT:    fnstcw (%esp)
+; SDAG-X86-NEXT:    movzwl (%esp), %ecx
+; SDAG-X86-NEXT:    shrl $9, %ecx
+; SDAG-X86-NEXT:    andl $6, %ecx
+; SDAG-X86-NEXT:    movl $45, %eax
+; SDAG-X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; SDAG-X86-NEXT:    shrl %cl, %eax
+; SDAG-X86-NEXT:    andl $3, %eax
+; SDAG-X86-NEXT:    addl $2, %esp
+; SDAG-X86-NEXT:    retl
 ;
-; X64-LABEL: test_flt_rounds:
-; X64:       # %bb.0:
-; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    shrl $9, %ecx
-; X64-NEXT:    andb $6, %cl
-; X64-NEXT:    movl $45, %eax
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrl %cl, %eax
-; X64-NEXT:    andl $3, %eax
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_flt_rounds:
+; SDAG-X64:       # %bb.0:
+; SDAG-X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
+; SDAG-X64-NEXT:    shrl $9, %ecx
+; SDAG-X64-NEXT:    andl $6, %ecx
+; SDAG-X64-NEXT:    movl $45, %eax
+; SDAG-X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; SDAG-X64-NEXT:    shrl %cl, %eax
+; SDAG-X64-NEXT:    andl $3, %eax
+; SDAG-X64-NEXT:    retq
+;
+; GISEL-X86-LABEL: test_flt_rounds:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $2, %esp
+; GISEL-X86-NEXT:    fnstcw (%esp)
+; GISEL-X86-NEXT:    movzwl (%esp), %ecx
+; GISEL-X86-NEXT:    shrl $9, %ecx
+; GISEL-X86-NEXT:    andb $6, %cl
+; GISEL-X86-NEXT:    movl $45, %eax
+; GISEL-X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; GISEL-X86-NEXT:    shrl %cl, %eax
+; GISEL-X86-NEXT:    andl $3, %eax
+; GISEL-X86-NEXT:    addl $2, %esp
+; GISEL-X86-NEXT:    retl
+;
+; GISEL-X64-LABEL: test_flt_rounds:
+; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
+; GISEL-X64-NEXT:    shrl $9, %ecx
+; GISEL-X64-NEXT:    andb $6, %cl
+; GISEL-X64-NEXT:    movl $45, %eax
+; GISEL-X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; GISEL-X64-NEXT:    shrl %cl, %eax
+; GISEL-X64-NEXT:    andl $3, %eax
+; GISEL-X64-NEXT:    retq
   %1 = call i32 @llvm.get.rounding()
   ret i32 %1
 }
@@ -49,7 +75,7 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-NEXT:    shrl $9, %ecx
-; SDAG-X86-NEXT:    andb $6, %cl
+; SDAG-X86-NEXT:    andl $6, %ecx
 ; SDAG-X86-NEXT:    movl $45, %esi
 ; SDAG-X86-NEXT:    movl $45, %eax
 ; SDAG-X86-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -63,7 +89,7 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-NEXT:    shrl $9, %ecx
-; SDAG-X86-NEXT:    andb $6, %cl
+; SDAG-X86-NEXT:    andl $6, %ecx
 ; SDAG-X86-NEXT:    movl $45, %eax
 ; SDAG-X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; SDAG-X86-NEXT:    shrl %cl, %eax
@@ -78,7 +104,7 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-NEXT:    shrl $9, %ecx
-; SDAG-X86-NEXT:    andb $6, %cl
+; SDAG-X86-NEXT:    andl $6, %ecx
 ; SDAG-X86-NEXT:    movl $45, %eax
 ; SDAG-X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; SDAG-X86-NEXT:    shrl %cl, %eax
@@ -90,7 +116,7 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-NEXT:    shrl $9, %ecx
-; SDAG-X86-NEXT:    andb $6, %cl
+; SDAG-X86-NEXT:    andl $6, %ecx
 ; SDAG-X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; SDAG-X86-NEXT:    shrl %cl, %esi
 ; SDAG-X86-NEXT:    andl $3, %esi
@@ -117,7 +143,7 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
 ; SDAG-X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
 ; SDAG-X64-NEXT:    shrl $9, %ecx
-; SDAG-X64-NEXT:    andb $6, %cl
+; SDAG-X64-NEXT:    andl $6, %ecx
 ; SDAG-X64-NEXT:    movl $45, %ebx
 ; SDAG-X64-NEXT:    movl $45, %eax
 ; SDAG-X64-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -131,7 +157,7 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
 ; SDAG-X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
 ; SDAG-X64-NEXT:    shrl $9, %ecx
-; SDAG-X64-NEXT:    andb $6, %cl
+; SDAG-X64-NEXT:    andl $6, %ecx
 ; SDAG-X64-NEXT:    movl $45, %eax
 ; SDAG-X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; SDAG-X64-NEXT:    shrl %cl, %eax
@@ -144,7 +170,7 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
 ; SDAG-X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
 ; SDAG-X64-NEXT:    shrl $9, %ecx
-; SDAG-X64-NEXT:    andb $6, %cl
+; SDAG-X64-NEXT:    andl $6, %ecx
 ; SDAG-X64-NEXT:    movl $45, %eax
 ; SDAG-X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; SDAG-X64-NEXT:    shrl %cl, %eax
@@ -156,7 +182,7 @@ define i32 @multiple_flt_rounds() nounwind {
 ; SDAG-X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
 ; SDAG-X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
 ; SDAG-X64-NEXT:    shrl $9, %ecx
-; SDAG-X64-NEXT:    andb $6, %cl
+; SDAG-X64-NEXT:    andl $6, %ecx
 ; SDAG-X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; SDAG-X64-NEXT:    shrl %cl, %ebx
 ; SDAG-X64-NEXT:    andl $3, %ebx
@@ -368,3 +394,6 @@ entry:
 
 ; Function Attrs: nounwind
 declare dso_local i32 @fesetround(i32) local_unnamed_addr #1
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; X64: {{.*}}
+; X86: {{.*}}
