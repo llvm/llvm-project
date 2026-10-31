@@ -48,48 +48,9 @@ class UUID;
 class VariableList;
 struct ModuleFunctionSearchOptions;
 
-static constexpr OptionEnumValueElement g_auto_download_enum_values[] = {
-    {
-        lldb::eSymbolDownloadOff,
-        "off",
-        "Disable automatically downloading symbols.",
-    },
-    {
-        lldb::eSymbolDownloadBackground,
-        "background",
-        "Download symbols in the background for images as they appear in the "
-        "backtrace.",
-    },
-    {
-        lldb::eSymbolDownloadForeground,
-        "foreground",
-        "Download symbols in the foreground for images as they appear in the "
-        "backtrace.",
-    },
-};
-
-static constexpr OptionEnumValueElement g_shared_cache_use_enum_values[] = {
-    {
-        lldb::eSymbolSharedCacheUseHostLLDBMemory,
-        "host-lldb-memory",
-        "Get binaries from the host lldb in-memory shared cache.",
-    },
-    {
-        lldb::eSymbolSharedCacheUseHostSharedCache,
-        "host-shared-cache",
-        "Get binaries from the host shared cache.",
-    },
-    {
-        lldb::eSymbolSharedCacheUseHostAndInferiorSharedCache,
-        "host-and-inferior-shared-cache",
-        "Get binaries from the host and inferior's shared caches.",
-    },
-    {
-        lldb::eSymbolSharedCacheUseInferiorSharedCacheOnly,
-        "inferior-shared-cache-only",
-        "Get binaries from inferior's shared cache only.",
-    },
-};
+#define LLDB_ENUMS_auto_download_enum_values
+#define LLDB_ENUMS_shared_cache_use_enum_values
+#include "lldb/Core/ModuleListEnums.inc"
 
 class ModuleListProperties : public Properties {
   mutable llvm::sys::RWMutex m_symlink_paths_mutex;
