@@ -243,7 +243,8 @@ struct IndirectEscape2 {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -270,7 +271,8 @@ struct NestedAnonStructEscape {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -282,7 +284,8 @@ struct MultiFieldAnonStructEscapesOnlyWrittenField {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -294,7 +297,8 @@ struct AnonUnionEscapesOnlyWrittenField {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -308,8 +312,10 @@ struct AnonUnionAliasingWarnsPerMember {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
-    q = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'q' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
+    q = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'q' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -324,7 +330,8 @@ struct AnonUnionSafeOverwriteStillWarns {
 
   void foo() {
     std::string s;
-    p = s.data();       // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data();       // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                        // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
     q = kGlobal.data(); // safe overwrite of the shared storage; `p` is still (wrongly) reported
   }
 };
