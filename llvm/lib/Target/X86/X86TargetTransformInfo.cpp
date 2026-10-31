@@ -69,6 +69,10 @@ using namespace llvm;
 //
 //===----------------------------------------------------------------------===//
 
+static cl::opt<bool> EnableAVX512TailFolding(
+    "x86-enable-avx512-tail-folding", cl::init(false), cl::Hidden,
+    cl::desc("Enable experimental AVX-512 tail folding in loop vectorizer"));
+
 // Helper struct to store/access costs for each cost kind.
 // TODO: Move this to allow other targets to use it?
 namespace {
@@ -7691,6 +7695,17 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() const {
   // but there are currently some unexplained performance artifacts on Atom.
   // As a temporary solution, disable on Atom.
   return !(ST->isAtom());
+}
+
+// AVX-512 supports scalar-expanded lane masks (bzhi+kmov), but tail folding
+// is gated behind an experimental flag until dedicated legality heuristics
+// exist.
+TailFoldingStyle X86TTIImpl::getPreferredTailFoldingStyle() const {
+  if (EnableAVX512TailFolding && ST->hasAVX512() && ST->hasBWI() &&
+      ST->hasBMI2())
+    return TailFoldingStyle::DataAndControlFlow;
+
+  return TailFoldingStyle::DataWithoutLaneMask;
 }
 
 bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {

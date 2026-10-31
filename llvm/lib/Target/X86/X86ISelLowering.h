@@ -110,6 +110,9 @@ namespace llvm {
 
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
+    /// Return true if X86 prefers to expand get_active_lane_mask into a scalar
+    /// bitmask sequence.
+    bool shouldExpandGetActiveLaneMaskUsingScalar(EVT VT) const override;
 
     void markLibCallAttributes(MachineFunction *MF, unsigned CC,
                                ArgListTy &Args) const override;
