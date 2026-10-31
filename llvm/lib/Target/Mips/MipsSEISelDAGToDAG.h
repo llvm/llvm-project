@@ -34,10 +34,6 @@ private:
 
   bool replaceUsesWithZeroReg(MachineRegisterInfo *MRI, const MachineInstr&);
 
-  std::pair<SDNode *, SDNode *> selectMULT(SDNode *N, unsigned Opc,
-                                           const SDLoc &dl, EVT Ty, bool HasLo,
-                                           bool HasHi);
-
   void selectAddE(SDNode *Node, const SDLoc &DL) const;
 
   bool selectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset) const;
@@ -129,9 +125,6 @@ public:
   explicit MipsSEDAGToDAGISelLegacy(MipsTargetMachine &TM, CodeGenOptLevel OL);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
-
-FunctionPass *createMipsSEISelDag(MipsTargetMachine &TM,
-                                  CodeGenOptLevel OptLevel);
 }
 
 #endif

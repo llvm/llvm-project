@@ -21,7 +21,7 @@
 
 # CHECK:      --- !ifs-v1
 # CHECK-NEXT: IfsVersion:      3.0
-# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: aarch64, Endianness: little, BitWidth: 64 }
 # CHECK-NEXT: Symbols:
 # CHECK-NEXT:   - { Name: bar, Type: Object, Size: 0, Undefined: true }
 # CHECK-NEXT:   - { Name: foo, Type: Func, Undefined: true }

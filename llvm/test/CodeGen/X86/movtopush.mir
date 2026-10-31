@@ -10,6 +10,8 @@
 
   declare void @good(i32, i32, i32, i32)
 
+  declare void @two(i32, i32)
+
   declare void @struct(ptr byval(%struct.s), i32, i32, i32)
 
   ; Function Attrs: optsize
@@ -25,11 +27,29 @@
     ret void
   }
 
+  define void @debug_after_call() !dbg !4 {
+  entry:
+    call void @two(i32 1, i32 2)
+    ret void
+  }
+
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { optsize }
   attributes #1 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "debug-after-call.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = distinct !DISubprogram(name: "debug_after_call", scope: !1, file: !1, line: 1, type: !5, spFlags: DISPFlagDefinition, unit: !0)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{}
+  !7 = !DILocalVariable(name: "x", scope: !4, file: !1, line: 1, type: !8)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DILocation(line: 1, scope: !4)
 
 ...
 ---
@@ -115,15 +135,43 @@ body:             |
     %1 = MOV32rm %stack.2.s, 1, $noreg, 0, $noreg :: (load (s32) from %stack.2.s, align 8)
     %2 = MOV32rm %stack.2.s, 1, $noreg, 4, $noreg :: (load (s32) from %stack.2.s + 4)
     %3 = COPY $esp
-    MOV32mr %3, 1, $noreg, 4, $noreg, killed %2 :: (store (s32))
-    MOV32mr %3, 1, $noreg, 0, $noreg, killed %1 :: (store (s32))
+    MOV32mr %3, 1, $noreg, 4, $noreg, %2 :: (store (s32))
+    MOV32mr %3, 1, $noreg, 0, $noreg, %1 :: (store (s32))
     %4 = LEA32r %stack.0.p, 1, $noreg, 0, $noreg
-    MOV32mr %3, 1, $noreg, 16, $noreg, killed %4 :: (store (s32) into stack + 16)
+    MOV32mr %3, 1, $noreg, 16, $noreg, %4 :: (store (s32) into stack + 16)
     %5 = LEA32r %stack.1.q, 1, $noreg, 0, $noreg
-    MOV32mr %3, 1, $noreg, 12, $noreg, killed %5 :: (store (s32) into stack + 12)
+    MOV32mr %3, 1, $noreg, 12, $noreg, %5 :: (store (s32) into stack + 12)
     MOV32mi %3, 1, $noreg, 8, $noreg, 6 :: (store (s32) into stack + 8)
     CALLpcrel32 @struct, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp,
     ADJCALLSTACKUP32 20, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
     RET 0
 
+...
+---
+# CHECK-LABEL: name: debug_after_call
+# CHECK: bb.0.entry:
+# CHECK-NEXT: ADJCALLSTACKDOWN32 8, 0, 8, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+# CHECK-NEXT: PUSH32i 2, implicit-def $esp, implicit $esp
+# CHECK-NEXT: CFI_INSTRUCTION adjust_cfa_offset 4
+# CHECK-NEXT: PUSH32i 1, implicit-def $esp, implicit $esp
+# CHECK-NEXT: CFI_INSTRUCTION adjust_cfa_offset 4
+# CHECK-NEXT: CALLpcrel32 @two, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
+# CHECK-NEXT: DBG_VALUE
+# CHECK-NEXT: ADJCALLSTACKUP32 8, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+# CHECK-NEXT: RET 0
+name: debug_after_call
+alignment: 1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32, preferred-register: '' }
+body: |
+  bb.0.entry:
+    ADJCALLSTACKDOWN32 8, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    %0 = COPY $esp
+    MOV32mi %0, 1, $noreg, 4, $noreg, 2 :: (store (s32) into stack + 4)
+    MOV32mi %0, 1, $noreg, 0, $noreg, 1 :: (store (s32) into stack)
+    CALLpcrel32 @two, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
+    DBG_VALUE $noreg, $noreg, !7, !DIExpression(), debug-location !9
+    ADJCALLSTACKUP32 8, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    RET 0
 ...

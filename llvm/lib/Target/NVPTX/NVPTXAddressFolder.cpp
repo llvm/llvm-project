@@ -51,7 +51,7 @@ static bool foldAddress(MachineInstr &MI, MachineOperand &Addr,
     return false;
 
   const MachineOperand &Sym = Mov->getOperand(1);
-  if (!Sym.isGlobal() && !Sym.isSymbol())
+  if (!Sym.isGlobal() && !Sym.isSymbol() && !Sym.isMCSymbol())
     return false;
 
   // The accessed address space must be known and must not be shared.
@@ -64,11 +64,12 @@ static bool foldAddress(MachineInstr &MI, MachineOperand &Addr,
       AddrSpace == NVPTX::AddressSpace::SharedCluster)
     return false;
 
-  if (Sym.isGlobal()) {
+  if (Sym.isGlobal())
     Addr.ChangeToGA(Sym.getGlobal(), Sym.getOffset(), Sym.getTargetFlags());
-  } else {
+  else if (Sym.isSymbol())
     Addr.ChangeToES(Sym.getSymbolName(), Sym.getTargetFlags());
-  }
+  else
+    Addr.ChangeToMCSymbol(Sym.getMCSymbol(), Sym.getTargetFlags());
 
   if (MRI.use_empty(Mov->getOperand(0).getReg()))
     Mov->eraseFromParent();

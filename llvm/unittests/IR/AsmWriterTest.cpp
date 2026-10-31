@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
@@ -12,6 +13,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -60,6 +62,128 @@ TEST(AsmWriterTest, DumpDIExpression) {
   raw_string_ostream OS(S);
   Expr->print(OS);
   EXPECT_EQ("!DIExpression(DW_OP_constu, 4, DW_OP_minus, DW_OP_deref)", S);
+}
+
+TEST(AsmWriterTest, PersistentBasicBlockPrint) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    @0 = global i32 0
+
+    declare void @use(ptr)
+
+    define void @f() !dbg !6 {
+      call void @use(ptr @0), !annotation !12
+        #dbg_value(i32 0, !9, !DIExpression(DW_OP_constu, 4), !11)
+      ret void, !annotation !12
+    }
+
+    define void @g() {
+      ret void
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "f", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "x", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "i32", size: 32, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+    !12 = !{!"annotation"}
+  )",
+                                                  Err, Ctx);
+  ASSERT_NE(M, nullptr);
+
+  std::string First;
+  raw_string_ostream FirstOS(First);
+  M->getFunction("f")->getEntryBlock().print(FirstOS);
+
+  std::string Second;
+  raw_string_ostream SecondOS(Second);
+  M->getFunction("f")->getEntryBlock().print(SecondOS);
+
+  EXPECT_EQ(First, Second);
+  EXPECT_THAT(First, HasSubstr("call void @use(ptr @0), !annotation !"));
+  EXPECT_THAT(First, HasSubstr("#dbg_value(i32 0, !"));
+  EXPECT_THAT(First, HasSubstr("!DIExpression(DW_OP_constu, 4)"));
+  EXPECT_THAT(First, HasSubstr("ret void, !annotation !"));
+
+  MDNode *Earlier = MDNode::getDistinct(Ctx, MDString::get(Ctx, "earlier"));
+  M->getFunction("f")->getEntryBlock().getTerminator()->setMetadata("order",
+                                                                    Earlier);
+  MDNode *Later = MDNode::getDistinct(Ctx, MDString::get(Ctx, "later"));
+  M->getFunction("g")->getEntryBlock().getTerminator()->setMetadata("order",
+                                                                    Later);
+
+  std::string LaterOutput;
+  raw_string_ostream LaterOS(LaterOutput);
+  M->getFunction("g")->getEntryBlock().print(LaterOS);
+
+  std::string EarlierOutput;
+  raw_string_ostream EarlierOS(EarlierOutput);
+  M->getFunction("f")->getEntryBlock().print(EarlierOS);
+
+  StringRef MetadataPrefix = "!order !";
+  size_t EarlierPos = EarlierOutput.find(MetadataPrefix);
+  size_t LaterPos = LaterOutput.find(MetadataPrefix);
+  ASSERT_NE(EarlierPos, StringRef::npos);
+  ASSERT_NE(LaterPos, StringRef::npos);
+  StringRef EarlierIDText =
+      StringRef(EarlierOutput).drop_front(EarlierPos + MetadataPrefix.size());
+  StringRef LaterIDText =
+      StringRef(LaterOutput).drop_front(LaterPos + MetadataPrefix.size());
+  unsigned EarlierID;
+  unsigned LaterID;
+  ASSERT_FALSE(EarlierIDText.consumeInteger(10, EarlierID));
+  ASSERT_FALSE(LaterIDText.consumeInteger(10, LaterID));
+  EXPECT_LT(EarlierID, LaterID);
+}
+
+TEST(AsmWriterTest, PersistentPrintTemporaryMetadata) {
+  LLVMContext Ctx;
+  Module M("test", Ctx);
+  Function *F = Function::Create(
+      FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false),
+      Function::ExternalLinkage, "f", M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  ReturnInst *Ret = ReturnInst::Create(Ctx, BB);
+
+  MDNode *Permanent = MDNode::getDistinct(Ctx, MDString::get(Ctx, "permanent"));
+  TempMDNode Temporary = MDNode::getTemporary(Ctx, Permanent);
+  Ret->setMetadata("permanent", Permanent);
+  Ret->setMetadata("temporary", Temporary.get());
+
+  std::string FunctionText;
+  raw_string_ostream FunctionOS(FunctionText);
+  F->print(FunctionOS);
+  EXPECT_THAT(FunctionText, HasSubstr("!permanent !0"));
+  EXPECT_THAT(FunctionText, HasSubstr("!temporary !1"));
+
+  std::string BasicBlockText;
+  raw_string_ostream BasicBlockOS(BasicBlockText);
+  BB->print(BasicBlockOS);
+  EXPECT_THAT(BasicBlockText, HasSubstr("!permanent !0"));
+  EXPECT_THAT(BasicBlockText, HasSubstr("!temporary !1"));
+
+  std::string ModuleText;
+  raw_string_ostream ModuleOS(ModuleText);
+  M.print(ModuleOS, nullptr);
+  EXPECT_THAT(ModuleText, HasSubstr("!0 = distinct !{!\"permanent\"}"));
+  EXPECT_THAT(ModuleText, HasSubstr("!1 = <temporary!> !{!0}"));
+
+  MDNode *Later = MDNode::getDistinct(Ctx, MDString::get(Ctx, "later"));
+  Ret->setMetadata("later", Later);
+  std::string LaterText;
+  raw_string_ostream LaterOS(LaterText);
+  F->print(LaterOS);
+  EXPECT_THAT(LaterText, HasSubstr("!later !2"));
+  EXPECT_THAT(LaterText, HasSubstr("!temporary !1"));
 }
 
 TEST(AsmWriterTest, PrintAddrspaceWithNullOperand) {

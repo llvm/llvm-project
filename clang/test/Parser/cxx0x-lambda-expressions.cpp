@@ -146,7 +146,7 @@ struct A {
 };
 
 struct S {
-  void mf() { A(([*this]{})); } // cxx17ext-warning {{'*this' by copy is a C++17 extension}}
+  void mf() { A(([*this]{})); } // cxx17ext-warning {{by value capture of '*this' is a C++17 extension}}
 };
 }
 

@@ -90,11 +90,6 @@ BitVector MSP430RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-const TargetRegisterClass *
-MSP430RegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &MSP430::GR16RegClass;
-}
-
 bool
 MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                         int SPAdj, unsigned FIOperandNum,

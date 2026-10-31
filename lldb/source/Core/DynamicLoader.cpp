@@ -105,7 +105,7 @@ ModuleSP DynamicLoader::GetTargetExecutable() {
         if (executable.get() != target.GetExecutableModulePointer()) {
           // Don't load dependent images since we are in dyld where we will
           // know and find out about all images that are loaded
-          target.SetExecutableModule(executable, eLoadDependentsNo);
+          target.RebuildModuleListWithExecutable(executable, eLoadDependentsNo);
         }
       }
     }
@@ -390,6 +390,8 @@ DynamicLoader::LoadBinaryInTarget(Process *process, BinarySpec &bin_spec) {
   if (!target.GetArchitecture().IsValid())
     target.SetArchitecture(bin_spec.module_sp->GetArchitecture());
   target.GetImages().AppendIfNeeded(bin_spec.module_sp, false);
+  if (bin_spec.is_main_executable && !target.GetExecutableModule())
+    target.MarkExecutableModule(bin_spec.module_sp);
 
   bool changed = false;
   if (bin_spec.set_address_in_target) {
@@ -452,12 +454,12 @@ int64_t DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr,
 }
 
 addr_t DynamicLoader::ReadPointer(addr_t addr) {
-  Status error;
-  addr_t value = m_process->ReadPointerFromMemory(addr, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> value = m_process->ReadPointerFromMemory(addr);
+  if (!value) {
+    llvm::consumeError(value.takeError());
     return LLDB_INVALID_ADDRESS;
-  else
-    return value;
+  }
+  return *value;
 }
 
 void DynamicLoader::LoadOperatingSystemPlugin(bool flush)

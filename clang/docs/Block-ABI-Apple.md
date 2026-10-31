@@ -1,8 +1,5 @@
 # Block Implementation Specification
 
-```{contents}
-:local: true
-```
 
 ## History
 
@@ -334,7 +331,7 @@ would have the following helper functions generated:
 
 ```c
 void __block_copy_foo(struct __block_literal_5 *dst, struct __block_literal_5 *src) {
-     _Block_object_assign(&dst->objectPointer, src-> objectPointer, BLOCK_FIELD_IS_OBJECT);
+     _Block_object_assign(&dst->objectPointer, src->objectPointer, BLOCK_FIELD_IS_OBJECT);
 }
 
 void __block_dispose_foo(struct __block_literal_5 *src) {
@@ -425,7 +422,7 @@ helper code generated must use the `_Block_object_assign` and
 copies. For example:
 
 ```c
-__block void (voidBlock)(void) = blockA;
+__block void (^voidBlock)(void) = blockA;
 voidBlock = blockB;
 ```
 
@@ -449,13 +446,14 @@ void _block_byref_keep_helper(struct _block_byref_voidBlock *dst, struct _block_
 
 void _block_byref_dispose_helper(struct _block_byref_voidBlock *param) {
     //_Block_destroy(param->captured_voidBlock, 0);
-    _Block_object_dispose(param->captured_voidBlock, BLOCK_FIELD_IS_BLOCK | BLOCK_BYREF_CALLER)}
+    _Block_object_dispose(param->captured_voidBlock, BLOCK_FIELD_IS_BLOCK | BLOCK_BYREF_CALLER);
+}
 ```
 
 and:
 
 ```c
-struct _block_byref_voidBlock voidBlock = {( .forwarding=&voidBlock, .flags=(1<<25), .size=sizeof(struct _block_byref_voidBlock *),
+struct _block_byref_voidBlock voidBlock = {( .forwarding=&voidBlock, .flags=(1<<25), .size=sizeof(struct _block_byref_voidBlock),
     .byref_keep=_block_byref_keep_helper, .byref_dispose=_block_byref_dispose_helper,
     .captured_voidBlock=blockA )};
 
@@ -482,11 +480,9 @@ would translate to:
 ```c
 struct _block_byref_i {
     void *isa;  // set to NULL
-    struct _block_byref_voidBlock *forwarding;
+    struct _block_byref_i *forwarding;
     int flags;   //refcount;
     int size;
-    void (*byref_keep)(struct _block_byref_i *dst, struct _block_byref_i *src);
-    void (*byref_dispose)(struct _block_byref_i *);
     int captured_i;
 };
 
@@ -501,17 +497,17 @@ struct __block_literal_5 {
 };
 
 void __block_invoke_5(struct __block_literal_5 *_block) {
-   _block->forwarding->captured_i = 10;
+   _block->i_holder->forwarding->captured_i = 10;
 }
 
 void __block_copy_5(struct __block_literal_5 *dst, struct __block_literal_5 *src) {
-     //_Block_byref_assign_copy(&dst->captured_i, src->captured_i);
-     _Block_object_assign(&dst->captured_i, src->captured_i, BLOCK_FIELD_IS_BYREF | BLOCK_BYREF_CALLER);
+     //_Block_byref_assign_copy(&dst->i_holder, src->i_holder);
+     _Block_object_assign(&dst->i_holder, src->i_holder, BLOCK_FIELD_IS_BYREF);
 }
 
 void __block_dispose_5(struct __block_literal_5 *src) {
-     //_Block_byref_release(src->captured_i);
-     _Block_object_dispose(src->captured_i, BLOCK_FIELD_IS_BYREF | BLOCK_BYREF_CALLER);
+     //_Block_byref_release(src->i_holder);
+     _Block_object_dispose(src->i_holder, BLOCK_FIELD_IS_BYREF);
 }
 
 static struct __block_descriptor_5 {
@@ -519,7 +515,7 @@ static struct __block_descriptor_5 {
     unsigned long int Block_size;
     void (*copy_helper)(struct __block_literal_5 *dst, struct __block_literal_5 *src);
     void (*dispose_helper)(struct __block_literal_5 *);
-} __block_descriptor_5 = { 0, sizeof(struct __block_literal_5) __block_copy_5, __block_dispose_5 };
+} __block_descriptor_5 = { 0, sizeof(struct __block_literal_5), __block_copy_5, __block_dispose_5 };
 ```
 
 and:
@@ -596,7 +592,7 @@ The `__weak` variable is stored in a `_block_byref_foo` structure and the
 `Block` has copy and dispose helpers for this structure that call:
 
 ```c
-_Block_object_assign(&dest->_block_byref_i, src-> _block_byref_i, BLOCK_FIELD_IS_WEAK | BLOCK_FIELD_IS_BYREF);
+_Block_object_assign(&dest->_block_byref_i, src->_block_byref_i, BLOCK_FIELD_IS_WEAK | BLOCK_FIELD_IS_BYREF);
 ```
 
 and:
@@ -635,20 +631,20 @@ struct _block_byref_obj {
     struct _block_byref_obj *forwarding;
     int flags;   //refcount;
     int size;
-    void (*byref_keep)(struct _block_byref_i *dst, struct _block_byref_i *src);
-    void (*byref_dispose)(struct _block_byref_i *);
+    void (*byref_keep)(struct _block_byref_obj *dst, struct _block_byref_obj *src);
+    void (*byref_dispose)(struct _block_byref_obj *);
     id captured_obj;
 };
 
-void _block_byref_obj_keep(struct _block_byref_voidBlock *dst, struct _block_byref_voidBlock *src) {
+void _block_byref_obj_keep(struct _block_byref_obj *dst, struct _block_byref_obj *src) {
     //_Block_copy_assign(&dst->captured_obj, src->captured_obj, 0);
     _Block_object_assign(&dst->captured_obj, src->captured_obj, BLOCK_FIELD_IS_OBJECT | BLOCK_FIELD_IS_WEAK | BLOCK_BYREF_CALLER);
 }
 
-void _block_byref_obj_dispose(struct _block_byref_voidBlock *param) {
+void _block_byref_obj_dispose(struct _block_byref_obj *param) {
     //_Block_destroy(param->captured_obj, 0);
     _Block_object_dispose(param->captured_obj, BLOCK_FIELD_IS_OBJECT | BLOCK_FIELD_IS_WEAK | BLOCK_BYREF_CALLER);
-};
+}
 ```
 
 for the block `byref` part and:
@@ -688,11 +684,11 @@ static struct __block_descriptor_5 {
 and within the compound statement:
 
 ```c
-truct _block_byref_obj obj = {( .forwarding=&obj, .flags=(1<<25), .size=sizeof(struct _block_byref_obj),
+struct _block_byref_obj obj = {( .forwarding=&obj, .flags=(1<<25), .size=sizeof(struct _block_byref_obj),
                  .byref_keep=_block_byref_obj_keep, .byref_dispose=_block_byref_obj_dispose,
                  .captured_obj = <initialization expression> )};
 
-truct __block_literal_5 _block_literal = {
+struct __block_literal_5 _block_literal = {
      &_NSConcreteStackBlock,
      (1<<25)|(1<<29), <uninitialized>,
      __block_invoke_5,
@@ -701,7 +697,7 @@ truct __block_literal_5 _block_literal = {
 };
 
 
-functioncall(_block_literal->invoke(&_block_literal));
+functioncall(&_block_literal);
 ```
 
 ## C++ Support

@@ -14,14 +14,14 @@ body: |
   bb.1:
     B %bb.2
   bb.2:
-    %1:gprc = RLWINM killed %0:gprc, 1, 0, 30
-    %2:gprc = RLWINM killed %1:gprc, 31, 0, 0
+    %1:gprc = RLWINM %0:gprc, 1, 0, 30
+    %2:gprc = RLWINM %1:gprc, 31, 0, 0
     BLR8 implicit $lr8, implicit $rm
 
 ...
 
 # CHECK-LABEL: testFoldRLWINM
 # CHECK:       bb.0.entry:
-# CHECK:         dead %0:gprc = COPY killed $r3
+# CHECK:         %0:gprc = COPY $r3
 # CHECK:       bb.2:
-# CHECK:         dead %2:gprc = LI 0
+# CHECK:         %2:gprc = LI 0

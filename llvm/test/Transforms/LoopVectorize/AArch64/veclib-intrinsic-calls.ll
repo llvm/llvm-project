@@ -2076,24 +2076,24 @@ define void @nearbyint_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 define void @pow_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @pow_f64
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; LIBMVEC-NEON:    [[TMP1:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
+; LIBMVEC-NEON:    [[TMP1:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; LIBMVEC-NEON-WIDTH-2-LABEL: define void @pow_f64
 ; LIBMVEC-NEON-WIDTH-2-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; LIBMVEC-NEON-WIDTH-2:    [[TMP1:%.*]] = call aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
+; LIBMVEC-NEON-WIDTH-2:    [[TMP1:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; LIBMVEC-SVE-LABEL: define void @pow_f64
 ; LIBMVEC-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; LIBMVEC-SVE:    [[TMP5:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]], <vscale x 2 x i1> splat (i1 true))
+; LIBMVEC-SVE:    [[TMP5:%.*]] = call <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]])
 ; LIBMVEC-SVE:    [[CALL:%.*]] = tail call double @llvm.pow.f64(double [[IN:%.*]], double [[IN]])
 ;
 ; SLEEF-NEON-LABEL: define void @pow_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; SLEEF-NEON:    [[TMP1:%.*]] = call <2 x double> @_ZGVnN2vv_pow(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
+; SLEEF-NEON:    [[TMP1:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @pow_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; SLEEF-SVE:    [[TMP3:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SLEEF-SVE:    [[TMP3:%.*]] = call <vscale x 2 x double> @llvm.pow.nxv2f64(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]])
 ;
 ; ARMPL-NEON-LABEL: define void @pow_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -2124,7 +2124,7 @@ define void @pow_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 define void @pow_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ; LIBMVEC-NEON-LABEL: define void @pow_f32
 ; LIBMVEC-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; LIBMVEC-NEON:    [[TMP1:%.*]] = call aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
+; LIBMVEC-NEON:    [[TMP1:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; LIBMVEC-NEON-WIDTH-2-LABEL: define void @pow_f32
 ; LIBMVEC-NEON-WIDTH-2-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -2132,16 +2132,16 @@ define void @pow_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; LIBMVEC-SVE-LABEL: define void @pow_f32
 ; LIBMVEC-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; LIBMVEC-SVE:    [[TMP5:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x i1> splat (i1 true))
+; LIBMVEC-SVE:    [[TMP5:%.*]] = call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; LIBMVEC-SVE:    [[CALL:%.*]] = tail call float @llvm.pow.f32(float [[IN:%.*]], float [[IN]])
 ;
 ; SLEEF-NEON-LABEL: define void @pow_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; SLEEF-NEON:    [[TMP1:%.*]] = call <4 x float> @_ZGVnN4vv_powf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
+; SLEEF-NEON:    [[TMP1:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @pow_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; SLEEF-SVE:    [[TMP3:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SLEEF-SVE:    [[TMP3:%.*]] = call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]])
 ;
 ; ARMPL-NEON-LABEL: define void @pow_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {

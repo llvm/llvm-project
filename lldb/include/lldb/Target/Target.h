@@ -14,6 +14,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointList.h"
@@ -35,6 +36,7 @@
 #include "lldb/Target/Statistics.h"
 #include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/TargetAPIMutex.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -47,6 +49,7 @@
 #include "lldb/lldb-public.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 
 namespace lldb_private {
 
@@ -227,6 +230,7 @@ public:
   void SetStandardErrorPath(const char *path) = delete;
 
   bool GetBreakpointsConsultPlatformAvoidList();
+  lldb::BreakpointConditionMode GetBreakpointsConditionMode() const;
 
   SourceLanguage GetLanguage() const;
 
@@ -280,6 +284,10 @@ public:
   bool GetUseDIL(ExecutionContext *exe_ctx) const;
 
   void SetUseDIL(ExecutionContext *exe_ctx, bool b);
+
+  bool GetUseDILForCreatingValues() const;
+
+  void SetUseDILForCreatingValues(bool b);
 
   void SetRequireHardwareBreakpoints(bool b);
 
@@ -530,6 +538,10 @@ public:
 
   bool GetCppIgnoreContextQualifiers() const;
 
+  void SetTryDILFirst(bool b) { m_try_DIL_first = b; }
+
+  bool GetTryDILFirst() const { return m_try_DIL_first; }
+
 private:
   const StructuredData::Dictionary &GetLanguageOptions() const;
 
@@ -556,6 +568,10 @@ private:
   /// True if the executed code should be treated as utility code that is only
   /// used by LLDB internally.
   bool m_running_utility_expression = false;
+  /// If enabled, Data Inspection Language (DIL) should attempt to evaluate the
+  /// expression first. If DIL is not called or fails, the evaluation falls
+  /// back to UserExpression.
+  bool m_try_DIL_first = false;
 
   lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
   Timeout<std::micro> m_timeout = default_timeout;
@@ -757,12 +773,18 @@ public:
   ///     will handle / summarize the failures in a custom way and
   ///     don't use these messages.
   ///
+  /// \param[in] invoke_symbol_locators
+  ///     Whether to search beyond the Target's modules, the shared module list
+  ///     and the locate module callback, i.e. with the platform and the symbol
+  ///     locators. A caller that has already searched passes false.
+  ///
   /// \return
   ///     An empty ModuleSP will be returned if no matching file
   ///     was found.  If error_ptr was non-nullptr, an error message
   ///     will likely be provided.
   lldb::ModuleSP GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
-                                   Status *error_ptr = nullptr);
+                                   Status *error_ptr = nullptr,
+                                   bool invoke_symbol_locators = true);
 
   // Settings accessors
 
@@ -1041,8 +1063,9 @@ public:
     virtual ~BreakpointResolverOverride() {}
     virtual lldb::BreakpointResolverSP
     CheckForOverride(Target &target, lldb::BreakpointResolverSP initial_sp) = 0;
-    // Return whether constructing this resolver was successful.
-    virtual llvm::Error Validate() = 0;
+    // Returns an error describing why this override can't be used, for
+    // example because its script class doesn't exist.
+    virtual llvm::Error HasErrors() = 0;
     const std::string &GetDescription() { return m_desc; }
     uint64_t GetTypeMask() { return m_type_mask; }
     std::string DescribeTypeMask();
@@ -1188,25 +1211,31 @@ public:
   /// discovered at runtime as things are dynamically loaded.
   ///
   /// \return
-  ///     The shared pointer to the executable module which can
-  ///     contains a nullptr Module object if no executable has been
-  ///     set.
+  ///     The first module of type ObjectFile::eTypeExecutable. Failing that,
+  ///     the module set by RebuildModuleListWithExecutable or
+  ///     MarkExecutableModule while the target still holds it, which can be a
+  ///     shared library (an ELF PIE). Otherwise, nullptr.
   ///
   /// \see DynamicLoader
   /// \see ObjectFile::GetDependentModules (FileSpecList&)
-  /// \see Process::SetExecutableModule(lldb::ModuleSP&)
+  /// \see Target::RebuildModuleListWithExecutable(lldb::ModuleSP&)
   lldb::ModuleSP GetExecutableModule();
 
   Module *GetExecutableModulePointer();
 
-  /// Set the main executable module.
+  /// Make \a module_sp the main executable without clearing the other images,
+  /// unlike RebuildModuleListWithExecutable. Has no effect until the target
+  /// holds it.
+  void MarkExecutableModule(const lldb::ModuleSP &module_sp);
+
+  /// Clear the module list and rebuild it around a new main executable.
   ///
   /// Each process has a notion of a main executable that is the file
   /// that will be executed or attached to. Executable files can have
   /// dependent modules that are discovered from the object files, or
   /// discovered at runtime as things are dynamically loaded.
   ///
-  /// Setting the executable causes any of the current dependent
+  /// Rebuilding causes any of the current dependent
   /// image information to be cleared and replaced with the static
   /// dependent image information found by calling
   /// ObjectFile::GetDependentModules (FileSpecList&) on the main
@@ -1224,7 +1253,7 @@ public:
   ///
   /// \see ObjectFile::GetDependentModules (FileSpecList&)
   /// \see Process::GetImages()
-  void SetExecutableModule(
+  void RebuildModuleListWithExecutable(
       lldb::ModuleSP &module_sp,
       LoadDependentFiles load_dependent_files = eLoadDependentsDefault);
 
@@ -1369,14 +1398,13 @@ public:
                                size_t dst_max_len, Status &result_error,
                                bool force_live_memory = false);
 
-  /// Read a NULL terminated string from memory
+  /// Read a null-terminated string from memory
   ///
-  /// This function will read a cache page at a time until a NULL string
-  /// terminator is found. It will stop reading if an aligned sequence of NULL
-  /// termination \a type_width bytes is not found before reading \a
-  /// cstr_max_len bytes.  The results are always guaranteed to be NULL
-  /// terminated, and that no more than (max_bytes - type_width) bytes will be
-  /// read.
+  /// This function will read a cache page at a time until a null terminator
+  /// is found. It will stop reading if an aligned null terminator of \a
+  /// type_width bytes is not found before reading \a cstr_max_len bytes. The
+  /// results are always guaranteed to be null-terminated, and that no more
+  /// than (max_bytes - type_width) bytes will be read.
   ///
   /// \param[in] addr
   ///     The address to start the memory read.
@@ -2049,7 +2077,30 @@ public:
   /// Print all the signals set in this target.
   void PrintDummySignals(Stream &strm, Args &signals);
 
+  /// Return the target groups this target belongs to.
+  std::vector<lldb::TargetGroupSP> GetTargetGroups() const;
+
+  /// Return the first target group that can be cast to GroupT.
+  template <typename GroupT>
+  std::shared_ptr<GroupT> GetFirstTargetGroupOfType() const {
+    static_assert(std::is_base_of_v<TargetGroup, GroupT>,
+                  "GroupT must derive from TargetGroup");
+    for (const lldb::TargetGroupSP &group_sp : GetTargetGroups()) {
+      if (GroupT *group = llvm::dyn_cast<GroupT>(group_sp.get()))
+        return std::shared_ptr<GroupT>(group_sp, group);
+    }
+    return {};
+  }
+
 protected:
+  friend class TargetGroup;
+  friend class TargetGroupList;
+
+  /// Called only by TargetGroup::AddTarget to record group membership.
+  void AddTargetGroup(const lldb::TargetGroupSP &group_sp);
+  /// Called only by TargetGroup::RemoveTarget to remove group membership.
+  void RemoveTargetGroup(const TargetGroup *group);
+
   /// The mutex the calling thread must serialize on for its current policy, or
   /// nullptr when that policy bypasses the API mutex entirely.
   std::recursive_mutex *GetAPIMutexForCurrentPolicy();
@@ -2098,6 +2149,8 @@ protected:
   std::string m_label;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
+  /// The marked main executable. Weak, so it can't outlive its image.
+  lldb::ModuleWP m_executable_module_wp;
   SummaryStatisticsCache m_summary_statistics_cache;
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
@@ -2165,6 +2218,9 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  /// Every target group this target belongs to.
+  TargetGroupList m_target_groups;
 
   lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
 

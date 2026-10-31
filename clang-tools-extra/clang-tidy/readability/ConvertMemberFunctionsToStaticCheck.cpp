@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ConvertMemberFunctionsToStaticCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -15,18 +16,13 @@
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::readability {
 
 namespace {
 
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-
 AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
-
-AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
-  return Node.isOverloadedOperator();
-}
 
 AST_MATCHER(CXXRecordDecl, hasAnyDependentBases) {
   return Node.hasAnyDependentBases();
@@ -148,7 +144,7 @@ static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
                                       const SourceManager &SourceMgr,
                                       const LangOptions &LangOpts) {
   assert(TSI);
-  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().getAsAdjusted<FunctionTypeLoc>();
   assert(FTL);
 
   const SourceRange Range{FTL.getRParenLoc().getLocWithOffset(1),

@@ -91,9 +91,9 @@ Module:
     Params: []
     Block {
       VarDecl a<> @test/Examples/Toy/Ch1/ast.toy:11:3
-        Literal: <2, 3>[ <3>[ 1.000000e+00, 2.000000e+00, 3.000000e+00], <3>[ 4.000000e+00, 5.000000e+00, 6.000000e+00]] @test/Examples/Toy/Ch1/ast.toy:11:11
+        Literal: <2, 3>[ <3>[ 1.000000e+00, 2.000000e+00, 3.000000e+00 ], <3>[ 4.000000e+00, 5.000000e+00, 6.000000e+00 ] ] @test/Examples/Toy/Ch1/ast.toy:11:11
       VarDecl b<2, 3> @test/Examples/Toy/Ch1/ast.toy:15:3
-        Literal: <6>[ 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00] @test/Examples/Toy/Ch1/ast.toy:15:17
+        Literal: <6>[ 1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00 ] @test/Examples/Toy/Ch1/ast.toy:15:17
       VarDecl c<> @test/Examples/Toy/Ch1/ast.toy:19:3
         Call 'multiply_transpose' [ @test/Examples/Toy/Ch1/ast.toy:19:11
           var: a @test/Examples/Toy/Ch1/ast.toy:19:30

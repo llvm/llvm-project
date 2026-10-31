@@ -657,7 +657,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0:![0-9]+]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; COMMON-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -665,7 +665,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -679,7 +679,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -696,7 +696,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -713,7 +713,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -730,7 +730,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -740,7 +740,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX942-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
@@ -752,7 +752,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -769,7 +769,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -779,10 +779,10 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX12-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -796,7 +796,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -813,7 +813,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -830,7 +830,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -847,7 +847,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -857,7 +857,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX942-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
@@ -869,7 +869,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -886,7 +886,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -896,10 +896,10 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX12-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -913,7 +913,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -930,7 +930,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -947,7 +947,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -964,7 +964,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -974,7 +974,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX942-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
@@ -986,7 +986,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1003,7 +1003,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1013,10 +1013,10 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX12-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1030,7 +1030,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1047,7 +1047,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1064,7 +1064,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1081,7 +1081,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1091,7 +1091,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX942-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
@@ -1103,7 +1103,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1120,7 +1120,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1130,10 +1130,10 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX12-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1147,7 +1147,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1164,7 +1164,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1181,7 +1181,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1198,7 +1198,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1208,7 +1208,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX942-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
@@ -1220,7 +1220,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1237,7 +1237,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1247,10 +1247,10 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_den
 ;
 ; GFX12-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX12-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x bfloat> [[VALUE]] seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    ret <2 x bfloat> [[RES]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1290,7 +1290,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_no_fine_gr
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub <2 x bfloat> [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; COMMON-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1356,7 +1356,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub <2 x bfloat> [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; COMMON-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1364,7 +1364,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1378,7 +1378,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub <2 x bfloat> [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; COMMON-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1386,7 +1386,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1400,7 +1400,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub <2 x bfloat> [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; COMMON-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1408,7 +1408,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1422,7 +1422,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub <2 x bfloat> [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 ; COMMON-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1430,7 +1430,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1536,7 +1536,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> [[LOADED]], <2 x bfloat> [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1544,7 +1544,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1558,7 +1558,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> [[LOADED]], <2 x bfloat> [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1566,7 +1566,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1580,7 +1580,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> [[LOADED]], <2 x bfloat> [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1588,7 +1588,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1602,7 +1602,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> [[LOADED]], <2 x bfloat> [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1610,7 +1610,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1716,7 +1716,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> [[LOADED]], <2 x bfloat> [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1724,7 +1724,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1738,7 +1738,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> [[LOADED]], <2 x bfloat> [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1746,7 +1746,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1760,7 +1760,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> [[LOADED]], <2 x bfloat> [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1768,7 +1768,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 
@@ -1782,7 +1782,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> [[LOADED]], <2 x bfloat> [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
-; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4, !atomic.ignore.denormal.mode [[META0]], !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
@@ -1790,7 +1790,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_system__amdgpu_ignore_den
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret <2 x bfloat> [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, <2 x bfloat> %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret <2 x bfloat> %res
 }
 

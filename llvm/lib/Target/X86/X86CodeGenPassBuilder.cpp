@@ -16,24 +16,31 @@
 
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFGuardLongjmp.h"
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/MachineCombiner.h"
+#include "llvm/CodeGen/PseudoProbeInserter.h"
+#include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Pass.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Transforms/CFGuard.h"
 
 using namespace llvm;
-
-extern cl::opt<bool> X86EnableMachineCombinerPass;
 
 namespace {
 
@@ -53,19 +60,24 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
+
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
   void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
-  void addILPOpts(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
   void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+
   void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
+  void addILPOpts(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
-  // TODO(boomanaiden154): We need to add addPostFastRegAllocRewrite here once
-  // it is available to support AMX.
+  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
+  Expected<bool>
+  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addPreEmitPass2(PassManagerWrapper &PMW) override;
-  // TODO(boomanaiden154): We need to add addRegAssignAndRewriteOptimized here
-  // once it is available to support AMX.
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
@@ -100,6 +112,8 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
     flushFPMsToMPM(PMW);
     addModulePass(JMCInstrumenterPass(), PMW);
   }
+
+  addFunctionPass(X86FenceNonTemporalStoresPass(&getTM()), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
@@ -125,19 +139,38 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   return Error::success();
 }
 
-void X86CodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
+Error X86CodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
 }
 
-void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(EarlyIfConverterPass(), PMW);
-  if (X86EnableMachineCombinerPass)
-    addMachineFunctionPass(MachineCombinerPass(), PMW);
-  addMachineFunctionPass(X86CmovConversionPass(), PMW);
+void X86CodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
+}
+
+Error X86CodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
 }
 
 void X86CodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(X86PostLegalizerCombinerPass(), PMW);
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(X86PostLegalizerCombinerPass(), PMW);
+}
+
+Error X86CodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(RegBankSelectPass(), PMW);
+  return Error::success();
+}
+
+Error X86CodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
+  // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
+  if (isGlobalISelAbortEnabled())
+    addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
+  return Error::success();
 }
 
 void X86CodeGenPassBuilder::addMachineSSAOptimization(PassManagerWrapper &PMW) {
@@ -145,10 +178,18 @@ void X86CodeGenPassBuilder::addMachineSSAOptimization(PassManagerWrapper &PMW) {
   Base::addMachineSSAOptimization(PMW);
 }
 
+void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(EarlyIfConverterPass(), PMW);
+  if (getTM().getCLOpts().machine_combiner)
+    addMachineFunctionPass(MachineCombinerPass(), PMW);
+  addMachineFunctionPass(X86CmovConversionPass(), PMW);
+}
+
 void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(LiveRangeShrinkPass(), PMW);
     addMachineFunctionPass(X86FixupSetCCPass(), PMW);
+    addMachineFunctionPass(X86OptimizeLEAsPass(), PMW);
     addMachineFunctionPass(X86CallFrameOptimizationPass(), PMW);
     addMachineFunctionPass(X86AvoidStoreForwardingBlocksPass(), PMW);
   }
@@ -162,6 +203,32 @@ void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(X86PreTileConfigPass(), PMW);
   else
     addMachineFunctionPass(X86FastPreTileConfigPass(), PMW);
+}
+
+static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
+                                      const MachineRegisterInfo &MRI,
+                                      const Register Reg) {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  return static_cast<const X86RegisterInfo &>(TRI).isTileRegisterClass(RC);
+}
+
+Error X86CodeGenPassBuilder::addRegAssignAndRewriteFast(
+    PassManagerWrapper &PMW) {
+  Error PossibleError = Base::addRegAssignAndRewriteFast(PMW);
+  addMachineFunctionPass(X86FastTileConfigPass(), PMW);
+  return PossibleError;
+}
+
+Expected<bool> X86CodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+    PassManagerWrapper &PMW) {
+  // Don't support tile RA when RA is specified by command line "-regalloc".
+  if (Opt.RegAlloc == RegAllocType::Default && getTM().getCLOpts().tile_ra) {
+    // Allocate tile register first.
+    addMachineFunctionPass(
+        RAGreedyPass({RAGreedyPass::Options(onlyAllocateTileRegisters)}), PMW);
+    addMachineFunctionPass(X86TileConfigPass(), PMW);
+  }
+  return Base::addRegAssignAndRewriteOptimized(PMW);
 }
 
 void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
@@ -193,19 +260,20 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(X86FixupBWInstsPass(), PMW);
-    // TODO(boomanaiden154): Add X86PadShortFunctionsPass here once it has been
-    // ported.
+    addMachineFunctionPass(X86PadShortFunctionsPass(), PMW);
     addMachineFunctionPass(X86FixupLEAsPass(), PMW);
     addMachineFunctionPass(X86FixupInstTuningPass(), PMW);
     addMachineFunctionPass(X86FixupVectorConstantsPass(), PMW);
   }
   addMachineFunctionPass(X86CompressEVEXPass(), PMW);
   addMachineFunctionPass(X86InsertX87WaitPass(), PMW);
+
+  if (TM.getTargetTriple().isLFI())
+    addMachineFunctionPass(X86LFIRewritePass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   const Triple &TT = TM.getTargetTriple();
-  const MCAsmInfo &MAI = TM.getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -229,16 +297,14 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
-  // instructions.
-  if (!TT.isOSDarwin() &&
-      (!TT.isOSWindows() ||
-       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
+  // instructions. CFIInstrInserter self-skips targets that do not use DWARF
+  // CFI.
+  if (!TT.isOSDarwin())
     addMachineFunctionPass(CFIInstrInserterPass(), PMW);
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    // TODO(boomanaiden154): Add CFGuardLongjmpPass here when it has been
-    // ported.
+    addMachineFunctionPass(CFGuardLongjmpPass(), PMW);
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addMachineFunctionPass(EHContGuardTargetsPass(), PMW);
   }
@@ -246,13 +312,22 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
 
   // Insert pseudo probe annotation for callsite profiling
-  // TODO(boomanaiden154): Add PseudoProberInserterPass here once it has been
-  // ported.
+  addMachineFunctionPass(PseudoProbeInserterPass(), PMW);
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
-  // TODO(boomanaiden154): Add UnpackMachineBundlesPass here once it has been
-  // ported.
+  addMachineFunctionPass(
+      UnpackMachineBundlesPass([&TT](const MachineFunction &MF) {
+        // Only run bundle expansion if the module uses kcfi, or there are
+        // relevant ObjC runtime functions present in the module.
+        const Function &F = MF.getFunction();
+        const Module *M = F.getParent();
+        return M->getModuleFlag("kcfi") ||
+               (TT.isOSDarwin() &&
+                (M->getFunction("objc_retainAutoreleasedReturnValue") ||
+                 M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
+      }),
+      PMW);
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.

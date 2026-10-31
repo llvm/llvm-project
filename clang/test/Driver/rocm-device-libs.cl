@@ -145,13 +145,13 @@
 // RUN: 2>&1 | FileCheck  --check-prefixes=ASAN,COMMON %s
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa \
-// RUN:   -x cl -mcpu=gfx1250 -fsanitize=address \
+// RUN:   -x cl -mcpu=gfx1250:xnack+ -fsanitize=address \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %s \
 // RUN: 2>&1 | FileCheck  --check-prefixes=ASAN,COMMON %s
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa \
-// RUN:   -x cl -mcpu=gfx1251 -fsanitize=address \
+// RUN:   -x cl -mcpu=gfx1251:xnack+ -fsanitize=address \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %s \
 // RUN: 2>&1 | FileCheck  --check-prefixes=ASAN,COMMON %s

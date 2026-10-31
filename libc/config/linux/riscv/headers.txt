@@ -27,7 +27,9 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.malloc
     libc.include.math
     libc.include.memory
+    libc.include.net_ethernet
     libc.include.net_if
+    libc.include.netinet_ether
     libc.include.netinet_in
     libc.include.netinet_tcp
     libc.include.netinet_udp
@@ -51,7 +53,10 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.strings
     libc.include.sys_auxv
     libc.include.sys_epoll
+    libc.include.sys_eventfd
     libc.include.sys_fcntl
+    libc.include.sys_file
+    libc.include.sys_inotify
     libc.include.sys_ioctl
     libc.include.sys_mman
     libc.include.sys_param
@@ -63,6 +68,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_resource
     libc.include.sys_select
     libc.include.sys_sendfile
+    libc.include.sys_shm
     libc.include.sys_signal
     libc.include.sys_socket
     libc.include.sys_stat
@@ -93,6 +99,8 @@ set(TARGET_PUBLIC_HEADERS
 
 if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   list(APPEND TARGET_PUBLIC_HEADERS
+    libc.include.glob
+    libc.include.libintl
     libc.include.regex
     libc.include.sys_ptrace
   )

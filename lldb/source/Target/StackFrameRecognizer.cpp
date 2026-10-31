@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStackFrameRecognizerInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -23,17 +24,15 @@ using namespace lldb;
 using namespace lldb_private;
 
 class ScriptedRecognizedStackFrame : public RecognizedStackFrame {
-  bool m_hidden;
-  lldb::StackFrameSP m_most_relevant_frame;
-  lldb::ValueObjectSP m_exception;
-
 public:
   ScriptedRecognizedStackFrame(ValueObjectListSP args, bool hidden,
                                lldb::StackFrameSP most_relevant_frame,
                                lldb::ValueObjectSP exception,
-                               std::string stop_desc)
+                               std::string stop_desc,
+                               lldb::ThreadPlanSP step_through_plan_sp)
       : m_hidden(hidden), m_most_relevant_frame(std::move(most_relevant_frame)),
-        m_exception(std::move(exception)) {
+        m_exception(std::move(exception)),
+        m_thread_plan_sp(std::move(step_through_plan_sp)) {
     m_arguments = std::move(args);
     m_stop_desc = std::move(stop_desc);
   }
@@ -42,6 +41,14 @@ public:
     return m_most_relevant_frame;
   }
   lldb::ValueObjectSP GetExceptionObject() override { return m_exception; }
+
+  lldb::ThreadPlanSP GetStepThroughPlan() override { return m_thread_plan_sp; }
+
+protected:
+  bool m_hidden;
+  lldb::StackFrameSP m_most_relevant_frame;
+  lldb::ValueObjectSP m_exception;
+  lldb::ThreadPlanSP m_thread_plan_sp;
 };
 
 ScriptedStackFrameRecognizer::ScriptedStackFrameRecognizer(
@@ -87,10 +94,14 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
       m_interface_sp->SelectMostRelevantFrame(frame);
   lldb::ValueObjectSP exception = m_interface_sp->GetException(frame);
   std::string stop_desc = m_interface_sp->GetStopDescription(frame);
+  // We only do step through if we're at the zeroth frame:
+  lldb::ThreadPlanSP step_through_sp;
+  if (frame->GetConcreteFrameIndex() == 0)
+    step_through_sp = m_interface_sp->GetStepThroughPlan(frame->GetThread());
 
   return RecognizedStackFrameSP(new ScriptedRecognizedStackFrame(
       args_synthesized, hidden, std::move(most_relevant), std::move(exception),
-      std::move(stop_desc)));
+      std::move(stop_desc), std::move(step_through_sp)));
 }
 
 void StackFrameRecognizerManager::BumpGeneration() {
@@ -100,13 +111,13 @@ void StackFrameRecognizerManager::BumpGeneration() {
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
-    StackFrameRecognizerSP recognizer, ConstString module,
-    llvm::ArrayRef<ConstString> symbols,
-    Mangled::NamePreference symbol_mangling, bool first_instruction_only) {
+    StackFrameRecognizerSP recognizer, std::string module,
+    std::vector<ConstString> symbols, Mangled::NamePreference symbol_mangling,
+    bool first_instruction_only) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, false,
-                            module, RegularExpressionSP(), symbols,
-                            RegularExpressionSP(), symbol_mangling,
-                            first_instruction_only, true});
+                            std::move(module), RegularExpressionSP(),
+                            std::move(symbols), RegularExpressionSP(),
+                            symbol_mangling, first_instruction_only, true});
   BumpGeneration();
 }
 
@@ -115,7 +126,7 @@ void StackFrameRecognizerManager::AddRecognizer(
     RegularExpressionSP symbol, Mangled::NamePreference symbol_mangling,
     bool first_instruction_only) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, true,
-                            ConstString(), module, std::vector<ConstString>(),
+                            std::string(), module, std::vector<ConstString>(),
                             symbol, symbol_mangling, first_instruction_only,
                             true});
   BumpGeneration();
@@ -140,8 +151,7 @@ void StackFrameRecognizerManager::ForEach(
                entry.symbol_mangling, true);
     } else {
       callback(entry.recognizer_id, entry.enabled, entry.recognizer->GetName(),
-               entry.module.GetCString(), entry.symbols, entry.symbol_mangling,
-               false);
+               entry.module, entry.symbols, entry.symbol_mangling, false);
     }
   }
 }
@@ -185,10 +195,13 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   if (!module_sp)
     return StackFrameRecognizerSP();
   llvm::StringRef module_name = module_sp->GetFileSpec().GetFilename();
-  const Symbol *symbol = symctx.symbol;
-  if (!symbol)
+  Address start_addr;
+  if (symctx.symbol)
+    start_addr = symctx.symbol->GetAddress();
+  else if (symctx.function)
+    start_addr = symctx.function->GetAddress();
+  else
     return StackFrameRecognizerSP();
-  Address start_addr = symbol->GetAddress();
   Address current_addr = frame->GetFrameCodeAddress();
 
   // The symbol's start address may fall inside a non-executable function
@@ -202,9 +215,8 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
     if (!entry.enabled)
       continue;
 
-    if (entry.module)
-      if (entry.module != module_name)
-        continue;
+    if (!entry.module.empty() && entry.module != module_name)
+      continue;
 
     if (entry.module_regexp)
       if (!entry.module_regexp->Execute(module_name))

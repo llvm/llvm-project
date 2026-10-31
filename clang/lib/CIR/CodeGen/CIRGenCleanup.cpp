@@ -20,7 +20,7 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -31,13 +31,50 @@ namespace {
 class ConditionalEvaluationFinder
     : public RecursiveASTVisitor<ConditionalEvaluationFinder> {
   bool foundConditional = false;
+  bool inResumeExpr = false;
+
+  bool traverseSuspendExpr(CoroutineSuspendExpr *e) {
+    return TraverseStmt(e->getCommonExpr()) && traverseResumeExpr(e);
+  }
+
+  /// Traverse the resume expression of \p e, except for the binding of its
+  /// result, which emitSuspendExpression destroys after the cir.await.
+  bool traverseResumeExpr(CoroutineSuspendExpr *e) {
+    Expr *resume = e->getResumeExpr();
+    if (auto *bind = dyn_cast_if_present<CXXBindTemporaryExpr>(resume))
+      resume = bind->getSubExpr();
+    llvm::SaveAndRestore inResume(inResumeExpr, true);
+    return TraverseStmt(resume);
+  }
 
 public:
-  bool found() const { return foundConditional; }
+  static bool needsCleanupScope(const Stmt *s) {
+    ConditionalEvaluationFinder finder;
+    finder.TraverseStmt(const_cast<Stmt *>(s));
+    return finder.foundConditional;
+  }
+
+  static bool resumeExprDefersCleanups(const CoroutineSuspendExpr &s) {
+    ConditionalEvaluationFinder finder;
+    finder.traverseResumeExpr(const_cast<CoroutineSuspendExpr *>(&s));
+    return finder.foundConditional;
+  }
+
+  // Default arguments and default member initializers can contain conditional
+  // temporaries whose cleanups belong to the enclosing full-expression.
+  bool shouldVisitImplicitCode() const { return true; }
 
   bool VisitAbstractConditionalOperator(AbstractConditionalOperator *) {
     foundConditional = true;
     return false;
+  }
+
+  bool VisitBinaryOperator(BinaryOperator *e) {
+    if (e->isLogicalOp()) {
+      foundConditional = true;
+      return false;
+    }
+    return true;
   }
 
   bool VisitCXXNewExpr(CXXNewExpr *e) {
@@ -51,16 +88,53 @@ public:
     return true;
   }
 
-  // Don't cross evaluation-context boundaries.
-  bool TraverseLambdaExpr(LambdaExpr *) { return true; }
+  // Don't cross evaluation-context boundaries. Only the initializers of a
+  // lambda's captures are part of the enclosing full-expression.
+  bool TraverseLambdaExpr(LambdaExpr *e) {
+    for (Expr *init : e->capture_inits())
+      if (init && !TraverseStmt(init))
+        return false;
+    return true;
+  }
   bool TraverseBlockExpr(BlockExpr *) { return true; }
   bool TraverseStmtExpr(StmtExpr *) { return true; }
+
+  bool TraverseGCCAsmStmt(GCCAsmStmt *s) {
+    for (Stmt *operand : s->children())
+      if (!TraverseStmt(operand))
+        return false;
+    return true;
+  }
+
+  // Traverse the common and resume expressions, whose temporaries belong to
+  // the enclosing full-expression. Ready and suspend have their own cleanup
+  // boundaries. The resume result's cleanup is handled separately.
+  bool TraverseCoawaitExpr(CoawaitExpr *e) { return traverseSuspendExpr(e); }
+  bool TraverseCoyieldExpr(CoyieldExpr *e) { return traverseSuspendExpr(e); }
+
+  bool VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *) {
+    if (!inResumeExpr)
+      return true;
+    foundConditional = true;
+    return false;
+  }
+
+  bool VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *e) {
+    if (!inResumeExpr || !e->getType().isDestructedType())
+      return true;
+    foundConditional = true;
+    return false;
+  }
 };
 } // namespace
 
 //===----------------------------------------------------------------------===//
 // CIRGenFunction cleanup related
 //===----------------------------------------------------------------------===//
+
+bool CIRGenFunction::resumeExprDefersCleanups(const CoroutineSuspendExpr &s) {
+  return ConditionalEvaluationFinder::resumeExprDefersCleanups(s);
+}
 
 /// Emits all the code to cause the given temporary to be cleaned up.
 void CIRGenFunction::emitCXXTemporary(const CXXTemporary *temporary,
@@ -85,7 +159,9 @@ Address CIRGenFunction::createCleanupActiveFlag() {
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
-    builder.createFlagStore(loc, false, active.getPointer());
+    cir::StoreOp store =
+        builder.createFlagStore(loc, false, active.getPointer());
+    outermostConditional->advanceInsertPoint(store);
   }
 
   // Set to true at the current location (inside the conditional branch).
@@ -108,14 +184,16 @@ void CIRGenFunction::initFullExprCleanupWithFlag(Address activeFlag) {
 }
 
 CIRGenFunction::FullExprCleanupScope::FullExprCleanupScope(CIRGenFunction &cgf,
-                                                           const Expr *subExpr)
+                                                           const Stmt *s)
     : cgf(cgf), cleanups(cgf), scope(nullptr),
-      deferredCleanupStackSize(cgf.deferredConditionalCleanupStack.size()) {
+      oldFullExprCleanupScope(cgf.currentFullExprCleanupScope),
+      oldOutermostConditional(cgf.outermostConditional),
+      oldHiddenOutermostConditional(cgf.hiddenOutermostConditional),
+      deferredCleanupStackSize(cgf.deferredConditionalCleanupStack.size()),
+      conditionalScopeDepth(cgf.conditionalCleanupScopes.size()) {
 
-  assert(subExpr && "ExprWithCleanups always has a sub-expression");
-  ConditionalEvaluationFinder finder;
-  finder.TraverseStmt(const_cast<Expr *>(subExpr));
-  if (finder.found()) {
+  assert(s && "expected an AST root for a cleanup boundary");
+  if (ConditionalEvaluationFinder::needsCleanupScope(s)) {
     mlir::Location loc = cgf.builder.getUnknownLoc();
     cir::CleanupKind cleanupKind = cgf.getLangOpts().Exceptions
                                        ? cir::CleanupKind::All
@@ -128,6 +206,17 @@ CIRGenFunction::FullExprCleanupScope::FullExprCleanupScope(CIRGenFunction &cgf,
         [&](mlir::OpBuilder &b, mlir::Location loc) {});
     cgf.builder.setInsertionPointToEnd(&scope.getBodyRegion().front());
   }
+
+  // Conditional cleanup scopes are only opened while a full-expression scope
+  // is active to close them.
+  cgf.currentFullExprCleanupScope = scope;
+
+  // This full-expression owns its cleanups, even inside a conditional branch.
+  // Hide the outer conditional to keep those cleanups here, but remember it
+  // for lifetime-extended temporaries whose cleanups belong to an outer scope.
+  if (cgf.outermostConditional)
+    cgf.hiddenOutermostConditional = cgf.outermostConditional;
+  cgf.outermostConditional = nullptr;
 }
 
 /// If the alloca that backs \p addr is currently nested inside the body
@@ -177,16 +266,99 @@ static void hoistAllocaOutOfCleanupScope(CIRGenFunction &cgf, Address addr,
   }
 }
 
+/// Close a cleanup scope opened by a ConditionalEvaluation. Terminate its body
+/// region and emit this scope's slice of deferredConditionalCleanupStack into
+/// its cleanup region, in reverse of push order. An insertion point that was
+/// inside the scope's body is moved to immediately after the scope op.
+static void closeConditionalCleanupScope(
+    CIRGenFunction &cgf,
+    const CIRGenFunction::ConditionalCleanupScope &condScope) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  cir::CleanupScopeOp scope = condScope.scope;
+  size_t base = condScope.deferredCleanupStackSize;
+  auto &stack = cgf.deferredConditionalCleanupStack;
+  bool hasDeferredCleanups = stack.size() > base;
+
+  // Make sure the body region has a terminator.
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::Block &lastBodyBlock = scope.getBodyRegion().back();
+    builder.setInsertionPointToEnd(&lastBodyBlock);
+    if (lastBodyBlock.empty() ||
+        !lastBodyBlock.back().hasTrait<mlir::OpTrait::IsTerminator>())
+      builder.createYield(scope.getLoc());
+  }
+
+  // Each deferred cleanup references its addr from the sibling cleanup region
+  // we are about to fill. If the alloca that backs that addr was created
+  // inside this scope's body region, hoist it out so it dominates the cleanup
+  // region.
+  if (hasDeferredCleanups) {
+    for (const CIRGenFunction::PendingCleanupEntry &entry :
+         llvm::make_range(stack.begin() + base, stack.end()))
+      hoistAllocaOutOfCleanupScope(cgf, entry.addr, scope);
+  }
+
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::Block &cleanupBlock = scope.getCleanupRegion().front();
+    builder.setInsertionPointToEnd(&cleanupBlock);
+
+    for (const CIRGenFunction::PendingCleanupEntry &entry :
+         llvm::reverse(llvm::make_range(stack.begin() + base, stack.end()))) {
+      if (entry.activeFlag.isValid()) {
+        // We may have hoisted this alloca out of the cleanup scope. If so, we
+        // will have also hoisted any casts between it and the address that we
+        // stored in the deferredConditionalCleanupStack. While I can't find a
+        // case where this actually happens, there is a theoretical
+        // possibility that we could have a second address that uses an alloca
+        // that has already been hoisted but a different cast chain. This
+        // assert guards against that possibility.
+        assert(entry.addr.getUnderlyingAllocaOp() &&
+               (entry.addr.getUnderlyingAllocaOp()->getBlock() ==
+                entry.addr.getPointer().getDefiningOp()->getBlock()) &&
+               "alloca and cast are in different blocks");
+        mlir::Value flag = builder.createLoad(scope.getLoc(), entry.activeFlag);
+        cir::IfOp::create(builder, scope.getLoc(), flag,
+                          /*withElseRegion=*/false,
+                          [&](mlir::OpBuilder &b, mlir::Location loc) {
+                            cgf.emitDestroy(entry.addr, entry.type,
+                                            entry.destroyer);
+                            builder.createYield(loc);
+                          });
+      } else {
+        cgf.emitDestroy(entry.addr, entry.type, entry.destroyer);
+      }
+    }
+    builder.createYield(scope.getLoc());
+  }
+
+  stack.truncate(base);
+
+  // Move the insertion point out of the scope just closed, but only if it was
+  // inside it. Moving it unconditionally can strand it outside the region it
+  // belonged to, leaving an enclosing scope unterminated. popCleanup guards
+  // this the same way.
+  mlir::Block *insertBlock = builder.getInsertionBlock();
+  if (insertBlock &&
+      scope.getBodyRegion().findAncestorBlockInRegion(*insertBlock))
+    builder.setInsertionPointAfter(scope);
+}
+
 void CIRGenFunction::FullExprCleanupScope::exit(
     ArrayRef<mlir::Value *> valuesToReload) {
   assert(!exited && "FullExprCleanupScope::exit called twice");
   exited = true;
 
+  cgf.currentFullExprCleanupScope = oldFullExprCleanupScope;
+  cgf.outermostConditional = oldOutermostConditional;
+  cgf.hiddenOutermostConditional = oldHiddenOutermostConditional;
+
   size_t oldSize = deferredCleanupStackSize;
-  bool hasDeferredCleanups =
-      cgf.deferredConditionalCleanupStack.size() > oldSize;
 
   if (!scope) {
+    assert(cgf.conditionalCleanupScopes.size() == conditionalScopeDepth &&
+           "conditional cleanup scope opened without one to close it");
     cgf.deferredConditionalCleanupStack.truncate(oldSize);
     cleanups.forceCleanup(valuesToReload);
     return;
@@ -206,6 +378,13 @@ void CIRGenFunction::FullExprCleanupScope::exit(
     cgf.builder.createStore(val.getLoc(), val, temp);
   }
 
+  // Close the cleanup scopes opened by conditionals in this full expression,
+  // innermost first. The EH cleanups popped below own the scopes enclosing
+  // these, so they are closed after.
+  while (cgf.conditionalCleanupScopes.size() > conditionalScopeDepth)
+    closeConditionalCleanupScope(cgf,
+                                 cgf.conditionalCleanupScopes.pop_back_val());
+
   // Pop any EH cleanups that were pushed during the expression but leave
   // any lifetime-extended cleanups so that they can be promoted to the EH
   // stack after we've finished emitting any deferred cleanups.
@@ -221,57 +400,18 @@ void CIRGenFunction::FullExprCleanupScope::exit(
       cgf.builder.createYield(scope.getLoc());
   }
 
-  // Each deferred conditional cleanup will reference its addr from the
-  // sibling cleanup region we are about to fill.  If the alloca that backs
-  // that addr was created inside this scope's body region, hoist it out so it
-  // dominates the cleanup region.
-  if (hasDeferredCleanups) {
-    for (const PendingCleanupEntry &entry :
-         llvm::make_range(cgf.deferredConditionalCleanupStack.begin() + oldSize,
-                          cgf.deferredConditionalCleanupStack.end())) {
-      hoistAllocaOutOfCleanupScope(cgf, entry.addr, scope);
-    }
-  }
-
-  // Emit any deferred cleanups.
+  // Deferred cleanups are emitted into the conditional scopes closed above,
+  // so this scope's cleanup region is empty and canonicalization will inline
+  // the scope away.
   {
     mlir::OpBuilder::InsertionGuard guard(cgf.builder);
     mlir::Block &cleanupBlock = scope.getCleanupRegion().front();
     cgf.builder.setInsertionPointToEnd(&cleanupBlock);
-
-    if (hasDeferredCleanups) {
-      for (const PendingCleanupEntry &entry : llvm::reverse(llvm::make_range(
-               cgf.deferredConditionalCleanupStack.begin() + oldSize,
-               cgf.deferredConditionalCleanupStack.end()))) {
-        if (entry.activeFlag.isValid()) {
-          // We may have hoisted this alloca out of the cleanup scope. If so,
-          // we will have also hoisted any casts between it and the address that
-          // we stored in the deferredConditionalCleanupStack. While I can't
-          // find a case where this actually happens, there is a theoretical
-          // possibility that we could have a second address that uses an
-          // alloca that has already been hoisted but a different cast chain.
-          // This assert guards against that possibility.
-          assert(entry.addr.getUnderlyingAllocaOp() &&
-                 (entry.addr.getUnderlyingAllocaOp()->getBlock() ==
-                  entry.addr.getPointer().getDefiningOp()->getBlock()) &&
-                 "alloca and cast are in different blocks");
-          mlir::Value flag =
-              cgf.builder.createLoad(scope.getLoc(), entry.activeFlag);
-          cir::IfOp::create(
-              cgf.builder, scope.getLoc(), flag, /*withElseRegion=*/false,
-              [&](mlir::OpBuilder &b, mlir::Location loc) {
-                cgf.emitDestroy(entry.addr, entry.type, entry.destroyer);
-                cgf.builder.createYield(loc);
-              });
-        } else {
-          cgf.emitDestroy(entry.addr, entry.type, entry.destroyer);
-        }
-      }
-    }
     cgf.builder.createYield(scope.getLoc());
   }
 
-  cgf.deferredConditionalCleanupStack.truncate(oldSize);
+  assert(cgf.deferredConditionalCleanupStack.size() == oldSize &&
+         "deferred cleanups were not consumed by a conditional scope");
   cgf.builder.setInsertionPointAfter(scope);
 
   // Promote any lifetime-extended cleanups onto the EH scope stack. The new
@@ -363,10 +503,10 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
       skipCleanupScope = true;
   }
 
-  // While emitting a loop's condition variable, suppress cir.cleanup.scope
-  // creation. The variable's cleanups are captured on the EH stack and later
-  // emitted into the loop op's per-iteration cleanup region.
-  if (capturingLoopConditionCleanups)
+  // While emitting a variable with captured cleanups, suppress
+  // cir.cleanup.scope creation. The variable's cleanups are captured on the EH
+  // stack and later emitted into the cleanup region of the op that owns them.
+  if (capturingCleanups)
     skipCleanupScope = true;
 
   cir::CleanupScopeOp cleanupScope = nullptr;
@@ -467,8 +607,12 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
                                           mlir::Operation *dominatingIP) {
   EHCleanupScope &scope = cast<EHCleanupScope>(*cgf.ehStack.find(c));
 
-  assert((scope.isNormalCleanup() || scope.isEHCleanup()) &&
-         "cleanup block is neither normal nor EH?");
+  // An EH-only cleanup has both flags clear when pushCleanup dropped
+  // the EH flag. That happens when exceptions are disabled, and when
+  // the innermost EH scope is a terminate scope. The cleanup never
+  // runs, so there is no active flag to clear.
+  if (!scope.isNormalCleanup() && !scope.isEHCleanup())
+    return;
 
   scope.setTestFlagInNormalCleanup(scope.isNormalCleanup());
   scope.setTestFlagInEHCleanup(scope.isEHCleanup());
@@ -505,7 +649,16 @@ static void setupCleanupBlockDeactivation(CIRGenFunction &cgf,
   builder.createFlagStore(loc, false, var.getPointer());
 }
 
-/// Deactive a cleanup that was created in an active state.
+static bool enclosesOpenConditionalCleanupScope(CIRGenFunction &cgf,
+                                                EHCleanupScope &scope) {
+  cir::CleanupScopeOp op = scope.getCleanupScopeOp();
+  return op &&
+         llvm::any_of(cgf.conditionalCleanupScopes, [&](const auto &condScope) {
+           return op->isProperAncestor(condScope.scope);
+         });
+}
+
+/// Deactivate a cleanup that was created in an active state.
 void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
                                             mlir::Operation *dominatingIP) {
   assert(c != ehStack.stable_end() && "deactivating bottom of stack?");
@@ -513,9 +666,11 @@ void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
   assert(scope.isActive() && "double deactivation");
 
   // If it's the top of the stack, just pop it, but do so only if it belongs
-  // to the current RunCleanupsScope.
+  // to the current RunCleanupsScope. If a conditional opened a cleanup scope
+  // keep it open till the end of the full-expression.
   if (c == ehStack.stable_begin() &&
-      currentCleanupStackDepth.strictlyEncloses(c)) {
+      currentCleanupStackDepth.strictlyEncloses(c) &&
+      !enclosesOpenConditionalCleanupScope(*this, scope)) {
     popCleanupBlock(/*forDeactivation=*/true);
     return;
   }
@@ -725,17 +880,17 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   emitCleanup(*this, cleanupScope, cleanup, cleanupFlags, cleanupActiveFlag);
 }
 
-void CIRGenFunction::emitLoopConditionCleanups(
-    EHScopeStack::stable_iterator depth, mlir::Location loc) {
-  // The captured cleanups were pushed while emitting the loop's condition
-  // variable with EHScopeStack capturing condition cleanups, so they own no
-  // cir.cleanup.scope. Emit them directly into the loop's cleanup region (the
-  // current insertion point), popping each off the EH stack.
+void CIRGenFunction::emitCapturedCleanups(EHScopeStack::stable_iterator depth,
+                                          mlir::Location loc) {
+  // The captured cleanups were pushed while EHScopeStack was capturing
+  // cleanups, so they own no cir.cleanup.scope. Emit them directly into the
+  // owning op's cleanup region (the current insertion point), popping each off
+  // the EH stack.
   while (ehStack.stable_begin() != depth) {
     assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
     EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
     assert(!scope.getCleanupScopeOp() &&
-           "captured loop-condition cleanup should not own a cleanup scope");
+           "captured cleanup should not own a cleanup scope");
 
     EHScopeStack::Cleanup::Flags cleanupFlags;
     if (scope.isNormalCleanup())
@@ -743,10 +898,12 @@ void CIRGenFunction::emitLoopConditionCleanups(
     if (scope.isEHCleanup())
       cleanupFlags.setIsEHCleanupKind();
 
-    // A condition variable's destructor cleanup is guarded by an active flag
-    // that is false while its initializer runs, so a throwing initializer does
-    // not destroy the not-yet-constructed variable. The lifetime-end cleanup
-    // has no flag because its lifetime starts before initialization. Each
+    // A captured cleanup may be guarded by an active flag. The destructor
+    // cleanups of a loop condition variable and of the temporaries that its
+    // initializer lifetime-extends have one that is false while its
+    // initializer runs, so a throwing initializer does not destroy the
+    // not-yet-constructed variables. The lifetime-end cleanup has no flag
+    // because its lifetime starts before initialization. For a loop, each
     // emission serves both the normal per-iteration exit and the EH unwind
     // path.
     Address activeFlag = scope.getActiveFlag();

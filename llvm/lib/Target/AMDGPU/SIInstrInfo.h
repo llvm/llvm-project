@@ -30,7 +30,6 @@ namespace llvm {
 
 class APInt;
 class GCNSubtarget;
-class LiveVariables;
 class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
@@ -64,6 +63,13 @@ struct V2PhysSCopyInfo {
 /// never written to by other threads.
 static const MachineMemOperand::Flags MOThreadPrivate =
     MachineMemOperand::MOTargetFlag4;
+
+/// Use two MMO flags to encode the 2-bit cache fill size field for GFX13+
+static const MachineMemOperand::Flags MOCFSB0 =
+    MachineMemOperand::MOTargetFlag5;
+
+static const MachineMemOperand::Flags MOCFSB1 =
+    MachineMemOperand::MOTargetFlag6;
 
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
@@ -232,13 +238,14 @@ protected:
   bool swapSourceModifiers(MachineInstr &MI, MachineOperand &Src0,
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
-  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     unsigned toIdx) const;
+  bool isNonCommutableDPP(const MachineInstr &MI) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
 
 public:
+  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
+                     unsigned toIdx) const;
   enum TargetOperandFlags {
     MO_MASK = 0xf,
 
@@ -272,13 +279,20 @@ public:
     return RI;
   }
 
+  // FIXME: This is inaccurate and needs to account for use context. Normal asm
+  // constraints should use 64-bit pointers.
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &AMDGPU::VGPR_32RegClass;
+  }
+
   const GCNSubtarget &getSubtarget() const {
     return ST;
   }
 
   bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
-  bool isIgnorableUse(const MachineOperand &MO) const override;
+  bool isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const override;
 
   bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,
                     MachineCycleInfo *CI) const override;
@@ -291,8 +305,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const final;
+      bool &OffsetIsScalable, LocationSize &Width) const final;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                            int64_t Offset1, bool OffsetIsScalable1,
@@ -300,6 +313,15 @@ public:
                            int64_t Offset2, bool OffsetIsScalable2,
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
+
+  /// Return true if the memory operations described by \p BaseOps1 and
+  /// \p BaseOps2 (as returned by getMemOperandsWithOffsetWidth) address the
+  /// same base. Unlike shouldClusterMemOps, this does not apply the
+  /// MaxMemoryClusterDWords budget, which only bounds pre-RA register pressure.
+  /// Only the first base operand is compared, unlike
+  /// memOpsHaveSameBaseOperands which requires all of them to match.
+  bool memOpsHaveSameBase(ArrayRef<const MachineOperand *> BaseOps1,
+                          ArrayRef<const MachineOperand *> BaseOps2) const;
 
   bool shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1, int64_t Offset0,
                                int64_t Offset1, unsigned NumLoads) const override;
@@ -436,8 +458,8 @@ public:
 
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
-                       Register TrueReg, Register FalseReg, int &CondCycles,
-                       int &TrueCycles, int &FalseCycles) const override;
+                       Register TrueReg, Register FalseReg,
+                       SelectExpansion &Exp) const override;
 
   void insertSelect(MachineBasicBlock &MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
@@ -478,7 +500,7 @@ public:
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   bool isSchedulingBoundary(const MachineInstr &MI,
@@ -885,13 +907,13 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/true));
+           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/false));
   }
 
   bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/true));
+           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/false));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
@@ -931,6 +953,17 @@ public:
   static bool isDPP(const MachineInstr &MI) { return SIInstrFlags::isDPP(MI); }
 
   bool isDPP(uint32_t Opcode) const { return SIInstrFlags::isDPP(get(Opcode)); }
+
+  // Some opcodes use Src1 for DPP instead of Src0, because the sequencer
+  // transforms them and reverse the order of their operands at runtime.
+  //
+  // Documentation is incomplete on which instructions are effected, so
+  // the implementation is derived from experimentation.
+  //
+  // Listed as target-independent pseudos; the per-subtarget MC opcodes
+  // (V_SUBREV_NC_U32_e32_gfx11 and friends) are all reached through these.
+  // Defined out of line because GCNSubtarget is incomplete here.
+  static bool isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode);
 
   static bool isTRANS(const MachineInstr &MI) {
     return SIInstrFlags::isTRANS(MI);
@@ -1040,10 +1073,6 @@ public:
 
   bool isVINTERP(uint32_t Opcode) const {
     return SIInstrFlags::isVINTERP(get(Opcode));
-  }
-
-  static bool isScalarUnit(const MachineInstr &MI) {
-    return SIInstrFlags::isSALU(MI) || SIInstrFlags::isSMRD(MI);
   }
 
   static bool usesVM_CNT(const MachineInstr &MI) {
@@ -1188,6 +1217,45 @@ public:
            Opcode == AMDGPU::V_S_SQRT_F16_e64;
   }
 
+  static bool isPseudoScalarTrans(unsigned Opcode) {
+    return isF16PseudoScalarTrans(Opcode) ||
+           Opcode == AMDGPU::V_S_EXP_F32_e64 ||
+           Opcode == AMDGPU::V_S_LOG_F32_e64 ||
+           Opcode == AMDGPU::V_S_RCP_F32_e64 ||
+           Opcode == AMDGPU::V_S_RSQ_F32_e64 ||
+           Opcode == AMDGPU::V_S_SQRT_F32_e64;
+  }
+
+  static bool isVPermPk16(unsigned Opcode) {
+    return Opcode == AMDGPU::V_PERM_PK16_B4_U4_e64 ||
+           Opcode == AMDGPU::V_PERM_PK16_B6_U4_e64 ||
+           Opcode == AMDGPU::V_PERM_PK16_B8_U4_e64;
+  }
+
+  // \returns true if \p MI clears the V_PERM_PK16 hazard when it immediately
+  // follows a V_PERM_PK16 (i.e. \p MI is a "safe" instruction).
+  bool isVPermPk16SafeInstr(const MachineInstr &MI) const {
+    unsigned Opc = MI.getOpcode();
+
+    // Only VALU ops issue on the pipe that clears the V_PERM_PK16 hazard.
+    if (!isVALU(MI, /*AllowLDSDMA=*/false))
+      return false;
+    // OP_XDL: matrix (WMMA/SWMMAC/DOT) ops clear the hazard.
+    if (isXDL(MI))
+      return true;
+    // Pseudo-scalar transcendentals (OP32_SCL_T) do NOT clear the hazard.
+    if (isPseudoScalarTrans(Opc))
+      return false;
+
+    // Use the table lookup, not getBlockingCycles(): occupancy is gated off on
+    // gfx1251 but the hazard applies to both gfx1250 and gfx1251. Gfx1250 table
+    // is valid enough for gfx1251 w.r.t. v_perm_pk16 safety check here.
+    // OP_32_T is in the table at 2 and is safe; other table entries (>= 2) are
+    // not.
+    unsigned Cycles = getGFX1250BlockingCyclesTable(MI);
+    return Cycles < 2 || (Cycles == 2 && isTRANS(MI));
+  }
+
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
     return SIInstrFlags::isTiedSourceNotRead(MI);
   }
@@ -1251,6 +1319,8 @@ public:
     case AMDGPU::S_WAIT_DSCNT:
     case AMDGPU::S_WAIT_KMCNT:
     case AMDGPU::S_WAIT_XCNT:
+    case AMDGPU::S_WAIT_ASYNCCNT:
+    case AMDGPU::S_WAIT_TENSORCNT:
     case AMDGPU::S_WAIT_IDLE:
       return true;
     default:
@@ -1382,6 +1452,12 @@ public:
   /// This function will return false if you pass it a 32-bit instruction.
   bool hasVALU32BitEncoding(unsigned Opcode) const;
 
+  /// Return true if \p Reg is a lane mask that already has 0 in every bit
+  /// corresponding to a lane that is inactive in EXEC where \p Use executes,
+  /// so that ANDing it with EXEC there would be a no-op. Requires SSA form.
+  bool isMaskedByExec(Register Reg, const MachineInstr &Use,
+                      const MachineRegisterInfo &MRI, unsigned Depth = 0) const;
+
   bool physRegUsesConstantBus(const MachineOperand &Reg) const;
   bool regUsesConstantBus(const MachineOperand &Reg,
                           const MachineRegisterInfo &MRI) const;
@@ -1477,13 +1553,6 @@ public:
   bool isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                       const MachineOperand *MO = nullptr) const;
 
-  /// Check if \p MO would be a valid operand for the given operand
-  /// definition \p OpInfo. Note this does not attempt to validate constant bus
-  /// restrictions (e.g. literal constant usage).
-  bool isLegalVSrcOperand(const MachineRegisterInfo &MRI,
-                          const MCOperandInfo &OpInfo,
-                          const MachineOperand &MO) const;
-
   /// Check if \p MO (a register operand) is a legal register for the
   /// given operand description or operand index.
   /// The operand index version provide more legality checks
@@ -1506,6 +1575,13 @@ public:
   isLegalSingleSGPRReadInstOperand(const MachineRegisterInfo &MRI,
                                    const MachineInstr &MI, unsigned SrcN,
                                    const MachineOperand *MO = nullptr) const;
+
+  /// Check if \p MI has legal GFX950 v_pk_fma op_sel.
+  bool isLegalPkFMAF32OpSel(const MachineInstr &MI) const;
+
+  /// Decompose a GFX950 v_pk_fma_f32 with invalid op_sel into two independent
+  /// scalar V_FMA_F32_e64 instructions, replacing \p MI.
+  void decomposePkFMAF32(MachineInstr &MI, MachineRegisterInfo &MRI) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
@@ -1644,8 +1720,6 @@ public:
   InstSizeVerifyMode
   getInstSizeVerifyMode(const MachineInstr &MI) const override;
 
-  bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
-
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;
 
@@ -1755,6 +1829,13 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  unsigned getBlockingCycles(const MachineInstr &MI) const;
+
+  /// GFX1250 blocking-cycles table lookup with no occupancy subtarget gate.
+  /// Returns 0 if \p MI is not in the table. Used as a multi-pass VALU denylist
+  /// (e.g. V_PERM_PK16 hazard) on both gfx1250 and gfx1251.
+  unsigned getGFX1250BlockingCyclesTable(const MachineInstr &MI) const;
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 

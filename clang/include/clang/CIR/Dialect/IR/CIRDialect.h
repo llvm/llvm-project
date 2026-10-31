@@ -81,6 +81,17 @@ private:
   }
 };
 
+/// The properties of \p Op with every ODS-declared default applied.  The
+/// aggregate op builders that take a `Properties` struct do not apply those
+/// defaults themselves, so callers of those builders have to do it here.
+template <typename Op>
+typename Op::Properties getDefaultProperties(mlir::MLIRContext *context) {
+  typename Op::Properties properties{};
+  Op::populateDefaultProperties(
+      mlir::OperationName(Op::getOperationName(), context), properties);
+  return properties;
+}
+
 /// Look up the RecordLayoutAttr for a named record in the module's
 /// cir.record_layouts dictionary.  Asserts if the entry is missing.
 RecordLayoutAttr getRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
@@ -95,5 +106,15 @@ RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
 // the operations of that dialect.
 #define GET_OP_CLASSES
 #include "clang/CIR/Dialect/IR/CIROps.h.inc"
+
+namespace cir {
+/// The alloca that defines \p addr, looking through casts that preserve the
+/// underlying storage.  Null when the chain does not end at an alloca.
+///
+/// Use the result only to inspect the allocation, such as its alignment or
+/// its allocated type.  Addressing has to keep using \p addr, whose type and
+/// address space may differ from the alloca's own result.
+AllocaOp getUnderlyingAlloca(mlir::Value addr);
+} // namespace cir
 
 #endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_H

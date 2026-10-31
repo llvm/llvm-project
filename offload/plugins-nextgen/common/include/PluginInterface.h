@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <limits>
 #include <list>
 #include <map>
 #include <shared_mutex>
@@ -29,6 +30,7 @@
 #include "Shared/Requirements.h"
 #include "Shared/Utils.h"
 
+#include "GenericProfiler.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
@@ -36,10 +38,6 @@
 #include "RPC.h"
 #include "RecordReplay.h"
 #include "omptarget.h"
-
-#ifdef OMPT_SUPPORT
-#include "omp-tools.h"
-#endif
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -103,6 +101,15 @@ template <typename... ArgsTy>
                                     ArgsTy... Args);
 } // namespace Plugin
 
+/// Decide whether an operation must be synchronized eagerly because the
+/// force-synchronization escape hatch (OFFLOAD_FORCE_SYNC_OPS) is enabled. Only
+/// external async info objects are affected; local ones are always synchronized
+/// on finalization. A pending error suppresses synchronization.
+inline bool shouldForceSync(bool ForceSyncOps, bool IsLocalAsyncInfo,
+                            bool HasQueue, bool HasError) {
+  return ForceSyncOps && !IsLocalAsyncInfo && HasQueue && !HasError;
+}
+
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
 /// an internal one and will synchronize the current thread with the pending
@@ -120,6 +127,10 @@ struct AsyncInfoWrapperTy {
 
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
+
+  /// Indicate whether the operation is synchronous, i.e., the caller did not
+  /// provide a __tgt_async_info.
+  bool isSynchronous() const { return AsyncInfoPtr == &LocalAsyncInfo; }
 
   /// Get the queue.
   template <typename Ty> Ty getQueueAs() {
@@ -150,14 +161,6 @@ struct AsyncInfoWrapperTy {
     return getQueueAs<Ty>();
   }
 
-  /// Explicitly synchronize with the __tgt_async_info's pending operations
-  /// regardless of which async info this object wraps. The associated
-  /// underlying queue (if any) will not be released. Calling this function does
-  /// not obviate the need to call the finalize function later. This function is
-  /// intended for specific use cases where a synchronous operation needs to
-  /// explicitly wait for the operations already on the queue.
-  Error synchronize();
-
   /// Synchronize with the __tgt_async_info's pending operations if it's the
   /// internal async info. The error associated to the asynchronous operations
   /// issued in this queue must be provided in \p Err. This function will update
@@ -187,13 +190,11 @@ enum class DeviceInfo {
 
 /// Tree node for device information
 ///
-/// This information is either printed or used by liboffload to extract certain
-/// device queries. Each property has an optional key, an optional value
-/// and optional children. The children can be used to store additional
-/// information (such as x, y and z components of ranges).
+/// This information is used by liboffload to extract certain device queries.
+/// Each property has an optional key, an optional value and optional children.
+/// The children can be used to store additional information (such as x, y and
+/// z components of ranges).
 struct InfoTreeNode {
-  static constexpr uint64_t IndentSize = 4;
-
   std::string Key;
   using VariantType = std::variant<uint64_t, std::string, bool, std::monostate>;
   VariantType Value;
@@ -259,72 +260,6 @@ struct InfoTreeNode {
       return &(*Children)[Result->second];
     return std::nullopt;
   }
-
-  /// Print all info entries in the tree
-  void print() const {
-    // Fake an additional indent so that values are offset from the keys
-    doPrint(0, maxKeySize(1));
-  }
-
-private:
-  void doPrint(int Level, uint64_t MaxKeySize) const {
-    if (Key.size()) {
-      // Compute the indentations for the current entry.
-      uint64_t KeyIndentSize = Level * IndentSize;
-      uint64_t ValIndentSize =
-          MaxKeySize - (Key.size() + KeyIndentSize) + IndentSize;
-
-      llvm::outs() << std::string(KeyIndentSize, ' ') << Key
-                   << std::string(ValIndentSize, ' ');
-      std::visit(
-          [](auto &&V) {
-            using T = std::decay_t<decltype(V)>;
-            if constexpr (std::is_same_v<T, std::string>)
-              llvm::outs() << V;
-            else if constexpr (std::is_same_v<T, bool>)
-              llvm::outs() << (V ? "Yes" : "No");
-            else if constexpr (std::is_same_v<T, uint64_t>)
-              llvm::outs() << V;
-            else if constexpr (std::is_same_v<T, std::monostate>) {
-              // Do nothing
-            } else
-              static_assert(false, "doPrint visit not exhaustive");
-          },
-          Value);
-      llvm::outs() << (Units.empty() ? "" : " ") << Units << "\n";
-    }
-
-    // Print children
-    if (Children)
-      for (const auto &Entry : *Children)
-        Entry.doPrint(Level + 1, MaxKeySize);
-  }
-
-  // Recursively calculates the maximum width of each key, including indentation
-  uint64_t maxKeySize(int Level) const {
-    uint64_t MaxKeySize = 0;
-
-    if (Children)
-      for (const auto &Entry : *Children) {
-        uint64_t KeySize = Entry.Key.size() + Level * IndentSize;
-        MaxKeySize = std::max(MaxKeySize, KeySize);
-        MaxKeySize = std::max(MaxKeySize, Entry.maxKeySize(Level + 1));
-      }
-
-    return MaxKeySize;
-  }
-};
-
-/// Configuration of dynamic block memory needed for launching a kernel.
-struct DynBlockMemConfTy {
-  /// The size of the dynamic block memory buffer.
-  uint32_t Size = 0;
-  /// The size of dynamic shared memory natively provided by the device.
-  uint32_t NativeSize = 0;
-  /// The fallback that was triggered (if any).
-  DynCGroupMemFallbackType Fallback = DynCGroupMemFallbackType::None;
-  /// The fallback pointer if global memory was used as alternative.
-  void *FallbackPtr = nullptr;
 };
 
 /// Tracker of virtual memory address reservations.
@@ -430,9 +365,6 @@ public:
 /// so it is never aliased onto compiler-emitted memory and may be extended
 /// freely.
 struct KernelLaunchArgsTy {
-  /// Version of KernelArgsTy this launch was built from, for ABI
-  /// compatibility checks.
-  uint32_t OmpABIVersion = 0;
   /// Number of kernel arguments in \p Args.
   uint32_t NumArgs = 0;
   /// Array of \p NumArgs pointers, each pointing at one argument's value,
@@ -441,13 +373,6 @@ struct KernelLaunchArgsTy {
   /// Size of the argument data in bytes, one entry per \p Args element,
   /// possibly null.
   int64_t *ArgSizes = nullptr;
-  /// Address of the element of \p Args reserved for the kernel launch
-  /// environment (dyn_ptr), or null if this launch has no such slot. The
-  /// caller owns the storage it points into; the plugin fills it in once it
-  /// has computed the actual (device-side) value.
-  void **DynPtrSlot = nullptr;
-  /// Tripcount for the teams / distribute loop, 0 otherwise.
-  uint64_t Tripcount = 0;
   /// Amount of dynamic cgroup memory requested.
   uint32_t DynCGroupMem = 0;
   /// User-requested number of blocks (for x,y,z dimension).
@@ -456,24 +381,16 @@ struct KernelLaunchArgsTy {
   uint32_t UserThreadLimit[3] = {0, 0, 0};
   struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
-    uint64_t StrictBlocks : 1; // The user-requested number of blocks is strict.
-    uint64_t StrictThreads
-        : 1; // The user-requested number of threads is strict.
-    uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
-    uint64_t Unused : 60;
-  } Flags = {0, 0, 0, 0, 0};
-  /// Set by the caller when replaying a previously recorded kernel launch, so
-  /// the plugin can report the outcome back; null for a normal launch.
-  KernelReplayOutcomeTy *ReplayOutcome = nullptr;
+    uint64_t Unused : 63;
+  } Flags = {0, 0};
 };
 
 /// Class implementing common functionalities of offload kernels. Each plugin
 /// should define the specific kernel class, derive from this generic one, and
 /// implement the necessary virtual function members.
 struct GenericKernelTy {
-  /// Construct a kernel with a name and a execution mode.
-  GenericKernelTy(StringRef Name)
-      : Name(Name), PreferredNumThreads(0), MaxNumThreads(0) {}
+  /// Construct a kernel with a name.
+  GenericKernelTy(StringRef Name) : Name(Name) {}
 
   virtual ~GenericKernelTy() {}
 
@@ -484,17 +401,16 @@ struct GenericKernelTy {
 
   /// Launch the kernel on the specific device. The device must be the same
   /// one used to initialize the kernel. \p LaunchArgs.Args is the flattened
-  /// argument-pointer array to pass to the kernel, with any offsets already
-  /// resolved. \p LaunchArgs.DynPtrSlot, if non-null, points at the element
-  /// of it reserved for the kernel launch environment (dyn_ptr); the caller
-  /// owns the storage it points into.
+  /// argument-pointer array to pass to the kernel, with any offsets.
   Error launch(GenericDeviceTy &GenericDevice, KernelLaunchArgsTy &LaunchArgs,
-               AsyncInfoWrapperTy &AsyncInfoWrapper) const;
+               AsyncInfoWrapperTy &AsyncInfoWrapper,
+               GenericProfilerTy *ProfilerPtr = nullptr) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice,
                            uint32_t NumThreads[3], uint32_t NumBlocks[3],
                            uint32_t DynBlockMemSize,
                            KernelLaunchArgsTy &LaunchArgs,
-                           AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
+                           AsyncInfoWrapperTy &AsyncInfoWrapper,
+                           GenericProfilerTy *ProfilerPtr = nullptr) const = 0;
 
   virtual Expected<uint64_t> maxGroupSize(GenericDeviceTy &GenericDevice,
                                           uint64_t DynamicMemSize) const = 0;
@@ -514,28 +430,11 @@ struct GenericKernelTy {
   /// Get the size of the static per-block memory consumed by the kernel.
   uint32_t getStaticBlockMemSize() const { return StaticBlockMemSize; };
 
-  /// Get the maximum number of threads per block that this kernel may use.
-  uint32_t getMaxThreads() const { return MaxNumThreads; }
-
-  /// Get the kernel image.
-  DeviceImageTy &getImage() const {
-    assert(ImagePtr && "Kernel is not initialized!");
-    return *ImagePtr;
+  /// Return the maximum number of threads per block that this kernel's
+  /// underlying device function may run, as reported by the driver/backend.
+  virtual uint32_t getMaxThreads() const {
+    return std::numeric_limits<uint32_t>::max();
   }
-
-  /// Return the kernel environment object for kernel \p Name.
-  const KernelEnvironmentTy &getKernelEnvironmentForKernel() {
-    return KernelEnvironment;
-  }
-
-  /// Return a device pointer to a new kernel launch environment.
-  ///
-  /// \p NumBlocks0 is the number of blocks for this launch and is used to size
-  /// the reduction buffer.
-  Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
-      GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
-      const DynBlockMemConfTy &DynBlockMemConf,
-      AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const;
 
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
@@ -551,23 +450,6 @@ struct GenericKernelTy {
   }
 
 protected:
-  /// Get the execution mode name of the kernel.
-  const char *getExecutionModeName() const {
-    switch (KernelEnvironment.Configuration.ExecMode) {
-    case OMP_TGT_EXEC_MODE_BARE:
-      return "BARE";
-    case OMP_TGT_EXEC_MODE_SPMD:
-      return "SPMD";
-    case OMP_TGT_EXEC_MODE_GENERIC:
-      return "Generic";
-    case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
-      return "Generic-SPMD";
-    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
-      return "SPMD-No-Loop";
-    }
-    llvm_unreachable("Unknown execution mode!");
-  }
-
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
                         const KernelLaunchArgsTy &LaunchArgs,
@@ -581,71 +463,12 @@ protected:
                                        uint32_t NumBlocks[3]) const;
 
 private:
-  /// Prepare the block memory buffer requested for the kernel and execute the
-  /// specified fallback if necessary.
-  Expected<DynBlockMemConfTy>
-  prepareBlockMemory(GenericDeviceTy &GenericDevice,
-                     const KernelLaunchArgsTy &LaunchArgs,
-                     uint32_t NumBlocks) const;
-
-  /// Get the effective number of threads for the kernel based on the
-  /// user-defined number of threads.
-  uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
-                                  uint32_t UserThreadLimit) const;
-
-  /// Get the effective number of blocks for the kernel based on the
-  /// user-defined number of blocks and the loop trip count.
-  /// The number of threads \p NumThreads can be adjusted by this method.
-  /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
-  /// thread_limit clause.
-  uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
-                                 uint32_t UserNumBlocks, uint64_t LoopTripCount,
-                                 uint32_t &EffectiveNumThreads,
-                                 bool IsNumThreadsStrict,
-                                 bool IsNumThreadsFromUser) const;
-
-  /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
-  /// or SPMD mode.
-  bool isGenericSPMDMode() const {
-    return KernelEnvironment.Configuration.ExecMode ==
-           OMP_TGT_EXEC_MODE_GENERIC_SPMD;
-  }
-  bool isGenericMode() const {
-    return KernelEnvironment.Configuration.ExecMode ==
-           OMP_TGT_EXEC_MODE_GENERIC;
-  }
-  bool isSPMDMode() const {
-    return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_SPMD;
-  }
-  bool isBareMode() const {
-    return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_BARE;
-  }
-  bool isNoLoopMode() const {
-    return KernelEnvironment.Configuration.ExecMode ==
-           OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
-  }
-
   /// The kernel name.
   std::string Name;
 
-  /// The image that contains this kernel.
-  DeviceImageTy *ImagePtr = nullptr;
-
 protected:
-  /// The preferred number of threads to run the kernel.
-  uint32_t PreferredNumThreads;
-
-  /// The maximum number of threads which the kernel could leverage.
-  uint32_t MaxNumThreads;
-
   /// The static memory sized per block.
   uint32_t StaticBlockMemSize = 0;
-
-  /// The kernel environment, including execution flags.
-  KernelEnvironmentTy KernelEnvironment;
-
-  /// The prototype kernel launch environment.
-  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
 };
 
 /// Information about an allocation, when it has been allocated, and when/if it
@@ -682,7 +505,7 @@ struct AllocationTraceInfoTy {
 struct KernelTraceInfoTy {
 
   /// The launched kernel.
-  GenericKernelTy *Kernel;
+  const GenericKernelTy *Kernel;
 
   /// The stack trace of the launch itself.
   std::string LaunchTrace;
@@ -698,7 +521,7 @@ struct KernelTraceInfoRecordTy {
   auto size() const { return KTIs.size(); }
 
   /// Create a new kernel trace info and add it into the record.
-  void emplace(GenericKernelTy *Kernel, const std::string &&StackTrace,
+  void emplace(const GenericKernelTy *Kernel, const std::string &&StackTrace,
                __tgt_async_info *AsyncInfo) {
     KTIs[Idx] = {Kernel, std::move(StackTrace), AsyncInfo};
     Idx = (Idx + 1) % size();
@@ -896,6 +719,30 @@ public:
   }
 };
 
+/// Description of an allocation: owning device, kind, base address and size.
+struct PluginAllocInfoTy {
+  GenericDeviceTy *Device;
+  TargetAllocTy Kind;
+  void *Base;
+  size_t Size;
+};
+
+/// Memory manager that allocates through a plugin context, so that pooled
+/// memory comes from the same place as memory the context hands out directly.
+class ContextAllocatorTy final : public DeviceAllocatorTy {
+public:
+  ContextAllocatorTy(PluginContextTy &Context, GenericDeviceTy &Device)
+      : Context(Context), Device(Device) {}
+
+  llvm::Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+                                  size_t Alignment) override;
+  llvm::Error free(void *TgtPtr, TargetAllocTy Kind) override;
+
+private:
+  PluginContextTy &Context;
+  GenericDeviceTy &Device;
+};
+
 /// A plugin-side context grouping a set of devices.
 struct PluginContextTy {
   PluginContextTy(GenericPluginTy &Plugin,
@@ -907,7 +754,7 @@ struct PluginContextTy {
   PluginContextTy(PluginContextTy &&) = delete;
   PluginContextTy &operator=(PluginContextTy &&) = delete;
 
-  virtual ~PluginContextTy() = default;
+  virtual ~PluginContextTy();
 
   /// Release resources owned by this context. Called from olDestroyContext
   /// before the object is destroyed so that errors are propagated instead of
@@ -922,9 +769,84 @@ struct PluginContextTy {
   virtual Error initAsyncInfoImpl(GenericDeviceTy &Device,
                                   AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  /// Allocate Size bytes of Kind memory accessible from Device. HostPtr is an
+  /// optional hint (e.g. for pinned-buffer registration); pass nullptr when
+  /// unused.
+  llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                                  void *HostPtr, TargetAllocTy Kind,
+                                  size_t Alignment,
+                                  GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Serve an allocation requested through allocate, which decides pooling.
+  virtual llvm::Expected<void *>
+  allocateImpl(GenericDeviceTy &Device, int64_t Size, void *HostPtr,
+               TargetAllocTy Kind, size_t Alignment,
+               GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Free a pointer returned by allocate; resolves owner/kind via
+  /// getAllocInfo. Requires a non-empty device set, so this is only valid on
+  /// user-created contexts (not on the per-plugin default context, which
+  /// carries no devices).
+  llvm::Error deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Free a pointer when the caller already knows the owning device and kind.
+  llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+                         GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Serve the deallocation requested through deallocate.
+  virtual llvm::Error deallocateImpl(GenericDeviceTy &Device, void *Ptr,
+                                     TargetAllocTy Kind,
+                                     GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Record that \p Ptr is a live allocation of \p Size bytes of \p Kind
+  /// memory on \p Device. Called once per allocation served through allocate,
+  /// pooled or not, so that an implementation's registry tracks what the user
+  /// asked for and not how it was served.
+  virtual void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
+                               TargetAllocTy Kind) {}
+
+  /// Record that \p Ptr is no longer live. Called before the deallocation is
+  /// served, as serving it may hand \p Ptr back out to another thread.
+  virtual void untrackAllocation(void *Ptr) {}
+
+  /// Look up the allocation containing Ptr. Returns NOT_FOUND when Ptr is not
+  /// known to this context. Only valid on user-created contexts.
+  virtual llvm::Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) = 0;
+
+  /// Return the backend-native handle of this context, reinterpreted as a
+  /// void pointer.
+  virtual llvm::Expected<void *> getNativeHandle() {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
+  }
+
+  /// Release the memory pools of this context. Must be called before deinit.
+  void releaseMemoryManagers();
+
 protected:
   GenericPluginTy &Plugin;
   llvm::SmallVector<GenericDeviceTy *> Devices;
+
+private:
+  /// Return the pool that serves allocations of \p Kind memory on \p Device,
+  /// or null when they are not pooled.
+  MemoryManagerTy *getMemoryManagerFor(GenericDeviceTy &Device,
+                                       TargetAllocTy Kind);
+  MemoryManagerTy *getDeviceMemoryManagerFor(GenericDeviceTy &Device,
+                                             TargetAllocTy Kind);
+  MemoryManagerTy *getHostMemoryManager();
+
+  /// A memory pool and the allocator that lets it allocate through this
+  /// context. The allocator outlives the pool it backs.
+  struct MemoryPoolTy {
+    std::unique_ptr<ContextAllocatorTy> Allocator;
+    std::unique_ptr<MemoryManagerTy> Manager;
+  };
+
+  llvm::DenseMap<std::pair<GenericDeviceTy *, int>, MemoryPoolTy>
+      DeviceMemoryManagers;
+  MemoryPoolTy HostMemoryManager;
+  std::mutex MemoryManagersMutex;
 };
 
 /// Class implementing common functionalities of offload devices. Each plugin
@@ -961,6 +883,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
 
+  virtual uint32_t getDriverId() const { return 0; }
+
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
 
@@ -974,20 +898,26 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Initialize the device. After this call, the device should be already
   /// working and ready to accept queries or modifications.
-  Error init(GenericPluginTy &Plugin);
-  virtual Error initImpl(GenericPluginTy &Plugin) = 0;
+  Error init(GenericPluginTy &Plugin, GenericProfilerTy *ProfilerPtr = nullptr);
+  virtual Error initImpl(GenericPluginTy &Plugin,
+                         GenericProfilerTy *ProfilerPtr) = 0;
 
   /// Deinitialize the device and free all its resources. After this call, the
   /// device is no longer considered ready, so no queries or modifications are
   /// allowed.
-  Error deinit(GenericPluginTy &Plugin);
+  Error deinit(GenericPluginTy &Plugin,
+               GenericProfilerTy *ProfilerPtr = nullptr);
   virtual Error deinitImpl() = 0;
 
-  /// Load the binary image into the device and return the target table.
-  Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
-                                       StringRef TgtImage);
+  /// Load the binary image into the device and return the target table. When
+  /// \p Context is null the plugin's driver-scoped default context is used.
+  Expected<DeviceImageTy *>
+  loadBinary(GenericPluginTy &Plugin, StringRef TgtImage,
+             PluginContextTy *Context,
+             GenericProfilerTy *ProfilerPtr = nullptr);
   virtual Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId) = 0;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy *Context) = 0;
 
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);
@@ -1044,10 +974,23 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Allocate data on the device or involving the device.
   Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind,
-                             size_t Alignment);
+                             size_t Alignment,
+                             GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Deallocate data from the device or involving the device.
-  Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
+  Error dataDelete(void *TgtPtr, TargetAllocTy Kind,
+                   GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Record the allocation of \p Size bytes of \p Kind memory at \p DevicePtr,
+  /// associated to \p HostPtr, with the stack it was made from. Does nothing
+  /// if allocation traces are not tracked.
+  void recordAllocation(void *DevicePtr, void *HostPtr, int64_t Size,
+                        TargetAllocTy Kind);
+
+  /// Record the deallocation of \p Kind memory at \p DevicePtr, and report it
+  /// if the allocation it refers to was never made, is already deallocated, or
+  /// was of another kind. Does nothing if allocation traces are not tracked.
+  void recordDeallocation(void *DevicePtr, TargetAllocTy Kind);
 
   /// Pin or register host memory to optimize transfers and return the device
   /// accessible pointer that devices should use for memory transfers involving
@@ -1069,30 +1012,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Unlock a previously locked host buffer starting at \p HstPtr.
   virtual Error dataUnlockImpl(void *HstPtr) = 0;
 
-  /// Mark the host buffer with address \p HstPtr and \p Size bytes as a mapped
-  /// buffer. This means that libomptarget created a new mapping of that host
-  /// buffer (e.g., because a user OpenMP target map) and the buffer may be used
-  /// as source/destination of memory transfers. We can use this information to
-  /// lock the host buffer and optimize its memory transfers.
-  Error notifyDataMapped(void *HstPtr, int64_t Size) {
-    auto Err = PinnedAllocs.registerMemory(HstPtr, Size, LockMappedBuffers);
-    if (!Err && !IgnoreLockMappedFailures)
-      return Err.takeError();
-    return Plugin::success();
-  }
-
-  /// Mark the host buffer with address \p HstPtr as unmapped. This means that
-  /// libomptarget removed an existing mapping. If the plugin locked the buffer
-  /// in notifyDataMapped, this function should unlock it.
-  Error notifyDataUnmapped(void *HstPtr) {
-    auto Err = PinnedAllocs.unregisterMemory(HstPtr, LockMappedBuffers);
-    if (IgnoreLockMappedFailures) {
-      consumeError(std::move(Err));
-      return Plugin::success();
-    }
-    return Err;
-  }
-
   /// Check whether the host buffer with address \p HstPtr is pinned by the
   /// underlying vendor-specific runtime (if any). Retrieve the host pointer,
   /// the device accessible pointer and the size of the original pinned buffer.
@@ -1102,15 +1021,19 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmit(void *TgtPtr, const void *HstPtr, int64_t Size,
-                   __tgt_async_info *AsyncInfo);
+                   __tgt_async_info *AsyncInfo,
+                   GenericProfilerTy *ProfilerPtr = nullptr);
   virtual Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                               AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+                               AsyncInfoWrapperTy &AsyncInfoWrapper,
+                               GenericProfilerTy *ProfilerPtr = nullptr) = 0;
 
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieve(void *HstPtr, const void *TgtPtr, int64_t Size,
-                     __tgt_async_info *AsyncInfo);
+                     __tgt_async_info *AsyncInfo,
+                     GenericProfilerTy *ProfilerPtr = nullptr);
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
-                                 AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                 GenericProfilerTy *ProfilerPtr = nullptr) = 0;
 
   /// Copy data between arbitrary memory locations.
   Error dataMemcpy(void *DstPtr, const void *SrcPtr, int64_t Size,
@@ -1118,18 +1041,16 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
-  /// Instert a data fence between previous data operations and the following
-  /// operations if necessary for the device
-  virtual Error dataFence(__tgt_async_info *AsyncInfo) = 0;
-
   /// Exchange data between devices (device to device transfer). Calling this
   /// function is only valid if GenericPlugin::isDataExchangable() passing the
   /// two devices returns true.
   Error dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev, void *DstPtr,
-                     int64_t Size, __tgt_async_info *AsyncInfo);
+                     int64_t Size, __tgt_async_info *AsyncInfo,
+                     GenericProfilerTy *ProfilerPtr = nullptr);
   virtual Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                                  void *DstPtr, int64_t Size,
-                                 AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                 GenericProfilerTy *ProfilerPtr = nullptr) = 0;
 
   /// Fill data on the device with a pattern from the host
   Error dataFill(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
@@ -1148,10 +1069,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) {
     return Plugin::success();
   }
-
-  /// Run the kernel associated with \p EntryPtr
-  Error launchKernel(void *EntryPtr, KernelLaunchArgsTy &LaunchArgs,
-                     __tgt_async_info *AsyncInfo);
 
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
@@ -1199,9 +1116,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Expected<InfoTreeNode> obtainInfo();
   virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
 
-  /// Print information about the device.
-  Error printInfo();
-
   /// Return true if the device has work that is either queued or currently
   /// running
   ///
@@ -1216,19 +1130,22 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Get the number of lanes used for the RPC interface.
   virtual uint32_t getRPCNumLanes() const { return getWarpSize(); }
   uint32_t getThreadLimit() const { return GridValues.GV_Max_WG_Size; }
-  /// Get the maximum number of blocks that can be launched. The \p NumThreads
-  /// argument is the per-block thread count the kernel will be launched with.
-  virtual uint32_t getBlockLimit(uint32_t NumThreads) const {
-    return GridValues.GV_Max_Teams;
-  }
+  uint32_t getMaxNumBlocks() const { return GridValues.GV_Max_Teams; }
+  /// Get the maximum number of work items (blocks * threads) of a launch, or
+  /// zero if the device only limits the number of blocks.
+  uint64_t getMaxGridSize() const { return MaxGridSize; }
   uint32_t getDefaultNumThreads() const {
     return GridValues.GV_Default_WG_Size;
   }
   uint32_t getDefaultNumBlocks() const {
     return GridValues.GV_Default_Num_Teams;
   }
-  uint32_t getDebugKind() const { return OMPX_DebugKind; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
+
+  /// Get a device-specific timestamp in nanoseconds, used by the profiler
+  /// for timing device operations. Subclasses should override this to provide
+  /// hardware-accurate timestamps (e.g., via HSA system info).
+  virtual uint64_t getDeviceTimeStamp() { return 0; }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }
@@ -1237,20 +1154,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Expected<std::unique_ptr<MemoryBuffer>>
   doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const {
     return std::move(MB);
-  }
-
-  /// The minimum number of threads we use for a low-trip count combined loop.
-  /// Instead of using more threads we increase the outer (block/team)
-  /// parallelism.
-  /// @see OMPX_MinThreadsForLowTripCount
-  virtual uint32_t getMinThreadsForLowTripCountLoop() {
-    return OMPX_MinThreadsForLowTripCount;
-  }
-
-  /// Whether or not to reuse blocks for high trip count loops.
-  /// @see OMPX_ReuseBlocksForHighTripCount
-  bool getReuseBlocksForHighTripCount() {
-    return OMPX_ReuseBlocksForHighTripCount;
   }
 
   /// Get the total amount of hardware parallelism supported by the target
@@ -1295,9 +1198,24 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// storage is accessible
   Expected<bool> isAccessiblePtr(const void *Ptr, size_t Size);
 
+  /// Return the backend-native handle of this device, reinterpreted as a
+  /// void pointer.
+  virtual Expected<void *> getNativeHandle() {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
+  }
+
+  /// Return the backend-native handle of the queue held by \p AsyncInfo,
+  /// reinterpreted as a void pointer.
+  virtual Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
+  }
+
   virtual Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
-    return nullptr;
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
   }
 
   virtual Error releaseInterop(omp_interop_val_t *Interop) {
@@ -1393,9 +1311,19 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
+  /// Environment flag that forces every device operation to be synchronized,
+  /// draining the queue after each operation. Debugging escape hatch.
+  BoolEnvar OF_ForceSyncOps = BoolEnvar("OFFLOAD_FORCE_BLOCKING", false);
+
+  /// Return whether all device operations should be forced synchronous.
+  bool forceSyncOps() const { return OF_ForceSyncOps; }
+
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
   llvm::SmallVector<DeviceImageTy *> LoadedImages;
+
+  /// Per device setting of MemoryManager's Threshold
+  virtual size_t getMemoryManagerSizeThreshold() { return 0; }
 
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
@@ -1407,61 +1335,16 @@ private:
   /// only necessary for unhosted targets like the GPU.
   virtual bool shouldSetupRPCServer() const { return false; }
 
-  /// Pointer to the device memory manager or nullptr if not available.
-  MemoryManagerTy *MemoryManager;
-  /// Memory managers for the host and shared allocation kinds or nullptr if not
-  /// available.
-  MemoryManagerTy *HostMemoryManager;
-  MemoryManagerTy *SharedMemoryManager;
-
-  /// Per device setting of MemoryManager's Threshold
-  virtual size_t getMemoryManagerSizeThreshold() { return 0; }
-
   virtual Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) {
     return false;
   }
 
-  /// Environment variables defined by the OpenMP standard.
-  Int32Envar OMP_TeamLimit;
-  Int32Envar OMP_NumTeams;
-  Int32Envar OMP_TeamsThreadLimit;
-
   /// Environment variables defined by the LLVM OpenMP implementation.
-  Int32Envar OMPX_DebugKind;
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
-  /// Environment flag to set the minimum number of threads we use for a
-  /// low-trip count combined loop. Instead of using more threads we increase
-  /// the outer (block/team) parallelism.
-  UInt32Envar OMPX_MinThreadsForLowTripCount =
-      UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
-
-  BoolEnvar OMPX_ReuseBlocksForHighTripCount =
-      BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
-
-  /// Indicate whether mapped host buffers should be locked automatically.
-  bool LockMappedBuffers;
-
-  /// Indicate whether failures when locking mapped buffers should be ignored.
-  bool IgnoreLockMappedFailures;
-
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
-
-  /// Return the memory manager for the given allocation kind.
-  MemoryManagerTy *getMemoryManagerFor(TargetAllocTy Kind) {
-    switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
-      return MemoryManager;
-    case TARGET_ALLOC_HOST:
-      return HostMemoryManager;
-    case TARGET_ALLOC_SHARED:
-      return SharedMemoryManager;
-    }
-    return nullptr;
-  }
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
@@ -1484,6 +1367,9 @@ protected:
   /// The default grid values used for this device.
   llvm::omp::GV GridValues;
 
+  /// Maximum number of work items of a launch, or zero if not limited.
+  uint64_t MaxGridSize = 0;
+
   /// Enumeration used for representing the current state between two devices
   /// two devices (both under the same plugin) for the peer access between them.
   /// The states can be a) PENDING when the state has not been queried and needs
@@ -1505,16 +1391,6 @@ protected:
   /// This is used to run the RPC server during task synchronization.
   RPCServerTy *RPCServer;
 
-#ifdef OMPT_SUPPORT
-  /// OMPT callback functions
-#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
-#undef defineOmptCallback
-
-  /// Internal representation for OMPT device (initialize & finalize)
-  std::atomic<bool> OmptInitialized;
-#endif
-
   /// The total per-block native shared memory that a kernel may use.
   size_t MaxBlockSharedMemSize = 0;
 };
@@ -1531,13 +1407,13 @@ struct GenericPluginTy {
   virtual ~GenericPluginTy() {}
 
   /// Initialize the plugin.
-  Error init();
+  Error init(GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Initialize the plugin and return the number of available devices.
   virtual Expected<int32_t> initImpl() = 0;
 
   /// Deinitialize the plugin and release the resources.
-  Error deinit();
+  Error deinit(GenericProfilerTy *ProfilerPtr = nullptr);
   virtual Error deinitImpl() = 0;
 
   /// Create a new device for the underlying plugin.
@@ -1567,15 +1443,6 @@ struct GenericPluginTy {
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
 
-  /// Get the plugin-specific device identifier.
-  int32_t getUserId(int32_t DeviceId) const {
-    assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
-    return UserDeviceIds.at(DeviceId);
-  }
-
-  /// Get the UID for the host device.
-  static constexpr const char *getHostDeviceUid() { return "HOST"; }
-
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
 
@@ -1590,7 +1457,11 @@ struct GenericPluginTy {
     return reinterpret_cast<Ty *>(Allocator.Allocate(sizeof(Ty), alignof(Ty)));
   }
 
-  template <typename Ty> void free(Ty *Mem) { Allocator.Deallocate(Mem); }
+  /// Destroy and deallocate a structure allocated with the internal allocator.
+  template <typename Ty> void free(Ty *Mem) {
+    Mem->~Ty();
+    Allocator.Deallocate(Mem);
+  }
 
   /// Get the reference to the global handler of this plugin.
   GenericGlobalHandlerTy &getGlobalHandler() {
@@ -1617,12 +1488,12 @@ struct GenericPluginTy {
   /// Tear down any target-specific doorbell resources.
   virtual Error deinitRPCDoorbell() { return Plugin::success(); }
 
-  /// Get a reference to the record and replay interface for the plugin.
   /// Initialize a device within the plugin.
-  Error initDevice(int32_t DeviceId);
+  Error initDevice(int32_t DeviceId, GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Deinitialize a device within the plugin and release its resources.
-  Error deinitDevice(int32_t DeviceId);
+  Error deinitDevice(int32_t DeviceId,
+                     GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Indicate whether data can be exchanged directly between two devices under
   /// this same plugin. If this function returns true, it's safe to call the
@@ -1700,134 +1571,12 @@ public:
   /// Returns non-zero if the \p Image is compatible with the device.
   int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
-  /// Returns non-zero if the plugin device has been initialized.
-  int32_t is_device_initialized(int32_t DeviceId) const;
-
-  /// Initialize the device inside of the plugin.
-  int32_t init_device(int32_t DeviceId);
-
-  /// Return the number of devices this plugin can support.
-  int32_t number_of_devices();
-
-  /// Returns non-zero if the data can be exchanged between the two devices.
-  int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
-
   /// Initializes the record and replay mechanism inside the plugin.
   int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                    void *VAddr, bool IsRecord, bool IsNative,
                                    bool SaveOutput, bool EmitReport,
                                    const char *ReportFilename,
                                    const char *OutputDirPath);
-
-  /// Loads the associated binary into the plugin and returns a handle to it.
-  int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
-                      __tgt_device_binary *Binary);
-
-  /// Allocates memory that is accessively to the given device.
-  void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr, int32_t Kind);
-
-  /// Deallocates memory on the given device.
-  int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind);
-
-  /// Locks / pins host memory using the plugin runtime.
-  int32_t data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
-                    void **LockedPtr);
-
-  /// Unlocks / unpins host memory using the plugin runtime.
-  int32_t data_unlock(int32_t DeviceId, void *Ptr);
-
-  /// Notify the runtime about a new mapping that has been created outside.
-  int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr, int64_t Size);
-
-  /// Notify t he runtime about a mapping that has been deleted.
-  int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
-
-  /// Copy data to the given device.
-  int32_t data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                      int64_t Size);
-
-  /// Copy data to the given device asynchronously.
-  int32_t data_submit_async(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                            int64_t Size, __tgt_async_info *AsyncInfoPtr);
-
-  /// Copy data from the given device.
-  int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                        int64_t Size);
-
-  /// Copy data from the given device asynchronously.
-  int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                              int64_t Size, __tgt_async_info *AsyncInfoPtr);
-
-  /// Exchange memory addresses between two devices.
-  int32_t data_exchange(int32_t SrcDeviceId, void *SrcPtr, int32_t DstDeviceId,
-                        void *DstPtr, int64_t Size);
-
-  /// Exchange memory addresses between two devices asynchronously.
-  int32_t data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
-                              int DstDeviceId, void *DstPtr, int64_t Size,
-                              __tgt_async_info *AsyncInfo);
-
-  /// Places a fence between previous data movements and following data
-  /// movements if necessary on the device
-  int32_t data_fence(int32_t DeviceId, __tgt_async_info *AsyncInfo);
-
-  /// Begin executing a kernel on the given device.
-  int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
-                        KernelLaunchArgsTy &LaunchArgs,
-                        __tgt_async_info *AsyncInfoPtr);
-
-  /// Synchronize an asyncrhonous queue with the plugin runtime.
-  int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
-  /// Query the current state of an asynchronous queue.
-  int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
-  /// Obtain information about the given device.
-  InfoTreeNode obtain_device_info(int32_t DeviceId);
-
-  /// Prints information about the given devices supported by the plugin.
-  void print_device_info(int32_t DeviceId);
-
-  /// Creates an event in the given plugin if supported.
-  int32_t create_event(int32_t DeviceId, void **EventPtr);
-
-  /// Records an event that has occurred.
-  int32_t record_event(int32_t DeviceId, void *EventPtr,
-                       __tgt_async_info *AsyncInfoPtr);
-
-  /// Wait until an event has occurred.
-  int32_t wait_event(int32_t DeviceId, void *EventPtr,
-                     __tgt_async_info *AsyncInfoPtr);
-
-  /// Synchronize execution until an event is done.
-  int32_t sync_event(int32_t DeviceId, void *EventPtr);
-
-  /// Get the elapsed time in milliseconds between two events.
-  int32_t get_event_elapsed_time(int32_t DeviceId, void *StartEventPtr,
-                                 void *EndEventPtr, float *ElapsedTime);
-
-  /// Remove the event from the plugin.
-  int32_t destroy_event(int32_t DeviceId, void *EventPtr);
-
-  /// Remove the event from the plugin.
-  void set_info_flag(uint32_t NewInfoLevel);
-
-  /// Sets the offset into the devices for use by OMPT.
-  int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
-
-  /// Returns if the plugin can support automatic copy.
-  int32_t use_auto_zero_copy(int32_t DeviceId);
-
-  /// Returns if the associated storage is accessible for a given device.
-  int32_t is_accessible_ptr(int32_t DeviceId, const void *Ptr, size_t Size);
-
-  /// Look up a global symbol in the given binary.
-  int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
-                     const char *Name, void **DevicePtr);
-
-  /// Look up a kernel function in the given binary.
-  int32_t get_function(__tgt_device_binary Binary, const char *Name,
-                       void **KernelPtr);
 
   /// Return the interop specification that the plugin supports
   /// It might not be one of the user specified ones.
@@ -1856,22 +1605,12 @@ public:
   /// object and return immediately.
   int32_t async_barrier(omp_interop_val_t *Interop);
 
-  /// Returns a Range over all the devices in the plugin that can be
-  /// used in a for loop:
-  /// for (&Device : GenericPluginRef.getDevicesRange()) {
-  auto getDevicesRange() {
-    return llvm::make_range(Devices.begin(), Devices.end());
-  }
-
 private:
   /// Indicates if the platform runtime has been fully initialized.
   bool Initialized = false;
 
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
-
-  /// Map of plugin device identifiers to the user device identifier.
-  llvm::DenseMap<int32_t, int32_t> UserDeviceIds;
 
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given

@@ -484,9 +484,8 @@ define void @concat_shuf_of_a_to_itself(ptr %a.ptr, ptr %dst) {
 ; AVX1-LABEL: concat_shuf_of_a_to_itself:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = mem[1,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vmovapd %xmm0, 16(%rsi)
+; AVX1-NEXT:    vmovapd %xmm0, (%rsi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: concat_shuf_of_a_to_itself:

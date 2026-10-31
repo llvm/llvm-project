@@ -18,6 +18,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -620,8 +621,9 @@ ParseGlobals(DataExtractor &data) {
           "global section holds %zu of its %u globals", globals.size(), *count);
 
     WasmGlobal global;
-    global.size = GetWasmValueTypeSize(data.GetU8(&offset));
-    data.GetU8(&offset); // mutability
+    global.value_type = data.GetU8(&offset);
+    global.size = GetWasmValueTypeSize(global.value_type);
+    global.is_mutable = data.GetU8(&offset) != 0;
     global.init_expr_value = ParseGlobalInitValue(data, offset);
     globals.push_back(global);
   }
@@ -701,7 +703,7 @@ ParseNames(SectionSP code_section_sp, SectionSP global_section_sp,
         if (*idx >= segments.size())
           continue;
         // Update the segment name.
-        segments[i].name = *name;
+        segments[*idx].name = *name;
       }
 
     } break;
@@ -753,6 +755,88 @@ ParseNames(SectionSP code_section_sp, SectionSP global_section_sp,
     return c.takeError();
 
   return symbols;
+}
+
+struct WasmExport {
+  std::string name;
+  uint8_t kind = 0;
+  uint32_t index = 0;
+};
+
+static llvm::Expected<std::vector<WasmExport>>
+ParseExports(DataExtractor &export_data) {
+  llvm::DataExtractor data = export_data.GetAsLLVM();
+  llvm::DataExtractor::Cursor c(0);
+
+  llvm::Expected<uint32_t> count = GetULEB32(data, c);
+  if (!count)
+    return count.takeError();
+
+  std::vector<WasmExport> exports;
+  for (uint32_t i = 0; c && i < *count; ++i) {
+    llvm::Expected<std::string> name = GetWasmString(data, c);
+    if (!name)
+      return name.takeError();
+    const uint8_t kind = data.getU8(c);
+    llvm::Expected<uint32_t> index = GetULEB32(data, c);
+    if (!index)
+      return index.takeError();
+    exports.push_back({std::move(*name), kind, *index});
+  }
+
+  if (!c)
+    return c.takeError();
+
+  return exports;
+}
+
+/// Adds to \p symbols a data symbol for each export that stands for a variable
+/// in linear memory. Such an export refers to an immutable Wasm global that
+/// holds the variable's address, not the variable's value. Wasm globals listed
+/// in the name section already have a symbol and are skipped.
+static void AddExportedDataSymbols(llvm::ArrayRef<WasmExport> exports,
+                                   llvm::ArrayRef<WasmGlobal> globals,
+                                   uint32_t num_imported_globals,
+                                   const SectionSP &global_section_sp,
+                                   llvm::ArrayRef<SectionSP> memory_sections,
+                                   std::vector<Symbol> &symbols) {
+  llvm::DenseSet<uint32_t> named_globals;
+  if (global_section_sp)
+    for (const Symbol &symbol : symbols)
+      if (symbol.GetAddressRef().GetSection() == global_section_sp)
+        named_globals.insert(symbol.GetAddressRef().GetOffset());
+
+  for (const WasmExport &exp : exports) {
+    if (exp.kind != llvm::wasm::WASM_EXTERNAL_GLOBAL ||
+        exp.index < num_imported_globals || named_globals.contains(exp.index))
+      continue;
+    const uint32_t global_idx = exp.index - num_imported_globals;
+    if (global_idx >= globals.size())
+      continue;
+
+    const WasmGlobal &global = globals[global_idx];
+    if (global.is_mutable || !global.init_expr_value ||
+        (global.value_type != llvm::wasm::WASM_TYPE_I32 &&
+         global.value_type != llvm::wasm::WASM_TYPE_I64))
+      continue;
+
+    const addr_t addr = *global.init_expr_value;
+    const SectionSP *section_sp =
+        llvm::find_if(memory_sections, [addr](const SectionSP &section) {
+          return section->ContainsFileAddress(addr);
+        });
+    if (section_sp == memory_sections.end())
+      continue;
+
+    // The module does not record the variable's size. Symtab would size a
+    // symbol without one up to the next symbol, across unnamed variables.
+    symbols.emplace_back(symbols.size(), exp.name, lldb::eSymbolTypeData,
+                         /*external=*/true, /*is_debug=*/false,
+                         /*is_trampoline=*/false, /*is_artificial=*/false,
+                         *section_sp, addr - (*section_sp)->GetFileAddress(),
+                         /*size=*/1, /*size_is_valid=*/true,
+                         /*contains_linker_annotations=*/false, /*flags=*/0);
+  }
 }
 
 void ObjectFileWasm::ParseSymtab(Symtab &symtab) {
@@ -839,18 +923,18 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
     }
 
     SectionSP section_sp = std::make_shared<Section>(
-        GetModule(),  // Module to which this section belongs.
-        this,         // ObjectFile to which this section belongs and
-                      // should read section data from.
-        section_type, // Section ID.
-        ConstString(section_name), // Section name.
-        section_type,              // Section type.
-        vm_addr,                   // VM address.
-        vm_size,                   // VM size in bytes of this section.
-        file_offset,               // Offset of this section in the file.
-        sect_info.size,            // Size of the section as found in the file.
-        0,                         // Alignment of the section
-        0);                        // Flags for this section.
+        GetModule(),    // Module to which this section belongs.
+        this,           // ObjectFile to which this section belongs and
+                        // should read section data from.
+        section_type,   // Section ID.
+        section_name,   // Section name.
+        section_type,   // Section type.
+        vm_addr,        // VM address.
+        vm_size,        // VM size in bytes of this section.
+        file_offset,    // Offset of this section in the file.
+        sect_info.size, // Size of the section as found in the file.
+        0,              // Alignment of the section
+        0);             // Flags for this section.
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }
@@ -876,6 +960,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
 
   // Parse the import section. The counts are needed because the function and
   // global index spaces used in the name section include imports.
+  bool imports_parsed = true;
   if (std::optional<section_info> info =
           GetSectionInfo(llvm::wasm::WASM_SEC_IMPORT)) {
     DataExtractor import_data = ReadImageData(info->offset, info->size);
@@ -883,6 +968,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
     if (!imports) {
       LLDB_LOG_ERROR(log, imports.takeError(),
                      "Failed to parse Wasm import section: {0}");
+      imports_parsed = false;
     } else {
       m_num_imported_functions = imports->functions;
       m_num_imported_globals = imports->globals;
@@ -924,7 +1010,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
   if (!m_globals.empty()) {
     global_section_sp = std::make_shared<Section>(
         GetModule(),
-        /*obj_file=*/this, eSectionTypeWasmGlobal, ConstString("global"),
+        /*obj_file=*/this, eSectionTypeWasmGlobal, "global",
         eSectionTypeWasmGlobal,
         /*file_vm_addr=*/kWasmGlobalFileAddress,
         /*vm_size=*/m_num_imported_globals + m_globals.size(),
@@ -950,6 +1036,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
 
   lldb::user_id_t segment_id = 0;
   lldb::addr_t static_data_end = 0;
+  std::vector<SectionSP> memory_sections;
   for (const WasmSegment &segment : segments) {
     if (segment.type == WasmSegment::Active) {
       // FIXME: Support segments with a memory index.
@@ -979,7 +1066,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         /*obj_file=*/this,
         ++segment_id << 8, // 1-based segment index, shifted by 8 bits to avoid
                            // collision with section IDs.
-        ConstString(segment.name), GetSegmentTypeFromName(segment.name),
+        segment.name, GetSegmentTypeFromName(segment.name),
         /*file_vm_addr=*/file_vm_addr,
         /*vm_size=*/segment.size,
         /*file_offset=*/file_offset,
@@ -988,8 +1075,10 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
     m_sections_up->AddSection(segment_sp);
     GetModule()->GetSectionList()->AddSection(segment_sp);
 
-    if (segment.type == WasmSegment::Active)
+    if (segment.type == WasmSegment::Active) {
+      memory_sections.push_back(segment_sp);
       static_data_end = std::max(static_data_end, file_vm_addr + segment.size);
+    }
   }
 
   // Zero-initialized globals (BSS) have no data segment, so the loop above
@@ -1005,17 +1094,35 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
       LLDB_LOG_ERROR(log, memory_size.takeError(),
                      "Failed to parse Wasm memory section: {0}");
     } else if (*memory_size > static_data_end) {
-      SectionSP bss_sp =
-          std::make_shared<Section>(GetModule(),
-                                    /*obj_file=*/this, ++segment_id << 8,
-                                    ConstString(".bss"), eSectionTypeZeroFill,
-                                    /*file_vm_addr=*/static_data_end,
-                                    /*vm_size=*/*memory_size - static_data_end,
-                                    /*file_offset=*/0,
-                                    /*file_size=*/0,
-                                    /*log2align=*/0, /*flags=*/0);
+      SectionSP bss_sp = std::make_shared<Section>(
+          GetModule(),
+          /*obj_file=*/this, ++segment_id << 8, ".bss", eSectionTypeZeroFill,
+          /*file_vm_addr=*/static_data_end,
+          /*vm_size=*/*memory_size - static_data_end,
+          /*file_offset=*/0,
+          /*file_size=*/0,
+          /*log2align=*/0, /*flags=*/0);
       m_sections_up->AddSection(bss_sp);
       GetModule()->GetSectionList()->AddSection(bss_sp);
+      memory_sections.push_back(bss_sp);
+    }
+  }
+
+  // The global index of an export counts imported globals, so it can be mapped
+  // to a global of this module only if the import section parsed.
+  if (!imports_parsed)
+    return;
+
+  if (std::optional<section_info> info =
+          GetSectionInfo(llvm::wasm::WASM_SEC_EXPORT)) {
+    DataExtractor export_data = ReadImageData(info->offset, info->size);
+    llvm::Expected<std::vector<WasmExport>> exports = ParseExports(export_data);
+    if (!exports) {
+      LLDB_LOG_ERROR(log, exports.takeError(),
+                     "Failed to parse Wasm export section: {0}");
+    } else {
+      AddExportedDataSymbols(*exports, m_globals, m_num_imported_globals,
+                             global_section_sp, memory_sections, m_symbols);
     }
   }
 }

@@ -489,6 +489,14 @@ enum {
   /// - Imm(8) - The immediate to add
   GIR_AddCImm,
 
+  /// Add a floating-point immediate to the specified instruction.
+  /// Imm is the IEEE bit pattern of a value with Ty's scalar semantics; it is
+  /// not converted from an integer or a double.
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - Ty(1) - Type of the constant immediate.
+  /// - Imm(8) - Bit pattern of the floating-point immediate
+  GIR_AddCFPImm,
+
   /// Render complex operands to the specified instruction
   /// - InsnID(ULEB128) - Instruction ID to modify
   /// - RendererID(2) - The renderer to call
@@ -515,6 +523,8 @@ enum {
   /// Calls a C++ function that concludes the current match.
   /// The C++ function is free to return false and reject the match, or
   /// return true and mutate the instruction(s) (or do nothing, even).
+  /// Poison-generating flags left on OutMIs by the custom action are treated as
+  /// explicitly preserved.
   /// - FnID(2) - The function to call.
   GIR_DoneWithCustomAction,
 
@@ -738,6 +748,8 @@ protected:
                                NewMIVector &OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
+
+  virtual uint32_t getRootFlagsToDrop() const { return 0; }
 
   LLVM_ABI bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                                   const MachineRegisterInfo &MRI,

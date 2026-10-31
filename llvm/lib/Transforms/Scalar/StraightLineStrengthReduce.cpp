@@ -69,6 +69,7 @@
 // - Floating point arithmetics when fast math is enabled.
 
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -117,11 +118,6 @@ static const unsigned UnknownAddressSpace =
 DEBUG_COUNTER(StraightLineStrengthReduceCounter, "slsr-counter",
               "Controls whether rewriteCandidate is executed.");
 
-// Only for testing.
-static cl::opt<bool>
-    EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
-                           cl::desc("Enable poison-reuse guard"));
-
 STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
 
@@ -156,9 +152,10 @@ public:
 
 class StraightLineStrengthReduce {
 public:
-  StraightLineStrengthReduce(const DataLayout *DL, DominatorTree *DT,
-                             ScalarEvolution *SE, TargetTransformInfo *TTI)
-      : DL(DL), DT(DT), SE(SE), TTI(TTI) {}
+  StraightLineStrengthReduce(const ScalarOptions &Opts, const DataLayout *DL,
+                             DominatorTree *DT, ScalarEvolution *SE,
+                             TargetTransformInfo *TTI)
+      : Opts(Opts), DL(DL), DT(DT), SE(SE), TTI(TTI) {}
 
   // SLSR candidate. Such a candidate must be in one of the forms described in
   // the header comments.
@@ -222,8 +219,8 @@ public:
     // Points to (Y - X) that will be used to rewrite this candidate.
     Value *Delta = nullptr;
 
-    // List of instructions we need to drop poison generating annotations from.
-    // This is used so we can defer dropping until the candidate is evaluated.
+    // List of instructions whose poison-generating annotations must be dropped
+    // if this candidate is used as the basis of an executed rewrite.
     SmallVector<Instruction *> DropList;
 
     /// Cost model: Evaluate the computational efficiency of the candidate.
@@ -411,6 +408,7 @@ private:
   static Value *emitBump(const Candidate &Basis, const Candidate &C,
                          IRBuilder<> &Builder, const DataLayout *DL);
 
+  const ScalarOptions &Opts;
   const DataLayout *DL = nullptr;
   DominatorTree *DT = nullptr;
   ScalarEvolution *SE;
@@ -808,11 +806,6 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
       !C.isProfitableRewrite(*Delta, Candidate::IndexDelta))
     return false;
 
-  // If there is a Delta that we can reuse Basis to rewrite C, clean up
-  // previously collected poison generating instructions.
-  for (Instruction *I : Basis->DropList)
-    I->dropPoisonGeneratingAnnotations();
-
   // Record delta if none has been found yet, or the new delta is
   // a constant that is better than the existing delta.
   if (!C.Delta || isa<ConstantInt>(Delta)) {
@@ -1101,9 +1094,9 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
   RewriteCandidates[C.Ins].push_back(&Candidates.back());
   // Only add to the dict if this instruction is safe to reuse as a basis. By
   // doing this early we avoid calling canReuseInstruction repeatedly for the
-  // same instruction. The DropList is stored on the Candidate so
-  // candidatePredicate can drop the flags when a rewrite is being done.
-  if (!EnablePoisonReuseGuard ||
+  // same instruction. The DropList is stored on the Candidate so the flags can
+  // be dropped only if this candidate is used by an executed rewrite.
+  if (!Opts.enable_poison_reuse_guard ||
       SE->canReuseInstruction(SE->getSCEV(I), I, Candidates.back().DropList)) {
     CandidateDict.add(Candidates.back());
   }
@@ -1355,6 +1348,9 @@ void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
   assert(C.Delta && C.CandidateKind == Basis.CandidateKind &&
          C.hasValidDelta(Basis));
 
+  for (Instruction *I : Basis.DropList)
+    I->dropPoisonGeneratingAnnotations();
+
   IRBuilder<> Builder(C.Ins);
   Value *Bump = emitBump(Basis, C, Builder, DL);
   Value *Reduced = nullptr; // equivalent to but weaker than C.Ins
@@ -1410,7 +1406,8 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
   auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  return StraightLineStrengthReduce(DL, DT, SE, TTI).runOnFunction(F);
+  const ScalarOptions &Opts = getScalarOptions(F);
+  return StraightLineStrengthReduce(Opts, DL, DT, SE, TTI).runOnFunction(F);
 }
 
 bool StraightLineStrengthReduce::runOnFunction(Function &F) {
@@ -1460,7 +1457,8 @@ StraightLineStrengthReducePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  if (!StraightLineStrengthReduce(DL, DT, SE, TTI).runOnFunction(F))
+  const ScalarOptions &Opts = getScalarOptions(F);
+  if (!StraightLineStrengthReduce(Opts, DL, DT, SE, TTI).runOnFunction(F))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

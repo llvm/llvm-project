@@ -4,227 +4,53 @@
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_library", "objc_library")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
-load(":plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
+load(":plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "FALLBACK_PLUGINS", "OBJCPP_COPTS")
 
 package(
     default_visibility = ["//visibility:public"],
-    features = ["layering_check"],
+    features = [
+        "parse_headers",
+        "layering_check",
+    ],
 )
 
 licenses(["notice"])
 
 cc_library(
-    name = "PluginHighlighterDefault",
-    srcs = glob(["Highlighter/Default/*.cpp"]),
-    hdrs = glob(["Highlighter/Default/*.h"]),
-    includes = [".."],
+    name = "PluginsClang",
+    srcs = glob([
+        "ExpressionParser/Clang/*.cpp",
+        "Language/CPlusPlus/*.cpp",
+        "Language/ObjC/*.cpp",
+        "LanguageRuntime/CPlusPlus/*.cpp",
+        "LanguageRuntime/ObjC/*.cpp",
+        "LanguageRuntime/ObjC/AppleObjCRuntime/*.cpp",
+        "SymbolFile/DWARF/*.cpp",
+        "SymbolFile/NativePDB/*.cpp",
+        "SymbolFile/PDB/*.cpp",
+        "TypeSystem/Clang/*.cpp",
+        "TypeSystem/Fortran/*.cpp",
+    ]),
+    hdrs = glob([
+        "ExpressionParser/Clang/*.h",
+        "Language/CPlusPlus/*.h",
+        "Language/ObjC/*.h",
+        "LanguageRuntime/CPlusPlus/*.h",
+        "LanguageRuntime/ObjC/*.h",
+        "LanguageRuntime/ObjC/AppleObjCRuntime/*.h",
+        "SymbolFile/DWARF/*.h",
+        "SymbolFile/NativePDB/*.h",
+        "SymbolFile/PDB/*.h",
+        "TypeSystem/Clang/*.h",
+        "TypeSystem/Fortran/*.h",
+    ]),
     deps = [
-        "//lldb:CoreHeaders",
-        "//lldb:Utility",
-    ],
-)
-
-cc_library(
-    name = "PluginHighlighterClang",
-    srcs = glob(["Highlighter/Clang/*.cpp"]),
-    hdrs = glob(["Highlighter/Clang/*.h"]),
-    includes = [".."],
-    deps = [
-        "//clang:basic",
-        "//clang:lex",
-        "//lldb:CoreHeaders",
-        "//lldb:Host",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginObjCLanguageHeaders",
-    hdrs = glob(["Language/ObjC/*.h"]),
-    features = ["-parse_headers"],  # Would otherwise have circular dependencies
-    includes = [".."],
-    deps = [
-        ":PluginExpressionParserClangHeaders",
+        ":LanguageCPlusPlusProperties",
         ":PluginHighlighterClang",
-        "//lldb:CoreHeaders",
-    ],
-)
-
-cc_library(
-    name = "PluginObjCLanguage",
-    srcs = glob(["Language/ObjC/*.cpp"]),
-    includes = [".."],
-    deps = [
-        ":PluginAppleObjCRuntime",
-        ":PluginExpressionParserClangHeaders",
-        ":PluginObjCLanguageHeaders",
-        ":PluginObjCRuntime",
-        ":PluginTypeSystemClangHeaders",
-        "//clang:ast",
-        "//clang:basic",
-        "//lldb:CoreHeaders",
-        "//lldb:DataFormattersHeaders",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Host",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginTypeSystemClangHeaders",
-    hdrs = glob(["TypeSystem/Clang/*.h"]),
-    includes = [".."],
-    deps = [
-        ":PluginExpressionParserClangHeaders",
-        "//clang:ast",
-        "//clang:basic",
-        "//clang:frontend",
-        "//lldb:CoreHeaders",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Headers",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
-        "//lldb:UtilityHeaders",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginCPPRuntime",
-    srcs = glob(["LanguageRuntime/CPlusPlus/*.cpp"]),
-    hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
-    includes = [".."],
-    deps = [
-        ":PluginTypeSystemClangHeaders",
-        "//clang:codegen",
-        "//lldb:CoreHeaders",
-        "//lldb:DataFormattersHeaders",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Headers",
-        "//lldb:InterpreterHeaders",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginObjCRuntime",
-    srcs = glob(["LanguageRuntime/ObjC/*.cpp"]),
-    hdrs = glob(["LanguageRuntime/ObjC/*.h"]),
-    includes = [".."],
-    deps = [
-        ":PluginTypeSystemClangHeaders",
-        "//clang:ast",
-        "//lldb:BreakpointHeaders",
-        "//lldb:CoreHeaders",
-        "//lldb:Headers",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginAppleObjCRuntime",
-    srcs = glob(["LanguageRuntime/ObjC/AppleObjCRuntime/*.cpp"]),
-    hdrs = glob(["LanguageRuntime/ObjC/AppleObjCRuntime/*.h"]),
-    includes = [".."],
-    deps = [
-        ":PluginCPPRuntime",
-        ":PluginExpressionParserClangHeaders",
-        ":PluginObjCLanguageHeaders",
-        ":PluginObjCRuntime",
+        ":PluginObjectFilePDB",
         ":PluginProcessUtility",
-        ":PluginTypeSystemClangHeaders",
-        "//clang:ast",
-        "//clang:basic",
-        "//lldb:BreakpointHeaders",
-        "//lldb:CoreHeaders",
-        "//lldb:DataFormattersHeaders",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Headers",
-        "//lldb:Host",
-        "//lldb:InterpreterHeaders",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginProtocolServerMCP",
-    srcs = glob(["Protocol/MCP/*.cpp"]),
-    hdrs = glob(["Protocol/MCP/*.h"]),
-    deps = [
-        "//lldb:CoreHeaders",
-        "//lldb:Headers",
-        "//lldb:Host",
-        "//lldb:InterpreterHeaders",
-        "//lldb:ProtocolHeaders",
-        "//lldb:ProtocolMCP",
-        "//lldb:Utility",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginTypeSystemClang",
-    srcs = glob(["TypeSystem/Clang/*.cpp"]),
-    deps = [
-        ":PluginExpressionParserClangHeaders",
-        ":PluginObjCRuntime",
-        ":PluginSymbolFileDWARF",
-        ":PluginSymbolFileDWARFHeaders",
-        ":PluginSymbolFileNativePDBHeaders",
-        ":PluginSymbolFilePDBHeaders",
-        ":PluginTypeSystemClangHeaders",
-        "//clang:ast",
-        "//clang:basic",
-        "//clang:frontend",
-        "//clang:lex",
-        "//clang:sema",
-        "//lldb:CoreHeaders",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Host",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginExpressionParserClangHeaders",
-    hdrs = glob(["ExpressionParser/Clang/*.h"]),
-    features = ["-parse_headers"],  # Would otherwise have circular dependencies
-    includes = [".."],
-    deps = [
-        "//lldb:CoreHeaders",
-        "//lldb:DataFormattersHeaders",
-    ],
-)
-
-cc_library(
-    name = "PluginExpressionParserClang",
-    srcs = glob(["ExpressionParser/Clang/*.cpp"]),
-    includes = [".."],
-    deps = [
-        ":PluginCPPRuntime",
-        ":PluginCPlusPlusLanguageHeaders",
-        ":PluginExpressionParserClangHeaders",
-        ":PluginObjCRuntime",
-        ":PluginPlatformMacOSX",
-        ":PluginTypeSystemClang",
-        ":PluginTypeSystemClangHeaders",
+        ":SymbolFileDWARFProperties",
+        ":SymbolFilePDBProperties",
         "//clang:ast",
         "//clang:basic",
         "//clang:codegen",
@@ -241,20 +67,116 @@ cc_library(
         "//clang:serialization",
         "//lldb:Core",
         "//lldb:DataFormatters",
-        "//lldb:ExpressionHeaders",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
+        "//lldb:Register",
+        "//lldb:Symbol",
+        "//lldb:Target",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Core",
+        "//llvm:DebugInfoCodeView",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:DebugInfoMSF",
+        "//llvm:DebugInfoPDB",
+        "//llvm:Demangle",
         "//llvm:ExecutionEngine",
         "//llvm:IPO",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:config",
+    ],
+)
+
+cc_library(
+    name = "PluginHighlighterDefault",
+    srcs = glob(["Highlighter/Default/*.cpp"]),
+    hdrs = glob(["Highlighter/Default/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Headers",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginHighlighterClang",
+    srcs = glob(["Highlighter/Clang/*.cpp"]),
+    hdrs = glob(["Highlighter/Clang/*.h"]),
+    includes = [".."],
+    deps = [
+        "//clang:basic",
+        "//clang:lex",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+alias(
+    name = "PluginObjCLanguage",
+    actual = ":PluginsClang",
+)
+
+alias(
+    name = "PluginCPPRuntime",
+    actual = ":PluginsClang",
+)
+
+alias(
+    name = "PluginObjCRuntime",
+    actual = ":PluginsClang",
+)
+
+alias(
+    name = "PluginAppleObjCRuntime",
+    actual = ":PluginsClang",
+)
+
+cc_library(
+    name = "PluginProtocolServerMCP",
+    srcs = glob(["Protocol/MCP/*.cpp"]),
+    hdrs = glob(["Protocol/MCP/*.h"]),
+    deps = [
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:ProtocolMCP",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+alias(
+    name = "PluginTypeSystemClang",
+    actual = ":PluginsClang",
+)
+
+alias(
+    name = "PluginTypeSystemFortran",
+    actual = ":PluginsClang",
+)
+
+cc_library(
+    name = "PluginTypeSystemClike",
+    srcs = glob(["TypeSystem/Clike/*.cpp"]),
+    hdrs = glob(["TypeSystem/Clike/*.h"]),
+    includes = [".."],
+    deps = [
+        "//clang:basic",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Symbol",
+        "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
+)
+
+alias(
+    name = "PluginExpressionParserClang",
+    actual = ":PluginsClang",
 )
 
 gentbl_cc_library(
@@ -269,20 +191,9 @@ gentbl_cc_library(
     deps = ["//lldb:CoreTdFiles"],
 )
 
-cc_library(
-    name = "PluginPlatformMacOSXObjCXXHeaders",
-    hdrs = glob(["Platform/MacOSX/objcxx/*.h"]),
-    includes = [".."],
-    tags = ["nobuildkite"],
-    target_compatible_with = select({
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = ["//lldb:Host"],
-)
-
 objc_library(
     name = "PluginPlatformMacOSXObjCXX",
+    hdrs = glob(["Platform/MacOSX/objcxx/*.h"]),
     copts = OBJCPP_COPTS,
     non_arc_srcs = glob(["Platform/MacOSX/objcxx/*.mm"]),
     tags = ["nobuildkite"],
@@ -291,9 +202,7 @@ objc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":PluginPlatformMacOSXObjCXXHeaders",
         "//lldb:Host",
-        "//lldb:HostMacOSXPrivateHeaders",
         "//llvm:Support",
     ],
 )
@@ -301,38 +210,47 @@ objc_library(
 cc_library(
     name = "PluginPlatformMacOSX",
     srcs = glob(
-               ["Platform/MacOSX/*.cpp"],
+               [
+                   "DynamicLoader/Darwin-Kernel/*.cpp",
+                   "Platform/MacOSX/*.cpp",
+               ],
                exclude = ["Platform/MacOSX/PlatformAppleSimulator.cpp"],
            ) +
            select({
                "@platforms//os:macos": ["Platform/MacOSX/PlatformAppleSimulator.cpp"],
                "//conditions:default": [],
            }),
-    hdrs = glob(["Platform/MacOSX/*.h"]),
-    features = ["-parse_headers"],  # TODO: Attempt to fix in a way that works cross platform
+    hdrs = glob(
+        [
+            "DynamicLoader/Darwin-Kernel/*.h",
+            "Platform/MacOSX/*.h",
+        ],
+        exclude = ["Platform/MacOSX/PlatformAppleSimulator.h"],
+    ) + select({
+        "@platforms//os:macos": ["Platform/MacOSX/PlatformAppleSimulator.h"],
+        "//conditions:default": [],
+    }),
     includes = [".."],
     tags = ["nobuildkite"],
     deps = [
+        ":DynamicLoaderDarwinKernelProperties",
         ":PlatformMacOSXProperties",
-        ":PluginDynamicLoaderDarwinKernelHeaders",
         ":PluginObjectContainerMachOFileset",
+        ":PluginObjectFileMachO",
         ":PluginPlatformPOSIX",
-        "//clang:driver_options_inc_gen",
-        "//lldb:BreakpointHeaders",
+        "//clang:options",
+        "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
+        "//lldb:Symbol",
+        "//lldb:Target",
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
     ] + select({
         "@platforms//os:macos": [
             ":PluginPlatformMacOSXObjCXX",
-            ":PluginPlatformMacOSXObjCXXHeaders",
-            "//lldb:HostMacOSXPrivateHeaders",
         ],
         "//conditions:default": [],
     }),
@@ -350,44 +268,9 @@ gentbl_cc_library(
     deps = ["//lldb:CoreTdFiles"],
 )
 
-cc_library(
-    name = "PluginSymbolFileDWARFHeaders",
-    hdrs = glob(["SymbolFile/DWARF/*.h"]),
-    features = ["-parse_headers"],  # Would otherwise have circular dependencies
-    includes = [".."],
-    deps = [
-        ":PluginTypeSystemClangHeaders",
-        "//lldb:Core",
-    ],
-)
-
-cc_library(
+alias(
     name = "PluginSymbolFileDWARF",
-    srcs = glob(["SymbolFile/DWARF/*.cpp"]),
-    deps = [
-        ":PluginCPlusPlusLanguageHeaders",
-        ":PluginExpressionParserClangHeaders",
-        ":PluginObjCLanguageHeaders",
-        ":PluginSymbolFileDWARFHeaders",
-        ":PluginTypeSystemClangHeaders",
-        ":SymbolFileDWARFProperties",
-        "//clang:ast",
-        "//clang:basic",
-        "//lldb:Core",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Headers",
-        "//lldb:Host",
-        "//lldb:InterpreterHeaders",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
-        "//llvm:BinaryFormat",
-        "//llvm:DebugInfoDWARF",
-        "//llvm:Demangle",
-        "//llvm:Object",
-        "//llvm:Support",
-    ],
+    actual = ":PluginsClang",
 )
 
 cc_library(
@@ -396,15 +279,11 @@ cc_library(
     hdrs = glob(["Process/Utility/*.h"]),
     includes = [".."],
     deps = [
-        "//lldb:BreakpointHeaders",
         "//lldb:Core",
-        "//lldb:ExpressionHeaders",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
+        "//lldb:Register",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -417,7 +296,7 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
-        "//lldb:SymbolHeaders",
+        "//lldb:Headers",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:DebugInfoPDB",
@@ -425,64 +304,9 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "PluginSymbolFileNativePDBHeaders",
-    hdrs = glob(["SymbolFile/NativePDB/*.h"]),
-    includes = [".."],
-    deps = [
-        ":PluginExpressionParserClangHeaders",
-        "//lldb:Core",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Headers",
-        "//lldb:SymbolHeaders",
-        "//lldb:UtilityHeaders",
-        "//llvm:DebugInfoCodeView",
-        "//llvm:DebugInfoPDB",
-        "//llvm:Support",
-        "//llvm:TargetParser",
-    ],
-)
-
-cc_library(
+alias(
     name = "PluginSymbolFileNativePDB",
-    srcs = glob(["SymbolFile/NativePDB/*.cpp"]),
-    deps = [
-        ":PluginCPlusPlusLanguageHeaders",
-        ":PluginExpressionParserClangHeaders",
-        ":PluginObjectFilePDB",
-        ":PluginProcessUtility",
-        ":PluginSymbolFileNativePDBHeaders",
-        ":PluginSymbolFilePDBHeaders",
-        ":PluginTypeSystemClangHeaders",
-        "//lldb:Core",
-        "//lldb:ExpressionHeaders",
-        "//lldb:Headers",
-        "//lldb:SymbolHeaders",
-        "//lldb:Utility",
-        "//llvm:BinaryFormat",
-        "//llvm:DebugInfoCodeView",
-        "//llvm:DebugInfoMSF",
-        "//llvm:DebugInfoPDB",
-        "//llvm:Demangle",
-        "//llvm:Object",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "PluginSymbolFilePDBHeaders",
-    hdrs = glob(["SymbolFile/PDB/*.h"]),
-    includes = [".."],
-    deps = [
-        ":PluginExpressionParserClangHeaders",
-        "//lldb:Core",
-        "//lldb:Headers",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
-        "//lldb:UtilityHeaders",
-        "//llvm:DebugInfoPDB",
-        "//llvm:Support",
-    ],
+    actual = ":PluginsClang",
 )
 
 gentbl_cc_library(
@@ -497,27 +321,9 @@ gentbl_cc_library(
     deps = ["//lldb:CoreTdFiles"],
 )
 
-cc_library(
+alias(
     name = "PluginSymbolFilePDB",
-    srcs = glob(["SymbolFile/PDB/*.cpp"]),
-    deps = [
-        ":PluginCPlusPlusLanguageHeaders",
-        ":PluginExpressionParserClangHeaders",
-        ":PluginSymbolFileNativePDB",
-        ":PluginSymbolFileNativePDBHeaders",
-        ":PluginSymbolFilePDBHeaders",
-        ":PluginTypeSystemClangHeaders",
-        ":SymbolFilePDBProperties",
-        "//clang:ast",
-        "//clang:lex",
-        "//lldb:Core",
-        "//lldb:ExpressionHeaders",
-        "//lldb:SymbolHeaders",
-        "//lldb:Utility",
-        "//llvm:DebugInfoCodeView",
-        "//llvm:DebugInfoPDB",
-        "//llvm:config",
-    ],
+    actual = ":PluginsClang",
 )
 
 gentbl_cc_library(
@@ -542,17 +348,10 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         ":ProcessGDBRemoteProperties",
-        "//lldb:BreakpointHeaders",
-        "//lldb:CoreHeaders",
-        "//lldb:DataFormattersHeaders",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
@@ -568,11 +367,8 @@ cc_library(
     deps = [
         ":PluginObjectFileWasm",
         ":PluginProcessGDBRemote",
-        "//lldb:CoreHeaders",
         "//lldb:Headers",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
     ],
 )
@@ -584,11 +380,10 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -600,9 +395,9 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Object",
         "//llvm:Support",
@@ -616,9 +411,9 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -631,12 +426,29 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginObjectContainerClangOffloadBundle",
+    srcs = glob(["ObjectContainer/Clang-Offload-Bundle/*.cpp"]),
+    hdrs = glob(["ObjectContainer/Clang-Offload-Bundle/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
     ],
 )
 
@@ -661,10 +473,9 @@ cc_library(
         ":StructuredDataDarwinLogProperties",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -678,8 +489,8 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
     ],
 )
 
@@ -690,14 +501,12 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginPlatformGDB",
-        ":PluginTypeSystemClang",
-        ":PluginTypeSystemClangHeaders",
+        ":PluginsClang",
         "//lldb:Core",
         "//lldb:Expression",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -723,11 +532,9 @@ cc_library(
     deps = [
         ":PlatformQemuUserProperties",
         ":PluginProcessGDBRemote",
-        "//lldb:CoreHeaders",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -754,12 +561,9 @@ cc_library(
         ":PluginPlatformGDB",
         ":PluginProcessWasm",
         "//lldb:Core",
-        "//lldb:CoreHeaders",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -775,11 +579,26 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginPlatformEmscripten",
+    srcs = glob(["Platform/Emscripten/*.cpp"]),
+    hdrs = glob(["Platform/Emscripten/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginPlatformPOSIX",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
     ],
 )
 
@@ -791,16 +610,84 @@ cc_library(
     deps = [
         ":PluginPlatformPOSIX",
         ":PluginProcessUtility",
-        ":PluginTypeSystemClangHeaders",
+        ":PluginsClang",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
-        "//lldb:SymbolHeaders",
+        "//lldb:Register",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
+    ],
+)
+
+cc_library(
+    name = "PluginPlatformAIX",
+    srcs = glob(["Platform/AIX/*.cpp"]),
+    hdrs = glob(["Platform/AIX/*.h"]),
+    includes = [".."],
+    local_defines = ["_ALL_SOURCE"],
+    deps = [
+        ":PluginPlatformPOSIX",
+        ":PluginsClang",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginPlatformFreeBSD",
+    srcs = glob(["Platform/FreeBSD/*.cpp"]),
+    hdrs = glob(["Platform/FreeBSD/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginPlatformPOSIX",
+        ":PluginsClang",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginPlatformNetBSD",
+    srcs = glob(["Platform/NetBSD/*.cpp"]),
+    hdrs = glob(["Platform/NetBSD/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginPlatformPOSIX",
+        ":PluginsClang",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginPlatformOpenBSD",
+    srcs = glob(["Platform/OpenBSD/*.cpp"]),
+    hdrs = glob(["Platform/OpenBSD/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginPlatformPOSIX",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
     ],
 )
 
@@ -827,8 +714,8 @@ cc_library(
         ":PluginPlatformLinux",
         ":PluginPlatformPOSIX",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -854,13 +741,12 @@ cc_library(
     deps = [
         ":PlatformWindowsProperties",
         ":PluginPlatformGDB",
-        ":PluginTypeSystemClangHeaders",
+        ":PluginsClang",
         "//lldb:Breakpoint",
         "//lldb:Core",
-        "//lldb:ExpressionHeaders",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -878,9 +764,7 @@ cc_library(
         "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
     ],
 )
 
@@ -892,10 +776,10 @@ cc_library(
     deps = [
         ":PluginCPPRuntime",
         ":PluginHighlighterClang",
-        ":PluginTypeSystemClang",
+        ":PluginsClang",
         "//lldb:Core",
         "//lldb:DataFormatters",
-        "//lldb:ExpressionHeaders",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:Target",
@@ -914,8 +798,6 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -931,8 +813,6 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -948,8 +828,6 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -965,8 +843,6 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -981,8 +857,25 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginFortranLanguage",
+    srcs = glob(["Language/Fortran/*.cpp"]),
+    hdrs = glob(["Language/Fortran/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:DataFormatters",
+        "//lldb:Expression",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -998,49 +891,9 @@ gentbl_cc_library(
     deps = ["//lldb:CoreTdFiles"],
 )
 
-cc_library(
-    name = "PluginCPlusPlusLanguageHeaders",
-    hdrs = glob(["Language/CPlusPlus/*.h"]),
-    includes = [".."],
-    deps = [
-        ":PluginExpressionParserClangHeaders",
-        ":PluginHighlighterClang",
-        "//clang:lex",
-        "//lldb:CoreHeaders",
-        "//lldb:DataFormatters",
-        "//lldb:Headers",
-        "//lldb:TargetHeaders",
-        "//lldb:UtilityHeaders",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
+alias(
     name = "PluginCPlusPlusLanguage",
-    srcs = glob(["Language/CPlusPlus/*.cpp"]),
-    includes = [".."],
-    deps = [
-        ":LanguageCPlusPlusProperties",
-        ":PluginCPPRuntime",
-        ":PluginCPlusPlusLanguageHeaders",
-        ":PluginExpressionParserClangHeaders",
-        ":PluginHighlighterClang",
-        ":PluginTypeSystemClang",
-        ":PluginTypeSystemClangHeaders",
-        "//clang:basic",
-        "//lldb:Core",
-        "//lldb:DataFormatters",
-        "//lldb:Headers",
-        "//lldb:Host",
-        "//lldb:InterpreterHeaders",
-        "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:Target",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//llvm:Demangle",
-        "//llvm:Support",
-    ],
+    actual = ":PluginsClang",
 )
 
 gentbl_cc_library(
@@ -1064,11 +917,10 @@ cc_library(
         ":PluginTraceExporterCommon",
         ":TraceExporterCTFOptions",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
     ],
 )
 
@@ -1079,9 +931,8 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
-        "//lldb:SymbolHeaders",
+        "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//llvm:Support",
     ],
 )
@@ -1093,17 +944,14 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginProcessUtility",
-        ":PluginTypeSystemClang",
-        ":PluginTypeSystemClangHeaders",
+        ":PluginsClang",
         "//clang:ast",
         "//lldb:Core",
         "//lldb:Headers",
+        "//lldb:Register",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -1118,11 +966,27 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Core",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginABILoongArch",
+    srcs = glob(["ABI/LoongArch/*.cpp"]),
+    hdrs = glob(["ABI/LoongArch/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessUtility",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Core",
+        "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )
@@ -1136,9 +1000,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1154,9 +1016,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Core",
         "//llvm:TargetParser",
@@ -1172,9 +1032,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1191,11 +1049,8 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -1211,9 +1066,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Core",
         "//llvm:Support",
@@ -1232,9 +1085,7 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Symbol",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:Core",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1250,9 +1101,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1268,44 +1117,16 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )
 
-cc_library(
-    name = "PluginDynamicLoaderPosixDYLDHeaders",
-    hdrs = glob(["DynamicLoader/POSIX-DYLD/*.h"]),
-    features = ["-parse_headers"],  # Would otherwise have circular dependencies
-    includes = [".."],
-)
-
-cc_library(
+alias(
     name = "PluginDynamicLoaderPosixDYLD",
-    srcs = glob(["DynamicLoader/POSIX-DYLD/*.cpp"]),
-    includes = [".."],
-    deps = [
-        ":PluginDynamicLoaderPosixDYLDHeaders",
-        ":PluginObjectFileELF",
-        ":PluginObjectFilePlaceholder",
-        ":PluginProcessElfCore",
-        ":PluginProcessUtility",
-        "//lldb:Breakpoint",
-        "//lldb:Core",
-        "//lldb:Host",
-        "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:Target",
-        "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//llvm:BinaryFormat",
-        "//llvm:Support",
-    ],
+    actual = ":PluginProcessElfCore",
 )
 
 cc_library(
@@ -1314,11 +1135,10 @@ cc_library(
     hdrs = glob(["DynamicLoader/Windows-DYLD/*.h"]),
     includes = [".."],
     deps = [
+        ":PluginObjectFilePECOFF",
         "//lldb:Core",
         "//lldb:Headers",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1335,10 +1155,9 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1350,8 +1169,8 @@ cc_library(
     deps = [
         ":PluginObjectFileWasm",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -1363,11 +1182,10 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -1379,16 +1197,14 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginObjCRuntime",
-        ":PluginTypeSystemClang",
-        ":PluginTypeSystemClangHeaders",
+        ":PluginsClang",
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Expression",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1407,32 +1223,28 @@ gentbl_cc_library(
     deps = ["//lldb:CoreTdFiles"],
 )
 
-cc_library(
-    name = "PluginDynamicLoaderDarwinKernelHeaders",
-    hdrs = glob(["DynamicLoader/Darwin-Kernel/*.h"]),
-    features = ["-parse_headers"],  # Would otherwise have circular dependencies
-    includes = [".."],
+alias(
+    name = "PluginDynamicLoaderDarwinKernel",
+    actual = ":PluginPlatformMacOSX",
 )
 
 cc_library(
-    name = "PluginDynamicLoaderDarwinKernel",
-    srcs = glob(["DynamicLoader/Darwin-Kernel/*.cpp"]),
+    name = "PluginDynamicLoaderFreeBSDKernel",
+    srcs = glob(["DynamicLoader/FreeBSD-Kernel/*.cpp"]),
+    hdrs = glob(["DynamicLoader/FreeBSD-Kernel/*.h"]),
     includes = [".."],
-    tags = ["nobuildkite"],
     deps = [
-        ":DynamicLoaderDarwinKernelProperties",
-        ":PluginDynamicLoaderDarwinKernelHeaders",
-        ":PluginObjectFileMachO",
-        ":PluginPlatformMacOSX",
+        ":PluginObjectFileELF",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Interpreter",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
+        "//llvm:Support",
     ],
 )
 
@@ -1444,9 +1256,8 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:SymbolHeaders",
+        "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
     ],
@@ -1459,9 +1270,8 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
-        "//lldb:SymbolHeaders",
+        "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1475,11 +1285,9 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:SymbolHeaders",
+        "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
     ],
 )
@@ -1492,9 +1300,57 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginArchitectureRISCV",
+    srcs = glob(["Architecture/RISCV/*.cpp"]),
+    hdrs = glob(["Architecture/RISCV/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginArchitectureWasm",
+    srcs = glob(["Architecture/Wasm/*.cpp"]),
+    hdrs = glob(["Architecture/Wasm/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Symbol",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginBugReporterNone",
+    srcs = glob(["BugReporter/None/*.cpp"]),
+    hdrs = glob(["BugReporter/None/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Config",
+        "//lldb:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginGitHubReporter",
+    srcs = glob(["BugReporter/GitHub/*.cpp"]),
+    hdrs = glob(["BugReporter/GitHub/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Host",
         "//llvm:Support",
     ],
 )
@@ -1506,10 +1362,9 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:MC",
         "//llvm:MCDisassembler",
@@ -1525,8 +1380,8 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
     ],
 )
@@ -1537,13 +1392,11 @@ cc_library(
     hdrs = glob(["SymbolFile/CTF/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginExpressionParserClangHeaders",
-        ":PluginTypeSystemClangHeaders",
+        ":PluginsClang",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:config",
@@ -1559,8 +1412,8 @@ cc_library(
     deps = [
         ":PluginObjectFileJSON",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1574,9 +1427,9 @@ cc_library(
     deps = [
         ":PluginObjectFileBreakpad",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1590,9 +1443,9 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Headers",
+        "//lldb:Register",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
     ],
 )
@@ -1605,9 +1458,9 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Headers",
+        "//lldb:Register",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1621,10 +1474,10 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Register",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:MC",
         "//llvm:MCDisassembler",
@@ -1640,10 +1493,10 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Register",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:MC",
         "//llvm:MCDisassembler",
@@ -1659,14 +1512,11 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:Support",
     ],
 )
@@ -1679,9 +1529,9 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Headers",
+        "//lldb:Register",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1695,9 +1545,9 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Headers",
+        "//lldb:Register",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1716,9 +1566,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1736,11 +1584,8 @@ cc_library(
         "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -1755,10 +1600,9 @@ cc_library(
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Expression",
+        "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1775,11 +1619,8 @@ cc_library(
         "//lldb:Core",
         "//lldb:Expression",
         "//lldb:Headers",
-        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -1796,11 +1637,8 @@ cc_library(
         "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -1817,9 +1655,7 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Symbol",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityHeaders",
     ],
 )
 
@@ -1845,11 +1681,9 @@ cc_library(
         ":PluginObjectFileMachO",
         "//lldb:Breakpoint",
         "//lldb:Core",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1866,8 +1700,6 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1895,9 +1727,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Debuginfod",
         "//llvm:HTTP",
@@ -1927,9 +1757,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:HTTP",
         "//llvm:Support",
@@ -1942,15 +1770,16 @@ cc_library(
     hdrs = glob(["SymbolLocator/DebugSymbols/*.h"]),
     includes = [".."],
     tags = ["nobuildkite"],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":PluginObjectFileWasm",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -1985,16 +1814,9 @@ cc_library(
 #     ],
 # )
 # cc_library(
-#     name = "PluginScriptInterpreterPythonHeaders",
-#     hdrs = glob(["ScriptInterpreter/Python/*.h"]),
-#     includes = [".."],
-#     deps = [
-#         "//lldb:Host",
-#     ],
-# )
-# cc_library(
 #     name = "PluginScriptInterpreterPython",
 #     srcs = glob(["ScriptInterpreter/Python/*.cpp"]),
+#     hdrs = glob(["ScriptInterpreter/Python/*.h"]),
 #     local_defines = [
 #         'LLDB_PYTHON_EXE_RELATIVE_PATH=\\"bin/python3\\"',
 #         # Must be kept in sync with WORKSPACE python version
@@ -2007,7 +1829,7 @@ cc_library(
 #         "//lldb:DataFormatters",
 #         "//lldb:Host",
 #         "//lldb:Interpreter",
-#         ":PluginScriptInterpreterPythonHeaders",
+#         ":PluginScriptInterpreterPython",
 #         ":PluginScriptInterpreterPythonInterfaces",
 #         "//lldb:Target",
 #     ],
@@ -2032,7 +1854,7 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Headers",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2045,18 +1867,16 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginProcessUtility",
-        ":PluginTypeSystemClang",
-        ":PluginTypeSystemClangHeaders",
+        ":PluginsClang",
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2067,9 +1887,9 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:Utility",
         "//llvm:Object",
@@ -2087,8 +1907,6 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Support",
@@ -2102,11 +1920,10 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2122,9 +1939,7 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
     ],
 )
@@ -2140,9 +1955,7 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Support",
@@ -2161,9 +1974,7 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Object",
@@ -2193,12 +2004,11 @@ cc_library(
         ":ObjectFilePECOFFProperties",
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Register",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Object",
@@ -2217,7 +2027,6 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -2234,9 +2043,7 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Object",
@@ -2255,10 +2062,7 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
-        "//lldb:UtilityHeaders",
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
@@ -2274,9 +2078,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:MCDisassembler",
         "//llvm:Support",
@@ -2292,9 +2094,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2309,7 +2109,6 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Support",
@@ -2328,11 +2127,11 @@ cc_library(
     deps = [
         ":PluginProcessPOSIX",
         ":PluginProcessUtility",
+        ":PluginRegisterNative",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:SymbolHeaders",
-        "//lldb:TargetHeaders",
+        "//lldb:Register",
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -2348,14 +2147,10 @@ cc_library(
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
-        "//lldb:CoreHeaders",
         "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2369,11 +2164,8 @@ cc_library(
     deps = [
         ":PluginScriptedProcess",
         "//lldb:Core",
-        "//lldb:CoreHeaders",
         "//lldb:Headers",
-        "//lldb:InterpreterHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2386,7 +2178,7 @@ cc_library(
     includes = [".."],
     tags = ["nobuildkite"],
     deps = [
-        ":PluginDynamicLoaderDarwinKernelHeaders",
+        ":PluginDynamicLoaderDarwinKernel",
         ":PluginDynamicLoaderMacOSXDYLD",
         ":PluginDynamicLoaderStatic",
         ":PluginObjectFileMachO",
@@ -2397,9 +2189,7 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2407,18 +2197,27 @@ cc_library(
 
 cc_library(
     name = "PluginProcessElfCore",
-    srcs = glob(["Process/elf-core/*.cpp"]),
-    hdrs = glob(["Process/elf-core/*.h"]),
+    srcs = glob([
+        "DynamicLoader/POSIX-DYLD/*.cpp",
+        "Process/elf-core/*.cpp",
+    ]),
+    hdrs = glob([
+        "DynamicLoader/POSIX-DYLD/*.h",
+        "Process/elf-core/*.h",
+    ]),
     includes = [".."],
     deps = [
-        ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginDynamicLoaderStatic",
         ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
+        "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Symbol",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Support",
@@ -2450,7 +2249,6 @@ cc_library(
     }),
     deps = [
         ":PluginDynamicLoaderDarwinKernel",
-        ":PluginDynamicLoaderDarwinKernelHeaders",
         ":PluginDynamicLoaderStatic",
         ":PluginProcessUtility",
         ":ProcessKDPProperties",
@@ -2458,11 +2256,8 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
-        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2475,17 +2270,14 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLD",
-        ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessElfCore",
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Headers",
-        "//lldb:InterpreterHeaders",
+        "//lldb:Register",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//lldb:UtilityPrivateHeaders",
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
@@ -2498,10 +2290,8 @@ cc_library(
     hdrs = glob(["LanguageRuntime/ObjC/GNUstepObjCRuntime/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginExpressionParserClang",
         ":PluginObjCRuntime",
-        ":PluginTypeSystemClang",
-        ":PluginTypeSystemClangHeaders",
+        ":PluginsClang",
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Expression",
@@ -2509,7 +2299,6 @@ cc_library(
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2521,13 +2310,29 @@ cc_library(
     hdrs = glob(["RegisterTypeBuilder/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginTypeSystemClangHeaders",
+        ":PluginsClang",
         "//clang:ast",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Target",
-        "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginRegisterNative",
+    srcs = glob(["Register/Native/*.cpp"]),
+    hdrs = glob(["Register/Native/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2546,10 +2351,12 @@ cc_library(
     }),
     deps = [
         ":PluginDynamicLoaderWindowsDYLD",
+        ":PluginRegisterNative",
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
+        "//lldb:Register",
         "//lldb:Target",
         "//lldb:Utility",
         "//llvm:Support",
@@ -2559,11 +2366,24 @@ cc_library(
 _DEFAULT_LOAD_PLUGINS = "\n".join(["LLDB_PLUGIN({})".format(x) for x in DEFAULT_PLUGINS]) + \
                         "\n" + "\n".join(["LLDB_SCRIPT_PLUGIN({})".format(x) for x in DEFAULT_SCRIPT_PLUGINS])
 
+# Plugins.def.in has a single slot for the enumerated plugins. Split it so that
+# OS-specific and optional plugins can be selected independently, while the
+# fallback plugins stay after both.
+expand_template(
+    name = "plugins_config_template",
+    out = "Plugins.def.split.in",
+    substitutions = {
+        "@LLDB_ENUM_PLUGINS@": "@LLDB_DEFAULT_PLUGINS@\n@LLDB_OPTIONAL_PLUGINS@\n@LLDB_FALLBACK_PLUGINS@",
+    },
+    template = "Plugins.def.in",
+)
+
 expand_template(
     name = "plugins_config_gen",
     out = "Plugins.def",
     substitutions = {
         "@LLDB_PROCESS_GDB_PLUGIN@": "LLDB_PLUGIN(ProcessGDBRemote)",
+        "@LLDB_FALLBACK_PLUGINS@": "\n".join(["LLDB_PLUGIN({})".format(x) for x in FALLBACK_PLUGINS]),
     } | select({
         # ProcessWindowsCommon registers via its dedicated slot in Plugins.def.in
         # (ordered after all other process plugins, before ProcessGDBRemote).
@@ -2575,17 +2395,24 @@ expand_template(
         },
     }) | select({
         "@platforms//os:macos": {
-            "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS + """
+            "@LLDB_DEFAULT_PLUGINS@": _DEFAULT_LOAD_PLUGINS + """
 LLDB_PLUGIN(ProcessMacOSXKernel)
 LLDB_PLUGIN(SymbolLocatorDebugSymbols)
 LLDB_PLUGIN(SymbolVendorMacOSX)
 """,
         },
         "//conditions:default": {
-            "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS,
+            "@LLDB_DEFAULT_PLUGINS@": _DEFAULT_LOAD_PLUGINS,
+        },
+    }) | select({
+        "//lldb:github_bug_reporter_enabled": {
+            "@LLDB_OPTIONAL_PLUGINS@": "LLDB_PLUGIN(GitHubReporter)",
+        },
+        "//conditions:default": {
+            "@LLDB_OPTIONAL_PLUGINS@": "",
         },
     }),
-    template = "Plugins.def.in",
+    template = ":plugins_config_template",
 )
 
 cc_library(

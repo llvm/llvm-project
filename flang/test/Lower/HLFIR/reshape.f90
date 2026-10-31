@@ -15,11 +15,11 @@ subroutine reshape_test(x, source, pd, sh, ord)
   x = reshape(source, sh, pd, ord)
 end subroutine reshape_test
 ! CHECK-LABEL:   func.func @_QPreshape_test(
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_testEord"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_testEpd"} : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
-! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_testEsh"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
-! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_testEsource"} : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
-! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_testEx"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_testEord") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_testEpd") : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_testEsh") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_testEsource") : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
+! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_testEx") : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
 ! CHECK:           %[[VAL_15:.*]] = hlfir.reshape %[[VAL_13]]#0 %[[VAL_12]]#0 pad %[[VAL_9]]#0 order %[[VAL_8]]#0 : (!fir.box<!fir.array<?x?x?xi32>>, !fir.ref<!fir.array<2xi32>>, !fir.box<!fir.array<?x?x?xi32>>, !fir.ref<!fir.array<2xi32>>) -> !hlfir.expr<?x?xi32>
 ! CHECK:           hlfir.assign %[[VAL_15]] to %[[VAL_14]]#0 : !hlfir.expr<?x?xi32>, !fir.box<!fir.array<?x?xi32>>
 ! CHECK:           hlfir.destroy %[[VAL_15]] : !hlfir.expr<?x?xi32>
@@ -32,9 +32,9 @@ subroutine reshape_test_noorder(x, source, pd, sh)
   x = reshape(source, sh, pd)
 end subroutine reshape_test_noorder
 ! CHECK-LABEL:   func.func @_QPreshape_test_noorder(
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_test_noorderEpd"} : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_test_noorderEsh"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_test_noorderEsource"} : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_test_noorderEpd") : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_test_noorderEsh") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_test_noorderEsource") : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
 ! CHECK:           %[[VAL_11:.*]] = hlfir.reshape %[[VAL_9]]#0 %[[VAL_8]]#0 pad %[[VAL_5]]#0 : (!fir.box<!fir.array<?x?x?xi32>>, !fir.ref<!fir.array<2xi32>>, !fir.box<!fir.array<?x?x?xi32>>) -> !hlfir.expr<?x?xi32>
 
 subroutine reshape_test_nopad(x, source, sh, ord)
@@ -45,9 +45,9 @@ subroutine reshape_test_nopad(x, source, sh, ord)
   x = reshape(source, sh, ORDER=ord)
 end subroutine reshape_test_nopad
 ! CHECK-LABEL:   func.func @_QPreshape_test_nopad(
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_test_nopadEord"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_test_nopadEsh"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFreshape_test_nopadEsource"} : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_test_nopadEord") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_test_nopadEsh") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFreshape_test_nopadEsource") : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xi32>>, !fir.box<!fir.array<?x?x?xi32>>)
 ! CHECK:           %[[VAL_13:.*]] = hlfir.reshape %[[VAL_11]]#0 %[[VAL_10]]#0 order %[[VAL_7]]#0 : (!fir.box<!fir.array<?x?x?xi32>>, !fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>) -> !hlfir.expr<?x?xi32>
 
 subroutine test_reshape_optional1(pad, order, source, shape)
@@ -58,10 +58,10 @@ subroutine test_reshape_optional1(pad, order, source, shape)
   print *, reshape(source=source, shape=shape, pad=pad, order=order)
 end subroutine test_reshape_optional1
 ! CHECK-LABEL:   func.func @_QPtest_reshape_optional1(
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}{fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_reshape_optional1Eorder"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}{fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_reshape_optional1Epad"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>)
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_optional1Eshape"} : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_optional1Esource"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.box<!fir.array<?x?x?xf32>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_optional1Eorder") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_optional1Epad") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_optional1Eshape") : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_optional1Esource") : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.box<!fir.array<?x?x?xf32>>)
 ! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 ! CHECK:           %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>) -> !fir.ptr<!fir.array<?x?xf32>>
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ptr<!fir.array<?x?xf32>>) -> i64
@@ -88,10 +88,10 @@ subroutine test_reshape_optional2(pad, order, source, shape)
   print *, reshape(source=source, shape=shape, pad=pad, order=order)
 end subroutine test_reshape_optional2
 ! CHECK-LABEL:   func.func @_QPtest_reshape_optional2(
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}{fortran_attrs = #fir.var_attrs<optional, pointer>, uniq_name = "_QFtest_reshape_optional2Eorder"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}{fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_reshape_optional2Epad"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_optional2Eshape"} : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtest_reshape_optional2Esource"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.box<!fir.array<?x?x?xf32>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_optional2Eorder") fortran_attrs<optional, pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_optional2Epad") fortran_attrs<optional> : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_optional2Eshape") : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFtest_reshape_optional2Esource") : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.box<!fir.array<?x?x?xf32>>)
 ! CHECK:           %[[VAL_16:.*]] = fir.is_present %[[VAL_6]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> i1
 ! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_18:.*]] = fir.box_addr %[[VAL_17]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>

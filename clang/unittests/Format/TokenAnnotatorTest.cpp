@@ -2074,6 +2074,30 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
   ASSERT_EQ(Tokens.size(), 27u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown); // Not CtorDtorDeclName.
   EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ObjCBlockLParen);
+
+  Tokens = annotate("id p = ^NSArray<NSString *> *() {\n"
+                    "  return nil;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_ObjCBlockLBrace);
+
+  Tokens = annotate("id p = ^NSArray<NSArray<NSString *> *> *(int) {\n"
+                    "  return nil;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_ObjCBlockLBrace);
+
+  Tokens = annotate("id p = ^id<Proto>(int x) {\n"
+                    "  return nil;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_ObjCBlockLBrace);
+
+  Tokens = annotate("id p = ^NSDictionary<NSString *, NSString *> *(int x) {\n"
+                    "  return nil;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_ObjCBlockLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodExpr) {
@@ -2435,6 +2459,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[3], tok::star, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_LambdaLBrace);
+
+  // The new declarator is not a lambda.
+  Tokens = annotate("x = new a *[]{};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::l_square, TT_ArraySubscriptLSquare);
+  Tokens = annotate("x = new (a) a *[]{};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[8], tok::l_square, TT_ArraySubscriptLSquare);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
@@ -2886,7 +2920,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   // joined operators, we don't have a separate type, so we only test for their
   // precedence.
   std::pair<prec::Level, std::string> JoinedBinary[] = {
-      {prec::Comma, "->"},        {prec::Comma, "<->"},
+      {prec::Equality, "->"},     {prec::Equality, "<->"},
       {prec::Comma, "#-#"},       {prec::Comma, "#=#"},
       {prec::Assignment, "+="},   {prec::Assignment, "-="},
       {prec::Assignment, "*="},   {prec::Assignment, "/="},

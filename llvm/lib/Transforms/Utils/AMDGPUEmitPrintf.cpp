@@ -16,11 +16,9 @@
 
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 #include "llvm/ADT/SparseBitVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/MD5.h"
+#include "llvm/Support/AMDGPUPrintf.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
@@ -53,7 +51,7 @@ static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg) {
 
 static Value *callPrintfBegin(IRBuilder<> &Builder, Value *Version) {
   auto Int64Ty = Builder.getInt64Ty();
-  auto M = Builder.GetInsertBlock()->getModule();
+  auto M = Builder.getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_begin", Int64Ty, Int64Ty);
   return Builder.CreateCall(Fn, Version);
 }
@@ -64,7 +62,7 @@ static Value *callAppendArgs(IRBuilder<> &Builder, Value *Desc, int NumArgs,
                              bool IsLast) {
   auto Int64Ty = Builder.getInt64Ty();
   auto Int32Ty = Builder.getInt32Ty();
-  auto M = Builder.GetInsertBlock()->getModule();
+  auto M = Builder.getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_append_args", Int64Ty,
                                    Int64Ty, Int32Ty, Int64Ty, Int64Ty, Int64Ty,
                                    Int64Ty, Int64Ty, Int64Ty, Int64Ty, Int32Ty);
@@ -135,14 +133,14 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   Builder.CreateCondBr(Cmp, WhileDone, While);
 
   // Add one to the computed length.
-  Builder.SetInsertPoint(WhileDone, WhileDone->begin());
+  Builder.SetInsertPoint(WhileDone->begin());
   auto Len = Builder.CreatePtrDiff(PtrPhi, Str);
   Len = Builder.CreateZExt(Len, Int64Ty);
   Len = Builder.CreateAdd(Len, One);
 
   // Final join.
   UncondBrInst::Create(Join, WhileDone);
-  Builder.SetInsertPoint(Join, Join->begin());
+  Builder.SetInsertPoint(Join->begin());
   auto LenPhi = Builder.CreatePHI(Len->getType(), 2);
   LenPhi->addIncoming(Len, WhileDone);
   LenPhi->addIncoming(Zero, Prev);
@@ -154,7 +152,7 @@ static Value *callAppendStringN(IRBuilder<> &Builder, Value *Desc, Value *Str,
                                 Value *Length, bool isLast) {
   auto Int64Ty = Builder.getInt64Ty();
   auto IsLastInt32 = Builder.getInt32(isLast);
-  auto M = Builder.GetInsertBlock()->getModule();
+  auto M = Builder.getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_append_string_n", Int64Ty,
                                    Desc->getType(), Str->getType(),
                                    Length->getType(), IsLastInt32->getType());
@@ -178,32 +176,6 @@ static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
   return appendArg(Builder, Desc, Arg, IsLast);
 }
 
-// Scan the format string to locate all specifiers, and mark the ones that
-// specify a string, i.e, the "%s" specifier with optional '*' characters.
-static void locateCStrings(SparseBitVector<8> &BV, StringRef Str) {
-  static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
-  size_t SpecPos = 0;
-  // Skip the first argument, the format string.
-  unsigned ArgIdx = 1;
-
-  while ((SpecPos = Str.find_first_of('%', SpecPos)) != StringRef::npos) {
-    if (Str[SpecPos + 1] == '%') {
-      SpecPos += 2;
-      continue;
-    }
-    auto SpecEnd = Str.find_first_of(ConvSpecifiers, SpecPos);
-    if (SpecEnd == StringRef::npos)
-      return;
-    auto Spec = Str.slice(SpecPos, SpecEnd + 1);
-    ArgIdx += Spec.count('*');
-    if (Str[SpecEnd] == 's') {
-      BV.set(ArgIdx);
-    }
-    SpecPos = SpecEnd + 1;
-    ++ArgIdx;
-  }
-}
-
 // helper struct to package the string related data
 struct StringData {
   StringRef Str;
@@ -222,7 +194,7 @@ static Value *callBufferedPrintfStart(
     IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *Fmt,
     bool isConstFmtStr, SparseBitVector<8> &SpecIsCString,
     SmallVectorImpl<StringData> &StringContents, Value *&ArgSize) {
-  Module *M = Builder.GetInsertBlock()->getModule();
+  Module *M = Builder.getModule();
   Value *NonConstStrLen = nullptr;
   Value *LenWithNull = nullptr;
   Value *LenWithNullAligned = nullptr;
@@ -308,49 +280,14 @@ static Value *callBufferedPrintfStart(
 // Prepare constant string argument to push onto the buffer
 static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
                                      SmallVectorImpl<Value *> &WhatToStore) {
-  std::string Str(SD->Str.str() + '\0');
-
-  DataExtractor Extractor(Str, /*IsLittleEndian=*/true);
-  DataExtractor::Cursor Offset(0);
-  while (Offset && Offset.tell() < Str.size()) {
-    const uint64_t ReadSize = 4;
-    uint64_t ReadNow = std::min(ReadSize, Str.size() - Offset.tell());
-    uint64_t ReadBytes = 0;
-    switch (ReadNow) {
-    default:
-      llvm_unreachable("min(4, X) > 4?");
-    case 1:
-      ReadBytes = Extractor.getU8(Offset);
-      break;
-    case 2:
-      ReadBytes = Extractor.getU16(Offset);
-      break;
-    case 3:
-      ReadBytes = Extractor.getU24(Offset);
-      break;
-    case 4:
-      ReadBytes = Extractor.getU32(Offset);
-      break;
-    }
-    cantFail(Offset.takeError(), "failed to read bytes from constant array");
-
-    APInt IntVal(8 * ReadSize, ReadBytes);
-
-    // TODO: Should not bother aligning up.
-    if (ReadNow < ReadSize)
-      IntVal = IntVal.zext(8 * ReadSize);
-
-    Type *IntTy = Type::getIntNTy(Builder.getContext(), IntVal.getBitWidth());
-    WhatToStore.push_back(ConstantInt::get(IntTy, IntVal));
-  }
-  // Additional padding for 8 byte alignment
-  int Rem = (Str.size() % 8);
-  if (Rem > 0 && Rem <= 4)
-    WhatToStore.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
+  SmallVector<uint32_t, 16> Words;
+  packAMDGPUPrintfConstantString(SD->Str, Words);
+  for (uint32_t Word : Words)
+    WhatToStore.push_back(Builder.getInt32(Word));
 }
 
 static Value *processNonStringArg(Value *Arg, IRBuilder<> &Builder) {
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
   auto Ty = Arg->getType();
 
   if (auto IntTy = dyn_cast<IntegerType>(Ty)) {
@@ -373,7 +310,7 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
                           Value *PtrToStore, SparseBitVector<8> &SpecIsCString,
                           SmallVectorImpl<StringData> &StringContents,
                           bool IsConstFmtStr) {
-  Module *M = Builder.GetInsertBlock()->getModule();
+  Module *M = Builder.getModule();
   const DataLayout &DL = M->getDataLayout();
   auto StrIt = StringContents.begin();
   size_t i = IsConstFmtStr ? 1 : 0;
@@ -432,11 +369,11 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   StringRef FmtStr;
 
   if (getConstantStringInfo(Fmt, FmtStr))
-    locateCStrings(SpecIsCString, FmtStr);
+    locateAMDGPUPrintfCStrings(SpecIsCString, FmtStr);
 
   if (IsBuffered) {
     SmallVector<StringData, 8> StringContents;
-    Module *M = Builder.GetInsertBlock()->getModule();
+    Module *M = Builder.getModule();
     LLVMContext &Ctx = Builder.getContext();
     auto Int8Ty = Builder.getInt8Ty();
     auto Int32Ty = Builder.getInt32Ty();
@@ -479,21 +416,13 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     // same onto buffer and metadata.
     NamedMDNode *metaD = M->getOrInsertNamedMetadata("llvm.printf.fmts");
     if (IsConstFmtStr) {
-      MD5 Hasher;
-      MD5::MD5Result Hash;
-      Hasher.update(FmtStr);
-      Hasher.final(Hash);
-
-      // Try sticking to llvm.printf.fmts format, although we are not going to
-      // use the ID and argument size fields while printing,
-      std::string MetadataStr =
-          "0:0:" + llvm::utohexstr(Hash.low(), /*LowerCase=*/true) + "," +
-          FmtStr.str();
-      MDString *fmtStrArray = MDString::get(Ctx, MetadataStr);
+      MDString *fmtStrArray =
+          MDString::get(Ctx, getAMDGPUPrintfFormatMetadata(FmtStr));
       MDNode *myMD = MDNode::get(Ctx, fmtStrArray);
       metaD->addOperand(myMD);
 
-      Builder.CreateStore(Builder.getInt64(Hash.low()), Ptr);
+      Builder.CreateStore(Builder.getInt64(getAMDGPUPrintfFormatHash(FmtStr)),
+                          Ptr);
       Ptr = Builder.CreateConstInBoundsGEP1_32(Int8Ty, Ptr, 8);
     } else {
       // Include a dummy metadata instance in case of only non constant
@@ -501,7 +430,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
       // be done for completeness
       if (metaD->getNumOperands() == 0) {
         MDString *fmtStrArray =
-            MDString::get(Ctx, "0:0:ffffffff,\"Non const format string\"");
+            MDString::get(Ctx, AMDGPUPrintfNonConstFormatMetadata);
         MDNode *myMD = MDNode::get(Ctx, fmtStrArray);
         metaD->addOperand(myMD);
       }

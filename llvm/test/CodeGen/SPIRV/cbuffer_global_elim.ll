@@ -1,6 +1,8 @@
 ; RUN: opt -S -passes='spirv-cbuffer-access' %s -o - | FileCheck %s
 ; RUN: llc %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc  %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc %s -O3 -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O3 %s -o - -filetype=obj | spirv-val %}
 
 target triple = "spirv-unknown-vulkan1.3-compute"
 

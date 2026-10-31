@@ -190,10 +190,16 @@ func.func @ipowi_zero_exp(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi3
 // CHECK-SAME: %[[ARG1:.+]]: vector<4xi32>
 // CHECK-SAME: -> (i32, vector<4xi32>, i32, vector<4xi32>) {
 func.func @ipowi_exp_one(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi32>, i32, vector<4xi32>) {
-  // CHECK-DAG: %[[CST_S:.*]] = arith.constant 1 : i32
-  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<1> : vector<4xi32>
-  // CHECK: %[[SCALAR:.*]] = arith.divsi %[[CST_S]], %[[ARG0]]
-  // CHECK: %[[VECTOR:.*]] = arith.divsi %[[CST_V]], %[[ARG1]]
+  // Positive exponent (1) folds to the base directly. Negative exponent
+  // (-1) is intentionally left unconverted: integer negative-exponent
+  // IPowIOp is lowered exactly once, correctly, by ConvertMathToFuncs's
+  // createElementIPowIFunc (base == 0 returns 0 there, see MathToFuncs.cpp
+  // and MathToFuncs/ipowi.mlir). Reducing it here too would divide by zero
+  // for that base.
+  // CHECK-DAG: %[[CM1:.*]] = arith.constant -1 : i32
+  // CHECK-DAG: %[[VM1:.*]] = arith.constant dense<-1> : vector<4xi32>
+  // CHECK: %[[SCALAR:.*]] = math.ipowi %[[ARG0]], %[[CM1]]
+  // CHECK: %[[VECTOR:.*]] = math.ipowi %[[ARG1]], %[[VM1]]
   // CHECK: return %[[ARG0]], %[[ARG1]], %[[SCALAR]], %[[VECTOR]]
   %c1 = arith.constant 1 : i32
   %v1 = arith.constant dense <1> : vector<4xi32>
@@ -211,14 +217,14 @@ func.func @ipowi_exp_one(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi32
 // CHECK-SAME: %[[ARG1:.+]]: vector<4xi32>
 // CHECK-SAME: -> (i32, vector<4xi32>, i32, vector<4xi32>) {
 func.func @ipowi_exp_two(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi32>, i32, vector<4xi32>) {
-  // CHECK-DAG: %[[CST_S:.*]] = arith.constant 1 : i32
-  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<1> : vector<4xi32>
+  // Positive exponent (2) still strength-reduces to a multiplication.
+  // Negative exponent (-2) is left unconverted (see @ipowi_exp_one).
+  // CHECK-DAG: %[[CM2:.*]] = arith.constant -2 : i32
+  // CHECK-DAG: %[[VM2:.*]] = arith.constant dense<-2> : vector<4xi32>
   // CHECK: %[[SCALAR0:.*]] = arith.muli %[[ARG0]], %[[ARG0]]
   // CHECK: %[[VECTOR0:.*]] = arith.muli %[[ARG1]], %[[ARG1]]
-  // CHECK: %[[SMUL:.*]] = arith.muli %[[ARG0]], %[[ARG0]]
-  // CHECK: %[[SCALAR1:.*]] = arith.divsi %[[CST_S]], %[[SMUL]]
-  // CHECK: %[[VMUL:.*]] = arith.muli %[[ARG1]], %[[ARG1]]
-  // CHECK: %[[VECTOR1:.*]] = arith.divsi %[[CST_V]], %[[VMUL]]
+  // CHECK: %[[SCALAR1:.*]] = math.ipowi %[[ARG0]], %[[CM2]]
+  // CHECK: %[[VECTOR1:.*]] = math.ipowi %[[ARG1]], %[[VM2]]
   // CHECK: return %[[SCALAR0]], %[[VECTOR0]], %[[SCALAR1]], %[[VECTOR1]]
   %c1 = arith.constant 2 : i32
   %v1 = arith.constant dense <2> : vector<4xi32>
@@ -236,18 +242,16 @@ func.func @ipowi_exp_two(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi32
 // CHECK-SAME: %[[ARG1:.+]]: vector<4xi32>
 // CHECK-SAME: -> (i32, vector<4xi32>, i32, vector<4xi32>) {
 func.func @ipowi_exp_three(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi32>, i32, vector<4xi32>) {
-  // CHECK-DAG: %[[CST_S:.*]] = arith.constant 1 : i32
-  // CHECK-DAG: %[[CST_V:.*]] = arith.constant dense<1> : vector<4xi32>
+  // Positive exponent (3) still strength-reduces to multiplications.
+  // Negative exponent (-3) is left unconverted (see @ipowi_exp_one).
+  // CHECK-DAG: %[[CM3:.*]] = arith.constant -3 : i32
+  // CHECK-DAG: %[[VM3:.*]] = arith.constant dense<-3> : vector<4xi32>
   // CHECK: %[[SMUL0:.*]] = arith.muli %[[ARG0]], %[[ARG0]]
   // CHECK: %[[SCALAR0:.*]] = arith.muli %[[SMUL0]], %[[ARG0]]
   // CHECK: %[[VMUL0:.*]] = arith.muli %[[ARG1]], %[[ARG1]]
   // CHECK: %[[VECTOR0:.*]] = arith.muli %[[VMUL0]], %[[ARG1]]
-  // CHECK: %[[SMUL1:.*]] = arith.muli %[[ARG0]], %[[ARG0]]
-  // CHECK: %[[SMUL2:.*]] = arith.muli %[[SMUL1]], %[[ARG0]]
-  // CHECK: %[[SCALAR1:.*]] = arith.divsi %[[CST_S]], %[[SMUL2]]
-  // CHECK: %[[VMUL1:.*]] = arith.muli %[[ARG1]], %[[ARG1]]
-  // CHECK: %[[VMUL2:.*]] = arith.muli %[[VMUL1]], %[[ARG1]]
-  // CHECK: %[[VECTOR1:.*]] = arith.divsi %[[CST_V]], %[[VMUL2]]
+  // CHECK: %[[SCALAR1:.*]] = math.ipowi %[[ARG0]], %[[CM3]]
+  // CHECK: %[[VECTOR1:.*]] = math.ipowi %[[ARG1]], %[[VM3]]
   // CHECK: return %[[SCALAR0]], %[[VECTOR0]], %[[SCALAR1]], %[[VECTOR1]]
   %c1 = arith.constant 3 : i32
   %v1 = arith.constant dense <3> : vector<4xi32>
@@ -258,6 +262,34 @@ func.func @ipowi_exp_three(%arg0: i32, %arg1: vector<4xi32>) -> (i32, vector<4xi
   %2 = math.ipowi %arg0, %cm1 : i32
   %3 = math.ipowi %arg1, %vm1 : vector<4xi32>
   return %0, %1, %2, %3 : i32, vector<4xi32>, i32, vector<4xi32>
+}
+
+// MathToFuncs does not lower math.ipowi on index, so a negative constant
+// exponent is still strength-reduced here instead of being left unlowered.
+// CHECK-LABEL: @ipowi_index_neg_exp(
+// CHECK-SAME: %[[ARG0:.+]]: index
+// CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : index
+// CHECK: %[[SQ:.*]] = arith.muli %[[ARG0]], %[[ARG0]] : index
+// CHECK: %[[RES:.*]] = arith.divsi %[[ONE]], %[[SQ]] : index
+// CHECK: return %[[RES]]
+func.func @ipowi_index_neg_exp(%arg0: index) -> index {
+  %cm2 = arith.constant -2 : index
+  %0 = math.ipowi %arg0, %cm2 : index
+  return %0 : index
+}
+
+// INT64_MIN has no positive int64_t representation; PowIStrengthReduction
+// must bail out rather than negate it (negating would overflow). Index ipowi
+// is not deferred to MathToFuncs, so it reaches that check.
+// CHECK-LABEL: @ipowi_index_exp_int64_min(
+// CHECK-SAME: %[[ARG0:.+]]: index
+// CHECK: %[[CST:.*]] = arith.constant -9223372036854775808 : index
+// CHECK: %[[RES:.*]] = math.ipowi %[[ARG0]], %[[CST]] : index
+// CHECK: return %[[RES]]
+func.func @ipowi_index_exp_int64_min(%arg0: index) -> index {
+  %cmin = arith.constant -9223372036854775808 : index
+  %0 = math.ipowi %arg0, %cmin : index
+  return %0 : index
 }
 
 // CHECK-LABEL: @fpowi_zero_exp(
@@ -294,6 +326,19 @@ func.func @fpowi_exp_one(%arg0: f32, %arg1: vector<4xf32>) -> (f32, vector<4xf32
   %2 = math.fpowi %arg0, %cm1 : f32, i32
   %3 = math.fpowi %arg1, %vm1 : vector<4xf32>, vector<4xi32>
   return %0, %1, %2, %3 : f32, vector<4xf32>, f32, vector<4xf32>
+}
+
+// INT64_MIN has no positive int64_t representation; PowIStrengthReduction
+// must bail out rather than negate it (negating would overflow).
+// CHECK-LABEL: @fpowi_exp_int64_min(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+// CHECK: %[[CST:.*]] = arith.constant -9223372036854775808 : i64
+// CHECK: %[[RES:.*]] = math.fpowi %[[ARG0]], %[[CST]] : f32, i64
+// CHECK: return %[[RES]]
+func.func @fpowi_exp_int64_min(%arg0: f32) -> f32 {
+  %cmin = arith.constant -9223372036854775808 : i64
+  %0 = math.fpowi %arg0, %cmin : f32, i64
+  return %0 : f32
 }
 
 // CHECK-LABEL: @fpowi_exp_two(
@@ -348,4 +393,147 @@ func.func @fpowi_exp_three(%arg0: f32, %arg1: vector<4xf32>) -> (f32, vector<4xf
   %2 = math.fpowi %arg0, %cm1 : f32, i32
   %3 = math.fpowi %arg1, %vm1 : vector<4xf32>, vector<4xi32>
   return %0, %1, %2, %3 : f32, vector<4xf32>, f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @exp_quotient(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32,
+// CHECK-SAME: %[[ARG2:.+]]: vector<4xf32>, %[[ARG3:.+]]: vector<4xf32>
+func.func @exp_quotient(%arg0: f32, %arg1: f32, %arg2: vector<4xf32>,
+                        %arg3: vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SSUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[SCALAR:.*]] = math.exp %[[SSUB]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[VSUB:.*]] = arith.subf %[[ARG2]], %[[ARG3]] fastmath<reassoc,nsz,arcp,contract,afn> : vector<4xf32>
+  // CHECK: %[[VECTOR:.*]] = math.exp2 %[[VSUB]] fastmath<reassoc,nsz,arcp,contract,afn> : vector<4xf32>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  %3 = math.exp2 %arg2 fastmath<fast> : vector<4xf32>
+  %4 = math.exp2 %arg3 fastmath<fast> : vector<4xf32>
+  %5 = arith.divf %3, %4 fastmath<fast> : vector<4xf32>
+  return %2, %5 : f32, vector<4xf32>
+}
+
+// The rewrite only needs `arcp` and `reassoc` on the division. The subtraction
+// takes the division's flags, the new `exp` the ones shared by both
+// exponentials it replaces.
+// CHECK-LABEL: @exp_quotient_minimal_fastmath(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_minimal_fastmath(%arg0: f32, %arg1: f32) -> f32 {
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,arcp> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<afn> : f32
+  // CHECK: return %[[EXP]]
+  %0 = math.exp %arg0 fastmath<afn,ninf> : f32
+  %1 = math.exp %arg1 fastmath<afn> : f32
+  %2 = arith.divf %0, %1 fastmath<reassoc,arcp> : f32
+  return %2 : f32
+}
+
+// `nnan` and `ninf` are assumptions about the values an operation sees, and
+// neither new operation sees the values of the ones it replaces, so they are
+// dropped rather than propagated: here `ninf` holds for the division for
+// `%arg0 = -inf`, `%arg1 = 0.0`, but not for the subtraction.
+// CHECK-LABEL: @exp_quotient_drops_value_assumptions(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_drops_value_assumptions(%arg0: f32, %arg1: f32) -> f32 {
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,arcp> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<afn> : f32
+  // CHECK: return %[[EXP]]
+  %0 = math.exp %arg0 fastmath<nnan,ninf,afn> : f32
+  %1 = math.exp %arg1 fastmath<nnan,ninf,afn> : f32
+  %2 = arith.divf %0, %1 fastmath<nnan,ninf,reassoc,arcp> : f32
+  return %2 : f32
+}
+
+// The two new operations derive their flags independently: the subtraction from
+// the division, the exponential from the two exponentials, and neither inherits
+// flags that only the other side carries.
+// CHECK-LABEL: @exp_quotient_mixed_fastmath(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_mixed_fastmath(%arg0: f32, %arg1: f32) -> f32 {
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,arcp,contract> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<nsz,contract> : f32
+  // CHECK: return %[[EXP]]
+  %0 = math.exp %arg0 fastmath<nsz,contract,afn> : f32
+  %1 = math.exp %arg1 fastmath<nsz,contract,ninf> : f32
+  %2 = arith.divf %0, %1 fastmath<reassoc,arcp,contract,nnan> : f32
+  return %2 : f32
+}
+
+// The numerator is still needed, but folding remains profitable because the
+// division becomes a subtraction.
+// CHECK-LABEL: @exp_quotient_numerator_multiple_uses(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_numerator_multiple_uses(%arg0: f32, %arg1: f32) -> (f32, f32) {
+  // CHECK: %[[NUM:.*]] = math.exp %[[ARG0]] fastmath<fast> : f32
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: return %[[EXP]], %[[NUM]]
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  return %2, %0 : f32, f32
+}
+
+// The divisor is still needed, but folding remains profitable because the
+// numerator dies and the division becomes a subtraction.
+// CHECK-LABEL: @exp_quotient_denominator_multiple_uses(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_denominator_multiple_uses(%arg0: f32, %arg1: f32) -> (f32, f32) {
+  // CHECK: %[[DEN:.*]] = math.exp %[[ARG1]] fastmath<fast> : f32
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: return %[[EXP]], %[[DEN]]
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  return %2, %1 : f32, f32
+}
+
+// Negative test - neither exponential dies, so the fold would add a third one.
+// CHECK-LABEL: @exp_quotient_both_multiple_uses(
+func.func @exp_quotient_both_multiple_uses(%arg0: f32, %arg1: f32) -> (f32, f32, f32) {
+  // CHECK-COUNT-2: math.exp
+  // CHECK-NOT: math.exp
+  // CHECK: arith.divf
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  return %2, %0, %1 : f32, f32, f32
+}
+
+// Both operands come from the same exponential, which therefore dies.
+// CHECK-LABEL: @exp_quotient_same_exponential(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @exp_quotient_same_exponential(%arg0: f32) -> f32 {
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG0]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: return %[[EXP]]
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = arith.divf %0, %0 fastmath<fast> : f32
+  return %1 : f32
+}
+
+// Negative test - not enough fastmath flags on the division.
+// CHECK-LABEL: @exp_quotient_not_enough_fastmath(
+func.func @exp_quotient_not_enough_fastmath(%arg0: f32, %arg1: f32, %arg2: f32,
+                                            %arg3: f32) -> (f32, f32) {
+  // CHECK-COUNT-2: arith.divf
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<reassoc> : f32
+  %3 = math.exp %arg2 fastmath<fast> : f32
+  %4 = math.exp %arg3 fastmath<fast> : f32
+  %5 = arith.divf %3, %4 fastmath<arcp> : f32
+  return %2, %5 : f32, f32
+}
+
+// Negative test - mismatched exponential bases.
+// CHECK-LABEL: @exp_quotient_mixed_bases(
+func.func @exp_quotient_mixed_bases(%arg0: f32, %arg1: f32) -> f32 {
+  // CHECK: arith.divf
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp2 %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  return %2 : f32
 }

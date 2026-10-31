@@ -1,4 +1,4 @@
-# RUN: llc -x mir -o - %s -run-pass=twoaddressinstruction,register-coalescer,greedy -verify-regalloc 2>&1 | FileCheck %s
+# RUN: llc -x mir -o - %s -run-pass=two-address-instruction,register-coalescer,greedy -verify-regalloc 2>&1 | FileCheck %s
 
 # The test checks no verification errors happen in the case of
 # statepoint invoke instruction with tied-defs.
@@ -31,7 +31,7 @@
 # CHECK:     EH_LABEL <mcsymbol .Ltmp0>
 # CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 # CHECK:     $edi = MOV32r0 implicit-def dead $eflags
-# CHECK:     dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
+# CHECK:     $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
 # CHECK:     $ecx = COPY %7
 # CHECK:     $r8d = MOV32r0 implicit-def dead $eflags
 # CHECK:     %37:gr64 = lr-split COPY %38
@@ -222,9 +222,9 @@ body:             |
     %1:gr32 = MOV32rm %8, 1, $noreg, 96, $noreg :: (load (s32) from %ir.tmp4, addrspace 1)
     %2:gr32 = MOV32rm %8, 1, $noreg, 160, $noreg :: (load (s32) from %ir.tmp6, addrspace 1)
     %14:gr64 = MOV64rm undef %15:gr64, 1, $noreg, 0, $noreg :: (load (s64) from `ptr addrspace(1) undef`, addrspace 1)
-    %4:gr32 = MOV32rm killed %8, 1, $noreg, 352, $noreg :: (load (s32) from %ir.tmp10, addrspace 1)
+    %4:gr32 = MOV32rm %8, 1, $noreg, 352, $noreg :: (load (s32) from %ir.tmp10, addrspace 1)
     %16:gr64 = MOV64rm %6, 1, $noreg, 96, $noreg :: (load (s64) from %ir.tmp12, addrspace 1)
-    %17:gr64 = MOV64rm killed %6, 1, $noreg, 104, $noreg :: (load (s64) from %ir.tmp15, addrspace 1)
+    %17:gr64 = MOV64rm %6, 1, $noreg, 104, $noreg :: (load (s64) from %ir.tmp15, addrspace 1)
     %5:gr32 = DEC32r %3, implicit-def dead $eflags
     MOV32mr %stack.1, 1, $noreg, 0, $noreg, %7 :: (store (s32) into %stack.1)
     MOV32mr %stack.0, 1, $noreg, 0, $noreg, %5 :: (store (s32) into %stack.0)
@@ -237,10 +237,10 @@ body:             |
     %20:gr32 = MOV32r0 implicit-def dead $eflags
     %21:gr64 = SUBREG_TO_REG %20, %subreg.sub_32bit
     $edi = COPY %20
-    $rsi = COPY killed %21
+    $rsi = COPY %21
     $ecx = COPY %7
-    $r8d = COPY killed %20
-    %9:gr64, %10:gr64, %11:gr64, %12:gr64 = STATEPOINT 1, 16, 5, undef %23:gr64, killed $edi, killed $rsi, undef $edx, killed $ecx, killed $r8d, 2, 0, 2, 0, 2, 11, 1, 4, %stack.0, 0, killed %13, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, 1, 4, %stack.4, 0, 1, 4, %stack.2, 0, killed %14, 1, 4, %stack.5, 0, killed %16, killed %17, 2, 4, %17(tied-def 0), %16(tied-def 1), %13(tied-def 2), %14(tied-def 3), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1), (volatile load store (s32) on %stack.2), (volatile load store (s32) on %stack.3), (volatile load store (s32) on %stack.4), (volatile load store (s32) on %stack.5)
+    $r8d = COPY %20
+    %9:gr64, %10:gr64, %11:gr64, %12:gr64 = STATEPOINT 1, 16, 5, undef %23:gr64, killed $edi, killed $rsi, undef $edx, killed $ecx, killed $r8d, 2, 0, 2, 0, 2, 11, 1, 4, %stack.0, 0, %13, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, 1, 4, %stack.4, 0, 1, 4, %stack.2, 0, %14, 1, 4, %stack.5, 0, %16, %17, 2, 4, %17(tied-def 0), %16(tied-def 1), %13(tied-def 2), %14(tied-def 3), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1), (volatile load store (s32) on %stack.2), (volatile load store (s32) on %stack.3), (volatile load store (s32) on %stack.4), (volatile load store (s32) on %stack.5)
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     EH_LABEL <mcsymbol .Ltmp1>
     JMP_1 %bb.1
@@ -248,8 +248,8 @@ body:             |
   bb.1.bb21:
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %29:gr32 = MOV32ri 10
-    $edi = COPY killed %29
-    dead %30:gr64, dead %31:gr64, dead %32:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, killed $edi, 2, 0, 2, 2, 2, 10, killed %5, killed %11, killed %7, killed %0, killed %1, killed %2, killed %3, killed %4, killed %10, killed %9, 2, 3, %11(tied-def 0), %10(tied-def 1), %9(tied-def 2), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp
+    $edi = COPY %29
+    dead %30:gr64, dead %31:gr64, dead %32:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, killed $edi, 2, 0, 2, 2, 2, 10, %5, %11, %7, %0, %1, %2, %3, %4, %10, %9, 2, 3, %11(tied-def 0), %10(tied-def 1), %9(tied-def 2), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     RET 0
 
@@ -257,15 +257,15 @@ body:             |
     liveins: $rax, $rdx
 
     EH_LABEL <mcsymbol .Ltmp2>
-    MOV32mr %stack.1, 1, $noreg, 0, $noreg, killed %0 :: (store (s32) into %stack.1)
-    MOV32mr %stack.0, 1, $noreg, 0, $noreg, killed %7 :: (store (s32) into %stack.0)
-    MOV32mr %stack.2, 1, $noreg, 0, $noreg, killed %1 :: (store (s32) into %stack.2)
-    MOV32mr %stack.3, 1, $noreg, 0, $noreg, killed %3 :: (store (s32) into %stack.3)
-    MOV32mr %stack.4, 1, $noreg, 0, $noreg, killed %4 :: (store (s32) into %stack.4)
+    MOV32mr %stack.1, 1, $noreg, 0, $noreg, %0 :: (store (s32) into %stack.1)
+    MOV32mr %stack.0, 1, $noreg, 0, $noreg, %7 :: (store (s32) into %stack.0)
+    MOV32mr %stack.2, 1, $noreg, 0, $noreg, %1 :: (store (s32) into %stack.2)
+    MOV32mr %stack.3, 1, $noreg, 0, $noreg, %3 :: (store (s32) into %stack.3)
+    MOV32mr %stack.4, 1, $noreg, 0, $noreg, %4 :: (store (s32) into %stack.4)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %27:gr32 = MOV32ri -271
-    $edi = COPY killed %27
-    dead %28:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, killed $edi, 2, 0, 2, 0, 2, 6, 1, 4, %stack.0, 0, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, killed %12, 1, 4, %stack.4, 0, 2, 1, %12(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1), (volatile load store (s32) on %stack.2), (volatile load store (s32) on %stack.3), (volatile load store (s32) on %stack.4)
+    $edi = COPY %27
+    dead %28:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @quux, killed $edi, 2, 0, 2, 0, 2, 6, 1, 4, %stack.0, 0, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, %12, 1, 4, %stack.4, 0, 2, 1, %12(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1), (volatile load store (s32) on %stack.2), (volatile load store (s32) on %stack.3), (volatile load store (s32) on %stack.4)
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 
 ...

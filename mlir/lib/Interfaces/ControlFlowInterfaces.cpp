@@ -15,6 +15,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/DebugLog.h"
 
 using namespace mlir;
@@ -221,11 +222,34 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
   return success();
 }
 
+/// Return the regions in `successors`. Branches back to the parent op are left
+/// out.
+static SmallVector<Region *>
+filterRegionSuccessors(ArrayRef<RegionSuccessor> successors) {
+  SmallVector<Region *> regions;
+  for (RegionSuccessor successor : successors)
+    if (successor.isRegion())
+      regions.push_back(successor.getSuccessor());
+  return regions;
+}
+
+/// Return the regions that the terminators of `region` may branch to.
+///
+/// This asks the parent op, not each terminator. A terminator's own
+/// `getSuccessorRegions` can only narrow the parent's answer using constant
+/// operands, and we know no operand values here.
+static SmallVector<Region *> getSuccessorRegionsOf(Region *region) {
+  SmallVector<RegionSuccessor> successors;
+  cast<RegionBranchOpInterface>(region->getParentOp())
+      .getSuccessorRegions(*region, successors);
+  LDBG() << "Region #" << region->getRegionNumber() << " has "
+         << successors.size() << " successors";
+  return filterRegionSuccessors(successors);
+}
+
 /// Stop condition for `traverseRegionGraph`. The traversal is interrupted if
-/// this function returns "true" for a successor region. The first parameter is
-/// the successor region. The second parameter indicates all already visited
-/// regions.
-using StopConditionFn = function_ref<bool(Region *, ArrayRef<bool> visited)>;
+/// this function returns "true" for a successor region.
+using StopConditionFn = function_ref<bool(Region *)>;
 
 /// Traverse the region graph starting at `begin`. The traversal is interrupted
 /// if `stopCondition` evaluates to "true" for a successor region. In that case,
@@ -242,36 +266,7 @@ static bool traverseRegionGraph(Region *begin,
   LDBG() << "Initialized visited array with " << op->getNumRegions()
          << " regions";
 
-  // Retrieve all successors of the region and enqueue them in the worklist.
-  SmallVector<Region *> worklist;
-  auto enqueueAllSuccessors = [&](Region *region) {
-    LDBG() << "Enqueuing successors for region #" << region->getRegionNumber();
-    SmallVector<Attribute> operandAttributes(op->getNumOperands());
-    for (Block &block : *region) {
-      if (block.empty())
-        continue;
-      auto terminator =
-          dyn_cast<RegionBranchTerminatorOpInterface>(block.back());
-      if (!terminator)
-        continue;
-      SmallVector<RegionSuccessor> successors;
-      operandAttributes.resize(terminator->getNumOperands());
-      terminator.getSuccessorRegions(operandAttributes, successors);
-      LDBG() << "Found " << successors.size()
-             << " successors from terminator in block";
-      for (RegionSuccessor successor : successors) {
-        if (successor.isRegion()) {
-          worklist.push_back(successor.getSuccessor());
-          LDBG() << "Added region #"
-                 << successor.getSuccessor()->getRegionNumber()
-                 << " to worklist";
-        } else {
-          LDBG() << "Skipping operation successor";
-        }
-      }
-    }
-  };
-  enqueueAllSuccessors(begin);
+  SmallVector<Region *> worklist = getSuccessorRegionsOf(begin);
   LDBG() << "Initial worklist size: " << worklist.size();
 
   // Process all regions in the worklist via DFS.
@@ -280,7 +275,9 @@ static bool traverseRegionGraph(Region *begin,
     LDBG() << "Processing region #" << nextRegion->getRegionNumber()
            << " from worklist (remaining: " << worklist.size() << ")";
 
-    if (stopConditionFn(nextRegion, visited)) {
+    // Check the stop condition before the visited set. `begin` starts out
+    // visited, and reaching it again must still stop the traversal.
+    if (stopConditionFn(nextRegion)) {
       LDBG() << "Stop condition met for region #"
              << nextRegion->getRegionNumber() << ", returning true";
       return true;
@@ -297,7 +294,7 @@ static bool traverseRegionGraph(Region *begin,
     visited[nextRegion->getRegionNumber()] = true;
     LDBG() << "Marking region #" << nextRegion->getRegionNumber()
            << " as visited";
-    enqueueAllSuccessors(nextRegion);
+    llvm::append_range(worklist, getSuccessorRegionsOf(nextRegion));
   }
 
   LDBG() << "Traversal completed, returning false";
@@ -309,11 +306,10 @@ static bool traverseRegionGraph(Region *begin,
 static bool isRegionReachable(Region *begin, Region *r) {
   assert(begin->getParentOp() == r->getParentOp() &&
          "expected that both regions belong to the same op");
-  return traverseRegionGraph(begin,
-                             [&](Region *nextRegion, ArrayRef<bool> visited) {
-                               // Interrupt traversal if `r` was reached.
-                               return nextRegion == r;
-                             });
+  return traverseRegionGraph(begin, [&](Region *nextRegion) {
+    // Interrupt traversal if `r` was reached.
+    return nextRegion == r;
+  });
 }
 
 /// Return `true` if `a` and `b` are in mutually exclusive regions.
@@ -401,39 +397,67 @@ bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
   return isRepetitive;
 }
 
+/// Return "true" if a cycle in the region graph is reachable from one of
+/// `entryRegions`, which must belong to the same op.
+///
+/// This is an iterative depth-first search. A region is on the DFS path from
+/// the time the search enters it until every region reachable from it is
+/// finished. Reaching a region on the path closes a cycle. Reaching a finished
+/// region does not. That happens, for example, when two terminators branch to
+/// the same successor region.
+static bool canReachCycle(ArrayRef<Region *> entryRegions) {
+  // With no entry regions, nothing is reachable. `states` below also needs an
+  // entry region to get the op from.
+  if (entryRegions.empty())
+    return false;
+  enum class State : uint8_t { Unvisited, OnPath, Finished };
+  SmallVector<State> states(
+      entryRegions.front()->getParentOp()->getNumRegions(), State::Unvisited);
+
+  // Each stack item enters its region, or leaves it if the flag is set.
+  // Entering a region pushes its leave item first and the enter items of its
+  // successors on top. The leave item pops only after all of those finish, so
+  // the region stays on the path until then.
+  using StackItem = llvm::PointerIntPair<Region *, 1, bool>;
+  SmallVector<StackItem> stack;
+  for (Region *region : entryRegions)
+    stack.push_back(StackItem(region, /*isLeave=*/false));
+  while (!stack.empty()) {
+    StackItem item = stack.pop_back_val();
+    Region *region = item.getPointer();
+    bool isLeave = item.getInt();
+    State &state = states[region->getRegionNumber()];
+    if (isLeave) {
+      state = State::Finished;
+      continue;
+    }
+    if (state == State::OnPath) {
+      LDBG() << "Found loop through region #" << region->getRegionNumber();
+      return true;
+    }
+    if (state == State::Finished)
+      continue;
+
+    state = State::OnPath;
+    stack.push_back(StackItem(region, /*isLeave=*/true));
+    for (Region *successor : getSuccessorRegionsOf(region))
+      stack.push_back(StackItem(successor, /*isLeave=*/false));
+  }
+  return false;
+}
+
 bool RegionBranchOpInterface::hasLoop() {
   LDBG() << "Checking if operation " << getOperation()->getName()
          << " has loops";
 
-  SmallVector<RegionSuccessor> entryRegions;
-  getSuccessorRegions(RegionBranchPoint::parent(), entryRegions);
+  SmallVector<RegionSuccessor> entrySuccessors;
+  getSuccessorRegions(RegionBranchPoint::parent(), entrySuccessors);
+  SmallVector<Region *> entryRegions = filterRegionSuccessors(entrySuccessors);
   LDBG() << "Found " << entryRegions.size() << " entry regions";
 
-  for (RegionSuccessor successor : entryRegions) {
-    if (successor.isRegion()) {
-      LDBG() << "Checking entry region #"
-             << successor.getSuccessor()->getRegionNumber() << " for loops";
-
-      bool hasLoop =
-          traverseRegionGraph(successor.getSuccessor(),
-                              [](Region *nextRegion, ArrayRef<bool> visited) {
-                                // Interrupt traversal if the region was already
-                                // visited.
-                                return visited[nextRegion->getRegionNumber()];
-                              });
-
-      if (hasLoop) {
-        LDBG() << "Found loop in entry region #"
-               << successor.getSuccessor()->getRegionNumber();
-        return true;
-      }
-    } else {
-      LDBG() << "Skipping operation successor";
-    }
-  }
-
-  LDBG() << "No loops found in operation";
-  return false;
+  bool hasLoop = canReachCycle(entryRegions);
+  LDBG() << "Operation " << (hasLoop ? "has" : "has no") << " loops";
+  return hasLoop;
 }
 
 OperandRange
@@ -722,9 +746,6 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    assert(!op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-           "isolated-from-above ops are not supported");
-
     // Compute the mapping of successor inputs to successor operands.
     auto regionBranchOp = cast<RegionBranchOpInterface>(op);
     RegionBranchInverseSuccessorMapping inputToOperands;
@@ -732,6 +753,7 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
 
     // Try to replace the uses of each successor input one-by-one.
     bool changed = false;
+    const bool isIsolated = op->hasTrait<OpTrait::IsIsolatedFromAbove>();
     for (Value value : inputToOperands.keys()) {
       // Nothing to do for successor inputs that are already dead.
       if (value.use_empty())
@@ -744,8 +766,28 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
               /*maxReachableValues=*/1)) ||
           reachableValues.empty())
         continue;
-      assert(*reachableValues.begin() != value &&
+      Value replacement = *reachableValues.begin();
+      assert(replacement != value &&
              "successor inputs are supposed to be excluded");
+      // A value inside an isolated region cannot be replaced with a value from
+      // another region, even if the replacement dominates its uses. Op results
+      // are in the parent region and do not cross this isolation boundary.
+      // Successor inputs are direct region arguments or results of this op.
+      // Valid input IR already prevents captures across nested isolation
+      // boundaries, so only this op's boundary needs an additional check.
+      // Example (isolated_op has IsolatedFromAbove):
+      // %r = isolated_op %x {
+      // ^bb0(%arg: ...):
+      //   use(%arg)
+      //   yield %arg
+      // }
+      // use(%r)
+      // Replacing %arg with %x would introduce a capture inside isolated_op.
+      // Replacing %r with %x changes only the outer use and is allowed.
+      Region *valueRegion = value.getParentRegion();
+      if (isIsolated && valueRegion->getParentOp() == op &&
+          replacement.getParentRegion() != valueRegion)
+        continue;
       // Do not replace `value` with the found reachable value if doing so
       // would violate dominance. Example:
       // %r = scf.execute_region ... {
@@ -755,9 +797,9 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
       // use(%r)
       // In the above example, reachableValues(%r) = {%a}, but %a cannot be
       // used as a replacement for %r due to dominance / scope.
-      if (!isDefinedBefore(regionBranchOp, *reachableValues.begin(), value))
+      if (!isDefinedBefore(regionBranchOp, replacement, value))
         continue;
-      rewriter.replaceAllUsesWith(value, *reachableValues.begin());
+      rewriter.replaceAllUsesWith(value, replacement);
       changed = true;
     }
     return success(changed);
@@ -845,9 +887,6 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    assert(!op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-           "isolated-from-above ops are not supported");
-
     // Compute tied values: values that must come as a set. If you remove one,
     // you must remove all. If a successor op operand is forwarded to two
     // successor inputs %a and %b, both %a and %b are in the same set.
@@ -923,7 +962,7 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
     for (auto &pair : operandsToRemove) {
       Operation *op = pair.first;
       BitVector &operands = pair.second;
-      rewriter.modifyOpInPlace(op, [&]() { op->eraseOperands(operands); });
+      rewriter.eraseOperands(op, operands);
     }
 
     // Erase block arguments.
@@ -995,9 +1034,6 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    assert(!op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-           "isolated-from-above ops are not supported");
-
     // Collect all successor inputs and sort them. When dropping the uses of a
     // successor input, we'd like to also drop the uses of the same tied
     // successor inputs. Otherwise, a set of tied successor inputs may not

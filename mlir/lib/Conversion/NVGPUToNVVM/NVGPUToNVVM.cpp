@@ -319,9 +319,9 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
 static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
   Type elType = getElementTypeOrSelf(t);
   if (elType.isInteger(8))
-    return NVVM::MMATypes::s8;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u8 : NVVM::MMATypes::s8;
   if (elType.isInteger(4))
-    return NVVM::MMATypes::s4;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u4 : NVVM::MMATypes::s4;
   if (elType.isF16())
     return NVVM::MMATypes::f16;
   if (elType.isBF16())
@@ -353,7 +353,7 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     std::array<int64_t, 3> gemmShape = op.getMmaShapeAsArray();
 
     // Tensor Cores (mma.sync) on F32 works only with TensorFloat32 (TF32).
-    bool tf32Enabled = op->hasAttr(op.getTf32EnabledAttrName());
+    bool tf32Enabled = op.getTf32Enabled().value_or(false);
     if (aType.getElementType().isF32() && !tf32Enabled)
       return failure();
 
@@ -566,6 +566,7 @@ static FailureOr<LLVM::InlineAsmOp> emitMmaSparseSyncOpAsm(
                                    /*has_side_effects=*/true,
                                    /*is_align_stack=*/false,
                                    LLVM::TailCallKind::None,
+                                   /*convergent=*/false,
                                    /*asm_dialect=*/asmDialectAttr,
                                    /*operand_attrs=*/ArrayAttr());
 }
@@ -599,7 +600,7 @@ struct NVGPUMmaSparseSyncLowering
           "could not infer the PTX type for the accumulator/result");
 
     // Same as `mma.sync`, F32 works only with TensorFloat32 (TF32).
-    bool tf32Enabled = op->hasAttr(op.getTf32EnabledAttrName());
+    bool tf32Enabled = op.getTf32Enabled().value_or(false);
     if (aType.getElementType().isF32() && !tf32Enabled)
       return failure();
 
@@ -846,7 +847,7 @@ struct NVGPUMBarrierInitLowering
     Value barrier = getMbarrierPtr(b, mbarrierType, adaptor.getBarriers(),
                                    adaptor.getMbarId(), rewriter);
     Value count = truncToI32(b, adaptor.getCount());
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count,
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count, 0,
                                                       adaptor.getPredicate());
     return success();
   }
@@ -863,7 +864,7 @@ struct NVGPUMBarrierArriveLowering
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier);
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier, Value{});
     return success();
   }
 };
@@ -1206,7 +1207,7 @@ struct NVGPUWarpgroupMmaOpLowering
   /// This is a helper class to generate required NVVM Ops for warp-group level
   /// matrix multiplication.
   /// When the given GEMM shape is larger than the shape of
-  /// a wgmma instrution in PTX, it can generate multiple NVVM::WgmmaMmaAsyncOp
+  /// a wgmma instruction in PTX, it can generate multiple NVVM::WgmmaMmaAsyncOp
   /// Op(s), group and execute them asynchronously. The class also handles
   /// waiting for completion and iterates through WarpgroupMatrixDescriptor to
   /// create descriptors for each instruction.
@@ -1248,7 +1249,7 @@ struct NVGPUWarpgroupMmaOpLowering
       } else if (inputElemType.isF16() || inputElemType.isBF16()) {
         wgmmaK = 16;
       } else if (isa<Float8E4M3FNType, Float8E5M2Type>(inputElemType) ||
-                 inputElemType.isInteger(16)) {
+                 inputElemType.isInteger(8)) {
         wgmmaK = 32;
       } else if (inputElemType.isInteger(1)) {
         wgmmaK = 256;

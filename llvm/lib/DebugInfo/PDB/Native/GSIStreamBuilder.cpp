@@ -28,7 +28,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <vector>
 
@@ -55,9 +54,6 @@ struct llvm::pdb::GSIHashStreamBuilder {
 
   uint32_t calculateSerializedLength() const;
   Error commit(BinaryStreamWriter &Writer);
-
-  void finalizePublicBuckets();
-  void finalizeGlobalBuckets(uint32_t RecordZeroOffset);
 
   // Assign public and global symbol records into hash table buckets.
   // Modifies the list of records to store the bucket index, but does not

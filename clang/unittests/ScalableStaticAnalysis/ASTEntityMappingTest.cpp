@@ -13,6 +13,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
 
@@ -335,6 +336,39 @@ TEST(ASTEntityMappingTest, FunctionReturnRedeclaration) {
     ASSERT_TRUE(Name.has_value());
     EXPECT_EQ(*Name1, *Name);
   }
+}
+
+// getQualifiedEntityName / getQualifiedEntityNameForReturn tests
+
+TEST(ASTEntityMappingTest, QualifiedNameFollowsLinkage) {
+  auto AST = tooling::buildASTFromCode(R"cpp(
+    void ext() {}
+    static void internal() {}
+  )cpp");
+  auto &Ctx = AST->getASTContext();
+
+  const auto *Ext = findFnByName("ext", Ctx);
+  const auto *Internal = findFnByName("internal", Ctx);
+  ASSERT_TRUE(Ext);
+  ASSERT_TRUE(Internal);
+
+  auto TUNamespace = NestedBuildNamespace::makeCompilationUnit("tu1.cpp");
+  auto LUNamespace = NestedBuildNamespace::makeLinkUnit("lu1");
+  auto BareExt = getEntityName(Ext);
+  auto BareInternal = getEntityName(Internal);
+  auto BareExtReturn = getEntityNameForReturn(Ext);
+  ASSERT_TRUE(BareExt && BareInternal && BareExtReturn);
+
+  // External linkage is qualified with the LU namespace only, not the TU's.
+  ASSERT_TRUE(getQualifiedEntityName(Ext, TUNamespace, LUNamespace) ==
+              BareExt->makeQualified(LUNamespace));
+  // Internal linkage is qualified with the TU namespace first, then the LU's.
+  ASSERT_TRUE(
+      getQualifiedEntityName(Internal, TUNamespace, LUNamespace) ==
+      BareInternal->makeQualified(TUNamespace).makeQualified(LUNamespace));
+  // getQualifiedEntityNameForReturn follows the same linkage-based rule.
+  ASSERT_TRUE(getQualifiedEntityNameForReturn(Ext, TUNamespace, LUNamespace) ==
+              BareExtReturn->makeQualified(LUNamespace));
 }
 
 } // namespace

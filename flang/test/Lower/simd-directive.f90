@@ -14,4 +14,4 @@ end subroutine
 ! CHECK: #[[loop_vec:.*]] = #llvm.loop_vectorize<disable = false>
 ! CHECK: #[[loop_annotate:.*]] = #llvm.loop_annotation<vectorize = #[[loop_vec]]>
 
-! CHECK :%[[.*]] = fir.do_loop %[[.*]] = %[[.*]] to %[[.*]] step %[[.*]] iter_args(%arg1 = %[[.*]]) -> (i32) attributes {loopAnnotation = #[[loop_annontate]]} {
+! CHECK :%[[.*]] = fir.do_loop %[[.*]] = %[[.*]] to %[[.*]] step %[[.*]] iter_args(%arg1 = %[[.*]]) -> (i32) <{loopAnnotation = #[[loop_annontate]]}> {

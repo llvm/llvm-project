@@ -11,11 +11,9 @@
 #include "SIShrinkInstructions.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 
 #define DEBUG_TYPE "si-shrink-instructions"
 
@@ -1019,12 +1017,9 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       // If there is no chance we will shrink it and use VCC as sdst to get
       // a 32 bit form try to replace dead sdst with NULL.
-      if (TII->isVOP3(MI.getOpcode())) {
-        Changed |= tryReplaceDeadSDST(MI);
-        if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
-          continue;
-        }
-      }
+      Changed |= tryReplaceDeadSDST(MI);
+      if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
+        continue;
 
       if (!TII->canShrink(MI, *MRI)) {
         // Try commuting the instruction and see if that enables us to shrink
@@ -1118,10 +1113,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       // Copy extra operands not present in the instruction definition.
       copyExtraImplicitOps(*Inst32, MI);
-
-      // Copy deadness from the old explicit vcc def to the new implicit def.
-      if (SDst && SDst->isDead())
-        Inst32->findRegisterDefOperand(VCCReg, /*TRI=*/nullptr)->setIsDead();
 
       MI.eraseFromParent();
       foldImmediates(*Inst32);

@@ -1,0 +1,13 @@
+## Itanium counterpart of registry-microsoft.test: a reference to the
+## getRegistryLinkListInstance<R>() accessor counts as a reference to Registry,
+## so its explicitly instantiated members that are defined once are exported.
+## Symbols are printed in input order, so the checks are ordered.
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=x86_64-linux-gnu -filetype=obj %S/Inputs/lib-itanium.s -o %t/lib.o
+# RUN: llvm-mc -triple=x86_64-linux-gnu -filetype=obj %S/Inputs/user-itanium.s -o %t/user.o
+# RUN: %extract_symbols --mangling=itanium %t/lib.o %t/user.o \
+# RUN:   | FileCheck %s --implicit-check-not=Registry
+
+# CHECK:      _ZN4llvm6detail27getRegistryLinkListInstanceINS_8RegistryIN5clang15PluginASTActionEJEEEEERNS0_23RegistryLinkListStorageIT_EEv
+# CHECK-NEXT: _ZN4llvm8RegistryIN5clang15PluginASTActionEJEE8add_nodeEPNS3_4nodeE

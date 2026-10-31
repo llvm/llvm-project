@@ -8,7 +8,7 @@
 
 #include "mlir-c/Dialect/Bufferization.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationDialect.h"
 
 using namespace mlir::bufferization;
 

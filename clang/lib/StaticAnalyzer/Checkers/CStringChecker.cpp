@@ -86,17 +86,13 @@ class CStringChecker
   mutable StringRef CurrentFunctionDescription;
 
 public:
-  // FIXME: The bug types emitted by this checker family have confused garbage
-  // in their Description and Category fields (e.g. `categories::UnixAPI` is
-  // passed as the description in several cases and `uninitialized` is mistyped
-  // as `unitialized`). This should be cleaned up.
-  CheckerFrontendWithBugType NullArg{categories::UnixAPI};
+  CheckerFrontendWithBugType NullArg{"Null pointer argument"};
   CheckerFrontendWithBugType OutOfBounds{"Out-of-bound array access"};
-  CheckerFrontendWithBugType BufferOverlap{categories::UnixAPI,
+  CheckerFrontendWithBugType BufferOverlap{"Overlapping buffers",
                                            "Improper arguments"};
-  CheckerFrontendWithBugType NotNullTerm{categories::UnixAPI};
+  CheckerFrontendWithBugType NotNullTerm{"Not null-terminated string"};
   CheckerFrontendWithBugType UninitializedRead{
-      "Accessing unitialized/garbage values"};
+      "Accessing uninitialized/garbage values"};
 
   StringRef getDebugTag() const override { return "MallocChecker"; }
 
@@ -835,7 +831,7 @@ void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
                                     const Stmt *Second) const {
   assert(BufferOverlap.isEnabled() &&
          "Can't emit from a checker that is not enabled!");
-  ExplodedNode *N = C.generateErrorNode(state);
+  ExplodedNode *N = C.addSink(state);
   if (!N)
     return;
 
@@ -852,7 +848,7 @@ void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
                                     const Stmt *S, StringRef WarningMsg) const {
   assert(NullArg.isEnabled() &&
          "Can't emit from a checker that is not enabled!");
-  if (ExplodedNode *N = C.generateErrorNode(State)) {
+  if (ExplodedNode *N = C.addSink(State)) {
     auto Report =
         std::make_unique<PathSensitiveBugReport>(NullArg, WarningMsg, N);
     Report->addRange(S->getSourceRange());
@@ -868,7 +864,7 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                                               StringRef Msg) const {
   assert(UninitializedRead.isEnabled() &&
          "Can't emit from a checker that is not enabled!");
-  if (ExplodedNode *N = C.generateErrorNode(State)) {
+  if (ExplodedNode *N = C.addSink(State)) {
     auto Report =
         std::make_unique<PathSensitiveBugReport>(UninitializedRead, Msg, N);
     Report->addNote("Other elements might also be undefined",
@@ -885,7 +881,7 @@ void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
                                         StringRef WarningMsg) const {
   assert(OutOfBounds.isEnabled() &&
          "Can't emit from a checker that is not enabled!");
-  if (ExplodedNode *N = C.generateErrorNode(State)) {
+  if (ExplodedNode *N = C.addSink(State)) {
     // FIXME: It would be nice to eventually make this diagnostic more clear,
     // e.g., by referencing the original declaration or by saying *why* this
     // reference is outside the range.
@@ -2941,6 +2937,11 @@ void CStringChecker::evalMemset(CheckerContext &C,
   const StackFrame *SF = C.getStackFrame();
   SVal SizeVal = C.getSVal(Size.Expression);
   QualType SizeTy = Size.Expression->getType();
+
+  // Avoid assertion failure in the corner case when we see a function named
+  // 'memset' with a nonstandard declaration.
+  if (!SizeTy->isUnsignedIntegerType() || !Size.Expression->isPRValue())
+    return;
 
   ProgramStateRef ZeroSize, NonZeroSize;
   std::tie(ZeroSize, NonZeroSize) = assumeZero(C, State, SizeVal, SizeTy);

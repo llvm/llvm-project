@@ -11,6 +11,7 @@
 #if LIBFUZZER_APPLE
 #include "FuzzerCommand.h"
 #include "FuzzerIO.h"
+#include <TargetConditionals.h>
 #include <mutex>
 #include <signal.h>
 #include <spawn.h>
@@ -18,6 +19,9 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#if TARGET_OS_OSX
+#include <libproc.h>
+#endif
 
 // There is no header for this on macOS so declare here
 extern "C" char **environ;
@@ -168,6 +172,13 @@ void DiscardOutput(int Fd) {
 void SetThreadName(std::thread &thread, const std::string &name) {
   // TODO ?
   // Darwin allows to set the name only on the current thread it seems
+}
+
+void PlatformInit() {
+#if TARGET_OS_OSX
+  // Let the kernel kill us when OOM.
+  proc_setpcontrol(PROC_SETPC_TERMINATE);
+#endif
 }
 
 } // namespace fuzzer

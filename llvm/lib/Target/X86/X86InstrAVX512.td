@@ -1468,14 +1468,14 @@ def : Pat<(vselect_mask VK8WM:$mask,
           (VBROADCASTI32X4Z256rmk VR256X:$src0, VK8WM:$mask, addr:$src)>;
 }
 
-let Predicates = [HasBF16] in {
+let Predicates = [HasBWI] in {
   def : Pat<(v32bf16 (X86SubVBroadcastld256 addr:$src)),
             (VBROADCASTF64X4Zrm addr:$src)>;
   def : Pat<(v32bf16 (X86SubVBroadcastld128 addr:$src)),
             (VBROADCASTF32X4Zrm addr:$src)>;
 }
 
-let Predicates = [HasBF16, HasVLX] in
+let Predicates = [HasBWI, HasVLX] in
   def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
             (VBROADCASTF32X4Z256rm addr:$src)>;
 
@@ -2732,6 +2732,20 @@ def : Pat<(i32 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
 def : Pat<(i64 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
           (INSERT_SUBREG (IMPLICIT_DEF), (COPY_TO_REGCLASS VK8:$src, GR32), sub_32bit)>;
 
+// zext(and(bitcast(mask), C)) --> and(anyext(bitcast(mask)), zext(C)). PR120389.
+def : Pat<(i32 (zext (and (i8 (bitconvert (v8i1 VK8:$src))), imm:$c))),
+          (AND32ri (COPY_TO_REGCLASS VK8:$src, GR32), (i32 (GetLo32XForm imm:$c)))>;
+def : Pat<(i64 (zext (and (i8 (bitconvert (v8i1 VK8:$src))), imm:$c))),
+          (SUBREG_TO_REG
+            (AND32ri (COPY_TO_REGCLASS VK8:$src, GR32), (i32 (GetLo32XForm imm:$c))),
+            sub_32bit)>;
+def : Pat<(i32 (zext (and (i16 (bitconvert (v16i1 VK16:$src))), imm:$c))),
+          (AND32ri (COPY_TO_REGCLASS VK16:$src, GR32), (i32 (GetLo32XForm imm:$c)))>;
+def : Pat<(i64 (zext (and (i16 (bitconvert (v16i1 VK16:$src))), imm:$c))),
+          (SUBREG_TO_REG
+            (AND32ri (COPY_TO_REGCLASS VK16:$src, GR32), (i32 (GetLo32XForm imm:$c))),
+            sub_32bit)>;
+
 def : Pat<(v32i1 (bitconvert (i32 GR32:$src))),
           (COPY_TO_REGCLASS GR32:$src, VK32)>;
 def : Pat<(i32 (bitconvert (v32i1 VK32:$src))),
@@ -3126,6 +3140,11 @@ let Predicates = [HasAVX512, NoVLX] in {
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPS", v4f32x_info, v16f32_info>;
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPD", v4f64x_info, v8f64_info>;
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPD", v2f64x_info, v8f64_info>;
+}
+
+let Predicates = [HasFP16, NoVLX] in {
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v16f16x_info, v32f16_info>;
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v8f16x_info, v32f16_info>;
 }
 
 let Predicates = [HasBWI, NoVLX] in {
@@ -4252,6 +4271,11 @@ def : Pat<(f16 (X86selects VK1WM:$mask, (f16 FR16X:$src1), (f16 FR16X:$src2))),
 def : Pat<(f16 (X86selects VK1WM:$mask, (f16 FR16X:$src1), fp16imm0)),
           (COPY_TO_REGCLASS (v8f16 (VMOVSHZrrkz VK1WM:$mask, (v8f16 (IMPLICIT_DEF)),
            (v8f16 (COPY_TO_REGCLASS FR16X:$src1, VR128X)))), FR16X)>;
+
+def : Pat<(v8f16 (X86selects VK1WM:$mask, (v8f16 VR128X:$src1), (v8f16 VR128X:$src2))),
+          (VMOVSHZrrk VR128X:$src2, VK1WM:$mask, VR128X:$src1, VR128X:$src1)>;
+def : Pat<(v8f16 (X86selects VK1WM:$mask, (v8f16 VR128X:$src1), (v8f16 immAllZerosV))),
+          (VMOVSHZrrkz VK1WM:$mask, VR128X:$src1, VR128X:$src1)>;
 }
 
 defm : avx512_store_scalar_lowering_subreg2<"VMOVSSZ", avx512vl_f32_info,
@@ -5813,6 +5837,11 @@ defm VXOR  : avx512_fp_binop_p<0x57, "vxor", null_frag, null_frag, HasDQI,
                                SchedWriteFLogicSizes, 1>;
 }
 
+defm : avx512_binary_lowering<"VADDPH", fadd, X86VBroadcastld16, avx512vl_f16_info, HasFP16>;
+defm : avx512_binary_lowering<"VSUBPH", fsub, X86VBroadcastld16, avx512vl_f16_info, HasFP16>;
+defm : avx512_binary_lowering<"VMULPH", fmul, X86VBroadcastld16, avx512vl_f16_info, HasFP16>;
+defm : avx512_binary_lowering<"VDIVPH", fdiv, X86VBroadcastld16, avx512vl_f16_info, HasFP16>;
+
 multiclass avx512_fp_scalef_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               X86FoldableSchedWrite sched, X86VectorVTInfo _> {
   let ExeDomain = _.ExeDomain, Uses = [MXCSR], mayRaiseFPException = 1 in {
@@ -6650,6 +6679,29 @@ defm VFNMADD213   : avx512_fma3p_213_f<0xAC, "vfnmadd213", X86any_Fnmadd,
                                        X86Fnmadd, X86FnmaddRnd>;
 defm VFNMSUB213   : avx512_fma3p_213_f<0xAE, "vfnmsub213", X86any_Fnmsub,
                                        X86Fnmsub, X86FnmsubRnd>;
+
+multiclass avx512_fma3p_213_lowering<string InstrStr, SDNode OpNode,
+                                     AVX512VLVectorVTInfo _, Predicate prd> {
+  let Predicates = [prd, NoVLX] in
+  foreach info = [_.info128, _.info256] in
+    def : Pat<(info.VT (OpNode info.RC:$src2, info.RC:$src1, info.RC:$src3)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zr")
+                  (INSERT_SUBREG (_.info512.VT (IMPLICIT_DEF)), info.RC:$src1,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (_.info512.VT (IMPLICIT_DEF)), info.RC:$src2,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (_.info512.VT (IMPLICIT_DEF)), info.RC:$src3,
+                                 info.SubRegIdx)),
+                info.SubRegIdx)>;
+}
+
+defm : avx512_fma3p_213_lowering<"VFMADD213PH", fma, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFMSUB213PH", X86Fmsub, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFMADDSUB213PH", X86Fmaddsub, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFMSUBADD213PH", X86Fmsubadd, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFNMADD213PH", X86Fnmadd, avx512vl_f16_info, HasFP16>;
+defm : avx512_fma3p_213_lowering<"VFNMSUB213PH", X86Fnmsub, avx512vl_f16_info, HasFP16>;
 
 
 multiclass avx512_fma3p_231_rm<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
@@ -10446,7 +10498,7 @@ multiclass avx512_gather_scatter_prefetch<bits<8> opc, Format F, string OpcodeSt
                        RegisterClass KRC, X86MemOperand memop> {
   let mayLoad = 1, mayStore = 1 in
   def m  : AVX5128I<opc, F, (outs), (ins KRC:$mask, memop:$src),
-            !strconcat(OpcodeStr, "\t{$src {${mask}}|{${mask}}, $src}"), []>,
+            !strconcat(OpcodeStr, "\t{$src {${mask}}|$src {${mask}}}"), []>,
             EVEX, EVEX_K, Sched<[WriteLoad]>;
 }
 
@@ -12618,7 +12670,7 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (ins VTI.RC:$src2, VTI.MemOp:$src3), OpStr,
                                    "$src3, $src2", "$src2, $src3",
                                    (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
-                                            (VTI.VT (VTI.LdFrag addr:$src3))))>,
+                                            (load addr:$src3)))>,
                                    EVEX, VVVV, EVEX_CD8<32, CD8VF>, T8,
                                    Sched<[sched.Folded, sched.ReadAfterFold,
                                           sched.ReadAfterFold]>;
@@ -12626,8 +12678,9 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (ins VTI.RC:$src2, VTI.ScalarMemOp:$src3),
                                    OpStr, "${src3}"#VTI.BroadcastStr#", $src2",
                                    "$src2, ${src3}"#VTI.BroadcastStr,
-                                   (OpNode VTI.RC:$src1, VTI.RC:$src2,
-                                    (VTI.VT (VTI.BroadcastLdFrag addr:$src3)))>,
+                                   (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
+                                            (bitconvert
+                                             (VTI.VT (VTI.BroadcastLdFrag addr:$src3)))))>,
                                    EVEX, VVVV, EVEX_CD8<32, CD8VF>, EVEX_B,
                                    T8, Sched<[sched.Folded, sched.ReadAfterFold,
                                                 sched.ReadAfterFold]>;
@@ -12994,6 +13047,15 @@ let Predicates = [HasBF16, HasVLX] in {
   def : Pat<(v8bf16 (int_x86_vcvtneps2bf16256 (loadv8f32 addr:$src))),
             (VCVTNEPS2BF16Z256rm addr:$src)>;
 
+  def : Pat<(v8bf16 (X86vfpround (v8f32 VR256X:$src))),
+            (VCVTNEPS2BF16Z256rr VR256X:$src)>;
+  def : Pat<(v8bf16 (X86vfpround (loadv8f32 addr:$src))),
+            (VCVTNEPS2BF16Z256rm addr:$src)>;
+
+  // TODO: No scalar broadcast due to we don't support legal scalar bf16 so far.
+}
+
+let Predicates = [HasBWI, HasVLX] in {
   def : Pat<(v8bf16 (X86VBroadcastld16 addr:$src)),
             (VPBROADCASTWZ128rm addr:$src)>;
   def : Pat<(v16bf16 (X86VBroadcastld16 addr:$src)),
@@ -13003,22 +13065,17 @@ let Predicates = [HasBF16, HasVLX] in {
             (VPBROADCASTWZ128rr VR128X:$src)>;
   def : Pat<(v16bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
             (VPBROADCASTWZ256rr VR128X:$src)>;
-
-  def : Pat<(v8bf16 (X86vfpround (v8f32 VR256X:$src))),
-            (VCVTNEPS2BF16Z256rr VR256X:$src)>;
-  def : Pat<(v8bf16 (X86vfpround (loadv8f32 addr:$src))),
-            (VCVTNEPS2BF16Z256rm addr:$src)>;
-
-  // TODO: No scalar broadcast due to we don't support legal scalar bf16 so far.
 }
 
-let Predicates = [HasBF16] in {
+let Predicates = [HasBWI] in {
   def : Pat<(v32bf16 (X86VBroadcastld16 addr:$src)),
             (VPBROADCASTWZrm addr:$src)>;
 
   def : Pat<(v32bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
             (VPBROADCASTWZrr VR128X:$src)>;
+}
 
+let Predicates = [HasBF16] in {
   def : Pat<(v16bf16 (X86vfpround (v16f32 VR512:$src))),
             (VCVTNEPS2BF16Zrr VR512:$src)>;
   def : Pat<(v16bf16 (X86vfpround (loadv16f32 addr:$src))),
@@ -13777,6 +13834,39 @@ let Uses = [MXCSR] in {
   defm VFCMULCPH : avx512_cfmulop_common<0xD6, "vfcmulcph", x86vfcmulc,
                                          x86vfcmulc, x86vfcmulcRnd, 0>, T_MAP6, XD, EVEX_CD8<32, CD8VF>;
 }
+
+multiclass avx512_cfmaop_lowering<string InstrStr, SDNode OpNode> {
+  let Predicates = [HasFP16, NoVLX] in
+  foreach info = [v4f32x_info, v8f32x_info] in {
+    def : Pat<(info.VT (OpNode info.RC:$src2, info.RC:$src3, info.RC:$src1)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zr")
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src1,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src2,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src3,
+                                 info.SubRegIdx)),
+                info.SubRegIdx)>;
+
+    def : Pat<(info.VT (OpNode info.RC:$src2,
+                               (info.VT (info.BroadcastLdFrag addr:$src3)),
+                               info.RC:$src1)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zmb")
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src1,
+                                 info.SubRegIdx),
+                  (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), info.RC:$src2,
+                                 info.SubRegIdx),
+                  addr:$src3),
+                info.SubRegIdx)>;
+  }
+}
+
+defm : avx512_cfmaop_lowering<"VFMADDCPH", x86vfmaddc>;
+defm : avx512_cfmaop_lowering<"VFCMADDCPH", x86vfcmaddc>;
+defm : avx512_binary_lowering<"VFMULCPH", x86vfmulc, X86VBroadcastld32, avx512vl_f32_info, HasFP16>;
+defm : avx512_binary_lowering<"VFCMULCPH", x86vfcmulc, X86VBroadcastld32, avx512vl_f32_info, HasFP16>;
 
 
 multiclass avx512_cfmaop_sh_common<bits<8> opc, string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd,

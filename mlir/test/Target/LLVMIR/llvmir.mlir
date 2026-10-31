@@ -122,6 +122,25 @@ llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   llvm.return %gepinit : !llvm.ptr
 }
 
+// CHECK: @i32_array = internal constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
+llvm.mlir.global internal constant @i32_array(dense<[1, 2, 3, 4]> : tensor<4xi32>) : !llvm.array<4 x i32>
+// The offset is within the global, so the folder infers inbounds and nuw.
+// CHECK: @int_gep_inferred_flags = internal constant ptr getelementptr inbounds nuw (i8, ptr @i32_array, i64 8)
+llvm.mlir.global internal constant @int_gep_inferred_flags() : !llvm.ptr {
+  %addr = llvm.mlir.addressof @i32_array : !llvm.ptr
+  %gepinit = llvm.getelementptr %addr[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
+  llvm.return %gepinit : !llvm.ptr
+}
+
+// CHECK: @vt = external constant { [3 x ptr] }
+llvm.mlir.global external constant @vt() : !llvm.struct<(array<3 x ptr>)>
+// CHECK: @int_gep_inrange = internal constant ptr getelementptr inbounds nuw inrange(-16, 8) (i8, ptr @vt, i64 16)
+llvm.mlir.global internal constant @int_gep_inrange() : !llvm.ptr {
+  %addr = llvm.mlir.addressof @vt : !llvm.ptr
+  %gepinit = llvm.getelementptr inbounds inrange <i64, -16, 8> %addr[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
+  llvm.return %gepinit : !llvm.ptr
+}
+
 // CHECK{LITERAL}: @dense_float_vector = internal global <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
 llvm.mlir.global internal @dense_float_vector(dense<[1.0, 2.0, 3.0]> : vector<3xf32>) : vector<3xf32>
 
@@ -1251,6 +1270,12 @@ llvm.func @nocaptureattr_decl(!llvm.ptr {llvm.nocapture})
 // CHECK-LABEL: declare void @nofreeattr_decl(ptr nofree)
 llvm.func @nofreeattr_decl(!llvm.ptr {llvm.nofree})
 
+// CHECK-LABEL: declare void @nofreeobjattr_decl(ptr nofreeobj)
+llvm.func @nofreeobjattr_decl(!llvm.ptr {llvm.nofreeobj})
+
+// CHECK-LABEL: declare nofreeobj ptr @nofreeobjattr_ret_decl()
+llvm.func @nofreeobjattr_ret_decl() -> (!llvm.ptr {llvm.nofreeobj})
+
 // CHECK-LABEL: declare void @nonnullattr_decl(ptr nonnull)
 llvm.func @nonnullattr_decl(!llvm.ptr {llvm.nonnull})
 
@@ -1662,7 +1687,9 @@ llvm.func @atomicrmw(
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic <alignment = 8> : !llvm.ptr, i32
+  // CHECK: atomicrmw fadd ptr %{{.*}}, float %{{.*}} monotonic, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}
+  %28 = llvm.atomicrmw ignore_denormal_mode fadd %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   llvm.return
 }
 
@@ -1678,7 +1705,7 @@ llvm.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %val: i32) {
   // CHECK:  cmpxchg weak volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %3 = llvm.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %3 = llvm.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic <alignment = 8> : !llvm.ptr, i32
   llvm.return
 }
 
@@ -1792,6 +1819,18 @@ llvm.func @invoke_phis() -> i32 attributes { personality = @__gxx_personality_v0
 
 // -----
 
+module attributes {llvm.data_layout = "P4"} {
+  llvm.func @__gxx_personality_v0(...) -> i32
+
+  // CHECK-LABEL: @personality_program_as
+  // CHECK-SAME: personality ptr addrspace(4) @__gxx_personality_v0
+  llvm.func @personality_program_as() attributes { personality = @__gxx_personality_v0 } {
+    llvm.return
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @hasGCFunction
 // CHECK-SAME: gc "statepoint-example"
 llvm.func @hasGCFunction() attributes { garbageCollector = "statepoint-example" } {
@@ -1887,7 +1926,7 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
+llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"], ["llvm.assume", "omp_no_openmp"]]} {
   llvm.return
 }
 
@@ -1895,6 +1934,7 @@ llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_p
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
+// CHECK-DAG: "llvm.assume"="omp_no_openmp"
 
 // -----
 
@@ -1916,30 +1956,6 @@ llvm.func @functionEntryCount() attributes {
 }
 
 // CHECK-DAG: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
-
-// -----
-
-// CHECK-LABEL: @syntheticFunctionEntryCount
-// CHECK-SAME: !prof ![[SYNTH_PROF_ID:[0-9]+]]
-llvm.func @syntheticFunctionEntryCount() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic>
-} {
-  llvm.return
-}
-
-// CHECK-DAG: ![[SYNTH_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7}
-
-// -----
-
-// CHECK-LABEL: @syntheticFunctionEntryCountWithImports
-// CHECK-SAME: !prof ![[SYNTH_IMPORTS_PROF_ID:[0-9]+]]
-llvm.func @syntheticFunctionEntryCountWithImports() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic, imports = 1234, 4, 1234>
-} {
-  llvm.return
-}
-
-// CHECK-DAG: ![[SYNTH_IMPORTS_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7, i64 4, i64 1234}
 
 // -----
 
@@ -2089,9 +2105,9 @@ llvm.func @nontemporal_store_and_load() {
   %size = llvm.mlir.constant(1 : i64) : i64
   %0 = llvm.alloca %size x i32 : (i64) -> (!llvm.ptr)
   // CHECK: !nontemporal ![[NODE:[0-9]+]]
-  llvm.store %val, %0 {nontemporal} : i32, !llvm.ptr
+  llvm.store %val, %0 <nontemporal> : i32, !llvm.ptr
   // CHECK: !nontemporal ![[NODE]]
-  %1 = llvm.load %0 {nontemporal} : !llvm.ptr -> i32
+  %1 = llvm.load %0 <nontemporal> : !llvm.ptr -> i32
   llvm.return
 }
 
@@ -2107,6 +2123,28 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 }
 
 // CHECK: ![[NODE]] = !{}
+
+// -----
+
+// CHECK-LABEL: @noundef_load
+llvm.func @noundef_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: load i32, ptr %{{.*}}, align 4, !noundef ![[NODE:[0-9]+]]
+  %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
+
+// -----
+
+// CHECK-LABEL: @range_load
+llvm.func @range_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: load i32, ptr %{{.*}}, align 4, !range ![[RANGE:[0-9]+]]
+  %0 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK: ![[RANGE]] = !{i32 0, i32 10}
 
 // -----
 
@@ -2127,17 +2165,17 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
   // CHECK-SAME:  acquire, align 4
-  %1 = llvm.load %ptr atomic acquire {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load %ptr atomic acquire <alignment = 4> : !llvm.ptr -> f32
   // CHECK: load atomic
   // CHECK-SAME:  syncscope("singlethread") acquire, align 4
-  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire {alignment = 4 : i64} : !llvm.ptr -> f32
+  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire <alignment = 4> : !llvm.ptr -> f32
 
   // CHECK: store atomic
   // CHECK-SAME:  release, align 4
-  llvm.store %1, %ptr atomic release {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %1, %ptr atomic release <alignment = 4> : f32, !llvm.ptr
   // CHECK: store atomic
   // CHECK-SAME:  syncscope("singlethread") release, align 4
-  llvm.store %2, %ptr atomic syncscope("singlethread") release {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %2, %ptr atomic syncscope("singlethread") release <alignment = 4> : f32, !llvm.ptr
   llvm.return
 }
 
@@ -2209,8 +2247,13 @@ llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
   // CHECK-NEXT:  notail call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %8 = llvm.inline_asm tail_call_kind = <notail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
+  // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}}) #[[$CONVERGENT:.*]]
+  %9 = llvm.inline_asm convergent "foo", "=r,r" %arg0 : (i32) -> i8
+
   llvm.return
 }
+
+// CHECK: attributes #[[$CONVERGENT]] = { convergent }
 
 // -----
 
@@ -2242,17 +2285,17 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
 // CHECK: {{.*}} = fmul nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = fdiv nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = frem nnan ninf float {{.*}}, {{.*}}
-  %0 = llvm.fadd %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %1 = llvm.fsub %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %2 = llvm.fmul %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %3 = llvm.fdiv %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %4 = llvm.frem %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %0 = llvm.fadd %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %1 = llvm.fsub %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %2 = llvm.fmul %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %3 = llvm.fdiv %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %4 = llvm.frem %arg0, %arg0 fastmath<nnan, ninf> : f32
 
 // CHECK: {{.*}} = fcmp nnan ninf oeq {{.*}}, {{.*}}
-  %5 = llvm.fcmp "oeq" %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %5 = llvm.fcmp "oeq" %arg0, %arg0 fastmath<nnan, ninf> : f32
 
 // CHECK: {{.*}} = fneg nnan ninf float {{.*}}
-  %6 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %6 = llvm.fneg %arg0 fastmath<nnan, ninf> : f32
 
 // CHECK: {{.*}} = call float @fastmathFlagsFunc({{.*}})
 // CHECK: {{.*}} = call nnan float @fastmathFlagsFunc({{.*}})
@@ -2274,29 +2317,29 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
   %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> (f32)
 
 // CHECK: call fast float @llvm.copysign.f32(float {{.*}}, float {{.*}})
-  %17 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  %17 = "llvm.intr.copysign"(%arg0, %arg0) <{fastmathFlags = #llvm.fastmath<fast>}> : (f32, f32) -> f32
 // CHECK: call afn float @llvm.copysign.f32(float {{.*}}, float {{.*}})
-  %18 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+  %18 = "llvm.intr.copysign"(%arg0, %arg0) <{fastmathFlags = #llvm.fastmath<afn>}> : (f32, f32) -> f32
 
 // CHECK: call fast float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
   %exp = llvm.mlir.constant(1 : i32) : i32
-  %19 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<fast>} : (f32, i32) -> f32
+  %19 = "llvm.intr.powi"(%arg0, %exp) <{fastmathFlags = #llvm.fastmath<fast>}> : (f32, i32) -> f32
 // CHECK: call afn float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
-  %20 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<afn>} : (f32, i32) -> f32
+  %20 = "llvm.intr.powi"(%arg0, %exp) <{fastmathFlags = #llvm.fastmath<afn>}> : (f32, i32) -> f32
 
 // CHECK: call nnan float @llvm.vector.reduce.fmax.v2f32(<2 x float> {{.*}})
 // CHECK: call nnan float @llvm.vector.reduce.fmin.v2f32(<2 x float> {{.*}})
-  %21 = llvm.intr.vector.reduce.fmax(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
-  %22 = llvm.intr.vector.reduce.fmin(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %21 = llvm.intr.vector.reduce.fmax(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
+  %22 = llvm.intr.vector.reduce.fmin(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
 
 // CHECK: call nnan float @llvm.vector.reduce.fmaximum.v2f32(<2 x float> {{.*}})
 // CHECK: call nnan float @llvm.vector.reduce.fminimum.v2f32(<2 x float> {{.*}})
-  %23 = llvm.intr.vector.reduce.fmaximum(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
-  %24 = llvm.intr.vector.reduce.fminimum(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %23 = llvm.intr.vector.reduce.fmaximum(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
+  %24 = llvm.intr.vector.reduce.fminimum(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
 
   %25 = llvm.mlir.constant(true) : i1
 // CHECK: select contract i1
-  %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
+  %26 = llvm.select %25, %arg0, %20 fastmath<contract> : i1, f32
 
 // CHECK: {{.*}} = fpext nnan float {{.*}} to double
 // CHECK: {{.*}} = fptrunc fast float {{.*}} to half
@@ -2364,7 +2407,7 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
   llvm.switch %arg0 : i32, ^bb1(%0 : i32) [
     9: ^bb2(%1, %2 : i32, i32),
     99: ^bb3
-  ] {branch_weights = array<i32 : 13, 17, 19>}
+  ] weights([13, 17, 19])
 
 ^bb1(%3: i32):  // pred: ^bb0
   llvm.return %3 : i32
@@ -3051,6 +3094,52 @@ llvm.func @save_reg_params_call() {
 
 llvm.func @f()
 
+// CHECK-LABEL: @uniform_work_group_size
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size() attributes { uniform_work_group_size } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @uniform_work_group_size_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size_call() {
+  llvm.call @f() {uniform_work_group_size} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @uniform_work_group_size_invoke
+// CHECK: invoke void @f() #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size_invoke() attributes {personality = @__gxx_personality_v0} {
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {uniform_work_group_size} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+
 // CHECK-LABEL: @zero_call_used_regs_1
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 llvm.func @zero_call_used_regs_1() attributes { zero_call_used_regs = "skip"} {
@@ -3642,6 +3731,59 @@ llvm.mlir.global external @target_specific_attrs_only() {target_specific_attrs =
 // CHECK: @target_specific_attrs_combined = global i32 2, section "mysection", align 4 #[[ATTRS:[0-9]+]]
 // CHECK: attributes #[[ATTRS]] = { norecurse "bss-section"="my_bss.1" }
 llvm.mlir.global external @target_specific_attrs_combined(2 : i32) {alignment = 4 : i64, section = "mysection", target_specific_attrs = ["norecurse", ["bss-section", "my_bss.1"]]} : i32
+
+// -----
+
+// CHECK: @associated_target = global i32 0
+// CHECK: @associated_global = global i32 0, !associated ![[ASSOC:[0-9]+]]
+// CHECK: ![[ASSOC]] = !{ptr @associated_target}
+llvm.mlir.global external @associated_target(0 : i32) {addr_space = 0 : i32} : i32
+llvm.mlir.global external @associated_global(0 : i32) {addr_space = 0 : i32, associated = @associated_target} : i32
+
+// -----
+
+// CHECK: @associated_fn_global = global i32 0, !associated ![[ASSOC_FN:[0-9]+]]
+// CHECK: declare void @associated_fn()
+// CHECK: ![[ASSOC_FN]] = !{ptr @associated_fn}
+llvm.mlir.global external @associated_fn_global(0 : i32) {associated = @associated_fn} : i32
+llvm.func @associated_fn()
+
+// -----
+
+// CHECK: @alias_target = global i32 1
+// CHECK: @associated_via_alias = global i32 2, !associated ![[ASSOC_ALIAS:[0-9]+]]
+// CHECK: @alias_of_target = alias i32, ptr @alias_target
+// CHECK: ![[ASSOC_ALIAS]] = !{ptr @alias_of_target}
+llvm.mlir.global @alias_target(1 : i32) : i32
+llvm.mlir.alias external @alias_of_target : i32 {
+  %0 = llvm.mlir.addressof @alias_target : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+llvm.mlir.global @associated_via_alias(2 : i32) {associated = @alias_of_target} : i32
+
+// -----
+
+// CHECK: @associated_ifunc_global = global i32 0, !associated ![[ASSOC_IFUNC:[0-9]+]]
+// CHECK: @associated_ifunc = ifunc i32 (i32), ptr @associated_ifunc_resolver
+// CHECK: ![[ASSOC_IFUNC]] = !{ptr @associated_ifunc}
+llvm.mlir.global @associated_ifunc_global(0 : i32) {associated = @associated_ifunc} : i32
+llvm.mlir.ifunc @associated_ifunc : !llvm.func<i32 (i32)>, !llvm.ptr @associated_ifunc_resolver
+llvm.func @associated_ifunc_resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.zero : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// CHECK: @absolute_symbol_global = external global i8, !absolute_symbol ![[ABS:[0-9]+]]
+// CHECK: ![[ABS]] = !{i64 0, i64 42}
+llvm.mlir.global external @absolute_symbol_global() {absolute_symbol = [0 : i64, 42 : i64]} : i8
+
+// -----
+
+// CHECK: @absolute_symbol_full = external global i8, !absolute_symbol ![[ABS_FULL:[0-9]+]]
+// CHECK: ![[ABS_FULL]] = !{i64 -1, i64 -1}
+llvm.mlir.global external @absolute_symbol_full() {absolute_symbol = [-1 : i64, -1 : i64]} : i8
 
 // -----
 

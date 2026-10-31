@@ -37,6 +37,7 @@
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -70,6 +71,7 @@ class Module;
 class NamespaceDecl;
 class ParmVarDecl;
 class RecordDecl;
+class SemaProxy;
 class Stmt;
 class StringLiteral;
 class TagDecl;
@@ -1438,6 +1440,7 @@ public:
 
 private:
   const APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                                   SemaProxy *SProxy,
                                    bool IsConstantInitialization) const;
 
 public:
@@ -1453,6 +1456,15 @@ public:
   /// \return \c true if this variable has constant destruction, \c false if
   ///         not.
   bool evaluateDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+
+  /// Evaluate the destruction of a variable that is required by the language to
+  /// have constant destruction.
+  ///
+  /// \pre hasConstantInitialization()
+  /// \return \c true if this variable has constant destruction, \c false if
+  ///         not.
+  bool evaluateConstantDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                   SemaProxy &SProxy) const;
 
   /// Determine whether this variable has constant initialization.
   ///
@@ -1470,8 +1482,9 @@ public:
   /// Evaluate the initializer of this variable to determine whether it's a
   /// constant initializer. Should only be called once, after completing the
   /// definition of the variable.
-  bool checkForConstantInitialization(
-      SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+  bool
+  checkForConstantInitialization(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                 SemaProxy &SProxy) const;
 
   void setInitStyle(InitializationStyle Style) {
     VarDeclBits.InitStyle = Style;
@@ -2228,7 +2241,7 @@ private:
   /// \param TemplateArgs the template arguments that produced this
   /// function template specialization from the template.
   ///
-  /// \param InsertPos If non-NULL, the position in the function template
+  /// \param InsertToken If set, the insert token in the function template
   /// specialization set where the function template specialization data will
   /// be inserted.
   ///
@@ -2240,8 +2253,8 @@ private:
   /// specialization was first instantiated.
   void setFunctionTemplateSpecialization(
       ASTContext &C, FunctionTemplateDecl *Template,
-      TemplateArgumentList *TemplateArgs, void *InsertPos,
-      TemplateSpecializationKind TSK,
+      TemplateArgumentList *TemplateArgs,
+      llvm::FoldingSetInsertToken InsertToken, TemplateSpecializationKind TSK,
       const TemplateArgumentListInfo *TemplateArgsAsWritten,
       SourceLocation PointOfInstantiation);
 
@@ -2924,6 +2937,10 @@ public:
   /// created.
   unsigned getNumParams() const;
 
+  /// Return the number of parameters, including the implicit 'this' parameter
+  /// if this function has one.
+  unsigned getNumParamsIncludingThis() const;
+
   const ParmVarDecl *getParamDecl(unsigned i) const {
     assert(i < getNumParams() && "Illegal param #");
     return ParamInfo[i];
@@ -3191,7 +3208,7 @@ public:
   /// \param TemplateArgs the template arguments that produced this
   /// function template specialization from the template.
   ///
-  /// \param InsertPos If non-NULL, the position in the function template
+  /// \param InsertToken If set, the insert token in the function template
   /// specialization set where the function template specialization data will
   /// be inserted.
   ///
@@ -3203,12 +3220,12 @@ public:
   /// specialization was first instantiated.
   void setFunctionTemplateSpecialization(
       FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
-      void *InsertPos,
+      llvm::FoldingSetInsertToken InsertToken,
       TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
       TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
       SourceLocation PointOfInstantiation = SourceLocation()) {
     setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
-                                      InsertPos, TSK, TemplateArgsAsWritten,
+                                      InsertToken, TSK, TemplateArgsAsWritten,
                                       PointOfInstantiation);
   }
 
@@ -4772,6 +4789,8 @@ class TopLevelStmtDecl : public Decl, public DeclContext {
 
   Stmt *Statement = nullptr;
   bool IsSemiMissing = false;
+  /// Position among all top-level statements of the session, in parse order.
+  unsigned Ordinal = 0;
 
   TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
       : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt), Statement(S) {}
@@ -4788,6 +4807,7 @@ public:
   void setStmt(Stmt *S);
   bool isSemiMissing() const { return IsSemiMissing; }
   void setSemiMissing(bool Missing = true) { IsSemiMissing = Missing; }
+  unsigned getOrdinal() const { return Ordinal; }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TopLevelStmt; }
@@ -5468,6 +5488,9 @@ void Redeclarable<decl_type>::setPreviousDecl(decl_type *PrevDecl) {
          "setPreviousDecl on a decl already in a redeclaration chain");
 
   if (PrevDecl) {
+    // Linking this declaration to a previous one may change its linkage.
+    static_cast<decl_type *>(this)->invalidateCachedLinkage();
+
     // Point to previous. Make sure that this is actually the most recent
     // redeclaration, or we can build invalid chains. If the most recent
     // redeclaration is invalid, it won't be PrevDecl, but we want it anyway.

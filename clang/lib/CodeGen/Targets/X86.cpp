@@ -101,10 +101,7 @@ struct CCState {
 
 /// X86_32ABIInfo - The X86-32 ABI information.
 class X86_32ABIInfo : public ABIInfo {
-  enum Class {
-    Integer,
-    Float
-  };
+  enum Class { Integer, Float, AlwaysStack };
 
   static const unsigned MinABIStackAlignInBytes = 4;
 
@@ -462,6 +459,18 @@ bool X86_32ABIInfo::canExpandIndirectArgument(QualType Ty) const {
   return Size == getContext().getTypeSize(Ty);
 }
 
+static bool shouldExtendReturnType(const ABIInfo &Info, QualType RetTy) {
+  // Bools need to be zero-extended to 8 bits for all ABIs.
+  if (RetTy->isBooleanType())
+    return true;
+
+  // Promotable integer types get extended only for Darwin.
+  if (!Info.getTarget().getTriple().isOSDarwin())
+    return false;
+
+  return Info.isPromotableIntegerTypeForABI(RetTy);
+}
+
 ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State) const {
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
@@ -547,7 +556,7 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
       // floating-point register. (MSVC does not apply this special case.)
       // We apply a similar transformation for pointer types to improve the
       // quality of the generated IR.
-      if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
+      if (const Type *SeltTy = isSingleElementRecord(RetTy, getContext()))
         if ((!IsWin32StructABI && SeltTy->isRealFloatingType())
             || SeltTy->hasPointerRepresentation())
           return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
@@ -568,8 +577,8 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
     if (EIT->getNumBits() > 64)
       return getIndirectReturnResult(RetTy, State);
 
-  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
-                                               : ABIArgInfo::getDirect());
+  return shouldExtendReturnType(*this, RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                              : ABIArgInfo::getDirect();
 }
 
 unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
@@ -634,25 +643,111 @@ ABIArgInfo X86_32ABIInfo::getIndirectResult(QualType Ty, bool ByVal,
       Realign);
 }
 
-X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
-  const Type *T = isSingleElementStruct(Ty, getContext());
-  if (!T)
-    T = Ty.getTypePtr();
+/// Like isSingleElementRecord, but only looks through one level of records.
+/// This mirrors how GCC gives a record the mode of its only field.
+static const Type *getSingleFieldType(QualType T, ASTContext &Context) {
+  const auto *RD = T->getAsRecordDecl();
+  if (!RD)
+    return nullptr;
 
-  if (const BuiltinType *BT = T->getAs<BuiltinType>()) {
-    BuiltinType::Kind K = BT->getKind();
-    if (K == BuiltinType::Float || K == BuiltinType::Double)
-      return Float;
+  if (RD->hasFlexibleArrayMember())
+    return nullptr;
+
+  const Type *Found = nullptr;
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    for (const auto &I : CXXRD->bases()) {
+      // Ignore empty records.
+      if (isEmptyRecord(Context, I.getType(), true))
+        continue;
+
+      // If we already found an element then this isn't a single-element struct.
+      if (Found)
+        return nullptr;
+
+      Found = I.getType().getTypePtr();
+    }
   }
+
+  // Check for single element.
+  for (const auto *FD : RD->fields()) {
+    QualType FT = FD->getType();
+
+    // Ignore empty fields.
+    if (isEmptyField(Context, FD, true))
+      continue;
+
+    // If we already found an element then this isn't a single-element
+    // struct.
+    if (Found)
+      return nullptr;
+
+    // Treat single element arrays as the element.
+    while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
+      if (AT->getZExtSize() != 1)
+        break;
+      FT = AT->getElementType();
+    }
+
+    Found = FT.getTypePtr();
+  }
+
+  // We don't consider a struct a single-element struct if it has
+  // padding beyond the element type.
+  if (Found && Context.getTypeSize(Found) != Context.getTypeSize(T))
+    return nullptr;
+
+  return Found;
+}
+
+X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
+  if (getContext().getLangOpts().isCompatibleWith(
+          LangOptions::ClangABI::Ver23)) {
+    const Type *T = isSingleElementRecord(Ty, getContext());
+    if (!T)
+      T = Ty.getTypePtr();
+
+    if (const BuiltinType *BT = T->getAs<BuiltinType>()) {
+      BuiltinType::Kind K = BT->getKind();
+      if (K == BuiltinType::Float || K == BuiltinType::Double)
+        return Float;
+    }
+    return Integer;
+  }
+
+  while (const RecordDecl *RD = Ty->getAsRecordDecl()) {
+    // Unions are always passed as integers.
+    if (RD->isUnion())
+      return Integer;
+
+    const Type *FT = getSingleFieldType(Ty, getContext());
+
+    // Pick integer for zero-sized types. They will be ignored down the line.
+    if (!FT)
+      return Integer;
+
+    Ty = QualType(FT, 0);
+  }
+
+  // All complex values are passed via the stack.
+  if (Ty->isAnyComplexType())
+    return AlwaysStack;
+
+  // Types like bfloat16 or __float128 are all passed like floats.
+  if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
+    if (BT->isFloatingPoint())
+      return Float;
+
   return Integer;
 }
 
 bool X86_32ABIInfo::updateFreeRegs(QualType Ty, CCState &State) const {
-  if (!IsSoftFloatABI) {
-    Class C = classify(Ty);
-    if (C == Float)
-      return false;
-  }
+  Class C = classify(Ty);
+  if (C == AlwaysStack && !IsMCUABI)
+    return false;
+  if (C == Float && !IsSoftFloatABI)
+    return false;
 
   unsigned Size = getContext().getTypeSize(Ty);
   unsigned SizeInRegs = (Size + 31) / 32;
@@ -1137,7 +1232,7 @@ static void addX86InterruptAttrs(const FunctionDecl *FD, llvm::GlobalValue *GV,
   if (FD->getNumParams() == 0)
     return;
 
-  auto PtrTy = cast<PointerType>(FD->getParamDecl(0)->getType());
+  const auto *PtrTy = FD->getParamDecl(0)->getType()->castAs<PointerType>();
   llvm::Type *ByValTy = CGM.getTypes().ConvertType(PtrTy->getPointeeType());
   llvm::Attribute NewAttr = llvm::Attribute::getWithByValType(
     Fn->getContext(), ByValTy);
@@ -1426,14 +1521,18 @@ public:
     return isX86VectorCallAggregateSmallEnough(NumMembers);
   }
 
-  ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const override {
+  ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty,
+                                         bool IsNamedArg) const override {
     unsigned FreeSSERegs = 0;
-    return classify(Ty, FreeSSERegs, /*IsReturnType=*/false,
-                    llvm::CallingConv::C);
+    ClassifyKind Kind =
+        IsNamedArg ? ClassifyKind::FixedArgument : ClassifyKind::VarArg;
+    return classify(Ty, FreeSSERegs, Kind, llvm::CallingConv::C);
   }
 
 private:
-  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, bool IsReturnType,
+  enum class ClassifyKind { Return, FixedArgument, VarArg };
+
+  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, ClassifyKind Kind,
                       unsigned CC) const;
   ABIArgInfo reclassifyHvaArgForVectorCall(QualType Ty, unsigned &FreeSSERegs,
                                            const ABIArgInfo &current) const;
@@ -2200,6 +2299,10 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     bool UseClang11Compat = getContext().getLangOpts().isCompatibleWith(
                                 LangOptions::ClangABI::Ver11) ||
                             getContext().getTargetInfo().getTriple().isPS();
+    bool ClassifyUnnamedBitFields =
+        getContext().getLangOpts().getClangABICompat() >
+            LangOptions::ClangABI::Ver23 &&
+        !getContext().getTargetInfo().getTriple().isPS();
     bool IsUnion = RT->isUnionType() && !UseClang11Compat;
 
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
@@ -2207,8 +2310,13 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
-      // Ignore padding bit-fields.
-      if (BitField && i->isUnnamedBitField())
+      // Ignore padding bit-fields. Normally only zero-length bit-fields are
+      // padding, but under -fclang-abi-compat=23 every unnamed bit-field is,
+      // faithfully reproducing Clang 23 -- including its crash on aggregates
+      // where skipping one leaves part of a wider access unit (e.g. an
+      // __int128 bit-field run) unclassified.
+      if (BitField && (ClassifyUnnamedBitFields ? i->isZeroLengthBitField()
+                                                : i->isUnnamedBitField()))
         continue;
 
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
@@ -2249,7 +2357,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // structure to be passed in memory even if unaligned, and
       // therefore they can straddle an eightbyte.
       if (BitField) {
-        assert(!i->isUnnamedBitField());
+        assert(ClassifyUnnamedBitFields ? !i->isZeroLengthBitField()
+                                        : !i->isUnnamedBitField());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
         uint64_t Size = i->getBitWidthValue();
 
@@ -2288,8 +2397,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
     llvm::Type *IRTy = CGT.ConvertType(Ty);
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
-                                              : ABIArgInfo::getDirect(IRTy));
+    return shouldExtendReturnType(*this, Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
+                                             : ABIArgInfo::getDirect(IRTy);
   }
 
   return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
@@ -2380,7 +2489,7 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
 llvm::Type *X86_64ABIInfo::GetByteVectorType(QualType Ty) const {
   // Wrapper structs/arrays that only contain vectors are passed just like
   // vectors; strip them off if present.
-  if (const Type *InnerTy = isSingleElementStruct(Ty, getContext()))
+  if (const Type *InnerTy = isSingleElementRecord(Ty, getContext()))
     Ty = QualType(InnerTy, 0);
 
   llvm::Type *IRType = CGT.ConvertType(Ty);
@@ -2514,6 +2623,8 @@ static llvm::Type *getFPTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
   if (llvm::ArrayType *ATy = dyn_cast<llvm::ArrayType>(IRType)) {
     llvm::Type *EltTy = ATy->getElementType();
     unsigned EltSize = TD.getTypeAllocSize(EltTy);
+    if (EltSize == 0)
+      return nullptr;
     IROffset -= IROffset / EltSize * EltSize;
     return getFPTypeAtOffset(EltTy, IROffset, TD);
   }
@@ -2730,17 +2841,16 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   case Integer:
     ResType = GetINTEGERTypeAtOffset(CGT.ConvertType(RetTy), 0, RetTy, 0);
 
-    // If we have a sign or zero extended integer, make sure to return Extend
-    // so that the parameter gets the right LLVM IR attributes.
-    if (Hi == NoClass && isa<llvm::IntegerType>(ResType)) {
-      // Treat an enum type as its underlying type.
-      if (const auto *ED = RetTy->getAsEnumDecl())
-        RetTy = ED->getIntegerType();
+    // Treat an enum type as its underlying type.
+    if (const auto *ED = RetTy->getAsEnumDecl())
+      RetTy = ED->getIntegerType();
 
-      if (RetTy->isIntegralOrEnumerationType() &&
-          isPromotableIntegerTypeForABI(RetTy))
-        return ABIArgInfo::getExtend(RetTy);
-    }
+    // Always returns integral types as plain integers, without padding to a
+    // larger type or splitting into a struct. For some targets, small integers
+    // are additionally sign/zero extended.
+    if (RetTy->isIntegralOrEnumerationType())
+      return shouldExtendReturnType(*this, RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                                  : ABIArgInfo::getDirect();
 
     if (ResType->isIntegerTy(128)) {
       // i128 are passed directly
@@ -3451,15 +3561,26 @@ ABIArgInfo WinX86_64ABIInfo::reclassifyHvaArgForVectorCall(
 }
 
 ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
-                                      bool IsReturnType, unsigned CC) const {
+                                      ClassifyKind Kind, unsigned CC) const {
   bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
   bool IsRegCall = CC == llvm::CallingConv::X86_RegCall;
 
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  if (const auto *ED = Ty->getAsEnumDecl())
+  bool PromoteScopedEnum = false;
+  if (const auto *ED = Ty->getAsEnumDecl()) {
     Ty = ED->getIntegerType();
+    PromoteScopedEnum = Kind == ClassifyKind::VarArg && ED->isScoped() &&
+                        getContext().isPromotableIntegerType(Ty);
+  }
+
+  // MSVC extends scoped enums with a sub-int underlying type when they are
+  // passed through an ellipsis. Unlike unscoped enums, scoped enums are not
+  // subject to the language's default argument promotions, so handle the
+  // extension as part of the ABI classification.
+  if (PromoteScopedEnum)
+    return ABIArgInfo::getExtend(Ty);
 
   TypeInfo Info = getContext().getTypeInfo(Ty);
   uint64_t Width = Info.Width;
@@ -3467,7 +3588,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 
   const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
-    if (!IsReturnType) {
+    if (Kind != ClassifyKind::Return) {
       if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI()))
         return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                        RAA == CGCXXABI::RAA_DirectInMemory);
@@ -3487,7 +3608,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     if (IsRegCall) {
       if (FreeSSERegs >= NumElts) {
         FreeSSERegs -= NumElts;
-        if (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())
+        if (Kind == ClassifyKind::Return || Ty->isBuiltinType() ||
+            Ty->isVectorType())
           return ABIArgInfo::getDirect();
         return ABIArgInfo::getExpand();
       }
@@ -3496,10 +3618,11 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           /*ByVal=*/false);
     } else if (IsVectorCall) {
       if (FreeSSERegs >= NumElts &&
-          (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
+          (Kind == ClassifyKind::Return || Ty->isBuiltinType() ||
+           Ty->isVectorType())) {
         FreeSSERegs -= NumElts;
         return ABIArgInfo::getDirect();
-      } else if (IsReturnType) {
+      } else if (Kind == ClassifyKind::Return) {
         return ABIArgInfo::getExpand();
       } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
         // HVAs are delayed and reclassified in the 2nd step.
@@ -3554,7 +3677,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       // If it's a parameter type, the normal ABI rule is that arguments larger
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.
-      if (!IsReturnType)
+      if (Kind != ClassifyKind::Return)
         return ABIArgInfo::getIndirect(
             Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
             /*ByVal=*/false);
@@ -3640,7 +3763,8 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 
   if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true, CC);
+    FI.getReturnInfo() =
+        classify(FI.getReturnType(), FreeSSERegs, ClassifyKind::Return, CC);
 
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.
@@ -3658,7 +3782,10 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     // registers are left.
     unsigned *MaybeFreeSSERegs =
         (IsVectorCall && ArgNum >= 6) ? &ZeroSSERegs : &FreeSSERegs;
-    I.info = classify(I.type, *MaybeFreeSSERegs, false, CC);
+    ClassifyKind Kind = ArgNum >= FI.getNumRequiredArgs()
+                            ? ClassifyKind::VarArg
+                            : ClassifyKind::FixedArgument;
+    I.info = classify(I.type, *MaybeFreeSSERegs, Kind, CC);
     ++ArgNum;
   }
 

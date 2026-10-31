@@ -27,7 +27,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBranchFolderLegacyPass(Registry);
   initializeBranchRelaxationLegacyPass(Registry);
   initializeBreakFalseDepsLegacyPass(Registry);
-  initializeCFGuardLongjmpPass(Registry);
+  initializeCFGuardLongjmpLegacyPass(Registry);
   initializeCFIFixupLegacyPass(Registry);
   initializeCFIInstrInserterLegacyPass(Registry);
   initializeCheckDebugMachineModuleLegacyPass(Registry);
@@ -72,7 +72,6 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeLiveIntervalsWrapperPassPass(Registry);
   initializeLiveRangeShrinkPass(Registry);
   initializeLiveStacksWrapperLegacyPass(Registry);
-  initializeLiveVariablesWrapperPassPass(Registry);
   initializeLocalStackSlotPassPass(Registry);
   initializeLowerEmuTLSPass(Registry);
   initializeLowerGlobalDtorsLegacyPassPass(Registry);
@@ -95,14 +94,13 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineCycleInfoWrapperPassPass(Registry);
   initializeMachineDominatorTreeWrapperPassPass(Registry);
   initializeMachineFunctionPrinterPassPass(Registry);
-  initializeMachineFunctionSplitterPass(Registry);
   initializeMachineLateInstrsCleanupLegacyPass(Registry);
   initializeMachineLICMPass(Registry);
   initializeMachineLoopInfoWrapperPassPass(Registry);
   initializeMachineModuleInfoWrapperPassPass(Registry);
   initializeMachineOptimizationRemarkEmitterPassPass(Registry);
   initializeMachineOutlinerPass(Registry);
-  initializeMachinePipelinerPass(Registry);
+  initializeMachinePipelinerLegacyPass(Registry);
   initializeMachineSanitizerBinaryMetadataLegacyPass(Registry);
   initializeModuloScheduleTestPass(Registry);
   initializeMachinePostDominatorTreeWrapperPassPass(Registry);
@@ -128,11 +126,12 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePostRASchedulerLegacyPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeProcessImplicitDefsLegacyPass(Registry);
-  initializePseudoProbeInserterPass(Registry);
+  initializePseudoProbeInserterLegacyPass(Registry);
   initializeRABasicPass(Registry);
   initializeRAGreedyLegacyPass(Registry);
   initializeReachingDefInfoWrapperPassPass(Registry);
   initializeRegAllocFastPass(Registry);
+  initializeRegAllocPBQPPass(Registry);
   initializeRegAllocScoringPass(Registry);
   initializeRegUsageInfoCollectorLegacyPass(Registry);
   initializeRegUsageInfoPropagationLegacyPass(Registry);
@@ -141,6 +140,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRemoveRedundantDebugValuesLegacyPass(Registry);
   initializeRenameIndependentSubregsLegacyPass(Registry);
   initializeReplaceWithVeclibLegacyPass(Registry);
+  initializeSSAMachineSchedulerLegacyPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeShadowStackGCLoweringPass(Registry);

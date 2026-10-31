@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 
@@ -122,6 +124,23 @@ unsigned long __getauxval(unsigned long id) {
   return LIBC_NAMESPACE::getauxval(id);
 }
 #endif
+
+void *calloc(size_t num, size_t size) {
+  if (num == 0 || size == 0)
+    return nullptr;
+  size_t total = 0;
+  if (__builtin_mul_overflow(num, size, &total)) {
+    LIBC_NAMESPACE::libc_errno = ENOMEM;
+    return nullptr;
+  }
+  void *mem = malloc(total);
+  if (mem == nullptr) {
+    LIBC_NAMESPACE::libc_errno = ENOMEM;
+    return nullptr;
+  }
+  LIBC_NAMESPACE::memset(mem, 0, total);
+  return mem;
+}
 
 } // extern "C"
 

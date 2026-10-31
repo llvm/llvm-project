@@ -20,6 +20,6 @@ entry:
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"foo: %a"}
-!2 = distinct !{!2, !"foo"}
+!2 = distinct !{!2, i1 false, !"foo"}
 !3 = !{!4}
 !4 = distinct !{!4, !2, !"foo: %b"}

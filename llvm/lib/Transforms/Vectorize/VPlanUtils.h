@@ -10,6 +10,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -17,17 +19,21 @@ class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
+class SCEVNAryExpr;
 class PredicatedScalarEvolution;
-class VPBuilder;
 } // namespace llvm
 
 namespace llvm {
 
 namespace vputils {
-/// Returns true if only the first lane of \p Def is used.
+/// Returns true if checking whether \p U uses the first lane of \p Op requires
+/// recursively checking \p Op's users.
+bool propagatesFirstLaneUse(const VPUser *U, const VPValue *Op);
+
+/// Returns true if only the first lane of \p Def is used by all users.
 bool onlyFirstLaneUsed(const VPValue *Def);
 
-/// Returns true if only the first part of \p Def is used.
+/// Returns true if only the first part of \p Def is used by all users.
 bool onlyFirstPartUsed(const VPValue *Def);
 
 /// Returns true if only scalar values of \p Def are used by all users.
@@ -37,14 +43,22 @@ bool onlyScalarValuesUsed(const VPValue *Def);
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
 /// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
 /// pre-header already contains a recipe expanding \p Expr, return it. If not,
-/// create a new one.
-VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
+/// create a new one. \p ExpandInIR is forwarded to the VPExpandSCEVRecipe.
+VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
+                                       bool ExpandInIR = false);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(const VPValue *V,
-                                  PredicatedScalarEvolution &PSE,
-                                  const Loop *L = nullptr);
+LLVM_ABI_FOR_TEST const SCEV *
+getSCEVExprForVPValue(const VPValue *V, PredicatedScalarEvolution &PSE,
+                      const Loop *L = nullptr);
+
+/// If the pointer operand \p Addr of a memory access is an affine AddRec
+/// w.r.t. \p L with a constant stride, return the stride in units of
+/// \p AccessTy. Otherwise return std::nullopt.
+std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
+                                         PredicatedScalarEvolution &PSE,
+                                         const Loop *L);
 
 /// Returns true if \p Addr is an address SCEV that can be passed to
 /// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
@@ -60,7 +74,7 @@ bool isSingleScalar(const VPValue *VPV);
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operands are known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or the canonical IV).
-bool isUniformAcrossVFsAndUFs(const VPValue *V);
+LLVM_ABI_FOR_TEST bool isUniformAcrossVFsAndUFs(const VPValue *V);
 
 /// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
 bool isElementwise(const VPValue *V);
@@ -105,8 +119,7 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
       return GetCalleeIntrinsic(
           VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     if (VPI->getOpcode() == VPInstruction::Intrinsic) {
-      return cast<VPConstantInt>(VPI->getOperand(VPI->getNumOperands() - 1))
-          ->getZExtValue();
+      return cast<VPConstantInt>(VPI->getLastOperand())->getZExtValue();
     }
   }
   return Intrinsic::not_intrinsic;
@@ -127,21 +140,10 @@ getOpcodeOrIntrinsicID(const VPValue *V);
 /// the location is conservatively set to nullptr.
 std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 
-/// Extracts and returns NoWrap and FastMath flags from the induction binop in
-/// \p ID.
-inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
-  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
-    return ID.getInductionBinOp()->getFastMathFlags();
-
-  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
-          ID.getInductionBinOp()))
-    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
-                                  OBO->hasNoSignedWrap());
-
-  assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
-         "Expected int induction");
-  return VPIRFlags::WrapFlagsTy(false, false);
-}
+/// Extracts and returns NoWrap flags from \p PhiR and fast-math flags from \p
+/// ID.
+VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
+                               const VPPhi *PhiR);
 
 /// Search \p Start's users for a recipe satisfying \p Pred, looking through
 /// recipes with definitions.
@@ -190,13 +192,14 @@ getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
 
 /// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
 /// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
-/// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
-/// non-null, inserting recipes via \p Builder.
-VPScalarIVStepsRecipe *createScalarIVSteps(
-    VPlan &Plan, InductionDescriptor::InductionKind Kind,
-    Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
-    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
+/// StartV and step \p Step, truncated to \p ResultTy, inserting recipes via \p
+/// Builder.
+VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, Type *ResultTy, VPValue *StartV,
+                    VPValue *Step, DebugLoc DL, VPBuilder &Builder,
+                    const VPIRFlags::WrapFlagsTy &Flags = {});
 
 /// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
@@ -220,6 +223,27 @@ SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
 /// Operands are foldable live-ins.
 VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
                             const DataLayout &DL);
+
+/// Insert phis to reconstruct SSA for a single value starting from \p VPBB. \p
+/// Defs is a map of definitions at specific blocks. Returns the
+/// reconstructed value at VPBB. Use if the CFG has been modified such that a
+/// def no longer dominates all its uses. Every block leading to VPBB must be
+/// reachable from the entry and the plan must be plain-CFG (not contain any
+/// regions).
+LLVM_ABI_FOR_TEST VPValue *
+reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
+
+/// Returns \p Freq as a BranchProbability, relative to the full mass.
+BranchProbability getExecutionProbability(BlockFrequency Freq);
+
+/// Computes for each block in \p Blocks, which must be in reverse post-order,
+/// the frequency with which it executes relative to the first (header) block,
+/// and whether that frequency was composed using any estimated branch weights.
+/// The frequency of a block is the sum over its incoming edges, or std::nullopt
+/// if any edge on a path reaching it lacks branch weights. Edges to blocks
+/// outside \p Blocks are ignored.
+DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
 namespace detail {
 
@@ -245,8 +269,10 @@ void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
-/// VPInstructions and live-ins. SCEVAddRecExprs are wrapped in a
-/// VPExpandSCEVRecipe to be expanded to IR later.
+/// VPInstructions and live-ins. Canonical IVs and non-affine SCEVAddRecExprs
+/// are wrapped in a VPExpandSCEVRecipe to be expanded to IR later. Expansions
+/// are reused across calls to expand(), so the builder's insert point must
+/// only move to positions dominated by all earlier insert points.
 class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;
@@ -256,17 +282,36 @@ class VPSCEVExpander {
   /// zero, matching SCEVExpander's SafeUDivMode.
   bool SafeUDivMode = false;
 
+  /// If set, expressions invariant in this loop are expanded in IR via
+  /// VPExpandSCEVRecipes, which hoists them out of it.
+  const Loop *HoistOutOf;
+
+  DenseMap<PointerIntPair<const SCEV *, 1, bool>, VPValue *>
+      InsertedExpressions;
+
   /// Try to find a loop-invariant IR value in the plan's entry block whose
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
   /// if none is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
 
+  /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
+  VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
+
+  VPValue *expandImpl(const SCEV *S);
+
 public:
-  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
-      : Builder(Builder), SE(SE), DL(DL) {}
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL,
+                 const Loop *HoistOutOf = nullptr)
+      : Builder(Builder), SE(SE), DL(DL), HoistOutOf(HoistOutOf) {}
 
   /// Expand \p S into recipes and live-ins using the builder.
   VPValue *expand(const SCEV *S);
+
+  /// Expand the expression of \p R, or return \p R if it must be expanded in
+  /// IR.
+  VPValue *expand(VPExpandSCEVRecipe &R) {
+    return R.expandInIR() ? &R : expand(R.getSCEV());
+  }
 };
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.
@@ -298,11 +343,8 @@ public:
     assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
-      Pred->replaceSuccessor(BlockPtr, NewBlock);
-      NewBlock->appendPredecessor(Pred);
-    }
-    BlockPtr->clearPredecessors();
+    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors()))
+      replaceSuccessor(Pred, BlockPtr, NewBlock);
     connectBlocks(NewBlock, BlockPtr);
   }
 
@@ -354,12 +396,24 @@ public:
     To->removePredecessor(From);
   }
 
+  /// Redirect the edge from \p From to \p OldSucc to \p NewSucc, keeping \p
+  /// From's successor order. \p From is removed from \p OldSucc's predecessors
+  /// and appended to \p NewSucc's.
+  static void replaceSuccessor(VPBlockBase *From, VPBlockBase *OldSucc,
+                               VPBlockBase *NewSucc) {
+    From->replaceSuccessor(OldSucc, NewSucc);
+    OldSucc->removePredecessor(From);
+    NewSucc->appendPredecessor(From);
+  }
+
   /// Reassociate all the blocks connected to \p Old so that they now point to
   /// \p New.
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
-    for (auto *Pred : to_vector(Old->getPredecessors()))
+    auto Preds = to_vector(Old->getPredecessors());
+    auto Succs = to_vector(Old->getSuccessors());
+    for (auto *Pred : Preds)
       Pred->replaceSuccessor(Old, New);
-    for (auto *Succ : to_vector(Old->getSuccessors()))
+    for (auto *Succ : Succs)
       Succ->replacePredecessor(Old, New);
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
@@ -385,18 +439,7 @@ public:
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
-    // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
-                                      const VPBlockBase, VPBlockBase>;
-
-    // We need the pointee range over (const) BlocktTy & instead of (const)
-    // BlockTy * for filter_range to work properly.
-    auto Filter =
-        make_filter_range(make_pointee_range(Range),
-                          [](BaseTy &Block) { return isa<BlockTy>(&Block); });
-    return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
-      return cast<BlockTy>(&Block);
-    });
+    return make_isa_range<BlockTy>(std::forward<T>(Range));
   }
 
   /// Return an iterator range over \p Range with each block cast to \p

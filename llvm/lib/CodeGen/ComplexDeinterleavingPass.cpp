@@ -599,7 +599,8 @@ static bool isDeinterleavingMask(ArrayRef<int> Mask) {
 }
 
 bool isNeg(Value *V) {
-  return match(V, m_FNeg(m_Value())) || match(V, m_Neg(m_Value()));
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  return match(V, m_FNegOrFSubNegZero(m_Value())) || match(V, m_Neg(m_Value()));
 }
 
 Value *getNegOperand(Value *V) {
@@ -937,6 +938,9 @@ ComplexDeinterleavingGraph::CompositeNode *
 ComplexDeinterleavingGraph::identifySymmetricOperation(ComplexValues &Vals) {
   auto *FirstReal = cast<Instruction>(Vals[0].Real);
   unsigned FirstOpc = FirstReal->getOpcode();
+  FastMathFlags CommonFlags;
+  if (isa<FPMathOperator>(FirstReal))
+    CommonFlags = FirstReal->getFastMathFlags();
   for (auto &V : Vals) {
     auto *Real = cast<Instruction>(V.Real);
     auto *Imag = cast<Instruction>(V.Imag);
@@ -947,10 +951,10 @@ ComplexDeinterleavingGraph::identifySymmetricOperation(ComplexValues &Vals) {
         !isInstructionPotentiallySymmetric(Imag))
       return nullptr;
 
-    if (isa<FPMathOperator>(FirstReal))
-      if (Real->getFastMathFlags() != FirstReal->getFastMathFlags() ||
-          Imag->getFastMathFlags() != FirstReal->getFastMathFlags())
-        return nullptr;
+    if (isa<FPMathOperator>(FirstReal)) {
+      CommonFlags &= Real->getFastMathFlags();
+      CommonFlags &= Imag->getFastMathFlags();
+    }
   }
 
   ComplexValues OpVals;
@@ -981,7 +985,7 @@ ComplexDeinterleavingGraph::identifySymmetricOperation(ComplexValues &Vals) {
       prepareCompositeNode(ComplexDeinterleavingOperation::Symmetric, Vals);
   Node->Opcode = FirstReal->getOpcode();
   if (isa<FPMathOperator>(FirstReal))
-    Node->Flags = FirstReal->getFastMathFlags();
+    Node->Flags = CommonFlags;
 
   Node->addOperand(Op0);
   if (FirstReal->isBinaryOp())
@@ -1224,13 +1228,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
 
   std::optional<FastMathFlags> Flags;
   if (isa<FPMathOperator>(Real)) {
-    if (Real->getFastMathFlags() != Imag->getFastMathFlags()) {
-      LLVM_DEBUG(dbgs() << "The flags in Real and Imaginary instructions are "
-                           "not identical\n");
-      return nullptr;
-    }
-
-    Flags = Real->getFastMathFlags();
+    Flags = Real->getFastMathFlags() & Imag->getFastMathFlags();
     if (!Flags->allowReassoc()) {
       LLVM_DEBUG(
           dbgs()
@@ -1241,7 +1239,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
 
   // Collect multiplications and addend instructions from the given instruction
   // while traversing it operands. Additionally, verify that all instructions
-  // have the same fast math flags.
+  // allow reassociation, and narrow \p Flags to the intersection of their
+  // flags.
   auto Collect = [&Flags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
                           AddendList &Addends) -> bool {
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
@@ -1315,17 +1314,18 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
           continue;
         }
 
+        bool IsProductPositive = IsPositive;
         if (isNeg(A)) {
           A = getNegOperand(A);
-          IsPositive = !IsPositive;
+          IsProductPositive = !IsProductPositive;
         }
 
         if (isNeg(B)) {
           B = getNegOperand(B);
-          IsPositive = !IsPositive;
+          IsProductPositive = !IsProductPositive;
         }
 
-        Muls.push_back(Product{A, B, IsPositive});
+        Muls.push_back(Product{A, B, IsProductPositive});
         Worklist.emplace_back(C, IsPositive);
         break;
       }
@@ -1334,11 +1334,13 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
         continue;
       }
 
-      if (Flags && I->getFastMathFlags() != *Flags) {
-        LLVM_DEBUG(dbgs() << "The instruction's fast math flags are "
-                             "inconsistent with the root instructions' flags: "
-                          << *I << "\n");
-        return false;
+      if (Flags) {
+        if (!I->getFastMathFlags().allowReassoc()) {
+          LLVM_DEBUG(dbgs() << "The instruction does not allow reassociation: "
+                            << *I << "\n");
+          return false;
+        }
+        *Flags &= I->getFastMathFlags();
       }
     }
     return true;

@@ -168,7 +168,11 @@ define i32 @test10() {
 define i16 @constant_fold_custom_dl() {
 ; CHECK-LABEL: @constant_fold_custom_dl(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i16 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @X_as1, i32 1000), i16 sub (i16 0, i16 ptrtoint (ptr addrspace(1) @X_as1 to i16))) to i16)
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 sub (i16 0, i16 ptrtoint (ptr addrspace(1) @X_as1 to i16)) to i32
+; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @X_as1, i32 1000), i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[D]] to i40
+; CHECK-NEXT:    [[E:%.*]] = trunc i40 [[TMP1]] to i16
+; CHECK-NEXT:    ret i16 [[E]]
 ;
 
 entry:

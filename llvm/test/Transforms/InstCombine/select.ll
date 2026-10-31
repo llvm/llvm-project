@@ -724,7 +724,7 @@ define i1 @test39(i1 %cond, double %x) {
 ; CHECK-SAME: i1 [[COND:%.*]], double [[X:%.*]]) {
 ; CHECK-NEXT:    ret i1 true
 ;
-  %s = select i1 %cond, double %x, double 0x7FF0000000000000   ; RHS = +infty
+  %s = select i1 %cond, double %x, double +inf   ; RHS = +infty
   %cmp = fcmp ule double %x, %s
   ret i1 %cmp
 }
@@ -4943,8 +4943,7 @@ define i32 @sequence_select_with_same_cond_true(i1 %c1, i1 %c2){
 define double @sequence_select_with_same_cond_double(double %a, i1 %c1, i1 %c2, double %r1, double %r2){
 ; CHECK-LABEL: define double @sequence_select_with_same_cond_double(
 ; CHECK-SAME: double [[A:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], double [[R1:%.*]], double [[R2:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], double 1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], double [[S1]], double 2.000000e+00
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], double 1.000000e+00, double 2.000000e+00
 ; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], double [[S2]], double 3.000000e+00
 ; CHECK-NEXT:    ret double [[S3]]
 ;
@@ -5800,3 +5799,77 @@ entry:
   call void @use_v2i64(<2 x i64> %neg)
   ret <2 x i64> %r
 }
+
+; The inner select shares the condition of the outer select, so it can be
+; resolved while simplifying the arm of the outer select.
+define float @shared_select_cond_fneg(float %a, float %b, i1 %c) {
+; CHECK-LABEL: define float @shared_select_cond_fneg(
+; CHECK-SAME: float [[A:%.*]], float [[B:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A_NEG:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float [[A_NEG]], float [[B]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %inner = select i1 %c, float %a, float 1.000000e+00
+  %arm = fneg float %inner
+  %r = select i1 %c, float %arm, float %b
+  ret float %r
+}
+
+define <2 x float> @shared_select_cond_fneg_vec(<2 x float> %a, <2 x float> %b, <2 x i1> %c) {
+; CHECK-LABEL: define <2 x float> @shared_select_cond_fneg_vec(
+; CHECK-SAME: <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x i1> [[C:%.*]]) {
+; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <2 x float> [[A]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x float> [[A_NEG]], <2 x float> [[B]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %inner = select <2 x i1> %c, <2 x float> %a, <2 x float> <float 1.0, float 1.0>
+  %arm = fneg <2 x float> %inner
+  %r = select <2 x i1> %c, <2 x float> %arm, <2 x float> %b
+  ret <2 x float> %r
+}
+
+define { i32, i32 } @shared_select_cond_insertvalue(i1 %c, { i32, i32 } %a, { i32, i32 } %b, { i32, i32 } %d) {
+; CHECK-LABEL: define { i32, i32 } @shared_select_cond_insertvalue(
+; CHECK-SAME: i1 [[C:%.*]], { i32, i32 } [[A:%.*]], { i32, i32 } [[B:%.*]], { i32, i32 } [[D:%.*]]) {
+; CHECK-NEXT:    [[ARM:%.*]] = insertvalue { i32, i32 } [[A]], i32 42, 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], { i32, i32 } [[ARM]], { i32, i32 } [[B]]
+; CHECK-NEXT:    ret { i32, i32 } [[R]]
+;
+  %inner = select i1 %c, { i32, i32 } %a, { i32, i32 } %d
+  %arm = insertvalue { i32, i32 } %inner, i32 42, 0
+  %r = select i1 %c, { i32, i32 } %arm, { i32, i32 } %b
+  ret { i32, i32 } %r
+}
+
+define [2 x i32] @shared_select_cond_insertvalue_array(i1 %c, [2 x i32] %a, [2 x i32] %b, [2 x i32] %d) {
+; CHECK-LABEL: define [2 x i32] @shared_select_cond_insertvalue_array(
+; CHECK-SAME: i1 [[C:%.*]], [2 x i32] [[A:%.*]], [2 x i32] [[B:%.*]], [2 x i32] [[D:%.*]]) {
+; CHECK-NEXT:    [[ARM:%.*]] = insertvalue [2 x i32] [[A]], i32 42, 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], [2 x i32] [[ARM]], [2 x i32] [[B]]
+; CHECK-NEXT:    ret [2 x i32] [[R]]
+;
+  %inner = select i1 %c, [2 x i32] %a, [2 x i32] %d
+  %arm = insertvalue [2 x i32] %inner, i32 42, 0
+  %r = select i1 %c, [2 x i32] %arm, [2 x i32] %b
+  ret [2 x i32] %r
+}
+
+; Negative test: the inner select has another use, so the arm cannot be
+; rewritten.
+define { i32, i32 } @shared_select_cond_insertvalue_extra_use(i1 %c, { i32, i32 } %a, { i32, i32 } %b, { i32, i32 } %d) {
+; CHECK-LABEL: define { i32, i32 } @shared_select_cond_insertvalue_extra_use(
+; CHECK-SAME: i1 [[C:%.*]], { i32, i32 } [[A:%.*]], { i32, i32 } [[B:%.*]], { i32, i32 } [[D:%.*]]) {
+; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[C]], { i32, i32 } [[A]], { i32, i32 } [[D]]
+; CHECK-NEXT:    [[ARM:%.*]] = insertvalue { i32, i32 } [[INNER]], i32 42, 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], { i32, i32 } [[ARM]], { i32, i32 } [[B]]
+; CHECK-NEXT:    call void @use_struct({ i32, i32 } [[INNER]])
+; CHECK-NEXT:    ret { i32, i32 } [[R]]
+;
+  %inner = select i1 %c, { i32, i32 } %a, { i32, i32 } %d
+  %arm = insertvalue { i32, i32 } %inner, i32 42, 0
+  %r = select i1 %c, { i32, i32 } %arm, { i32, i32 } %b
+  call void @use_struct({ i32, i32 } %inner)
+  ret { i32, i32 } %r
+}
+
+declare void @use_struct({ i32, i32 })

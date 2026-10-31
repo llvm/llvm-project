@@ -250,9 +250,5 @@ private:
 
   lto::Config Config;
 };
-
-/// A convenience function that calls cl::ParseCommandLineOptions on the given
-/// set of options.
-LLVM_ABI void parseCommandLineOptions(std::vector<std::string> &Options);
 } // namespace llvm
 #endif

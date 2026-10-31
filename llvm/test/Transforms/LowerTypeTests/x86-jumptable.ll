@@ -32,14 +32,14 @@ define i1 @foo(ptr %p) {
 ; X86_32: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [3 x ptr] [ptr @f, ptr @g, ptr @h], align 16
 ; X86_32: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
 ; X86_32: @f = alias [16 x i8], ptr @.cfi.jumptable
-; X86_32: @g = internal alias [16 x i8], getelementptr inbounds ([3 x [16 x i8]], ptr @.cfi.jumptable, i32 0, i32 1)
-; X86_32: @h = dso_local alias [16 x i8], getelementptr inbounds ([3 x [16 x i8]], ptr @.cfi.jumptable, i32 0, i32 2)
+; X86_32: @g = internal alias [16 x i8], getelementptr inbounds (i8, ptr @.cfi.jumptable, i32 16)
+; X86_32: @h = dso_local alias [16 x i8], getelementptr inbounds (i8, ptr @.cfi.jumptable, i32 32)
 ;.
 ; X86_64: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [3 x ptr] [ptr @f, ptr @g, ptr @h], align 16
 ; X86_64: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
 ; X86_64: @f = alias [16 x i8], ptr @.cfi.jumptable
-; X86_64: @g = internal alias [16 x i8], getelementptr inbounds ([3 x [16 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
-; X86_64: @h = dso_local alias [16 x i8], getelementptr inbounds ([3 x [16 x i8]], ptr @.cfi.jumptable, i64 0, i64 2)
+; X86_64: @g = internal alias [16 x i8], getelementptr inbounds (i8, ptr @.cfi.jumptable, i64 16)
+; X86_64: @h = dso_local alias [16 x i8], getelementptr inbounds (i8, ptr @.cfi.jumptable, i64 32)
 ;.
 ; X86_32-LABEL: @f.cfi(
 ; X86_32-NEXT:    ret void
@@ -107,7 +107,9 @@ define i1 @foo(ptr %p) {
 ;.
 ; X86_32: [[META0:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
 ; X86_32: [[META1:![0-9]+]] = !{i32 0, !"typeid1"}
+; X86_32: [[META2:![0-9]+]] = !{i64 1879002126, i64 16}
 ;.
 ; X86_64: [[META0:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
 ; X86_64: [[META1:![0-9]+]] = !{i32 0, !"typeid1"}
+; X86_64: [[META2:![0-9]+]] = !{i64 1879002126, i64 16}
 ;.

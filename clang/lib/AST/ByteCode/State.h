@@ -19,7 +19,7 @@
 #include "clang/AST/OptionalDiagnostic.h"
 
 namespace clang {
-class OptionalDiagnostic;
+class SemaProxy;
 
 /// Kinds of access we can perform on an object, for diagnostics. Note that
 /// we consider a member function call to be a kind of access, even though
@@ -80,8 +80,8 @@ class SourceInfo;
 /// Interface for the VM to interact with the AST walker's context.
 class State {
 public:
-  State(ASTContext &ASTCtx, Expr::EvalStatus &EvalStatus)
-      : Ctx(ASTCtx), EvalStatus(EvalStatus) {}
+  State(ASTContext &ASTCtx, SemaProxy *SProxy, Expr::EvalStatus &EvalStatus)
+      : Ctx(ASTCtx), SProxy(SProxy), EvalStatus(EvalStatus) {}
   virtual ~State();
 
   virtual const Frame *getCurrentFrame() = 0;
@@ -90,6 +90,7 @@ public:
 
   Expr::EvalStatus &getEvalStatus() const { return EvalStatus; }
   ASTContext &getASTContext() const { return Ctx; }
+  SemaProxy *getSemaProxy() const { return SProxy; }
   const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
   /// If \c DiagId should be relaxed as per the current evaluation settings,
@@ -169,9 +170,6 @@ public:
   OptionalDiagnostic Note(SourceLocation Loc, diag::kind DiagId);
   OptionalDiagnostic Note(SourceInfo Loc, diag::kind DiagId);
 
-  /// Add a stack of notes to a prior diagnostic.
-  void addNotes(ArrayRef<PartialDiagnosticAt> Diags);
-
   /// Directly reports a diagnostic message.
   DiagnosticBuilder report(SourceLocation Loc, diag::kind DiagId);
 
@@ -194,6 +192,7 @@ public:
 
   EvaluationMode EvalMode;
   ASTContext &Ctx;
+  SemaProxy *SProxy;
   Expr::EvalStatus &EvalStatus;
 
 private:
@@ -212,7 +211,7 @@ private:
   void addExtendedDiag(SourceLocation Loc, diag::kind DiagId);
 
   OptionalDiagnostic diag(SourceLocation Loc, diag::kind DiagId,
-                          unsigned ExtraNotes, bool IsCCEDiag);
+                          unsigned ExtraNotes, bool IsFFDiag);
 
   /// Should we continue evaluation after encountering undefined behavior?
   bool keepEvaluatingAfterUndefinedBehavior() const;
