@@ -267,6 +267,9 @@ struct AllocaInfo {
   }
 };
 
+using DVRIndirectValuesAtStoreMap =
+    DenseMap<StoreInst *, SmallVector<DbgVariableRecord *, 1>>;
+
 template <typename T> class VectorWithUndo {
   SmallVector<T, 8> Vals;
   SmallVector<std::pair<size_t, T>, 8> Undo;
@@ -401,6 +404,9 @@ struct PromoteMem2Reg {
   /// dbg.values. Call cleanUpDbgAssigns to delete them.
   SmallPtrSet<DbgVariableRecord *, 8> DVRAssignsToDelete;
 
+  /// For each store to an alloca, the #dbg_values with a deref alive there.
+  DVRIndirectValuesAtStoreMap DVRIndirectValuesAtStore;
+
   /// The set of basic blocks the renamer has already visited.
   BitVector Visited;
 
@@ -448,6 +454,7 @@ private:
   void ComputeLiveInBlocks(AllocaInst *AI, AllocaInfo &Info,
                            const SmallPtrSetImpl<BasicBlock *> &DefBlocks,
                            SmallPtrSetImpl<BasicBlock *> &LiveInBlocks);
+  void collectDVRIndirectValuesAtStores();
   void RenamePass(BasicBlock *BB, BasicBlock *Pred);
   bool QueuePhiNode(BasicBlock *BB, unsigned AllocaIdx, unsigned &Version);
 
@@ -678,7 +685,8 @@ static bool rewriteSingleStoreAlloca(
 static bool promoteSingleBlockAlloca(
     AllocaInst *AI, const AllocaInfo &Info, LargeBlockInfo &LBI,
     const DataLayout &DL, DominatorTree &DT, AssumptionCache *AC,
-    SmallPtrSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
+    SmallPtrSet<DbgVariableRecord *, 8> *DVRAssignsToDelete,
+    const DVRIndirectValuesAtStoreMap &DVRIndirectValuesAtStore) {
   // The trickiest case to handle is when we have large blocks. Because of this,
   // this code is optimized assuming that large blocks happen.  This does not
   // significantly pessimize the small block case.  This uses LargeBlockInfo to
@@ -747,8 +755,16 @@ static bool promoteSingleBlockAlloca(
     for (DbgVariableRecord *DbgItem : Info.DPUsers) {
       if (DbgItem->isAddressOfVariable()) {
         ConvertDebugDeclareToDebugValue(DbgItem, SI, DIB);
+      } else if (DbgItem->isDbgDeclareValue() &&
+                 DbgItem->getExpression()->startsWithDeref()) {
+        // A #dbg_declare_value is converted to a #dbg_value at each store,
+        // with its deref stripped.
+        InsertDebugValueAtStoreLoc(DbgItem, SI, DIB);
       }
     }
+    // Each live #dbg_value is cloned at each store with its deref stripped.
+    for (DbgVariableRecord *DbgItem : DVRIndirectValuesAtStore.lookup(SI))
+      InsertDebugValueAtStoreLoc(DbgItem, SI, DIB);
 
     SI->eraseFromParent();
     LBI.deleteValue(SI);
@@ -767,6 +783,60 @@ static bool promoteSingleBlockAlloca(
 
   ++NumLocalPromoted;
   return true;
+}
+
+/// Collect which records are valid at each store, walking each block once for
+/// all allocas.
+void PromoteMem2Reg::collectDVRIndirectValuesAtStores() {
+  // A #dbg_value with a deref can be cloned and rewritten at each store.
+  // Any other kind is left to be poisoned.
+  SmallPtrSet<DbgVariableRecord *, 8> DVRIndirectValues;
+  SmallSetVector<BasicBlock *, 4> BlocksToProcess;
+  for (AllocaInst *AI : Allocas)
+    for (DbgVariableRecord *DVR : findDVRValues(AI))
+      if (DVR->isDbgValue() && DVR->getExpression()->startsWithDeref()) {
+        DVRIndirectValues.insert(DVR);
+        BlocksToProcess.insert(DVR->getParent());
+      }
+
+  // Only promoteSingleBlockAlloca is supported, so each block is processed
+  // individually.
+  for (BasicBlock *BB : BlocksToProcess) {
+    // The records alive at this point, for each variable. There can be
+    // multiple if there are fragments.
+    SmallDenseMap<DebugVariableAggregate, SmallVector<DbgVariableRecord *, 1>>
+        LiveByVar;
+    // The records alive at this point, whose value use the alloca.
+    SmallDenseMap<Value *, SmallVector<DbgVariableRecord *, 1>> LiveByAlloca;
+    for (Instruction &I : *BB) {
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        // Only #dbg_values have a meaningful location.
+        if (!DVR.isDbgValue())
+          continue;
+        // Any overlapping previous record is no longer live.
+        auto &Live = LiveByVar[DebugVariableAggregate(&DVR)];
+        erase_if(Live, [&](DbgVariableRecord *L) {
+          if (!L->getExpression()->fragmentsOverlap(DVR.getExpression()))
+            return false;
+          erase(LiveByAlloca[L->getVariableLocationOp(0)], L);
+          return true;
+        });
+        // If this is one of our indirect records, mark it live.
+        if (DVRIndirectValues.contains(&DVR)) {
+          Live.push_back(&DVR);
+          LiveByAlloca[DVR.getVariableLocationOp(0)].push_back(&DVR);
+        }
+      }
+      // Save the records alive at this point.
+      auto *SI = dyn_cast<StoreInst>(&I);
+      if (!SI)
+        continue;
+      // Copy the list of live records into the map, if it was tracked.
+      auto Live = LiveByAlloca.lookup(SI->getPointerOperand());
+      if (!Live.empty())
+        DVRIndirectValuesAtStore[SI] = std::move(Live);
+    }
+  }
 }
 
 void PromoteMem2Reg::run() {
@@ -792,6 +862,8 @@ void PromoteMem2Reg::run() {
            "All allocas should be in the same function, which is same as DF!");
     removeIntrinsicUsers(AI);
   }
+
+  collectDVRIndirectValuesAtStores();
 
   for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
     AllocaInst *AI = Allocas[AllocaNum];
@@ -826,7 +898,8 @@ void PromoteMem2Reg::run() {
     // linear sweep over the block to eliminate it.
     if (Info.OnlyUsedInOneBlock &&
         promoteSingleBlockAlloca(AI, Info, LBI, SQ.DL, DT, AC,
-                                 &DVRAssignsToDelete)) {
+                                 &DVRAssignsToDelete,
+                                 DVRIndirectValuesAtStore)) {
       // The alloca has been processed, move on.
       RemoveFromAllocasList(AllocaNum);
       continue;
