@@ -260,11 +260,10 @@ static cl::opt<bool> CallsitePrioritizedInline(
 
 static cl::opt<bool> ImportLocalIndirectTargets(
     "sample-profile-import-local-indirect-targets", cl::Hidden, cl::init(false),
-    cl::desc(
-        "In ThinLTO pre-link, also add hot profiled targets of a deferred "
-        "indirect call to the import list when they are defined in the "
-        "current module, so they can be imported together with the caller "
-        "into other modules."));
+    cl::desc("In ThinLTO pre-link, also add hot profiled targets of a deferred "
+             "indirect call to the import list when they are defined in the "
+             "current module, so they can be imported together with the caller "
+             "into other modules."));
 
 static cl::opt<bool> UsePreInlinerDecision(
     "sample-profile-use-preinliner", cl::Hidden,
