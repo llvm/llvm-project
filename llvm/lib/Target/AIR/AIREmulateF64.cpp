@@ -841,7 +841,9 @@ static StringRef ieeeF32Op(const Instruction &I) {
     case Instruction::FMul:
       return "mul";
     case Instruction::FDiv:
-      return "div";
+      // (an approximate division, afn or arcp, keeps the hardware's
+      // reciprocal where no denormal is involved: PTX's div.approx, rcp.approx)
+      return BO->hasApproxFunc() || BO->hasAllowReciprocal() ? "div.approx" : "div";
     default:
       return "";
     }
@@ -1470,6 +1472,12 @@ void EmulateF64::emulate(Function &F, StringRef Key) {
       Fast = B.CreateFMul(A[0], A[1]);
     else if (Name == "div")
       Fast = B.CreateFDiv(A[0], A[1]);
+    else if (Name == "div.approx") {
+      FastMathFlags FMF;
+      FMF.setApproxFunc();
+      FMF.setAllowReciprocal();
+      Fast = B.CreateFDivFMF(A[0], A[1], FMF);
+    }
     else if (Name == "fma")
       Fast = B.CreateIntrinsic(Intrinsic::fma, {F32}, {A[0], A[1], A[2]});
     else if (Name == "sqrt")
@@ -1497,7 +1505,8 @@ void EmulateF64::emulate(Function &F, StringRef Key) {
     SmallVector<Value *, 4> D;
     for (Value *X : A)
       D.push_back(Lib("__air_f64_from_f32", I64, {Bits(X)}));
-    std::string Lname = ("__air_f64_" + Name + "_r").str();
+    // (div.approx: its exact result where a denormal is involved, as div's)
+    std::string Lname = ("__air_f64_" + Name.split('.').first + "_r").str();
     auto Call = [&](Value *Rounding) {
       SmallVector<Value *, 4> Args(D);
       Args.push_back(Rounding);
