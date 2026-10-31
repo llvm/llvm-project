@@ -650,8 +650,21 @@ X86_64TargetInfo::classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
     // If we have a sign or zero extended integer, make sure to return Extend
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && ResType->isInteger()) {
-      if (Ty->isInteger() && isPromotableInteger(cast<IntegerType>(Ty)))
-        return ArgInfo::getExtend(Ty);
+      if (Ty->isInteger() && isPromotableInteger(cast<IntegerType>(Ty))) {
+        switch (getX86ABICompatInfo().SmallIntABICompat) {
+        case SmallIntABICompatKind::Platform:
+          if (cast<IntegerType>(Ty)->isBool()) {
+            // Bool should be extended to 8-bits. We can't express this right
+            // now, so use conservative extension.
+            return ArgInfo::getConservativeExtend(Ty);
+          }
+          break;
+        case SmallIntABICompatKind::Clang:
+          return ArgInfo::getExtend(Ty);
+        case SmallIntABICompatKind::Both:
+          return ArgInfo::getConservativeExtend(Ty);
+        }
+      }
     }
 
     if (ResType->isInteger() && ResType->getSizeInBits() == 128) {

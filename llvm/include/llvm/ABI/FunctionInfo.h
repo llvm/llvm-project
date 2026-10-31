@@ -78,6 +78,7 @@ private:
   Kind TheKind;
   bool SignExt : 1;
   bool ZeroExt : 1;
+  bool Conservative : 1;
   bool IndirectByVal : 1;
   bool IndirectRealign : 1;
   bool CanBeFlattened : 1;
@@ -85,9 +86,9 @@ private:
   unsigned NeededSseRegs : 3;
 
   ArgInfo(Kind K = Direct)
-      : TheKind(K), SignExt(false), ZeroExt(false), IndirectByVal(false),
-        IndirectRealign(false), CanBeFlattened(false), NeededIntRegs(0),
-        NeededSseRegs(0) {}
+      : TheKind(K), SignExt(false), ZeroExt(false), Conservative(false),
+        IndirectByVal(false), IndirectRealign(false), CanBeFlattened(false),
+        NeededIntRegs(0), NeededSseRegs(0) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
@@ -126,6 +127,12 @@ public:
     else
       AI.setZeroExt();
 
+    return AI;
+  }
+
+  static ArgInfo getConservativeExtend(const Type *T) {
+    ArgInfo AI = getExtend(T);
+    AI.Conservative = true;
     return AI;
   }
 
@@ -266,6 +273,14 @@ public:
   bool isNoExt() const {
     assert(isExtend() && "Invalid Kind!");
     return !SignExt && !ZeroExt;
+  }
+
+  /// Whether the extension is conservative, i.e. the sender extends, but the
+  /// receiver does not assume the extension. Currently only supported for
+  /// arguments, i.e. caller extends, but callee does not assume extension.
+  bool isConservative() const {
+    assert(isExtend() && "Invalid Kind!");
+    return Conservative;
   }
 
   const Type *getCoerceToType() const {

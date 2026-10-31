@@ -1099,7 +1099,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z3foossss
-// CHECK3-SAME: (i16 noundef signext [[A:%.*]], i16 noundef signext [[B:%.*]], i16 noundef signext [[C:%.*]], i16 noundef signext [[D:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK3-SAME: (i16 noundef [[A:%.*]], i16 noundef [[B:%.*]], i16 noundef [[C:%.*]], i16 noundef [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca i16, align 2
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca i16, align 2
@@ -1388,7 +1388,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z3barssss
-// CHECK3-SAME: (i16 noundef signext [[A:%.*]], i16 noundef signext [[B:%.*]], i16 noundef signext [[C:%.*]], i16 noundef signext [[D:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i16 noundef [[A:%.*]], i16 noundef [[B:%.*]], i16 noundef [[C:%.*]], i16 noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca i16, align 2
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca i16, align 2
@@ -1700,7 +1700,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z5tbar2ssss
-// CHECK3-SAME: (i16 noundef signext [[A:%.*]], i16 noundef signext [[B:%.*]], i16 noundef signext [[C:%.*]], i16 noundef signext [[D:%.*]]) #[[ATTR0]] {
+// CHECK3-SAME: (i16 noundef [[A:%.*]], i16 noundef [[B:%.*]], i16 noundef [[C:%.*]], i16 noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca i16, align 2
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca i16, align 2
@@ -1719,7 +1719,7 @@ int tbar2(short a, short b, short c, short d){
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z4tbarIsEiT_S0_S0_S0_
-// CHECK3-SAME: (i16 noundef signext [[A:%.*]], i16 noundef signext [[B:%.*]], i16 noundef signext [[C:%.*]], i16 noundef signext [[D:%.*]]) #[[ATTR0]] comdat {
+// CHECK3-SAME: (i16 noundef [[A:%.*]], i16 noundef [[B:%.*]], i16 noundef [[C:%.*]], i16 noundef [[D:%.*]]) #[[ATTR0]] comdat {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca i16, align 2
 // CHECK3-NEXT:    [[B_ADDR:%.*]] = alloca i16, align 2

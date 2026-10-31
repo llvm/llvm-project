@@ -806,7 +806,7 @@ _Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
 // CIR:     cir.yield
 // CIR:   }
 
-// LLVMCIR-LABEL: define dso_local {{.*}} <2 x float> @_Z25test_complex_cond_cleanupbCf(i1 noundef zeroext %{{.*}}, <2 x float> noundef %{{.*}})
+// LLVMCIR-LABEL: define dso_local {{.*}} <2 x float> @_Z25test_complex_cond_cleanupbCf(i1 noundef %{{.*}}, <2 x float> noundef %{{.*}})
 // LLVMCIR:         %[[TMP:.*]] = alloca %struct.CplxD
 // LLVMCIR:         %[[ACTIVE:.*]] = alloca i8
 // LLVMCIR:         br i1 %{{.*}}, label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]

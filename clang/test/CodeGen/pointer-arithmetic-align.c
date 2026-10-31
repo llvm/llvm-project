@@ -65,7 +65,7 @@ void ptrsub_4(struct a *ctx) {
 }
 
 // CHECK-LABEL: define dso_local void @neg_ptradd_var_index(
-// CHECK-SAME: ptr nofree noundef writeonly captures(none) [[CTX:%.*]], i8 noundef zeroext [[IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef writeonly captures(none) [[CTX:%.*]], i8 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BLOCK:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 8
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i8 [[IDX]] to i64

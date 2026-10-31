@@ -392,7 +392,8 @@ static void initializeCommonABICompatInfo(llvm::abi::ABICompatInfo &CompatInfo,
 
 static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
                                        const llvm::Triple &T,
-                                       const LangOptions::ClangABI Compat) {
+                                       const LangOptions::ClangABI Compat,
+                                       const CodeGenOptions &CGOpts) {
   initializeCommonABICompatInfo(CompatInfo, Compat);
   CompatInfo.ClassifyIntegerMMXAsSSE = Compat > LangOptions::ClangABI::Ver3_8 &&
                                        !T.isOSDarwin() && !T.isPS() &&
@@ -406,6 +407,21 @@ static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
   CompatInfo.Clang11Compat = Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
   CompatInfo.ClassifyUnnamedBitFields =
       Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
+  if (T.isOSDarwin() || T.isPS()) {
+    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+  } else {
+    switch (CGOpts.getSmallIntABICompat()) {
+    case CodeGenOptions::SmallIntABICompatKind::Platform:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Platform;
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Clang:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang;
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Both:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Both;
+      break;
+    }
+  }
 }
 
 const llvm::abi::TargetInfo &
@@ -462,8 +478,8 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
                         : llvm::abi::X86AVXABILevel::None;
 
     llvm::abi::X86ABICompatInfo CompatInfo;
-    initializeX86ABICompatInfo(CompatInfo, T,
-                               getLangOpts().getClangABICompat());
+    initializeX86ABICompatInfo(CompatInfo, T, getLangOpts().getClangABICompat(),
+                               getCodeGenOpts());
 
     bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
 

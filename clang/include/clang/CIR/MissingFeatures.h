@@ -182,6 +182,7 @@ struct MissingFeatures {
   static bool aggValueSlotMayOverlap() { return false; }
   static bool aggValueSlotVolatile() { return false; }
   static bool allocToken() { return false; }
+  static bool smallIntABICompatOption() { return false; }
   static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
   static bool asmGoto() { return false; }

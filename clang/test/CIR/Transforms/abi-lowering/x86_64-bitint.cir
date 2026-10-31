@@ -43,12 +43,12 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @ret_b17(
-  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.signext})
+  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint>)
   // CHECK-SAME:    -> !cir.int<s, 17, bitint>
   // CHECK-NEXT:    cir.return %arg0 : !cir.int<s, 17, bitint>
 
   // LLVM-LABEL: define i17 @ret_b17(
-  // LLVM-SAME:    i17 signext %[[ARG:[0-9]+]])
+  // LLVM-SAME:    i17 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    ret i17 %[[ARG]]
 
   // Unsigned takes zeroext instead.
@@ -57,12 +57,12 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @ret_ub17(
-  // CHECK-SAME:    %arg0: !cir.int<u, 17, bitint> {llvm.zeroext})
+  // CHECK-SAME:    %arg0: !cir.int<u, 17, bitint>)
   // CHECK-SAME:    -> !cir.int<u, 17, bitint>
   // CHECK-NEXT:    cir.return %arg0 : !cir.int<u, 17, bitint>
 
   // LLVM-LABEL: define i17 @ret_ub17(
-  // LLVM-SAME:    i17 zeroext %[[ARG:[0-9]+]])
+  // LLVM-SAME:    i17 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    ret i17 %[[ARG]]
 
   // Already the width the classifier names: Direct, nothing to rewrite.
@@ -365,7 +365,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @take_widths(
-  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.signext}
+  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint>
   // CHECK-SAME:    , %arg1: !u64i, %arg2: !u64i, %arg3: !u64i)
   // CHECK-NEXT:    %[[W33SLOT:[0-9]+]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg3, %[[W33SLOT]] : !u64i, !cir.ptr<!u64i>
@@ -388,7 +388,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_widths(
-  // LLVM-SAME:    i17 signext %{{[0-9]+}}, i64 %[[A1:[0-9]+]]
+  // LLVM-SAME:    i17 %{{[0-9]+}}, i64 %[[A1:[0-9]+]]
   // LLVM-SAME:    , i64 %[[A2:[0-9]+]], i64 %[[A3:[0-9]+]])
   // The fourth register holds the 33-bit value, materialized first.
   // LLVM-NEXT:    %[[W33SLOT:[0-9]+]] = alloca i64, align 8
@@ -416,7 +416,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @call_widths(
-  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.signext}
+  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint>
   // CHECK-SAME:    , %arg1: !u64i, %arg2: !u64i, %arg3: !u64i)
   // CHECK-NEXT:    %[[V33SLOT:[0-9]+]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg3, %[[V33SLOT]] : !u64i, !cir.ptr<!u64i>
@@ -460,7 +460,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @call_widths(
-  // LLVM-SAME:    i17 signext %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]]
+  // LLVM-SAME:    i17 %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]]
   // LLVM-SAME:    , i64 %[[A2:[0-9]+]], i64 %[[A3:[0-9]+]])
   // LLVM-NEXT:    %[[V33SLOT:[0-9]+]] = alloca i64, align 8
   // LLVM-NEXT:    store i64 %[[A3]], ptr %[[V33SLOT]], align 8

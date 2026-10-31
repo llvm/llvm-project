@@ -6,7 +6,7 @@ void __vectorcall v1(int a, int b) {}
 // X64: define dso_local x86_vectorcallcc void @"\01v1@@16"(i32 noundef %a, i32 noundef %b)
 
 void __vectorcall v2(char a, char b) {}
-// X86: define dso_local x86_vectorcallcc void @"\01v2@@8"(i8 inreg noundef signext %a, i8 inreg noundef signext %b)
+// X86: define dso_local x86_vectorcallcc void @"\01v2@@8"(i8 inreg noundef %a, i8 inreg noundef %b)
 // X64: define dso_local x86_vectorcallcc void @"\01v2@@16"(i8 noundef %a, i8 noundef %b)
 
 struct Small { int x; };

@@ -127,9 +127,9 @@ int take_five_short(FiveShort v) { return v.b; }
 FiveShort ret_five_short(short x) { FiveShort v = {0, x, 0}; return v; }
 
 // CIR: cir.func{{.*}} @take_five_short(%arg0: !cir.int<u, 40>{{.*}}) -> !s32i
-// CIR: cir.func{{.*}} @ret_five_short(%arg0: !s16i {llvm.noundef, llvm.signext}{{.*}}) -> !cir.int<u, 40>
+// CIR: cir.func{{.*}} @ret_five_short(%arg0: !s16i {llvm.noundef}{{.*}}) -> !cir.int<u, 40>
 // LLVM: define dso_local i32 @take_five_short(i40 %{{.+}})
-// LLVM: define dso_local i40 @ret_five_short(i16 noundef signext %{{.+}})
+// LLVM: define dso_local i40 @ret_five_short(i16 noundef %{{.+}})
 
 // A named access unit is only ambiguous where padding lets classic read the
 // declared type through the gap, so a packed record whose every byte holds

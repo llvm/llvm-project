@@ -673,11 +673,13 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   // there is no offset to honor here.
   if (info.isExtend()) {
     if (isa_and_present<cir::BoolType>(origTy))
-      return ArgClassification::getExtend(nullptr, info.isSignExt());
+      return ArgClassification::getExtend(nullptr, info.isSignExt(),
+                                          info.isConservative());
     assert((!origTy || isa<cir::IntType>(origTy)) &&
            "the x86_64 classifier only returns Extend for integers and bool");
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
-    return ArgClassification::getExtend(extendedTy, info.isSignExt());
+    return ArgClassification::getExtend(extendedTy, info.isSignExt(),
+                                        info.isConservative());
   }
   // ArgClassification has no address space for the indirect pointer yet.
   if (info.isIndirectAliased() ||

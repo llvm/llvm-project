@@ -223,7 +223,7 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
                                ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
                                const FunctionClassification &fc,
-                               const mlir::DataLayout &dl) {
+                               const mlir::DataLayout &dl, bool isCallSite) {
   mlir::Builder builder(ctx);
   SmallVector<mlir::Attribute> newArgAttrs;
   newArgAttrs.reserve(fc.argInfos.size());
@@ -248,7 +248,7 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
       // fields, so each field gets an empty dict.
       auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
       newArgAttrs.append(recTy.getNumElements(), builder.getDictionaryAttr({}));
-    } else if (ac.kind == ArgKind::Extend) {
+    } else if (ac.kind == ArgKind::Extend && (isCallSite || !ac.conservative)) {
       StringRef attrName = ac.signExtend
                                ? mlir::LLVM::LLVMDialect::getSExtAttrName()
                                : mlir::LLVM::LLVMDialect::getZExtAttrName();
@@ -1577,7 +1577,8 @@ mlir::LogicalResult rewriteIndirectReturnCall(
   mlir::ArrayAttr argAttrs = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
   if (needsArgAttrUpdate(fc))
     argAttrs = updateArgAttrs(ctx, call->getParentOfType<mlir::ModuleOp>(),
-                              origCallArgTypes, argAttrs, fc, dl);
+                              origCallArgTypes, argAttrs, fc, dl,
+                              /*isCallSite=*/true);
   applySretSlotAttrs(newCall, argAttrs, origRetTy, sretAlign, builder);
 
   if (reuseStore) {
@@ -1929,7 +1930,8 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   if (hasSRet || needsArgAttrUpdate(fc)) {
     auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
     mlir::ArrayAttr updated =
-        updateArgAttrs(ctx, module, oldArgTypes, existing, fc, dl);
+        updateArgAttrs(ctx, module, oldArgTypes, existing, fc, dl,
+                       /*isCallSite=*/false);
     if (hasSRet) {
       // Prepend the sret slot's attribute dict (slot 0); the per-argument
       // dicts shift to slots 1..N.  noalias is valid only on the callee's
@@ -2236,8 +2238,9 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
 
   if (needsArgAttrUpdate(fc)) {
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
-    newCall->setAttr("arg_attrs", updateArgAttrs(ctx, module, origCallArgTypes,
-                                                 existing, fc, dl));
+    newCall->setAttr("arg_attrs",
+                     updateArgAttrs(ctx, module, origCallArgTypes, existing, fc,
+                                    dl, /*isCallSite=*/true));
   }
   // Add llvm.signext / llvm.zeroext to an Extend return, and drop llvm.noundef
   // from a coerced Direct return that passes undefined bits.

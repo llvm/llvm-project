@@ -28,7 +28,7 @@ void storeEnum(BoolEnum *p, BoolEnum v) { *p = v; }
 // CIR:         %[[P:.*]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.bool>>, !cir.ptr<!cir.bool>
 // CIR:         cir.store {{.*}}%[[V]], %[[P]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM-LABEL: define dso_local void @_Z9storeEnumP8BoolEnumS_(ptr noundef %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local void @_Z9storeEnumP8BoolEnumS_(ptr noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         zext i1 %{{.*}} to i8
 // LLVM:         store i8 %{{.*}}, ptr %{{.*}}, align 1
 // LLVM:         load i8, ptr %{{.*}}, align 1
@@ -42,7 +42,7 @@ bool toBool(BoolEnum e) { return static_cast<bool>(e); }
 // CIR-NOT:     cir.cast int_to_bool
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6toBool8BoolEnum(i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6toBool8BoolEnum(i1 noundef %{{[^,)]+}})
 // LLVM:         ret i1 %{{.*}}
 
 // An unscoped enum is integer-promoted before the comparison, so cir.cmp sees
@@ -54,7 +54,7 @@ bool ltUnscopedEnum(BoolEnum a, BoolEnum b) { return a < b; }
 // CIR:         %[[B:.*]] = cir.cast bool_to_int %{{.*}} : !cir.bool -> !s32i
 // CIR:         cir.cmp lt %[[A]], %[[B]] : !s32i
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z14ltUnscopedEnum8BoolEnumS_(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z14ltUnscopedEnum8BoolEnumS_(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         zext i1 %{{.*}} to i32
 // LLVM:         zext i1 %{{.*}} to i32
 // LLVM:         icmp slt i32 %{{.*}}, %{{.*}}
@@ -67,7 +67,7 @@ bool ltPlainBool(bool a, bool b) { return a < b; }
 // CIR:         %[[B:.*]] = cir.cast bool_to_int %{{.*}} : !cir.bool -> !s32i
 // CIR:         cir.cmp lt %[[A]], %[[B]] : !s32i
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z11ltPlainBoolbb(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z11ltPlainBoolbb(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         zext i1 %{{.*}} to i32
 // LLVM:         zext i1 %{{.*}} to i32
 // LLVM:         icmp slt i32 %{{.*}}, %{{.*}}
@@ -81,7 +81,7 @@ bool eqEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a == b; }
 // CIR-LABEL: cir.func{{.*}} @_Z6eqEnum14ScopedBoolEnumS_
 // CIR:         cir.cmp eq %{{.*}}, %{{.*}} : !cir.bool
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6eqEnum14ScopedBoolEnumS_(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6eqEnum14ScopedBoolEnumS_(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         icmp eq i1 %{{.*}}, %{{.*}}
 
 bool neEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a != b; }
@@ -89,7 +89,7 @@ bool neEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a != b; }
 // CIR-LABEL: cir.func{{.*}} @_Z6neEnum14ScopedBoolEnumS_
 // CIR:         cir.cmp ne %{{.*}}, %{{.*}} : !cir.bool
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6neEnum14ScopedBoolEnumS_(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6neEnum14ScopedBoolEnumS_(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         icmp ne i1 %{{.*}}, %{{.*}}
 
 bool ltEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a < b; }
@@ -97,7 +97,7 @@ bool ltEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a < b; }
 // CIR-LABEL: cir.func{{.*}} @_Z6ltEnum14ScopedBoolEnumS_
 // CIR:         cir.cmp lt %{{.*}}, %{{.*}} : !cir.bool
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6ltEnum14ScopedBoolEnumS_(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6ltEnum14ScopedBoolEnumS_(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         icmp ult i1 %{{.*}}, %{{.*}}
 
 bool leEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a <= b; }
@@ -105,7 +105,7 @@ bool leEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a <= b; }
 // CIR-LABEL: cir.func{{.*}} @_Z6leEnum14ScopedBoolEnumS_
 // CIR:         cir.cmp le %{{.*}}, %{{.*}} : !cir.bool
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6leEnum14ScopedBoolEnumS_(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6leEnum14ScopedBoolEnumS_(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         icmp ule i1 %{{.*}}, %{{.*}}
 
 bool gtEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a > b; }
@@ -113,7 +113,7 @@ bool gtEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a > b; }
 // CIR-LABEL: cir.func{{.*}} @_Z6gtEnum14ScopedBoolEnumS_
 // CIR:         cir.cmp gt %{{.*}}, %{{.*}} : !cir.bool
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6gtEnum14ScopedBoolEnumS_(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6gtEnum14ScopedBoolEnumS_(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         icmp ugt i1 %{{.*}}, %{{.*}}
 
 bool geEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a >= b; }
@@ -121,5 +121,5 @@ bool geEnum(ScopedBoolEnum a, ScopedBoolEnum b) { return a >= b; }
 // CIR-LABEL: cir.func{{.*}} @_Z6geEnum14ScopedBoolEnumS_
 // CIR:         cir.cmp ge %{{.*}}, %{{.*}} : !cir.bool
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6geEnum14ScopedBoolEnumS_(i1 noundef zeroext %{{[^,)]+}}, i1 noundef zeroext %{{[^,)]+}})
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z6geEnum14ScopedBoolEnumS_(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
 // LLVM:         icmp uge i1 %{{.*}}, %{{.*}}

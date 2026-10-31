@@ -2,7 +2,7 @@
 // RUN: FileCheck < %t %s
 
 // CHECK-LABEL: define{{.*}} void @f56(
-// CHECK: i8 noundef signext %a0, ptr noundef byval(%struct.s56_0) align 4 %a1,
+// CHECK: i8 noundef %a0, ptr noundef byval(%struct.s56_0) align 4 %a1,
 // CHECK: i64 noundef %a2.coerce, ptr noundef byval(%struct.s56_1) align 4 %0,
 // CHECK: <1 x double> noundef %a4, ptr noundef byval(%struct.s56_2) align 4 %1,
 // CHECK: <4 x i32> noundef %a6, ptr noundef byval(%struct.s56_3) align 4 %2,
