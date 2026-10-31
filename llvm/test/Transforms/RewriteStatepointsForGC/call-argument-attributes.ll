@@ -40,3 +40,44 @@ exceptional_return:
   cleanup
   ret i8 0
 }
+
+; A gc.statepoint returns a token, so the 'returned' argument attribute of the
+; original call cannot move onto its argument: the result comes back through
+; gc.result. The other argument attributes are kept.
+declare i64 @callee_returned(i64, ptr)
+
+define i64 @test_returned(i64 %x, ptr %arg) gc "statepoint-example" {
+; CHECK-LABEL: define i64 @test_returned(
+; CHECK-SAME: i64 [[X:%.*]], ptr [[ARG:%.*]]) gc "statepoint-example" {
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i64 (i64, ptr)) @callee_returned, i32 2, i32 0, i64 noundef [[X]], ptr [[ARG]], i32 0, i32 0)
+; CHECK-NEXT:    [[R1:%.*]] = call i64 @llvm.experimental.gc.result.i64(token [[STATEPOINT_TOKEN]])
+; CHECK-NEXT:    ret i64 [[R1]]
+;
+  %r = call i64 @callee_returned(i64 noundef returned %x, ptr %arg)
+  ret i64 %r
+}
+
+define i64 @test_invoke_returned(i64 %x, ptr %arg) gc "statepoint-example" personality ptr @personality_function {
+; CHECK-LABEL: define i64 @test_invoke_returned(
+; CHECK-SAME: i64 [[X:%.*]], ptr [[ARG:%.*]]) gc "statepoint-example" personality ptr @personality_function {
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i64 (i64, ptr)) @callee_returned, i32 2, i32 0, i64 noundef [[X]], ptr [[ARG]], i32 0, i32 0)
+; CHECK-NEXT:            to label [[NORMAL_RETURN:%.*]] unwind label [[EXCEPTIONAL_RETURN:%.*]]
+; CHECK:       normal_return:
+; CHECK-NEXT:    [[R1:%.*]] = call i64 @llvm.experimental.gc.result.i64(token [[STATEPOINT_TOKEN]])
+; CHECK-NEXT:    ret i64 [[R1]]
+; CHECK:       exceptional_return:
+; CHECK-NEXT:    [[LANDING_PAD4:%.*]] = landingpad token
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret i64 0
+;
+  %r = invoke i64 @callee_returned(i64 noundef returned %x, ptr %arg)
+  to label %normal_return unwind label %exceptional_return
+
+normal_return:
+  ret i64 %r
+
+exceptional_return:
+  %landing_pad4 = landingpad token
+  cleanup
+  ret i64 0
+}
