@@ -1642,6 +1642,9 @@ def PROBED_STACKALLOC : Pseudo<(outs),
                                (ins GPR:$target),
                                []>,
                                Sched<[]>;
+// Probed stack allocation of a size held in $target, used in function
+// prologues for the RVV area and for stack realignment. The loop subtracts each
+// probed step from $target, which then holds what is left to allocate.
 def PROBED_STACKALLOC_RVV : Pseudo<(outs),
                                    (ins GPR:$target),
                                    []>,
