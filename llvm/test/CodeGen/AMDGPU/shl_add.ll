@@ -362,3 +362,66 @@ define i32 @v_shl4_add_chain(i32 %src) {
   %a5 = add i32 %s5, 84017408
   ret i32 %a5
 }
+
+define amdgpu_ps <3 x float> @shl_add_shared_literals(<3 x i32> %a) {
+; VI-LABEL: shl_add_shared_literals:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_mov_b32 s0, 0xf000f
+; VI-NEXT:    v_lshlrev_b32_e64 v2, v2, s0
+; VI-NEXT:    v_lshlrev_b32_e64 v1, v1, s0
+; VI-NEXT:    v_lshlrev_b32_e64 v0, v0, s0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x64006400, v0
+; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x64006400, v1
+; VI-NEXT:    v_add_u32_e32 v2, vcc, 0x64006400, v2
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: shl_add_shared_literals:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x64006400
+; GFX9-NEXT:    v_lshl_add_u32 v0, s0, v0, v3
+; GFX9-NEXT:    v_lshl_add_u32 v1, s0, v1, v3
+; GFX9-NEXT:    v_lshl_add_u32 v2, s0, v2, v3
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: shl_add_shared_literals:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX10-NEXT:    v_lshl_add_u32 v0, s0, v0, 0x64006400
+; GFX10-NEXT:    v_lshl_add_u32 v1, s0, v1, 0x64006400
+; GFX10-NEXT:    v_lshl_add_u32 v2, s0, v2, 0x64006400
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX9-O0-LABEL: shl_add_shared_literals:
+; GFX9-O0:       ; %bb.0:
+; GFX9-O0-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GFX9-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-O0-NEXT:    s_mov_b32 s6, -1
+; GFX9-O0-NEXT:    s_mov_b32 s7, 0xe00000
+; GFX9-O0-NEXT:    s_add_u32 s4, s4, s2
+; GFX9-O0-NEXT:    s_addc_u32 s5, s5, 0
+; GFX9-O0-NEXT:    buffer_store_dword v2, off, s[4:7], 0 ; 4-byte Folded Spill
+; GFX9-O0-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-O0-NEXT:    buffer_load_dword v0, off, s[4:7], 0 ; 4-byte Folded Reload
+; GFX9-O0-NEXT:    v_mov_b32_e32 v3, v2
+; GFX9-O0-NEXT:    s_mov_b32 s1, 0x64006400
+; GFX9-O0-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX9-O0-NEXT:    v_mov_b32_e32 v3, s1
+; GFX9-O0-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-O0-NEXT:    v_lshl_add_u32 v0, s0, v0, v3
+; GFX9-O0-NEXT:    v_mov_b32_e32 v3, s1
+; GFX9-O0-NEXT:    v_lshl_add_u32 v1, s0, v1, v3
+; GFX9-O0-NEXT:    v_mov_b32_e32 v3, s1
+; GFX9-O0-NEXT:    v_lshl_add_u32 v2, s0, v2, v3
+; GFX9-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4 killed $exec
+; GFX9-O0-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-O0-NEXT:    v_mov_b32_e32 v4, v0
+; GFX9-O0-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-O0-NEXT:    v_mov_b32_e32 v1, v3
+; GFX9-O0-NEXT:    v_mov_b32_e32 v2, v4
+; GFX9-O0-NEXT:    ; return to shader part epilog
+  %x = shl <3 x i32> splat (i32 983055), %a
+  %r = add <3 x i32> %x, splat (i32 1677747200)
+  %f = bitcast <3 x i32> %r to <3 x float>
+  ret <3 x float> %f
+}
