@@ -30,6 +30,10 @@ void use() {
 
   (void)Foo<int>::static_data_member; // expected-warning{{instantiation of variable 'Foo<int>::static_data_member' required here, but no definition is available}}
   // expected-note@-1 {{add an explicit instantiation}}
+  // expected-note@-2 {{there are 3 ways to fix this:}}
+  // expected-note@-3 {{use 'extern template}}
+  // expected-note@-4 {{or use 'template <>}}
+  // expected-note@-5 {{or use 'template <class T>}}
 
   Foo<int>::nested::static_member_function(); // expected-warning{{instantiation of function 'Foo<int>::nested::static_member_function' required here, but no definition is available}}
   // expected-note@-1 {{add an explicit instantiation}}

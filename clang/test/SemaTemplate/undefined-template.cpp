@@ -37,11 +37,19 @@ char func_01() {
 char func_02() {
   return C1<int>::s_var_1; // expected-warning{{instantiation of variable 'C1<int>::s_var_1' required here, but no definition is available}}
                            // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::s_var_1' is explicitly instantiated in another translation unit}}
+                           // expected-note@-2{{there are 3 ways to fix this:}}
+                           // expected-note@-3{{use 'extern template char C1<int>::s_var_1;'}}
+                           // expected-note@-4{{or use 'template <> char C1<int>::s_var_1;'}}
+                           // expected-note@-5{{or use 'template <class T> char C1<T>::s_var_1;' to provide a definition for all types}}
 }
 
 char func_03() {
   return C1<char>::s_var_2; // expected-warning{{instantiation of variable 'C1<char>::s_var_2' required here, but no definition is available}}
                             // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<char>::s_var_2' is explicitly instantiated in another translation unit}}
+                            // expected-note@-2{{there are 3 ways to fix this:}}
+                            // expected-note@-3{{use 'extern template char C1<char>::s_var_2;'}}
+                            // expected-note@-4{{or use 'template <> char C1<char>::s_var_2;'}}
+                            // expected-note@-5{{or use 'template <class T> char C1<T>::s_var_2;' to provide a definition for all types}}
 }
 
 void func_04() {
@@ -79,6 +87,10 @@ char func_10() {
 char func_11() {
   return C1<int>::s_tvar_2<long>; // expected-warning{{instantiation of variable 'C1<int>::s_tvar_2<long>' required here, but no definition is available}}
                                   // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::s_tvar_2<long>' is explicitly instantiated in another translation unit}}
+                                  // expected-note@-2{{there are 3 ways to fix this:}}
+                                  // expected-note@-3{{use 'extern template char C1<int>::s_tvar_2<long>;'}}
+                                  // expected-note@-4{{or use 'template <> template <> char C1<int>::s_tvar_2<long>;'}}
+                                  // expected-note@-5{{or use 'template <class T> template <class T1> char C1<T>::s_tvar_2;' to provide a definition for all types}}
 }
 
 void func_12() {
@@ -97,6 +109,10 @@ char func_14() {
 char func_15() {
   return C1<int>::C2<char>::s_var_2;  //expected-warning {{instantiation of variable 'C1<int>::C2<char>::s_var_2' required here, but no definition is available}}
                                       // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::C2<char>::s_var_2' is explicitly instantiated in another translation unit}}
+                                      // expected-note@-2{{there are 3 ways to fix this:}}
+                                      // expected-note@-3{{use 'extern template char C1<int>::C2<char>::s_var_2;'}}
+                                      // expected-note@-4{{or use 'template <> template <> char C1<int>::C2<char>::s_var_2;'}}
+                                      // expected-note@-5{{or use 'template <class T> template <typename T1> char C1<T>::C2<T1>::s_var_2;' to provide a definition for all types}}
 }
 
 void func_16() {
@@ -124,6 +140,10 @@ char func_20() {
 char func_21() {
   return C1<int>::C2<long>::s_tvar_2<long>; // expected-warning{{instantiation of variable 'C1<int>::C2<long>::s_tvar_2<long>' required here, but no definition is available}}
                                   // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::C2<long>::s_tvar_2<long>' is explicitly instantiated in another translation unit}}
+                                  // expected-note@-2{{there are 3 ways to fix this:}}
+                                  // expected-note@-3{{use 'extern template char C1<int>::C2<long>::s_tvar_2<long>;'}}
+                                  // expected-note@-4{{or use 'template <> template <> template <> char C1<int>::C2<long>::s_tvar_2<long>;'}}
+                                  // expected-note@-5{{or use 'template <class T> template <typename T1> template <class T2> char C1<T>::C2<T1>::s_tvar_2;' to provide a definition for all types}}
 }
 
 void func_22(C1<int>::C2<long> *x) {
