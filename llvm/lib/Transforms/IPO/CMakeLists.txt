@@ -31,6 +31,7 @@ add_llvm_component_library(LLVMipo
   InstrumentorConfigFile.cpp
   InstrumentorStubPrinter.cpp
   Internalize.cpp
+  InternalizeLinkOnceODR.cpp
   LowerTypeTests.cpp
   MemProfContextDisambiguation.cpp
   MergeFunctions.cpp
