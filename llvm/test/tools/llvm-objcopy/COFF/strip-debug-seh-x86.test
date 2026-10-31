@@ -1,0 +1,125 @@
+## Check that --strip-debug preserves x86 SafeSEH handler references.
+## .sxdata contains raw COFF symbol-table indices, not relocations. Merely
+## retaining the section (or successfully reading the object) is insufficient.
+##
+## Removing .debug$S removes its section symbol AND its auxiliary record.
+## Consequently, _handler1 and _handler2 move from indices 7 and 8 to 5 and 6.
+## The .sxdata entries must change accordingly. The handlers have no ordinary
+## relocations referring to them, and one is a local symbol.
+##
+# RUN: yaml2obj %s -o %t.in.o
+# RUN: llvm-readobj --sections %t.in.o | FileCheck %s --check-prefix=BEFORE-SECTIONS
+# RUN: llvm-objdump --syms %t.in.o | FileCheck %s --check-prefix=BEFORE-SYMS
+# RUN: llvm-readobj --hex-dump=.sxdata %t.in.o | FileCheck %s --check-prefix=BEFORE-DATA
+# RUN: llvm-objcopy --strip-debug %t.in.o %t.out.o
+# RUN: llvm-readobj --sections --symbols %t.out.o | FileCheck %s --check-prefix=AFTER --implicit-check-not=.debug
+# RUN: llvm-objdump --syms %t.out.o | FileCheck %s --check-prefix=AFTER-SYMS
+# RUN: llvm-readobj --hex-dump=.sxdata %t.out.o | FileCheck %s --check-prefix=AFTER-DATA
+## Stripping again must not remap already-updated indices a second time.
+# RUN: llvm-objcopy --strip-debug %t.out.o %t.twice.o
+# RUN: llvm-objdump --syms %t.twice.o | FileCheck %s --check-prefix=AFTER-SYMS
+# RUN: llvm-readobj --hex-dump=.sxdata %t.twice.o | FileCheck %s --check-prefix=AFTER-DATA
+
+# BEFORE-SECTIONS: Name: .debug$S
+# BEFORE-SECTIONS: Name: .text
+# BEFORE-SECTIONS: Name: .sxdata
+# BEFORE-SYMS: [{{ *}}7]{{.*}} _handler1
+# BEFORE-SYMS: [{{ *}}8]{{.*}} _handler2
+# BEFORE-DATA: Hex dump of section '.sxdata':
+# BEFORE-DATA-NEXT: 0x00000000 07000000 08000000
+
+# AFTER: Sections [
+# AFTER-NEXT: Section {
+# AFTER-NEXT: Number: 1
+# AFTER-NEXT: Name: .text
+# AFTER: Section {
+# AFTER-NEXT: Number: 2
+# AFTER-NEXT: Name: .sxdata
+# AFTER: RelocationCount: 0
+# AFTER: Symbols [
+# AFTER: Name: @feat.00
+# AFTER-NEXT: Value: 1
+# AFTER: Name: _handler1
+# AFTER-NEXT: Value: 0
+# AFTER-NEXT: Section: .text (1)
+# AFTER: Name: _handler2
+# AFTER-NEXT: Value: 1
+# AFTER-NEXT: Section: .text (1)
+# AFTER-SYMS: [{{ *}}5]{{.*}} _handler1
+# AFTER-SYMS: [{{ *}}6]{{.*}} _handler2
+# AFTER-DATA: Hex dump of section '.sxdata':
+# AFTER-DATA-NEXT: 0x00000000 05000000 06000000
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_I386
+  Characteristics: []
+sections:
+  - Name: '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_DISCARDABLE ]
+    Alignment: 4
+    SectionData: '04000000'
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: 'C3C3'
+  - Name: .sxdata
+    Characteristics: [ IMAGE_SCN_LNK_INFO ]
+    Alignment: 4
+    SectionData: '0700000008000000'
+symbols:
+  - Name: '.debug$S'
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 1
+  - Name: .text
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 2
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 2
+  - Name: .sxdata
+    Value: 0
+    SectionNumber: 3
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 3
+  - Name: '@feat.00'
+    Value: 1
+    SectionNumber: -1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+  - Name: _handler1
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: _handler2
+    Value: 1
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+...
