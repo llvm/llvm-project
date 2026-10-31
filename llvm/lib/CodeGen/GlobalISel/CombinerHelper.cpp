@@ -1486,9 +1486,11 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(
   // This is required to create the memory operand for the narrowed load.
   // This machine memory operand object helps us infer about legality
   // before we proceed to combine the instruction.
-  if (auto CVal = getIConstantVRegVal(Vector, MRI)) {
+  Register Idx = MI.getOperand(2).getReg();
+  if (auto CVal = getIConstantVRegVal(Idx, MRI)) {
+    // Regardless of the ABI data layout, the vector elements are always tightly
+    // packed, so the offset can be computed from the element index.
     int Elt = CVal->getZExtValue();
-    // FIXME: should be (ABI size)*Elt.
     Offset = VecEltTy.getSizeInBits() * Elt / 8;
     PtrInfo = MMO.getPointerInfo().getWithOffset(Offset);
   } else {
