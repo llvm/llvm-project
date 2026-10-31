@@ -59788,6 +59788,12 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
   }
 
+  // Keep the packed unsigned expansion when the signed conversion would
+  // scalarize. Strict conversions cannot use that expansion.
+  if (!IsStrict && InVT.isVector() && InVT.getScalarType() == MVT::i64 &&
+      VT.getScalarType() == MVT::f64 && !Subtarget.hasDQI())
+    return SDValue();
+
   // Since UINT_TO_FP is legal (it's marked custom), dag combiner won't
   // optimize it to a SINT_TO_FP when the sign bit is known zero. Perform
   // the optimization here.

@@ -10437,9 +10437,14 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   // it.
   if (Node->getFlags().hasNonNeg() &&
       isOperationLegalOrCustom(ISD::SINT_TO_FP, SrcVT)) {
-    Result =
-        DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), DstVT, Node->getOperand(0));
-    return true;
+    SDValue Signed = DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), DstVT, Src);
+    // Custom lowering may decline this source/destination combination.
+    if (isOperationCustom(ISD::SINT_TO_FP, SrcVT))
+      Signed = LowerOperation(Signed, DAG);
+    if (Signed) {
+      Result = Signed;
+      return true;
+    }
   }
 
   if (SrcVT.getScalarType() != MVT::i64 || DstVT.getScalarType() != MVT::f64)
