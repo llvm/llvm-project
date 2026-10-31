@@ -20441,12 +20441,14 @@ TEST_F(FormatTest, BreakPenaltyScopeResolution) {
 }
 
 TEST_F(FormatTest, PenaltyDoesNotOverflow) {
-  // The total penalty of this line is above 2^32.
-  std::string Code = "int t[] = {\n";
-  for (int I = 0; I < 81; ++I)
-    Code += "    0x" + std::string(100, '0') + ",\n";
-  Code += "};";
-  verifyFormat(Code);
+  // Indenting the rows more would make the total penalty go past 2^32.
+  auto Style = getLLVMStyleWithColumns(20);
+  Style.PenaltyExcessCharacter = 200'000'000;
+  verifyFormat("int t[] = {\n"
+               "    11111111111111111111,\n"
+               "    11111111111111111111,\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, WorksFor8bitEncodings) {

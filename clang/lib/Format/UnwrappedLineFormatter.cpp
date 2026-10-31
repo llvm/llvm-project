@@ -1243,7 +1243,7 @@ public:
   /// Formats an \c AnnotatedLine and returns the penalty.
   ///
   /// If \p DryRun is \c false, directly applies the changes.
-  virtual unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
+  virtual uint64_t formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
                               unsigned FirstStartColumn, bool DryRun) = 0;
 
 protected:
@@ -1268,7 +1268,7 @@ protected:
   /// \c UnwrappedLineFormatter, where we only have two options for each token:
   /// break or don't break.
   bool formatChildren(LineState &State, bool NewLine, bool DryRun,
-                      unsigned &Penalty) {
+                      uint64_t &Penalty) {
     const FormatToken *LBrace = State.NextToken->getPreviousNonComment();
     bool HasLBrace = LBrace && LBrace->is(tok::l_brace) && LBrace->is(BK_Block);
     FormatToken &Previous = *State.NextToken->Previous;
@@ -1348,7 +1348,7 @@ public:
 
   /// Formats the line, simply keeping all of the input's line breaking
   /// decisions.
-  unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
+  uint64_t formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
                       unsigned FirstStartColumn, bool DryRun) override {
     assert(!DryRun);
     LineState State = Indenter->getInitialState(FirstIndent, FirstStartColumn,
@@ -1357,7 +1357,7 @@ public:
       bool Newline =
           Indenter->mustBreak(State) ||
           (Indenter->canBreak(State) && State.NextToken->NewlinesBefore > 0);
-      unsigned Penalty = 0;
+      uint64_t Penalty = 0;
       formatChildren(State, Newline, /*DryRun=*/false, Penalty);
       Indenter->addTokenToState(State, Newline, /*DryRun=*/false);
     }
@@ -1374,9 +1374,9 @@ public:
       : LineFormatter(Indenter, Whitespaces, Style, BlockFormatter) {}
 
   /// Puts all tokens into a single line.
-  unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
+  uint64_t formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
                       unsigned FirstStartColumn, bool DryRun) override {
-    unsigned Penalty = 0;
+    uint64_t Penalty = 0;
     LineState State =
         Indenter->getInitialState(FirstIndent, FirstStartColumn, &Line, DryRun);
     while (State.NextToken) {
@@ -1399,7 +1399,7 @@ public:
 
   /// Formats the line by finding the best line breaks with line lengths
   /// below the column limit.
-  unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
+  uint64_t formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
                       unsigned FirstStartColumn, bool DryRun) override {
     LineState State =
         Indenter->getInitialState(FirstIndent, FirstStartColumn, &Line, DryRun);
@@ -1454,7 +1454,7 @@ private:
   /// to a state where all tokens are placed. Returns the penalty.
   ///
   /// If \p DryRun is \c false, directly applies the changes.
-  unsigned analyzeSolutionSpace(LineState &InitialState, bool DryRun) {
+  uint64_t analyzeSolutionSpace(LineState &InitialState, bool DryRun) {
     std::set<LineState *, CompareLineStatePointers> Seen;
 
     // Increasing count of \c StateNode items we have created. This is used to
@@ -1517,7 +1517,7 @@ private:
                << "Total number of analyzed states: " << Count << "\n");
     LLVM_DEBUG(llvm::dbgs() << "---\n");
 
-    return std::min<uint64_t>(Penalty, UINT_MAX);
+    return Penalty;
   }
 
   /// Add the following state to the analysis queue \c Queue.
@@ -1533,11 +1533,9 @@ private:
 
     StateNode *Node = new (Allocator.Allocate())
         StateNode(PreviousNode->State, NewLine, PreviousNode);
-    unsigned ChildrenPenalty = 0;
-    if (!formatChildren(Node->State, NewLine, /*DryRun=*/true, ChildrenPenalty))
+    if (!formatChildren(Node->State, NewLine, /*DryRun=*/true, Penalty))
       return;
 
-    Penalty += ChildrenPenalty;
     Penalty += Indenter->addTokenToState(Node->State, NewLine, true);
 
     Queue->push(QueueItem(OrderedPenalty(Penalty, *Count), Node));
@@ -1554,7 +1552,7 @@ private:
       Best = Best->Previous;
     }
     for (const auto &Node : llvm::reverse(Path)) {
-      unsigned Penalty = 0;
+      uint64_t Penalty = 0;
       formatChildren(State, Node->NewLine, /*DryRun=*/false, Penalty);
       Penalty += Indenter->addTokenToState(State, Node->NewLine, false);
 
@@ -1574,7 +1572,7 @@ private:
 
 } // anonymous namespace
 
-unsigned UnwrappedLineFormatter::format(
+uint64_t UnwrappedLineFormatter::format(
     const SmallVectorImpl<AnnotatedLine *> &Lines, bool DryRun,
     int AdditionalIndent, bool FixBadIndentation, unsigned FirstStartColumn,
     unsigned NextStartColumn, unsigned LastStartColumn) {
@@ -1588,7 +1586,7 @@ unsigned UnwrappedLineFormatter::format(
     return CacheIt->second;
 
   assert(!Lines.empty());
-  unsigned Penalty = 0;
+  uint64_t Penalty = 0;
   LevelIndentTracker IndentTracker(Style, Keywords, Lines[0]->Level,
                                    AdditionalIndent);
   const AnnotatedLine *PrevPrevLine = nullptr;
