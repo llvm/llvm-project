@@ -571,6 +571,8 @@ func.func @pad_dyn_input(%arg0 : tensor<?x2xf32>) -> (tensor<?x9xf32>) {
 func.func @pad_dyn_padding(%arg0 : tensor<1x2xf32>) -> (tensor<?x9xf32>) {
   %0 = tosa.const_shape values(dense<[-1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
   %pad_const = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // CHECK: [[FALSE:%.+]] = arith.constant false
+  // CHECK: cf.assert [[FALSE]], "tosa.pad: padding must be non-negative
   // CHECK-DAG: [[INDEX1:%.+]] = arith.constant -1 : index
   // CHECK-DAG: [[INDEX2:%.+]] = arith.constant 2 : index
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index

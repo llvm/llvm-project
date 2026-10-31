@@ -1126,8 +1126,8 @@ static void inferFrameworkLink(Module *Mod) {
 
   StringRef FrameworkName(Mod->Name);
   FrameworkName.consume_back("_Private");
-  Mod->LinkLibraries.push_back(Module::LinkLibrary(FrameworkName.str(),
-                                                   /*IsFramework=*/true));
+  Mod->LinkLibraries.emplace_back(FrameworkName.str(),
+                                  /*IsFramework=*/true);
 }
 
 Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
@@ -2301,8 +2301,8 @@ void ModuleMapLoader::handleUseDecl(const modulemap::UseDecl &UD) {
 }
 
 void ModuleMapLoader::handleLinkDecl(const modulemap::LinkDecl &LD) {
-  ActiveModule->LinkLibraries.push_back(
-      Module::LinkLibrary(std::string{LD.Library}, LD.Framework));
+  ActiveModule->LinkLibraries.emplace_back(std::string{LD.Library},
+                                           LD.Framework);
 }
 
 void ModuleMapLoader::handleConfigMacros(
@@ -2444,6 +2444,18 @@ bool ModuleMapLoader::parseAndLoadModuleMapFile(
         Decl);
   }
   return HadError;
+}
+
+OptionalFileEntryRef ModuleMap::getModuleMapFileForName(StringRef Name) const {
+  // Check loaded modules first, inferred modules are only found here.
+  if (Module *M = Modules.lookup(Name))
+    return getModuleMapFileForUniquing(M);
+
+  // Then check only parsed modules.
+  auto ParsedMod = ParsedModules.find(Name);
+  if (ParsedMod == ParsedModules.end())
+    return std::nullopt;
+  return SourceMgr.getFileEntryRefForID(ParsedMod->second.front().first->ID);
 }
 
 Module *ModuleMap::findOrLoadModule(StringRef Name) {

@@ -44,6 +44,7 @@ class LoadInst;
 class Loop;
 class PHINode;
 class ScalarEvolution;
+class SelectInst;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -358,6 +359,10 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
 /// the loads \p VL.
 Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
                                       const DataLayout &DL);
+
+/// Returns the select instruction picking between the candidate base pointers
+/// of the blended loads \p VL.
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL);
 
 /// Returns the common type for the indices of the single-index GEP lanes of
 /// a GEP node with the main op \p VL0, or nullptr if no such type exists.

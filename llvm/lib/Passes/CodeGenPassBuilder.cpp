@@ -43,7 +43,6 @@
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -55,6 +54,7 @@
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineVerifier.h"
@@ -94,6 +94,7 @@
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/CodeGen/XRayInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -446,47 +447,47 @@ void CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 /// Turn exception handling constructs into something the code generators can
 /// handle.
 void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
-  const MCAsmInfo &MCAI = TM.getMCAsmInfo();
-  switch (MCAI.getExceptionHandlingType()) {
-  case ExceptionHandling::SjLj:
-    // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
-    // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
-    // catch info can get misplaced when a selector ends up more than one block
-    // removed from the parent invoke(s). This could happen when a landing
-    // pad is shared by multiple invokes and is also a target of a normal
-    // edge from elsewhere.
+  // The module's exception model is not known when the pipeline is built, so
+  // schedule the preparation pass for every model the target supports. Each
+  // pass does nothing for other models.
+  bool HasEHPrep = false;
+
+  // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
+  // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
+  // catch info can get misplaced when a selector ends up more than one block
+  // removed from the parent invoke(s). This could happen when a landing
+  // pad is shared by multiple invokes and is also a target of a normal
+  // edge from elsewhere.
+  if (TM.supportsExceptionModel(ExceptionHandling::SjLj)) {
     addFunctionPass(SjLjEHPreparePass(&TM), PMW);
-    [[fallthrough]];
-  case ExceptionHandling::DwarfCFI:
-  case ExceptionHandling::ARM:
-  case ExceptionHandling::AIX:
-  case ExceptionHandling::ZOS:
-    addFunctionPass(DwarfEHPreparePass(TM), PMW);
-    break;
-  case ExceptionHandling::WinEH:
-    // We support using both GCC-style and MSVC-style exceptions on Windows, so
-    // add both preparation passes. Each pass will only actually run if it
-    // recognizes the personality function.
+    HasEHPrep = true;
+  }
+  // We support using both GCC-style and MSVC-style exceptions on Windows, so
+  // WinEHPrepare runs in addition to DwarfEHPrepare below. Each pass will only
+  // actually run if it recognizes the personality function.
+  //
+  // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
+  // on catchpads and cleanuppads because it does not outline them into
+  // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
+  // should remove PHIs there.
+  if (TM.supportsExceptionModel(ExceptionHandling::WinEH) ||
+      TM.supportsExceptionModel(ExceptionHandling::Wasm)) {
     addFunctionPass(WinEHPreparePass(), PMW);
+    HasEHPrep = true;
+  }
+  if (TM.supportsExceptionModel(ExceptionHandling::Wasm))
+    addFunctionPass(WasmEHPreparePass(), PMW);
+  if (TM.supportsExceptionModel(ExceptionHandling::DwarfCFI)) {
     addFunctionPass(DwarfEHPreparePass(TM), PMW);
-    break;
-  case ExceptionHandling::Wasm:
-    // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
-    // on catchpads and cleanuppads because it does not outline them into
-    // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
-    // should remove PHIs there.
-    addFunctionPass(WinEHPreparePass(), PMW);
-    break;
-  case ExceptionHandling::Default:
-  case ExceptionHandling::None:
-  case ExceptionHandling::Emscripten:
-    // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
-    // by this point it needs no generic EH preparation, like the None case.
+    HasEHPrep = true;
+  }
+
+  // If the target supports no exception model, nothing else lowers invokes.
+  if (!HasEHPrep) {
     addFunctionPass(LowerInvokePass(), PMW);
 
     // The lower invoke pass may create unreachable code. Remove it.
     addFunctionPass(UnreachableBlockElimPass(), PMW);
-    break;
   }
 }
 
@@ -631,6 +632,13 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
                   PMW, /*Force=*/true);
     addMachineFunctionPass(RegUsageInfoPropagationPass(), PMW);
   }
+
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      (Opt.EnableMachinePipeliner == cl::boolOrDefault::BOU_UNSET
+           ? isMachinePipelinerEnabled()
+           : Opt.EnableMachinePipeliner == cl::boolOrDefault::BOU_TRUE))
+    addMachineFunctionPass(MachinePipelinerPass(), PMW);
+
   // Run pre-ra passes.
   addPreRegAlloc(PMW);
 
@@ -863,19 +871,10 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(ProcessImplicitDefsPass(), PMW);
 
-  // LiveVariables currently requires pure SSA form.
-  //
-  // FIXME: Once TwoAddressInstruction pass no longer uses kill flags,
-  // LiveVariables can be removed completely, and LiveIntervals can be directly
-  // computed. (We still either need to regenerate kill flags after regalloc, or
-  // preferably fix the scavenger to not depend on them).
-  // FIXME: UnreachableMachineBlockElim is a dependant pass of LiveVariables.
-  // When LiveVariables is removed this has to be removed/moved either.
+  // LiveIntervals requires pure SSA form and no unreachable blocks.
   // Explicit addition of UnreachableMachineBlockElim allows stopping before or
   // after it with -stop-before/-stop-after.
   addMachineFunctionPass(UnreachableMachineBlockElimPass(), PMW);
-  addMachineFunctionPass(
-      RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>(), PMW);
 
   // If enabled, run the SSA machine scheduler just before PHI elimination.
   if (Opt.EnableSSAMachineScheduler) {
@@ -884,9 +883,6 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(SSAMachineSchedulerPass(&TM), PMW);
   }
 
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
   addMachineFunctionPass(
       RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 

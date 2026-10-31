@@ -33,43 +33,43 @@ foo:
 
         ldur x0, [x1, #-257]
 
-; CHECK-ERRORS: error: index must be an integer in range [-256, 255].
+; CHECK-ERRORS: error: immediate must be an integer in range [-256, 255].
 ; CHECK-ERRORS:         ldr x0, [x0, #804]
 ; CHECK-ERRORS:                 ^
-; CHECK-ERRORS: error: index must be an integer in range [-256, 255].
+; CHECK-ERRORS: error: immediate must be an integer in range [-256, 255].
 ; CHECK-ERRORS:         ldr w0, [x0, #802]
 ; CHECK-ERRORS:                 ^
-; CHECK-ERRORS: error: index must be an integer in range [-256, 255].
+; CHECK-ERRORS: error: immediate must be an integer in range [-256, 255].
 ; CHECK-ERRORS:         ldr x0, [x0, #804]!
 ; CHECK-ERRORS:                 ^
 ; CHECK-ERRORS: error: invalid operand for instruction
 ; CHECK-ERRORS:         ldr w0, [w0, #301]!
 ; CHECK-ERRORS:                  ^
-; CHECK-ERRORS: error: index must be an integer in range [-256, 255].
+; CHECK-ERRORS: error: immediate must be an integer in range [-256, 255].
 ; CHECK-ERRORS:         ldr x0, [x0], #804
 ; CHECK-ERRORS:                       ^
 ; CHECK-ERRORS: error: invalid operand for instruction
 ; CHECK-ERRORS:         ldr w0, [w0], #301
 ; CHECK-ERRORS:                  ^
-; CHECK-ERRORS: error: index must be a multiple of 4 in range [-256, 252].
+; CHECK-ERRORS: error: immediate must be a multiple of 4 in range [-256, 252].
 ; CHECK-ERRORS:         ldp w3, w4, [x5, #11]!
 ; CHECK-ERRORS:                     ^
-; CHECK-ERRORS: error: index must be a multiple of 8 in range [-512, 504].
+; CHECK-ERRORS: error: immediate must be a multiple of 8 in range [-512, 504].
 ; CHECK-ERRORS:         ldp x3, x4, [x5, #12]!
 ; CHECK-ERRORS:                     ^
-; CHECK-ERRORS: error: index must be a multiple of 16 in range [-1024, 1008].
+; CHECK-ERRORS: error: immediate must be a multiple of 16 in range [-1024, 1008].
 ; CHECK-ERRORS:         ldp q3, q4, [x5, #12]!
 ; CHECK-ERRORS:                     ^
-; CHECK-ERRORS: error: index must be a multiple of 4 in range [-256, 252].
+; CHECK-ERRORS: error: immediate must be a multiple of 4 in range [-256, 252].
 ; CHECK-ERRORS:         ldp w3, w4, [x5], #11
 ; CHECK-ERRORS:                           ^
-; CHECK-ERRORS: error: index must be a multiple of 8 in range [-512, 504].
+; CHECK-ERRORS: error: immediate must be a multiple of 8 in range [-512, 504].
 ; CHECK-ERRORS:         ldp x3, x4, [x5], #12
 ; CHECK-ERRORS:                           ^
-; CHECK-ERRORS: error: index must be a multiple of 16 in range [-1024, 1008].
+; CHECK-ERRORS: error: immediate must be a multiple of 16 in range [-1024, 1008].
 ; CHECK-ERRORS:         ldp q3, q4, [x5], #12
 ; CHECK-ERRORS:                           ^
-; CHECK-ERRORS: error: index must be an integer in range [-256, 255].
+; CHECK-ERRORS: error: immediate must be an integer in range [-256, 255].
 ; CHECK-ERRORS:         ldur x0, [x1, #-257]
 ; CHECK-ERRORS:                   ^
 

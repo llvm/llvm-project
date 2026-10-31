@@ -21,3 +21,19 @@ cc_library(
     ],
     strip_include_prefix = "include",
 )
+
+filegroup(
+    name = "libunwind_hdrs",
+    srcs = glob(["include/**/*.h"]),
+)
+
+filegroup(
+    name = "libunwind_srcs",
+    srcs = glob([
+        "src/*.cpp",
+        "src/*.hpp",
+        "src/*.c",
+        "src/*.h",
+        "src/*.S",
+    ]),
+)

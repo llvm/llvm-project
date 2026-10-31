@@ -12,6 +12,7 @@ code_style
 source_tree_layout
 entrypoints
 implementing_a_function
+errno
 config_options
 date_and_time
 fuzzing

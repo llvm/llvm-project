@@ -1,0 +1,15 @@
+# REQUIRES: asserts
+# RUN: not llc -mtriple=amdgpu9 -run-pass=dead-mi-elimination -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=amdgpu9 -passes=dead-mi-elimination -filetype=null %s 2>&1 | FileCheck %s
+
+# CHECK: Required properties: IsSSA
+# CHECK: LLVM ERROR: MachineFunctionProperties check failed
+---
+name: func
+isSSA: false
+body:             |
+  bb.0:
+    %0:sgpr_32 = S_MOV_B32 0
+    %0:sgpr_32 = S_MOV_B32 0
+
+...

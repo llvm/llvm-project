@@ -76,14 +76,6 @@ static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
   return fallbackSymTab.lookup<RoutineOp>(routineRef.getLeafReference());
 }
 
-static bool isACCRoutineBindDefaultOrDeviceType(RoutineOp op,
-                                                DeviceType deviceType) {
-  if (!op.getBindIdName() && !op.getBindStrName())
-    return false;
-  return op.getBindNameValue().has_value() ||
-         op.getBindNameValue(deviceType).has_value();
-}
-
 class ACCMaterializeRoutineBindTargets
     : public acc::impl::ACCMaterializeRoutineBindTargetsBase<
           ACCMaterializeRoutineBindTargets> {
@@ -146,13 +138,10 @@ public:
           return WalkResult::advance();
 
       RoutineOp routine = getFirstAccRoutineOp(callee, outerSymTab);
-      if (!routine ||
-          !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
+      if (!routine)
         return WalkResult::advance();
 
-      auto bindNameOpt = routine.getBindNameValue(this->deviceType);
-      if (!bindNameOpt)
-        bindNameOpt = routine.getBindNameValue();
+      auto bindNameOpt = routine.getEffectiveBindName(this->deviceType);
       if (!bindNameOpt || !std::holds_alternative<StringAttr>(*bindNameOpt))
         return WalkResult::advance();
 
@@ -227,13 +216,10 @@ public:
       }
 
       RoutineOp routine = getFirstAccRoutineOp(callee, outerSymTab);
-      if (!routine ||
-          !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
+      if (!routine)
         return;
 
-      auto bindNameOpt = routine.getBindNameValue(this->deviceType);
-      if (!bindNameOpt)
-        bindNameOpt = routine.getBindNameValue();
+      auto bindNameOpt = routine.getEffectiveBindName(this->deviceType);
       if (!bindNameOpt)
         return;
       SymbolRefAttr calleeRef;

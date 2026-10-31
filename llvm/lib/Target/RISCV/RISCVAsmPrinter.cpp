@@ -402,8 +402,8 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     lowerOperand(MI->getOperand(0), SymOp);
     MCInst TmpInst;
     TmpInst.setOpcode(RISCV::PseudoTAILReg);
-    TmpInst.addOperand(SymOp);
     TmpInst.addOperand(MCOperand::createReg(RISCV::X7));
+    TmpInst.addOperand(SymOp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }

@@ -955,6 +955,22 @@ define i1 @test_invert_demorgan_logical_or(i64 %x, i64 %y) !prof !0 {
   ret i1 %not
 }
 
+define i1 @test_invert_demorgan_logical_or_xor(i64 %x, i64 %y, i1 %z) !prof !0 {
+; CHECK-LABEL: @test_invert_demorgan_logical_or_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X:%.*]], 27
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[Y:%.*]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !prof [[PROF2]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[Z:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmp1 = icmp eq i64 %x, 27
+  %cmp2 = icmp eq i64 %y, 0
+  %sel = select i1 %cmp1, i1 true, i1 %cmp2, !prof !1
+  %xor = xor i1 %z, %sel
+  %not = xor i1 %xor, true
+  ret i1 %not
+}
+
 define i1 @test_invert_demorgan_and(i32 %a, i32 %b, i1 %cond) {
 ; CHECK-LABEL: @test_invert_demorgan_and(
 ; CHECK-NEXT:  entry:
@@ -1026,6 +1042,22 @@ define i1 @test_invert_demorgan_logical_and(i64 %x, i64 %y) !prof !0 {
   %cmp3 = icmp eq i64 %x, 0
   %or = or i1 %cmp3, %sel
   %not = xor i1 %or, true
+  ret i1 %not
+}
+
+define i1 @test_invert_demorgan_logical_and_xor(i64 %x, i64 %y, i1 %z) !prof !0 {
+; CHECK-LABEL: @test_invert_demorgan_logical_and_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X:%.*]], 27
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[Y:%.*]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP2]], !prof [[PROF2]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[Z:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i1 [[NOT]]
+;
+  %cmp1 = icmp eq i64 %x, 27
+  %cmp2 = icmp eq i64 %y, 0
+  %sel = select i1 %cmp1, i1 %cmp2, i1 false, !prof !1
+  %xor = xor i1 %z, %sel
+  %not = xor i1 %xor, true
   ret i1 %not
 }
 

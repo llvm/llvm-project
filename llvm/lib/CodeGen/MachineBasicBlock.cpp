@@ -535,6 +535,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "machine-block-address-taken";
       hasAttributes = true;
     }
+    if (hasLabelMustBeEmitted()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "label-must-be-emitted";
+      hasAttributes = true;
+    }
     if (isIRBlockAddressTaken()) {
       os << (hasAttributes ? ", " : " (");
       os << "ir-block-address-taken ";
@@ -1840,10 +1845,7 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
-    // Prefer the "exception-model" module flag, else the TargetOptions default.
     ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
-    if (EH == ExceptionHandling::Default)
-      EH = TLI.getTargetMachine().getExceptionModel();
     ExceptionPointer = TLI.getExceptionPointerRegister(EH, PersonalityFn);
     ExceptionSelector = TLI.getExceptionSelectorRegister(EH, PersonalityFn);
   }

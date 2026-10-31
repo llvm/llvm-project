@@ -4948,7 +4948,7 @@ void Parser::CompleteLateParsedTypeAttributes(
   for (LateParsedTypeAttribute *RawLTA : LateTypeAttrs) {
     std::unique_ptr<LateParsedTypeAttribute> LTA(RawLTA);
 
-    BoundsAttributedType *BATy = LTA->TypeToComplete;
+    BoundsAttributedType *BATy = LTA->Info.TypeToComplete;
     if (!BATy || Actions.isLateParsedBoundsTypeRejected(BATy))
       continue;
 
@@ -6654,9 +6654,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     DeclSpec DS(AttrFactory);
     ParseTypeQualifierListOpt(DS);
 
-    D.AddTypeInfo(
-        DeclaratorChunk::getPipe(DS.getTypeQualifiers(), DS.getPipeLoc()),
-        std::move(DS.getAttributes()), SourceLocation());
+    D.AddTypeInfo(DeclaratorChunk::getPipe(DS.getTypeQualifiers(),
+                                           D.getDeclSpec().getPipeLoc()),
+                  std::move(DS.getAttributes()), SourceLocation());
   }
 
   // Not a pointer, C++ reference, or block.

@@ -134,7 +134,7 @@ body:             |
     ; GFX6-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C2]]
     ; GFX6-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[ZEXT1]](s32)
     ; GFX6-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = disjoint G_OR [[TRUNC2]], [[TRUNC3]]
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[TRUNC2]], [[TRUNC3]]
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; GFX6-NEXT: $sgpr0 = COPY [[ANYEXT]](s32)
     ;
@@ -152,7 +152,7 @@ body:             |
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[AND]](s16)
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[SUB]], [[C1]]
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[AND1]](s16)
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s16) = disjoint G_OR [[SHL]], [[LSHR]]
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[SHL]], [[LSHR]]
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; GFX8-NEXT: $sgpr0 = COPY [[ANYEXT]](s32)
     %2:_(s32) = COPY $sgpr0
@@ -274,7 +274,7 @@ body:             |
     ; GFX-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C1]]
     ; GFX-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
     ; GFX-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[TRUNC1]](s32)
-    ; GFX-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[SHL]], [[LSHR]]
+    ; GFX-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[LSHR]]
     ; GFX-NEXT: $sgpr0_sgpr1 = COPY [[OR]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $sgpr2_sgpr3
@@ -346,7 +346,7 @@ body:             |
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[AND2]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[ZEXT1]](s32)
     ; GFX6-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = disjoint G_OR [[TRUNC2]], [[TRUNC3]]
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[TRUNC2]], [[TRUNC3]]
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; GFX6-NEXT: $sgpr0 = COPY [[ANYEXT]](s32)
     ;
@@ -364,7 +364,7 @@ body:             |
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[AND]](s16)
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[SUB]], [[C1]]
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[AND1]](s16)
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s16) = disjoint G_OR [[LSHR]], [[SHL]]
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[LSHR]], [[SHL]]
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; GFX8-NEXT: $sgpr0 = COPY [[ANYEXT]](s32)
     %2:_(s32) = COPY $sgpr0
@@ -427,7 +427,7 @@ body:             |
     ; GFX-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C1]]
     ; GFX-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
     ; GFX-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[TRUNC1]](s32)
-    ; GFX-NEXT: [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[LSHR]], [[SHL]]
+    ; GFX-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR]], [[SHL]]
     ; GFX-NEXT: $sgpr0_sgpr1 = COPY [[OR]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $sgpr2_sgpr3

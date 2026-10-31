@@ -12,16 +12,10 @@
 define <8 x i8> @concat_v8i8(<4 x i8> %op1) {
 ; CHECK-LABEL: concat_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, wzr
-; CHECK-NEXT:    mov z2.h, z0.h[3]
-; CHECK-NEXT:    mov z3.h, z0.h[2]
-; CHECK-NEXT:    mov z4.h, z0.h[1]
-; CHECK-NEXT:    zip1 z2.b, z3.b, z2.b
-; CHECK-NEXT:    zip1 z0.b, z0.b, z4.b
-; CHECK-NEXT:    zip1 z1.b, z1.b, z1.b
-; CHECK-NEXT:    zip1 z0.h, z0.h, z2.h
-; CHECK-NEXT:    zip1 z1.h, z1.h, z1.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    mov z1.h, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    splice z0.h, p0, { z0.h, z1.h }
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i8> %op1, <4 x i8> zeroinitializer,
                        <8 x i32> <i32 0, i32 1, i32 2, i32 3,

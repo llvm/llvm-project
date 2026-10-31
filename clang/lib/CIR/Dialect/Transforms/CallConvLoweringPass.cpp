@@ -203,7 +203,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
     // A scalable vector has no size the SysV eightbyte rules can read, and
     // x86_64 has no calling convention for one.
-    if (vecTy.getIsScalable())
+    if (vecTy.isScalable())
       return false;
     // mapCIRType maps a bool as a one-bit integer, so a bool vector is sized
     // one bit per element, as clang packs it.  Vectors of a _BitInt whose
@@ -308,15 +308,25 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
       .Case([&](const llvm::abi::FloatType *fltTy) {
         return cir::getFloatingPointType(*fltTy->getSemantics(), ctx);
       })
-      .Case([&](const llvm::abi::PointerType *) {
-        return cir::PointerType::get(cir::VoidType::get(ctx));
+      .Case([&](const llvm::abi::PointerType *ptrTy) {
+        auto voidTy = cir::VoidType::get(ctx);
+        if (unsigned as = ptrTy->getAddrSpace())
+          return cir::PointerType::get(
+              voidTy, cir::TargetAddressSpaceAttr::get(ctx, as));
+        return cir::PointerType::get(voidTy);
       })
       .Case([&](const llvm::abi::VectorType *vecTy) -> mlir::Type {
         mlir::Type elemCIR = abiTypeToCIR(vecTy->getElementType(), ctx);
         if (!elemCIR)
           return nullptr;
-        return cir::VectorType::get(elemCIR,
-                                    vecTy->getNumElements().getFixedValue());
+        return cir::VectorType::getFixed(
+            elemCIR, vecTy->getNumElements().getFixedValue());
+      })
+      .Case([&](const llvm::abi::ArrayType *arrTy) -> mlir::Type {
+        mlir::Type elemCIR = abiTypeToCIR(arrTy->getElementType(), ctx);
+        if (!elemCIR)
+          return nullptr;
+        return cir::ArrayType::get(elemCIR, arrTy->getNumElements());
       })
       .Case([&](const llvm::abi::RecordType *recTy) -> mlir::Type {
         SmallVector<mlir::Type> fieldTypes;
@@ -342,8 +352,8 @@ static mlir::Type unwrapLongDoubleVectorElement(mlir::Type ty) {
   if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
     if (auto longDoubleTy =
             dyn_cast<cir::LongDoubleType>(vecTy.getElementType()))
-      return cir::VectorType::get(longDoubleTy.getUnderlying(), vecTy.getSize(),
-                                  vecTy.getIsScalable());
+      return cir::VectorType::get(longDoubleTy.getUnderlying(),
+                                  vecTy.getSize());
   }
   return ty;
 }
@@ -403,8 +413,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // always fixed here.
         return tb.getVectorType(
             mapCIRType(vecTy.getElementType(), typeMapper, dl, modOp),
-            llvm::ElementCount::getFixed(vecTy.getSize()),
-            llvm::Align(dl.getTypeABIAlignment(type)));
+            vecTy.getSize(), llvm::Align(dl.getTypeABIAlignment(type)));
       })
       .Case([&](cir::ArrayType arrTy) {
         const llvm::abi::Type *elemAbi =
@@ -554,15 +563,18 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// CIRABIRewriteContext.
 ///
 /// Direct: the value passes in register(s).  A coercion is forwarded in the
-/// four cases where the value has to be rebuilt on the wire: an aggregate
-/// unpacked into the register(s) holding it, a scalar too wide for one register
-/// split into a tuple of them, a scalar the classifier widens to fill its
-/// eightbyte, and a value whose live bytes start partway into its storage
-/// because a leading eightbyte holds no field (getDirectOffset).  canFlatten
+/// cases where the value has to be rebuilt on the wire: an aggregate unpacked
+/// into the register(s) holding it, a scalar too wide for one register split
+/// into a tuple of them, a scalar the classifier widens to fill its
+/// eightbyte, a pointer moved into another address space, and a value whose
+/// live bytes start partway into its storage because a leading eightbyte
+/// holds no field (getDirectOffset).  canFlatten
 /// follows the classifier's CanBeFlattened, so the rewriter splits a
 /// multi-field coerced struct into individual wire arguments unless the
 /// classifier asked to keep it intact.  Any other scalar passes in its
-/// natural CIR type, which a null coercion denotes.  A coercion this bridge
+/// natural CIR type, which a null coercion denotes.  A multi-field struct with
+/// a null coercion is its own coerced type, so the rewriter splits it into one
+/// wire argument per field as classic codegen does.  A coercion this bridge
 /// cannot represent yields std::nullopt so the caller reports NYI rather than
 /// silently passing the value unchanged.
 ///
@@ -584,17 +596,46 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // The classifier names a coerce type even where it matches the natural
     // type, so a non-null coerce does not by itself mean a rewrite is needed.
     const llvm::abi::Type *coerceAbi = info.getCoerceToType();
+    if (!coerceAbi) {
+      auto recTy = dyn_cast_if_present<cir::RecordType>(origTy);
+      if (!recTy || !recTy.isStruct() || !info.getCanBeFlattened())
+        return ArgClassification::getDirect();
+      ArgClassification classified =
+          ArgClassification::getDirect(recTy, /*offset=*/0);
+      classified.canFlatten = true;
+      return classified;
+    }
     bool isAggregate = isa_and_present<cir::RecordType, cir::ArrayType>(origTy);
     // For a _Complex or a vector the classifier's coerce is only sometimes the
     // natural type, so it has to be read rather than assumed.
     bool comparesAgainstCoerce =
-        coerceAbi && isa_and_present<cir::ComplexType, cir::VectorType>(origTy);
+        isa_and_present<cir::ComplexType, cir::VectorType>(origTy);
     bool coerceIsRegisterTuple =
         isa_and_present<llvm::abi::RecordType>(coerceAbi);
     // A tuple coercion cannot be read at an offset, so refuse the pair rather
     // than emit a read of the wrong bytes.
     if (offset && coerceIsRegisterTuple)
       return std::nullopt;
+    // A pointer moved to another address space keeps its pointee, which
+    // abiTypeToCIR cannot recover.
+    auto origPtr = dyn_cast_if_present<cir::PointerType>(origTy);
+    const auto *coercePtr =
+        dyn_cast_if_present<llvm::abi::PointerType>(coerceAbi);
+    if (origPtr && coercePtr && !offset) {
+      // Compare numbers, since an explicit address_space(0) keeps a
+      // target_address_space(0) attribute that a plain pointer lacks.
+      auto origAS = dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          origPtr.getAddrSpace());
+      if (coercePtr->getAddrSpace() != (origAS ? origAS.getValue() : 0)) {
+        auto coercedPtr = cast<cir::PointerType>(abiTypeToCIR(coerceAbi, ctx));
+        ArgClassification classified = ArgClassification::getDirect(
+            cir::PointerType::get(origPtr.getPointee(),
+                                  coercedPtr.getAddrSpace()),
+            /*offset=*/0);
+        classified.canFlatten = info.getCanBeFlattened();
+        return classified;
+      }
+    }
     // Compare widths rather than identity: a coerce no wider than the natural
     // type carries the same value and needs no rewrite.
     auto origInt = dyn_cast_if_present<cir::IntType>(origTy);
@@ -638,9 +679,14 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
     return ArgClassification::getExtend(extendedTy, info.isSignExt());
   }
+  // ArgClassification has no address space for the indirect pointer yet.
+  if (info.isIndirectAliased() ||
+      (info.isIndirect() && info.getIndirectAddrSpace() != 0))
+    return std::nullopt;
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
-                                          info.getIndirectByVal());
+                                          info.getIndirectByVal(),
+                                          info.getIndirectAddrSpace());
   // AArch64 pure scalable aggregates use CoerceAndExpand. This bridge lowers
   // x86_64 classifications only.
   assert(!info.isCoerceAndExpand() &&
@@ -664,12 +710,13 @@ llvm::abi::RequiredArgs cir::requiredArgs(cir::FuncType fnTy) {
 /// indirect-call path (the latter classifies from the callee function
 /// pointer's pointee FuncType).  \p required marks where the declared
 /// parameters in \p inputs end.  The classifier treats every argument past that
-/// point as passed through an ellipsis.  Returns std::nullopt and emits an NYI
+/// point as passed through an ellipsis.  \p callConv is the calling convention
+/// the signature is classified under.  Returns std::nullopt and emits an NYI
 /// error via \p emitError if the signature uses a type the bridge does not
 /// handle yet.
 std::optional<FunctionClassification> CIRABIClassifierCommon::classifySignature(
     mlir::Type retCIR, mlir::TypeRange inputs, llvm::abi::RequiredArgs required,
-    const llvm::abi::TargetInfo &targetInfo,
+    const llvm::abi::TargetInfo &targetInfo, llvm::CallingConv::ID callConv,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
   assert(retCIR && "signature return type must be non-null");
   assert((!required.allowsOptionalArgs() ||
@@ -698,8 +745,8 @@ std::optional<FunctionClassification> CIRABIClassifierCommon::classifySignature(
   for (mlir::Type a : inputs)
     argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
 
-  std::unique_ptr<llvm::abi::FunctionInfo> fi = llvm::abi::FunctionInfo::create(
-      llvm::CallingConv::C, retAbi, argAbi, required);
+  std::unique_ptr<llvm::abi::FunctionInfo> fi =
+      llvm::abi::FunctionInfo::create(callConv, retAbi, argAbi, required);
   targetInfo.computeInfo(*fi);
 
   // convertABIArgInfo returns nullopt when the classifier picks a coercion this
@@ -769,6 +816,7 @@ CIRABIClassifierCommon::classifyFunction(cir::FuncOp func) {
   cir::FuncType fnTy = func.getFunctionType();
   return classifySignature(fnTy.getReturnType(), fnTy.getInputs(),
                            requiredArgs(fnTy), getTargetInfo(func),
+                           convertCallingConv(func.getCallingConv()),
                            [&]() { return func.emitOpError(); });
 }
 
@@ -779,9 +827,9 @@ std::optional<ArgClassification> CIRABIClassifierCommon::classifyVarArgType(
     mlir::Type ty, const llvm::abi::TargetInfo &targetInfo,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
   MLIRContext *ctx = modOp->getContext();
-  std::optional<FunctionClassification> fc =
-      classifySignature(cir::VoidType::get(ctx), mlir::TypeRange(ty),
-                        llvm::abi::RequiredArgs(0), targetInfo, emitError);
+  std::optional<FunctionClassification> fc = classifySignature(
+      cir::VoidType::get(ctx), mlir::TypeRange(ty), llvm::abi::RequiredArgs(0),
+      targetInfo, llvm::CallingConv::C, emitError);
   if (!fc)
     return std::nullopt;
   return fc->argInfos[0];
@@ -797,13 +845,14 @@ std::optional<ArgClassification> CIRABIClassifierCommon::classifyVarArgType(
 std::optional<FunctionClassification>
 CIRABIClassifierCommon::classifyVariadicCall(
     cir::CIRCallOpInterface call, cir::FuncType calleeTy,
-    const llvm::abi::TargetInfo &targetInfo) {
+    const llvm::abi::TargetInfo &targetInfo, llvm::CallingConv::ID callConv) {
   assert(calleeTy.isVarArg() &&
          "only a variadic callee can take more operands than it declares");
   Operation *op = call.getOperation();
-  return classifySignature(
-      calleeTy.getReturnType(), call.getArgOperands().getTypes(),
-      requiredArgs(calleeTy), targetInfo, [&]() { return op->emitOpError(); });
+  return classifySignature(calleeTy.getReturnType(),
+                           call.getArgOperands().getTypes(),
+                           requiredArgs(calleeTy), targetInfo, callConv,
+                           [&]() { return op->emitOpError(); });
 }
 
 /// Whether \p fc gives the callee access to memory through a pointer the ABI
@@ -905,8 +954,8 @@ cir::classifyFunction(cir::FuncOp func, const DataLayout &dl,
                               returnType);
   }
 
-  // The x86_64 target classifies through CIRABIClassifierCommon, so only the
-  // test target reaches here.
+  // The x86_64 and AMDGPU targets classify through CIRABIClassifierCommon, so
+  // only the test target reaches here.
   assert(target == cir::CallConvTarget::Test &&
          "classifyFunction only handles the test target");
   return withReturnVoidness(mlir::abi::test::classify(argTypes, returnType, dl),
@@ -928,6 +977,8 @@ createABIClassifier(cir::CallConvTarget target,
     return createTestTargetABIClassifier(dl);
   case cir::CallConvTarget::X86_64:
     return createX86_64ABIClassifier(dl, modOp, options);
+  case cir::CallConvTarget::AMDGPU:
+    return createAMDGPUABIClassifier(dl, modOp);
   case cir::CallConvTarget::None:
     break;
   }

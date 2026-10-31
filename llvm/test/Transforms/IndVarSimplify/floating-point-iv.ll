@@ -671,3 +671,49 @@ break:
 exit:
   ret i32 %n.next
 }
+
+; Make sure the FP IV is not converted when the exit comparison does not run
+; on every iteration, as otherwise the integer IV could then wrap before the exit.
+define i32 @test_fp_iv_exit_check_not_dominating_latch() {
+; CHECK-LABEL: @test_fp_iv_exit_check_not_dominating_latch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[FP_IV:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[FP_IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[INT_IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INT_IV_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[FP_IV_NEXT]] = fadd double [[FP_IV]], f0x41D0000000000000
+; CHECK-NEXT:    [[INT_IV_NEXT]] = add nuw nsw i32 [[INT_IV]], 1
+; CHECK-NEXT:    [[SKIP:%.*]] = icmp samesign ult i32 [[INT_IV_NEXT]], 3
+; CHECK-NEXT:    br i1 [[SKIP]], label [[LATCH]], label [[CHECK:%.*]]
+; CHECK:       check:
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[FP_IV_NEXT]], 1.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[LATCH]], label [[EXIT:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[INT_IV_NEXT_LCSSA:%.*]] = phi i32 [ [[INT_IV_NEXT]], [[CHECK]] ]
+; CHECK-NEXT:    ret i32 [[INT_IV_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %fp.iv = phi double [ 0.0, %entry ], [ %fp.iv.next, %latch ]
+  %int.iv = phi i32 [ 0, %entry ], [ %int.iv.next, %latch ]
+  %fp.iv.next = fadd double %fp.iv, 1073741824.0
+  %int.iv.next = add nuw nsw i32 %int.iv, 1
+  %skip = icmp ult i32 %int.iv.next, 3
+  br i1 %skip, label %latch, label %check
+
+check:
+  call void @opaque()
+  %cmp = fcmp olt double %fp.iv.next, 1.0
+  br i1 %cmp, label %latch, label %exit
+
+latch:
+  br label %loop
+
+exit:
+  ret i32 %int.iv.next
+}

@@ -1855,15 +1855,17 @@ public:
     if (AA->isNoAlias(LoadLoc, StoreLoc))
       return {Load->getPointerOperand(), nullptr};
 
+    // Use an array type for the alloca, to avoid potentially huge alignment
+    // requirements for large vector types.
+    auto *VT = cast<FixedVectorType>(Load->getType());
+    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
+    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
+    AllocaInst *Alloca =
+        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+
     // If the pointers are in different address spaces, we cannot compare them
     // at runtime. Conservatively copy the load operand to a new buffer.
-    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
     if (Load->getPointerAddressSpace() != Store->getPointerAddressSpace()) {
-      auto *VT = cast<FixedVectorType>(Load->getType());
-      auto *ArrayTy =
-          ArrayType::get(VT->getElementType(), VT->getNumElements());
-      AllocaInst *Alloca =
-          AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
       IRBuilder<> Builder(MatMul);
       Builder.CreateLifetimeStart(Alloca);
       Builder.CreateMemCpy(Alloca, Alloca->getAlign(),
@@ -1916,13 +1918,6 @@ public:
     // overlap.
     Check1->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check1->begin());
-
-    auto *VT = cast<FixedVectorType>(Load->getType());
-    // Use an array type for the alloca, to avoid potentially huge alignment
-    // requirements for large vector types.
-    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
-    AllocaInst *Alloca =
-        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
     Builder.CreateLifetimeStart(Alloca);
 
     Value *LoadEnd = Builder.CreatePtrAdd(
@@ -2936,8 +2931,7 @@ PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   LowerMatrixIntrinsics LMT(Opts, F, TTI, Minimal ? nullptr : &AM);
   if (LMT.Visit()) {
     PreservedAnalyses PA;

@@ -258,6 +258,10 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
     /// Checks if a struct is packed.
     bool isPacked() const;
 
+    /// Returns the byte offset of the element at the given index.
+    uint64_t getElementOffset(const DataLayout &dataLayout,
+                              unsigned index) const;
+
     /// Checks if a struct is identified.
     bool isIdentified() const;
 
