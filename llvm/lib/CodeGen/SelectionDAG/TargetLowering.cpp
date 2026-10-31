@@ -11725,9 +11725,10 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
   }
 
-  // abds, or abdu with non-negative operands: if the sub is nsw, abs(sub).
+  // abds: if the sub is nsw -> abs(sub)
+  // abdu with non-negative operands -> abs(sub)
   // The abdu case where the sub is nuw is handled in DAGCombine.
-  if (IsSigned || (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS))) {
+  if (IsSigned) {
     if (DAG.willNotOverflowSub(/*IsSigned=*/true, LHS, RHS))
       return DAG.getNode(ISD::ABS, dl, VT,
                          DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
@@ -11735,6 +11736,9 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
     if (DAG.willNotOverflowSub(/*IsSigned=*/true, RHS, LHS))
       return DAG.getNode(ISD::ABS, dl, VT,
                          DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+  } else if (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS)) {
+    return DAG.getNode(ISD::ABS, dl, VT,
+                       DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
   }
 
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
