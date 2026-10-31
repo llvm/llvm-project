@@ -294,10 +294,6 @@ struct TypeBuilderImpl {
     bool isPolymorphic = (Fortran::semantics::IsPolymorphic(symbol) ||
                           Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
                          !isAssumedType;
-    if (Fortran::evaluate::IsCoarray(symbol) &&
-        symbol.attrs().test(Fortran::semantics::Attr::VOLATILE))
-      TODO(loc, "coarray: variable with VOLATILE attribute.");
-
     if (Fortran::semantics::IsPointer(symbol))
       return fir::wrapInClassOrBoxType(fir::PointerType::get(ty), isPolymorphic,
                                        isAssumedType, symbol.Corank());

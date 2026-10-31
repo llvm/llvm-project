@@ -247,11 +247,14 @@ mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile) {
   if (fir::isa_volatile_type(type) == isVolatile)
     return type;
   return mlir::TypeSwitch<mlir::Type, mlir::Type>(type)
-      .Case<fir::BoxType, fir::ClassType, fir::ReferenceType>(
-          [&](auto ty) -> mlir::Type {
-            using TYPE = decltype(ty);
-            return TYPE::get(ty.getEleTy(), isVolatile);
-          })
+      .Case<fir::BoxType, fir::ClassType>([&](auto ty) -> mlir::Type {
+        using TYPE = decltype(ty);
+        return TYPE::get(ty.getEleTy(), isVolatile, ty.getCorank());
+      })
+      .Case<fir::ReferenceType>([&](auto ty) -> mlir::Type {
+        using TYPE = decltype(ty);
+        return TYPE::get(ty.getEleTy(), isVolatile);
+      })
       .Default([&](mlir::Type t) -> mlir::Type { return t; });
 }
 
@@ -816,19 +819,30 @@ mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
   auto location = parser.getCurrentLocation();
   auto *context = parser.getContext();
   bool isVolatile = false;
+  bool hasCorank = false;
   int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  if (mlir::succeeded(parser.parseOptionalComma())) {
-    // Fortran 2023 C871
-    // VOLATILE attribute shall not be specified for a coarray, so the
-    // "volatile" keyword cannot coexist with the "corank".
-    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
+  while (mlir::succeeded(parser.parseOptionalComma())) {
+    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword()))) {
+      if (isVolatile) {
+        parser.emitError(location, "duplicate 'volatile' keyword");
+        return {};
+      }
       isVolatile = true;
-    else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))
-      if (mlir::succeeded(parser.parseOptionalColon()))
-        if (!mlir::succeeded(parser.parseInteger(corank)))
-          return {};
+    } else if (mlir::succeeded(
+                   parser.parseOptionalKeyword(getCorankKeyword()))) {
+      if (hasCorank) {
+        parser.emitError(location, "duplicate 'corank' keyword");
+        return {};
+      }
+      hasCorank = true;
+      if (parser.parseColon() || parser.parseInteger(corank))
+        return {};
+    } else {
+      parser.emitError(location, "expected 'volatile' or 'corank'");
+      return {};
+    }
   }
   if (parser.parseGreater())
     return {};
@@ -920,19 +934,30 @@ mlir::Type fir::ClassType::parse(mlir::AsmParser &parser) {
   auto location = parser.getCurrentLocation();
   auto *context = parser.getContext();
   bool isVolatile = false;
+  bool hasCorank = false;
   int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  if (mlir::succeeded(parser.parseOptionalComma())) {
-    // Fortran 2023 C871
-    // VOLATILE attribute shall not be specified for a coarray, so the
-    // "volatile" keyword cannot coexist with the "corank".
-    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
+  while (mlir::succeeded(parser.parseOptionalComma())) {
+    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword()))) {
+      if (isVolatile) {
+        parser.emitError(location, "duplicate 'volatile' keyword");
+        return {};
+      }
       isVolatile = true;
-    else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))
-      if (mlir::succeeded(parser.parseOptionalColon()))
-        if (!mlir::succeeded(parser.parseInteger(corank)))
-          return {};
+    } else if (mlir::succeeded(
+                   parser.parseOptionalKeyword(getCorankKeyword()))) {
+      if (hasCorank) {
+        parser.emitError(location, "duplicate 'corank' keyword");
+        return {};
+      }
+      hasCorank = true;
+      if (parser.parseColon() || parser.parseInteger(corank))
+        return {};
+    } else {
+      parser.emitError(location, "expected 'volatile' or 'corank'");
+      return {};
+    }
   }
   if (parser.parseGreater())
     return {};
