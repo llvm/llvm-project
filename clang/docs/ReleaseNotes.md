@@ -766,6 +766,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- `-Wunsequenced` now diagnoses unsequenced volatile accesses.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
