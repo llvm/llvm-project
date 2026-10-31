@@ -563,15 +563,15 @@ define void @f2() {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $2, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 6
-; X86-NEXT:    movzbl var_7, %edx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    sete %al
+; X86-NEXT:    movzbl var_7, %eax
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    xorl %edx, %eax
-; X86-NEXT:    movw %ax, (%esp)
+; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    sete %cl
-; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    xorl %eax, %ecx
+; X86-NEXT:    movw %cx, (%esp)
+; X86-NEXT:    sete %dl
+; X86-NEXT:    movw %dx, (%eax)
 ; X86-NEXT:    addl $2, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl

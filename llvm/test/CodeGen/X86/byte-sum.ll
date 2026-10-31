@@ -286,43 +286,43 @@ middle.block:
 define i32 @byte_sum_v64_i32() nounwind {
 ; SSE2-LABEL: byte_sum_v64_i32:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rcx
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
-; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB2_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqa (%rcx,%rax), %xmm5
-; SSE2-NEXT:    psadbw %xmm3, %xmm5
+; SSE2-NEXT:    psadbw %xmm2, %xmm5
 ; SSE2-NEXT:    paddd %xmm5, %xmm0
 ; SSE2-NEXT:    movdqa 16(%rcx,%rax), %xmm5
-; SSE2-NEXT:    psadbw %xmm3, %xmm5
+; SSE2-NEXT:    psadbw %xmm2, %xmm5
 ; SSE2-NEXT:    paddd %xmm5, %xmm4
 ; SSE2-NEXT:    movdqa 32(%rcx,%rax), %xmm5
-; SSE2-NEXT:    psadbw %xmm3, %xmm5
-; SSE2-NEXT:    paddd %xmm5, %xmm2
+; SSE2-NEXT:    psadbw %xmm2, %xmm5
+; SSE2-NEXT:    paddd %xmm5, %xmm3
 ; SSE2-NEXT:    movdqa 48(%rcx,%rax), %xmm5
-; SSE2-NEXT:    psadbw %xmm3, %xmm5
+; SSE2-NEXT:    psadbw %xmm2, %xmm5
 ; SSE2-NEXT:    paddd %xmm5, %xmm1
 ; SSE2-NEXT:    addq $64, %rax
 ; SSE2-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE2-NEXT:    jne .LBB2_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
-; SSE2-NEXT:    paddd %xmm3, %xmm2
+; SSE2-NEXT:    paddd %xmm2, %xmm3
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    paddd %xmm5, %xmm5
-; SSE2-NEXT:    paddd %xmm3, %xmm0
-; SSE2-NEXT:    paddd %xmm3, %xmm1
-; SSE2-NEXT:    paddd %xmm3, %xmm4
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    paddd %xmm2, %xmm1
+; SSE2-NEXT:    paddd %xmm2, %xmm4
 ; SSE2-NEXT:    paddd %xmm5, %xmm4
 ; SSE2-NEXT:    paddd %xmm5, %xmm1
 ; SSE2-NEXT:    paddd %xmm4, %xmm1
 ; SSE2-NEXT:    paddd %xmm5, %xmm0
-; SSE2-NEXT:    paddd %xmm2, %xmm5
+; SSE2-NEXT:    paddd %xmm3, %xmm5
 ; SSE2-NEXT:    paddd %xmm0, %xmm5
 ; SSE2-NEXT:    paddd %xmm1, %xmm5
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[2,3,2,3]
@@ -334,43 +334,43 @@ define i32 @byte_sum_v64_i32() nounwind {
 ;
 ; SSE42-LABEL: byte_sum_v64_i32:
 ; SSE42:       # %bb.0: # %entry
-; SSE42-NEXT:    pxor %xmm3, %xmm3
+; SSE42-NEXT:    pxor %xmm2, %xmm2
 ; SSE42-NEXT:    xorl %eax, %eax
 ; SSE42-NEXT:    movq a@GOTPCREL(%rip), %rcx
 ; SSE42-NEXT:    pxor %xmm0, %xmm0
 ; SSE42-NEXT:    pxor %xmm4, %xmm4
-; SSE42-NEXT:    pxor %xmm2, %xmm2
+; SSE42-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-NEXT:    pxor %xmm1, %xmm1
 ; SSE42-NEXT:    .p2align 4
 ; SSE42-NEXT:  .LBB2_1: # %vector.body
 ; SSE42-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE42-NEXT:    movdqa (%rcx,%rax), %xmm5
-; SSE42-NEXT:    psadbw %xmm3, %xmm5
+; SSE42-NEXT:    psadbw %xmm2, %xmm5
 ; SSE42-NEXT:    paddd %xmm5, %xmm0
 ; SSE42-NEXT:    movdqa 16(%rcx,%rax), %xmm5
-; SSE42-NEXT:    psadbw %xmm3, %xmm5
+; SSE42-NEXT:    psadbw %xmm2, %xmm5
 ; SSE42-NEXT:    paddd %xmm5, %xmm4
 ; SSE42-NEXT:    movdqa 32(%rcx,%rax), %xmm5
-; SSE42-NEXT:    psadbw %xmm3, %xmm5
-; SSE42-NEXT:    paddd %xmm5, %xmm2
+; SSE42-NEXT:    psadbw %xmm2, %xmm5
+; SSE42-NEXT:    paddd %xmm5, %xmm3
 ; SSE42-NEXT:    movdqa 48(%rcx,%rax), %xmm5
-; SSE42-NEXT:    psadbw %xmm3, %xmm5
+; SSE42-NEXT:    psadbw %xmm2, %xmm5
 ; SSE42-NEXT:    paddd %xmm5, %xmm1
 ; SSE42-NEXT:    addq $64, %rax
 ; SSE42-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE42-NEXT:    jne .LBB2_1
 ; SSE42-NEXT:  # %bb.2: # %middle.block
-; SSE42-NEXT:    paddd %xmm3, %xmm2
+; SSE42-NEXT:    paddd %xmm2, %xmm3
 ; SSE42-NEXT:    pxor %xmm5, %xmm5
 ; SSE42-NEXT:    paddd %xmm5, %xmm5
-; SSE42-NEXT:    paddd %xmm3, %xmm0
-; SSE42-NEXT:    paddd %xmm3, %xmm1
-; SSE42-NEXT:    paddd %xmm3, %xmm4
+; SSE42-NEXT:    paddd %xmm2, %xmm0
+; SSE42-NEXT:    paddd %xmm2, %xmm1
+; SSE42-NEXT:    paddd %xmm2, %xmm4
 ; SSE42-NEXT:    paddd %xmm5, %xmm4
 ; SSE42-NEXT:    paddd %xmm5, %xmm1
 ; SSE42-NEXT:    paddd %xmm4, %xmm1
 ; SSE42-NEXT:    paddd %xmm5, %xmm0
-; SSE42-NEXT:    paddd %xmm2, %xmm5
+; SSE42-NEXT:    paddd %xmm3, %xmm5
 ; SSE42-NEXT:    paddd %xmm0, %xmm5
 ; SSE42-NEXT:    paddd %xmm1, %xmm5
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[2,3,2,3]
@@ -600,8 +600,8 @@ define i32 @byte_sum_v16_i32_sext() nounwind {
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rcx
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB4_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -616,16 +616,16 @@ define i32 @byte_sum_v16_i32_sext() nounwind {
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; SSE2-NEXT:    psrad $24, %xmm5
-; SSE2-NEXT:    paddd %xmm5, %xmm3
+; SSE2-NEXT:    paddd %xmm5, %xmm2
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    psrad $24, %xmm4
-; SSE2-NEXT:    paddd %xmm4, %xmm2
+; SSE2-NEXT:    paddd %xmm4, %xmm3
 ; SSE2-NEXT:    addq $16, %rax
 ; SSE2-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE2-NEXT:    jne .LBB4_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
-; SSE2-NEXT:    paddd %xmm3, %xmm0
-; SSE2-NEXT:    paddd %xmm2, %xmm1
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    paddd %xmm3, %xmm1
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
@@ -640,15 +640,15 @@ define i32 @byte_sum_v16_i32_sext() nounwind {
 ; SSE42-NEXT:    xorl %eax, %eax
 ; SSE42-NEXT:    movq a@GOTPCREL(%rip), %rcx
 ; SSE42-NEXT:    pxor %xmm1, %xmm1
-; SSE42-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
+; SSE42-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-NEXT:    .p2align 4
 ; SSE42-NEXT:  .LBB4_1: # %vector.body
 ; SSE42-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE42-NEXT:    pmovsxbd 12(%rcx,%rax), %xmm4
-; SSE42-NEXT:    paddd %xmm4, %xmm2
-; SSE42-NEXT:    pmovsxbd 8(%rcx,%rax), %xmm4
 ; SSE42-NEXT:    paddd %xmm4, %xmm3
+; SSE42-NEXT:    pmovsxbd 8(%rcx,%rax), %xmm4
+; SSE42-NEXT:    paddd %xmm4, %xmm2
 ; SSE42-NEXT:    pmovsxbd (%rcx,%rax), %xmm4
 ; SSE42-NEXT:    pmovsxbd 4(%rcx,%rax), %xmm5
 ; SSE42-NEXT:    paddd %xmm4, %xmm0
@@ -657,8 +657,8 @@ define i32 @byte_sum_v16_i32_sext() nounwind {
 ; SSE42-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE42-NEXT:    jne .LBB4_1
 ; SSE42-NEXT:  # %bb.2: # %middle.block
-; SSE42-NEXT:    paddd %xmm3, %xmm0
-; SSE42-NEXT:    paddd %xmm2, %xmm1
+; SSE42-NEXT:    paddd %xmm2, %xmm0
+; SSE42-NEXT:    paddd %xmm3, %xmm1
 ; SSE42-NEXT:    paddd %xmm0, %xmm1
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE42-NEXT:    paddd %xmm1, %xmm0
@@ -749,8 +749,8 @@ define i32 @word_sum_v16_i32(ptr nocapture readonly %src) nounwind {
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB5_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -758,20 +758,20 @@ define i32 @word_sum_v16_i32(ptr nocapture readonly %src) nounwind {
 ; SSE2-NEXT:    movdqu 16(%rdi,%rax,2), %xmm6
 ; SSE2-NEXT:    movdqa %xmm6, %xmm7
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm7 = xmm7[4],xmm2[4],xmm7[5],xmm2[5],xmm7[6],xmm2[6],xmm7[7],xmm2[7]
-; SSE2-NEXT:    paddd %xmm7, %xmm3
+; SSE2-NEXT:    paddd %xmm7, %xmm4
 ; SSE2-NEXT:    movdqa %xmm5, %xmm7
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm2[0],xmm7[1],xmm2[1],xmm7[2],xmm2[2],xmm7[3],xmm2[3]
 ; SSE2-NEXT:    paddd %xmm7, %xmm1
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm2[4],xmm5[5],xmm2[5],xmm5[6],xmm2[6],xmm5[7],xmm2[7]
 ; SSE2-NEXT:    paddd %xmm5, %xmm0
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm2[0],xmm6[1],xmm2[1],xmm6[2],xmm2[2],xmm6[3],xmm2[3]
-; SSE2-NEXT:    paddd %xmm6, %xmm4
+; SSE2-NEXT:    paddd %xmm6, %xmm3
 ; SSE2-NEXT:    addq $16, %rax
 ; SSE2-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE2-NEXT:    jne .LBB5_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
-; SSE2-NEXT:    paddd %xmm4, %xmm1
-; SSE2-NEXT:    paddd %xmm3, %xmm0
+; SSE2-NEXT:    paddd %xmm3, %xmm1
+; SSE2-NEXT:    paddd %xmm4, %xmm0
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
@@ -785,15 +785,15 @@ define i32 @word_sum_v16_i32(ptr nocapture readonly %src) nounwind {
 ; SSE42-NEXT:    pxor %xmm0, %xmm0
 ; SSE42-NEXT:    xorl %eax, %eax
 ; SSE42-NEXT:    pxor %xmm1, %xmm1
-; SSE42-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
+; SSE42-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-NEXT:    .p2align 4
 ; SSE42-NEXT:  .LBB5_1: # %vector.body
 ; SSE42-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE42-NEXT:    pmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; SSE42-NEXT:    paddd %xmm4, %xmm2
-; SSE42-NEXT:    pmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; SSE42-NEXT:    paddd %xmm4, %xmm3
+; SSE42-NEXT:    pmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; SSE42-NEXT:    paddd %xmm4, %xmm2
 ; SSE42-NEXT:    pmovzxwd {{.*#+}} xmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; SSE42-NEXT:    pmovzxwd {{.*#+}} xmm5 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; SSE42-NEXT:    paddd %xmm4, %xmm0
@@ -802,8 +802,8 @@ define i32 @word_sum_v16_i32(ptr nocapture readonly %src) nounwind {
 ; SSE42-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE42-NEXT:    jne .LBB5_1
 ; SSE42-NEXT:  # %bb.2: # %middle.block
-; SSE42-NEXT:    paddd %xmm3, %xmm0
-; SSE42-NEXT:    paddd %xmm2, %xmm1
+; SSE42-NEXT:    paddd %xmm2, %xmm0
+; SSE42-NEXT:    paddd %xmm3, %xmm1
 ; SSE42-NEXT:    paddd %xmm0, %xmm1
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE42-NEXT:    paddd %xmm1, %xmm0
@@ -888,33 +888,33 @@ middle.block:
 define i16 @byte_sum_v16_i16() nounwind {
 ; SSE2-LABEL: byte_sum_v16_i16:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rcx
-; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB6_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqa (%rcx,%rax), %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3],xmm4[4],xmm0[4],xmm4[5],xmm0[5],xmm4[6],xmm0[6],xmm4[7],xmm0[7]
-; SSE2-NEXT:    paddw %xmm4, %xmm1
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm0[8],xmm3[9],xmm0[9],xmm3[10],xmm0[10],xmm3[11],xmm0[11],xmm3[12],xmm0[12],xmm3[13],xmm0[13],xmm3[14],xmm0[14],xmm3[15],xmm0[15]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3],xmm4[4],xmm1[4],xmm4[5],xmm1[5],xmm4[6],xmm1[6],xmm4[7],xmm1[7]
+; SSE2-NEXT:    paddw %xmm4, %xmm0
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm1[8],xmm3[9],xmm1[9],xmm3[10],xmm1[10],xmm3[11],xmm1[11],xmm3[12],xmm1[12],xmm3[13],xmm1[13],xmm3[14],xmm1[14],xmm3[15],xmm1[15]
 ; SSE2-NEXT:    paddw %xmm3, %xmm2
 ; SSE2-NEXT:    addq $16, %rax
 ; SSE2-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE2-NEXT:    jne .LBB6_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
-; SSE2-NEXT:    paddw %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE2-NEXT:    paddw %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    paddw %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    psrld $16, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    paddw %xmm1, %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psrld $16, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1028,8 +1028,8 @@ define i32 @dword_sum_v16_i32(ptr nocapture readonly %src) nounwind {
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB7_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1038,15 +1038,15 @@ define i32 @dword_sum_v16_i32(ptr nocapture readonly %src) nounwind {
 ; SSE2-NEXT:    movdqu 16(%rdi,%rax,4), %xmm4
 ; SSE2-NEXT:    paddd %xmm4, %xmm1
 ; SSE2-NEXT:    movdqu 32(%rdi,%rax,4), %xmm4
-; SSE2-NEXT:    paddd %xmm4, %xmm3
-; SSE2-NEXT:    movdqu 48(%rdi,%rax,4), %xmm4
 ; SSE2-NEXT:    paddd %xmm4, %xmm2
+; SSE2-NEXT:    movdqu 48(%rdi,%rax,4), %xmm4
+; SSE2-NEXT:    paddd %xmm4, %xmm3
 ; SSE2-NEXT:    addq $16, %rax
 ; SSE2-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE2-NEXT:    jne .LBB7_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
-; SSE2-NEXT:    paddd %xmm3, %xmm0
-; SSE2-NEXT:    paddd %xmm2, %xmm1
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    paddd %xmm3, %xmm1
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
@@ -1060,8 +1060,8 @@ define i32 @dword_sum_v16_i32(ptr nocapture readonly %src) nounwind {
 ; SSE42-NEXT:    pxor %xmm0, %xmm0
 ; SSE42-NEXT:    xorl %eax, %eax
 ; SSE42-NEXT:    pxor %xmm1, %xmm1
-; SSE42-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
+; SSE42-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-NEXT:    .p2align 4
 ; SSE42-NEXT:  .LBB7_1: # %vector.body
 ; SSE42-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1070,15 +1070,15 @@ define i32 @dword_sum_v16_i32(ptr nocapture readonly %src) nounwind {
 ; SSE42-NEXT:    movdqu 16(%rdi,%rax,4), %xmm4
 ; SSE42-NEXT:    paddd %xmm4, %xmm1
 ; SSE42-NEXT:    movdqu 32(%rdi,%rax,4), %xmm4
-; SSE42-NEXT:    paddd %xmm4, %xmm3
-; SSE42-NEXT:    movdqu 48(%rdi,%rax,4), %xmm4
 ; SSE42-NEXT:    paddd %xmm4, %xmm2
+; SSE42-NEXT:    movdqu 48(%rdi,%rax,4), %xmm4
+; SSE42-NEXT:    paddd %xmm4, %xmm3
 ; SSE42-NEXT:    addq $16, %rax
 ; SSE42-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE42-NEXT:    jne .LBB7_1
 ; SSE42-NEXT:  # %bb.2: # %middle.block
-; SSE42-NEXT:    paddd %xmm3, %xmm0
-; SSE42-NEXT:    paddd %xmm2, %xmm1
+; SSE42-NEXT:    paddd %xmm2, %xmm0
+; SSE42-NEXT:    paddd %xmm3, %xmm1
 ; SSE42-NEXT:    paddd %xmm0, %xmm1
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE42-NEXT:    paddd %xmm1, %xmm0
@@ -1159,31 +1159,31 @@ middle.block:
 define i32 @byte_sum_v8_i32() nounwind {
 ; SSE2-LABEL: byte_sum_v8_i32:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rcx
-; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB8_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3],xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3],xmm3[4],xmm1[4],xmm3[5],xmm1[5],xmm3[6],xmm1[6],xmm3[7],xmm1[7]
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
-; SSE2-NEXT:    paddd %xmm4, %xmm1
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
+; SSE2-NEXT:    paddd %xmm4, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm1[4],xmm3[5],xmm1[5],xmm3[6],xmm1[6],xmm3[7],xmm1[7]
 ; SSE2-NEXT:    paddd %xmm3, %xmm2
 ; SSE2-NEXT:    addq $8, %rax
 ; SSE2-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; SSE2-NEXT:    jne .LBB8_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
-; SSE2-NEXT:    paddd %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE2-NEXT:    paddd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: byte_sum_v8_i32:

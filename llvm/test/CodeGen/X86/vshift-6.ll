@@ -36,29 +36,29 @@ define <16 x i8> @do_not_crash(ptr, ptr, ptr, i32, i64, i8) {
 ; X86-NEXT:    movdqa %xmm1, %xmm2
 ; X86-NEXT:    pandn %xmm0, %xmm2
 ; X86-NEXT:    por %xmm1, %xmm2
-; X86-NEXT:    pcmpeqd %xmm3, %xmm3
+; X86-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-NEXT:    psllw $5, %xmm2
 ; X86-NEXT:    pxor %xmm0, %xmm0
 ; X86-NEXT:    pcmpgtb %xmm2, %xmm0
 ; X86-NEXT:    paddb %xmm2, %xmm2
-; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    pxor %xmm3, %xmm3
 ; X86-NEXT:    pxor %xmm4, %xmm4
 ; X86-NEXT:    pcmpgtb %xmm2, %xmm4
-; X86-NEXT:    pxor %xmm3, %xmm0
+; X86-NEXT:    pxor %xmm1, %xmm0
 ; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movdqa %xmm4, %xmm3
-; X86-NEXT:    pandn %xmm0, %xmm3
+; X86-NEXT:    movdqa %xmm4, %xmm1
+; X86-NEXT:    pandn %xmm0, %xmm1
 ; X86-NEXT:    paddb %xmm0, %xmm0
 ; X86-NEXT:    paddb %xmm0, %xmm0
 ; X86-NEXT:    pand %xmm4, %xmm0
-; X86-NEXT:    por %xmm3, %xmm0
+; X86-NEXT:    por %xmm1, %xmm0
 ; X86-NEXT:    paddb %xmm2, %xmm2
-; X86-NEXT:    pcmpgtb %xmm2, %xmm1
-; X86-NEXT:    movdqa %xmm1, %xmm2
-; X86-NEXT:    pandn %xmm0, %xmm2
+; X86-NEXT:    pcmpgtb %xmm2, %xmm3
+; X86-NEXT:    movdqa %xmm3, %xmm1
+; X86-NEXT:    pandn %xmm0, %xmm1
 ; X86-NEXT:    paddb %xmm0, %xmm0
-; X86-NEXT:    pand %xmm1, %xmm0
-; X86-NEXT:    por %xmm2, %xmm0
+; X86-NEXT:    pand %xmm3, %xmm0
+; X86-NEXT:    por %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: do_not_crash:

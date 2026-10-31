@@ -99,18 +99,21 @@ define i64 @foo_warm(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) noun
 ; COST1-NEXT:    movq %rcx, %r13
 ; COST1-NEXT:    movq %rsi, %r15
 ; COST1-NEXT:    callq bar2@PLT
+; COST1-NEXT:    movq %r15, %rsi
+; COST1-NEXT:    movq %r13, %rcx
+; COST1-NEXT:    movq %r14, %rdx
 ; COST1-NEXT:    jmp .LBB1_4
 ; COST1-NEXT:  .LBB1_1: # %if.then
 ; COST1-NEXT:    movq %rax, %rbx
 ; COST1-NEXT:    movq %r9, %r12
-; COST1-NEXT:    movq %rdx, %r14
+; COST1-NEXT:    movq %rdx, %r15
 ; COST1-NEXT:    movq %rcx, %r13
-; COST1-NEXT:    movq %rsi, %r15
+; COST1-NEXT:    movq %rsi, %r14
 ; COST1-NEXT:    callq bar1@PLT
-; COST1-NEXT:  .LBB1_4: # %if.end
-; COST1-NEXT:    movq %r15, %rsi
+; COST1-NEXT:    movq %r14, %rsi
 ; COST1-NEXT:    movq %r13, %rcx
-; COST1-NEXT:    movq %r14, %rdx
+; COST1-NEXT:    movq %r15, %rdx
+; COST1-NEXT:  .LBB1_4: # %if.end
 ; COST1-NEXT:    movq %r12, %r9
 ; COST1-NEXT:    movq %rax, %rdi
 ; COST1-NEXT:    movq %rbx, %rax

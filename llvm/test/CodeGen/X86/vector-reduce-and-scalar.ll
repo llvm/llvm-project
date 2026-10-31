@@ -337,20 +337,20 @@ define i1 @test_v16i64(ptr %ptr) nounwind {
 ; X86-SSE2-LABEL: test_v16i64:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movdqa 32(%eax), %xmm1
-; X86-SSE2-NEXT:    movdqa (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqa 32(%eax), %xmm0
+; X86-SSE2-NEXT:    movdqa (%eax), %xmm1
 ; X86-SSE2-NEXT:    movdqa 16(%eax), %xmm2
 ; X86-SSE2-NEXT:    movdqa 48(%eax), %xmm3
 ; X86-SSE2-NEXT:    pand 112(%eax), %xmm3
 ; X86-SSE2-NEXT:    pand 80(%eax), %xmm2
 ; X86-SSE2-NEXT:    pand %xmm3, %xmm2
-; X86-SSE2-NEXT:    pand 96(%eax), %xmm1
-; X86-SSE2-NEXT:    pand 64(%eax), %xmm0
-; X86-SSE2-NEXT:    pand %xmm1, %xmm0
-; X86-SSE2-NEXT:    pand %xmm2, %xmm0
-; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; X86-SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; X86-SSE2-NEXT:    movmskps %xmm1, %eax
+; X86-SSE2-NEXT:    pand 96(%eax), %xmm0
+; X86-SSE2-NEXT:    pand 64(%eax), %xmm1
+; X86-SSE2-NEXT:    pand %xmm0, %xmm1
+; X86-SSE2-NEXT:    pand %xmm2, %xmm1
+; X86-SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; X86-SSE2-NEXT:    movmskps %xmm0, %eax
 ; X86-SSE2-NEXT:    xorl $15, %eax
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    retl
@@ -378,19 +378,19 @@ define i1 @test_v16i64(ptr %ptr) nounwind {
 ; X86-SSE4-LABEL: test_v16i64:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE4-NEXT:    movdqa 32(%eax), %xmm1
-; X86-SSE4-NEXT:    movdqa (%eax), %xmm0
+; X86-SSE4-NEXT:    movdqa 32(%eax), %xmm0
+; X86-SSE4-NEXT:    movdqa (%eax), %xmm1
 ; X86-SSE4-NEXT:    movdqa 16(%eax), %xmm2
 ; X86-SSE4-NEXT:    movdqa 48(%eax), %xmm3
 ; X86-SSE4-NEXT:    pand 112(%eax), %xmm3
 ; X86-SSE4-NEXT:    pand 80(%eax), %xmm2
 ; X86-SSE4-NEXT:    pand %xmm3, %xmm2
-; X86-SSE4-NEXT:    pand 96(%eax), %xmm1
-; X86-SSE4-NEXT:    pand 64(%eax), %xmm0
-; X86-SSE4-NEXT:    pand %xmm1, %xmm0
-; X86-SSE4-NEXT:    pand %xmm2, %xmm0
-; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
-; X86-SSE4-NEXT:    ptest %xmm1, %xmm0
+; X86-SSE4-NEXT:    pand 96(%eax), %xmm0
+; X86-SSE4-NEXT:    pand 64(%eax), %xmm1
+; X86-SSE4-NEXT:    pand %xmm0, %xmm1
+; X86-SSE4-NEXT:    pand %xmm2, %xmm1
+; X86-SSE4-NEXT:    pcmpeqd %xmm0, %xmm0
+; X86-SSE4-NEXT:    ptest %xmm0, %xmm1
 ; X86-SSE4-NEXT:    setb %al
 ; X86-SSE4-NEXT:    retl
 ;

@@ -184,40 +184,40 @@ define <8 x i32> @pext_v8i32(<8 x i32> %val, <8 x i32> %mask) nounwind {
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm10[0],xmm9[1],xmm10[1]
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm9[0],xmm8[1],xmm9[1]
 ; SLOW-NEXT:    vinserti128 $1, %xmm6, %ymm8, %ymm6
-; SLOW-NEXT:    vpandn %ymm7, %ymm6, %ymm8
-; SLOW-NEXT:    vextracti128 $1, %ymm8, %xmm7
-; SLOW-NEXT:    vpclmulqdq $17, %xmm2, %xmm7, %xmm9
-; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm10
-; SLOW-NEXT:    vpsrlq $32, %xmm7, %xmm7
-; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
-; SLOW-NEXT:    vpclmulqdq $17, %xmm3, %xmm7, %xmm10
-; SLOW-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm7
-; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm10[0],xmm7[1],xmm10[1]
-; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm10
-; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm9[0],xmm7[0],xmm9[1],xmm7[1]
+; SLOW-NEXT:    vpandn %ymm7, %ymm6, %ymm7
+; SLOW-NEXT:    vextracti128 $1, %ymm7, %xmm8
 ; SLOW-NEXT:    vpclmulqdq $17, %xmm2, %xmm8, %xmm9
+; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm10
+; SLOW-NEXT:    vpsrlq $32, %xmm8, %xmm8
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
-; SLOW-NEXT:    vpsrlq $32, %xmm8, %xmm10
+; SLOW-NEXT:    vpclmulqdq $17, %xmm3, %xmm8, %xmm10
+; SLOW-NEXT:    vpclmulqdq $0, %xmm3, %xmm8, %xmm8
+; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm10[0],xmm8[1],xmm10[1]
+; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm10
+; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1]
+; SLOW-NEXT:    vpclmulqdq $17, %xmm2, %xmm7, %xmm9
+; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
+; SLOW-NEXT:    vpsrlq $32, %xmm7, %xmm10
 ; SLOW-NEXT:    vpclmulqdq $17, %xmm3, %xmm10, %xmm11
 ; SLOW-NEXT:    vpclmulqdq $0, %xmm3, %xmm10, %xmm10
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm10[0],xmm11[0],xmm10[1],xmm11[1]
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm10[0],xmm9[1],xmm10[1]
-; SLOW-NEXT:    vinserti128 $1, %xmm7, %ymm9, %ymm7
-; SLOW-NEXT:    vpandn %ymm8, %ymm7, %ymm8
-; SLOW-NEXT:    vextracti128 $1, %ymm8, %xmm9
-; SLOW-NEXT:    vpclmulqdq $17, %xmm2, %xmm8, %xmm12
+; SLOW-NEXT:    vinserti128 $1, %xmm8, %ymm9, %ymm8
+; SLOW-NEXT:    vpandn %ymm7, %ymm8, %ymm7
+; SLOW-NEXT:    vextracti128 $1, %ymm7, %xmm9
+; SLOW-NEXT:    vpclmulqdq $17, %xmm2, %xmm7, %xmm12
 ; SLOW-NEXT:    vpclmulqdq $17, %xmm2, %xmm9, %xmm10
 ; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm11
 ; SLOW-NEXT:    vpsrlq $32, %xmm9, %xmm9
-; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm2
-; SLOW-NEXT:    vpsrlq $32, %xmm8, %xmm8
+; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm2
+; SLOW-NEXT:    vpsrlq $32, %xmm7, %xmm7
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm11[0],xmm10[0],xmm11[1],xmm10[1]
 ; SLOW-NEXT:    vpclmulqdq $17, %xmm3, %xmm9, %xmm11
 ; SLOW-NEXT:    vpclmulqdq $0, %xmm3, %xmm9, %xmm9
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm12[0],xmm2[1],xmm12[1]
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm11[0],xmm9[1],xmm11[1]
-; SLOW-NEXT:    vpclmulqdq $17, %xmm3, %xmm8, %xmm11
-; SLOW-NEXT:    vpclmulqdq $0, %xmm3, %xmm8, %xmm3
+; SLOW-NEXT:    vpclmulqdq $17, %xmm3, %xmm7, %xmm11
+; SLOW-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm3
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm3[0],xmm11[0],xmm3[1],xmm11[1]
 ; SLOW-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
@@ -225,27 +225,27 @@ define <8 x i32> @pext_v8i32(<8 x i32> %val, <8 x i32> %mask) nounwind {
 ; SLOW-NEXT:    vpand %ymm1, %ymm4, %ymm9
 ; SLOW-NEXT:    vpxor %ymm1, %ymm9, %ymm4
 ; SLOW-NEXT:    vpand %ymm0, %ymm9, %ymm1
-; SLOW-NEXT:    vpsrld $1, %ymm9, %ymm8
-; SLOW-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-NEXT:    vpsrld $1, %ymm9, %ymm7
+; SLOW-NEXT:    vpor %ymm7, %ymm4, %ymm4
 ; SLOW-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpsrld $1, %ymm1, %ymm1
 ; SLOW-NEXT:    vpand %ymm4, %ymm5, %ymm5
 ; SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpand %ymm5, %ymm0, %ymm1
 ; SLOW-NEXT:    vpxor %ymm5, %ymm4, %ymm4
-; SLOW-NEXT:    vpsrld $2, %ymm5, %ymm8
-; SLOW-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-NEXT:    vpsrld $2, %ymm5, %ymm7
+; SLOW-NEXT:    vpor %ymm7, %ymm4, %ymm4
 ; SLOW-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpsrld $2, %ymm1, %ymm1
 ; SLOW-NEXT:    vpand %ymm4, %ymm6, %ymm6
 ; SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpand %ymm6, %ymm0, %ymm1
 ; SLOW-NEXT:    vpxor %ymm6, %ymm4, %ymm4
-; SLOW-NEXT:    vpsrld $4, %ymm6, %ymm8
-; SLOW-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-NEXT:    vpsrld $4, %ymm6, %ymm7
+; SLOW-NEXT:    vpor %ymm7, %ymm4, %ymm4
 ; SLOW-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpsrld $4, %ymm1, %ymm1
-; SLOW-NEXT:    vpand %ymm4, %ymm7, %ymm7
+; SLOW-NEXT:    vpand %ymm4, %ymm8, %ymm7
 ; SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpand %ymm7, %ymm0, %ymm1
 ; SLOW-NEXT:    vpxor %ymm7, %ymm4, %ymm4
@@ -434,31 +434,31 @@ define <4 x i64> @pext_v4i64(<4 x i64> %val, <4 x i64> %mask) nounwind {
 ; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm8
 ; SLOW-NEXT:    vinserti128 $1, %xmm5, %ymm8, %ymm5
 ; SLOW-NEXT:    vpunpcklqdq {{.*#+}} ymm5 = ymm5[0],ymm7[0],ymm5[2],ymm7[2]
-; SLOW-NEXT:    vpandn %ymm6, %ymm5, %ymm7
-; SLOW-NEXT:    vextracti128 $1, %ymm7, %xmm6
-; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm9
-; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm6, %xmm8
-; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm6
+; SLOW-NEXT:    vpandn %ymm6, %ymm5, %ymm6
+; SLOW-NEXT:    vextracti128 $1, %ymm6, %xmm7
+; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm6, %xmm9
+; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm8
+; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
 ; SLOW-NEXT:    vinserti128 $1, %xmm8, %ymm9, %ymm8
-; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm9
-; SLOW-NEXT:    vinserti128 $1, %xmm6, %ymm9, %ymm6
-; SLOW-NEXT:    vpunpcklqdq {{.*#+}} ymm6 = ymm6[0],ymm8[0],ymm6[2],ymm8[2]
-; SLOW-NEXT:    vpandn %ymm7, %ymm6, %ymm7
-; SLOW-NEXT:    vextracti128 $1, %ymm7, %xmm8
-; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm10
+; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm9
+; SLOW-NEXT:    vinserti128 $1, %xmm7, %ymm9, %ymm7
+; SLOW-NEXT:    vpunpcklqdq {{.*#+}} ymm7 = ymm7[0],ymm8[0],ymm7[2],ymm8[2]
+; SLOW-NEXT:    vpandn %ymm6, %ymm7, %ymm6
+; SLOW-NEXT:    vextracti128 $1, %ymm6, %xmm8
+; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm6, %xmm10
 ; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm8, %xmm9
 ; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
 ; SLOW-NEXT:    vinserti128 $1, %xmm9, %ymm10, %ymm9
-; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm10
+; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm10
 ; SLOW-NEXT:    vinserti128 $1, %xmm8, %ymm10, %ymm8
 ; SLOW-NEXT:    vpunpcklqdq {{.*#+}} ymm8 = ymm8[0],ymm9[0],ymm8[2],ymm9[2]
-; SLOW-NEXT:    vpandn %ymm7, %ymm8, %ymm7
-; SLOW-NEXT:    vextracti128 $1, %ymm7, %xmm9
-; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm11
+; SLOW-NEXT:    vpandn %ymm6, %ymm8, %ymm6
+; SLOW-NEXT:    vextracti128 $1, %ymm6, %xmm9
+; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm6, %xmm11
 ; SLOW-NEXT:    vpclmulqdq $1, %xmm2, %xmm9, %xmm10
 ; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
-; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm2
-; SLOW-NEXT:    vpxor %ymm3, %ymm1, %ymm7
+; SLOW-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm2
+; SLOW-NEXT:    vpxor %ymm3, %ymm1, %ymm6
 ; SLOW-NEXT:    vpand %ymm3, %ymm0, %ymm1
 ; SLOW-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpsrlq $1, %ymm1, %ymm1
@@ -466,41 +466,41 @@ define <4 x i64> @pext_v4i64(<4 x i64> %val, <4 x i64> %mask) nounwind {
 ; SLOW-NEXT:    vinserti128 $1, %xmm9, %ymm2, %ymm2
 ; SLOW-NEXT:    vpsrlq $1, %ymm3, %ymm9
 ; SLOW-NEXT:    vinserti128 $1, %xmm10, %ymm11, %ymm10
-; SLOW-NEXT:    vpor %ymm7, %ymm9, %ymm7
-; SLOW-NEXT:    vpand %ymm7, %ymm4, %ymm4
+; SLOW-NEXT:    vpor %ymm6, %ymm9, %ymm6
+; SLOW-NEXT:    vpand %ymm6, %ymm4, %ymm4
 ; SLOW-NEXT:    vpunpcklqdq {{.*#+}} ymm2 = ymm2[0],ymm10[0],ymm2[2],ymm10[2]
 ; SLOW-NEXT:    vpand %ymm4, %ymm0, %ymm1
-; SLOW-NEXT:    vpxor %ymm4, %ymm7, %ymm7
+; SLOW-NEXT:    vpxor %ymm4, %ymm6, %ymm6
 ; SLOW-NEXT:    vpsrlq $2, %ymm4, %ymm9
-; SLOW-NEXT:    vpor %ymm7, %ymm9, %ymm7
+; SLOW-NEXT:    vpor %ymm6, %ymm9, %ymm6
 ; SLOW-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpsrlq $2, %ymm1, %ymm1
-; SLOW-NEXT:    vpand %ymm7, %ymm5, %ymm5
+; SLOW-NEXT:    vpand %ymm6, %ymm5, %ymm5
 ; SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpand %ymm5, %ymm0, %ymm1
-; SLOW-NEXT:    vpxor %ymm5, %ymm7, %ymm7
+; SLOW-NEXT:    vpxor %ymm5, %ymm6, %ymm6
 ; SLOW-NEXT:    vpsrlq $4, %ymm5, %ymm9
-; SLOW-NEXT:    vpor %ymm7, %ymm9, %ymm7
+; SLOW-NEXT:    vpor %ymm6, %ymm9, %ymm6
 ; SLOW-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpsrlq $4, %ymm1, %ymm1
-; SLOW-NEXT:    vpand %ymm7, %ymm6, %ymm6
+; SLOW-NEXT:    vpand %ymm6, %ymm7, %ymm7
 ; SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; SLOW-NEXT:    vpand %ymm6, %ymm0, %ymm1
-; SLOW-NEXT:    vpxor %ymm6, %ymm7, %ymm7
-; SLOW-NEXT:    vpsrlq $8, %ymm6, %ymm9
-; SLOW-NEXT:    vpor %ymm7, %ymm9, %ymm7
+; SLOW-NEXT:    vpand %ymm7, %ymm0, %ymm1
+; SLOW-NEXT:    vpxor %ymm7, %ymm6, %ymm6
+; SLOW-NEXT:    vpsrlq $8, %ymm7, %ymm9
+; SLOW-NEXT:    vpor %ymm6, %ymm9, %ymm6
 ; SLOW-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpsrlq $8, %ymm1, %ymm1
-; SLOW-NEXT:    vpand %ymm7, %ymm8, %ymm8
+; SLOW-NEXT:    vpand %ymm6, %ymm8, %ymm8
 ; SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpand %ymm0, %ymm8, %ymm1
-; SLOW-NEXT:    vpxor %ymm7, %ymm8, %ymm7
+; SLOW-NEXT:    vpxor %ymm6, %ymm8, %ymm6
 ; SLOW-NEXT:    vpsrlq $16, %ymm8, %ymm9
 ; SLOW-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpsrlq $16, %ymm1, %ymm1
-; SLOW-NEXT:    vpor %ymm7, %ymm9, %ymm7
+; SLOW-NEXT:    vpor %ymm6, %ymm9, %ymm6
 ; SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; SLOW-NEXT:    vpand %ymm7, %ymm0, %ymm1
+; SLOW-NEXT:    vpand %ymm6, %ymm0, %ymm1
 ; SLOW-NEXT:    vpand %ymm2, %ymm1, %ymm1
 ; SLOW-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; SLOW-NEXT:    vpsrlq $32, %ymm1, %ymm1
