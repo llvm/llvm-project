@@ -1,0 +1,4 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# REQUIRES: linux, riscv64-target-arch, rv64-cfi-gnu
+# RUN: %python %S/Inputs/rv64-cfi-check.py --library %libomp-cfi-library --objdump %libomp-cfi-objdump --readelf %libomp-cfi-readelf --json %t.json
