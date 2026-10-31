@@ -229,9 +229,9 @@ TargetTransformInfo::adjustInliningThreshold(const CallBase *CB) const {
   return TTIImpl->adjustInliningThreshold(CB);
 }
 
-unsigned TargetTransformInfo::getCallerAllocaCost(const CallBase *CB,
-                                                  const AllocaInst *AI) const {
-  return TTIImpl->getCallerAllocaCost(CB, AI);
+unsigned TargetTransformInfo::getCallerAllocaCost(
+    const CallBase *CB, const AllocaInst *AI, const Function &Callee) const {
+  return TTIImpl->getCallerAllocaCost(CB, AI, Callee);
 }
 
 int TargetTransformInfo::getInlinerVectorBonusPercent() const {

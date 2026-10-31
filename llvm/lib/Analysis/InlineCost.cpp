@@ -751,7 +751,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   void onInitializeSROAArg(AllocaInst *Arg) override {
     assert(Arg != nullptr &&
            "Should not initialize SROA costs for null value.");
-    auto SROAArgCost = TTI.getCallerAllocaCost(&CandidateCall, Arg);
+    auto SROAArgCost = TTI.getCallerAllocaCost(&CandidateCall, Arg, F);
     SROACostSavings += SROAArgCost;
     SROAArgCosts[Arg] = SROAArgCost;
   }
@@ -1286,7 +1286,7 @@ private:
   }
 
   void onInitializeSROAArg(AllocaInst *Arg) override {
-    auto SROAArgCost = TTI.getCallerAllocaCost(&CandidateCall, Arg);
+    auto SROAArgCost = TTI.getCallerAllocaCost(&CandidateCall, Arg, F);
     SROACosts[Arg] = SROAArgCost;
     SROACostSavingOpportunities += SROAArgCost;
   }
