@@ -1801,3 +1801,174 @@ define <16 x i16> @combine_vec_sdiv_by_one_obfuscated(<16 x i16> %x) "target-fea
   %div = sdiv <16 x i16> %x, %zero_and_ones
   ret <16 x i16> %div
 }
+
+define <8 x i32> @combine_vec_sdiv_nonuniform_v8i32(<8 x i32> %x) {
+; CHECK-SD-LABEL: combine_vec_sdiv_nonuniform_v8i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adrp x8, .LCPI61_0
+; CHECK-SD-NEXT:    movi v6.2d, #0x000000ffffffff
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI61_0]
+; CHECK-SD-NEXT:    adrp x8, .LCPI61_1
+; CHECK-SD-NEXT:    smull2 v3.2d, v0.4s, v2.4s
+; CHECK-SD-NEXT:    smull v4.2d, v0.2s, v2.2s
+; CHECK-SD-NEXT:    smull2 v5.2d, v1.4s, v2.4s
+; CHECK-SD-NEXT:    smull v2.2d, v1.2s, v2.2s
+; CHECK-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-SD-NEXT:    and v1.16b, v1.16b, v6.16b
+; CHECK-SD-NEXT:    uzp2 v3.4s, v4.4s, v3.4s
+; CHECK-SD-NEXT:    uzp2 v2.4s, v2.4s, v5.4s
+; CHECK-SD-NEXT:    add v3.4s, v3.4s, v0.4s
+; CHECK-SD-NEXT:    add v2.4s, v2.4s, v1.4s
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI61_1]
+; CHECK-SD-NEXT:    sshl v0.4s, v3.4s, v1.4s
+; CHECK-SD-NEXT:    sshl v1.4s, v2.4s, v1.4s
+; CHECK-SD-NEXT:    usra v0.4s, v3.4s, #31
+; CHECK-SD-NEXT:    usra v1.4s, v2.4s, #31
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: combine_vec_sdiv_nonuniform_v8i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI61_2
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI61_2]
+; CHECK-GI-NEXT:    adrp x8, .LCPI61_1
+; CHECK-GI-NEXT:    smull2 v3.2d, v0.4s, v2.4s
+; CHECK-GI-NEXT:    smull v4.2d, v0.2s, v2.2s
+; CHECK-GI-NEXT:    smull2 v5.2d, v1.4s, v2.4s
+; CHECK-GI-NEXT:    smull v2.2d, v1.2s, v2.2s
+; CHECK-GI-NEXT:    uzp2 v3.4s, v4.4s, v3.4s
+; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI61_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI61_0
+; CHECK-GI-NEXT:    uzp2 v2.4s, v2.4s, v5.4s
+; CHECK-GI-NEXT:    ldr q5, [x8, :lo12:.LCPI61_0]
+; CHECK-GI-NEXT:    mla v3.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    mla v2.4s, v1.4s, v4.4s
+; CHECK-GI-NEXT:    neg v1.4s, v5.4s
+; CHECK-GI-NEXT:    sshl v0.4s, v3.4s, v1.4s
+; CHECK-GI-NEXT:    sshl v1.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    usra v0.4s, v0.4s, #31
+; CHECK-GI-NEXT:    usra v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    ret
+  %r = sdiv <8 x i32> %x, <i32 7, i32 6, i32 7, i32 6, i32 7, i32 6, i32 7, i32 6>
+  ret <8 x i32> %r
+}
+
+define <16 x i16> @combine_vec_sdiv_nonuniform_v16i16(<16 x i16> %x) {
+; CHECK-SD-LABEL: combine_vec_sdiv_nonuniform_v16i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adrp x8, .LCPI62_0
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI62_0]
+; CHECK-SD-NEXT:    smull2 v3.4s, v0.8h, v2.8h
+; CHECK-SD-NEXT:    smull v0.4s, v0.4h, v2.4h
+; CHECK-SD-NEXT:    smull2 v4.4s, v1.8h, v2.8h
+; CHECK-SD-NEXT:    smull v1.4s, v1.4h, v2.4h
+; CHECK-SD-NEXT:    movi v2.2d, #0x00ffff0000ffff
+; CHECK-SD-NEXT:    uzp2 v0.8h, v0.8h, v3.8h
+; CHECK-SD-NEXT:    uzp2 v1.8h, v1.8h, v4.8h
+; CHECK-SD-NEXT:    sshl v0.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    sshl v1.8h, v1.8h, v2.8h
+; CHECK-SD-NEXT:    usra v0.8h, v0.8h, #15
+; CHECK-SD-NEXT:    usra v1.8h, v1.8h, #15
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: combine_vec_sdiv_nonuniform_v16i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI62_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI62_0]
+; CHECK-GI-NEXT:    smull2 v3.4s, v0.8h, v2.8h
+; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v2.4h
+; CHECK-GI-NEXT:    smull2 v4.4s, v1.8h, v2.8h
+; CHECK-GI-NEXT:    smull v1.4s, v1.4h, v2.4h
+; CHECK-GI-NEXT:    movi v2.4s, #1
+; CHECK-GI-NEXT:    uzp2 v0.8h, v0.8h, v3.8h
+; CHECK-GI-NEXT:    uzp2 v1.8h, v1.8h, v4.8h
+; CHECK-GI-NEXT:    neg v2.8h, v2.8h
+; CHECK-GI-NEXT:    sshl v0.8h, v0.8h, v2.8h
+; CHECK-GI-NEXT:    sshl v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    usra v0.8h, v0.8h, #15
+; CHECK-GI-NEXT:    usra v1.8h, v1.8h, #15
+; CHECK-GI-NEXT:    ret
+  %r = sdiv <16 x i16> %x, <i16 7, i16 6, i16 7, i16 6, i16 7, i16 6, i16 7, i16 6, i16 7, i16 6, i16 7, i16 6, i16 7, i16 6, i16 7, i16 6>
+  ret <16 x i16> %r
+}
+
+define <32 x i8> @combine_vec_sdiv_nonuniform_v32i8(<32 x i8> %x) {
+; CHECK-SD-LABEL: combine_vec_sdiv_nonuniform_v32i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adrp x8, .LCPI63_0
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI63_0]
+; CHECK-SD-NEXT:    smull2 v3.8h, v0.16b, v2.16b
+; CHECK-SD-NEXT:    smull v4.8h, v0.8b, v2.8b
+; CHECK-SD-NEXT:    smull2 v5.8h, v1.16b, v2.16b
+; CHECK-SD-NEXT:    smull v2.8h, v1.8b, v2.8b
+; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-SD-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-SD-NEXT:    uzp2 v3.16b, v4.16b, v3.16b
+; CHECK-SD-NEXT:    movi v4.8h, #254
+; CHECK-SD-NEXT:    uzp2 v2.16b, v2.16b, v5.16b
+; CHECK-SD-NEXT:    add v0.16b, v3.16b, v0.16b
+; CHECK-SD-NEXT:    add v1.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    sshl v0.16b, v0.16b, v4.16b
+; CHECK-SD-NEXT:    sshl v1.16b, v1.16b, v4.16b
+; CHECK-SD-NEXT:    usra v0.16b, v0.16b, #7
+; CHECK-SD-NEXT:    usra v1.16b, v1.16b, #7
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: combine_vec_sdiv_nonuniform_v32i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI63_0
+; CHECK-GI-NEXT:    movi v6.8h, #1
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI63_0]
+; CHECK-GI-NEXT:    smull2 v3.8h, v0.16b, v2.16b
+; CHECK-GI-NEXT:    smull v4.8h, v0.8b, v2.8b
+; CHECK-GI-NEXT:    smull2 v5.8h, v1.16b, v2.16b
+; CHECK-GI-NEXT:    smull v2.8h, v1.8b, v2.8b
+; CHECK-GI-NEXT:    uzp2 v3.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    movi v4.8h, #2
+; CHECK-GI-NEXT:    uzp2 v2.16b, v2.16b, v5.16b
+; CHECK-GI-NEXT:    mla v3.16b, v0.16b, v6.16b
+; CHECK-GI-NEXT:    mla v2.16b, v1.16b, v6.16b
+; CHECK-GI-NEXT:    neg v1.16b, v4.16b
+; CHECK-GI-NEXT:    sshl v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    sshl v1.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    usra v0.16b, v0.16b, #7
+; CHECK-GI-NEXT:    usra v1.16b, v1.16b, #7
+; CHECK-GI-NEXT:    ret
+  %r = sdiv <32 x i8> %x, <i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6>
+  ret <32 x i8> %r
+}
+
+; There is no vector multiply-high for 64-bit elements, so this stays scalar.
+define <2 x i64> @combine_vec_sdiv_nonuniform_v2i64(<2 x i64> %x) {
+; CHECK-SD-LABEL: combine_vec_sdiv_nonuniform_v2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov x8, #18725 // =0x4925
+; CHECK-SD-NEXT:    fmov x10, d0
+; CHECK-SD-NEXT:    mov x9, v0.d[1]
+; CHECK-SD-NEXT:    movk x8, #9362, lsl #16
+; CHECK-SD-NEXT:    movk x8, #37449, lsl #32
+; CHECK-SD-NEXT:    movk x8, #18724, lsl #48
+; CHECK-SD-NEXT:    smulh x8, x10, x8
+; CHECK-SD-NEXT:    mov x10, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
+; CHECK-SD-NEXT:    eor x10, x10, #0x8000000000000001
+; CHECK-SD-NEXT:    smulh x9, x9, x10
+; CHECK-SD-NEXT:    asr x10, x8, #1
+; CHECK-SD-NEXT:    add x8, x10, x8, lsr #63
+; CHECK-SD-NEXT:    add x9, x9, x9, lsr #63
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    mov v0.d[1], x9
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: combine_vec_sdiv_nonuniform_v2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    mov w8, #7 // =0x7
+; CHECK-GI-NEXT:    mov w10, #6 // =0x6
+; CHECK-GI-NEXT:    sdiv x8, x9, x8
+; CHECK-GI-NEXT:    mov x9, v0.d[1]
+; CHECK-GI-NEXT:    sdiv x9, x9, x10
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    mov v0.d[1], x9
+; CHECK-GI-NEXT:    ret
+  %r = sdiv <2 x i64> %x, <i64 7, i64 6>
+  ret <2 x i64> %r
+}

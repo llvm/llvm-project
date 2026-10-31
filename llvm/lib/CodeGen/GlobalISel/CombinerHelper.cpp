@@ -168,9 +168,26 @@ bool CombinerHelper::isLegalOrHasWidenScalar(const LegalityQuery &Query) const {
 
 bool CombinerHelper::isLegalOrHasFewerElements(
     const LegalityQuery &Query) const {
-  LegalizeAction Action = LI->getAction(Query).Action;
-  return Action == LegalizeActions::Legal ||
-         Action == LegalizeActions::FewerElements;
+  // Follow FewerElements steps until the types are legal. This relies on the
+  // legalizer splitting the vectors, so only do it before legalization.
+  SmallVector<LLT, 4> Types(Query.Types);
+  for (unsigned Step = 0; Step < 4; ++Step) {
+    LegalizeActionStep Action =
+        LI->getAction({Query.Opcode, Types, Query.MMODescrs});
+    if (Action.Action == LegalizeActions::Legal)
+      return true;
+    if (!isPreLegalize() || Action.Action != LegalizeActions::FewerElements)
+      return false;
+    // The legalizer splits all the vectors with the same number of elements.
+    ElementCount OldEC = Types[Action.TypeIdx].getElementCount();
+    ElementCount NewEC = Action.NewType.isVector()
+                             ? Action.NewType.getElementCount()
+                             : ElementCount::getFixed(1);
+    for (LLT &Ty : Types)
+      if (Ty.isVector() && Ty.getElementCount() == OldEC)
+        Ty = Ty.changeElementCount(NewEC);
+  }
+  return false;
 }
 
 bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
@@ -5645,7 +5662,7 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
-    if (!isLegal({TargetOpcode::G_SMULH, {DstTy}}) &&
+    if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
         !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
       return false;
     if (Opcode == TargetOpcode::G_SREM &&

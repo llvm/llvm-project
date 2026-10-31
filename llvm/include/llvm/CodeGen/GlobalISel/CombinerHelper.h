@@ -164,8 +164,8 @@ public:
   /// perform WidenScalar action on the target.
   LLVM_ABI bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
 
-  /// \return true if \p Query is legal on the target, or if \p Query will
-  /// perform a FewerElements action on the target.
+  /// \return true if \p Query is legal on the target, or if, before
+  /// legalization, FewerElements actions will split it into legal types.
   LLVM_ABI bool isLegalOrHasFewerElements(const LegalityQuery &Query) const;
 
   /// \return true if the combine is running prior to legalization, or if \p Ty
