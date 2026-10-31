@@ -1,4 +1,4 @@
-// Check that the paths of C++ headers vendored in clang 
+// Check that the paths of C++ headers vendored in clang
 // will be found before the C++ standard libraries
 
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
@@ -10,9 +10,9 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LIBCXX %s
 // CHECK-LIBCXX: "-cc1"
 // CHECK-LIBCXX-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-LIBCXX-SAME: "-internal-isystem" "[[RESOURCE_DIR]][[SEP:/|\\\\]]include[[SEP]]cxx"
-// CHECK-LIBCXX-SAME: "-internal-isystem" "{{[^"]+}}[[SEP]]c++[[SEP]]v1"
-// CHECK-LIBCXX-SAME: "-internal-isystem" "[[RESOURCE_DIR]][[SEP]]include"
+// CHECK-LIBCXX-SAME: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include{{/|\\\\}}cxx"
+// CHECK-LIBCXX-SAME: "-internal-isystem" "{{[^"]+}}{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK-LIBCXX-SAME: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
@@ -21,9 +21,9 @@
 // RUN:   | FileCheck --check-prefix=CHECK-STDLIBCXX %s
 // CHECK-STDLIBCXX: "-cc1"
 // CHECK-STDLIBCXX-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-STDLIBCXX-SAME: "-internal-isystem" "[[RESOURCE_DIR]][[SEP:/|\\\\]]include[[SEP]]cxx"
-// CHECK-STDLIBCXX-SAME: "-internal-isystem" "{{[^"]+}}[[SEP]]Inputs[[SEP]]stdlib"
-// CHECK-STDLIBCXX-SAME: "-internal-isystem" "[[RESOURCE_DIR]][[SEP]]include"
+// CHECK-STDLIBCXX-SAME: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include{{/|\\\\}}cxx"
+// CHECK-STDLIBCXX-SAME: "-internal-isystem" "{{[^"]+}}{{/|\\\\}}Inputs{{/|\\\\}}stdlib"
+// CHECK-STDLIBCXX-SAME: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 
 // The directory is not added with -nostdinc or -nobuiltininc, or for C.
 // RUN: %clang -### %s -fsyntax-only -nostdinc 2>&1 \
