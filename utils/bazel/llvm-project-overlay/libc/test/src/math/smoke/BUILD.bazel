@@ -2291,6 +2291,13 @@ math_test(
 )
 
 math_test(
+    name = "sinhbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_test(
     name = "sinhf",
     deps = [
         "//libc:__support_cpp_array",

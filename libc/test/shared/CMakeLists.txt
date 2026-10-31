@@ -489,6 +489,7 @@ else()
       libc.src.__support.math.sinf16
       libc.src.__support.math.sinh
       libc.src.__support.math.sinhf
+      libc.src.__support.math.sinhbf16
       libc.src.__support.math.sinhf16
       libc.src.__support.math.sqrtf128
       libc.src.__support.math.sinpif
