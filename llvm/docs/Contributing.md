@@ -44,11 +44,12 @@ you are interested in working on any of these projects, please post on the
 ## How to Submit a Patch
 Once you have a patch ready, it is time to submit it. The patch should:
 
+* have a single commit, up-to-date with the upstream `origin/main` branch, and don't have merges.
 * include a small unit test
-* conform to the {doc}`CodingStandards`. You can use the [clang-format-diff.py] or [git-clang-format] tools to automatically format your patch properly.
+* conform to the {doc}`CodingStandards`. See [format patches](#format patches) below. 
 * not contain any unrelated changes
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
-* have a single commit, up-to-date with the upstream `origin/main` branch, and don't have merges.
+* Follow the {ref}`GitHub review process <github-reviews>` from here on out.
 
 (format patches)=
 
