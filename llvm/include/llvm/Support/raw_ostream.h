@@ -499,13 +499,13 @@ protected:
   /// Set the flag indicating that an output error has been encountered.
   void error_detected(std::error_code EC) { this->EC = EC; }
 
+  /// Return the file descriptor.
+  int get_fd() const { return FD; }
+
   // Update the file position by increasing \p Delta.
   void inc_pos(uint64_t Delta) { pos += Delta; }
 
 public:
-  /// Return the file descriptor.
-  int get_fd() const { return FD; }
-
   /// Open the specified file for writing. If an error occurs, information
   /// about the error is put into EC, and the stream should be immediately
   /// destroyed;
