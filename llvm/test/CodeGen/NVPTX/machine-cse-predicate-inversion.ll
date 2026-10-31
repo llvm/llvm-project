@@ -1854,7 +1854,9 @@ define i32 @test_bfloat16_ord(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_bfloat16_ord_param_0];
 ; CHECK-NEXT:    setp.num.bf16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    @!%p1 bra $L__BB44_1;
+; CHECK-NEXT:    @%p1 bra $L__BB44_2;
+; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB44_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB44_4;
 ; CHECK-NEXT:  // %bb.3: // %else
@@ -1862,9 +1864,6 @@ define i32 @test_bfloat16_ord(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:  $L__BB44_4: // %merge2
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB44_1: // %then
-; CHECK-NEXT:    mov.b32 %r1, 1;
-; CHECK-NEXT:    bra.uni $L__BB44_2;
 entry:
   %cmp = fcmp ord bfloat %a, %b
   br i1 %cmp, label %merge1, label %then
@@ -1901,13 +1900,12 @@ define i32 @test_bfloat16_uno(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB45_2: // %merge1
-; CHECK-NEXT:    @%p1 bra $L__BB45_3;
+; CHECK-NEXT:    @!%p1 bra $L__BB45_4;
+; CHECK-NEXT:  // %bb.3: // %else
+; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB45_4: // %merge2
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB45_3: // %else
-; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    bra.uni $L__BB45_4;
 entry:
   %cmp = fcmp uno bfloat %a, %b
   br i1 %cmp, label %merge1, label %then
@@ -2528,7 +2526,9 @@ define i32 @test_float16_ord(half %a, half %b) {
 ; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_float16_ord_param_0];
 ; CHECK-NEXT:    setp.num.f16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    @!%p1 bra $L__BB60_1;
+; CHECK-NEXT:    @%p1 bra $L__BB60_2;
+; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB60_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB60_4;
 ; CHECK-NEXT:  // %bb.3: // %else
@@ -2536,9 +2536,6 @@ define i32 @test_float16_ord(half %a, half %b) {
 ; CHECK-NEXT:  $L__BB60_4: // %merge2
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB60_1: // %then
-; CHECK-NEXT:    mov.b32 %r1, 1;
-; CHECK-NEXT:    bra.uni $L__BB60_2;
 entry:
   %cmp = fcmp ord half %a, %b
   br i1 %cmp, label %merge1, label %then
@@ -2575,13 +2572,12 @@ define i32 @test_float16_uno(half %a, half %b) {
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB61_2: // %merge1
-; CHECK-NEXT:    @%p1 bra $L__BB61_3;
+; CHECK-NEXT:    @!%p1 bra $L__BB61_4;
+; CHECK-NEXT:  // %bb.3: // %else
+; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB61_4: // %merge2
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB61_3: // %else
-; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    bra.uni $L__BB61_4;
 entry:
   %cmp = fcmp uno half %a, %b
   br i1 %cmp, label %merge1, label %then
@@ -3172,7 +3168,9 @@ define i32 @test_float32_ord(float %arg) {
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [test_float32_ord_param_0];
 ; CHECK-NEXT:    setp.num.f32 %p1, %r1, %r1;
 ; CHECK-NEXT:    mov.b32 %r2, 0;
-; CHECK-NEXT:    @!%p1 bra $L__BB76_1;
+; CHECK-NEXT:    @%p1 bra $L__BB76_2;
+; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    mov.b32 %r2, 1;
 ; CHECK-NEXT:  $L__BB76_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB76_4;
 ; CHECK-NEXT:  // %bb.3: // %else
@@ -3180,9 +3178,6 @@ define i32 @test_float32_ord(float %arg) {
 ; CHECK-NEXT:  $L__BB76_4: // %merge2
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB76_1: // %then
-; CHECK-NEXT:    mov.b32 %r2, 1;
-; CHECK-NEXT:    bra.uni $L__BB76_2;
 entry:
   %cmp = fcmp ord float %arg, 0.000000e+00
   br i1 %cmp, label %merge1, label %then
@@ -3217,13 +3212,12 @@ define i32 @test_float32_uno(float %arg) {
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    mov.b32 %r2, 1;
 ; CHECK-NEXT:  $L__BB77_2: // %merge1
-; CHECK-NEXT:    @%p1 bra $L__BB77_3;
+; CHECK-NEXT:    @!%p1 bra $L__BB77_4;
+; CHECK-NEXT:  // %bb.3: // %else
+; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:  $L__BB77_4: // %merge2
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB77_3: // %else
-; CHECK-NEXT:    mov.b32 %r2, 0;
-; CHECK-NEXT:    bra.uni $L__BB77_4;
 entry:
   %cmp = fcmp uno float %arg, 0.000000e+00
   br i1 %cmp, label %merge1, label %then
@@ -3829,7 +3823,9 @@ define i32 @test_float64_ord(double %arg) {
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_float64_ord_param_0];
 ; CHECK-NEXT:    setp.num.f64 %p1, %rd1, %rd1;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    @!%p1 bra $L__BB92_1;
+; CHECK-NEXT:    @%p1 bra $L__BB92_2;
+; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB92_2: // %merge1
 ; CHECK-NEXT:    @!%p1 bra $L__BB92_4;
 ; CHECK-NEXT:  // %bb.3: // %else
@@ -3837,9 +3833,6 @@ define i32 @test_float64_ord(double %arg) {
 ; CHECK-NEXT:  $L__BB92_4: // %merge2
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB92_1: // %then
-; CHECK-NEXT:    mov.b32 %r1, 1;
-; CHECK-NEXT:    bra.uni $L__BB92_2;
 entry:
   %cmp = fcmp ord double %arg, 0.000000e+00
   br i1 %cmp, label %merge1, label %then
@@ -3875,13 +3868,12 @@ define i32 @test_float64_uno(double %arg) {
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    mov.b32 %r1, 1;
 ; CHECK-NEXT:  $L__BB93_2: // %merge1
-; CHECK-NEXT:    @%p1 bra $L__BB93_3;
+; CHECK-NEXT:    @!%p1 bra $L__BB93_4;
+; CHECK-NEXT:  // %bb.3: // %else
+; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB93_4: // %merge2
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB93_3: // %else
-; CHECK-NEXT:    mov.b32 %r1, 0;
-; CHECK-NEXT:    bra.uni $L__BB93_4;
 entry:
   %cmp = fcmp uno double %arg, 0.000000e+00
   br i1 %cmp, label %merge1, label %then

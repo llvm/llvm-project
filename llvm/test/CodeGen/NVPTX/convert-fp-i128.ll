@@ -144,8 +144,11 @@ define half @cvt_f16_u128(i128 %x) {
 ; CHECK-NEXT:    @%p4 bra $L__BB3_6;
 ; CHECK-NEXT:  // %bb.3: // %itofp-if-then4
 ; CHECK-NEXT:    setp.ne.b32 %p5, %r2, 25;
-; CHECK-NEXT:    @!%p5 bra $L__BB3_4;
-; CHECK-NEXT:  // %bb.5: // %itofp-sw-default
+; CHECK-NEXT:    @%p5 bra $L__BB3_5;
+; CHECK-NEXT:  // %bb.4: // %itofp-sw-bb
+; CHECK-NEXT:    shl.b64 %rd27, %rd27, 1;
+; CHECK-NEXT:    bra.uni $L__BB3_6;
+; CHECK-NEXT:  $L__BB3_5: // %itofp-sw-default
 ; CHECK-NEXT:    sub.s32 %r6, 102, %r1;
 ; CHECK-NEXT:    shr.u64 %rd8, %rd27, %r6;
 ; CHECK-NEXT:    sub.s32 %r7, 64, %r6;
@@ -179,7 +182,16 @@ define half @cvt_f16_u128(i128 %x) {
 ; CHECK-NEXT:    and.b64 %rd25, %rd23, 67108864;
 ; CHECK-NEXT:    setp.eq.b64 %p9, %rd25, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r18, %rd24;
-; CHECK-NEXT:    @!%p9 bra $L__BB3_7;
+; CHECK-NEXT:    @%p9 bra $L__BB3_9;
+; CHECK-NEXT:  // %bb.7: // %itofp-if-then20
+; CHECK-NEXT:    shr.u64 %rd26, %rd23, 3;
+; CHECK-NEXT:    cvt.u32.u64 %r18, %rd26;
+; CHECK-NEXT:    mov.b32 %r19, %r2;
+; CHECK-NEXT:    bra.uni $L__BB3_9;
+; CHECK-NEXT:  $L__BB3_8: // %itofp-if-else
+; CHECK-NEXT:    add.s32 %r5, %r1, -104;
+; CHECK-NEXT:    shl.b64 %rd7, %rd27, %r5;
+; CHECK-NEXT:    cvt.u32.u64 %r18, %rd7;
 ; CHECK-NEXT:  $L__BB3_9: // %itofp-if-end26
 ; CHECK-NEXT:    shl.b32 %r14, %r19, 23;
 ; CHECK-NEXT:    and.b32 %r15, %r18, 8388607;
@@ -189,19 +201,6 @@ define half @cvt_f16_u128(i128 %x) {
 ; CHECK-NEXT:  $L__BB3_10: // %itofp-return
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB3_8: // %itofp-if-else
-; CHECK-NEXT:    add.s32 %r5, %r1, -104;
-; CHECK-NEXT:    shl.b64 %rd7, %rd27, %r5;
-; CHECK-NEXT:    cvt.u32.u64 %r18, %rd7;
-; CHECK-NEXT:    bra.uni $L__BB3_9;
-; CHECK-NEXT:  $L__BB3_7: // %itofp-if-then20
-; CHECK-NEXT:    shr.u64 %rd26, %rd23, 3;
-; CHECK-NEXT:    cvt.u32.u64 %r18, %rd26;
-; CHECK-NEXT:    mov.b32 %r19, %r2;
-; CHECK-NEXT:    bra.uni $L__BB3_9;
-; CHECK-NEXT:  $L__BB3_4: // %itofp-sw-bb
-; CHECK-NEXT:    shl.b64 %rd27, %rd27, 1;
-; CHECK-NEXT:    bra.uni $L__BB3_6;
   %a = uitofp i128 %x to half
   ret half %a
 }
@@ -237,8 +236,11 @@ define float @cvt_f32_u128(i128 %x) {
 ; CHECK-NEXT:    @%p4 bra $L__BB4_6;
 ; CHECK-NEXT:  // %bb.3: // %itofp-if-then4
 ; CHECK-NEXT:    setp.ne.b32 %p5, %r2, 25;
-; CHECK-NEXT:    @!%p5 bra $L__BB4_4;
-; CHECK-NEXT:  // %bb.5: // %itofp-sw-default
+; CHECK-NEXT:    @%p5 bra $L__BB4_5;
+; CHECK-NEXT:  // %bb.4: // %itofp-sw-bb
+; CHECK-NEXT:    shl.b64 %rd27, %rd27, 1;
+; CHECK-NEXT:    bra.uni $L__BB4_6;
+; CHECK-NEXT:  $L__BB4_5: // %itofp-sw-default
 ; CHECK-NEXT:    sub.s32 %r6, 102, %r1;
 ; CHECK-NEXT:    shr.u64 %rd8, %rd27, %r6;
 ; CHECK-NEXT:    sub.s32 %r7, 64, %r6;
@@ -272,7 +274,16 @@ define float @cvt_f32_u128(i128 %x) {
 ; CHECK-NEXT:    and.b64 %rd25, %rd23, 67108864;
 ; CHECK-NEXT:    setp.eq.b64 %p9, %rd25, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r17, %rd24;
-; CHECK-NEXT:    @!%p9 bra $L__BB4_7;
+; CHECK-NEXT:    @%p9 bra $L__BB4_9;
+; CHECK-NEXT:  // %bb.7: // %itofp-if-then20
+; CHECK-NEXT:    shr.u64 %rd26, %rd23, 3;
+; CHECK-NEXT:    cvt.u32.u64 %r17, %rd26;
+; CHECK-NEXT:    mov.b32 %r18, %r2;
+; CHECK-NEXT:    bra.uni $L__BB4_9;
+; CHECK-NEXT:  $L__BB4_8: // %itofp-if-else
+; CHECK-NEXT:    add.s32 %r5, %r1, -104;
+; CHECK-NEXT:    shl.b64 %rd7, %rd27, %r5;
+; CHECK-NEXT:    cvt.u32.u64 %r17, %rd7;
 ; CHECK-NEXT:  $L__BB4_9: // %itofp-if-end26
 ; CHECK-NEXT:    shl.b32 %r14, %r18, 23;
 ; CHECK-NEXT:    and.b32 %r15, %r17, 8388607;
@@ -281,19 +292,6 @@ define float @cvt_f32_u128(i128 %x) {
 ; CHECK-NEXT:  $L__BB4_10: // %itofp-return
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r19;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB4_8: // %itofp-if-else
-; CHECK-NEXT:    add.s32 %r5, %r1, -104;
-; CHECK-NEXT:    shl.b64 %rd7, %rd27, %r5;
-; CHECK-NEXT:    cvt.u32.u64 %r17, %rd7;
-; CHECK-NEXT:    bra.uni $L__BB4_9;
-; CHECK-NEXT:  $L__BB4_7: // %itofp-if-then20
-; CHECK-NEXT:    shr.u64 %rd26, %rd23, 3;
-; CHECK-NEXT:    cvt.u32.u64 %r17, %rd26;
-; CHECK-NEXT:    mov.b32 %r18, %r2;
-; CHECK-NEXT:    bra.uni $L__BB4_9;
-; CHECK-NEXT:  $L__BB4_4: // %itofp-sw-bb
-; CHECK-NEXT:    shl.b64 %rd27, %rd27, 1;
-; CHECK-NEXT:    bra.uni $L__BB4_6;
   %a = uitofp i128 %x to float
   ret float %a
 }
@@ -329,8 +327,16 @@ define double @cvt_f64_u128(i128 %x) {
 ; CHECK-NEXT:    @%p4 bra $L__BB5_6;
 ; CHECK-NEXT:  // %bb.3: // %itofp-if-then4
 ; CHECK-NEXT:    setp.ne.b32 %p5, %r2, 54;
-; CHECK-NEXT:    @!%p5 bra $L__BB5_4;
-; CHECK-NEXT:  // %bb.5: // %itofp-sw-default
+; CHECK-NEXT:    @%p5 bra $L__BB5_5;
+; CHECK-NEXT:  // %bb.4: // %itofp-sw-bb
+; CHECK-NEXT:    mov.b64 {%r6, %r7}, %rd30;
+; CHECK-NEXT:    mov.b64 {%r8, %r9}, %rd31;
+; CHECK-NEXT:    shf.l.wrap.b32 %r10, %r7, %r8, 1;
+; CHECK-NEXT:    shf.l.wrap.b32 %r11, %r8, %r9, 1;
+; CHECK-NEXT:    mov.b64 %rd31, {%r10, %r11};
+; CHECK-NEXT:    shl.b64 %rd30, %rd30, 1;
+; CHECK-NEXT:    bra.uni $L__BB5_6;
+; CHECK-NEXT:  $L__BB5_5: // %itofp-sw-default
 ; CHECK-NEXT:    sub.s32 %r12, 73, %r1;
 ; CHECK-NEXT:    shr.u64 %rd7, %rd30, %r12;
 ; CHECK-NEXT:    sub.s32 %r13, 64, %r12;
@@ -373,7 +379,20 @@ define double @cvt_f64_u128(i128 %x) {
 ; CHECK-NEXT:    shf.l.wrap.b32 %r26, %r23, %r24, 30;
 ; CHECK-NEXT:    mov.b64 %rd25, {%r25, %r26};
 ; CHECK-NEXT:    cvt.u32.u64 %r34, %rd25;
-; CHECK-NEXT:    @!%p9 bra $L__BB5_7;
+; CHECK-NEXT:    @%p9 bra $L__BB5_9;
+; CHECK-NEXT:  // %bb.7: // %itofp-if-then20
+; CHECK-NEXT:    shf.l.wrap.b32 %r27, %r20, %r21, 29;
+; CHECK-NEXT:    shf.l.wrap.b32 %r28, %r21, %r23, 29;
+; CHECK-NEXT:    mov.b64 %rd32, {%r27, %r28};
+; CHECK-NEXT:    shf.l.wrap.b32 %r29, %r23, %r24, 29;
+; CHECK-NEXT:    mov.b64 %rd26, {%r28, %r29};
+; CHECK-NEXT:    cvt.u32.u64 %r34, %rd26;
+; CHECK-NEXT:    mov.b32 %r35, %r2;
+; CHECK-NEXT:    bra.uni $L__BB5_9;
+; CHECK-NEXT:  $L__BB5_8: // %itofp-if-else
+; CHECK-NEXT:    add.s32 %r5, %r1, -75;
+; CHECK-NEXT:    shl.b64 %rd32, %rd30, %r5;
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd32; }
 ; CHECK-NEXT:  $L__BB5_9: // %itofp-if-end26
 ; CHECK-NEXT:    shl.b32 %r30, %r35, 20;
 ; CHECK-NEXT:    and.b32 %r31, %r34, 1048575;
@@ -386,28 +405,6 @@ define double @cvt_f64_u128(i128 %x) {
 ; CHECK-NEXT:  $L__BB5_10: // %itofp-return
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd33;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB5_8: // %itofp-if-else
-; CHECK-NEXT:    add.s32 %r5, %r1, -75;
-; CHECK-NEXT:    shl.b64 %rd32, %rd30, %r5;
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd32; }
-; CHECK-NEXT:    bra.uni $L__BB5_9;
-; CHECK-NEXT:  $L__BB5_7: // %itofp-if-then20
-; CHECK-NEXT:    shf.l.wrap.b32 %r27, %r20, %r21, 29;
-; CHECK-NEXT:    shf.l.wrap.b32 %r28, %r21, %r23, 29;
-; CHECK-NEXT:    mov.b64 %rd32, {%r27, %r28};
-; CHECK-NEXT:    shf.l.wrap.b32 %r29, %r23, %r24, 29;
-; CHECK-NEXT:    mov.b64 %rd26, {%r28, %r29};
-; CHECK-NEXT:    cvt.u32.u64 %r34, %rd26;
-; CHECK-NEXT:    mov.b32 %r35, %r2;
-; CHECK-NEXT:    bra.uni $L__BB5_9;
-; CHECK-NEXT:  $L__BB5_4: // %itofp-sw-bb
-; CHECK-NEXT:    mov.b64 {%r6, %r7}, %rd30;
-; CHECK-NEXT:    mov.b64 {%r8, %r9}, %rd31;
-; CHECK-NEXT:    shf.l.wrap.b32 %r10, %r7, %r8, 1;
-; CHECK-NEXT:    shf.l.wrap.b32 %r11, %r8, %r9, 1;
-; CHECK-NEXT:    mov.b64 %rd31, {%r10, %r11};
-; CHECK-NEXT:    shl.b64 %rd30, %rd30, 1;
-; CHECK-NEXT:    bra.uni $L__BB5_6;
   %a = uitofp i128 %x to double
   ret double %a
 }
@@ -571,8 +568,11 @@ define half @cvt_f16_s128(i128 %x) {
 ; CHECK-NEXT:    @%p5 bra $L__BB9_6;
 ; CHECK-NEXT:  // %bb.3: // %itofp-if-then4
 ; CHECK-NEXT:    setp.ne.b32 %p6, %r2, 25;
-; CHECK-NEXT:    @!%p6 bra $L__BB9_4;
-; CHECK-NEXT:  // %bb.5: // %itofp-sw-default
+; CHECK-NEXT:    @%p6 bra $L__BB9_5;
+; CHECK-NEXT:  // %bb.4: // %itofp-sw-bb
+; CHECK-NEXT:    shl.b64 %rd32, %rd32, 1;
+; CHECK-NEXT:    bra.uni $L__BB9_6;
+; CHECK-NEXT:  $L__BB9_5: // %itofp-sw-default
 ; CHECK-NEXT:    sub.s32 %r6, 102, %r1;
 ; CHECK-NEXT:    shr.u64 %rd13, %rd32, %r6;
 ; CHECK-NEXT:    sub.s32 %r7, 64, %r6;
@@ -606,7 +606,16 @@ define half @cvt_f16_s128(i128 %x) {
 ; CHECK-NEXT:    and.b64 %rd30, %rd28, 67108864;
 ; CHECK-NEXT:    setp.eq.b64 %p10, %rd30, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r21, %rd29;
-; CHECK-NEXT:    @!%p10 bra $L__BB9_7;
+; CHECK-NEXT:    @%p10 bra $L__BB9_9;
+; CHECK-NEXT:  // %bb.7: // %itofp-if-then20
+; CHECK-NEXT:    shr.u64 %rd31, %rd28, 3;
+; CHECK-NEXT:    cvt.u32.u64 %r21, %rd31;
+; CHECK-NEXT:    mov.b32 %r22, %r2;
+; CHECK-NEXT:    bra.uni $L__BB9_9;
+; CHECK-NEXT:  $L__BB9_8: // %itofp-if-else
+; CHECK-NEXT:    add.s32 %r5, %r1, -104;
+; CHECK-NEXT:    shl.b64 %rd12, %rd32, %r5;
+; CHECK-NEXT:    cvt.u32.u64 %r21, %rd12;
 ; CHECK-NEXT:  $L__BB9_9: // %itofp-if-end26
 ; CHECK-NEXT:    cvt.u32.u64 %r14, %rd3;
 ; CHECK-NEXT:    and.b32 %r15, %r14, -2147483648;
@@ -619,19 +628,6 @@ define half @cvt_f16_s128(i128 %x) {
 ; CHECK-NEXT:  $L__BB9_10: // %itofp-return
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB9_8: // %itofp-if-else
-; CHECK-NEXT:    add.s32 %r5, %r1, -104;
-; CHECK-NEXT:    shl.b64 %rd12, %rd32, %r5;
-; CHECK-NEXT:    cvt.u32.u64 %r21, %rd12;
-; CHECK-NEXT:    bra.uni $L__BB9_9;
-; CHECK-NEXT:  $L__BB9_7: // %itofp-if-then20
-; CHECK-NEXT:    shr.u64 %rd31, %rd28, 3;
-; CHECK-NEXT:    cvt.u32.u64 %r21, %rd31;
-; CHECK-NEXT:    mov.b32 %r22, %r2;
-; CHECK-NEXT:    bra.uni $L__BB9_9;
-; CHECK-NEXT:  $L__BB9_4: // %itofp-sw-bb
-; CHECK-NEXT:    shl.b64 %rd32, %rd32, 1;
-; CHECK-NEXT:    bra.uni $L__BB9_6;
   %a = sitofp i128 %x to half
   ret half %a
 }
@@ -673,8 +669,11 @@ define float @cvt_f32_s128(i128 %x) {
 ; CHECK-NEXT:    @%p5 bra $L__BB10_6;
 ; CHECK-NEXT:  // %bb.3: // %itofp-if-then4
 ; CHECK-NEXT:    setp.ne.b32 %p6, %r2, 25;
-; CHECK-NEXT:    @!%p6 bra $L__BB10_4;
-; CHECK-NEXT:  // %bb.5: // %itofp-sw-default
+; CHECK-NEXT:    @%p6 bra $L__BB10_5;
+; CHECK-NEXT:  // %bb.4: // %itofp-sw-bb
+; CHECK-NEXT:    shl.b64 %rd32, %rd32, 1;
+; CHECK-NEXT:    bra.uni $L__BB10_6;
+; CHECK-NEXT:  $L__BB10_5: // %itofp-sw-default
 ; CHECK-NEXT:    sub.s32 %r6, 102, %r1;
 ; CHECK-NEXT:    shr.u64 %rd13, %rd32, %r6;
 ; CHECK-NEXT:    sub.s32 %r7, 64, %r6;
@@ -708,7 +707,16 @@ define float @cvt_f32_s128(i128 %x) {
 ; CHECK-NEXT:    and.b64 %rd30, %rd28, 67108864;
 ; CHECK-NEXT:    setp.eq.b64 %p10, %rd30, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r20, %rd29;
-; CHECK-NEXT:    @!%p10 bra $L__BB10_7;
+; CHECK-NEXT:    @%p10 bra $L__BB10_9;
+; CHECK-NEXT:  // %bb.7: // %itofp-if-then20
+; CHECK-NEXT:    shr.u64 %rd31, %rd28, 3;
+; CHECK-NEXT:    cvt.u32.u64 %r20, %rd31;
+; CHECK-NEXT:    mov.b32 %r21, %r2;
+; CHECK-NEXT:    bra.uni $L__BB10_9;
+; CHECK-NEXT:  $L__BB10_8: // %itofp-if-else
+; CHECK-NEXT:    add.s32 %r5, %r1, -104;
+; CHECK-NEXT:    shl.b64 %rd12, %rd32, %r5;
+; CHECK-NEXT:    cvt.u32.u64 %r20, %rd12;
 ; CHECK-NEXT:  $L__BB10_9: // %itofp-if-end26
 ; CHECK-NEXT:    cvt.u32.u64 %r14, %rd3;
 ; CHECK-NEXT:    and.b32 %r15, %r14, -2147483648;
@@ -720,19 +728,6 @@ define float @cvt_f32_s128(i128 %x) {
 ; CHECK-NEXT:  $L__BB10_10: // %itofp-return
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r22;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB10_8: // %itofp-if-else
-; CHECK-NEXT:    add.s32 %r5, %r1, -104;
-; CHECK-NEXT:    shl.b64 %rd12, %rd32, %r5;
-; CHECK-NEXT:    cvt.u32.u64 %r20, %rd12;
-; CHECK-NEXT:    bra.uni $L__BB10_9;
-; CHECK-NEXT:  $L__BB10_7: // %itofp-if-then20
-; CHECK-NEXT:    shr.u64 %rd31, %rd28, 3;
-; CHECK-NEXT:    cvt.u32.u64 %r20, %rd31;
-; CHECK-NEXT:    mov.b32 %r21, %r2;
-; CHECK-NEXT:    bra.uni $L__BB10_9;
-; CHECK-NEXT:  $L__BB10_4: // %itofp-sw-bb
-; CHECK-NEXT:    shl.b64 %rd32, %rd32, 1;
-; CHECK-NEXT:    bra.uni $L__BB10_6;
   %a = sitofp i128 %x to float
   ret float %a
 }
@@ -774,8 +769,16 @@ define double @cvt_f64_s128(i128 %x) {
 ; CHECK-NEXT:    @%p5 bra $L__BB11_6;
 ; CHECK-NEXT:  // %bb.3: // %itofp-if-then4
 ; CHECK-NEXT:    setp.ne.b32 %p6, %r2, 54;
-; CHECK-NEXT:    @!%p6 bra $L__BB11_4;
-; CHECK-NEXT:  // %bb.5: // %itofp-sw-default
+; CHECK-NEXT:    @%p6 bra $L__BB11_5;
+; CHECK-NEXT:  // %bb.4: // %itofp-sw-bb
+; CHECK-NEXT:    mov.b64 {%r6, %r7}, %rd33;
+; CHECK-NEXT:    mov.b64 {%r8, %r9}, %rd34;
+; CHECK-NEXT:    shf.l.wrap.b32 %r10, %r7, %r8, 1;
+; CHECK-NEXT:    shf.l.wrap.b32 %r11, %r8, %r9, 1;
+; CHECK-NEXT:    mov.b64 %rd34, {%r10, %r11};
+; CHECK-NEXT:    shl.b64 %rd33, %rd33, 1;
+; CHECK-NEXT:    bra.uni $L__BB11_6;
+; CHECK-NEXT:  $L__BB11_5: // %itofp-sw-default
 ; CHECK-NEXT:    sub.s32 %r12, 73, %r1;
 ; CHECK-NEXT:    shr.u64 %rd12, %rd33, %r12;
 ; CHECK-NEXT:    sub.s32 %r13, 64, %r12;
@@ -816,7 +819,18 @@ define double @cvt_f64_s128(i128 %x) {
 ; CHECK-NEXT:    and.b64 %rd29, %rd27, 36028797018963968;
 ; CHECK-NEXT:    setp.eq.b64 %p10, %rd29, 0;
 ; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r35}, %rd35; }
-; CHECK-NEXT:    @!%p10 bra $L__BB11_7;
+; CHECK-NEXT:    @%p10 bra $L__BB11_9;
+; CHECK-NEXT:  // %bb.7: // %itofp-if-then20
+; CHECK-NEXT:    shf.l.wrap.b32 %r26, %r23, %r20, 29;
+; CHECK-NEXT:    shf.l.wrap.b32 %r27, %r22, %r23, 29;
+; CHECK-NEXT:    mov.b64 %rd35, {%r27, %r26};
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r35}, %rd35; }
+; CHECK-NEXT:    mov.b32 %r36, %r2;
+; CHECK-NEXT:    bra.uni $L__BB11_9;
+; CHECK-NEXT:  $L__BB11_8: // %itofp-if-else
+; CHECK-NEXT:    add.s32 %r5, %r1, -75;
+; CHECK-NEXT:    shl.b64 %rd35, %rd33, %r5;
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r35}, %rd35; }
 ; CHECK-NEXT:  $L__BB11_9: // %itofp-if-end26
 ; CHECK-NEXT:    cvt.u32.u64 %r28, %rd3;
 ; CHECK-NEXT:    and.b32 %r29, %r28, -2147483648;
@@ -832,26 +846,6 @@ define double @cvt_f64_s128(i128 %x) {
 ; CHECK-NEXT:  $L__BB11_10: // %itofp-return
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd36;
 ; CHECK-NEXT:    ret;
-; CHECK-NEXT:  $L__BB11_8: // %itofp-if-else
-; CHECK-NEXT:    add.s32 %r5, %r1, -75;
-; CHECK-NEXT:    shl.b64 %rd35, %rd33, %r5;
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r35}, %rd35; }
-; CHECK-NEXT:    bra.uni $L__BB11_9;
-; CHECK-NEXT:  $L__BB11_7: // %itofp-if-then20
-; CHECK-NEXT:    shf.l.wrap.b32 %r26, %r23, %r20, 29;
-; CHECK-NEXT:    shf.l.wrap.b32 %r27, %r22, %r23, 29;
-; CHECK-NEXT:    mov.b64 %rd35, {%r27, %r26};
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r35}, %rd35; }
-; CHECK-NEXT:    mov.b32 %r36, %r2;
-; CHECK-NEXT:    bra.uni $L__BB11_9;
-; CHECK-NEXT:  $L__BB11_4: // %itofp-sw-bb
-; CHECK-NEXT:    mov.b64 {%r6, %r7}, %rd33;
-; CHECK-NEXT:    mov.b64 {%r8, %r9}, %rd34;
-; CHECK-NEXT:    shf.l.wrap.b32 %r10, %r7, %r8, 1;
-; CHECK-NEXT:    shf.l.wrap.b32 %r11, %r8, %r9, 1;
-; CHECK-NEXT:    mov.b64 %rd34, {%r10, %r11};
-; CHECK-NEXT:    shl.b64 %rd33, %rd33, 1;
-; CHECK-NEXT:    bra.uni $L__BB11_6;
   %a = sitofp i128 %x to double
   ret double %a
 }

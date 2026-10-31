@@ -19,6 +19,7 @@
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/FuncletLayout.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -104,6 +105,11 @@ public:
                 StackMapLivenessPass, PostRAMachineSinkingPass,
                 PostRASchedulerPass, FuncletLayoutPass, PatchableFunctionPass,
                 ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass>();
+
+    // Leave block placement to ptxas. Its CFG transformations can invalidate
+    // layout decisions made at the PTX level, and block placement here can
+    // interfere with ptxas analyses.
+    disablePass<MachineBlockPlacementPass>();
   }
 
   void addIRPasses(PassManagerWrapper &PMW) override;
