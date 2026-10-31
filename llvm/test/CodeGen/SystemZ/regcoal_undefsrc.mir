@@ -37,7 +37,7 @@ body:             |
     %4:addr64bit = COPY $r2d
     %6:grx32bit = LHIMux 1
     %7:grx32bit = LHIMux 0
-    CHIMux killed %7, 0, implicit-def $cc
+    CHIMux %7, 0, implicit-def $cc
     BRC 14, 6, %bb.2, implicit $cc
     J %bb.1
 

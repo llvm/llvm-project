@@ -32,10 +32,10 @@ body:             |
   bb.1:
     successors: %bb.3(0x7fffffff), %bb.2(0x00000001)
 
-    %2:gr32bit = COPY killed %21
-    %1:gr32bit = COPY killed %20
-    %0:grx32bit = COPY killed %19
-    TMLMux killed %0, 255, implicit-def $cc
+    %2:gr32bit = COPY %21
+    %1:gr32bit = COPY %20
+    %0:grx32bit = COPY %19
+    TMLMux %0, 255, implicit-def $cc
     %3:gr64bit = COPY %9
     %3:gr64bit = LOCGHI %3, 1, 15, 7, implicit $cc
     BRC 15, 8, %bb.3, implicit killed $cc
@@ -45,11 +45,11 @@ body:             |
     successors:
 
   bb.3:
-    %10:gr32bit = COPY killed %2
-    %10:gr32bit = OR %10, killed %1, implicit-def dead $cc
-    undef %11.subreg_l32:gr64bit = COPY killed %10
-    %13:gr64bit = COPY killed %11
-    %13:gr64bit = ROSBG %13, killed %3, 32, 63, 0, implicit-def dead $cc
+    %10:gr32bit = COPY %2
+    %10:gr32bit = OR %10, %1, implicit-def dead $cc
+    undef %11.subreg_l32:gr64bit = COPY %10
+    %13:gr64bit = COPY %11
+    %13:gr64bit = ROSBG %13, %3, 32, 63, 0, implicit-def dead $cc
     CHIMux %8, 0, implicit-def $cc
     BRC 14, 6, %bb.5, implicit killed $cc
     J %bb.4
@@ -59,20 +59,20 @@ body:             |
   bb.5:
     successors: %bb.7(0x00000001), %bb.6(0x7fffffff)
 
-    %4:grx32bit = COPY killed %13.subreg_l32
+    %4:grx32bit = COPY %13.subreg_l32
     CHIMux undef %16:grx32bit, 10, implicit-def $cc
     BRC 14, 8, %bb.7, implicit killed $cc
     J %bb.6
 
   bb.6:
     %6:grx32bit = LBMux %17, 0, $noreg :: (dereferenceable load (s8) from @g_105, align 2)
-    %19:grx32bit = COPY killed %6
-    %20:gr32bit = COPY killed %4
+    %19:grx32bit = COPY %6
+    %20:gr32bit = COPY %4
     %21:gr32bit = IMPLICIT_DEF
     J %bb.1
 
   bb.7:
     %18:addr64bit = LARL @g_149
-    STCMux killed %4, killed %18, 0, $noreg :: (store (s8) into @g_149, align 2)
+    STCMux %4, %18, 0, $noreg :: (store (s8) into @g_149, align 2)
 
 ...

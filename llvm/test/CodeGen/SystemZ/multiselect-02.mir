@@ -20,22 +20,22 @@ body:             |
   bb.0.entry:
     %1:addr64bit = IMPLICIT_DEF
     %0:gr32bit = LLC %1, 0, $noreg :: (load (s8) from `ptr undef`)
-    CHI killed %0, 0, implicit-def $cc
+    CHI %0, 0, implicit-def $cc
     %2:gr32bit = LHI 2
     %3:gr32bit = LHI 8
-    %4:gr32bit = Select32 killed %3, killed %2, 14, 8, implicit $cc
+    %4:gr32bit = Select32 %3, %2, 14, 8, implicit $cc
     %5:gr32bit = LHI 128
     %7:gr64bit = IMPLICIT_DEF
-    %6:gr64bit = INSERT_SUBREG %7, killed %5, %subreg.subreg_l32
+    %6:gr64bit = INSERT_SUBREG %7, %5, %subreg.subreg_l32
     ADJCALLSTACKDOWN 0, 0
     %16:gr64bit = LLILL 0
-    %8:gr128bit = REG_SEQUENCE killed %16, %subreg.subreg_h64, killed %6, %subreg.subreg_l64
+    %8:gr128bit = REG_SEQUENCE %16, %subreg.subreg_h64, killed %6, %subreg.subreg_l64
     %10:addr64bit = IMPLICIT_DEF
     %9:gr128bit = DL %8, %10, 0, $noreg :: (load (s32) from `ptr undef` + 4)
     %11:gr32bit = COPY %9.subreg_l32
     %12:gr64bit = LGHI 2
     %13:gr64bit = LGHI 8
-    %14:gr64bit = Select64 killed %13, killed %12, 14, 8, implicit $cc
+    %14:gr64bit = Select64 %13, %12, 14, 8, implicit $cc
     CR %4, %11, implicit-def $cc
     %15:gr32bit = Select32 %11, %4, 14, 4, implicit $cc
     $r2d = COPY %14
