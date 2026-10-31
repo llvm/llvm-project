@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 //
 // For each natural loop with multiple exit blocks, this pass creates a new
-// block N such that all exiting blocks now branch to N, and then control flow
-// is redistributed to all the original exit blocks.
+// block N such that all exiting edges eventually branch to N, and then control
+// flow is redistributed to all the original exit blocks. N might not be an exit
+// block, but all paths from the loop to any original exit block pass through N.
 //
 // Limitation: This assumes that all terminators in the CFG are direct branches
 //             (the "br" instruction). The presence of any other control flow
-//             such as indirectbr or switch will cause an assert.
+//             such as indirectbr will cause an assert.
 //             The callbr and switch terminators are supported by creating
 //             intermediate target blocks that unconditionally branch to the
 //             original target blocks. These intermediate target blocks can then
@@ -25,6 +26,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -196,23 +198,19 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
         BasicBlock *Succ = Term->getSuccessor(J);
         if (L->contains(Succ))
           continue;
-        bool UpdatedLI;
         auto It = BrTargets.find(Succ);
         BasicBlock *ExistingTarget =
             (It != BrTargets.end()) ? It->second : nullptr;
-        BasicBlock *NewSucc = SplitMultiBrEdge(BB, Succ, J, ExistingTarget,
-                                               &DTU, nullptr, &LI, &UpdatedLI);
+        BasicBlock *NewSucc =
+            SplitMultiBrEdge(BB, Succ, J, ExistingTarget, &DTU);
 
         if (!ExistingTarget) {
           // SplitMultiBrEdge modifies the CFG because it creates an
           // intermediate block. So we need to set the changed flag no matter
           // what the ControlFlowHub is going to do later.
           Changed = true;
-          // Even if the terminator and Succ do not have a common parent loop,
-          // we need to add the new target block to the parent loop of the
-          // current loop.
-          if (!UpdatedLI)
-            MultiBrTargetBlocksToFix.push_back(NewSucc);
+          // The new successor has to be correctly added to encompassing loops.
+          MultiBrTargetBlocksToFix.push_back(NewSucc);
           // ExitingBlocks is later used to restore SSA, so we need to make sure
           // that the blocks used for phi nodes in the guard blocks match the
           // predecessors of the guard blocks, which, in the case of callbr or
@@ -256,22 +254,32 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
 #endif // EXPENSIVE_CHECKS
   L->verifyLoop();
 
-  // The guard blocks were created outside the loop, so they need to become
-  // members of the parent loop.
-  // Same goes for the callbr/switch target blocks. Although we try to add them
-  // to the smallest common parent loop of the branching block and the
-  // corresponding original target block, there might not have been such a loop,
-  // in which case the newly created target blocks are not part of any
-  // loop. For nested loops, this might result in them leading to a loop with
-  // multiple entry points.
-  if (auto *ParentLoop = L->getParentLoop()) {
-    for (auto *G : GuardBlocks) {
-      ParentLoop->addBasicBlockToLoop(G, LI);
-    }
-    for (auto *C : MultiBrTargetBlocksToFix) {
-      ParentLoop->addBasicBlockToLoop(C, LI);
-    }
-    ParentLoop->verifyLoop();
+  // The guard blocks and split callbr/switch blocks are outside of L.
+  // Add them to the innermost enclosing loop with a reachable original exit
+  // block.
+  if (Loop *ParentLoop = L->getParentLoop()) {
+    auto AddBlockToLoop = [&](BasicBlock *BB) {
+      for (Loop *P = ParentLoop; P; P = P->getParentLoop()) {
+        if (any_of(successors(BB),
+                   [P](BasicBlock *Succ) { return P->contains(Succ); })) {
+          P->addBasicBlockToLoop(BB, LI);
+          break;
+        }
+      }
+    };
+    // The new blocks have the following topological order: MultiBrTargetBlocks
+    // -> Guard 0 -> Guard 1 -> ... -> Guard n -> original exits. As a result,
+    // we can backpropagate the innermost loop property and only need to check
+    // the direct successors. Guard n only branches to original exits, for which
+    // loop membership is known.
+    for (BasicBlock *G : reverse(GuardBlocks))
+      AddBlockToLoop(G);
+    for (BasicBlock *C : MultiBrTargetBlocksToFix)
+      AddBlockToLoop(C);
+#ifndef NDEBUG
+    DenseSet<const Loop *> Loops;
+    ParentLoop->getOutermostLoop()->verifyLoopNest(&Loops);
+#endif
   }
 
 #if defined(EXPENSIVE_CHECKS)
