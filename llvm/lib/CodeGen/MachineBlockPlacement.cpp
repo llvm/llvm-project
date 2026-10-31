@@ -2988,7 +2988,8 @@ void MachineBlockPlacement::optimizeBranches() {
     if (MBPI->getEdgeProbability(ChainBB, TBB) >=
         MBPI->getEdgeProbability(ChainBB, FBB))
       continue;
-    if (TII->reverseBranchCondition(Cond))
+    if (!TII->shouldSwapBranchTargets(*ChainBB) ||
+        TII->reverseBranchCondition(Cond))
       continue;
     LLVM_DEBUG(dbgs() << "Reverse order of the two branches: "
                       << getBlockName(ChainBB) << "\n");
