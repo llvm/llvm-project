@@ -21004,6 +21004,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BIfmax:
+  case Builtin::BIfmaxf:
+  case Builtin::BIfmaxl:
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:
@@ -21017,6 +21020,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BIfmin:
+  case Builtin::BIfminf:
+  case Builtin::BIfminl:
   case Builtin::BI__builtin_fmin:
   case Builtin::BI__builtin_fminf:
   case Builtin::BI__builtin_fminl:
