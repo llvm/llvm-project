@@ -16512,6 +16512,14 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     unsigned IntrinsicID = Op.getConstantOperandVal(0);
     // TODO: Handle more intrinsics
     switch (IntrinsicID) {
+    case Intrinsic::amdgcn_update_dpp:
+      if (QueryVT == MVT::f32 && (VT == MVT::i32 || VT == MVT::f32) &&
+          Op.getConstantOperandVal(4) == 0xf &&
+          Op.getConstantOperandVal(5) == 0xf &&
+          Op.getConstantOperandVal(6) != 0)
+        return isCanonicalized(DAG, Op.getOperand(2), QueryVT, UserFlags,
+                               MaxDepth - 1);
+      return false;
     case Intrinsic::amdgcn_cvt_pkrtz:
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_frexp_mant:
