@@ -326,13 +326,16 @@ public:
       loweredResultTypes.push_back(typeConverter->convertType(result));
     loweredOpState.addTypes(loweredResultTypes);
 
-    // Lower all regions
+    // Convert all regions before moving any blocks: a failure leaves the
+    // blocks unmoved for the driver to report.
+    for (mlir::Region &region : op->getRegions()) {
+      if (mlir::failed(
+              rewriter.convertRegionTypes(&region, *getTypeConverter())))
+        return mlir::failure();
+    }
     for (mlir::Region &region : op->getRegions()) {
       mlir::Region *loweredRegion = loweredOpState.addRegion();
       rewriter.inlineRegionBefore(region, *loweredRegion, loweredRegion->end());
-      if (mlir::failed(
-              rewriter.convertRegionTypes(loweredRegion, *getTypeConverter())))
-        return mlir::failure();
     }
 
     // Clone the operation with lowered operand types and result types
@@ -588,6 +591,12 @@ mlir::LogicalResult CIRFuncOpABILowering::matchAndRewrite(
       cir::FuncType::get(signatureConversion.getConvertedTypes(),
                          loweredResultType, /*isVarArg=*/opFuncType.isVarArg());
 
+  // Convert the body types before moving it: a failure here leaves the
+  // body unmoved for the driver to report.
+  if (mlir::failed(rewriter.convertRegionTypes(
+          &op.getBody(), *getTypeConverter(), &signatureConversion)))
+    return mlir::failure();
+
   // Create a new cir.func operation for the CXXABI-lowered function.
   cir::FuncOp loweredFuncOp = rewriter.cloneWithoutRegions(op);
   loweredFuncOp.setFunctionType(loweredFuncType);
@@ -598,9 +607,6 @@ mlir::LogicalResult CIRFuncOpABILowering::matchAndRewrite(
       });
   rewriter.inlineRegionBefore(op.getBody(), loweredFuncOp.getBody(),
                               loweredFuncOp.end());
-  if (mlir::failed(rewriter.convertRegionTypes(
-          &loweredFuncOp.getBody(), *getTypeConverter(), &signatureConversion)))
-    return mlir::failure();
 
   rewriter.eraseOp(op);
   return mlir::success();
