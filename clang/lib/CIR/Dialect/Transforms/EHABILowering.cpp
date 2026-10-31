@@ -25,7 +25,8 @@
 //                                  catch-copy thunk body, or a store of the
 //                                  exception object address for
 //                                  reference_to_pointer
-//   - personality function set on functions requiring EH
+//   - personality function set on functions requiring EH and removed from
+//     functions without landing pads
 //
 //===----------------------------------------------------------------------===//
 
@@ -137,6 +138,8 @@ private:
 
   DenseMap<mlir::StringAttr, cir::FuncOp> catchCopyThunks;
 
+  llvm::SmallSetVector<mlir::StringAttr, 1> droppedPersonalities;
+
   constexpr const static ::llvm::StringLiteral kGxxPersonality =
       "__gxx_personality_v0";
 
@@ -175,6 +178,13 @@ mlir::LogicalResult ItaniumEHLowering::run() {
   for (cir::FuncOp funcOp : mod.getOps<cir::FuncOp>()) {
     if (mlir::failed(lowerFunc(funcOp)))
       return mlir::failure();
+  }
+
+  for (mlir::StringAttr name : droppedPersonalities) {
+    auto personalityDecl = mod.lookupSymbol<cir::FuncOp>(name);
+    if (personalityDecl && personalityDecl.isDeclaration() &&
+        mlir::SymbolTable::symbolKnownUseEmpty(personalityDecl, mod))
+      personalityDecl.erase();
   }
   return mlir::success();
 }
@@ -380,9 +390,22 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   // (begin/end_cleanup, eh.dispatch, begin/end_catch, resume) through the
   // token graph. A single walk to collect initiates is therefore sufficient.
   SmallVector<cir::EhInitiateOp> initiateOps;
-  funcOp.walk([&](cir::EhInitiateOp op) { initiateOps.push_back(op); });
-  if (initiateOps.empty())
+  bool hasLandingPad = false;
+  funcOp.walk([&](mlir::Operation *op) {
+    if (auto initiateOp = mlir::dyn_cast<cir::EhInitiateOp>(op))
+      initiateOps.push_back(initiateOp);
+    else if (mlir::isa<cir::EhInflightOp>(op))
+      hasLandingPad = true;
+  });
+  if (initiateOps.empty()) {
+    // Without a landing pad the personality is dead, as in classic codegen.
+    mlir::FlatSymbolRefAttr personality = funcOp.getPersonalityAttr();
+    if (personality && !hasLandingPad) {
+      droppedPersonalities.insert(personality.getAttr());
+      funcOp.removePersonalityAttr();
+    }
     return mlir::success();
+  }
 
   ensureRuntimeDecls(funcOp.getLoc());
 
