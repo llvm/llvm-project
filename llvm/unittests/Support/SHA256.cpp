@@ -76,4 +76,18 @@ TEST(SHA256Test, SHA256) {
             "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
 }
 
+#if defined(EXPENSIVE_CHECKS)
+TEST(SHA256Test, LargeInput) {
+  std::string rep(1 << 20, '\0');
+  SHA256 Hash;
+  for (int i = 0; i < 512; ++i) {
+    Hash.update({reinterpret_cast<const uint8_t *>(rep.data()), rep.size()});
+  }
+  auto hash = Hash.final();
+  auto hashStr = toHex(hash);
+  EXPECT_EQ(hashStr,
+            "9acca8e8c22201155389f65abbf6bc9723edc7384ead80503839f49dcc56d767");
+}
+#endif
+
 } // namespace
