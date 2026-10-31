@@ -204,14 +204,12 @@ define void @f1(float %f) nounwind {
 ; MIPS32r6-NEXT:    bc1eqz $f0, $BB1_2
 ; MIPS32r6-NEXT:    nop
 ; MIPS32r6-NEXT:  # %bb.1: # %if.end
-; MIPS32r6-NEXT:    jal f2
-; MIPS32r6-NEXT:    nop
+; MIPS32r6-NEXT:    balc f2
 ; MIPS32r6-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32r6-NEXT:    jr $ra
 ; MIPS32r6-NEXT:    addiu $sp, $sp, 24
 ; MIPS32r6-NEXT:  $BB1_2: # %if.then
-; MIPS32r6-NEXT:    jal abort
-; MIPS32r6-NEXT:    nop
+; MIPS32r6-NEXT:    balc abort
 ;
 ; MIPS4-LABEL: f1:
 ; MIPS4:       # %bb.0: # %entry
@@ -276,14 +274,12 @@ define void @f1(float %f) nounwind {
 ; MIPS64R6-NEXT:    bc1eqz $f0, .LBB1_2
 ; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.1: # %if.end
-; MIPS64R6-NEXT:    jal f2
-; MIPS64R6-NEXT:    nop
+; MIPS64R6-NEXT:    balc f2
 ; MIPS64R6-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6-NEXT:  .LBB1_2: # %if.then
-; MIPS64R6-NEXT:    jal abort
-; MIPS64R6-NEXT:    nop
+; MIPS64R6-NEXT:    balc abort
 entry:
   %cmp = fcmp une float %f, 0.000000e+00
   br i1 %cmp, label %if.then, label %if.end

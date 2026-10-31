@@ -15,8 +15,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: KILL $r0
     %0:gpr = COPY killed $r0
-    %1:dpr = VSETLNi32 undef %1, killed %0, 0, 14 /* CC::al */, $noreg
+    %1:dpr = VSETLNi32 undef %1, %0, 0, 14 /* CC::al */, $noreg
     undef %2.dsub_0:qpr = COPY undef %3:dpr
-    %2.dsub_1:qpr = COPY killed %1
+    %2.dsub_1:qpr = COPY %1
     %4:dpr = COPY %2.dsub_0
 ...

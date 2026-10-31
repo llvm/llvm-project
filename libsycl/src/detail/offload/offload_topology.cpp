@@ -62,14 +62,8 @@ void discoverOffloadDevices() {
         if (Res != OL_SUCCESS)
           return true;
 
-        // Ignore unknown backends
-        if (OL_PLATFORM_BACKEND_UNKNOWN == OlBackend)
-          return true;
-
-        // Ignore the device if the backend index exceeds the number of backends
-        // known at compile time. This should only happen when running with a
-        // newer version of liboffload than libsycl was compiled with.
-        if (OlBackend >= OL_PLATFORM_BACKEND_LAST)
+        // Ignore unknown and unsupported backends.
+        if (!isBackendSupported(OlBackend))
           return true;
 
         uint32_t DriverId = 0;

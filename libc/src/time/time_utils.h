@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 #define LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_tm.h"
@@ -22,7 +23,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/time/time_constants.h"
 

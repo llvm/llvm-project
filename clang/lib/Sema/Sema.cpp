@@ -329,7 +329,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false),
       CurrentInstantiationScope(nullptr), NonInstantiationEntries(0),
-      ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
+      ArgPackSubstIndex(std::nullopt) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
@@ -627,11 +627,7 @@ Sema::~Sema() {
     ExternalSema->ForgetSema();
 
   // Delete cached satisfactions.
-  std::vector<ConstraintSatisfaction *> Satisfactions;
-  Satisfactions.reserve(SatisfactionCache.size());
-  for (auto &Node : SatisfactionCache)
-    Satisfactions.push_back(&Node);
-  for (auto *Node : Satisfactions)
+  for (auto [_, Node] : SatisfactionCache)
     delete Node;
 
   threadSafety::threadSafetyCleanup(ThreadSafetyDeclCache);

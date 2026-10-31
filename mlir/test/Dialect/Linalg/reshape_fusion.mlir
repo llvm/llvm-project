@@ -1,4 +1,7 @@
 // RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=fuse-with-reshape-by-expansion -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -split-input-file \
+// RUN: -transform-preload-library='transform-library-paths=%p/td/fold-reshape-ops-by-expansion.mlir' \
+// RUN: -transform-interpreter=entry-point=fold_reshape_ops_by_expansion | FileCheck %s
 
 #map0 = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
 #map1 = affine_map<(d0, d1, d2) -> (d1, d2, d0)>

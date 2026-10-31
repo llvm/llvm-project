@@ -205,6 +205,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed the legacy pass manager's `RegionPass` and `RGPassManager` classes,
   which no longer had any users.
 
+* Removed `LiveVariables` analysis
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)

@@ -19,6 +19,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
@@ -187,13 +188,10 @@ PipelineTuningOptions::PipelineTuningOptions(
   UnifiedLTO = false;
   MergeFunctions = Opts.enable_merge_functions;
   InlinerThreshold = -1;
+  MaxDevirtIterations = getMaxDevirtIterations(LibraryOptions);
   EagerlyInvalidateAnalyses = Opts.eagerly_invalidate_analyses;
   DevirtualizeSpeculatively = Opts.enable_devirtualize_speculatively;
 }
-
-namespace llvm {
-extern cl::opt<unsigned> MaxDevirtIterations;
-} // namespace llvm
 
 void PassBuilder::invokePeepholeEPCallbacks(FunctionPassManager &FPM,
                                             OptimizationLevel Level) {
@@ -728,13 +726,15 @@ void PassBuilder::addRequiredLTOPreLinkPasses(ModulePassManager &MPM) {
 
 void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
                                       OptimizationLevel Level,
-                                      ThinOrFullLTOPhase LTOPhase) {
+                                      ThinOrFullLTOPhase LTOPhase,
+                                      bool IgnoreProfile) {
   assert(Level != OptimizationLevel::O0 && "Not expecting O0 here!");
   if (Opts.disable_preinline)
     return;
   InlineParams IP;
 
   IP.DefaultThreshold = Opts.preinline_threshold;
+  IP.IgnoreProfile = IgnoreProfile;
 
   // FIXME: The hint threshold has the same value used by the regular inliner
   // when not optimzing for size. This should probably be lowered after
@@ -868,7 +868,8 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   ModuleInlinerWrapperPass MIWP(IP, Opts.mandatory_inlining_first,
                                 InlineContext{Phase, InlinePass::CGSCCInliner},
-                                Opts.enable_ml_inliner, MaxDevirtIterations);
+                                Opts.enable_ml_inliner,
+                                PTO.MaxDevirtIterations);
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // the CGSCC pipeline.
@@ -1156,9 +1157,19 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       isPGOInstrumentColdFunctionOnly(Context.getLibraryOptions()) &&
       IsPGOPreLink && !Opts.instrument_cold_function_only_path.empty();
 
+  // When a memory profile is used together with a sample profile, the
+  // pre-inliner runs after the sample profile has been loaded. By default make
+  // it ignore the sample profile, so that the inlining seen by MemProfUsePass
+  // doesn't depend on the sample profile. Otherwise, a different sample profile
+  // than the one used to build the memory-profiled binary can cause additional
+  // inlining (e.g. of newly hot callees) that leads to memprof matching
+  // failures. This matches the IR PGO pipeline, where the pre-inliner runs
+  // before the profile is annotated.
+  const bool PreInlinerIgnoreProfile =
+      IsMemprofUse && HasSampleProfile && Opts.memprof_preinline_ignore_profile;
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
       IsCtxProfUse || IsColdFuncOnlyInstrGen)
-    addPreInlinerPasses(MPM, Level, Phase);
+    addPreInlinerPasses(MPM, Level, Phase, PreInlinerIgnoreProfile);
 
   // Add all the requested passes for instrumentation PGO, if requested.
   if (IsPGOInstrGen || IsPGOInstrUse) {

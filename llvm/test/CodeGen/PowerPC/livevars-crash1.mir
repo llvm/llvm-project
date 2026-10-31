@@ -102,33 +102,33 @@ body:             |
 
     %1:g8rc_and_g8rc_nox0 = PHI %0, %bb.0, %2, %bb.1, %3, %bb.3, %2, %bb.2
     %5:gprc = LBZ 0, %1 :: (load (s8) from %ir.0)
-    %6:crrc = CMPWI killed %5, 0
-    %7:crbitrc = COPY killed %6.sub_eq
+    %6:crrc = CMPWI %5, 0
+    %7:crbitrc = COPY %6.sub_eq
     %2:g8rc = nuw ADDI8 %1, 1
     STD %2, 0, %4 :: (store (s64) into %ir.p)
     %8:gprc = LBZ 1, %1 :: (load (s8) from %ir.incdec.ptr)
-    BCn killed %7, %bb.1
+    BCn %7, %bb.1
     B %bb.2
 
   bb.2.loop:
     successors: %bb.3(0x55555555), %bb.1(0x2aaaaaab)
 
-    %9:crrc = CMPWI killed %8, 0
-    %10:crbitrc = COPY killed %9.sub_eq
-    BC killed %10, %bb.1
+    %9:crrc = CMPWI %8, 0
+    %10:crbitrc = COPY %9.sub_eq
+    BC %10, %bb.1
     B %bb.3
 
   bb.3.if.then3:
     successors: %bb.1(0x80000000)
 
-    %3:g8rc = nuw ADDI8 killed %1, 2
+    %3:g8rc = nuw ADDI8 %1, 2
     STD %3, 0, %4 :: (store (s64) into %ir.p)
     B %bb.1
 
 
 
 
-  ; CHEXK:   %7:crbitrc = COPY killed %6.sub_eq
+  ; CHEXK:   %7:crbitrc = COPY %6.sub_eq
 
 
 

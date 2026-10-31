@@ -711,8 +711,8 @@ define i64 @zext_call(i64 %x) {
 ; R6-N64-NEXT:    .cfi_def_cfa_offset 16
 ; R6-N64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; R6-N64-NEXT:    .cfi_offset 31, -8
-; R6-N64-NEXT:    jal zeroext_argument
 ; R6-N64-NEXT:    dext $4, $4, 0, 32
+; R6-N64-NEXT:    balc zeroext_argument
 ; R6-N64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; R6-N64-NEXT:    jr $ra
 ; R6-N64-NEXT:    daddiu $sp, $sp, 16
@@ -723,8 +723,8 @@ define i64 @zext_call(i64 %x) {
 ; R6-N32-NEXT:    .cfi_def_cfa_offset 16
 ; R6-N32-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; R6-N32-NEXT:    .cfi_offset 31, -8
-; R6-N32-NEXT:    jal zeroext_argument
 ; R6-N32-NEXT:    dext $4, $4, 0, 32
+; R6-N32-NEXT:    balc zeroext_argument
 ; R6-N32-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; R6-N32-NEXT:    jr $ra
 ; R6-N32-NEXT:    addiu $sp, $sp, 16
@@ -939,8 +939,8 @@ define i64 @zeroext_clear_call(i64 %x) {
 ; R6-N64-NEXT:    .cfi_def_cfa_offset 16
 ; R6-N64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; R6-N64-NEXT:    .cfi_offset 31, -8
-; R6-N64-NEXT:    jal zeroext_clear
 ; R6-N64-NEXT:    dext $4, $4, 0, 32
+; R6-N64-NEXT:    balc zeroext_clear
 ; R6-N64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; R6-N64-NEXT:    jr $ra
 ; R6-N64-NEXT:    daddiu $sp, $sp, 16
@@ -951,8 +951,8 @@ define i64 @zeroext_clear_call(i64 %x) {
 ; R6-N32-NEXT:    .cfi_def_cfa_offset 16
 ; R6-N32-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; R6-N32-NEXT:    .cfi_offset 31, -8
-; R6-N32-NEXT:    jal zeroext_clear
 ; R6-N32-NEXT:    dext $4, $4, 0, 32
+; R6-N32-NEXT:    balc zeroext_clear
 ; R6-N32-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; R6-N32-NEXT:    jr $ra
 ; R6-N32-NEXT:    addiu $sp, $sp, 16
@@ -1022,8 +1022,8 @@ define i64 @zeroext_or_call(i64 %x) {
 ; R6-N64-NEXT:    .cfi_def_cfa_offset 16
 ; R6-N64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; R6-N64-NEXT:    .cfi_offset 31, -8
-; R6-N64-NEXT:    jal zeroext_or
 ; R6-N64-NEXT:    dext $4, $4, 0, 32
+; R6-N64-NEXT:    balc zeroext_or
 ; R6-N64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; R6-N64-NEXT:    jr $ra
 ; R6-N64-NEXT:    daddiu $sp, $sp, 16
@@ -1034,8 +1034,8 @@ define i64 @zeroext_or_call(i64 %x) {
 ; R6-N32-NEXT:    .cfi_def_cfa_offset 16
 ; R6-N32-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; R6-N32-NEXT:    .cfi_offset 31, -8
-; R6-N32-NEXT:    jal zeroext_or
 ; R6-N32-NEXT:    dext $4, $4, 0, 32
+; R6-N32-NEXT:    balc zeroext_or
 ; R6-N32-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; R6-N32-NEXT:    jr $ra
 ; R6-N32-NEXT:    addiu $sp, $sp, 16
