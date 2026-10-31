@@ -307,6 +307,7 @@ Error ELFNixPlatform::setupJITDylib(JITDylib &JD) {
 
 Error ELFNixPlatform::teardownJITDylib(JITDylib &JD) {
   std::lock_guard<std::mutex> Lock(PlatformMutex);
+  JITDylibToPThreadKey.erase(&JD);
   auto I = JITDylibToHandleAddr.find(&JD);
   if (I != JITDylibToHandleAddr.end()) {
     assert(HandleAddrToJITDylib.count(I->second) &&
@@ -1230,12 +1231,16 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
       auto I = MP.JITDylibToPThreadKey.find(&JD);
       if (I != MP.JITDylibToPThreadKey.end())
         Key = I->second;
-    }
-    if (!Key) {
-      if (auto KeyOrErr = MP.createPThreadKey())
-        Key = *KeyOrErr;
-      else
-        return KeyOrErr.takeError();
+      else {
+        // All objects in a JITDylib must use the same per-thread TLV manager.
+        // Keep creation and insertion under the lock so concurrent links cannot
+        // allocate different keys for the same JITDylib.
+        if (auto KeyOrErr = MP.createPThreadKey()) {
+          Key = *KeyOrErr;
+          MP.JITDylibToPThreadKey[&JD] = *Key;
+        } else
+          return KeyOrErr.takeError();
+      }
     }
 
     for (auto *B : TLSInfoEntrySection->blocks()) {
