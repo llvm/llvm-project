@@ -309,8 +309,11 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
   const SCEV *PtrSCEV = SE.getSCEV(Ptr);
+  TypeSize StoreSize = DL.getTypeStoreSize(LI->getType());
+  if (StoreSize.isScalable())
+    return false;
   APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
-                DL.getTypeStoreSize(LI->getType()).getFixedValue());
+                StoreSize.getFixedValue());
 
   // If given a uniform (i.e. non-varying) address, see if we can prove the
   // access is safe within the loop w/o needing predication.
@@ -339,7 +342,11 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (!Step)
     return false;
 
-  const APInt &EltSize = cast<SCEVConstant>(EltSizeSCEV)->getAPInt();
+  auto *EltSizeConst = dyn_cast<SCEVConstant>(EltSizeSCEV);
+  if (!EltSizeConst)
+    return false;
+
+  const APInt &EltSize = EltSizeConst->getAPInt();
   // For the moment, restrict ourselves to the case where the access size is a
   // multiple of the requested alignment and the base is aligned.
   // TODO: generalize if a case found which warrants
