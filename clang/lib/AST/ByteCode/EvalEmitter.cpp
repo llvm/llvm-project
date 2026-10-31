@@ -366,6 +366,9 @@ bool EvalEmitter::emitGetLocal(uint32_t I, SourceInfo Info) {
 
   Block *B = getLocal(I);
 
+  if (!CheckC23ConstexprObject(S, CodePtr(), B->getDescriptor()))
+    return false;
+
   if (!CheckLocalLoad(S, CodePtr(), B))
     return false;
 

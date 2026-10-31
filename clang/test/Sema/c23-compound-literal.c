@@ -89,6 +89,9 @@ void test9(void) {
   (void)(constexpr struct S1){.a = (constexpr int){1}};
   (void)(constexpr int){(int){1}};        // gnu-error {{reading a non-constexpr compound literal}}
   (void)(constexpr int){(static int){1}}; // gnu-error {{reading a non-constexpr compound literal}}
+
+  (void)(constexpr int){({ const int a = 1; a; })}; // expected-error {{initializer of compound literal must be a constant expression}}
+  (void)(constexpr int){({ constexpr int a = 1; a; })};
 }
 
 void test10(void) {
