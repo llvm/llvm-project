@@ -88,11 +88,13 @@ public:
   std::optional<CharBlock> GetKeywordMacroName(const char *) const;
   TokenSequence ExpandKeywordMacro(CharBlock, Provenance) const;
 
+  enum class LineKind { Unknown, Initial, Continuation };
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
   const char *IsCompilerDirectiveSentinel(CharBlock) const;
   // 'first' is the sentinel, 'second' is beginning of payload
   std::optional<std::pair<const char *, const char *>>
-  IsCompilerDirectiveSentinel(const char *p) const;
+  IsCompilerDirectiveSentinel(
+      const char *p, LineKind lineKind = LineKind::Unknown) const;
 
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);
@@ -276,7 +278,8 @@ private:
   bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
   bool SourceLineContinuation(TokenSequence &);
   std::optional<LineClassification>
-  IsCompilerDirectiveSentinelAfterKeywordMacro(const char *p) const;
+  IsCompilerDirectiveSentinelAfterKeywordMacro(
+      const char *p, LineKind lineKind = LineKind::Unknown) const;
 
   Messages &messages_;
   CookedSource &cooked_;
