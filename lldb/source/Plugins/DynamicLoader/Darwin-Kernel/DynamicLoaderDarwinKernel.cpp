@@ -674,8 +674,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
   }
 
   llvm::Expected<ModuleSP> memory_module_sp_or_err =
-      process->ReadModuleFromMemory(file_spec, m_load_address,
-                                    size_to_read);
+      process->ReadModuleFromMemory(file_spec, m_load_address, size_to_read);
   if (auto err = memory_module_sp_or_err.takeError()) {
     LLDB_LOG_ERROR(log, std::move(err),
                    "KextImageInfo::ReadMemoryModule failed to read module from "
