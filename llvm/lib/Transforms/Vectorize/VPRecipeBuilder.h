@@ -19,6 +19,7 @@ class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 struct HistogramInfo;
 struct VFRange;
+struct CompressedPtrInfo;
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -72,6 +73,15 @@ public:
   /// Add|Sub + Store operations that perform the histogram in the original
   /// scalar loop.
   VPHistogramRecipe *widenIfHistogram(VPInstruction *VPI);
+
+  /// Returns the CompressedPtrInfo for \p VPI if it is a compressed load or
+  /// store (as determined by LoopVectorizationLegality), otherwise
+  /// std::nullopt.
+  std::optional<CompressedPtrInfo> getCompressedPtrInfo(VPInstruction *VPI);
+
+  /// Build a llvm.masked.expandload or llvm.masked.compressstore intrinsic for
+  /// \p VPI. \p VPI must be a compressed memory operation.
+  VPWidenMemIntrinsicRecipe *handleCompressedLoadOrStore(VPInstruction *VPI);
 
   /// If \p VPI is a store of a reduction into an invariant address, delete it.
   /// If it is the final store of a reduction result, a uniform store recipe

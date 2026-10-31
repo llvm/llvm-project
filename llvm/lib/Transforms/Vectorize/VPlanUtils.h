@@ -245,6 +245,12 @@ BranchProbability getExecutionProbability(BlockFrequency Freq);
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
+/// Get the value type of a VPInstruction or VPReplicateRecipe load or store.
+inline Type *getLoadStoreValueType(VPSingleDefRecipe *R) {
+  bool IsLoad = vputils::getOpcode(R) == Instruction::Load;
+  return (IsLoad ? R : R->getOperand(0))->getScalarType();
+}
+
 namespace detail {
 
 /// Template-independent implementation for pullOutPermutations.

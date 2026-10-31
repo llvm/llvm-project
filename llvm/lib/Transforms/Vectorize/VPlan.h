@@ -456,12 +456,13 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
+    VPConditionalInductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
     VPFirstPHISC = VPWidenPHISC,
     VPFirstHeaderPHISC = VPCurrentIterationPHISC,
-    VPLastHeaderPHISC = VPReductionPHISC,
-    VPLastPHISC = VPReductionPHISC,
+    VPLastHeaderPHISC = VPConditionalInductionPHISC,
+    VPLastPHISC = VPConditionalInductionPHISC,
   };
 
   VPRecipeBase(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
@@ -646,6 +647,7 @@ public:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
+    case VPRecipeBase::VPConditionalInductionPHISC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveEVLSC:
@@ -3013,6 +3015,63 @@ protected:
 #endif
 };
 
+/// A recipe for handling conditional induction PHIs. The start value is the
+/// first operand of the recipe and the incoming value from the backedge is the
+/// second operand.
+class VPConditionalInductionPHIRecipe : public VPHeaderPHIRecipe {
+  ConditionalInductionDescriptor CondID;
+
+public:
+  VPConditionalInductionPHIRecipe(PHINode &Phi, VPValue &Start,
+                                  VPValue &BackedgeValue,
+                                  const ConditionalInductionDescriptor &CondID)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPConditionalInductionPHISC, &Phi,
+                          &Start, Start.getScalarType()),
+        CondID(CondID) {
+    addOperand(&BackedgeValue);
+  }
+
+  unsigned getNumIncoming() const override { return 2; }
+
+  ~VPConditionalInductionPHIRecipe() override = default;
+
+  /// Returns the underlying PHINode.
+  PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
+
+  /// Returns the conditional induction descriptor for the recipe.
+  const ConditionalInductionDescriptor &
+  getConditionalInductionDescriptor() const {
+    return CondID;
+  }
+
+  VPConditionalInductionPHIRecipe *clone() override {
+    return new VPConditionalInductionPHIRecipe(
+        *getPHINode(), *getStartValue(), *getBackedgeValue(),
+        getConditionalInductionDescriptor());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPConditionalInductionPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPRecipeID() == VPRecipeBase::VPConditionalInductionPHISC;
+  }
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+};
+
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
 /// instructions.
 class LLVM_ABI_FOR_TEST VPBlendRecipe : public VPRecipeWithIRFlags {
@@ -4424,7 +4483,8 @@ struct CastInfoMixinImpl
 template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
     : vpdetail::CastInfoMixinImpl<VPPhiAccessors, VPPhi, VPIRPhi,
-                                  VPWidenPHIRecipe, VPHeaderPHIRecipe> {};
+                                  VPWidenPHIRecipe, VPHeaderPHIRecipe,
+                                  VPConditionalInductionPHIRecipe> {};
 
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
