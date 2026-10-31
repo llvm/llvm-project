@@ -9,22 +9,22 @@ define i32 @extract_last_active(<4 x i32> %data, <4 x i1> %mask, i32 %default) s
 ; NOORIGINS-LABEL: define i32 @extract_last_active(
 ; NOORIGINS-SAME: <4 x i32> [[DATA:%.*]], <4 x i1> [[MASK:%.*]], i32 [[DEFAULT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NOORIGINS-NEXT:  [[ENTRY:.*:]]
-; NOORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; NOORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; NOORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; NOORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; NOORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; NOORIGINS-NEXT:    call void @llvm.donothing()
-; NOORIGINS-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; NOORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; NOORIGINS-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
-; NOORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP3]], 0
-; NOORIGINS-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP]]
+; NOORIGINS-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
+; NOORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
+; NOORIGINS-NEXT:    [[TMP4:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
+; NOORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP4]], 0
+; NOORIGINS-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; NOORIGINS-NEXT:    [[_MSCMP2:%.*]] = icmp ne i32 [[TMP2]], 0
 ; NOORIGINS-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; NOORIGINS-NEXT:    br i1 [[_MSOR3]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1:![0-9]+]]
-; NOORIGINS:       [[BB4]]:
+; NOORIGINS-NEXT:    br i1 [[_MSOR3]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1:![0-9]+]]
+; NOORIGINS:       [[BB5]]:
 ; NOORIGINS-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
 ; NOORIGINS-NEXT:    unreachable
-; NOORIGINS:       [[BB5]]:
+; NOORIGINS:       [[BB6]]:
 ; NOORIGINS-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[DATA]], <4 x i1> [[MASK]], i32 [[DEFAULT]])
 ; NOORIGINS-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; NOORIGINS-NEXT:    ret i32 [[RES]]
@@ -32,27 +32,27 @@ define i32 @extract_last_active(<4 x i32> %data, <4 x i1> %mask, i32 %default) s
 ; ORIGINS-LABEL: define i32 @extract_last_active(
 ; ORIGINS-SAME: <4 x i32> [[DATA:%.*]], <4 x i1> [[MASK:%.*]], i32 [[DEFAULT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ORIGINS-NEXT:  [[ENTRY:.*:]]
-; ORIGINS-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; ORIGINS-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
-; ORIGINS-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
+; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGINS-NEXT:    [[TMP2:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; ORIGINS-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; ORIGINS-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; ORIGINS-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 24), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
-; ORIGINS-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; ORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP6]], 0
-; ORIGINS-NEXT:    br i1 [[_MSCMP1]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1:![0-9]+]]
+; ORIGINS-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
+; ORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP6]], 0
+; ORIGINS-NEXT:    br i1 [[_MSCMP]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1:![0-9]+]]
 ; ORIGINS:       [[BB7]]:
-; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP3]]) #[[ATTR4:[0-9]+]]
+; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP1]]) #[[ATTR4:[0-9]+]]
 ; ORIGINS-NEXT:    unreachable
 ; ORIGINS:       [[BB8]]:
-; ORIGINS-NEXT:    [[TMP8:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
-; ORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP8]], 0
-; ORIGINS-NEXT:    br i1 [[_MSCMP]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
-; ORIGINS:       [[BB9]]:
-; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP7]]) #[[ATTR4]]
-; ORIGINS-NEXT:    unreachable
+; ORIGINS-NEXT:    [[TMP9:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
+; ORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP9]], 0
+; ORIGINS-NEXT:    br i1 [[_MSCMP1]], label %[[BB10:.*]], label %[[BB11:.*]], !prof [[PROF1]]
 ; ORIGINS:       [[BB10]]:
+; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP3]]) #[[ATTR4]]
+; ORIGINS-NEXT:    unreachable
+; ORIGINS:       [[BB11]]:
 ; ORIGINS-NEXT:    [[_MSCMP2:%.*]] = icmp ne i32 [[TMP4]], 0
 ; ORIGINS-NEXT:    br i1 [[_MSCMP2]], label %[[BB12:.*]], label %[[BB13:.*]], !prof [[PROF1]]
 ; ORIGINS:       [[BB12]]:
@@ -73,22 +73,22 @@ define float @extract_last_active_float(<4 x float> %data, <4 x i1> %mask, float
 ; NOORIGINS-LABEL: define float @extract_last_active_float(
 ; NOORIGINS-SAME: <4 x float> [[DATA:%.*]], <4 x i1> [[MASK:%.*]], float [[DEFAULT:%.*]]) #[[ATTR0]] {
 ; NOORIGINS-NEXT:  [[ENTRY:.*:]]
-; NOORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; NOORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; NOORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; NOORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; NOORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; NOORIGINS-NEXT:    call void @llvm.donothing()
-; NOORIGINS-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; NOORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; NOORIGINS-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
-; NOORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP3]], 0
-; NOORIGINS-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP]]
+; NOORIGINS-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
+; NOORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
+; NOORIGINS-NEXT:    [[TMP4:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
+; NOORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP4]], 0
+; NOORIGINS-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; NOORIGINS-NEXT:    [[_MSCMP2:%.*]] = icmp ne i32 [[TMP2]], 0
 ; NOORIGINS-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; NOORIGINS-NEXT:    br i1 [[_MSOR3]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
-; NOORIGINS:       [[BB4]]:
+; NOORIGINS-NEXT:    br i1 [[_MSOR3]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
+; NOORIGINS:       [[BB5]]:
 ; NOORIGINS-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; NOORIGINS-NEXT:    unreachable
-; NOORIGINS:       [[BB5]]:
+; NOORIGINS:       [[BB6]]:
 ; NOORIGINS-NEXT:    [[RES:%.*]] = call float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float> [[DATA]], <4 x i1> [[MASK]], float [[DEFAULT]])
 ; NOORIGINS-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; NOORIGINS-NEXT:    ret float [[RES]]
@@ -96,27 +96,27 @@ define float @extract_last_active_float(<4 x float> %data, <4 x i1> %mask, float
 ; ORIGINS-LABEL: define float @extract_last_active_float(
 ; ORIGINS-SAME: <4 x float> [[DATA:%.*]], <4 x i1> [[MASK:%.*]], float [[DEFAULT:%.*]]) #[[ATTR0]] {
 ; ORIGINS-NEXT:  [[ENTRY:.*:]]
-; ORIGINS-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; ORIGINS-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
-; ORIGINS-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
+; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGINS-NEXT:    [[TMP2:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; ORIGINS-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; ORIGINS-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; ORIGINS-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 24), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
-; ORIGINS-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; ORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP6]], 0
-; ORIGINS-NEXT:    br i1 [[_MSCMP1]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
+; ORIGINS-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
+; ORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP6]], 0
+; ORIGINS-NEXT:    br i1 [[_MSCMP]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
 ; ORIGINS:       [[BB7]]:
-; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP3]]) #[[ATTR4]]
+; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP1]]) #[[ATTR4]]
 ; ORIGINS-NEXT:    unreachable
 ; ORIGINS:       [[BB8]]:
-; ORIGINS-NEXT:    [[TMP8:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
-; ORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP8]], 0
-; ORIGINS-NEXT:    br i1 [[_MSCMP]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
-; ORIGINS:       [[BB9]]:
-; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP7]]) #[[ATTR4]]
-; ORIGINS-NEXT:    unreachable
+; ORIGINS-NEXT:    [[TMP9:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
+; ORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP9]], 0
+; ORIGINS-NEXT:    br i1 [[_MSCMP1]], label %[[BB10:.*]], label %[[BB11:.*]], !prof [[PROF1]]
 ; ORIGINS:       [[BB10]]:
+; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP3]]) #[[ATTR4]]
+; ORIGINS-NEXT:    unreachable
+; ORIGINS:       [[BB11]]:
 ; ORIGINS-NEXT:    [[_MSCMP2:%.*]] = icmp ne i32 [[TMP4]], 0
 ; ORIGINS-NEXT:    br i1 [[_MSCMP2]], label %[[BB12:.*]], label %[[BB13:.*]], !prof [[PROF1]]
 ; ORIGINS:       [[BB12]]:
@@ -137,19 +137,19 @@ define i32 @extract_last_active_const_default(<4 x i32> %data, <4 x i1> %mask) s
 ; NOORIGINS-LABEL: define i32 @extract_last_active_const_default(
 ; NOORIGINS-SAME: <4 x i32> [[DATA:%.*]], <4 x i1> [[MASK:%.*]]) #[[ATTR0]] {
 ; NOORIGINS-NEXT:  [[ENTRY:.*:]]
-; NOORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; NOORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; NOORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; NOORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; NOORIGINS-NEXT:    call void @llvm.donothing()
-; NOORIGINS-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; NOORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP3]], 0
-; NOORIGINS-NEXT:    [[TMP2:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
-; NOORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP2]], 0
-; NOORIGINS-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP]]
-; NOORIGINS-NEXT:    br i1 [[_MSOR]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
-; NOORIGINS:       [[BB3]]:
+; NOORIGINS-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
+; NOORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
+; NOORIGINS-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
+; NOORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP3]], 0
+; NOORIGINS-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; NOORIGINS-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
+; NOORIGINS:       [[BB4]]:
 ; NOORIGINS-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; NOORIGINS-NEXT:    unreachable
-; NOORIGINS:       [[BB4]]:
+; NOORIGINS:       [[BB5]]:
 ; NOORIGINS-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[DATA]], <4 x i1> [[MASK]], i32 0)
 ; NOORIGINS-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; NOORIGINS-NEXT:    ret i32 [[RES]]
@@ -157,25 +157,25 @@ define i32 @extract_last_active_const_default(<4 x i32> %data, <4 x i1> %mask) s
 ; ORIGINS-LABEL: define i32 @extract_last_active_const_default(
 ; ORIGINS-SAME: <4 x i32> [[DATA:%.*]], <4 x i1> [[MASK:%.*]]) #[[ATTR0]] {
 ; ORIGINS-NEXT:  [[ENTRY:.*:]]
-; ORIGINS-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; ORIGINS-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
-; ORIGINS-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
+; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGINS-NEXT:    [[TMP2:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; ORIGINS-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
-; ORIGINS-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; ORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; ORIGINS-NEXT:    br i1 [[_MSCMP1]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
+; ORIGINS-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
+; ORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; ORIGINS-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
 ; ORIGINS:       [[BB5]]:
-; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP3]]) #[[ATTR4]]
+; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP1]]) #[[ATTR4]]
 ; ORIGINS-NEXT:    unreachable
 ; ORIGINS:       [[BB6]]:
-; ORIGINS-NEXT:    [[TMP6:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
-; ORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP6]], 0
-; ORIGINS-NEXT:    br i1 [[_MSCMP]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
-; ORIGINS:       [[BB7]]:
-; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP5]]) #[[ATTR4]]
-; ORIGINS-NEXT:    unreachable
+; ORIGINS-NEXT:    [[TMP7:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
+; ORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP7]], 0
+; ORIGINS-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; ORIGINS:       [[BB8]]:
+; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP3]]) #[[ATTR4]]
+; ORIGINS-NEXT:    unreachable
+; ORIGINS:       [[BB9]]:
 ; ORIGINS-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[DATA]], <4 x i1> [[MASK]], i32 0)
 ; ORIGINS-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; ORIGINS-NEXT:    store i32 0, ptr @__msan_retval_origin_tls, align 4
@@ -190,14 +190,14 @@ define i32 @extract_last_active_poison_default(<4 x i32> %data, <4 x i1> %mask) 
 ; NOORIGINS-LABEL: define i32 @extract_last_active_poison_default(
 ; NOORIGINS-SAME: <4 x i32> [[DATA:%.*]], <4 x i1> [[MASK:%.*]]) #[[ATTR0]] {
 ; NOORIGINS-NEXT:  [[ENTRY:.*:]]
-; NOORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; NOORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; NOORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; NOORIGINS-NEXT:    [[TMP1:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; NOORIGINS-NEXT:    call void @llvm.donothing()
-; NOORIGINS-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; NOORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP3]], 0
-; NOORIGINS-NEXT:    [[TMP2:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
-; NOORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP2]], 0
-; NOORIGINS-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP1]], [[_MSCMP]]
+; NOORIGINS-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
+; NOORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
+; NOORIGINS-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
+; NOORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP3]], 0
+; NOORIGINS-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; NOORIGINS-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; NOORIGINS-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[DATA]], <4 x i1> [[MASK]], i32 poison)
 ; NOORIGINS-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
@@ -206,25 +206,25 @@ define i32 @extract_last_active_poison_default(<4 x i32> %data, <4 x i1> %mask) 
 ; ORIGINS-LABEL: define i32 @extract_last_active_poison_default(
 ; ORIGINS-SAME: <4 x i32> [[DATA:%.*]], <4 x i1> [[MASK:%.*]]) #[[ATTR0]] {
 ; ORIGINS-NEXT:  [[ENTRY:.*:]]
-; ORIGINS-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; ORIGINS-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
-; ORIGINS-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
+; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGINS-NEXT:    [[TMP2:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; ORIGINS-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
-; ORIGINS-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; ORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; ORIGINS-NEXT:    br i1 [[_MSCMP1]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
+; ORIGINS-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP0]] to i128
+; ORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; ORIGINS-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
 ; ORIGINS:       [[BB5]]:
-; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP3]]) #[[ATTR4]]
+; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP1]]) #[[ATTR4]]
 ; ORIGINS-NEXT:    unreachable
 ; ORIGINS:       [[BB6]]:
-; ORIGINS-NEXT:    [[TMP6:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
-; ORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i4 [[TMP6]], 0
-; ORIGINS-NEXT:    br i1 [[_MSCMP]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
-; ORIGINS:       [[BB7]]:
-; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP5]]) #[[ATTR4]]
-; ORIGINS-NEXT:    unreachable
+; ORIGINS-NEXT:    [[TMP7:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
+; ORIGINS-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP7]], 0
+; ORIGINS-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
 ; ORIGINS:       [[BB8]]:
+; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP3]]) #[[ATTR4]]
+; ORIGINS-NEXT:    unreachable
+; ORIGINS:       [[BB9]]:
 ; ORIGINS-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR4]]
 ; ORIGINS-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[DATA]], <4 x i1> [[MASK]], i32 poison)
 ; ORIGINS-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
@@ -273,9 +273,9 @@ entry:
   %res = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x i1> %mask, i32 %default)
   ret i32 %res
 }
+
 ;.
 ; NOORIGINS: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
 ; ORIGINS: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
-
