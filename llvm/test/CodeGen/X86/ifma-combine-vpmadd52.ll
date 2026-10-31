@@ -725,3 +725,48 @@ define <9 x i64> @test_v9i64(<9 x i64> %x, <9 x i64> %y, <9 x i64> %z) {
   %res = add <9 x i64> %mul, %z
   ret <9 x i64> %res
 }
+
+; (x & (2^32-1)) * (y & (2^32-1)) fits in 64 bits, so lshr-by-52 gives the upper 52 bits of the product exactly. This should fold to vpmadd52huq.
+define <8 x i64> @test_512_combine_h(<8 x i64> %x, <8 x i64> %y, <8 x i64> %z){
+; AVXIFMA-LABEL: test_512_combine_h:
+; AVXIFMA:       # %bb.0:
+; AVXIFMA-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; AVXIFMA-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm6[1],ymm2[2],ymm6[3],ymm2[4],ymm6[5],ymm2[6],ymm6[7]
+; AVXIFMA-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm6[1],ymm0[2],ymm6[3],ymm0[4],ymm6[5],ymm0[6],ymm6[7]
+; AVXIFMA-NEXT:    {vex} vpmadd52huq %ymm2, %ymm0, %ymm4
+; AVXIFMA-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0],ymm6[1],ymm3[2],ymm6[3],ymm3[4],ymm6[5],ymm3[6],ymm6[7]
+; AVXIFMA-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm6[1],ymm1[2],ymm6[3],ymm1[4],ymm6[5],ymm1[6],ymm6[7]
+; AVXIFMA-NEXT:    {vex} vpmadd52huq %ymm0, %ymm1, %ymm5
+; AVXIFMA-NEXT:    vmovdqa %ymm4, %ymm0
+; AVXIFMA-NEXT:    vmovdqa %ymm5, %ymm1
+; AVXIFMA-NEXT:    retq
+;
+; AVX512-LABEL: test_512_combine_h:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [4294967295,0,4294967295,0,4294967295,0,4294967295,0,4294967295,0,4294967295,0,4294967295,0,4294967295,0]
+; AVX512-NEXT:    vpandq %zmm3, %zmm0, %zmm0
+; AVX512-NEXT:    vpandq %zmm3, %zmm1, %zmm1
+; AVX512-NEXT:    vpmadd52huq %zmm1, %zmm0, %zmm2
+; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm0
+; AVX512-NEXT:    retq
+;
+; AVX512-NOIFMA-LABEL: test_512_combine_h:
+; AVX512-NOIFMA:       # %bb.0:
+; AVX512-NOIFMA-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [4294967295,0,4294967295,0,4294967295,0,4294967295,0,4294967295,0,4294967295,0,4294967295,0,4294967295,0]
+; AVX512-NOIFMA-NEXT:    vpandd %zmm3, %zmm0, %zmm0
+; AVX512-NOIFMA-NEXT:    vpandd %zmm3, %zmm1, %zmm1
+; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm1, %ymm3
+; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
+; AVX512-NOIFMA-NEXT:    vextracti64x4 $1, %zmm2, %ymm5
+; AVX512-NOIFMA-NEXT:    {vex} vpmadd52huq %ymm3, %ymm4, %ymm5
+; AVX512-NOIFMA-NEXT:    {vex} vpmadd52huq %ymm1, %ymm0, %ymm2
+; AVX512-NOIFMA-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm0
+; AVX512-NOIFMA-NEXT:    retq
+  %x_masked = and <8 x i64> %x, splat (i64 4294967295)
+  %y_masked = and <8 x i64> %y, splat (i64 4294967295)
+  %mul = mul nuw nsw <8 x i64> %x_masked, %y_masked
+  %shifted = lshr <8 x i64> %mul, splat (i64 52)
+  %res = add nuw nsw <8 x i64> %shifted, %z
+  ret <8 x i64> %res
+}
+
