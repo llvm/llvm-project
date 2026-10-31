@@ -29,8 +29,11 @@
 
 namespace llvm {
 class APInt;
+class BasicBlock;
 class Constant;
 class ConstantInt;
+class DominatorTree;
+class LoopInfo;
 class TargetLibraryInfo;
 class Value;
 } // namespace llvm
@@ -230,6 +233,9 @@ class InstructionsState {
   /// fmuladd(a, b, -0.0)/fmuladd(1.0, a, b), absorbing the binop instead of
   /// computing and gathering its result.
   bool AbsorbCopyableFMulOrFAdd = false;
+  /// Whether the matching instructions are in different blocks of a region,
+  /// so the instructions from other blocks are not copyable.
+  bool IsRegion = false;
 
 public:
   Instruction *getMainOp() const {
@@ -298,9 +304,10 @@ public:
 
   InstructionsState() = delete;
   InstructionsState(Instruction *MainOp, Instruction *AltOp,
-                    bool HasCopyables = false)
+                    bool HasCopyables = false, bool IsRegion = false)
       : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables),
-        CopyableOpIdx(MainOp && isFMAOrFMulAdd(MainOp) ? 2 : 0) {}
+        CopyableOpIdx(MainOp && isFMAOrFMulAdd(MainOp) ? 2 : 0),
+        IsRegion(IsRegion) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 
   /// Checks if the value is a copyable element.
@@ -365,6 +372,18 @@ bool hasOnlyAbsorbableCopyableFMulOrFAdds(ArrayRef<Value *> VL);
 /// could be vectorized even if its structure is diverse.
 InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                                 const TargetLibraryInfo &TLI);
+
+/// Checks if the instructions in \p VL are in different reachable blocks of
+/// the same loop, i.e. can be the scalars of a region.
+bool areRegionScalars(ArrayRef<Value *> VL, const DominatorTree &DT,
+                      const LoopInfo &LI);
+
+/// \returns the entry block of the region, if the non-schedulable
+/// instructions \p VL with the state \p S, built for the region scalars, can
+/// be vectorized before the first of them in the entry block, nullptr
+/// otherwise.
+BasicBlock *getSESERegionEntry(ArrayRef<Value *> VL, const InstructionsState &S,
+                               const DominatorTree &DT, const LoopInfo &LI);
 
 /// \returns the main or alternate operation from \p S matching \p I, together
 /// with the operands of \p I adjusted to the selected operation.

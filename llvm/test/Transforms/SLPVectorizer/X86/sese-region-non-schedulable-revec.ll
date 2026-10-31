@@ -7,23 +7,19 @@ define void @chain(ptr %p, ptr %q, i1 %c, i1 %d) {
 ; CHECK-LABEL: define void @chain(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]], i1 [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X0:%.*]] = load <2 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X1:%.*]] = load <2 x i32>, ptr [[P1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[X0]], <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    br i1 [[C]], label %[[SIDE:.*]], label %[[MID:.*]]
 ; CHECK:       [[SIDE]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    call void @foo(<2 x i32> [[TMP2]])
 ; CHECK-NEXT:    br label %[[MID]]
 ; CHECK:       [[MID]]:
-; CHECK-NEXT:    [[A1:%.*]] = add <2 x i32> [[X1]], <i32 3, i32 4>
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[Q]], align 4
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[Q]], i64 1
-; CHECK-NEXT:    store <2 x i32> [[A1]], ptr [[Q1]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -56,22 +52,17 @@ define void @phi_operands(ptr %p, ptr %q, i1 %c, <2 x i32> %y) {
 ; CHECK-LABEL: define void @phi_operands(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]], <2 x i32> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X0:%.*]] = load <2 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[P]], i64 1
-; CHECK-NEXT:    [[X1:%.*]] = load <2 x i32>, ptr [[P1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[A0:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X0]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[Y]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[A1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X1]], <2 x i32> [[Y]])
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R0:%.*]] = phi <2 x i32> [ [[A0]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
-; CHECK-NEXT:    [[R1:%.*]] = phi <2 x i32> [ [[A1]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
-; CHECK-NEXT:    store <2 x i32> [[R0]], ptr [[Q]], align 4
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[Q]], i64 1
-; CHECK-NEXT:    store <2 x i32> [[R1]], ptr [[Q1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ [[TMP2]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -105,17 +96,14 @@ define void @shuffles(ptr %p, ptr %q, i1 %c) {
 ; CHECK-NEXT:    [[X:%.*]] = load <4 x i32>, ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[A0:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R0:%.*]] = phi <2 x i32> [ [[A0]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
-; CHECK-NEXT:    [[R1:%.*]] = phi <2 x i32> [ [[A1]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
-; CHECK-NEXT:    store <2 x i32> [[R0]], ptr [[Q]], align 4
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[Q]], i64 1
-; CHECK-NEXT:    store <2 x i32> [[R1]], ptr [[Q1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ [[TMP1]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
