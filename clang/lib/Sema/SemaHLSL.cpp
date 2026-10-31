@@ -47,6 +47,7 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cmath>
@@ -986,8 +987,13 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 }
 
 static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
+                                const DeclaratorDecl *D,
                                 HLSLAppliedSemanticAttr *Semantic,
                                 bool IsInput) {
+  // Explicitly annotated built-ins skip location assignment
+  if (D->hasAttr<HLSLVkBuiltInAttr>())
+    return true;
+
   if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
     return false;
 
@@ -1075,7 +1081,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
 
-  if (!isVkPipelineBuiltin(getASTContext(), FD, A,
+  if (!isVkPipelineBuiltin(getASTContext(), FD, D, A,
                            any(SC.CurrentIOType & IOType::In))) {
     bool HasVkLocation = false;
     if (auto *A = D->getAttr<HLSLVkLocationAttr>()) {
@@ -2240,8 +2246,51 @@ void SemaHLSL::handleVkLocationAttr(Decl *D, const ParsedAttr &AL) {
   if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Location))
     return;
 
+  // vk::builtin and vk::location mutually exclusive
+  if (const auto *BuiltIn = D->getAttr<HLSLVkBuiltInAttr>()) {
+    Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << BuiltIn
+        << (AL.isRegularKeywordAttribute() ||
+            BuiltIn->isRegularKeywordAttribute());
+    Diag(BuiltIn->getLocation(), diag::note_conflicting_attribute);
+  }
+
   D->addAttr(::new (getASTContext())
                  HLSLVkLocationAttr(getASTContext(), AL, Location));
+}
+
+void SemaHLSL::handleVkBuiltInAttr(Decl *D, const ParsedAttr &AL) {
+  StringRef BuiltIn;
+  SourceLocation ArgLoc;
+  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, BuiltIn, &ArgLoc))
+    return;
+
+  static constexpr StringRef SupportedBuiltIns[] = {
+      "PointSize", // TODO: uncomment build-ins as they're fully implemented
+                   // "HelperInvocation", "BaseVertex", "BaseInstance",
+                   // "DrawIndex", "DeviceIndex", "ViewportMaskNV",
+  };
+  if (!llvm::is_contained(SupportedBuiltIns, BuiltIn)) {
+    std::string Quoted;
+    llvm::raw_string_ostream OS(Quoted);
+    llvm::interleaveComma(SupportedBuiltIns, OS,
+                          [&](StringRef S) { OS << "'" << S << "'"; });
+    Diag(ArgLoc, diag::err_hlsl_vk_builtin_unsupported_value)
+        << BuiltIn << Quoted;
+    return;
+  }
+
+  // vk::builtin and vk::location mutually exclusive.
+  if (const auto *Location = D->getAttr<HLSLVkLocationAttr>()) {
+    Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << Location
+        << (AL.isRegularKeywordAttribute() ||
+            Location->isRegularKeywordAttribute());
+    Diag(Location->getLoc(), diag::note_conflicting_attribute);
+  }
+
+  D->addAttr(::new (getASTContext())
+                 HLSLVkBuiltInAttr(getASTContext(), AL, BuiltIn));
 }
 
 void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {

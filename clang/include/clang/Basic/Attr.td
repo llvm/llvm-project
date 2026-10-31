@@ -5462,6 +5462,14 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Documentation = [HLSLVkLocationDocs];
 }
 
+def HLSLVkBuiltIn : HLSLAnnotationAttr, TargetSpecificAttr<TargetSPIRV> {
+  let Spellings = [CXX11<"vk", "builtin">];
+  let Args = [StringArgument<"BuiltIn">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBuiltInDocs];
+}
+
 // `row_major` / `column_major` are HLSL keywords that select the in-memory
 // layout of a matrix-typed declaration.
 def HLSLRowMajor : TypeAttr {

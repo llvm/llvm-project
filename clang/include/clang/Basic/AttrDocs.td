@@ -9749,6 +9749,28 @@ This attribute maps to the `Location` SPIR-V decoration.
   }];
 }
 
+def HLSLVkBuiltInDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Some Vulkan built-in variables have no equivalent in native HLSL, so no
+system-value semantic can express them. The `[[vk::builtin]]` attribute marks a
+stage input/output variable as a SPIR-V built-in variable, identified by name.
+Allowed on function parameters, function returns, and struct fields. This
+attribute has no effect when used outside of an entrypoint parameter/parameter
+field/return value.
+
+The attribute is only available when targeting SPIR-V. For any other target it
+is ignored with an "unknown attribute ignored" warning.
+
+The attribute takes a single string literal argument naming the built-in.
+Supported built-in names are added incrementally, each landing with its own
+type/stage validation and CodeGen support.
+
+A declaration annotated with `[[vk::builtin]]` does not take part in
+`vk::location` assignment, and cannot also be annotated with `[[vk::location]]`.
+  }];
+}
+
 def HLSLMatrixLayoutDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "row_major, column_major";
