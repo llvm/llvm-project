@@ -882,7 +882,11 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  if (!match(I, m_Select(m_Cmp(), m_Value(), m_Value())))
+  // A phi condition may be the reduction phi or another phi in the reduction
+  // chain, which the vectorized select cannot use.
+  Value *Cond;
+  if (!match(I, m_Select(m_Value(Cond), m_Value(), m_Value())) ||
+      isa<PHINode>(Cond))
     return InstDesc(false, I);
 
   SelectInst *SI = cast<SelectInst>(I);
@@ -896,8 +900,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
     return InstDesc(false, I);
 
   // We are looking for selects of the form:
-  //   select(cmp(), phi, loop_invariant) or
-  //   select(cmp(), loop_invariant, phi)
+  //   select(cond, phi, loop_invariant) or
+  //   select(cond, loop_invariant, phi)
   if (!Loop->isLoopInvariant(NonPhi))
     return InstDesc(false, I);
 
