@@ -3544,7 +3544,8 @@ ExprResult SemaObjC::BuildInstanceMessage(
         if (IsWeak && !SemaRef.isUnevaluatedContext() &&
             !getDiagnostics().isIgnored(diag::warn_arc_repeated_use_of_weak,
                                         LBracLoc))
-          SemaRef.getCurFunction()->recordUseOfWeak(Result, Prop);
+          if (FunctionScopeInfo *FSI = SemaRef.getCurFunction())
+            FSI->recordUseOfWeak(Result, Prop);
       }
     }
   }
@@ -5088,7 +5089,8 @@ ExprResult SemaObjC::BuildIvarRefExpr(Scope *S, SourceLocation Loc,
   if (IV->getType().getObjCLifetime() == Qualifiers::OCL_Weak) {
     if (!SemaRef.isUnevaluatedContext() &&
         !getDiagnostics().isIgnored(diag::warn_arc_repeated_use_of_weak, Loc))
-      SemaRef.getCurFunction()->recordUseOfWeak(Result);
+      if (FunctionScopeInfo *FSI = SemaRef.getCurFunction())
+        FSI->recordUseOfWeak(Result);
   }
   if (getLangOpts().ObjCAutoRefCount && !SemaRef.isUnevaluatedContext())
     if (const BlockDecl *BD = SemaRef.CurContext->getInnermostBlockDecl())

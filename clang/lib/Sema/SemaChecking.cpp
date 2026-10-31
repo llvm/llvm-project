@@ -16448,8 +16448,10 @@ void Sema::checkUnsafeExprAssigns(SourceLocation Loc,
   Qualifiers::ObjCLifetime LT = LHSType.getObjCLifetime();
 
   if (LT == Qualifiers::OCL_Weak) {
-    if (!Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, Loc))
-      getCurFunction()->markSafeWeakUse(LHS);
+    if (!isUnevaluatedContext() &&
+        !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, Loc))
+      if (FunctionScopeInfo *FSI = getCurFunction())
+        FSI->markSafeWeakUse(LHS);
   }
 
   if (checkUnsafeAssigns(Loc, LHSType, RHS))

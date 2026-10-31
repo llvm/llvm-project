@@ -477,6 +477,33 @@ void foo() {
   __typeof__(NSBundle2.foo2.weakProp) t5;
 }
 
+// Ensure we don't crash when checking repeated weak uses outside of any
+// function scope (e.g. in type traits or global variable initializers) or
+// suppress warnings due to unevaluated assignments.
+namespace NonFunctionScopeAndUnevaluated {
+  bool b1 = __is_assignable(id __strong &, id __strong &);
+  bool b2 = __is_assignable(id __weak &, id __strong &);
+
+  id globalStrong1;
+  id globalStrong2 = (globalStrong1 = nil);
+
+  __weak id globalWeak;
+  id globalFromWeak = globalWeak;
+
+  Test *globalTest;
+  id globalFromProp = globalTest.weakProp;
+  id globalFromAssignProp = (globalTest.weakProp = nil);
+  id globalFromMsg = [globalTest weakProp];
+  id globalFromIvar = globalTest->weakIvar;
+
+  void unevaluatedAssign(Test *a) {
+    id x;
+    use(a.weakProp); // expected-warning{{weak property 'weakProp' is accessed multiple times in this function}}
+    (void)sizeof(x = a.weakProp); // expected-warning{{expression with side effects has no effect in an unevaluated context}}
+    use(a.weakProp); // expected-note{{also accessed here}}
+  }
+}
+
 // This used to crash in the constructor of WeakObjectProfileTy when a
 // DeclRefExpr was passed that didn't reference a VarDecl.
 
