@@ -316,10 +316,10 @@ void OutputSections::applyPatches(
   Section.ListDebugTypeStrPatch.forEach([&](DebugTypeStrPatch &Patch) {
     assert(TypeUnitPtr != nullptr);
     TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
-    assert(TypeEntry &&
-           formatv("No data for type {0}", getExpandedTypeKey(*Patch.TypeName))
-               .str()
-               .c_str());
+    assert(TypeEntry && formatv("No data for type {0}",
+                                TypeKey::expand(Patch.TypeName->getKey()))
+                            .str()
+                            .c_str());
 
     if (&TypeEntry->getFinalDie() != Patch.Die)
       return;
@@ -344,10 +344,10 @@ void OutputSections::applyPatches(
   Section.ListDebugTypeLineStrPatch.forEach([&](DebugTypeLineStrPatch &Patch) {
     assert(TypeUnitPtr != nullptr);
     TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
-    assert(TypeEntry &&
-           formatv("No data for type {0}", getExpandedTypeKey(*Patch.TypeName))
-               .str()
-               .c_str());
+    assert(TypeEntry && formatv("No data for type {0}",
+                                TypeKey::expand(Patch.TypeName->getKey()))
+                            .str()
+                            .c_str());
 
     if (&TypeEntry->getFinalDie() != Patch.Die)
       return;
@@ -424,7 +424,7 @@ void OutputSections::applyPatches(
 
     TypeEntryBody *TypeEntry = Patch.RefTypeName->getValue().load();
     assert(TypeEntry && formatv("No data for type {0}",
-                                getExpandedTypeKey(*Patch.RefTypeName))
+                                TypeKey::expand(Patch.RefTypeName->getKey()))
                             .str()
                             .c_str());
 
@@ -440,10 +440,11 @@ void OutputSections::applyPatches(
         if (Anchor.TypeName) {
           assert(TypeUnitPtr != nullptr);
           TypeEntryBody *TypeEntry = Anchor.TypeName->getValue().load();
-          assert(TypeEntry && formatv("No data for type {0}",
-                                      getExpandedTypeKey(*Anchor.TypeName))
-                                  .str()
-                                  .c_str());
+          assert(TypeEntry &&
+                 formatv("No data for type {0}",
+                         TypeKey::expand(Anchor.TypeName->getKey()))
+                     .str()
+                     .c_str());
 
           FinalOffset = TypeEntry->getFinalDie().getOffset();
         } else if (Anchor.Section) {
@@ -465,7 +466,7 @@ void OutputSections::applyPatches(
         assert(TypeUnitPtr != nullptr);
         TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
         assert(TypeEntry && formatv("No data for type {0}",
-                                    getExpandedTypeKey(*Patch.TypeName))
+                                    TypeKey::expand(Patch.TypeName->getKey()))
                                 .str()
                                 .c_str());
 
@@ -477,10 +478,11 @@ void OutputSections::applyPatches(
 
         assert(Patch.RefTypeName != nullptr);
         TypeEntryBody *RefTypeEntry = Patch.RefTypeName->getValue().load();
-        assert(TypeEntry && formatv("No data for type {0}",
-                                    getExpandedTypeKey(*Patch.RefTypeName))
-                                .str()
-                                .c_str());
+        assert(TypeEntry &&
+               formatv("No data for type {0}",
+                       TypeKey::expand(Patch.RefTypeName->getKey()))
+                   .str()
+                   .c_str());
 
         Section.apply(Patch.PatchOffset, dwarf::DW_FORM_ref4,
                       RefTypeEntry->getFinalDie().getOffset());

@@ -41,6 +41,13 @@ public:
   /// Remove the first part of the non-empty key \p Key and return it.
   static Part takePart(StringRef &Key);
 
+  /// Compare \p LHS and \p RHS as if every reference were replaced by the key
+  /// it refers to, so the result does not depend on pointer values.
+  static int compare(StringRef LHS, StringRef RHS);
+
+  /// \returns \p Key with every reference replaced by the key it refers to.
+  static std::string expand(StringRef Key);
+
   TypeKey &operator+=(StringRef Text) {
     assert(!Text.contains(RefMarker) && "text would read as a reference");
     Bytes += Text;
@@ -64,14 +71,6 @@ private:
 
   SmallString<1000> Bytes;
 };
-
-/// Compare \p LHS and \p RHS as if every reference were replaced by the key
-/// it refers to, so the result does not depend on pointer values.
-int compareTypeKeys(StringRef LHS, StringRef RHS);
-
-/// \returns the key of \p Entry with every reference replaced by the key it
-/// refers to.
-std::string getExpandedTypeKey(const TypeEntry &Entry);
 
 /// Keeps cloned data for the type DIE.
 class TypeEntryBody {
@@ -246,7 +245,7 @@ protected:
         RHS->getValue().load()->SortKey.load(std::memory_order_relaxed);
     if (LK != RK)
       return LK < RK;
-    return compareTypeKeys(LHS->getKey(), RHS->getKey()) < 0;
+    return TypeKey::compare(LHS->getKey(), RHS->getKey()) < 0;
   };
 
   // Root of all type entries.

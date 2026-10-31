@@ -101,8 +101,7 @@ static int compareTypeKeyStructure(StringRef LHS, StringRef RHS) {
   return LHS.empty() == RHS.empty() ? 0 : (LHS.empty() ? -1 : 1);
 }
 
-int llvm::dwarf_linker::parallel::compareTypeKeys(StringRef LHS,
-                                                  StringRef RHS) {
+int TypeKey::compare(StringRef LHS, StringRef RHS) {
   ExpandedKeyCursor L(LHS), R(RHS);
   while (true) {
     bool LEnd = L.atEnd();
@@ -142,10 +141,9 @@ int llvm::dwarf_linker::parallel::compareTypeKeys(StringRef LHS,
   }
 }
 
-std::string
-llvm::dwarf_linker::parallel::getExpandedTypeKey(const TypeEntry &Entry) {
+std::string TypeKey::expand(StringRef Key) {
   std::string Result;
-  ExpandedKeyCursor Cursor(Entry.getKey());
+  ExpandedKeyCursor Cursor(Key);
   while (!Cursor.atEnd()) {
     const auto *Text = std::get_if<StringRef>(&Cursor.peek());
     if (!Text) {

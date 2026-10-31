@@ -34,8 +34,9 @@ static int sign(int Value) { return (Value > 0) - (Value < 0); }
 
 static std::vector<std::string> getChildKeys(TypeEntry *Entry) {
   std::vector<std::string> Keys;
-  Entry->getValue().load()->Children.forEach(
-      [&](TypeEntry *Child) { Keys.push_back(getExpandedTypeKey(*Child)); });
+  Entry->getValue().load()->Children.forEach([&](TypeEntry *Child) {
+    Keys.push_back(TypeKey::expand(Child->getKey()));
+  });
   return Keys;
 }
 
@@ -54,7 +55,7 @@ TEST(TypePoolTest, TakePart) {
   EXPECT_TRUE(Rest.empty());
 }
 
-TEST(TypePoolTest, GetExpandedTypeKey) {
+TEST(TypePoolTest, ExpandTypeKey) {
   TypePool Pool;
   TypeEntry *Int = Pool.insert("{0}int");
   TypeEntry *IntPtr = Pool.insert(makeKey("{C}", Int));
@@ -62,11 +63,11 @@ TEST(TypePoolTest, GetExpandedTypeKey) {
   TypeEntry *Foo = Pool.insert(makeKey(NS, ".{8}Foo<", Int, ", ", IntPtr, ">"));
   TypeEntry *Empty = Pool.insert("");
 
-  EXPECT_EQ(getExpandedTypeKey(*Int), "{0}int");
-  EXPECT_EQ(getExpandedTypeKey(*IntPtr), "{C}{0}int");
-  EXPECT_EQ(getExpandedTypeKey(*Foo), "{1}ns.{8}Foo<{0}int, {C}{0}int>");
-  EXPECT_EQ(getExpandedTypeKey(*Pool.insert(makeKey("a", Empty, "b"))), "ab");
-  EXPECT_EQ(getExpandedTypeKey(*Pool.getRoot()), "");
+  EXPECT_EQ(TypeKey::expand(Int->getKey()), "{0}int");
+  EXPECT_EQ(TypeKey::expand(IntPtr->getKey()), "{C}{0}int");
+  EXPECT_EQ(TypeKey::expand(Foo->getKey()), "{1}ns.{8}Foo<{0}int, {C}{0}int>");
+  EXPECT_EQ(TypeKey::expand(makeKey("a", Empty, "b")), "ab");
+  EXPECT_EQ(TypeKey::expand(Pool.getRoot()->getKey()), "");
 }
 
 TEST(TypePoolTest, CompareTypeKeysWithoutRefs) {
@@ -74,7 +75,7 @@ TEST(TypePoolTest, CompareTypeKeysWithoutRefs) {
                                              {"a", "b"},     {"ab", "a"},
                                              {"abc", "abd"}, {"a\xff", "ab"}};
   for (auto [LHS, RHS] : Pairs)
-    EXPECT_EQ(sign(compareTypeKeys(LHS, RHS)), sign(LHS.compare(RHS)))
+    EXPECT_EQ(sign(TypeKey::compare(LHS, RHS)), sign(LHS.compare(RHS)))
         << LHS << " vs " << RHS;
 }
 
@@ -120,12 +121,12 @@ TEST(TypePoolTest, CompareTypeKeysAsIfExpanded) {
     Entries.push_back(Pool.insert(Key));
 
   auto Compare = [](TypeEntry *LHS, TypeEntry *RHS) {
-    return sign(compareTypeKeys(LHS->getKey(), RHS->getKey()));
+    return sign(TypeKey::compare(LHS->getKey(), RHS->getKey()));
   };
   for (TypeEntry *L : Entries) {
     for (TypeEntry *R : Entries) {
-      std::string LExpanded = getExpandedTypeKey(*L);
-      std::string RExpanded = getExpandedTypeKey(*R);
+      std::string LExpanded = TypeKey::expand(L->getKey());
+      std::string RExpanded = TypeKey::expand(R->getKey());
       SCOPED_TRACE(LExpanded + " vs " + RExpanded);
       EXPECT_EQ(Compare(L, R), -Compare(R, L));
       EXPECT_EQ(Compare(L, R) == 0, L == R);
@@ -160,10 +161,9 @@ TEST(TypePoolTest, CompareTypeKeysTieBreak) {
     TypeEntry *Empty = Pool.insert("");
 
     auto ExpectOrdered = [&](StringRef LHS, StringRef RHS) {
-      ASSERT_EQ(getExpandedTypeKey(*Pool.insert(LHS)),
-                getExpandedTypeKey(*Pool.insert(RHS)));
-      EXPECT_LT(compareTypeKeys(LHS, RHS), 0);
-      EXPECT_GT(compareTypeKeys(RHS, LHS), 0);
+      ASSERT_EQ(TypeKey::expand(LHS), TypeKey::expand(RHS));
+      EXPECT_LT(TypeKey::compare(LHS, RHS), 0);
+      EXPECT_GT(TypeKey::compare(RHS, LHS), 0);
     };
     // A reference sorts before text.
     ExpectOrdered(makeKey("{H}T", Int), "{H}T{0}int");
