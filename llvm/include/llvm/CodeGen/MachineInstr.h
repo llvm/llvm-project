@@ -1444,6 +1444,13 @@ public:
   /// beginning of the stack slot.
   LLVM_ABI bool mayFoldInlineAsmRegOp(unsigned OpId) const;
 
+  /// Returns true if \p Reg can be folded to its stack slot in this inline
+  /// asm: the asm reads or writes Reg, and every operand of Reg can be folded
+  /// (see mayFoldInlineAsmRegOp()). A use tied to a def is folded along with
+  /// the def, so it isn't checked on its own. The register allocator then
+  /// needs no register for Reg here.
+  LLVM_ABI bool mayFoldInlineAsmReg(Register Reg) const;
+
   LLVM_ABI bool isStackAligningInlineAsm() const;
   LLVM_ABI InlineAsm::AsmDialect getInlineAsmDialect() const;
 

@@ -2818,6 +2818,25 @@ bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
   return false;
 }
 
+bool MachineInstr::mayFoldInlineAsmReg(Register Reg) const {
+  assert(isInlineAsm() && "should only be used on inline asm");
+
+  bool Accessed = false;
+  for (unsigned I = InlineAsm::MIOp_FirstOperand, E = getNumOperands(); I != E;
+       ++I) {
+    const MachineOperand &MO = getOperand(I);
+    if (!MO.isReg() || MO.getReg() != Reg || isRegTiedToDefOperand(I))
+      continue;
+
+    if (!mayFoldInlineAsmRegOp(I))
+      return false;
+
+    Accessed |= MO.isDef() || MO.readsReg();
+  }
+
+  return Accessed;
+}
+
 unsigned MachineInstr::removePHIIncomingValueFor(const MachineBasicBlock &MBB) {
   assert(isPHI());
 
