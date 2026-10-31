@@ -1188,6 +1188,15 @@ static KnownFPClass fpconvert(const KnownFPClass &KnownSrc_,
       Known.knownNot(fcNegNormal | fcNegSubnormal);
   }
 
+  // Source subnormals cannot round to destination normals when the
+  // destination's minimum normal exponent is larger.
+  if (SrcSem.minExponent < DstSem.minExponent) {
+    if (KnownSrc.isKnownNever(fcPosNormal))
+      Known.knownNot(fcPosNormal);
+    if (KnownSrc.isKnownNever(fcNegNormal))
+      Known.knownNot(fcNegNormal);
+  }
+
   // Rule out subnormal.
   if (APFloat::isRepresentableAsNormalIn(SrcSem, DstSem))
     Known.knownNot(fcSubnormal);
