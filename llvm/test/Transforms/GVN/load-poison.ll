@@ -7,8 +7,9 @@ declare void @use(...) memory(none)
 define <2 x i64> @pr99268(ptr %p) {
 ; CHECK-LABEL: define <2 x i64> @pr99268(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load <2 x i64>, ptr [[P]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[V]] to b128
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load <2 x b64>, ptr [[P]], align 16
+; CHECK-NEXT:    [[V:%.*]] = bitcast <2 x b64> [[V_BYTES]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x b64> [[V_BYTES]] to b128
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitextract b64, b128 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b64 [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[S:%.*]] = sext <2 x i32> [[TMP3]] to <2 x i64>
@@ -25,9 +26,10 @@ define <2 x i64> @pr99268(ptr %p) {
 define i8 @load_i32_to_i8(ptr %p) {
 ; CHECK-LABEL: define i8 @load_i32_to_i8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load b32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast b32 [[V_BYTES]] to i32
 ; CHECK-NEXT:    call void (...) @use(i32 [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[V]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i8, b32 [[V_BYTES]], i32 0
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %v = load i32, ptr %p
@@ -39,11 +41,11 @@ define i8 @load_i32_to_i8(ptr %p) {
 define i32 @load_ptr_to_i32(ptr %p) {
 ; CHECK-LABEL: define i32 @load_ptr_to_i32(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load b64, ptr [[P]], align 8
+; CHECK-NEXT:    [[V:%.*]] = bitcast b64 [[V_BYTES]] to ptr
 ; CHECK-NEXT:    call void (...) @use(ptr [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[V]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i32, b64 [[V_BYTES]], i32 0
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %v = load ptr, ptr %p
   call void (...) @use(ptr %v)
@@ -54,10 +56,11 @@ define i32 @load_ptr_to_i32(ptr %p) {
 define i32 @load_v4i32_to_i32_straddle(ptr %p) {
 ; CHECK-LABEL: define i32 @load_v4i32_to_i32_straddle(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load <4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load <4 x b32>, ptr [[P]], align 16
+; CHECK-NEXT:    [[V:%.*]] = bitcast <4 x b32> [[V_BYTES]] to <4 x i32>
 ; CHECK-NEXT:    call void (...) @use(<4 x i32> [[V]])
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[V]] to b128
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x b32> [[V_BYTES]] to b128
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitextract i32, b128 [[TMP1]], i32 16
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -71,9 +74,10 @@ define i32 @load_v4i32_to_i32_straddle(ptr %p) {
 define i8 @load_v2i12_to_i8(ptr %p) {
 ; CHECK-LABEL: define i8 @load_v2i12_to_i8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load <2 x i12>, ptr [[P]], align 4
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load <2 x b12>, ptr [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast <2 x b12> [[V_BYTES]] to <2 x i12>
 ; CHECK-NEXT:    call void (...) @use(<2 x i12> [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i12> [[V]] to b24
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x b12> [[V_BYTES]] to b24
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitextract i8, b24 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
@@ -86,11 +90,11 @@ define i8 @load_v2i12_to_i8(ptr %p) {
 define i8 @load_float_to_i8(ptr %p) {
 ; CHECK-LABEL: define i8 @load_float_to_i8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[P]], align 4
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load b32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast b32 [[V_BYTES]] to float
 ; CHECK-NEXT:    call void (...) @use(float [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[V]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i8, b32 [[V_BYTES]], i32 0
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %v = load float, ptr %p
   call void (...) @use(float %v)
@@ -101,10 +105,10 @@ define i8 @load_float_to_i8(ptr %p) {
 define b32 @load_i32_to_b32(ptr %p) {
 ; CHECK-LABEL: define b32 @load_i32_to_b32(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load b32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast b32 [[V_BYTES]] to i32
 ; CHECK-NEXT:    call void (...) @use(i32 [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[V]] to b32
-; CHECK-NEXT:    ret b32 [[TMP1]]
+; CHECK-NEXT:    ret b32 [[V_BYTES]]
 ;
   %v = load i32, ptr %p
   call void (...) @use(i32 %v)
@@ -115,10 +119,10 @@ define b32 @load_i32_to_b32(ptr %p) {
 define b32 @load_i32_noundef_to_b32(ptr %p) {
 ; CHECK-LABEL: define b32 @load_i32_noundef_to_b32(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4, !noundef [[META0:![0-9]+]]
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load b32, ptr [[P]], align 4, !noundef [[META0:![0-9]+]]
+; CHECK-NEXT:    [[V:%.*]] = bitcast b32 [[V_BYTES]] to i32
 ; CHECK-NEXT:    call void (...) @use(i32 [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[V]] to b32
-; CHECK-NEXT:    ret b32 [[TMP1]]
+; CHECK-NEXT:    ret b32 [[V_BYTES]]
 ;
   %v = load i32, ptr %p, !noundef !{}
   call void (...) @use(i32 %v)
@@ -129,9 +133,10 @@ define b32 @load_i32_noundef_to_b32(ptr %p) {
 define <vscale x 4 x i32> @load_nxv2i64_to_nxv4i32(ptr %p) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @load_nxv2i64_to_nxv4i32(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load <vscale x 2 x i64>, ptr [[P]], align 16
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load <vscale x 2 x b64>, ptr [[P]], align 16
+; CHECK-NEXT:    [[V:%.*]] = bitcast <vscale x 2 x b64> [[V_BYTES]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    call void (...) @use(<vscale x 2 x i64> [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i64> [[V]] to <vscale x 4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x b64> [[V_BYTES]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %v = load <vscale x 2 x i64>, ptr %p
@@ -143,9 +148,10 @@ define <vscale x 4 x i32> @load_nxv2i64_to_nxv4i32(ptr %p) {
 define ptr @load_i64_to_ptr(ptr %p) {
 ; CHECK-LABEL: define ptr @load_i64_to_ptr(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 4
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load b64, ptr [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast b64 [[V_BYTES]] to i64
 ; CHECK-NEXT:    call void (...) @use(i64 [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[V]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[V_BYTES]] to ptr
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %v = load i64, ptr %p
@@ -157,11 +163,11 @@ define ptr @load_i64_to_ptr(ptr %p) {
 define ptr addrspace(1) @load_ptr_to_ptr1(ptr %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @load_ptr_to_ptr1(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load b64, ptr [[P]], align 8
+; CHECK-NEXT:    [[V:%.*]] = bitcast b64 [[V_BYTES]] to ptr
 ; CHECK-NEXT:    call void (...) @use(ptr [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[V]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr addrspace(1)
-; CHECK-NEXT:    ret ptr addrspace(1) [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[V_BYTES]] to ptr addrspace(1)
+; CHECK-NEXT:    ret ptr addrspace(1) [[TMP1]]
 ;
   %v = load ptr, ptr %p
   call void (...) @use(ptr %v)
@@ -172,9 +178,10 @@ define ptr addrspace(1) @load_ptr_to_ptr1(ptr %p) {
 define i8 @load_volatile_i32_to_i8(ptr %p) {
 ; CHECK-LABEL: define i8 @load_volatile_i32_to_i8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load volatile b32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast b32 [[V_BYTES]] to i32
 ; CHECK-NEXT:    call void (...) @use(i32 [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[V]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i8, b32 [[V_BYTES]], i32 0
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %v = load volatile i32, ptr %p
@@ -186,14 +193,14 @@ define i8 @load_volatile_i32_to_i8(ptr %p) {
 define i8 @load_i32_to_i16_i8(ptr %p) {
 ; CHECK-LABEL: define i8 @load_i32_to_i16_i8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load b32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast b32 [[V_BYTES]] to i32
 ; CHECK-NEXT:    call void (...) @use(i32 [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[V]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i16, b32 [[V_BYTES]], i32 0
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[V]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitextract i8, b32 [[V_BYTES]], i32 16
 ; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[TMP1]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[T]], [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[T]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %v = load i32, ptr %p
@@ -212,14 +219,16 @@ define i8 @load_i32_to_i8_nonlocal(ptr %p, i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[B:.*]]
 ; CHECK:       [[A]]:
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V1_BYTES:%.*]] = load b32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = bitcast b32 [[V1_BYTES]] to i32
 ; CHECK-NEXT:    call void (...) @use(i32 [[V1]])
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[V1]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = bitextract i8, b32 [[V1_BYTES]], i32 0
 ; CHECK-NEXT:    br label %[[MERGE:.*]]
 ; CHECK:       [[B]]:
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V2_BYTES:%.*]] = load b32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = bitcast b32 [[V2_BYTES]] to i32
 ; CHECK-NEXT:    call void (...) @use(i32 [[V2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[V2]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i8, b32 [[V2_BYTES]], i32 0
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
 ; CHECK-NEXT:    [[X:%.*]] = phi i8 [ [[TMP1]], %[[B]] ], [ [[TMP0]], %[[A]] ]
@@ -249,9 +258,10 @@ define i8 @load_i32_to_i8_pre(ptr %p, i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[B:.*]]
 ; CHECK:       [[A]]:
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V_BYTES:%.*]] = load b32, ptr [[P]], align 4
+; CHECK-NEXT:    [[V:%.*]] = bitcast b32 [[V_BYTES]] to i32
 ; CHECK-NEXT:    call void (...) @use(i32 [[V]])
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[V]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = bitextract i8, b32 [[V_BYTES]], i32 0
 ; CHECK-NEXT:    br label %[[MERGE:.*]]
 ; CHECK:       [[B]]:
 ; CHECK-NEXT:    call void (...) @use()
@@ -380,9 +390,8 @@ define i8 @neg_load_volatile_float_to_i8(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile float, ptr [[P]], align 4
 ; CHECK-NEXT:    call void (...) @use(float [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[V]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %v = load volatile float, ptr %p
   call void (...) @use(float %v)
@@ -394,14 +403,12 @@ define i8 @neg_load_volatile_float_to_i8(ptr %p) {
 define void @neg_load_i32_to_i8_loop(ptr %p, i1 %c) {
 ; CHECK-LABEL: define void @neg_load_i32_to_i8_loop(
 ; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[X_PRE:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[V_PRE:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[X:%.*]] = phi i8 [ [[TMP0:%.*]], %[[LOOP]] ], [ [[X_PRE]], %[[ENTRY]] ]
-; CHECK-NEXT:    call void (...) @use(i8 [[X]], i32 [[V_PRE]])
-; CHECK-NEXT:    [[TMP0]] = trunc i32 [[V_PRE]] to i8
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    call void (...) @use(i8 [[X]], i32 [[V]])
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
