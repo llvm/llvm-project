@@ -165,7 +165,7 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *LaneMaskPhi =
       new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc::getUnknown());
   auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
-  LaneMaskPhi->insertBefore(*HeaderVPBB, HeaderVPBB->begin());
+  LaneMaskPhi->insertBefore(HeaderVPBB->begin());
 
   // If the canonical IV increment could overflow, adjust the trip count (TC)
   // to TC - VF * UF.
@@ -212,7 +212,7 @@ void VPlanTransforms::materializeHeaderMask(
   }
 
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
-  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPBuilder Builder(Header->getFirstNonPhi());
   auto *WideCanonicalIV = Builder.insert(new VPWidenCanonicalIVRecipe(
       LoopRegion->getCanonicalIV(),
       VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false)));
@@ -227,7 +227,7 @@ void VPlanTransforms::materializeHeaderMask(
     VPBasicBlock *VectorPH = Plan.getVectorPreheader();
     VPValue *TC = Plan.getTripCount();
     VPValue *BTC =
-        VPBuilder(VectorPH, VectorPH->getFirstNonPhi())
+        VPBuilder(VectorPH->getFirstNonPhi())
             .createSub(TC, Plan.getConstantInt(TC->getScalarType(), 1),
                        DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
     if (!Plan.hasScalarVFOnly())
@@ -332,7 +332,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
     // inside a loop, such as for EVL tail-folding.
     if (VPRecipeBase *R = VF->getDefiningRecipe())
       if (R->getParent()->getEnclosingLoopRegion())
-        Builder.setInsertPoint(R->getParent(), std::next(R->getIterator()));
+        Builder.setInsertPoint(std::next(R->getIterator()));
 
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
@@ -348,7 +348,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
   }
 
   VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
-  Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
+  Builder.setInsertPoint(ExitingBB->getTerminator());
   auto *Next = Builder.createNaryOp(AddOp, {Prev, Inc}, Flags,
                                     WidenIVR->getDebugLoc(), "vec.ind.next");
 
@@ -399,7 +399,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R) {
 
   // Create actual address geps that use the pointer phi as base and a
   // vectorized version of the step value (<step*0, ..., step*N>) as offset.
-  Builder.setInsertPoint(R->getParent(), R->getParent()->getFirstNonPhi());
+  Builder.setInsertPoint(R->getParent()->getFirstNonPhi());
   Type *StepTy = Step->getScalarType();
   VPValue *Offset = Builder.createNaryOp(VPInstruction::StepVector, {}, StepTy);
   Offset = Builder.createOverflowingOp(Instruction::Mul, {Offset, Step});
@@ -409,7 +409,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R) {
 
   // Create the backedge value for the scalar pointer phi.
   VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
-  Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
+  Builder.setInsertPoint(ExitingBB->getTerminator());
   VF = Builder.createScalarZExtOrTrunc(VF, StepTy, DL);
   VPValue *Inc = Builder.createOverflowingOp(Instruction::Mul, {Step, VF});
 
@@ -748,20 +748,19 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
-    VPBasicBlock *HoistBlock = VectorPreheader;
     VPBasicBlock::iterator HoistPoint = VectorPreheader->end();
     for (VPUser *User : VPV->users()) {
       if (User->usesScalars(VPV))
         continue;
       if (cast<VPRecipeBase>(User)->getParent() == VectorPreheader)
-        HoistPoint = HoistBlock->getFirstNonPhi();
+        HoistPoint = VectorPreheader->getFirstNonPhi();
       else
         assert(VPDT.dominates(VectorPreheader,
                               cast<VPRecipeBase>(User)->getParent()) &&
                "All users must be in the vector preheader or dominated by it");
     }
 
-    VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
+    VPBuilder Builder(HoistPoint);
     auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
     VPV->replaceUsesWithIf(Broadcast, [VPV, Broadcast](VPUser *U) {
       return Broadcast != U && !U->usesScalars(VPV);
@@ -835,7 +834,7 @@ void VPlanTransforms::materializeUnpacks(VPlan &Plan) {
 
         auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Def});
         if (R.isPhi())
-          Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
+          Unpack->insertBefore(VPBB->getFirstNonPhi());
         else
           Unpack->insertAfter(&R);
         Def->replaceUsesWithIf(
@@ -864,7 +863,7 @@ void VPlanTransforms::materializeVectorTripCount(
     // Insert after Step's definition to maintain valid def-use ordering.
     InsertPt = std::next(StepR->getIterator());
   }
-  VPBuilder Builder(VectorPHVPBB, InsertPt);
+  VPBuilder Builder(InsertPt);
 
   // For scalable steps, if TC is a constant and is divisible by the maximum
   // possible runtime step, then TC % Step == 0 for all valid vscale values
@@ -926,7 +925,7 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
     return;
   }
 
-  VPBuilder Builder(VectorPH, VectorPH->getFirstNonPhi());
+  VPBuilder Builder(VectorPH->getFirstNonPhi());
   Type *TCTy = Plan.getTripCount()->getScalarType();
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
@@ -1050,7 +1049,7 @@ void VPlanTransforms::materializeAliasMaskCheckBlock(
 void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                                                   ScalarEvolution &SE) {
   auto *Entry = Plan.getEntry();
-  VPBuilder Builder(Entry, Entry->begin());
+  VPBuilder Builder(Entry->begin());
   DebugLoc DL = cast<VPIRBasicBlock>(Entry)
                     ->getIRBasicBlock()
                     ->getTerminator()
@@ -1106,7 +1105,7 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
       EI++;
       continue;
     }
-    VPIRInstruction::create(I)->insertBefore(*Entry, EI);
+    VPIRInstruction::create(I)->insertBefore(EI);
   }
 
   return ExpandedSCEVs;

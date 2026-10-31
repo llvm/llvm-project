@@ -541,7 +541,7 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   // Finally, move the recipes starting at SplitAt to new block.
   for (VPRecipeBase &ToMove :
        make_early_inc_range(make_range(SplitAt, this->end())))
-    ToMove.moveBefore(*SplitBlock, SplitBlock->end());
+    ToMove.moveBefore(SplitBlock->end());
 
   return SplitBlock;
 }
@@ -828,7 +828,7 @@ void VPRegionBlock::dissolveToCFGLoop() {
     auto *Zero = Plan.getZero(CanIV->getType());
     DebugLoc DL = CanIV->getDebugLoc();
     VPInstruction *CanIVInc = getOrCreateCanonicalIVIncrement();
-    VPBuilder HeaderBuilder(Header, Header->begin());
+    VPBuilder HeaderBuilder(Header->begin());
     auto *ScalarR =
         HeaderBuilder.createScalarPhi({Zero, CanIVInc}, DL, "index");
     CanIV->replaceAllUsesWith(ScalarR);
