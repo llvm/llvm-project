@@ -7474,7 +7474,8 @@ public:
   ///
   StmtResult ParseDefaultStatement(ParsedStmtContext StmtCtx);
 
-  StmtResult ParseCompoundStatement(bool isStmtExpr = false);
+  StmtResult ParseCompoundStatement(bool isStmtExpr = false,
+                                    bool *StmtExprHasResult = nullptr);
 
   /// ParseCompoundStatement - Parse a "{}" block.
   ///
@@ -7500,7 +7501,8 @@ public:
   /// [GNU]   '__label__' identifier-list ';'
   /// \endverbatim
   ///
-  StmtResult ParseCompoundStatement(bool isStmtExpr, unsigned ScopeFlags);
+  StmtResult ParseCompoundStatement(bool isStmtExpr, unsigned ScopeFlags,
+                                    bool *StmtExprHasResult = nullptr);
 
   /// Parse any pragmas at the start of the compound expression. We handle these
   /// separately since some pragmas (FP_CONTRACT) must appear before any C
@@ -7517,7 +7519,8 @@ public:
   /// followed by a label and invoke the ActOnCompoundStmt action.  This expects
   /// the '{' to be the current token, and consume the '}' at the end of the
   /// block.  It does not manipulate the scope stack.
-  StmtResult ParseCompoundStatementBody(bool isStmtExpr = false);
+  StmtResult ParseCompoundStatementBody(bool isStmtExpr = false,
+                                        bool *StmtExprHasResult = nullptr);
 
   /// ParseParenExprOrCondition:
   /// \verbatim
