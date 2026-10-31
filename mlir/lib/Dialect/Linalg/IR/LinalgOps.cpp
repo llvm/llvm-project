@@ -150,6 +150,16 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
   SmallVector<Location, 8> argLocs;
   for (auto containers : {inputTypes, outputTypes}) {
     for (auto t : containers) {
+      // Structured ops operate on tensor/memref containers (or scalars). Other
+      // shaped types such as vectors are not supported and previously hit an
+      // llvm_unreachable inside the region builder.
+      if (isa<ShapedType>(t) && !isa<MemRefType, RankedTensorType>(t)) {
+        if (emitError) {
+          emitError() << "expected tensor or memref operand, got " << t;
+          return;
+        }
+        llvm_unreachable("expected tensor or memref shaped operand");
+      }
       argTypes.push_back(
           isa<MemRefType, RankedTensorType>(t) ? getElementTypeOrSelf(t) : t);
 
@@ -5194,11 +5204,10 @@ ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
   auto arityGroupAndKind = getArityGroupAndKind(elemwiseKindVal);
   int numRegionArgs =
       getArityGroupAsUInt(arityGroupAndKind.arityGroup) + 1 /*output*/;
+  // parseNamedStructuredOp already emits a diagnostic on failure.
   if (parseNamedStructuredOp(parser, result, numRegionArgs,
-                             ElementwiseOp::getRegionBuilder())) {
-    return parser.emitError(parser.getCurrentLocation(),
-                            "unable to parse elemwise op");
-  }
+                             ElementwiseOp::getRegionBuilder()))
+    return failure();
 
   // Initialize indexingMaps, if not supplied explicitly.
   if (indexingMapsAttr.empty()) {
@@ -5286,18 +5295,24 @@ void ElementwiseOp::regionBuilder(
   Value result;
 
   if (arityGroup == ElementwiseArityGroup::Unary) {
-    result = helper.buildUnaryFn(kind.unaryFn, block.getArgument(0));
+    result = helper.buildUnaryFn(kind.unaryFn, block.getArgument(0), emitError);
 
   } else if (arityGroup == ElementwiseArityGroup::Binary) {
     result = helper.buildBinaryFn(kind.binaryFn, block.getArgument(0),
-                                  block.getArgument(1));
+                                  block.getArgument(1), emitError);
 
   } else if (arityGroup == ElementwiseArityGroup::Ternary) {
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
-                                   block.getArgument(1), block.getArgument(2));
+                                   block.getArgument(1), block.getArgument(2),
+                                   emitError);
 
   } else {
     assert(false && "found unhandled category in elemwise");
+  }
+
+  if (!result) {
+    // emitError already reported the problem (if provided).
+    return;
   }
 
   yields.push_back(result);
