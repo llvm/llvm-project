@@ -9996,6 +9996,39 @@ isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
   return std::nullopt;
 }
 
+/// Infer a range for an addend from a comparison of the sum with a constant.
+static std::optional<bool> isImpliedCondAdd(CmpPredicate LPred, const Value *L0,
+                                            const Value *L1, CmpPredicate RPred,
+                                            const Value *R0, const Value *R1,
+                                            const DataLayout &DL) {
+  // Normalize both comparisons to put the constants on the right.
+  if (match(L0, m_ImmConstant())) {
+    std::swap(L0, L1);
+    LPred = ICmpInst::getSwappedCmpPredicate(LPred);
+  }
+  if (match(R0, m_ImmConstant())) {
+    std::swap(R0, R1);
+    RPred = ICmpInst::getSwappedCmpPredicate(RPred);
+  }
+
+  const APInt *LC, *RC;
+  const Value *Offset;
+  if (!match(L1, m_APInt(LC)) || !match(R1, m_APInt(RC)) ||
+      !match(L0, m_c_Add(m_Specific(R0), m_Value(Offset))))
+    return std::nullopt;
+
+  // If `X + Offset` is in `LPred`, then X is in `LPred - Offset`.
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(LPred, *LC)
+                         .sub(computeConstantRange(
+                             Offset, ICmpInst::isSigned(LPred),
+                             SimplifyQuery(DL), MaxAnalysisRecursionDepth - 1));
+  if (CR.icmp(RPred, ConstantRange(*RC)))
+    return true;
+  if (CR.icmp(ICmpInst::getInversePredicate(RPred), ConstantRange(*RC)))
+    return false;
+  return std::nullopt;
+}
+
 /// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
 /// is true.  Return false if LHS implies RHS is false. Otherwise, return
 /// std::nullopt if we can't infer anything.
@@ -10098,6 +10131,9 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
       (RPred == ICmpInst::ICMP_ULT || RPred == ICmpInst::ICMP_UGE) &&
       match(L0, m_c_Add(m_Specific(L1), m_Specific(R1))))
     return CmpPredicate::getMatching(LPred, RPred).has_value();
+
+  if (auto Implication = isImpliedCondAdd(LPred, L0, L1, RPred, R0, R1, DL))
+    return Implication;
 
   if (auto P = CmpPredicate::getMatching(LPred, RPred))
     return isImpliedCondOperands(*P, L0, L1, R0, R1);
