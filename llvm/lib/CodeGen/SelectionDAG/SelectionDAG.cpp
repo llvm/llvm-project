@@ -12512,6 +12512,20 @@ void SDNode::DropOperands() {
   }
 }
 
+bool SDNode::hasAnyAddOrSubUser() const {
+  if (SDNodeBits.HasNoAddOrSubUsers)
+    return false;
+
+  for (const SDNode *User : users()) {
+    unsigned Opc = User->getOpcode();
+    if (Opc == ISD::ADD || Opc == ISD::SUB)
+      return true;
+  }
+
+  SDNodeBits.HasNoAddOrSubUsers = true;
+  return false;
+}
+
 void SelectionDAG::setNodeMemRefs(MachineSDNode *N,
                                   ArrayRef<MachineMemOperand *> NewMemRefs) {
   if (NewMemRefs.empty()) {
