@@ -4342,42 +4342,66 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     bool IsMax = match(LHS, m_FMaxNum_or_FMaximumNum(m_Value(), m_APFloat(C2)));
     bool IsMin = match(LHS, m_FMinNum_or_FMinimumNum(m_Value(), m_APFloat(C2)));
     if ((IsMax && *C2 > *C) || (IsMin && *C2 < *C)) {
-      // The ordered relationship and min/maxnum or min/maximumnum guarantee
-      // that we do not have NaN constants, so ordered/unordered preds are
-      // handled the same.
+      // The min/max constant is not a NaN, so the result is either on the
+      // known side of C, or a NaN that minnum/maxnum may return for a
+      // signaling NaN operand.
+      std::optional<bool> Res;
       switch (Pred) {
       case FCmpInst::FCMP_OEQ:
-      case FCmpInst::FCMP_UEQ:
+      case FCmpInst::FCMP_UEQ: {
         // minnum(X, LesserC)  == C --> false
         // maxnum(X, GreaterC) == C --> false
-        return getFalse(RetTy);
+        Res = false;
+        break;
+      }
       case FCmpInst::FCMP_ONE:
-      case FCmpInst::FCMP_UNE:
+      case FCmpInst::FCMP_UNE: {
         // minnum(X, LesserC)  != C --> true
         // maxnum(X, GreaterC) != C --> true
-        return getTrue(RetTy);
+        Res = true;
+        break;
+      }
       case FCmpInst::FCMP_OGE:
       case FCmpInst::FCMP_UGE:
       case FCmpInst::FCMP_OGT:
-      case FCmpInst::FCMP_UGT:
+      case FCmpInst::FCMP_UGT: {
         // minnum(X, LesserC)  >= C --> false
         // minnum(X, LesserC)  >  C --> false
         // maxnum(X, GreaterC) >= C --> true
         // maxnum(X, GreaterC) >  C --> true
-        return ConstantInt::get(RetTy, IsMax);
+        Res = IsMax;
+        break;
+      }
       case FCmpInst::FCMP_OLE:
       case FCmpInst::FCMP_ULE:
       case FCmpInst::FCMP_OLT:
-      case FCmpInst::FCMP_ULT:
+      case FCmpInst::FCMP_ULT: {
         // minnum(X, LesserC)  <= C --> true
         // minnum(X, LesserC)  <  C --> true
         // maxnum(X, GreaterC) <= C --> false
         // maxnum(X, GreaterC) <  C --> false
-        return ConstantInt::get(RetTy, !IsMax);
-      default:
-        // TRUE/FALSE/ORD/UNO should be handled before this.
+        Res = !IsMax;
+        break;
+      }
+      case FCmpInst::FCMP_ORD:
+      case FCmpInst::FCMP_UNO: {
+        // Reachable because minnum/maxnum may return a NaN for an sNaN
+        // operand. Nothing to fold since ord/uno do not depend on the
+        // ordering of the LHS and RHS.
+        break;
+      }
+      default: {
+        // TRUE/FALSE are handled before this.
         llvm_unreachable("Unexpected fcmp predicate");
       }
+      }
+
+      // If we are folding to false for an ordered predicate, or true for an
+      // unordered one, then a NaN result gives the same answer. Only
+      // minnum/maxnum with a possibly sNaN operand can be a NaN.
+      if (Res && (*Res == CmpInst::isUnordered(Pred) ||
+                  computeLHSClass(fcNan).isKnownNeverNaN()))
+        return ConstantInt::get(RetTy, *Res);
     }
   }
 

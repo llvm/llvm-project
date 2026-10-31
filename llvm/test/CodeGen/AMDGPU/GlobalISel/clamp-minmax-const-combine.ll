@@ -405,7 +405,9 @@ define float @test_min_max_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_min_max_maybe_NaN_input_ieee_false:
@@ -429,12 +431,49 @@ define float @test_min_max_maybe_NaN_input_ieee_false(float %a) #1 {
   ret float %fmed
 }
 
+; nofpclass(snan) on an argument does not reach codegen, so canonicalize
+; the operands instead to make them known to never be a signaling NaN.
+define float @test_min_max_maybe_NaN_input_ieee_false_nosnan(float %a.arg) #1 {
+; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_false_nosnan:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_min_max_maybe_NaN_input_ieee_false_nosnan:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_min_max_maybe_NaN_input_ieee_false_nosnan:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %a = call float @llvm.canonicalize.f32(float %a.arg)
+  %fmul = fmul float %a, 2.0
+  %maxnum = call float @llvm.maxnum.f32(float %fmul, float 0.0)
+  %fmed = call float @llvm.minnum.f32(float %maxnum, float 1.0)
+  ret float %fmed
+}
+
 ; clamp fails here since input can be NaN and dx10_clamp=false; fmed3 succeds
 define float @test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false(float %a) #4 {
 ; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_med3_f32 v0, v0, 0, 1.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false:
@@ -458,19 +497,59 @@ define float @test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false(float %a) #
   ret float %fmed
 }
 
+; nofpclass(snan) on an argument does not reach codegen, so canonicalize
+; the operands instead to make them known to never be a signaling NaN.
+define float @test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false_nosnan(float %a.arg) #4 {
+; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false_nosnan:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false_nosnan:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false_nosnan:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %a = call float @llvm.canonicalize.f32(float %a.arg)
+  %fmul = fmul float %a, 2.0
+  %maxnum = call float @llvm.maxnum.f32(float %fmul, float 0.0)
+  %fmed = call float @llvm.minnum.f32(float %maxnum, float 1.0)
+  ret float %fmed
+}
+
 ; max-min patterns always require known non-NaN input
 
 define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_true:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
+; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_max_min_maybe_NaN_input_ieee_true:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX1170-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_minmax_num_f32 v0, v0, 1.0, 0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_max_min_maybe_NaN_input_ieee_true:
@@ -480,8 +559,46 @@ define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_minmax_num_f32 v0, v0, 1.0, 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %fmul = fmul float %a, 2.0
+  %minnum = call float @llvm.minnum.f32(float %fmul, float 1.0)
+  %fmed = call float @llvm.maxnum.f32(float %minnum, float 0.0)
+  ret float %fmed
+}
+
+; nofpclass(snan) on an argument does not reach codegen, so canonicalize
+; the operands instead to make them known to never be a signaling NaN.
+define float @test_max_min_maybe_NaN_input_ieee_true_nosnan(float %a.arg) #0 {
+; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_true_nosnan:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_max_min_maybe_NaN_input_ieee_true_nosnan:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_max_min_maybe_NaN_input_ieee_true_nosnan:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %a = call float @llvm.canonicalize.f32(float %a.arg)
   %fmul = fmul float %a, 2.0
   %minnum = call float @llvm.minnum.f32(float %fmul, float 1.0)
   %fmed = call float @llvm.maxnum.f32(float %minnum, float 0.0)
@@ -492,13 +609,17 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
+; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_max_min_maybe_NaN_input_ieee_false:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX1170-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_minmax_num_f32 v0, v0, 1.0, 0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_max_min_maybe_NaN_input_ieee_false:
@@ -508,8 +629,46 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mul_f32_e32 v0, 2.0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_minmax_num_f32 v0, v0, 1.0, 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %fmul = fmul float %a, 2.0
+  %minnum = call float @llvm.minnum.f32(float %fmul, float 1.0)
+  %fmed = call float @llvm.maxnum.f32(float %minnum, float 0.0)
+  ret float %fmed
+}
+
+; nofpclass(snan) on an argument does not reach codegen, so canonicalize
+; the operands instead to make them known to never be a signaling NaN.
+define float @test_max_min_maybe_NaN_input_ieee_false_nosnan(float %a.arg) #1 {
+; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_false_nosnan:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: test_max_min_maybe_NaN_input_ieee_false_nosnan:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_max_min_maybe_NaN_input_ieee_false_nosnan:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %a = call float @llvm.canonicalize.f32(float %a.arg)
   %fmul = fmul float %a, 2.0
   %minnum = call float @llvm.minnum.f32(float %fmul, float 1.0)
   %fmed = call float @llvm.maxnum.f32(float %minnum, float 0.0)
@@ -519,7 +678,8 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 define amdgpu_ps float @test_min_max_f32_sgpr(float inreg %a) {
 ; GFX10-LABEL: test_min_max_f32_sgpr:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_max_f32_e64 v0, s2, s2 clamp
+; GFX10-NEXT:    v_max_f32_e64 v0, s2, 0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-LABEL: test_min_max_f32_sgpr:
@@ -542,10 +702,46 @@ define amdgpu_ps float @test_min_max_f32_sgpr(float inreg %a) {
   ret float %mn
 }
 
+; nofpclass(snan) on an argument does not reach codegen, so canonicalize
+; the operands instead to make them known to never be a signaling NaN.
+define amdgpu_ps float @test_min_max_f32_sgpr_nosnan(float inreg %a.arg) {
+; GFX10-LABEL: test_min_max_f32_sgpr_nosnan:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_max_f32_e64 v0, s2, s2 clamp
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1170-LABEL: test_min_max_f32_sgpr_nosnan:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    v_max_num_f32_e64 v0, s2, s2
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; GFX1170-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1170-NEXT:    s_max_f32 s0, s0, 0
+; GFX1170-NEXT:    s_min_f32 s0, s0, 1.0
+; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1170-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1170-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: test_min_max_f32_sgpr_nosnan:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_max_num_f32_e64 v0, s2, s2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    s_max_num_f32 s0, s0, 0
+; GFX12-NEXT:    s_min_num_f32 s0, s0, 1.0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
+  %a = call float @llvm.canonicalize.f32(float %a.arg)
+  %mx = call float @llvm.maxnum.f32(float %a, float 0.000000e+00)
+  %mn = call float @llvm.minnum.f32(float %mx, float 1.000000e+00)
+  ret float %mn
+}
+
 define amdgpu_ps float @test_min_max_f32_sgpr_1(float inreg %a) {
 ; GFX10-LABEL: test_min_max_f32_sgpr_1:
 ; GFX10:       ; %bb.0: ; %.entry
-; GFX10-NEXT:    v_max_f32_e64 v0, s2, s2 clamp
+; GFX10-NEXT:    v_max_f32_e64 v0, s2, 0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    v_fma_f32 v0, v0, 0, 0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -576,10 +772,52 @@ define amdgpu_ps float @test_min_max_f32_sgpr_1(float inreg %a) {
   ret float %.i025
 }
 
+; nofpclass(snan) on an argument does not reach codegen, so canonicalize
+; the operands instead to make them known to never be a signaling NaN.
+define amdgpu_ps float @test_min_max_f32_sgpr_1_nosnan(float inreg %a.arg) {
+; GFX10-LABEL: test_min_max_f32_sgpr_1_nosnan:
+; GFX10:       ; %bb.0: ; %.entry
+; GFX10-NEXT:    v_max_f32_e64 v0, s2, s2 clamp
+; GFX10-NEXT:    v_fma_f32 v0, v0, 0, 0
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1170-LABEL: test_min_max_f32_sgpr_1_nosnan:
+; GFX1170:       ; %bb.0: ; %.entry
+; GFX1170-NEXT:    v_max_num_f32_e64 v0, s2, s2
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; GFX1170-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1170-NEXT:    s_max_f32 s0, s0, 0
+; GFX1170-NEXT:    s_min_f32 s0, s0, 1.0
+; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX1170-NEXT:    s_fmaak_f32 s0, s0, 0, 0x0
+; GFX1170-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1170-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: test_min_max_f32_sgpr_1_nosnan:
+; GFX12:       ; %bb.0: ; %.entry
+; GFX12-NEXT:    v_max_num_f32_e64 v0, s2, s2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    s_max_num_f32 s0, s0, 0
+; GFX12-NEXT:    s_min_num_f32 s0, s0, 1.0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    s_fmaak_f32 s0, s0, 0, 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
+.entry:
+  %a = call float @llvm.canonicalize.f32(float %a.arg)
+  %.i09 = call float @llvm.maxnum.f32(float %a, float 0.000000e+00)
+  %.i013 = call float @llvm.minnum.f32(float %.i09, float 1.000000e+00)
+  %.i021 = fmul contract float %.i013, 0.000000e+00
+  %.i025 = fadd contract float %.i021, 0.000000e+00
+  ret float %.i025
+}
+
 define amdgpu_ps float @test_min_max_f32_sgpr_fma_user(float inreg %a, float inreg %b, float inreg %c) {
 ; GFX10-LABEL: test_min_max_f32_sgpr_fma_user:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_max_f32_e64 v0, s2, s2 clamp
+; GFX10-NEXT:    v_max_f32_e64 v0, s2, 0
+; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    v_fma_f32 v0, v0, s3, s4
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -602,6 +840,45 @@ define amdgpu_ps float @test_min_max_f32_sgpr_fma_user(float inreg %a, float inr
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    ; return to shader part epilog
+  %mx = call float @llvm.maxnum.f32(float %a, float 0.000000e+00)
+  %mn = call float @llvm.minnum.f32(float %mx, float 1.000000e+00)
+  %f  = call float @llvm.fma.f32(float %mn, float %b, float %c)
+  ret float %f
+}
+
+; nofpclass(snan) on an argument does not reach codegen, so canonicalize
+; the operands instead to make them known to never be a signaling NaN.
+define amdgpu_ps float @test_min_max_f32_sgpr_fma_user_nosnan(float inreg %a.arg, float inreg %b, float inreg %c) {
+; GFX10-LABEL: test_min_max_f32_sgpr_fma_user_nosnan:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_max_f32_e64 v0, s2, s2 clamp
+; GFX10-NEXT:    v_fma_f32 v0, v0, s3, s4
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX1170-LABEL: test_min_max_f32_sgpr_fma_user_nosnan:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    v_max_num_f32_e64 v0, s2, s2
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; GFX1170-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1170-NEXT:    s_max_f32 s0, s0, 0
+; GFX1170-NEXT:    s_min_f32 s0, s0, 1.0
+; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX1170-NEXT:    s_fmac_f32 s4, s0, s3
+; GFX1170-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1170-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: test_min_max_f32_sgpr_fma_user_nosnan:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_max_num_f32_e64 v0, s2, s2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    s_max_num_f32 s0, s0, 0
+; GFX12-NEXT:    s_min_num_f32 s0, s0, 1.0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    s_fmac_f32 s4, s0, s3
+; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    ; return to shader part epilog
+  %a = call float @llvm.canonicalize.f32(float %a.arg)
   %mx = call float @llvm.maxnum.f32(float %a, float 0.000000e+00)
   %mn = call float @llvm.minnum.f32(float %mx, float 1.000000e+00)
   %f  = call float @llvm.fma.f32(float %mn, float %b, float %c)

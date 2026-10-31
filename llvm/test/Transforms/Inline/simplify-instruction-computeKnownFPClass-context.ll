@@ -137,6 +137,7 @@ declare double @llvm.log.f64(double)
 
 declare float @llvm.maxnum.f32(float, float) #0
 declare <4 x float> @foo() #1
+declare nofpclass(snan) <4 x float> @foo_nosnan() #1
 
 define void @caller_maxnum() {
 ; CHECK-LABEL: define void @caller_maxnum() {
@@ -146,6 +147,7 @@ define void @caller_maxnum() {
 ; CHECK-NEXT:    [[I3_I:%.*]] = fmul float [[I2_I]], 0.000000e+00
 ; CHECK-NEXT:    [[I4_I:%.*]] = call float @llvm.maxnum.f32(float [[I3_I]], float 0.000000e+00)
 ; CHECK-NEXT:    [[I5_I:%.*]] = call float @llvm.maxnum.f32(float [[I4_I]], float [[I2_I]])
+; CHECK-NEXT:    [[I6_I:%.*]] = fcmp olt float [[I5_I]], 0.000000e+00
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -156,6 +158,32 @@ bb:
 define internal void @callee_maxnum() {
 bb:
   %i1 = call <4 x float> @foo()
+  %i2 = extractelement <4 x float> %i1, i64 0
+  %i3 = fmul float %i2, 0.000000e+00
+  %i4 = call float @llvm.maxnum.f32(float %i3, float 0.000000e+00)
+  %i5 = call float @llvm.maxnum.f32(float %i4, float %i2)
+  %i6 = fcmp olt float %i5, 0.000000e+00
+  ret void
+}
+
+define void @caller_maxnum_nosnan() {
+; CHECK-LABEL: define void @caller_maxnum_nosnan() {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I1_I:%.*]] = call <4 x float> @foo_nosnan()
+; CHECK-NEXT:    [[I2_I:%.*]] = extractelement <4 x float> [[I1_I]], i64 0
+; CHECK-NEXT:    [[I3_I:%.*]] = fmul float [[I2_I]], 0.000000e+00
+; CHECK-NEXT:    [[I4_I:%.*]] = call float @llvm.maxnum.f32(float [[I3_I]], float 0.000000e+00)
+; CHECK-NEXT:    [[I5_I:%.*]] = call float @llvm.maxnum.f32(float [[I4_I]], float [[I2_I]])
+; CHECK-NEXT:    ret void
+;
+bb:
+  call void @callee_maxnum_nosnan()
+  ret void
+}
+
+define internal void @callee_maxnum_nosnan() {
+bb:
+  %i1 = call <4 x float> @foo_nosnan()
   %i2 = extractelement <4 x float> %i1, i64 0
   %i3 = fmul float %i2, 0.000000e+00
   %i4 = call float @llvm.maxnum.f32(float %i3, float 0.000000e+00)
