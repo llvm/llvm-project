@@ -32909,6 +32909,11 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
                     : AtomicExpansionKind::CmpXChg;
   }
 
+  // Bit test accesses scaled by a register offset are not supported by LFI, so
+  // we use the CmpXChg pattern instead.
+  if (Subtarget.isLFI())
+    return AtomicExpansionKind::CmpXChg;
+
   assert(BitChange.second == ShiftBit || BitChange.second == NotShiftBit);
 
   auto BitTested = FindSingleBitChange(I->getOperand(OtherIdx));
