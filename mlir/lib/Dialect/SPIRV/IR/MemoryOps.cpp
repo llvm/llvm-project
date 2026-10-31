@@ -115,6 +115,9 @@ static void printSourceMemoryAccessAttribute(
                                  : memoryOp.getSourceMemoryAccess())) {
     elidedAttrs.push_back(memoryOp.getSourceMemoryAccessAttrName());
 
+    // Keep the source mask in the second position even without a target mask.
+    if (!memoryOp.getMemoryAccess())
+      printer << " [\"None\"]";
     printer << ", [\"" << stringifyMemoryAccess(*memAccess) << "\"";
 
     if (spirv::bitEnumContainsAll(*memAccess, spirv::MemoryAccess::Aligned)) {
@@ -456,6 +459,49 @@ LogicalResult StoreOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.CopyMemory and spirv.CopyMemorySized
+//===----------------------------------------------------------------------===//
+
+/// Parses the optional memory operands of a copy operation:
+///   (`[` memory-access `]` (`, [` memory-access `]`)?)?
+template <typename CopyOpTy>
+static ParseResult parseCopyMemoryAccessAttributes(OpAsmParser &parser,
+                                                   OperationState &result) {
+  if (parseMemoryAccessAttributes<CopyOpTy>(parser, result))
+    return failure();
+  if (parser.parseOptionalComma())
+    return success();
+  return parseSourceMemoryAccessAttributes<CopyOpTy>(parser, result);
+}
+
+/// Prints the memory operands of a copy operation followed by its remaining
+/// attributes.
+template <typename CopyOpTy>
+static void printCopyMemoryAccessAttributes(CopyOpTy op,
+                                            OpAsmPrinter &printer) {
+  SmallVector<StringRef, 4> elidedAttrs;
+  printMemoryAccessAttribute(op, printer, elidedAttrs);
+  printSourceMemoryAccessAttribute(op, printer, elidedAttrs);
+  printer.printOptionalAttrDict(op->getDiscardableAttrDictionary().getValue(),
+                                elidedAttrs);
+}
+
+/// Verifies the memory operands of a copy operation. A lone mask applies to
+/// both operands. Only the first of two masks is Target-only.
+template <typename CopyOpTy>
+static LogicalResult verifyCopyMemoryAccessAttributes(CopyOpTy op) {
+  MemoryAccessKind targetKind = op.getSourceMemoryAccess()
+                                    ? MemoryAccessKind::Write
+                                    : MemoryAccessKind::ReadWrite;
+  if (failed(verifyMemoryAccessAttribute(op, targetKind)))
+    return failure();
+
+  return verifyMemoryAccessAttribute(
+      op.getOperation(), op.getSourceMemoryAccessAttr(),
+      op.getSourceAlignmentAttr(), MemoryAccessKind::Read);
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.CopyMemory
 //===----------------------------------------------------------------------===//
 
@@ -470,14 +516,7 @@ void CopyMemoryOp::print(OpAsmPrinter &printer) {
       cast<spirv::PointerType>(getSource().getType()).getStorageClass());
   printer << " \"" << sourceStorageClass << "\" " << getSource();
 
-  SmallVector<StringRef, 4> elidedAttrs;
-  printMemoryAccessAttribute(*this, printer, elidedAttrs);
-  printSourceMemoryAccessAttribute(*this, printer, elidedAttrs,
-                                   getSourceMemoryAccess(),
-                                   getSourceAlignment());
-
-  printer.printOptionalAttrDict(
-      (*this)->getDiscardableAttrDictionary().getValue(), elidedAttrs);
+  printCopyMemoryAccessAttributes(*this, printer);
 
   Type pointeeType =
       cast<spirv::PointerType>(getTarget().getType()).getPointeeType();
@@ -497,15 +536,8 @@ ParseResult CopyMemoryOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.parseOperand(targetPtrInfo) || parser.parseComma() ||
       parseEnumStrAttr(sourceStorageClass, parser) ||
       parser.parseOperand(sourcePtrInfo) ||
-      parseMemoryAccessAttributes<CopyMemoryOp>(parser, result)) {
+      parseCopyMemoryAccessAttributes<CopyMemoryOp>(parser, result)) {
     return failure();
-  }
-
-  if (!parser.parseOptionalComma()) {
-    // Parse 2nd memory access attributes.
-    if (parseSourceMemoryAccessAttributes<CopyMemoryOp>(parser, result)) {
-      return failure();
-    }
   }
 
   if (parser.parseColon() || parser.parseType(elementType))
@@ -535,17 +567,61 @@ LogicalResult CopyMemoryOp::verify() {
   if (targetType != sourceType)
     return emitOpError("both operands must be pointers to the same type");
 
-  // A lone mask applies to both operands. Only the first of two masks is
-  // Target-only.
-  MemoryAccessKind targetKind = getSourceMemoryAccess()
-                                    ? MemoryAccessKind::Write
-                                    : MemoryAccessKind::ReadWrite;
-  if (failed(verifyMemoryAccessAttribute(*this, targetKind)))
+  return verifyCopyMemoryAccessAttributes(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CopyMemorySized
+//===----------------------------------------------------------------------===//
+
+void CopyMemorySizedOp::print(OpAsmPrinter &printer) {
+  printer << ' ' << getTarget() << ", " << getSource() << ", " << getSize();
+
+  printCopyMemoryAccessAttributes(*this, printer);
+
+  printer << " : " << getTarget().getType() << ", " << getSource().getType()
+          << ", " << getSize().getType();
+}
+
+ParseResult CopyMemorySizedOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 3> operandInfo;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseOperandList(operandInfo, 3) ||
+      parseCopyMemoryAccessAttributes<CopyMemorySizedOp>(parser, result))
     return failure();
 
-  return verifyMemoryAccessAttribute(
-      getOperation(), getSourceMemoryAccessAttr(), getSourceAlignmentAttr(),
-      MemoryAccessKind::Read);
+  SmallVector<Type, 3> operandTypes;
+  if (parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
+      parser.parseTypeList(operandTypes))
+    return failure();
+
+  return parser.resolveOperands(operandInfo, operandTypes, loc,
+                                result.operands);
+}
+
+LogicalResult CopyMemorySizedOp::verify() {
+  return verifyCopyMemoryAccessAttributes(*this);
+}
+
+std::optional<spirv::Version> CopyMemorySizedOp::getMinVersion() {
+  return getSourceMemoryAccess() ? spirv::Version::V_1_4
+                                 : spirv::Version::V_1_0;
+}
+
+std::optional<spirv::Version> CopyMemorySizedOp::getMaxVersion() {
+  return spirv::Version::V_1_6;
+}
+
+SmallVector<ArrayRef<spirv::Extension>, 1> CopyMemorySizedOp::getExtensions() {
+  return {};
+}
+
+SmallVector<ArrayRef<spirv::Capability>, 1>
+CopyMemorySizedOp::getCapabilities() {
+  static constexpr spirv::Capability capabilities[] = {
+      spirv::Capability::Addresses};
+  return {ArrayRef<spirv::Capability>(capabilities)};
 }
 
 //===----------------------------------------------------------------------===//

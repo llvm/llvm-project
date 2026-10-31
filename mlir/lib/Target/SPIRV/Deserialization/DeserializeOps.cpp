@@ -683,87 +683,94 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
   return success();
 }
 
-template <>
-LogicalResult
-Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
-  SmallVector<Type, 1> resultTypes;
-  size_t wordIndex = 0;
-  SmallVector<Value, 4> operands;
+template <typename OpTy>
+LogicalResult Deserializer::processCopyMemoryOp(ArrayRef<uint32_t> words,
+                                                unsigned numValueOperands) {
+  if (words.size() < numValueOperands) {
+    return emitError(unknownLoc, "expected at least ")
+           << numValueOperands << " operands for " << OpTy::getOperationName()
+           << ", but got " << words.size();
+  }
+
+  SmallVector<Value, 3> operands;
+  for (uint32_t operandID : words.take_front(numValueOperands)) {
+    Value operand = getValue(operandID);
+    if (!operand)
+      return emitError(unknownLoc, "unknown result <id> : ") << operandID;
+    operands.push_back(operand);
+  }
+
   SmallVector<NamedAttribute, 4> attributes;
-
-  if (wordIndex < words.size()) {
-    auto arg = getValue(words[wordIndex]);
-
-    if (!arg) {
-      return emitError(unknownLoc, "unknown result <id> : ")
-             << words[wordIndex];
+  size_t wordIndex = numValueOperands;
+  auto parseMemoryAccess = [&](StringRef memoryAccessName,
+                               StringRef alignmentName) -> LogicalResult {
+    if (wordIndex == words.size())
+      return success();
+    auto memoryAccess = static_cast<spirv::MemoryAccess>(words[wordIndex++]);
+    // Other masks require scope or alias-list operands that these ops cannot
+    // represent. Do not mistake those operands for a second memory access mask.
+    constexpr spirv::MemoryAccess supported =
+        spirv::MemoryAccess::Volatile | spirv::MemoryAccess::Aligned |
+        spirv::MemoryAccess::Nontemporal |
+        spirv::MemoryAccess::NonPrivatePointer;
+    if (static_cast<uint32_t>(memoryAccess) &
+        ~static_cast<uint32_t>(supported)) {
+      auto mask =
+          spirv::symbolizeMemoryAccess(static_cast<uint32_t>(memoryAccess));
+      return emitError(unknownLoc, "unsupported memory access mask: ")
+             << (mask ? spirv::stringifyMemoryAccess(*mask) : "unknown") << " ("
+             << static_cast<uint32_t>(memoryAccess) << ")";
     }
-
-    operands.push_back(arg);
-    wordIndex++;
-  }
-
-  if (wordIndex < words.size()) {
-    auto arg = getValue(words[wordIndex]);
-
-    if (!arg) {
-      return emitError(unknownLoc, "unknown result <id> : ")
-             << words[wordIndex];
+    attributes.push_back(opBuilder.getNamedAttr(
+        memoryAccessName,
+        opBuilder.getAttr<spirv::MemoryAccessAttr>(memoryAccess)));
+    if (spirv::bitEnumContainsAll(memoryAccess, spirv::MemoryAccess::Aligned)) {
+      if (wordIndex == words.size())
+        return emitError(unknownLoc, "missing alignment literal for ")
+               << memoryAccessName;
+      attributes.push_back(opBuilder.getNamedAttr(
+          alignmentName, opBuilder.getI32IntegerAttr(words[wordIndex++])));
     }
-
-    operands.push_back(arg);
-    wordIndex++;
-  }
-
-  bool isAlignedAttr = false;
-
-  if (wordIndex < words.size()) {
-    auto attrValue = words[wordIndex++];
-    auto attr = opBuilder.getAttr<spirv::MemoryAccessAttr>(
-        static_cast<spirv::MemoryAccess>(attrValue));
-    attributes.push_back(
-        opBuilder.getNamedAttr(attributeName<MemoryAccess>(), attr));
-    isAlignedAttr = (attrValue == 2);
-  }
-
-  if (isAlignedAttr && wordIndex < words.size()) {
-    attributes.push_back(opBuilder.getNamedAttr(
-        "alignment", opBuilder.getI32IntegerAttr(words[wordIndex++])));
-  }
-
-  if (wordIndex < words.size()) {
-    auto attrValue = words[wordIndex++];
-    auto attr = opBuilder.getAttr<spirv::MemoryAccessAttr>(
-        static_cast<spirv::MemoryAccess>(attrValue));
-    attributes.push_back(opBuilder.getNamedAttr("source_memory_access", attr));
-  }
-
-  if (wordIndex < words.size()) {
-    attributes.push_back(opBuilder.getNamedAttr(
-        "source_alignment", opBuilder.getI32IntegerAttr(words[wordIndex++])));
-  }
+    return success();
+  };
+  if (failed(parseMemoryAccess(attributeName<MemoryAccess>(), "alignment")) ||
+      failed(parseMemoryAccess("source_memory_access", "source_alignment")))
+    return failure();
 
   if (wordIndex != words.size()) {
     return emitError(unknownLoc,
-                     "found more operands than expected when deserializing "
-                     "spirv::CopyMemoryOp, only ")
-           << wordIndex << " of " << words.size() << " processed";
+                     "found more operands than expected when deserializing ")
+           << OpTy::getOperationName() << ", only " << wordIndex << " of "
+           << words.size() << " processed";
   }
 
   Location loc = createFileLineColLoc(opBuilder);
-  spirv::CopyMemoryOp::Properties properties{};
-  spirv::CopyMemoryOp::populateDefaultProperties(
-      OperationName(spirv::CopyMemoryOp::getOperationName(),
-                    opBuilder.getContext()),
+  typename OpTy::Properties properties{};
+  OpTy::populateDefaultProperties(
+      OperationName(OpTy::getOperationName(), opBuilder.getContext()),
       properties);
-  if (failed(spirv::CopyMemoryOp::setPropertiesFromAttr(
+  if (failed(OpTy::setPropertiesFromAttr(
           properties, opBuilder.getDictionaryAttr(attributes),
           [&]() { return emitError(loc); })))
     return failure();
-  spirv::CopyMemoryOp::create(opBuilder, loc, resultTypes, operands, properties,
-                              /*discardableAttributes=*/{});
+  OpTy::create(opBuilder, loc, /*resultTypes=*/TypeRange(), operands,
+               properties, /*discardableAttributes=*/{});
 
   return success();
+}
+
+template <>
+LogicalResult
+Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
+  return processCopyMemoryOp<spirv::CopyMemoryOp>(words,
+                                                  /*numValueOperands=*/2);
+}
+
+template <>
+LogicalResult
+Deserializer::processOp<spirv::CopyMemorySizedOp>(ArrayRef<uint32_t> words) {
+  return processCopyMemoryOp<spirv::CopyMemorySizedOp>(words,
+                                                       /*numValueOperands=*/3);
 }
 
 template <>
