@@ -899,6 +899,31 @@ connect to an already running executor via TCP on the given host and port. To
 use this option you will need to start `llvm-jitlink-executor` manually with
 `listen=<host>:<port>` as the first argument.
 
+### Profiling with Linux perf
+
+On supported Linux targets, `llvm-jitlink -perf-support` writes a jitdump to
+`/tmp/jit-<executor-pid>.dump`. The ORC `PerfSupportPlugin` uses the same
+target-process implementation. Run the JIT under `perf record --call-graph
+dwarf`, then use `perf inject -j` before reading the recording. The dump and
+the generated `/tmp/jitted-*.so` files must remain available when the recording
+is read. The `/tmp` location also allows perf's libdw unwinder to recognize
+the generated JIT DSOs.
+
+Each function's unwind and debug records precede its code-load record. Unwind
+payloads contain `.eh_frame` followed by `.eh_frame_hdr`, with addresses
+rebased for the ELF that `perf inject` creates. The implementation generates
+profiler-only CFI; it does not modify the executor's live exception-handling
+tables. Personality and LSDA augmentations are consumed but omitted from these
+copies, since the profiler does not execute exception handlers.
+
+Unwind support initially covers common little-endian ELF64 compiler output:
+DWARF32 records, CIE versions 1 and 3, `zR` and `zPLR`, and PC-relative signed
+32-bit FDE addresses. Ordinary register and relative-location CFA instructions
+are preserved. DWARF expressions, `DW_CFA_set_loc`, other encodings and malformed
+CFI are declined. Unsupported unwind metadata is omitted while ordinary
+code-load and debug records are still emitted, so an optional profiling
+limitation does not prevent JIT execution.
+
 ### Harness mode
 
 The `-harness` option allows a set of input objects to be designated as a test

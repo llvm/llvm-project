@@ -10,9 +10,13 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
 # RUN:     -filetype=obj -o %t/ELF_x86-64_perf.o %s
-# RUN: env JITDUMPDIR="%t" llvm-jitlink -perf-support \
-# RUN:     %t/ELF_x86-64_perf.o
-# RUN: test -f %t/.debug/jit/llvm-IR-jit-*/jit-*.dump
+# RUN: %python %S/../Inputs/check-perf-jitdump.py --run \
+# RUN:     llvm-jitlink -perf-support %t/ELF_x86-64_perf.o \
+# RUN:     | FileCheck %s --check-prefix=DUMP
+
+# DUMP-DAG: main: valid per-function unwind record
+# DUMP-DAG: passthrough: valid per-function unwind record
+# DUMP-DAG: source: valid per-function unwind record
 
 # Test ELF perf support for code load records and unwind info
 

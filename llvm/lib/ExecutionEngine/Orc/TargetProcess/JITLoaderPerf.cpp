@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
-
+#include "PerfJITUnwindInfo.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ExecutionEngine/Orc/Shared/PerfSharedStructs.h"
-
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Threading.h"
 
@@ -26,13 +26,10 @@
 #ifdef __linux__
 
 #include <sys/mman.h> // mmap()
-#include <time.h>     // clock_gettime(), time(), localtime_r() */
+#include <time.h>     // clock_gettime()
 
 #define DEBUG_TYPE "orc"
 
-// language identifier (XXX: should we generate something better from debug
-// info?)
-#define JIT_LANG "llvm-IR"
 #define LLVM_PERF_JIT_MAGIC                                                    \
   ((uint32_t)'J' << 24 | (uint32_t)'i' << 16 | (uint32_t)'T' << 8 |            \
    (uint32_t)'D')
@@ -44,9 +41,6 @@ using namespace llvm::orc;
 struct PerfState {
   // cache lookups
   uint32_t Pid;
-
-  // base directory for output data
-  std::string JitPath;
 
   // output data stream, closed via Dumpstream
   int DumpFd = -1;
@@ -152,33 +146,30 @@ static void writeCodeRecord(const PerfJITCodeLoadRecord &CodeRecord) {
                            CodeRecord.CodeSize);
 }
 
-static void
-writeUnwindRecord(const PerfJITCodeUnwindingInfoRecord &UnwindRecord) {
+static Error writeUnwindRecord(StringRef Frame) {
   assert(State && "PerfState not initialized");
-  LLVM_DEBUG(dbgs() << "Writing unwind record with unwind data size "
-                    << UnwindRecord.UnwindDataSize
-                    << " and EH frame header size "
-                    << UnwindRecord.EHFrameHdrSize << " and mapped size "
-                    << UnwindRecord.MappedSize << "\n");
-  UWR Uwr{RecHeader{static_cast<uint32_t>(UnwindRecord.Prefix.Id),
-                    UnwindRecord.Prefix.TotalSize, perf_get_timestamp()},
-          UnwindRecord.UnwindDataSize, UnwindRecord.EHFrameHdrSize,
-          UnwindRecord.MappedSize};
-  LLVM_DEBUG(dbgs() << "wrote " << sizeof(Uwr) << " bytes of UWR, "
-                    << UnwindRecord.EHFrameHdrSize
-                    << " bytes of EH frame header, "
-                    << UnwindRecord.UnwindDataSize - UnwindRecord.EHFrameHdrSize
-                    << " bytes of EH frame\n");
+  // The synthesized ELF contains this header immediately after .eh_frame.
+  // A PC-relative pointer remains valid at any ELF load bias, unlike the
+  // original absolute pointer into the executor's .eh_frame allocation.
+  constexpr uint64_t HeaderSize = 8;
+  if (Frame.size() > INT32_MAX - 4)
+    return make_error<StringError>("Perf .eh_frame is too large",
+                                   inconvertibleErrorCode());
+  char Header[HeaderSize] = {1, dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4,
+                             char(dwarf::DW_EH_PE_omit),
+                             char(dwarf::DW_EH_PE_omit)};
+  support::endian::write32(Header + 4, uint32_t(-int32_t(Frame.size()) - 4),
+                           sys::IsLittleEndianHost ? endianness::little
+                                                   : endianness::big);
+  UWR Uwr{RecHeader{
+              static_cast<uint32_t>(PerfJITRecordType::JIT_CODE_UNWINDING_INFO),
+              uint32_t(sizeof(UWR) + Frame.size() + HeaderSize),
+              perf_get_timestamp()},
+          Frame.size() + HeaderSize, HeaderSize, 0};
   State->Dumpstream->write(reinterpret_cast<const char *>(&Uwr), sizeof(Uwr));
-  if (UnwindRecord.EHFrameHdrAddr)
-    State->Dumpstream->write((const char *)UnwindRecord.EHFrameHdrAddr,
-                             UnwindRecord.EHFrameHdrSize);
-  else
-    State->Dumpstream->write(UnwindRecord.EHFrameHdr.data(),
-                             UnwindRecord.EHFrameHdrSize);
-  State->Dumpstream->write((const char *)UnwindRecord.EHFrameAddr,
-                           UnwindRecord.UnwindDataSize -
-                               UnwindRecord.EHFrameHdrSize);
+  State->Dumpstream->write(Frame.data(), Frame.size());
+  State->Dumpstream->write(Header, HeaderSize);
+  return Error::success();
 }
 
 static Error registerJITLoaderPerfImpl(const PerfJITRecordBatch &Batch) {
@@ -186,19 +177,59 @@ static Error registerJITLoaderPerfImpl(const PerfJITRecordBatch &Batch) {
     return make_error<StringError>("PerfState not initialized",
                                    inconvertibleErrorCode());
 
-  // Serialize the batch
+  // Profiler metadata is optional. A malformed or unsupported CFI record must
+  // not turn successful JIT materialization into an allocation-action failure.
   std::lock_guard<std::mutex> Lock(Mutex);
-  if (Batch.UnwindingRecord.Prefix.TotalSize > 0)
-    writeUnwindRecord(Batch.UnwindingRecord);
+  std::optional<PerfJITUnwindInfo> UnwindInfo;
+  const auto &U = Batch.UnwindingRecord;
+  auto SkipUnwind = [](Error Err) {
+    std::string Message = toString(std::move(Err));
+    LLVM_DEBUG(dbgs() << "Skipping perf unwind information: " << Message
+                      << "\n");
+  };
+  if (U.Prefix.TotalSize > 0) {
+    if (U.Prefix.Id != PerfJITRecordType::JIT_CODE_UNWINDING_INFO ||
+        U.UnwindDataSize > UINT32_MAX - sizeof(UWR) ||
+        U.Prefix.TotalSize != sizeof(UWR) + U.UnwindDataSize ||
+        U.UnwindDataSize < U.EHFrameHdrSize ||
+        U.UnwindDataSize - U.EHFrameHdrSize > SIZE_MAX ||
+        U.EHFrameAddr > UINTPTR_MAX ||
+        (!U.EHFrameAddr && U.UnwindDataSize != U.EHFrameHdrSize)) {
+      SkipUnwind(make_error<StringError>("Invalid perf unwind data size",
+                                         inconvertibleErrorCode()));
+    } else {
+      StringRef Frame(reinterpret_cast<const char *>(U.EHFrameAddr),
+                      U.UnwindDataSize - U.EHFrameHdrSize);
+      auto Info = PerfJITUnwindInfo::create(
+          Frame, U.EHFrameAddr, sizeof(void *), sys::IsLittleEndianHost);
+      if (Info)
+        UnwindInfo = std::move(*Info);
+      else
+        SkipUnwind(Info.takeError());
+    }
+  }
 
-  for (const auto &DebugInfo : Batch.DebugInfoRecords)
-    writeDebugRecord(DebugInfo);
-
-  for (const auto &CodeLoad : Batch.CodeLoadRecords)
+  // perf consumes pending unwind/debug records on the next CODE_LOAD. Emit
+  // each function's metadata separately, in the synthetic ELF's address space.
+  for (const auto &CodeLoad : Batch.CodeLoadRecords) {
+    if (UnwindInfo) {
+      auto Frame =
+          UnwindInfo->emitEHFrame(CodeLoad.CodeAddr, CodeLoad.CodeSize);
+      if (Frame) {
+        if (auto Err = writeUnwindRecord(*Frame))
+          SkipUnwind(std::move(Err));
+      } else {
+        SkipUnwind(Frame.takeError());
+      }
+    }
+    for (const auto &DebugInfo : Batch.DebugInfoRecords)
+      if (DebugInfo.CodeAddr == CodeLoad.CodeAddr) {
+        writeDebugRecord(DebugInfo);
+        break;
+      }
     writeCodeRecord(CodeLoad);
-
+  }
   State->Dumpstream->flush();
-
   return Error::success();
 }
 
@@ -283,51 +314,6 @@ static Expected<Header> FillMachine(PerfState &State) {
   return Hdr;
 }
 
-static Error InitDebuggingDir(PerfState &State) {
-  time_t Time;
-  struct tm LocalTime;
-  char TimeBuffer[sizeof("YYYYMMDD")];
-  SmallString<64> Path;
-
-  // search for location to dump data to
-  if (const char *BaseDir = getenv("JITDUMPDIR"))
-    Path.append(BaseDir);
-  else if (!sys::path::home_directory(Path))
-    Path = ".";
-
-  // create debug directory
-  Path += "/.debug/jit/";
-  if (auto EC = sys::fs::create_directories(Path)) {
-    std::string ErrStr;
-    raw_string_ostream ErrStream(ErrStr);
-    ErrStream << "could not create jit cache directory " << Path << ": "
-              << EC.message() << "\n";
-    return make_error<StringError>(std::move(ErrStr), inconvertibleErrorCode());
-  }
-
-  // create unique directory for dump data related to this process
-  time(&Time);
-  localtime_r(&Time, &LocalTime);
-  strftime(TimeBuffer, sizeof(TimeBuffer), "%Y%m%d", &LocalTime);
-  Path += JIT_LANG "-jit-";
-  Path += TimeBuffer;
-
-  SmallString<128> UniqueDebugDir;
-
-  using sys::fs::createUniqueDirectory;
-  if (auto EC = createUniqueDirectory(Path, UniqueDebugDir)) {
-    std::string ErrStr;
-    raw_string_ostream ErrStream(ErrStr);
-    ErrStream << "could not create unique jit cache directory "
-              << UniqueDebugDir << ": " << EC.message() << "\n";
-    return make_error<StringError>(std::move(ErrStr), inconvertibleErrorCode());
-  }
-
-  State.JitPath = std::string(UniqueDebugDir);
-
-  return Error::success();
-}
-
 static Error registerJITLoaderPerfStartImpl() {
   PerfState Tentative;
   Tentative.Pid = sys::Process::getProcessId();
@@ -336,16 +322,14 @@ static Error registerJITLoaderPerfStartImpl() {
     return make_error<StringError>("kernel does not support CLOCK_MONOTONIC",
                                    inconvertibleErrorCode());
 
-  if (auto Err = InitDebuggingDir(Tentative))
-    return Err;
-
   std::string Filename;
   raw_string_ostream FilenameBuf(Filename);
-  FilenameBuf << Tentative.JitPath << "/jit-" << Tentative.Pid << ".dump";
+  // perf inject writes JIT DSOs beside the dump. Its libdw unwinder
+  // recognizes /tmp/jitted-, so this must not use a cache subdirectory.
+  FilenameBuf << "/tmp/jit-" << Tentative.Pid << ".dump";
 
   // Need to open ourselves, because we need to hand the FD to OpenMarker() and
   // raw_fd_ostream doesn't expose the FD.
-  using sys::fs::openFileForWrite;
   if (auto EC = openFileForReadWrite(Filename, Tentative.DumpFd,
                                      sys::fs::CD_CreateNew, sys::fs::OF_None)) {
     std::string ErrStr;
