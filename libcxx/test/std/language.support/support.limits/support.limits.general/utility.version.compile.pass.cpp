@@ -56,6 +56,10 @@
 #    error "__cpp_lib_integer_sequence should not be defined before c++14"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_zip
 #    error "__cpp_lib_ranges_zip should not be defined before c++23"
 #  endif
@@ -118,6 +122,10 @@
 #  endif
 #  if __cpp_lib_integer_sequence != 201304L
 #    error "__cpp_lib_integer_sequence should have the value 201304L in c++14"
+#  endif
+
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_zip
@@ -188,6 +196,10 @@
 #  endif
 #  if __cpp_lib_integer_sequence != 201304L
 #    error "__cpp_lib_integer_sequence should have the value 201304L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_zip
@@ -267,6 +279,10 @@
 #  endif
 #  if __cpp_lib_integer_sequence != 201304L
 #    error "__cpp_lib_integer_sequence should have the value 201304L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_zip
@@ -349,6 +365,10 @@
 #  endif
 #  if __cpp_lib_integer_sequence != 201304L
 #    error "__cpp_lib_integer_sequence should have the value 201304L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_zip
@@ -457,6 +477,19 @@
 #    error "__cpp_lib_integer_sequence should have the value 202511L in c++26"
 #  endif
 
+#  if __has_builtin(__builtin_observable_checkpoint)
+#    ifndef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should be defined in c++26"
+#    endif
+#    if __cpp_lib_observable_checkpoint != 202506L
+#      error "__cpp_lib_observable_checkpoint should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should not be defined when the requirement '__has_builtin(__builtin_observable_checkpoint)' is not met!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_ranges_zip
 #    error "__cpp_lib_ranges_zip should be defined in c++26"
 #  endif
@@ -561,6 +594,19 @@
 #  endif
 #  if __cpp_lib_integer_sequence != 202511L
 #    error "__cpp_lib_integer_sequence should have the value 202511L in c++29"
+#  endif
+
+#  if __has_builtin(__builtin_observable_checkpoint)
+#    ifndef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should be defined in c++29"
+#    endif
+#    if __cpp_lib_observable_checkpoint != 202506L
+#      error "__cpp_lib_observable_checkpoint should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should not be defined when the requirement '__has_builtin(__builtin_observable_checkpoint)' is not met!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_ranges_zip

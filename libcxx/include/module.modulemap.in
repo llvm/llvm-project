@@ -2279,6 +2279,7 @@ module std {
     module lazy_synth_three_way_comparator { header "__utility/lazy_synth_three_way_comparator.h" }
     module move                            { header "__utility/move.h" }
     module no_destroy                      { header "__utility/no_destroy.h" }
+    module observable_checkpoint           { header "__utility/observable_checkpoint.h" }
     module pair                            {
       header "__utility/pair.h"
       export std.utility.piecewise_construct

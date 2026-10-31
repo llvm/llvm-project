@@ -3900,6 +3900,39 @@ takes no arguments and produces a void result.
 
 Query for this feature with `__has_builtin(__builtin_unreachable)`.
 
+### `__builtin_observable_checkpoint`
+
+`__builtin_observable_checkpoint` establishes an observable checkpoint, as
+specified by C++26's partial program correctness rules (P1494R5 and P3641R0).
+Undefined behavior after a checkpoint cannot affect the observable behavior
+that happens before it.
+
+**Syntax**:
+
+```c++
+void __builtin_observable_checkpoint(void);
+```
+
+The builtin takes no arguments, returns `void`, and does not throw. It is
+available in all C and C++ language modes. It cannot be used in a constant
+expression. A checkpoint constrains optimization and generates no machine
+instructions; it does not flush streams or introduce thread synchronization.
+
+For example, the diagnostic in this function must be preserved even when
+`p` is null:
+
+```c++
+void increment(int *p) {
+  if (!p)
+    __builtin_printf("null pointer\n");
+  __builtin_observable_checkpoint();
+  ++*p;
+}
+```
+
+Query for this feature with
+`__has_builtin(__builtin_observable_checkpoint)`.
+
 ### `__builtin_unpredictable`
 
 `__builtin_unpredictable` is used to indicate that a branch condition is

@@ -27743,6 +27743,40 @@ None.
 This intrinsic actually does nothing, but optimizers must assume that it
 has externally observable side effects.
 
+(llvm_observable_checkpoint)=
+
+#### '`llvm.observable.checkpoint`' Intrinsic
+
+##### Syntax:
+
+```llvm
+declare void @llvm.observable.checkpoint() nocallback nofree nosync nounwind memory(inaccessiblemem: readwrite)
+```
+
+##### Overview:
+
+The `llvm.observable.checkpoint` intrinsic establishes an observable checkpoint
+for partial program correctness. It prevents undefined behavior after the
+checkpoint from affecting observable behavior before it. It produces no machine
+instructions.
+
+##### Arguments:
+
+None.
+
+##### Semantics:
+
+For optimization purposes, a checkpoint may terminate execution in a defined
+way. In particular, it does not have the `willreturn` attribute. Optimizers must
+preserve the observable behavior preceding the checkpoint even if continuing
+past it would unconditionally execute undefined behavior. Undefined behavior
+after a checkpoint may still be used to optimize operations after it.
+
+The intrinsic models a read and write of inaccessible memory to preserve the
+checkpoint through optimization and attribute inference. It does not access
+program memory, flush streams, or synchronize threads. It is removed during
+instruction selection, after IR optimization (including link-time optimization).
+
 (llvm_pseudoprobe)=
 
 #### '`llvm.pseudoprobe`' Intrinsic

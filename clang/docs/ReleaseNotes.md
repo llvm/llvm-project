@@ -246,6 +246,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   and deprecate `memory_order::consume`) by removing support for the
   `[[carries_dependency]]` attribute.
 
+- Added `__builtin_observable_checkpoint` to support C++26 partial program
+  correctness ([P1494R5](https://wg21.link/P1494R5) and
+  [P3641R0](https://wg21.link/P3641R0)). The builtin is also available in earlier
+  language modes.
+
 #### C++23 Feature Support
 
 #### C++20 Feature Support

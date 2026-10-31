@@ -7950,8 +7950,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
   case Intrinsic::sideeffect:
-    // Discard annotate attributes, noalias scope declarations, assumptions, and
-    // artificial side-effects.
+  case Intrinsic::observable_checkpoint:
+    // Discard annotate attributes, noalias scope declarations, assumptions,
+    // artificial side-effects, and observable checkpoints.
     return;
 
   case Intrinsic::codeview_annotation: {

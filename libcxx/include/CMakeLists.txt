@@ -1007,6 +1007,7 @@ set(files
   __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
+  __utility/observable_checkpoint.h
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h

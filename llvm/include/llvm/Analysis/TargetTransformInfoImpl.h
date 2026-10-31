@@ -948,6 +948,7 @@ public:
     case Intrinsic::annotation:
     case Intrinsic::assume:
     case Intrinsic::sideeffect:
+    case Intrinsic::observable_checkpoint:
     case Intrinsic::pseudoprobe:
     case Intrinsic::arithmetic_fence:
     case Intrinsic::invariant_start:
