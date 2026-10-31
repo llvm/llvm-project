@@ -167,7 +167,7 @@ log
 | \<Func>   | \<Func_f> (float) | \<Func> (double) | \<Func_l> (long double) | \<Func_f16> (float16) | \<Func_f128> (float128) | \<Func_bf16> (bfloat16) | C23 Definition Section | C23 Error Handling Section |
 | --------- | ----------------- | ---------------- | ----------------------- | --------------------- | ----------------------- | ----------------------- | ---------------------- | -------------------------- |
 | acos      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         | {{ check }}             | 7.12.4.1               | F.10.1.1                   |
-| acosh     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.5.1               | F.10.2.1                   |
+| acosh     | {{ check }}       |                  |                         | {{ check }}           |                         | {{ check }}             | 7.12.5.1               | F.10.2.1                   |
 | acospi    |                   |                  |                         | {{ check }}           |                         |                         | 7.12.4.8               | F.10.1.8                   |
 | asin      | {{ check }}       | {{ check }}      |                         | {{ check }}           |                         | {{ check }}             | 7.12.4.2               | F.10.1.2                   |
 | asinh     | {{ check }}       |                  |                         | {{ check }}           |                         |                         | 7.12.5.2               | F.10.2.2                   |

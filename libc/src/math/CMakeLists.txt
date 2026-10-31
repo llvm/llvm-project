@@ -47,6 +47,7 @@ add_math_entrypoint_object(acosf16)
 
 add_math_entrypoint_object(acosh)
 add_math_entrypoint_object(acoshf)
+add_math_entrypoint_object(acoshbf16)
 add_math_entrypoint_object(acoshf16)
 
 add_math_entrypoint_object(acospif)

@@ -3877,6 +3877,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  acoshbf16
+  SRCS
+    acoshbf16.cpp
+  HDRS
+    ../acoshbf16.h
+  DEPENDS
+    libc.src.__support.math.acoshbf16
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   acoshf16
   SRCS
     acoshf16.cpp
