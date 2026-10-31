@@ -38,7 +38,7 @@ body:             |
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %3:ppr = CMPEQ_PPzZZ_B %0, %1, %2, implicit-def dead $nzcv
-    PTEST_PP %0, killed %3, implicit-def $nzcv
+    PTEST_PP %0, %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -210,7 +210,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:ppr_3b = COPY $p0
     ; CHECK-NEXT: [[CMPEQ_PPzZI_B:%[0-9]+]]:ppr = CMPEQ_PPzZI_B [[COPY1]], [[COPY]], 0, implicit-def dead $nzcv
     ; CHECK-NEXT: [[PTRUE_B:%[0-9]+]]:ppr = PTRUE_B 31, implicit $vg
-    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_B]], killed [[CMPEQ_PPzZI_B]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[PTRUE_B]], [[CMPEQ_PPzZI_B]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -219,7 +219,7 @@ body:             |
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
     %3:ppr = PTRUE_B 31, implicit $vg
-    PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    PTEST_PP %3, %2, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -388,7 +388,7 @@ body:             |
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %3:ppr = CMPEQ_WIDE_PPzZZ_B %0, %1, %2, implicit-def dead $nzcv
-    PTEST_PP %0, killed %3, implicit-def $nzcv
+    PTEST_PP %0, %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -514,7 +514,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:ppr_3b = COPY $p0
     ; CHECK-NEXT: [[CMPEQ_PPzZI_B:%[0-9]+]]:ppr = CMPEQ_PPzZI_B [[COPY1]], [[COPY]], 0, implicit-def dead $nzcv
     ; CHECK-NEXT: [[PTRUE_B:%[0-9]+]]:ppr = PTRUE_B 0, implicit $vg
-    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_B]], killed [[CMPEQ_PPzZI_B]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[PTRUE_B]], [[CMPEQ_PPzZI_B]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -523,7 +523,7 @@ body:             |
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
     %3:ppr = PTRUE_B 0, implicit $vg
-    PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    PTEST_PP %3, %2, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -557,7 +557,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:ppr_3b = COPY $p0
     ; CHECK-NEXT: [[CMPEQ_PPzZI_B:%[0-9]+]]:ppr = CMPEQ_PPzZI_B [[COPY1]], [[COPY]], 0, implicit-def dead $nzcv
     ; CHECK-NEXT: [[PTRUE_H:%[0-9]+]]:ppr = PTRUE_H 31, implicit $vg
-    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_H]], killed [[CMPEQ_PPzZI_B]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[PTRUE_H]], [[CMPEQ_PPzZI_B]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -566,7 +566,7 @@ body:             |
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
     %3:ppr = PTRUE_H 31, implicit $vg
-    PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    PTEST_PP %3, %2, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -601,7 +601,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:ppr_3b = COPY $p0
     ; CHECK-NEXT: [[CMPEQ_PPzZI_B:%[0-9]+]]:ppr = CMPEQ_PPzZI_B [[COPY1]], [[COPY]], 0, implicit-def dead $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr = COPY $p1
-    ; CHECK-NEXT: PTEST_PP killed [[COPY2]], killed [[CMPEQ_PPzZI_B]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[COPY2]], [[CMPEQ_PPzZI_B]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY3]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -610,7 +610,7 @@ body:             |
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
     %3:ppr = COPY $p1
-    PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    PTEST_PP %3, %2, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -645,7 +645,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr_3b = COPY $p0
     ; CHECK-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[COPY2]], [[COPY1]], [[COPY]], implicit-def dead $nzcv
-    ; CHECK-NEXT: PTEST_PP [[CMPEQ_PPzZZ_B]], killed [[CMPEQ_PPzZZ_B]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[CMPEQ_PPzZZ_B]], [[CMPEQ_PPzZZ_B]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY3]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -654,7 +654,7 @@ body:             |
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %3:ppr = CMPEQ_PPzZZ_B %0, %1, %2, implicit-def dead $nzcv
-    PTEST_PP %3, killed %3, implicit-def $nzcv
+    PTEST_PP %3, %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -699,7 +699,7 @@ body:             |
     %0:ppr = PTRUE_B 31, implicit $vg
     %3:ppr_3b = COPY %0
     %4:ppr = CMPEQ_PPzZZ_B %3, %1, %2, implicit-def dead $nzcv
-    PTEST_PP %0, killed %4, implicit-def $nzcv
+    PTEST_PP %0, %4, implicit-def $nzcv
     %5:gpr32 = COPY $wzr
     %6:gpr32 = CSINCWr %5, $wzr, 0, implicit $nzcv
     $w0 = COPY %6

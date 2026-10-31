@@ -49,7 +49,7 @@ body:             |
     %0:gpr64common = PHI %6, %bb.0, %3, %bb.1
     %1:gpr64sp = PHI %7, %bb.0, %2, %bb.1
     %8:ppr = PFALSE implicit $vg
-    STR_PXI killed %8, %0, 0
+    STR_PXI %8, %0, 0
     %9:gpr64 = SUBSXri %1, 1, 0, implicit-def $nzcv
     %2:gpr64all = COPY %9
     %10:gpr64 = INCD_XPiI %0, 31, 1

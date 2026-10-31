@@ -29,9 +29,9 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
     ; CHECK-NEXT: [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 11, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY3]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr2]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY3]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr2]], [[COPY5]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32 = COPY $w1
@@ -49,9 +49,9 @@ body:             |
     %10:gpr32 = SUBSWri %0, 11, 0, implicit-def $nzcv
     %11:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
 
-    STRWui killed %7, %3, 0
-    STRWui killed %9, %4, 0
-    STRWui killed %11, %5, 0
+    STRWui %7, %3, 0
+    STRWui %9, %4, 0
+    STRWui %11, %5, 0
     RET_ReallyLR
 
 ...
@@ -79,9 +79,9 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
     ; CHECK-NEXT: [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY3]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr2]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY3]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr2]], [[COPY5]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32 = COPY $w1
@@ -99,9 +99,9 @@ body:             |
     %9:gpr32 = SUBSWri %0, 10, 0, implicit-def $nzcv
     %10:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
 
-    STRWui killed %7, %3, 0
-    STRWui killed %8, %4, 0
-    STRWui killed %10, %5, 0
+    STRWui %7, %3, 0
+    STRWui %8, %4, 0
+    STRWui %10, %5, 0
     RET_ReallyLR
 
 ...
@@ -132,10 +132,10 @@ body:             |
     ; CHECK-NEXT: [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 5, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[SUBSWri3:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY3]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[SUBSWri2]], [[COPY5]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr2]], [[COPY6]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY3]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[SUBSWri2]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr2]], [[COPY6]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32 = COPY $w1
@@ -161,10 +161,10 @@ body:             |
     %12:gpr32 = SUBSWri %0, 10, 0, implicit-def $nzcv
     %13:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
 
-    STRWui killed %8, %3, 0
-    STRWui killed %10, %4, 0
-    STRWui killed %11, %5, 0
-    STRWui killed %13, %6, 0
+    STRWui %8, %3, 0
+    STRWui %10, %4, 0
+    STRWui %11, %5, 0
+    STRWui %13, %6, 0
     RET_ReallyLR
 
 ...
@@ -197,9 +197,9 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
     ; CHECK-NEXT: [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 11, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY3]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr2]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY3]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr2]], [[COPY5]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32 = COPY $w1
@@ -220,9 +220,9 @@ body:             |
     %10:gpr32 = SUBSWri %0, 11, 0, implicit-def $nzcv
     %11:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
 
-    STRWui killed %7, %3, 0
-    STRWui killed %9, %4, 0
-    STRWui killed %11, %5, 0
+    STRWui %7, %3, 0
+    STRWui %9, %4, 0
+    STRWui %11, %5, 0
     RET_ReallyLR
 
 ...
@@ -252,8 +252,8 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], [[COPY3]], 10, implicit $nzcv
     ; CHECK-NEXT: [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[COPY1]], 10, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], [[COPY3]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY5]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32common = COPY %0
@@ -270,8 +270,8 @@ body:             |
     %8:gpr32 = SUBSWri %1, 10, 0, implicit-def $nzcv
     %9:gpr32 = CSINCWr %2, %3, 12, implicit $nzcv
 
-    STRWui killed %7, %4, 0
-    STRWui killed %9, %5, 0
+    STRWui %7, %4, 0
+    STRWui %9, %5, 0
     RET_ReallyLR
 
 ...

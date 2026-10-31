@@ -46,7 +46,7 @@ body:             |
   ; CHECK-NEXT:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY3]], 0 :: (load (s8))
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr32all = COPY $wzr
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr32all = COPY [[COPY4]]
-  ; CHECK-NEXT:   CBZW killed [[LDRBBui]], %bb.3
+  ; CHECK-NEXT:   CBZW [[LDRBBui]], %bb.3
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -54,7 +54,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY1]], 4080, 12, implicit-def $nzcv
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 16711680
-  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32common = CSELWr [[COPY1]], killed [[MOVi32imm]], 11, implicit $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32common = CSELWr [[COPY1]], [[MOVi32imm]], 11, implicit $nzcv
   ; CHECK-NEXT:   [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[CSELWr]], 0, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gpr32 = COPY $wzr
   ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[CSELWr]], [[COPY6]], 12, implicit $nzcv
@@ -85,13 +85,13 @@ body:             |
     %9:gpr32 = LDRBBui %4, 0 :: (load (s8))
     %10:gpr32all = COPY $wzr
     %8:gpr32all = COPY %10
-    CBZW killed %9, %bb.3
+    CBZW %9, %bb.3
     B %bb.2
 
   bb.2:
     %11:gpr32 = SUBSWri %6, 4080, 12, implicit-def $nzcv
     %12:gpr32 = MOVi32imm 16711680
-    %13:gpr32common = CSELWr %6, killed %12, 11, implicit $nzcv
+    %13:gpr32common = CSELWr %6, %12, 11, implicit $nzcv
     %14:gpr32 = SUBSWri %13, 0, 0, implicit-def $nzcv
     %15:gpr32 = COPY $wzr
     %16:gpr32 = CSELWr %13, %15, 12, implicit $nzcv
@@ -130,7 +130,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr32all = COPY $wzr
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr32all = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gpr32all = COPY [[LDRBBui]]
-  ; CHECK-NEXT:   CBZW killed [[LDRBBui]], %bb.3
+  ; CHECK-NEXT:   CBZW [[LDRBBui]], %bb.3
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -160,7 +160,7 @@ body:             |
     %10:gpr32all = COPY $wzr
     %8:gpr32all = COPY %10
     %21:gpr32all = COPY %9
-    CBZW killed %9, %bb.3
+    CBZW %9, %bb.3
     B %bb.2
 
   bb.2:
@@ -196,7 +196,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[COPY3]]
   ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 4080, 12, implicit-def $nzcv
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 16711680
-  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32common = CSELWr [[COPY]], killed [[MOVi32imm]], 11, implicit $nzcv
+  ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32common = CSELWr [[COPY]], [[MOVi32imm]], 11, implicit $nzcv
   ; CHECK-NEXT:   [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[CSELWr]], 0, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY $wzr
   ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[CSELWr]], [[COPY5]], 12, implicit $nzcv
@@ -226,13 +226,13 @@ body:             |
     %11:gpr32 = LDRBBui %0, 0 :: (load (s8))
     %12:gpr32all = COPY $wzr
     %10:gpr32all = COPY %12
-    CBZW killed %11, %bb.3
+    CBZW %11, %bb.3
     B %bb.2
 
   bb.2:
     %13:gpr32 = SUBSWri %8, 4080, 12, implicit-def $nzcv
     %14:gpr32 = MOVi32imm 16711680
-    %15:gpr32common = CSELWr %8, killed %14, 11, implicit $nzcv
+    %15:gpr32common = CSELWr %8, %14, 11, implicit $nzcv
     %16:gpr32 = SUBSWri %15, 0, 0, implicit-def $nzcv
     %17:gpr32 = COPY $wzr
     %18:gpr32 = CSELWr %15, %17, 12, implicit $nzcv
@@ -272,7 +272,7 @@ body:             |
   ; CHECK-NEXT:   [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs [[LDRWui]], [[LDRWui1]], 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32all = COPY $wzr
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr32all = COPY [[COPY3]]
-  ; CHECK-NEXT:   CBZW killed [[SUBSWrs]], %bb.3
+  ; CHECK-NEXT:   CBZW [[SUBSWrs]], %bb.3
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -302,7 +302,7 @@ body:             |
     %7:gpr32 = SUBSWrs %5, %6, 0, implicit-def $nzcv
     %8:gpr32all = COPY $wzr
     %9:gpr32all = COPY %8
-    CBZW killed %7, %bb.3
+    CBZW %7, %bb.3
     B %bb.2
 
   bb.2:

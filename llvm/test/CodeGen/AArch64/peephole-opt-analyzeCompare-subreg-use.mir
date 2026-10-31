@@ -19,8 +19,8 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY]].sub_32, [[COPY2]], implicit-def dead $nzcv
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], killed [[SUBSWrr]], %subreg.sub_32
-    ; CHECK-NEXT: [[RORVXr:%[0-9]+]]:gpr64 = RORVXr [[COPY1]], killed [[INSERT_SUBREG]]
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[SUBSWrr]], %subreg.sub_32
+    ; CHECK-NEXT: [[RORVXr:%[0-9]+]]:gpr64 = RORVXr [[COPY1]], [[INSERT_SUBREG]]
     ; CHECK-NEXT: $x0 = COPY [[RORVXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x1
@@ -28,8 +28,8 @@ body:             |
     %2:gpr32 = COPY $wzr
     %3:gpr32 = SUBSWrr %0.sub_32, %2, implicit-def dead $nzcv
     %4:gpr64all = IMPLICIT_DEF
-    %5:gpr64 = INSERT_SUBREG %4, killed %3, %subreg.sub_32
-    %6:gpr64 = RORVXr %1, killed %5
+    %5:gpr64 = INSERT_SUBREG %4, %3, %subreg.sub_32
+    %6:gpr64 = RORVXr %1, %5
     $x0 = COPY %6
     RET_ReallyLR implicit $x0
 
@@ -50,8 +50,8 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY2]], [[COPY]].sub_32, implicit-def dead $nzcv
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], killed [[SUBSWrr]], %subreg.sub_32
-    ; CHECK-NEXT: [[RORVXr:%[0-9]+]]:gpr64 = RORVXr [[COPY1]], killed [[INSERT_SUBREG]]
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[SUBSWrr]], %subreg.sub_32
+    ; CHECK-NEXT: [[RORVXr:%[0-9]+]]:gpr64 = RORVXr [[COPY1]], [[INSERT_SUBREG]]
     ; CHECK-NEXT: $x0 = COPY [[RORVXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x1
@@ -59,8 +59,8 @@ body:             |
     %2:gpr32 = COPY $wzr
     %3:gpr32 = SUBSWrr %2, %0.sub_32, implicit-def dead $nzcv
     %4:gpr64all = IMPLICIT_DEF
-    %5:gpr64 = INSERT_SUBREG %4, killed %3, %subreg.sub_32
-    %6:gpr64 = RORVXr %1, killed %5
+    %5:gpr64 = INSERT_SUBREG %4, %3, %subreg.sub_32
+    %6:gpr64 = RORVXr %1, %5
     $x0 = COPY %6
     RET_ReallyLR implicit $x0
 

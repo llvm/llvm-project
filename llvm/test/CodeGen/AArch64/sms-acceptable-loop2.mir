@@ -53,7 +53,7 @@ body:             |
 
   bb.1.for.body.preheader:
     %11:gpr32 = ORRWrs $wzr, %9, 0
-    %0:gpr64all = SUBREG_TO_REG killed %11, %subreg.sub_32
+    %0:gpr64all = SUBREG_TO_REG %11, %subreg.sub_32
     %14:fpr32 = FMOVSi 112
     B %bb.3
 
@@ -67,8 +67,8 @@ body:             |
     %2:gpr64sp = PHI %8, %bb.1, %5, %bb.3
     %3:gpr64sp = PHI %7, %bb.1, %4, %bb.3
     early-clobber %12:gpr64sp, %13:fpr32 = LDRSpost %2, 4 :: (load (s32) from %ir.lsr.iv9)
-    %15:fpr32 = nofpexcept FADDSrr killed %13, %14, implicit $fpcr
-    early-clobber %16:gpr64sp = STRSpost killed %15, %3, 4 :: (store (s32) into %ir.lsr.iv)
+    %15:fpr32 = nofpexcept FADDSrr %13, %14, implicit $fpcr
+    early-clobber %16:gpr64sp = STRSpost %15, %3, 4 :: (store (s32) into %ir.lsr.iv)
     %4:gpr64all = COPY %16
     %5:gpr64all = COPY %12
     %17:gpr64 = nsw SUBSXri %1, 1, 0, implicit-def $nzcv

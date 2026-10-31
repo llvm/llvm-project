@@ -29,7 +29,7 @@ body : |
     %3 = SUBSXri $x1, 1, 0, implicit-def dead $nzcv
     %4 = COPY %0
     %5 = COPY %3
-    %6 = SUBSXrr $x1, killed %2, implicit-def $nzcv
+    %6 = SUBSXrr $x1, %2, implicit-def $nzcv
     Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
 

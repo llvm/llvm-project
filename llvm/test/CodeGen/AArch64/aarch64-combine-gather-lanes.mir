@@ -66,10 +66,10 @@ body:             |
     %3:gpr64common = COPY $x3
     %4:gpr64common = COPY $x4
     %5:fpr32 = LDRSui %0, 0
-    %6:fpr128 = SUBREG_TO_REG killed %5, %subreg.ssub
-    %7:fpr128 = LD1i32 %6, 1, killed %1
-    %8:fpr128 = LD1i32 %7, 2, killed %2
-    %9:fpr128 = LD1i32 %8, 3, killed %3
+    %6:fpr128 = SUBREG_TO_REG %5, %subreg.ssub
+    %7:fpr128 = LD1i32 %6, 1, %1
+    %8:fpr128 = LD1i32 %7, 2, %2
+    %9:fpr128 = LD1i32 %8, 3, %3
     $q0 = COPY %9
     RET_ReallyLR implicit $q0
 ...
@@ -113,15 +113,15 @@ body:             |
     %6:gpr64common = COPY $x6
     %7:gpr64common = COPY $x7
     %8:gpr64common = COPY $x8
-    %9:fpr16 = LDRHroX %0, killed %1, 0, 1
-    %10:fpr128 = SUBREG_TO_REG killed %9, %subreg.hsub
-    %11:fpr128 = LD1i16 %10, 1, killed %2
-    %12:fpr128 = LD1i16 %11, 2, killed %3
-    %13:fpr128 = LD1i16 %12, 3, killed %4
-    %14:fpr128 = LD1i16 %13, 4, killed %5
-    %15:fpr128 = LD1i16 %14, 5, killed %6
-    %16:fpr128 = LD1i16 %15, 6, killed %7
-    %17:fpr128 = LD1i16 %16, 7, killed %8
+    %9:fpr16 = LDRHroX %0, %1, 0, 1
+    %10:fpr128 = SUBREG_TO_REG %9, %subreg.hsub
+    %11:fpr128 = LD1i16 %10, 1, %2
+    %12:fpr128 = LD1i16 %11, 2, %3
+    %13:fpr128 = LD1i16 %12, 3, %4
+    %14:fpr128 = LD1i16 %13, 4, %5
+    %15:fpr128 = LD1i16 %14, 5, %6
+    %16:fpr128 = LD1i16 %15, 6, %7
+    %17:fpr128 = LD1i16 %16, 7, %8
     $q0 = COPY %17
     RET_ReallyLR implicit $q0
 ...
@@ -166,14 +166,14 @@ body:             |
     %7:gpr64common = COPY $x7
     %8:gpr64common = COPY $x8
     %9:fpr16 = LDRHui %0, 0
-    %10:fpr128 = SUBREG_TO_REG killed %9, %subreg.hsub
-    %11:fpr128 = LD1i16 %10, 1, killed %1
-    %12:fpr128 = LD1i16 %11, 2, killed %2
-    %13:fpr128 = LD1i16 %12, 3, killed %3
-    %14:fpr128 = LD1i16 %13, 4, killed %4
-    %15:fpr128 = LD1i16 %14, 5, killed %5
-    %16:fpr128 = LD1i16 %15, 6, killed %6
-    %17:fpr128 = LD1i16 %16, 7, killed %7
+    %10:fpr128 = SUBREG_TO_REG %9, %subreg.hsub
+    %11:fpr128 = LD1i16 %10, 1, %1
+    %12:fpr128 = LD1i16 %11, 2, %2
+    %13:fpr128 = LD1i16 %12, 3, %3
+    %14:fpr128 = LD1i16 %13, 4, %4
+    %15:fpr128 = LD1i16 %14, 5, %5
+    %16:fpr128 = LD1i16 %15, 6, %6
+    %17:fpr128 = LD1i16 %16, 7, %7
     $q0 = COPY %17
     RET_ReallyLR implicit $q0
 ...
@@ -241,23 +241,23 @@ body:             |
     %14:gpr64common = COPY $x14
     %15:gpr64common = COPY $x15
     %16:gpr64common = COPY $x16
-    %17:fpr8 = LDRBroX %0, killed %1, 0, 0
-    %18:fpr128 = SUBREG_TO_REG killed %17, %subreg.bsub
-    %19:fpr128 = LD1i8 %18, 1, killed %2
-    %20:fpr128 = LD1i8 %19, 2, killed %3
-    %21:fpr128 = LD1i8 %20, 3, killed %4
-    %22:fpr128 = LD1i8 %21, 4, killed %5
-    %23:fpr128 = LD1i8 %22, 5, killed %6
-    %24:fpr128 = LD1i8 %23, 6, killed %7
-    %25:fpr128 = LD1i8 %24, 7, killed %8
-    %26:fpr128 = LD1i8 %25, 8, killed %9
-    %27:fpr128 = LD1i8 %26, 9, killed %10
-    %28:fpr128 = LD1i8 %27, 10, killed %11
-    %29:fpr128 = LD1i8 %28, 11, killed %12
-    %30:fpr128 = LD1i8 %29, 12, killed %13
-    %31:fpr128 = LD1i8 %30, 13, killed %14
-    %32:fpr128 = LD1i8 %31, 14, killed %15
-    %33:fpr128 = LD1i8 %32, 15, killed %16
+    %17:fpr8 = LDRBroX %0, %1, 0, 0
+    %18:fpr128 = SUBREG_TO_REG %17, %subreg.bsub
+    %19:fpr128 = LD1i8 %18, 1, %2
+    %20:fpr128 = LD1i8 %19, 2, %3
+    %21:fpr128 = LD1i8 %20, 3, %4
+    %22:fpr128 = LD1i8 %21, 4, %5
+    %23:fpr128 = LD1i8 %22, 5, %6
+    %24:fpr128 = LD1i8 %23, 6, %7
+    %25:fpr128 = LD1i8 %24, 7, %8
+    %26:fpr128 = LD1i8 %25, 8, %9
+    %27:fpr128 = LD1i8 %26, 9, %10
+    %28:fpr128 = LD1i8 %27, 10, %11
+    %29:fpr128 = LD1i8 %28, 11, %12
+    %30:fpr128 = LD1i8 %29, 12, %13
+    %31:fpr128 = LD1i8 %30, 13, %14
+    %32:fpr128 = LD1i8 %31, 14, %15
+    %33:fpr128 = LD1i8 %32, 15, %16
     $q0 = COPY %33
     RET_ReallyLR implicit $q0
 ...
@@ -310,11 +310,11 @@ body:             |
     %2:gpr64common = COPY $x2
     %3:gpr64common = COPY $x3
     %4:gpr64common = COPY $x4
-    %5:fpr32 = LDRSroX %0, killed %1, 0, 1
-    %6:fpr128 = SUBREG_TO_REG killed %5, %subreg.ssub
-    %7:fpr128 = LD1i32 %6, 2, killed %2
-    %8:fpr128 = LD1i32 %7, 1, killed %3
-    %9:fpr128 = LD1i32 %8, 3, killed %4
+    %5:fpr32 = LDRSroX %0, %1, 0, 1
+    %6:fpr128 = SUBREG_TO_REG %5, %subreg.ssub
+    %7:fpr128 = LD1i32 %6, 2, %2
+    %8:fpr128 = LD1i32 %7, 1, %3
+    %9:fpr128 = LD1i32 %8, 3, %4
     $q0 = COPY %9
     RET_ReallyLR implicit $q0
 ...
@@ -342,9 +342,9 @@ body:             |
     %2:gpr64common = COPY $x2
     %3:gpr64common = COPY $x3
     %4:fpr128 = LDRQui %0, 0
-    %5:fpr128 = LD1i32 %4, 1, killed %1
-    %6:fpr128 = LD1i32 %5, 2, killed %2
-    %7:fpr128 = LD1i32 %6, 3, killed %3
+    %5:fpr128 = LD1i32 %4, 1, %1
+    %6:fpr128 = LD1i32 %5, 2, %2
+    %7:fpr128 = LD1i32 %6, 3, %3
     $q0 = COPY %7
     RET_ReallyLR implicit $q0
 ...
@@ -375,11 +375,11 @@ body:             |
     %2:gpr64common = COPY $x2
     %3:gpr64common = COPY $x3
     %4:gpr64common = COPY $x4
-    %5:fpr32 = LDRSroX %0, killed %1, 0, 1
-    %6:fpr128 = SUBREG_TO_REG killed %5, %subreg.ssub
-    %7:fpr128 = LD1i32 %6, 1, killed %2
-    %8:fpr128 = LD1i32 %7, 2, killed %3
-    %9:fpr128 = LD1i32 %8, 3, killed %4
+    %5:fpr32 = LDRSroX %0, %1, 0, 1
+    %6:fpr128 = SUBREG_TO_REG %5, %subreg.ssub
+    %7:fpr128 = LD1i32 %6, 1, %2
+    %8:fpr128 = LD1i32 %7, 2, %3
+    %9:fpr128 = LD1i32 %8, 3, %4
     $q0 = COPY %9
     $q1 = COPY %8
     RET_ReallyLR implicit $q0, implicit $q1
@@ -412,13 +412,13 @@ body:             |
     %1:gpr64common = COPY $x1
     %2:gpr64common = COPY $x2
     %3:gpr64common = COPY $x3
-    %5:fpr32 = LDRSroX %0, killed %1, 0, 1
-    %6:fpr128 = SUBREG_TO_REG killed %5, %subreg.ssub
+    %5:fpr32 = LDRSroX %0, %1, 0, 1
+    %6:fpr128 = SUBREG_TO_REG %5, %subreg.ssub
     %7:fpr128 = LD1i32 %6, 1, %2
     %10:gpr32 = MOVi32imm 99
     STRWui %10, %2, 0
-    %8:fpr128 = LD1i32 %7, 2, killed %2
-    %9:fpr128 = LD1i32 %8, 3, killed %3
+    %8:fpr128 = LD1i32 %7, 2, %2
+    %9:fpr128 = LD1i32 %8, 3, %3
     $q0 = COPY %9
     RET_ReallyLR implicit $q0
 ...
