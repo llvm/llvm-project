@@ -258,6 +258,11 @@ public:
   DeploymentInfo GetDeploymentInfo(const struct load_command &,
                                    uint64_t load_command_address,
                                    bool is_executable);
+  // command_data contains the validated command prefix, or is null when that
+  // optional prefix could not be read from the inferior.
+  DeploymentInfo GetDeploymentInfo(const struct load_command &,
+                                   const uint8_t *command_data,
+                                   bool is_executable);
   static std::optional<std::string> GetPlatformString(unsigned char platform);
   bool GetMachOInformationFromMemory(uint32_t platform,
                                      nub_addr_t mach_o_header_addr,
