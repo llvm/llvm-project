@@ -813,6 +813,11 @@ def MismatchedIteratorChecker : Checker<"MismatchedIterator">,
   Dependencies<[IteratorModeling]>,
   Documentation<HasDocumentation>;
 
+def PlacementSelfCopyChecker : Checker<"PlacementSelfCopy">,
+  HelpText<"Check for placement new expressions that initialize the new "
+           "object from the storage it is placed into">,
+  Documentation<HasDocumentation>;
+
 def SmartPtrChecker: Checker<"SmartPtr">,
   HelpText<"Find the dereference of null SmrtPtr">,
   Dependencies<[SmartPtrModeling]>,

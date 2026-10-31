@@ -1436,6 +1436,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 %   - Moved checkers
 %   - Diagnostic changes
 
+#### New checkers and features
+
+- Added the ``alpha.cplusplus.PlacementSelfCopy`` checker, which reports
+  placement new expressions and ``std::construct_at`` calls that initialize the
+  new object from the storage it is placed into, e.g. ``::new (p) T(*p)``.
+
 #### Improvements
 
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
