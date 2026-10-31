@@ -20363,13 +20363,16 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   if (SDValue V = combineRepeatedFPDivisors(N))
     return V;
 
-  // fold (fdiv X, c2) -> (fmul X, 1/c2) if there is no loss in precision, or
-  // the loss is acceptable with AllowReciprocal.
-  if (auto *N1CFP = isConstOrConstSplatFP(N1, true)) {
+  // If dividing by C can be done as a multiply by its reciprocal, return that
+  // reciprocal.
+  auto Reciprocal = [&](SDValue C) -> std::optional<APFloat> {
+    auto *CFP = isConstOrConstSplatFP(C, true);
+    if (!CFP)
+      return std::nullopt;
     // Compute the reciprocal 1.0 / c2.
-    const APFloat &N1APF = N1CFP->getValueAPF();
-    APFloat Recip = APFloat::getOne(N1APF.getSemantics());
-    APFloat::opStatus st = Recip.divide(N1APF, APFloat::rmNearestTiesToEven);
+    const APFloat &CAPF = CFP->getValueAPF();
+    APFloat Recip = APFloat::getOne(CAPF.getSemantics());
+    APFloat::opStatus st = Recip.divide(CAPF, APFloat::rmNearestTiesToEven);
     // Only do the transform if the reciprocal is a legal fp immediate that
     // isn't too nasty (eg NaN, denormal, ...).
     if (((st == APFloat::opOK && !Recip.isDenormal()) ||
@@ -20380,8 +20383,28 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
          // TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT) ||
          TLI.isOperationLegal(ISD::ConstantFP, VT) ||
          TLI.isFPImmLegal(Recip, VT, ForCodeSize)))
+      return Recip;
+    return std::nullopt;
+  };
+
+  // fold (fdiv X, c2) -> (fmul X, 1/c2) if there is no loss in precision, or
+  // the loss is acceptable with AllowReciprocal.
+  if (std::optional<APFloat> Recip = Reciprocal(N1))
+    return DAG.getNode(ISD::FMUL, DL, VT, N0,
+                       DAG.getConstantFP(*Recip, DL, VT));
+
+  // fold (fdiv X, (select C, c1, c2)) -> (fmul X, (select C, 1/c1, 1/c2))
+  SDValue Cond, True, False;
+  if (sd_match(N1,
+               m_SelectLike(m_Value(Cond), m_Value(True), m_Value(False)))) {
+    std::optional<APFloat> RecipT = Reciprocal(True);
+    std::optional<APFloat> RecipF = Reciprocal(False);
+    if (RecipT && RecipF)
       return DAG.getNode(ISD::FMUL, DL, VT, N0,
-                         DAG.getConstantFP(Recip, DL, VT));
+                         DAG.getSelect(DL, VT, Cond,
+                                       DAG.getConstantFP(*RecipT, DL, VT),
+                                       DAG.getConstantFP(*RecipF, DL, VT)),
+                         Flags);
   }
 
   if (Flags.hasAllowReciprocal()) {
