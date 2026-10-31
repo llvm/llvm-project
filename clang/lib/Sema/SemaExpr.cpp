@@ -12233,7 +12233,9 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
     return;
   }
 
-  QualType LHSExprType = LHS.get()->getType();
+  // Check the shift count against the width of the promoted left operand.
+  // For compound assignments, use the promoted type, not the original LHS type.
+  QualType LHSExprType = LHSType;
   uint64_t LeftSize = S.Context.getTypeSize(LHSExprType);
   if (LHSExprType->isBitIntType())
     LeftSize = S.Context.getIntWidth(LHSExprType);
