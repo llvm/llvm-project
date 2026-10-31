@@ -1778,6 +1778,7 @@ void __GOMP_taskloop(void (*func)(void *), void *data,
   int nogroup = gomp_flags & (1u << 11);
   int up = gomp_flags & (1u << 8);
   int reductions = gomp_flags & (1u << 12);
+  int strict = !!(gomp_flags & (1u << 14));
   p_task_dup_t task_dup = NULL;
   kmp_tasking_flags_t *input_flags = (kmp_tasking_flags_t *)&flags;
 #ifdef KMP_DEBUG
@@ -1865,9 +1866,9 @@ void __GOMP_taskloop(void (*func)(void *), void *data,
       KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKGROUP_REDUCTION_REGISTER)(d);
     }
   }
-  __kmpc_taskloop(&loc, gtid, task, if_val, (kmp_uint64 *)&(loop_bounds[0]),
-                  (kmp_uint64 *)&(loop_bounds[1]), (kmp_int64)step, 1, sched,
-                  (kmp_uint64)num_tasks, (void *)task_dup);
+  __kmpc_taskloop_5(&loc, gtid, task, if_val, (kmp_uint64 *)&(loop_bounds[0]),
+                    (kmp_uint64 *)&(loop_bounds[1]), (kmp_int64)step, 1, sched,
+                    (kmp_uint64)num_tasks, strict, (void *)task_dup);
   if (!nogroup) {
 #if OMPT_SUPPORT && OMPT_OPTIONAL
     OMPT_STORE_RETURN_ADDRESS(gtid);
