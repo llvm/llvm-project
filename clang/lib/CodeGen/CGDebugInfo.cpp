@@ -4744,8 +4744,10 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
 
   // Get context for static locals (that are technically globals) the same way
   // we do for "local" locals -- by using current lexical block.
-  if (VD->isStaticLocal()) {
-    assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+  // A static local can also be emitted outside its function (e.g. a CUDA/HIP
+  // __device__ static local ODR-used by host code); then no lexical block is
+  // open and it falls through to the declaration context below.
+  if (VD->isStaticLocal() && !LexicalBlockStack.empty()) {
     VDContext = LexicalBlockStack.back();
     return;
   }
