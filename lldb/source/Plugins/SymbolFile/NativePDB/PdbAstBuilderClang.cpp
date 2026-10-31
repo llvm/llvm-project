@@ -988,6 +988,13 @@ clang::QualType PdbAstBuilderClang::GetOrCreateClangType(PdbTypeSymId type) {
     DeclStatus &status = m_decl_to_status[tag];
     status.uid = uid;
     status.resolved = false;
+
+    if (auto *enum_decl = llvm::dyn_cast<clang::EnumDecl>(tag)) {
+      if (!CompleteTagDecl(*enum_decl)) {
+        TypeSystemClang::CompleteTagDeclarationDefinition(ToCompilerType(qt));
+        m_decl_to_status[enum_decl].resolved = true;
+      }
+    }
   }
   return qt;
 }
