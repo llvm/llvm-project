@@ -8,10 +8,12 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/LogicalResult.h"
@@ -618,10 +620,43 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
   return success();
 }
 
+/// SCF for/parallel IVs are lb + j * step in arbitrary-precision arithmetic;
+/// overflow of the terminating increment is undefined. Constant lower bounds
+/// and steps therefore prove divisibility by any positive factor. The generic
+/// LoopLikeOpInterface does not guarantee this arithmetic semantics.
+static bool isLoopIVMultipleOf(Value value, int64_t factor) {
+  auto arg = dyn_cast<BlockArgument>(value);
+  if (!arg)
+    return false;
+  Operation *op = arg.getOwner()->getParentOp();
+  if (!isa<scf::ForOp, scf::ParallelOp>(op))
+    return false;
+  auto loop = cast<LoopLikeOpInterface>(op);
+  auto ivs = loop.getLoopInductionVars();
+  auto lbs = loop.getLoopLowerBounds();
+  auto steps = loop.getLoopSteps();
+  if (!ivs || !lbs || !steps)
+    return false;
+  for (auto [iv, lb, step] : llvm::zip_equal(*ivs, *lbs, *steps)) {
+    if (iv != value)
+      continue;
+    auto lowerBound = getConstantIntValue(lb);
+    auto stride = getConstantIntValue(step);
+    // Bounds that require the unsigned interpretation of a negative int64_t
+    // are left unproven rather than using signed remainder for that value.
+    if (!lowerBound || !stride || *stride <= 0 ||
+        (op->hasAttr("unsignedCmp") && *lowerBound < 0))
+      return false;
+    return *lowerBound % factor == 0 && *stride % factor == 0;
+  }
+  return false;
+}
+
 // Checks if the `ofr` is a multiple of the `factor`.
-// Handles both static integer and dynamic values
-// where the value is the result of an affine.apply.
+// Handles constants, SCF induction variables, and affine.apply results.
 static bool isMultipleOf(OpFoldResult ofr, int64_t factor) {
+  if (factor <= 0)
+    return false;
   std::optional<int64_t> staticValue = getConstantIntValue(ofr);
   if (staticValue.has_value())
     return staticValue.value() % factor == 0;
@@ -629,6 +664,8 @@ static bool isMultipleOf(OpFoldResult ofr, int64_t factor) {
   Value value = dyn_cast<Value>(ofr);
   if (!value)
     return false;
+  if (isLoopIVMultipleOf(value, factor))
+    return true;
   auto applyOp = value.getDefiningOp<affine::AffineApplyOp>();
   if (!applyOp)
     return false;
