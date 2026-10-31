@@ -299,6 +299,11 @@ public:
   /// Returns the current list of diagnostic metadata.
   SmallVectorImpl<DiagnosticArgument> &getMetadata() { return metadata; }
 
+  /// Returns a string argument that refers to a copy of `val` owned by this
+  /// diagnostic, so the argument remains valid for as long as the diagnostic
+  /// does. This is useful for adding a non-constant string to the metadata.
+  DiagnosticArgument getStringArgument(const Twine &val);
+
   /// Starts a new message part. This has no effect if the current message part
   /// is empty.
   void startNewMessagePart();
