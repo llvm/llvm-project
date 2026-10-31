@@ -12052,15 +12052,42 @@ SDValue PPCTargetLowering::LowerPartialReduce(SDValue Op,
 
   if (Acc.getValueType() != MVT::v4i32)
     return SDValue();
-  if (Op1.getValueType() != MVT::v16i32 || Op1.getOpcode() != ISD::SIGN_EXTEND)
-    return SDValue();
-  SDValue Op1Input = Op1.getOperand(0);
-  if (Op1Input.getValueType() != MVT::v16i8 || !llvm::isOneOrOneSplat(Op2))
+
+  if (Op1.getValueType() != MVT::v16i32)
     return SDValue();
 
   SDLoc dl(Op);
-  SDValue Ones = DAG.getConstant(1, dl, MVT::v16i8);
-  return DAG.getNode(ISD::PARTIAL_REDUCE_SUMLA, dl, MVT::v4i32, Acc, Op1Input,
+  if (Op1.getOpcode() == ISD::SIGN_EXTEND && llvm::isOneOrOneSplat(Op2)) {
+    SDValue Op1Input = Op1.getOperand(0);
+    if (Op1Input.getValueType() != MVT::v16i8)
+      return SDValue();
+
+    SDValue Ones = DAG.getConstant(1, dl, MVT::v16i8);
+    return DAG.getNode(ISD::PARTIAL_REDUCE_SUMLA, dl, MVT::v4i32, Acc, Op1Input,
+                       Ones);
+  }
+
+  assert(Op1.getOpcode() == ISD::MUL && "Unexpected partial reduction type");
+
+  SDValue Left = Op1.getOperand(0);
+  SDValue Right = Op1.getOperand(1);
+  if (Left.getOpcode() != ISD::SIGN_EXTEND ||
+      Right.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+
+  Left = Left.getOperand(0);
+  Right = Right.getOperand(0);
+  if (Left.getValueType() != MVT::v16i8 || Right.getValueType() != MVT::v16i8)
+    return SDValue();
+
+  SDValue Odds = BuildIntrinsicOp(Intrinsic::ppc_altivec_vmulosb, Left, Right,
+                                  DAG, dl, MVT::v8i16);
+  SDValue Evens = BuildIntrinsicOp(Intrinsic::ppc_altivec_vmulesb, Left, Right,
+                                   DAG, dl, MVT::v8i16);
+  SDValue Ones = DAG.getConstant(1, dl, MVT::v8i16);
+  SDValue SumOdd =
+      DAG.getNode(ISD::PARTIAL_REDUCE_SMLA, dl, MVT::v4i32, Acc, Odds, Ones);
+  return DAG.getNode(ISD::PARTIAL_REDUCE_SMLA, dl, MVT::v4i32, SumOdd, Evens,
                      Ones);
 }
 

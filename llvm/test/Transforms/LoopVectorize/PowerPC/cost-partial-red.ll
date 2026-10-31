@@ -48,8 +48,10 @@ for.body:                                         ; preds = %for.body.preheader,
 ; Function Attrs: nofree norecurse nosync nounwind memory(argmem: read) uwtable
 define signext i32 @dots8(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, i64 noundef %n) {
 ; P8COST,P9COST: LV: Checking a loop in 'dots8'
-; P8COST: Cost for VF 16: 26 (Estimated cost per lane: 1.63)
-; P9COST: Cost for VF 16: 36 (Estimated cost per lane: 2.25)
+; P8COST: Cost of 4 for VF 16: EXPRESSION vp<%8> = ir<%sum.08> + partial.reduce.add (mul nsw (ir<%1> sext to i32), (ir<%0> sext to i32))
+; P8COST: Cost for VF 16: 8 (Estimated cost per lane: 0.5)
+; P9COST: Cost of 8 for VF 16: EXPRESSION vp<%8> = ir<%sum.08> + partial.reduce.add (mul nsw (ir<%1> sext to i32), (ir<%0> sext to i32))
+; P9COST: Cost for VF 16: 14 (Estimated cost per lane: 0.875)
 entry:
   %cmp7 = icmp sgt i64 %n, 0
   br i1 %cmp7, label %for.body, label %for.cond.cleanup
