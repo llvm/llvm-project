@@ -152,3 +152,69 @@ subroutine capture_with_convert_f64_to_i32()
   x = w * w
   !$acc end atomic
 end subroutine capture_with_convert_f64_to_i32
+
+subroutine atomic_derived_type()
+  type :: struct
+    integer :: m
+  end type
+  type(struct) :: x, v
+
+  !$acc atomic write
+  !ERROR: LHS of atomic write statement must be of intrinsic type
+  !ERROR: RHS of atomic write statement must be of intrinsic type
+  x = v
+
+  !$acc atomic update
+  !ERROR: LHS of atomic update statement must be of intrinsic type
+  !ERROR: RHS of atomic update statement must be of intrinsic type
+  !ERROR: Invalid atomic update operation, can only use: *, +, -, *, /, and, or, eqv, neqv, max, min, iand, ior, ieor
+  x = v
+end subroutine atomic_derived_type
+
+subroutine atomic_derived_read_capture()
+  type :: struct
+    integer :: m
+  end type
+  type(struct) :: x, v, w
+
+  !$acc atomic read
+  !ERROR: LHS of atomic capture statement must be of intrinsic type
+  !ERROR: RHS of atomic capture statement must be of intrinsic type
+  v = x
+
+  !$acc atomic capture
+  !ERROR: LHS of atomic capture statement must be of intrinsic type
+  !ERROR: RHS of atomic capture statement must be of intrinsic type
+  v = x
+  !ERROR: LHS of atomic write statement must be of intrinsic type
+  !ERROR: RHS of atomic write statement must be of intrinsic type
+  x = w
+  !$acc end atomic
+end subroutine atomic_derived_read_capture
+
+subroutine atomic_character_write()
+  character(len=1) :: x
+
+  !$acc atomic write
+  x = 'a'
+end subroutine atomic_character_write
+
+subroutine atomic_select_type_polymorphic(x)
+  class(*), intent(inout) :: x
+
+  select type (x)
+  type is (integer)
+    !$acc atomic update
+    x = x + 1
+  end select
+end subroutine atomic_select_type_polymorphic
+
+subroutine atomic_diagnostic_locations()
+  integer :: a(2)
+
+  !$acc atomic update
+  !ERROR: LHS of atomic update statement must be scalar
+  a = &
+  !ERROR: RHS of atomic update statement must be scalar
+      & a + 1
+end subroutine atomic_diagnostic_locations
