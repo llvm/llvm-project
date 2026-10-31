@@ -834,12 +834,36 @@ static lldb::addr_t ReadLinuxProcessAddressMask(lldb::ProcessSP process_sp,
   return address_mask;
 }
 
+// Reads code or data address mask for the current OpenBSD process.
+static lldb::addr_t ReadOpenBSDProcessAddressMask(lldb::ProcessSP process_sp,
+                                                  llvm::StringRef reg_name) {
+  // LLDB_INVALID_ADDRESS_MASK means the mask has not been read yet; return it
+  // until there is a thread to read the PAC mask register from, so the read is
+  // retried rather than locking in an empty mask.
+  lldb::ThreadSP thread_sp = process_sp->GetThreadList().GetSelectedThread();
+  if (!thread_sp)
+    return LLDB_INVALID_ADDRESS_MASK;
+  lldb::RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+  if (!reg_ctx_sp)
+    return LLDB_INVALID_ADDRESS_MASK;
+  const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfoByName(reg_name, 0);
+  if (!reg_info)
+    return LLDB_INVALID_ADDRESS_MASK;
+  return reg_ctx_sp->ReadRegisterAsUnsigned(reg_info->kinds[eRegisterKindLLDB],
+                                            LLDB_INVALID_ADDRESS_MASK);
+}
+
 lldb::addr_t ABISysV_arm64::FixCodeAddress(lldb::addr_t pc) {
   if (lldb::ProcessSP process_sp = GetProcessSP()) {
     if (process_sp->GetTarget().GetArchitecture().GetTriple().isOSLinux() &&
         process_sp->GetCodeAddressMask() == LLDB_INVALID_ADDRESS_MASK)
       process_sp->SetCodeAddressMask(
           ReadLinuxProcessAddressMask(process_sp, "code_mask"));
+
+    if (process_sp->GetTarget().GetArchitecture().GetTriple().isOSOpenBSD() &&
+        process_sp->GetCodeAddressMask() == LLDB_INVALID_ADDRESS_MASK)
+      process_sp->SetCodeAddressMask(
+          ReadOpenBSDProcessAddressMask(process_sp, "code_mask"));
 
     // b55 is the highest bit outside TBI (if it's enabled), use
     // it to determine if the high bits are set to 0 or 1.
@@ -861,6 +885,11 @@ lldb::addr_t ABISysV_arm64::FixDataAddress(lldb::addr_t pc) {
         process_sp->GetDataAddressMask() == LLDB_INVALID_ADDRESS_MASK)
       process_sp->SetDataAddressMask(
           ReadLinuxProcessAddressMask(process_sp, "data_mask"));
+
+    if (process_sp->GetTarget().GetArchitecture().GetTriple().isOSOpenBSD() &&
+        process_sp->GetDataAddressMask() == LLDB_INVALID_ADDRESS_MASK)
+      process_sp->SetDataAddressMask(
+          ReadOpenBSDProcessAddressMask(process_sp, "data_mask"));
 
     // b55 is the highest bit outside TBI (if it's enabled), use
     // it to determine if the high bits are set to 0 or 1.
