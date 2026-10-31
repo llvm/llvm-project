@@ -120,9 +120,9 @@ define void @test_guards_across_loops(i32 %N) {
 ; CHECK-NEXT:    %iv.2.next = add i32 %iv.2, 1
 ; CHECK-NEXT:    --> {1,+,1}<nw><%loop.2> U: full-set S: full-set Exits: (2 + %N) LoopDispositions: { %loop.2: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guards_across_loops
-; CHECK-NEXT:  Loop %loop.2: backedge-taken count is (1 + (zext i32 %N to i64))<nuw><nsw>
-; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 4294967296
-; CHECK-NEXT:  Loop %loop.2: symbolic max backedge-taken count is (1 + (zext i32 %N to i64))<nuw><nsw>
+; CHECK-NEXT:  Loop %loop.2: backedge-taken count is (1 + %N)
+; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop.2: symbolic max backedge-taken count is (1 + %N)
 ; CHECK-NEXT:  Loop %loop.2: Trip multiple is 1
 ; CHECK-NEXT:  Loop %loop.1: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.1: Unpredictable constant max backedge-taken count.
