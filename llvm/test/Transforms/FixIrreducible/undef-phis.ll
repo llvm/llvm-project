@@ -39,6 +39,46 @@ exit:
   ret i32 %z
 }
 
+; The values of %p moved into the guard block are undef from %entry and poison
+; from %pre, so the result is undef.
+define i32 @moved_undef_and_poison(i1 %c, i1 %d, i1 %e) {
+; CHECK-LABEL: define i32 @moved_undef_and_poison(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]], i1 [[E:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[E_INV:%.*]] = xor i1 [[E]], true
+; CHECK-NEXT:    br i1 [[C]], label %[[IRR_GUARD:.*]], label %[[PRE:.*]]
+; CHECK:       [[PRE]]:
+; CHECK-NEXT:    br label %[[IRR_GUARD]]
+; CHECK:       [[A:.*]]:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, %[[B:.*]] ], [ undef, %[[IRR_GUARD]] ]
+; CHECK-NEXT:    br i1 [[D]], label %[[EXIT:.*]], label %[[IRR_GUARD]]
+; CHECK:       [[B]]:
+; CHECK-NEXT:    br label %[[A]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[Z:%.*]] = and i32 [[P]], 0
+; CHECK-NEXT:    ret i32 [[Z]]
+; CHECK:       [[IRR_GUARD]]:
+; CHECK-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, %[[A]] ], [ [[E_INV]], %[[PRE]] ], [ false, %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B]], label %[[B]], label %[[A]]
+;
+entry:
+  br i1 %c, label %a, label %pre
+
+pre:
+  br i1 %e, label %a, label %b
+
+a:
+  %p = phi i32 [ undef, %entry ], [ poison, %pre ], [ 0, %b ]
+  br i1 %d, label %exit, label %b
+
+b:
+  br label %a
+
+exit:
+  %z = and i32 %p, 0
+  ret i32 %z
+}
+
 ; %a is the header of the irreducible cycle {a, b} and has a self-loop, which
 ; is redirected through the guard block. Every value of %p is undef.
 define i32 @self_loop_moved_undef(i1 %c, i1 %d, i1 %e) {
