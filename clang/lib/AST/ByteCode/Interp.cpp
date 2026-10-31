@@ -521,9 +521,9 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
-static bool CheckConstexprObject(InterpState &S, CodePtr OpPC,
-                                 const Descriptor *Desc) {
-  if (!S.getLangOpts().C23 || S.EvalMode != EvaluationMode::ConstantExpression)
+bool CheckConstexprObject(InterpState &S, CodePtr OpPC,
+                          const Descriptor *Desc) {
+  if (S.EvalMode != EvaluationMode::ConstantExpression)
     return true;
 
   if (const auto *VD = Desc->asVarDecl()) {
@@ -542,17 +542,20 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
                    AccessKinds AK) {
   assert(Desc);
 
-  if (!CheckConstexprObject(S, OpPC, Desc))
-    return false;
-
   const auto *D = Desc->asVarDecl();
+  if (!D)
+    return CheckC23ConstexprObject(S, OpPC, Desc);
+
   if (S.checkingConstantDestruction(D)) {
     // If we're checking for a constant destructor for this variable, we can
     // only read from it if it is constant.
     if (D->getType().isConstQualified())
       return true;
-  } else if (!D || D == S.EvaluatingDecl || D->isConstexpr())
+  } else if (D == S.EvaluatingDecl || D->isConstexpr())
     return true;
+
+  if (!CheckC23ConstexprObject(S, OpPC, Desc))
+    return false;
 
   QualType T = D->getType();
   bool IsConstant = T.isConstant(S.getASTContext());
@@ -610,7 +613,7 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, PtrView Ptr,
     return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 
   if (!Ptr.block()->isStatic() || !Ptr.block()->getDeclID())
-    return CheckConstexprObject(S, OpPC, Ptr.getDeclDesc());
+    return CheckC23ConstexprObject(S, OpPC, Ptr.getDeclDesc());
   return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 }
 
@@ -913,8 +916,6 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
   const auto &Desc = *reinterpret_cast<const InlineDescriptor *>(B->rawData());
   const Descriptor *BlockDesc = B->getDescriptor();
-  if (!CheckConstexprObject(S, OpPC, BlockDesc))
-    return false;
   if (!Desc.IsInitialized)
     return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B, Desc.LifeState);
   if (!CheckLifetime(S, OpPC, Desc.LifeState, B, AK_Read))
@@ -3752,7 +3753,7 @@ bool Memcpy(InterpState &S, CodePtr OpPC) {
       Src.inUnion()) {
     if (!CheckLoad(S, OpPC, Src))
       return false;
-  } else if (!CheckConstexprObject(S, OpPC, Src.getDeclDesc()))
+  } else if (!CheckC23ConstexprObject(S, OpPC, Src.getDeclDesc()))
     return false;
 
   return DoMemcpy(S, OpPC, Src, Dest);
