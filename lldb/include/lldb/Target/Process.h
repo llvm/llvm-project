@@ -25,6 +25,7 @@
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Breakpoint/StopPointSiteList.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceManager.h"
@@ -2079,6 +2080,15 @@ public:
   ReadModuleFromMemory(const FileSpec &file_spec, lldb::addr_t header_addr,
                        size_t size_to_read = 512);
 
+  /// Read the DataFileCache 'headerbytes' cache before creating an
+  /// ObjectFile from live memory, if it is cached on the debug host
+  /// already.  Create the 'headerbytes' cache file if it did not exist
+  /// yet.
+  llvm::Expected<lldb::ModuleSP>
+  ReadModuleFromMemoryWithCachedHeader(const FileSpec &file_spec, UUID uuid,
+                                       lldb::addr_t header_addr,
+                                       size_t size_to_read = 512);
+
   /// Attempt to get the attributes for a region of memory in the process.
   ///
   /// It may be possible for the remote debug server to inspect attributes for
@@ -3776,6 +3786,19 @@ private:
                        lldb::EventSP &event_sp);
 
   lldb::EventSP CreateEventFromProcessState(uint32_t event_type);
+
+  /// Load the header bytes of an in-memory binary from the DataFileCache
+  /// 'headerbytes' file, if it exists, and put the bytes in the Process
+  /// memory cache.
+  bool LoadHeaderBytesFromCache(const FileSpec &file_spec, UUID uuid,
+                                lldb::addr_t header_addr, size_t size_to_read,
+                                lldb_private::DataFileCache *cache);
+
+  /// Save the header bytes of an in-memory binary into the DataFileCache
+  /// 'headerbytes' file.
+  void SaveHeaderBytesToCache(const FileSpec &file_spec, UUID uuid,
+                              lldb::addr_t header_addr, size_t size_to_read,
+                              lldb_private::DataFileCache *cache);
 
   Process(const Process &) = delete;
   const Process &operator=(const Process &) = delete;
