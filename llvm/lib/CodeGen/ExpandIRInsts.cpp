@@ -901,11 +901,20 @@ static void expandIToFP(Instruction *IToFP) {
   // fp80 conversion is implemented by conversion tp fp128 first following
   // a fptrunc to fp80.
   FPMantissaWidth = FPMantissaWidth == 63 ? 112 : FPMantissaWidth;
-  // FIXME: As there is no related builtins added in compliler-rt,
-  // here currently utilized the fp32 <-> fp16 lib calls to implement.
+  // FIXME: Use a compiler-rt integer-to-half conversion builtin when one is
+  // available. For now, convert half through float.
   FPMantissaWidth = FPMantissaWidth == 10 ? 23 : FPMantissaWidth;
-  FPMantissaWidth = FPMantissaWidth == 7 ? 23 : FPMantissaWidth;
-  unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
+  // The result's bit pattern is assembled in at least 32 bits so that the
+  // exponent and sign arithmetic cannot overflow; bfloat is truncated to 16
+  // bits at the end.
+  unsigned ResultWidth = IToFP->getType()->getPrimitiveSizeInBits();
+  unsigned FloatWidth = std::max(32u, ResultWidth);
+  if (IToFP->getType()->isX86_FP80Ty())
+    FloatWidth = 128;
+  // bfloat is rounded at its own precision and assembled directly; the other
+  // formats (including half) are rounded at FloatWidth.
+  unsigned PatternWidth =
+      IToFP->getType()->isBFloatTy() ? ResultWidth : FloatWidth;
   bool IsSigned = IToFP->getOpcode() == Instruction::SIToFP;
 
   // We're going to introduce branches on the value, so freeze it.
@@ -1130,10 +1139,16 @@ static void expandIToFP(Instruction *IToFP) {
     And29 = Builder.CreateAnd(Shr, Temp2, "and29");
   } else {
     Value *Conv28 = Builder.CreateTrunc(Shr, Builder.getInt32Ty());
-    And29 = Builder.CreateAnd(
-        Conv28, ConstantInt::get(Builder.getContext(), APInt::getSignMask(32)));
+    // The sign is bit PatternWidth - 1 for bfloat, and bit 31 of the low word
+    // for the wider formats, which are assembled from 32-bit halves below.
+    unsigned SignBit = std::min(PatternWidth, 32u) - 1;
+    And29 =
+        Builder.CreateAnd(Conv28, ConstantInt::get(Builder.getContext(),
+                                                   APInt(32, 1u << SignBit)));
   }
   unsigned TempMod = FPMantissaWidth % 32;
+  // Number of exponent bits in the format the result is rounded to.
+  unsigned ExponentWidth = PatternWidth - FPMantissaWidth - 1;
   Value *And34 = nullptr;
   Value *Shl30 = nullptr;
   if (FloatWidth > 80) {
@@ -1144,8 +1159,8 @@ static void expandIToFP(Instruction *IToFP) {
     And34 = Builder.CreateZExt(Shl30, Builder.getInt128Ty());
   } else {
     Value *Add = Builder.CreateShl(E0, Builder.getInt32(TempMod));
-    Shl30 = Builder.CreateAdd(
-        Add, Builder.getInt32(((1 << (30 - TempMod)) - 1) << TempMod));
+    unsigned Bias = (1u << (ExponentWidth - 1)) - 1;
+    Shl30 = Builder.CreateAdd(Add, Builder.getInt32(Bias << TempMod));
     And34 = Builder.CreateAnd(FloatWidth > 32 ? AAddr1Off32 : AAddr1Off0,
                               Builder.getInt32((1 << TempMod) - 1));
   }
@@ -1175,9 +1190,14 @@ static void expandIToFP(Instruction *IToFP) {
     Value *A40 =
         Builder.CreateBitCast(Or35, Type::getFP128Ty(Builder.getContext()));
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
-  } else if (IToFP->getType()->isHalfTy() || IToFP->getType()->isBFloatTy()) {
-    // Deal with "half" situation. This is a workaround since we don't have
-    // floattihf.c currently as referring.
+  } else if (IToFP->getType()->isBFloatTy()) {
+    // bfloat was assembled directly above; the extra bits are only used by the
+    // exponent arithmetic.
+    Value *Bits = Builder.CreateTrunc(Or35, Builder.getIntNTy(ResultWidth));
+    A4 = Builder.CreateBitCast(Bits, IToFP->getType());
+  } else if (IToFP->getType()->isHalfTy()) {
+    // Convert half through float until compiler-rt provides an
+    // integer-to-half conversion builtin.
     Value *A40 =
         Builder.CreateBitCast(Or35, Type::getFloatTy(Builder.getContext()));
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
@@ -1192,7 +1212,6 @@ static void expandIToFP(Instruction *IToFP) {
   // (Values that round *up* into inf, e.g. 2^n - 1, keep Sub2 = BitWidth - 1;
   // these are handled by the conversion's own rounding, not by this
   // saturation.)
-  unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
   uint64_t MinInfExp = 1ULL << (ExponentWidth - 1);
   if (BitWidth - 1 >= MinInfExp) {
     Value *MinInfExpVal = Builder.getIntN(BitWidthNew, MinInfExp);
