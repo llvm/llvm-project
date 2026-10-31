@@ -621,6 +621,12 @@ void InlineSpiller::markValueUsed(LiveInterval *LI, VNInfo *VNI) {
 
 bool llvm::canGuaranteeAssignmentAfterRemat(Register VReg,
                                             const MachineInstr &MI) {
+  // An inline asm that can access VReg in its stack slot (an "rm" operand)
+  // falls back on that when registers run out, which is why VReg is being
+  // spilled. A register rematerialized for it may not be available.
+  if (MI.isInlineAsm() && MI.mayFoldInlineAsmReg(VReg))
+    return false;
+
   if (!RestrictStatepointRemat)
     return true;
   // Here's a quick explanation of the problem we're trying to handle here:

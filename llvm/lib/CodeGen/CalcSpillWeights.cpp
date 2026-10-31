@@ -319,7 +319,11 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
 
     // Force Weight onto the stack so that x86 doesn't add hidden precision.
     stack_float_t Weight = 1.0f;
-    if (IsSpillable) {
+    // An inline asm that can access the register in its stack slot needs no
+    // reload or spill for it, so it doesn't add to the spill weight. That makes
+    // the register a better choice to spill than the asm's other operands,
+    // which need registers.
+    if (IsSpillable && !canMemFoldInlineAsm(*MI, LI.reg())) {
       // Get loop info for mi.
       if (MI->getParent() != MBB) {
         MBB = MI->getParent();
