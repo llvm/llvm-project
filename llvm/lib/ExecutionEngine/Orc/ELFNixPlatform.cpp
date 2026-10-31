@@ -853,6 +853,32 @@ void ELFNixPlatform::ELFNixPlatformPlugin::addEHAndTLVSupportPasses(
     MaterializationResponsibility &MR, jitlink::PassConfiguration &Config,
     bool IsBootstrapping) {
 
+  // Collect TLS subsections before allocation so that the runtime can register
+  // a single thread data range for this graph. These are emitted for COMDAT TLS
+  // variables and when compiling with -fdata-sections.
+  Config.PrePrunePasses.push_back([](jitlink::LinkGraph &G) {
+    for (StringRef Name : {ELFThreadDataSectionName, ELFThreadBSSSectionName}) {
+      std::string Prefix = (Name + ".").str();
+      StringRef LinkOncePrefix = Name == ELFThreadDataSectionName
+                                     ? ".gnu.linkonce.td."
+                                     : ".gnu.linkonce.tb.";
+      SmallVector<jitlink::Section *> Subsections;
+      for (auto &S : G.sections())
+        if (S.getName().starts_with(Prefix) ||
+            S.getName().starts_with(LinkOncePrefix))
+          Subsections.push_back(&S);
+
+      if (Subsections.empty())
+        continue;
+      auto *Target = G.findSectionByName(Name);
+      if (!Target)
+        Target = &G.createSection(Name, Subsections.front()->getMemProt());
+      for (auto *S : Subsections)
+        G.mergeSections(*Target, *S);
+    }
+    return Error::success();
+  });
+
   // Insert TLV lowering at the start of the PostPrunePasses, since we want
   // it to run before GOT/PLT lowering.
 
