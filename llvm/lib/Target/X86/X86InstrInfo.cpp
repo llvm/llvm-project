@@ -5472,6 +5472,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
   MachineInstr *Movr0Inst = nullptr;
+  MachineInstr *UseDefEFLAGS = nullptr;
   MachineInstr *LTZCNTInst = nullptr;
   SmallVector<std::pair<MachineInstr *, unsigned>, 4> InstsToUpdate;
   bool NoSignFlag = false;
@@ -5578,6 +5579,19 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           continue;
         }
 
+        // An instruction that both uses and defines EFLAGS can be sunk below
+        // later EFLAGS readers so a duplicate compare can be removed.
+        // Example:
+        //     cmpq %rsi, %rdi
+        //     //  sbbq $-1, %rdx   <-- move below last use of EFLAGS
+        //     cmpq %rsi, %rdi      // <-- can be removed
+        //     cmovaeq %rsi, %rcx
+        //     sbbq $-1, %rdx
+        if (!UseDefEFLAGS && Inst.readsRegister(X86::EFLAGS, TRI)) {
+          UseDefEFLAGS = &Inst;
+          continue;
+        }
+
         // Try to replace non-NF with NF instructions.
         if (HasNF) {
           unsigned NewOp = X86::getNFVariantIfClobberRemovable(Inst, TRI);
@@ -5624,12 +5638,17 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     From = MBB->rbegin();
   }
 
+  // We only handle UseDefEFLAGS when it uses EFLAGS from a duplicate compare.
+  if (UseDefEFLAGS && !Sub)
+    return false;
+
   // Scan forward from the instruction after CmpInstr for uses of EFLAGS.
   // It is safe to remove CmpInstr if EFLAGS is redefined or killed.
   // If we are done with the basic block, we need to check whether EFLAGS is
   // live-out.
   bool FlagsMayLiveOut = true;
   SmallVector<std::pair<MachineInstr *, X86::CondCode>, 4> OpsToUpdate;
+  MachineInstr *LastEFLAGSUse = nullptr;
   MachineBasicBlock::iterator AfterCmpInstr =
       std::next(MachineBasicBlock::iterator(CmpInstr));
   for (MachineInstr &Instr : make_range(AfterCmpInstr, CmpMBB.end())) {
@@ -5643,6 +5662,13 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     }
     if (!UseEFLAGS && !ModifyEFLAGS)
       continue;
+
+    // We cannot move UseDefEFLAGS if another instruction also uses and updates
+    // EFLAGS.
+    if (UseDefEFLAGS && ModifyEFLAGS)
+      return false;
+
+    LastEFLAGSUse = &Instr;
 
     // EFLAGS is used by this instruction.
     X86::CondCode OldCC = X86::getCondFromMI(Instr);
@@ -5783,7 +5809,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
   // If we have to update users but EFLAGS is live-out abort, since we cannot
   // easily find all of the users.
-  if ((MI != nullptr || ShouldUpdateCC) && FlagsMayLiveOut) {
+  if ((MI != nullptr || ShouldUpdateCC || UseDefEFLAGS) && FlagsMayLiveOut) {
     for (MachineBasicBlock *Successor : CmpMBB.successors())
       if (Successor->isLiveIn(X86::EFLAGS))
         return false;
@@ -5793,6 +5819,33 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   assert((MI == nullptr || Sub == nullptr) && "Should not have Sub and MI set");
   Sub = MI != nullptr ? MI : Sub;
   MachineBasicBlock *SubBB = Sub->getParent();
+
+  // Move UseDefEFLAGS below the last user of CmpInstr's EFLAGS.
+  if (UseDefEFLAGS) {
+    if (&CmpMBB != SubBB || UseDefEFLAGS->getParent() != &CmpMBB ||
+        !LastEFLAGSUse || LastEFLAGSUse->isTerminator() ||
+        UseDefEFLAGS->mayLoad() || UseDefEFLAGS->mayStore())
+      return false;
+
+    for (MachineInstr &IM :
+         make_range(std::next(MachineBasicBlock::iterator(UseDefEFLAGS)),
+                    std::next(MachineBasicBlock::iterator(LastEFLAGSUse)))) {
+      for (const MachineOperand &MO : UseDefEFLAGS->operands()) {
+        if (!MO.isReg() || !MO.getReg() || MO.getReg() == X86::EFLAGS)
+          continue;
+        if (MO.isDef() && IM.readsRegister(MO.getReg(), TRI))
+          return false;
+        if (MO.isUse() && IM.modifiesRegister(MO.getReg(), TRI))
+          return false;
+      }
+    }
+
+    MachineBasicBlock::iterator InsertPt =
+        std::next(MachineBasicBlock::iterator(LastEFLAGSUse));
+    UseDefEFLAGS->getParent()->remove(UseDefEFLAGS);
+    CmpMBB.insert(InsertPt, UseDefEFLAGS);
+  }
+
   // Move Movr0Inst to the appropriate place before Sub.
   if (Movr0Inst) {
     // Only move within the same block so we don't accidentally move to a
