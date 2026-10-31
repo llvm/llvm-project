@@ -1290,7 +1290,8 @@ static inline bool IsOpaqueConstantCall(const CallExpr *E) {
   return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
           Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
           Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
-          Builtin == Builtin::BI__builtin_function_start);
+          Builtin == Builtin::BI__builtin_function_start ||
+          Builtin == Builtin::BI__builtin_imgrel32);
 }
 
 bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
@@ -3050,6 +3051,7 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
 bool CheckIntegralAddressCast(InterpState &S, CodePtr OpPC, unsigned BitWidth);
 bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
 bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
+bool Imgrel32(InterpState &S, CodePtr OpPC, const Expr *E);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {

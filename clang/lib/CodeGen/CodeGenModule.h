@@ -1111,6 +1111,10 @@ public:
   // Return the function body address of the given function.
   llvm::Constant *GetFunctionStart(const ValueDecl *Decl);
 
+  /// Returns the offset of the global Ptr points to from the image base,
+  /// as a constant of integer type Ty, for COFF targets.
+  llvm::Constant *GetImageRelativeOffset(llvm::Constant *Ptr, llvm::Type *Ty);
+
   /// Return a function pointer for a reference to the given function.
   /// This correctly handles weak references, but does not apply a
   /// pointer signature.

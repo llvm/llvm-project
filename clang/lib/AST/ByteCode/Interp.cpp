@@ -3022,6 +3022,24 @@ bool CheckIntegralAddressCast(InterpState &S, CodePtr OpPC, unsigned BitWidth) {
           BitWidth);
 }
 
+/// The offset of a global from the image base is only known to the linker, so
+/// the result is an integral based on the call, as in the other evaluator.
+bool Imgrel32(InterpState &S, CodePtr OpPC, const Expr *E) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!Ptr.isFunctionPointer()) {
+    const auto *VD = Ptr.getRootValueDecl();
+    if (!VD)
+      return Invalid(S, OpPC);
+    if (const auto *Var = dyn_cast<VarDecl>(VD);
+        Var && !Var->hasGlobalStorage())
+      return Invalid(S, OpPC);
+  }
+
+  S.Stk.push<Integral<32, false>>(IntegralKind::ExprAddress, E, 0);
+  return true;
+}
+
 bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 

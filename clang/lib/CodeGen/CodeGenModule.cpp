@@ -5924,6 +5924,25 @@ CodeGenModule::GetAddrOfFunction(GlobalDecl GD, llvm::Type *Ty, bool ForVTable,
   return F;
 }
 
+llvm::Constant *CodeGenModule::GetImageRelativeOffset(llvm::Constant *Ptr,
+                                                      llvm::Type *Ty) {
+  llvm::GlobalVariable *ImageBase = TheModule.getNamedGlobal("__ImageBase");
+  if (!ImageBase) {
+    ImageBase =
+        new llvm::GlobalVariable(TheModule, Int8Ty, /*isConstant=*/true,
+                                 llvm::GlobalValue::ExternalLinkage,
+                                 /*Initializer=*/nullptr, "__ImageBase");
+    setDSOLocal(ImageBase);
+  }
+
+  // trunc(ptrtoint(P) - ptrtoint(__ImageBase)), which the backend lowers to an
+  // image relative relocation.
+  llvm::Constant *Diff = llvm::ConstantExpr::getSub(
+      llvm::ConstantExpr::getPtrToInt(Ptr, IntPtrTy),
+      llvm::ConstantExpr::getPtrToInt(ImageBase, IntPtrTy));
+  return llvm::ConstantExpr::getTrunc(Diff, Ty);
+}
+
 llvm::Constant *CodeGenModule::GetFunctionStart(const ValueDecl *Decl) {
   llvm::GlobalValue *F =
       cast<llvm::GlobalValue>(GetAddrOfFunction(Decl)->stripPointerCasts());

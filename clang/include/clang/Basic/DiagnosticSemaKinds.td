@@ -1062,6 +1062,12 @@ def warn_fortify_source_overread : Warning<
 def err_function_start_invalid_type: Error<
   "argument must be a function">;
 
+def err_imgrel32_requires_coff : Error<
+  "'__builtin_imgrel32' is only supported on COFF targets">;
+def err_imgrel32_not_address_constant : Error<
+  "argument to '__builtin_imgrel32' must be the address of a global variable "
+  "or function">;
+
 def err_ptrauth_disabled :
   Error<"this target does not support pointer authentication">;
 def err_ptrauth_invalid_key :
