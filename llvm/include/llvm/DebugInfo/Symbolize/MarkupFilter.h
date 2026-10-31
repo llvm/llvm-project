@@ -35,12 +35,18 @@ public:
   LLVM_ABI MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
                         std::optional<bool> ColorsEnabled = std::nullopt);
 
-  /// Filters a line containing symbolizer markup and writes the human-readable
-  /// results to the output stream.
+  /// Filters input that may contain symbolizer markup and writes the
+  /// human-readable results to the output stream.
+  ///
+  /// Accepts both complete lines and fragments. Fragments without potential
+  /// markup elements are immediately flushed; otherwise they are buffered until
+  /// a newline is encountered. Eager flushing supports the case where an
+  /// interactive is being piped into llvm-symbolizer: without this, a user
+  /// would not be able to see what they were typing until they pressed enter.
   ///
   /// Invalid or unimplemented markup elements are removed. Some output may be
-  /// deferred until future filter() or finish() call.
-  LLVM_ABI void filter(std::string &&InputLine);
+  /// deferred until a future filter() or finish() call.
+  LLVM_ABI void filter(StringRef Input);
 
   /// Records that the input stream has ended and writes any deferred output.
   LLVM_ABI void finish();
@@ -92,6 +98,7 @@ private:
   void beginModuleInfoLine(const Module *M);
   void endAnyModuleInfoLine();
 
+  void processCompleteLine();
   void filterNode(const MarkupNode &Node);
 
   bool tryPresentation(const MarkupNode &Node);
@@ -142,7 +149,8 @@ private:
 
   MarkupParser Parser;
 
-  // Current line being filtered.
+  // Current line being filtered. Accumulates partial input across filter()
+  // calls until a newline completes it.
   std::string Line;
 
   // A module info line currently being built. This incorporates as much mmap
