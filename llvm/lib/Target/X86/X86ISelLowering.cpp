@@ -22866,6 +22866,15 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   MVT SVT = In.getSimpleValueType();
 
+  // Rounding through f32 may round twice, which afn permits.
+  if (VT == MVT::f16 && (SVT == MVT::f64 || SVT == MVT::f80) && !IsStrict &&
+      !Subtarget.hasFP16() && Subtarget.hasF16C() &&
+      Op->getFlags().hasApproximateFuncs()) {
+    SDValue Rnd = DAG.getIntPtrConstant(0, DL, /*isTarget=*/true);
+    SDValue F32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, In, Rnd);
+    return DAG.getNode(ISD::FP_ROUND, DL, VT, F32, Rnd);
+  }
+
   if (SVT == MVT::f128 || (VT == MVT::f16 && SVT == MVT::f80))
     return SDValue();
 
