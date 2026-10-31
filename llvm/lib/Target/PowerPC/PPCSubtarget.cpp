@@ -109,9 +109,30 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     report_fatal_error(
         "SPE and traditional floating point cannot both be enabled.\n", false);
 
+  /* Emit feature aliases */
+
   // If not SPE, set standard FPU
   if (!HasSPE)
     HasFPU = true;
+
+  // ISA 2.07 is power8
+  if (IsISA2_07 && HasAltivec)
+    HasP8Altivec = true;
+  if (IsISA2_07 && HasVSX)
+    HasP8Vector = true;
+
+  // ISA 3.0 is power9
+  if (IsISA3_0 && HasAltivec)
+    HasP9Altivec = true;
+  if (IsISA3_0 && HasVSX)
+    HasP9Vector = true;
+
+  // ISA 3.1 is power10
+  if (IsISA3_1 && HasVSX)
+    HasP10Vector = true;
+
+  if (IsISAFuture && HasVSX)
+    HasFutureVector = true;
 
   StackAlignment = getPlatformStackAlignment();
 
