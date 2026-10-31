@@ -107,6 +107,25 @@ namespace cwg1432 { // cwg1432: 16 open 2022-11-11
       f(A<0>());
     }
   } // namespace function_template
+  namespace combined_template_template_and_template_id_packs {
+    template <class>
+    struct select;
+
+    template <template <class, class...> class C, class A, class... Rest>
+    struct select<C<A, Rest...>> {
+      static const int value = 1;
+    };
+
+    template <template <class> class C, class A>
+    struct select<C<A>> {
+      static const int value = 2;
+    };
+
+    template <class>
+    struct unary {};
+
+    static_assert(select<unary<int>>::value == 2, "");
+  } // namespace combined_template_template_and_template_id_packs
 #endif
 } // namespace cwg1432
 

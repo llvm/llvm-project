@@ -932,6 +932,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   was used through a C++20 named module and its defining header was subsequently
   included. (#GH213299)
 
+- Clang now prefers a class template partial specialization whose
+  template-template parameter forms an exact match with the argument template
+  head when P3310's invented defaults would favor a partial with a trailing
+  parameter pack. (#GH216092)
+
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
 - Fixed an assertion failure when `#embed` was used in the braced initializer
