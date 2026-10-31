@@ -35,8 +35,6 @@ private:
               const LanguageRuntime::VTableInfo &vtable_info,
               llvm::SmallVectorImpl<llvm::StringRef> &vtable_components);
 
-  llvm::Error TypeHasVTable(CompilerType type);
-
   std::optional<int64_t>
   GetOffsetToTop(ValueObject &in_value, TypeAndOrName &class_type_or_name,
                  const LanguageRuntime::VTableInfo &vtable_info);
