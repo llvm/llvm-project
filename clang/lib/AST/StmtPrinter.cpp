@@ -2676,15 +2676,15 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
 }
 
 void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
-  // TODO(Reflection): add support for the remaining reflection kinds.
+  ReflectionValue Value = S->getValue();
   OS << "^^";
-  switch (S->getKind()) {
+  switch (Value.getKind()) {
   case ReflectionKind::Null:
     assert(false && "null reflection can't be constructed from parsing a "
                     "reflection operand");
     break;
   case ReflectionKind::Type:
-    S->getTypeSourceInfo()->getType().print(OS, Policy);
+    Value.castAsType()->getType().print(OS, Policy);
     break;
   }
 }

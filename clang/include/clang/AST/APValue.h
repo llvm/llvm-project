@@ -352,23 +352,12 @@ private:
     const AddrLabelExpr* LHSExpr;
     const AddrLabelExpr* RHSExpr;
   };
-  struct ReflectionData {
-    // OperandKind will eventually have support for
-    // Null, TypeSourceInfo, TemplateReference, NamespaceReference, DeclRefExpr.
-    // Operand stores the opaque pointer of the reflection operand.
-    // Depending on the value of OperandKind, we can perform the
-    // corresponding cast to the associated type.
-    // If OperandKind is Null, then the ReflectionData represents
-    // a null reflection, and therefore Operand should be a nullptr.
-    ReflectionKind OperandKind;
-    const void *Operand;
-  };
   struct MemberPointerData;
 
   // We ensure elsewhere that Data is big enough for LV and MemberPointerData.
   typedef llvm::AlignedCharArrayUnion<
       void *, APSInt, APFloat, ComplexAPSInt, ComplexAPFloat, Vec, Mat, Arr,
-      StructData, UnionData, AddrLabelDiffData, ReflectionData>
+      StructData, UnionData, AddrLabelDiffData, ReflectionValue>
       DataType;
   static const size_t DataSize = sizeof(DataType);
 
@@ -464,10 +453,8 @@ public:
   }
 
   /// Creates a new Reflection APValue.
-  /// \param OperandKind The kind of reflection.
-  /// \param Operand The entity being reflected.
-  APValue(ReflectionKind OperandKind, const void *Operand) : Kind(None) {
-    MakeReflection(OperandKind, Operand);
+  explicit APValue(ReflectionValue Value) : Kind(None) {
+    MakeReflection(Value);
   }
 
   /// Creates a new struct APValue.
@@ -779,14 +766,9 @@ public:
     return ((const AddrLabelDiffData *)(const char *)&Data)->RHSExpr;
   }
 
-  ReflectionKind getReflectionOperandKind() const {
+  ReflectionValue getReflectionValue() const {
     assert(isReflection() && "Invalid accessor");
-    return ((const ReflectionData *)(const char *)&Data)->OperandKind;
-  }
-
-  const void *getReflectionOpaqueOperand() const {
-    assert(isReflection() && "Invalid accessor");
-    return ((const ReflectionData *)(const char *)&Data)->Operand;
+    return *(const ReflectionValue *)(const char *)&Data;
   }
 
   void setInt(APSInt I) {
@@ -837,9 +819,9 @@ public:
 
 private:
   void DestroyDataAndMakeUninit();
-  void MakeReflection(ReflectionKind OperandKind, const void *Operand) {
+  void MakeReflection(ReflectionValue Value) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)Data.buffer) ReflectionData{OperandKind, Operand};
+    new ((void *)(char *)Data.buffer) ReflectionValue{Value};
     Kind = Reflection;
   }
   void MakeInt(const APSInt &I) {

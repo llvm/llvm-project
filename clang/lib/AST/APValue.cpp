@@ -433,8 +433,7 @@ APValue::APValue(const APValue &RHS)
     setAddrLabelDiff(RHS.getAddrLabelDiffLHS(), RHS.getAddrLabelDiffRHS());
     break;
   case Reflection:
-    MakeReflection(RHS.getReflectionOperandKind(),
-                   RHS.getReflectionOpaqueOperand());
+    MakeReflection(RHS.getReflectionValue());
     break;
   }
 }
@@ -492,7 +491,7 @@ void APValue::DestroyDataAndMakeUninit() {
   else if (Kind == AddrLabelDiff)
     ((AddrLabelDiffData *)(char *)&Data)->~AddrLabelDiffData();
   else if (Kind == Reflection)
-    ((ReflectionData *)(char *)&Data)->~ReflectionData();
+    ((ReflectionValue *)(char *)&Data)->~ReflectionValue();
   Kind = None;
   AllowConstexprUnknown = false;
 }
@@ -568,14 +567,13 @@ static void profileTypeReflection(llvm::FoldingSetNodeID &ID, QualType QT) {
 }
 
 static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
-  ID.AddInteger(static_cast<int>(V.getReflectionOperandKind()));
-  switch (V.getReflectionOperandKind()) {
+  ReflectionValue Val = V.getReflectionValue();
+  ID.AddInteger(llvm::to_underlying(Val.getKind()));
+  switch (Val.getKind()) {
   case ReflectionKind::Null:
     return;
   case ReflectionKind::Type: {
-    const TypeSourceInfo *Info =
-        static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
-    profileTypeReflection(ID, Info->getType());
+    profileTypeReflection(ID, Val.castAsType()->getType());
     return;
   }
   }
@@ -1079,19 +1077,10 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     Out << " - ";
     Out << "&&" << getAddrLabelDiffRHS()->getLabel()->getName();
     return;
-  case APValue::Reflection:
-    switch (getReflectionOperandKind()) {
-    case ReflectionKind::Null:
-      Out << "std::meta::info{}";
-      break;
-    case ReflectionKind::Type: {
-      const auto *TInfo =
-          static_cast<const TypeSourceInfo *>(getReflectionOpaqueOperand());
-      Out << "^^" << TInfo->getType().stream(Policy);
-      break;
-    }
-    }
+  case APValue::Reflection: {
+    getReflectionValue().print(Out, Policy);
     return;
+  }
   }
   llvm_unreachable("Unknown APValue kind!");
 }

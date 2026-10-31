@@ -2271,14 +2271,15 @@ void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   // TODO(Reflection): Add support for Null, TypeSourceInfo,
   // TemplateReference and DeclRefExpr
   VisitExpr(E);
-  ID.AddInteger(static_cast<int>(E->getKind()));
-  switch (E->getKind()) {
+  ReflectionValue Val = E->getValue();
+  ID.AddInteger(llvm::to_underlying(Val.getKind()));
+  switch (Val.getKind()) {
   case ReflectionKind::Null:
     assert(false && "null reflection can't be constructed from parsing a "
                     "reflection operand");
     return;
   case ReflectionKind::Type: {
-    QualType QT = E->getTypeSourceInfo()->getType();
+    QualType QT = Val.castAsType()->getType();
     if (isTypeAliasAsReflectionName(QT)) {
       if (const auto *TDT = QT->getAs<TypedefType>()) {
         ID.AddBoolean(true);
