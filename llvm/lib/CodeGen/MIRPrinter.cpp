@@ -1019,7 +1019,7 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
         if (IsReg && F.hasRegClassConstraint(RCID))
           OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
 
-        if (F.isMemKind() || F.isFuncKind()) {
+        if (F.isMemKind()) {
           InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
           OS << ':' << InlineAsm::getMemConstraintName(MCID);
         }

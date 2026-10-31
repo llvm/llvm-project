@@ -2006,15 +2006,14 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << F.getKindName();
 
       unsigned RCID;
-      if (!F.isImmKind() && !F.isMemKind() && !F.isFuncKind() &&
-          F.hasRegClassConstraint(RCID)) {
+      if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID)) {
         if (TRI) {
           OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
         } else
           OS << ":RC" << RCID;
       }
 
-      if (F.isMemKind() || F.isFuncKind()) {
+      if (F.isMemKind()) {
         const InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
         OS << ":" << InlineAsm::getMemConstraintName(MCID);
       }
