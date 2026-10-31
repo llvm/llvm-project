@@ -945,7 +945,12 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (ranges.empty())
     return nullptr;
 
-  return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die, std::move(ranges));
+  Function *function =
+      dwarf_ast->ParseFunctionFromDWARF(comp_unit, die, std::move(ranges));
+  if (function)
+    function->SetIsExternal(die.GetDIE()->GetAttributeValueAsUnsigned(
+        die.GetCU(), DW_AT_external, 0, /*check_elaborating_dies=*/true));
+  return function;
 }
 
 ConstString

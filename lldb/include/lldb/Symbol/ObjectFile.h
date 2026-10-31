@@ -24,6 +24,7 @@
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 namespace lldb_private {
@@ -296,6 +297,11 @@ public:
   ///     The ArchSpec of this object file. In case of error, an invalid
   ///     ArchSpec object is returned.
   virtual ArchSpec GetArchitecture() = 0;
+
+  /// Return the file format, or UnknownObjectFormat if not reported.
+  virtual llvm::Triple::ObjectFormatType GetFileFormat() const {
+    return llvm::Triple::UnknownObjectFormat;
+  }
 
   /// Gets the section list for the currently selected architecture (and
   /// object for archives).

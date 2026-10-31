@@ -42,6 +42,8 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   if (!type.IsValid())
     return nullptr;
 
+  // FIXME: Deduplicating by function type alone assumes all declarations with
+  // the same signature refer to the same function, hiding other definitions.
   if (m_function_types.count(type))
     return nullptr;
 

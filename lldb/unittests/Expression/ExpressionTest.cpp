@@ -11,10 +11,50 @@
 
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Expression/Expression.h"
+#include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/Target.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
+
+TEST(ExpressionTests, UniqueExternalFunctionSymbol) {
+  auto section = std::make_shared<Section>(lldb::ModuleSP(), nullptr, 1,
+                                           ".text", lldb::eSectionTypeCode,
+                                           0x1000, 0x100, 0, 0x100, 0, 0);
+  auto make_symbol = [&](bool external, lldb::addr_t offset) {
+    return Symbol(0, "action", lldb::eSymbolTypeCode, external, false, false,
+                  false, section, offset, 1, true, false, 0);
+  };
+  Symbol local = make_symbol(false, 0);
+  Symbol global = make_symbol(true, 0x10);
+  Symbol duplicate = make_symbol(true, 0x10);
+  Symbol other = make_symbol(true, 0x20);
+  Symbol weak = make_symbol(false, 0x30);
+  weak.SetIsWeak(true);
+  Symbol invalid;
+  invalid.SetExternal(true);
+
+  EXPECT_EQ(FindUniqueExternalFunctionSymbol({}), nullptr);
+  EXPECT_EQ(FindUniqueExternalFunctionSymbol({&local, &invalid}), nullptr);
+  EXPECT_EQ(FindUniqueExternalFunctionSymbol({&global, &local}), &global);
+  EXPECT_EQ(FindUniqueExternalFunctionSymbol({&local, &global}), &global);
+  Symbol *selected = FindUniqueExternalFunctionSymbol({&global, &duplicate});
+  ASSERT_NE(selected, nullptr);
+  EXPECT_EQ(selected->GetFileAddress(), global.GetFileAddress());
+  EXPECT_EQ(FindUniqueExternalFunctionSymbol({&global, &other}), nullptr);
+  EXPECT_EQ(FindUniqueExternalFunctionSymbol({&other, &global}), nullptr);
+  EXPECT_EQ(FindUniqueExternalFunctionSymbol({&weak, &local}), &weak);
+  EXPECT_EQ(FindUniqueExternalFunctionSymbol({&weak, &global}), nullptr);
+
+  EXPECT_EQ(FindSymbolAtFileAddress({&global, &local}, 0x1000), &local);
+
+  Symbol *match = FindSymbolAtFileAddress({&global, &duplicate}, 0x1010);
+  ASSERT_NE(match, nullptr);
+  EXPECT_EQ(match->GetFileAddress(), 0x1010u);
+  match = FindSymbolAtFileAddress({&duplicate, &global}, 0x1010);
+  ASSERT_NE(match, nullptr);
+  EXPECT_EQ(match->GetFileAddress(), 0x1010u);
+}
 
 struct LabelTestCase {
   llvm::StringRef encoded;
