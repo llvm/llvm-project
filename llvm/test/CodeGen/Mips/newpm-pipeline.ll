@@ -39,6 +39,7 @@
 ; MIPS-NEXT:   safe-stack
 ; MIPS-NEXT:   stack-protector
 ; MIPS-NEXT:   verify
+; MIPS-NEXT: mips-asm-printer-begin
 ; MIPS-NEXT: function
 ; MIPS-NEXT:   machine-function
 ; MIPS-NEXT:     mips-16-isel
@@ -98,7 +99,9 @@
 ; MIPS-NEXT:     machine-sanmd
 ; MIPS-NEXT:     stack-frame-layout
 ; MIPS-NEXT:     verify
+; MIPS-NEXT:     mips-asm-printer
 ; MIPS-NEXT:   free-machine-function
+; MIPS-NEXT: mips-asm-printer-end
 
 ; MIPS-OS16: require<MachineModuleAnalysis>
 ; MIPS-OS16-NEXT: require<profile-summary>
@@ -135,6 +138,7 @@
 ; MIPS-OS16-NEXT:   safe-stack
 ; MIPS-OS16-NEXT:   stack-protector
 ; MIPS-OS16-NEXT:   verify
+; MIPS-OS16-NEXT: mips-asm-printer-begin
 ; MIPS-OS16-NEXT: function
 ; MIPS-OS16-NEXT:   machine-function
 ; MIPS-OS16-NEXT:     mips-16-isel
@@ -194,7 +198,9 @@
 ; MIPS-OS16-NEXT:     machine-sanmd
 ; MIPS-OS16-NEXT:     stack-frame-layout
 ; MIPS-OS16-NEXT:     verify
+; MIPS-OS16-NEXT:     mips-asm-printer
 ; MIPS-OS16-NEXT:   free-machine-function
+; MIPS-OS16-NEXT: mips-asm-printer-end
 
 ; MIPS-MFIX4300: require<MachineModuleAnalysis>
 ; MIPS-MFIX4300-NEXT: require<profile-summary>
@@ -230,6 +236,7 @@
 ; MIPS-MFIX4300-NEXT:   safe-stack
 ; MIPS-MFIX4300-NEXT:   stack-protector
 ; MIPS-MFIX4300-NEXT:   verify
+; MIPS-MFIX4300-NEXT: mips-asm-printer-begin
 ; MIPS-MFIX4300-NEXT: function
 ; MIPS-MFIX4300-NEXT:   machine-function
 ; MIPS-MFIX4300-NEXT:     mips-16-isel
@@ -290,4 +297,6 @@
 ; MIPS-MFIX4300-NEXT:     machine-sanmd
 ; MIPS-MFIX4300-NEXT:     stack-frame-layout
 ; MIPS-MFIX4300-NEXT:     verify
+; MIPS-MFIX4300-NEXT:     mips-asm-printer
 ; MIPS-MFIX4300-NEXT:   free-machine-function
+; MIPS-MFIX4300-NEXT: mips-asm-printer-end

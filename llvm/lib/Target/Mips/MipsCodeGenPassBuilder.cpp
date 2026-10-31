@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mips.h"
+#include "MipsAsmPrinter.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -91,15 +92,15 @@ void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 }
 
 void MipsCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add MipsAsmPrinterBeginPass
+  addModulePass(MipsAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void MipsCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add MipsAsmPrinterPass
+  addMachineFunctionPass(MipsAsmPrinterPass(), PMW);
 }
 
 void MipsCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add MipsAsmPrinterEndPass
+  addModulePass(MipsAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 void MipsTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){

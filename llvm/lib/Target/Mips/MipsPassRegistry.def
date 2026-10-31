@@ -17,6 +17,8 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("mips-16-hard-float", Mips16HardFloatPass(*this))
+MODULE_PASS("mips-asm-printer-begin", MipsAsmPrinterBeginPass())
+MODULE_PASS("mips-asm-printer-end", MipsAsmPrinterEndPass())
 MODULE_PASS("mips-os16", MipsOs16Pass())
 #undef MODULE_PASS
 
@@ -24,6 +26,7 @@ MODULE_PASS("mips-os16", MipsOs16Pass())
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("mips-16-isel", Mips16ISelDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("mips-asm-printer", MipsAsmPrinterPass())
 MACHINE_FUNCTION_PASS("mips-branch-expansion", MipsBranchExpansionPass())
 MACHINE_FUNCTION_PASS("mips-constant-islands", MipsConstantIslandPass())
 MACHINE_FUNCTION_PASS("mips-delay-slot-filler", MipsDelaySlotFillerPass())
