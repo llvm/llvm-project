@@ -3,6 +3,8 @@
 # RUN: | FileCheck %s --check-prefix=RV32I
 # RUN: llc -mattr=+m -mtriple=riscv32 -mattr=+zbb -run-pass=legalizer %s -o - \
 # RUN: | FileCheck %s --check-prefix=RV32ZBB
+# RUN: llc -mattr=+m -mtriple=riscv32 -mattr=+xtheadbb -run-pass=legalizer %s -o - \
+# RUN: | FileCheck %s --check-prefix=RV32XTHEADBB
 
 ---
 name:            cttz_i8
@@ -53,6 +55,39 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[CTTZ]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: cttz_i8
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; RV32XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[ADD]]
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32XTHEADBB-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; RV32XTHEADBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[C1]](s32)
+    ; RV32XTHEADBB-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 85
+    ; RV32XTHEADBB-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C3]]
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[AND]], [[AND2]]
+    ; RV32XTHEADBB-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; RV32XTHEADBB-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C4]](s32)
+    ; RV32XTHEADBB-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 51
+    ; RV32XTHEADBB-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C5]]
+    ; RV32XTHEADBB-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C5]]
+    ; RV32XTHEADBB-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[AND4]], [[AND5]]
+    ; RV32XTHEADBB-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; RV32XTHEADBB-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[ADD1]], [[C6]](s32)
+    ; RV32XTHEADBB-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[LSHR2]], [[ADD1]]
+    ; RV32XTHEADBB-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+    ; RV32XTHEADBB-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[ADD2]], [[C7]]
+    ; RV32XTHEADBB-NEXT: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; RV32XTHEADBB-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND6]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[MUL]], [[C8]](s32)
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[LSHR3]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s8) = G_TRUNC %1(s32)
     %2:_(s8) = G_CTTZ %0(s8)
@@ -112,6 +147,41 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[CTTZ]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: cttz_i16
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; RV32XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[ADD]]
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32XTHEADBB-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; RV32XTHEADBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[C1]](s32)
+    ; RV32XTHEADBB-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 21845
+    ; RV32XTHEADBB-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C3]]
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[AND]], [[AND2]]
+    ; RV32XTHEADBB-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; RV32XTHEADBB-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C4]](s32)
+    ; RV32XTHEADBB-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 13107
+    ; RV32XTHEADBB-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C5]]
+    ; RV32XTHEADBB-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C5]]
+    ; RV32XTHEADBB-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[AND4]], [[AND5]]
+    ; RV32XTHEADBB-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; RV32XTHEADBB-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[ADD1]], [[C6]](s32)
+    ; RV32XTHEADBB-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[LSHR2]], [[ADD1]]
+    ; RV32XTHEADBB-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 3855
+    ; RV32XTHEADBB-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[ADD2]], [[C7]]
+    ; RV32XTHEADBB-NEXT: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; RV32XTHEADBB-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND6]], [[C8]](s32)
+    ; RV32XTHEADBB-NEXT: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[AND6]], [[LSHR3]]
+    ; RV32XTHEADBB-NEXT: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; RV32XTHEADBB-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[ADD3]], [[C9]]
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[AND7]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s16) = G_TRUNC %1(s32)
     %2:_(s16) = G_CTTZ %0(s16)
@@ -164,6 +234,20 @@ body:             |
     ; RV32ZBB-NEXT: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[COPY]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[CTTZ]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: cttz_i32
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; RV32XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[ADD]]
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[CTLZ]]
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[SUB]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = G_CTTZ %0(s32)
     $x10 = COPY %1(s32)
@@ -244,6 +328,31 @@ body:             |
     ; RV32ZBB-NEXT: $x10 = COPY [[SELECT]](s32)
     ; RV32ZBB-NEXT: $x11 = COPY [[C]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10, implicit $x11
+    ;
+    ; RV32XTHEADBB-LABEL: name: cttz_i64
+    ; RV32XTHEADBB: liveins: $x10, $x11
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; RV32XTHEADBB-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; RV32XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY1]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[ADD]]
+    ; RV32XTHEADBB-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ]]
+    ; RV32XTHEADBB-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[SUB]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[XOR1]], [[ADD2]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ1:%[0-9]+]]:_(s32) = G_CTLZ [[AND1]](s32)
+    ; RV32XTHEADBB-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ1]]
+    ; RV32XTHEADBB-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[ADD1]], [[SUB1]]
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[SELECT]](s32)
+    ; RV32XTHEADBB-NEXT: $x11 = COPY [[C]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10, implicit $x11
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
@@ -303,6 +412,39 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[CTTZ]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: cttz_zero_poison_i8
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; RV32XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[ADD]]
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32XTHEADBB-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; RV32XTHEADBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[C1]](s32)
+    ; RV32XTHEADBB-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 85
+    ; RV32XTHEADBB-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C3]]
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[AND]], [[AND2]]
+    ; RV32XTHEADBB-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; RV32XTHEADBB-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C4]](s32)
+    ; RV32XTHEADBB-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 51
+    ; RV32XTHEADBB-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C5]]
+    ; RV32XTHEADBB-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C5]]
+    ; RV32XTHEADBB-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[AND4]], [[AND5]]
+    ; RV32XTHEADBB-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; RV32XTHEADBB-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[ADD1]], [[C6]](s32)
+    ; RV32XTHEADBB-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[LSHR2]], [[ADD1]]
+    ; RV32XTHEADBB-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+    ; RV32XTHEADBB-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[ADD2]], [[C7]]
+    ; RV32XTHEADBB-NEXT: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; RV32XTHEADBB-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND6]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[MUL]], [[C8]](s32)
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[LSHR3]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s8) = G_TRUNC %1(s32)
     %2:_(s8) = G_CTTZ_ZERO_POISON %0(s8)
@@ -362,6 +504,41 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[CTTZ]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: cttz_zero_poison_i16
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; RV32XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[ADD]]
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32XTHEADBB-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; RV32XTHEADBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND1]], [[C1]](s32)
+    ; RV32XTHEADBB-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 21845
+    ; RV32XTHEADBB-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C3]]
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[AND]], [[AND2]]
+    ; RV32XTHEADBB-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; RV32XTHEADBB-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND3]], [[C4]](s32)
+    ; RV32XTHEADBB-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 13107
+    ; RV32XTHEADBB-NEXT: [[AND4:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C5]]
+    ; RV32XTHEADBB-NEXT: [[AND5:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C5]]
+    ; RV32XTHEADBB-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[AND4]], [[AND5]]
+    ; RV32XTHEADBB-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; RV32XTHEADBB-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[ADD1]], [[C6]](s32)
+    ; RV32XTHEADBB-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[LSHR2]], [[ADD1]]
+    ; RV32XTHEADBB-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 3855
+    ; RV32XTHEADBB-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[ADD2]], [[C7]]
+    ; RV32XTHEADBB-NEXT: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; RV32XTHEADBB-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND6]], [[C8]](s32)
+    ; RV32XTHEADBB-NEXT: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[AND6]], [[LSHR3]]
+    ; RV32XTHEADBB-NEXT: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; RV32XTHEADBB-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[ADD3]], [[C9]]
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[AND7]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s16) = G_TRUNC %1(s32)
     %2:_(s16) = G_CTTZ_ZERO_POISON %0(s16)
@@ -414,6 +591,20 @@ body:             |
     ; RV32ZBB-NEXT: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[COPY]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[CTTZ]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: cttz_zero_poison_i32
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; RV32XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[ADD]]
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[CTLZ]]
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[SUB]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = G_CTTZ_ZERO_POISON %0(s32)
     $x10 = COPY %1(s32)
@@ -494,6 +685,31 @@ body:             |
     ; RV32ZBB-NEXT: $x10 = COPY [[SELECT]](s32)
     ; RV32ZBB-NEXT: $x11 = COPY [[C]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10, implicit $x11
+    ;
+    ; RV32XTHEADBB-LABEL: name: cttz_zero_poison_i64
+    ; RV32XTHEADBB: liveins: $x10, $x11
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; RV32XTHEADBB-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; RV32XTHEADBB-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY1]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[XOR]], [[ADD]]
+    ; RV32XTHEADBB-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ]]
+    ; RV32XTHEADBB-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[SUB]], [[C2]]
+    ; RV32XTHEADBB-NEXT: [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[XOR1]], [[ADD2]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ1:%[0-9]+]]:_(s32) = G_CTLZ [[AND1]](s32)
+    ; RV32XTHEADBB-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[CTLZ1]]
+    ; RV32XTHEADBB-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[ADD1]], [[SUB1]]
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[SELECT]](s32)
+    ; RV32XTHEADBB-NEXT: $x11 = COPY [[C]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10, implicit $x11
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
