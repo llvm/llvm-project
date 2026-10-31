@@ -723,9 +723,12 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
   }
 
-  case Type::ObjCObjectPointer:
-    ResultType = llvm::PointerType::getUnqual(getLLVMContext());
+  case Type::ObjCObjectPointer: {
+    QualType ETy = cast<ObjCObjectPointerType>(Ty)->getPointeeType();
+    unsigned AS = getTargetAddressSpace(ETy);
+    ResultType = llvm::PointerType::get(getLLVMContext(), AS);
     break;
+  }
 
   case Type::Enum: {
     const auto *ED = Ty->castAsEnumDecl();
