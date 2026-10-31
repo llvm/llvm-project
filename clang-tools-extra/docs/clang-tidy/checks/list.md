@@ -173,6 +173,7 @@ readability/*
 | {doc}`bugprone-throw-keyword-missing <bugprone/throw-keyword-missing>` |  |
 | {doc}`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>` |  |
 | {doc}`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>` |  |
+| {doc}`bugprone-unchecked-expected-access <bugprone/unchecked-expected-access>` |  |
 | {doc}`bugprone-unchecked-optional-access <bugprone/unchecked-optional-access>` |  |
 | {doc}`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>` |  |
 | {doc}`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>` |  |
