@@ -433,7 +433,7 @@ private:
 #if _LIBCPP_STD_VER >= 17
 template <class _T1, class _T2>
 pair(_T1, _T2) -> pair<_T1, _T2>;
-#endif // _LIBCPP_STD_VER >= 17
+#endif
 
 // [pairs.spec], specialized algorithms
 

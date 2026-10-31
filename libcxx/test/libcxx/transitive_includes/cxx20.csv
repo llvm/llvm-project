@@ -196,7 +196,6 @@ condition_variable typeinfo
 condition_variable version
 coroutine compare
 coroutine cstdint
-coroutine cstdlib
 coroutine cstring
 coroutine limits
 coroutine version
@@ -279,7 +278,6 @@ experimental/iterator typeinfo
 experimental/iterator variant
 experimental/iterator version
 experimental/memory cstdint
-experimental/memory cstdlib
 experimental/memory cstring
 experimental/memory version
 experimental/propagate_const version
