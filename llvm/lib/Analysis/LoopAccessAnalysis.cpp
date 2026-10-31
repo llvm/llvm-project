@@ -2222,10 +2222,13 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                "Should only skip safe dependences");
         continue;
       }
-      Instruction *Src = Dep.getSource(DepChecker);
-      Instruction *Dst = Dep.getDestination(DepChecker);
-      DepCands.eraseClass({getPointerOperand(Src), Src->mayWriteToMemory()});
-      DepCands.eraseClass({getPointerOperand(Dst), Dst->mayWriteToMemory()});
+      // Both accesses are in the same class, which may already have been
+      // erased for an earlier dependence.
+      MemAccessInfo Src = DepChecker.getAccess(Dep.Source);
+      MemAccessInfo Dst = DepChecker.getAccess(Dep.Destination);
+      assert((!DepCands.contains(Src) || DepCands.isEquivalent(Src, Dst)) &&
+             "Dependences must be between accesses in the same class");
+      DepCands.eraseClass(Src);
     }
   } else {
     CheckDeps.clear();
@@ -2704,6 +2707,7 @@ void MemoryDepChecker::addAccess(StoreInst *SI) {
                 [this, SI](Value *Ptr) {
                   Accesses[MemAccessInfo(Ptr, true)].push_back(AccessIdx);
                   InstMap.push_back(SI);
+                  AccessLocs.emplace_back(Ptr, true);
                   ++AccessIdx;
                 });
 }
@@ -2713,6 +2717,7 @@ void MemoryDepChecker::addAccess(LoadInst *LI) {
                 [this, LI](Value *Ptr) {
                   Accesses[MemAccessInfo(Ptr, false)].push_back(AccessIdx);
                   InstMap.push_back(LI);
+                  AccessLocs.emplace_back(Ptr, false);
                   ++AccessIdx;
                 });
 }
