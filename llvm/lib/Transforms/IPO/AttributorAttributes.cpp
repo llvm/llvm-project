@@ -10818,6 +10818,14 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
     auto ProcessCallInst = [&](Instruction &Inst) {
       CallBase &CB = cast<CallBase>(Inst);
 
+      // A direct call without callbacks only calls its callee; there is no
+      // need for a call site attribute.
+      auto *Callee = dyn_cast<Function>(CB.getCalledOperand());
+      if (Callee && !Callee->hasMetadata(LLVMContext::MD_callback)) {
+        addCalledFunction(Callee, Change);
+        return true;
+      }
+
       auto *CBEdges = A.getAAFor<AACallEdges>(
           *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
       if (!CBEdges)
