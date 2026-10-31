@@ -801,8 +801,7 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
   // used in an instruction removed in the epilog block.
   for (MachineInstr &MI : llvm::make_early_inc_range(KernelBB->phis())) {
     Register reg = MI.getOperand(0).getReg();
-    if (MRI.use_nodbg_empty(reg)) {
-      MRI.markUsesInDebugValueAsUndef(reg);
+    if (MRI.use_begin(reg) == MRI.use_end()) {
       LIS.RemoveMachineInstrFromMaps(MI);
       MI.eraseFromParent();
     }
