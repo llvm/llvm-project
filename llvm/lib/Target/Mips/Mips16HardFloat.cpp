@@ -10,9 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Mips.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ModRef.h"
@@ -21,25 +24,26 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "mips16-hard-float"
+#define DEBUG_TYPE "mips-16-hard-float"
 
 namespace {
 
-  class Mips16HardFloat : public ModulePass {
-  public:
-    static char ID;
+class Mips16HardFloatLegacy : public ModulePass {
+public:
+  static char ID;
 
-    Mips16HardFloat() : ModulePass(ID) {}
+  Mips16HardFloatLegacy() : ModulePass(ID) {}
 
-    StringRef getPassName() const override { return "MIPS16 Hard Float Pass"; }
+  StringRef getPassName() const override { return "MIPS16 Hard Float Pass"; }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<TargetPassConfig>();
-      ModulePass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+    AU.setPreservesCFG();
+    ModulePass::getAnalysisUsage(AU);
+  }
 
-    bool runOnModule(Module &M) override;
-  };
+  bool runOnModule(Module &M) override;
+};
 
 } // end anonymous namespace
 
@@ -54,7 +58,7 @@ static void emitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
   CallInst::Create(IA, AsmArgs, "", BB);
 }
 
-char Mips16HardFloat::ID = 0;
+char Mips16HardFloatLegacy::ID = 0;
 
 //
 // Return types that matter for hard float are:
@@ -493,9 +497,7 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
 //    4) TBD. For pic, calls to extern functions of unknown type are handled by
 //       predefined helper functions in libc but this work is currently done
 //       during call lowering but it should be moved here in the future.
-bool Mips16HardFloat::runOnModule(Module &M) {
-  auto &TM = static_cast<const MipsTargetMachine &>(
-      getAnalysis<TargetPassConfig>().getTM<TargetMachine>());
+static bool runHardFloatOnModule(Module &M, const MipsTargetMachine &TM) {
   LLVM_DEBUG(errs() << "Run on Module Mips16HardFloat\n");
   bool Modified = false;
   for (Module::iterator F = M.begin(), E = M.end(); F != E; ++F) {
@@ -512,6 +514,19 @@ bool Mips16HardFloat::runOnModule(Module &M) {
   return Modified;
 }
 
-ModulePass *llvm::createMips16HardFloatPass() {
-  return new Mips16HardFloat();
+ModulePass *llvm::createMips16HardFloatLegacyPass() {
+  return new Mips16HardFloatLegacy();
+}
+
+bool Mips16HardFloatLegacy::runOnModule(Module &M) {
+  auto &TM = static_cast<const MipsTargetMachine &>(
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>());
+  return runHardFloatOnModule(M, TM);
+}
+
+PreservedAnalyses Mips16HardFloatPass::run(Module &M,
+                                           ModuleAnalysisManager &MAM) {
+  return runHardFloatOnModule(M, TM)
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }
