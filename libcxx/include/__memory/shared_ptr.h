@@ -654,6 +654,13 @@ private:
   friend class weak_ptr;
 };
 
+#if _LIBCPP_STD_VER >= 17
+template <class _Tp>
+shared_ptr(weak_ptr<_Tp>) -> shared_ptr<_Tp>;
+template <class _Tp, class _Dp>
+shared_ptr(unique_ptr<_Tp, _Dp>) -> shared_ptr<_Tp>;
+#endif
+
 //
 // std::allocate_shared and std::make_shared
 //
@@ -1288,19 +1295,12 @@ public:
   friend class weak_ptr;
   template <class _Up>
   friend class shared_ptr;
-
-  friend struct __tombstone_traits<weak_ptr<_Tp> >;
 };
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 weak_ptr(shared_ptr<_Tp>) -> weak_ptr<_Tp>;
-
-template <class _Tp>
-struct __tombstone_traits<weak_ptr<_Tp>> {
-
-};
-#endif // _LIBCPP_STD_VER >= 17
+#endif
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI void swap(weak_ptr<_Tp>& __x, weak_ptr<_Tp>& __y) _NOEXCEPT {
