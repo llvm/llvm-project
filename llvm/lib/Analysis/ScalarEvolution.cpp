@@ -11334,30 +11334,7 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
         return DT.properlyDominates(L1->getHeader(), L2->getHeader());
       });
 
-  // Get init and post increment value for LHS.
-  auto SplitLHS = SplitIntoInitAndPostInc(MDL, LHS);
-  // if LHS contains unknown non-invariant SCEV then bail out.
-  if (SplitLHS.first == getCouldNotCompute())
-    return false;
-  assert (SplitLHS.second != getCouldNotCompute() && "Unexpected CNC");
-  // Get init and post increment value for RHS.
-  auto SplitRHS = SplitIntoInitAndPostInc(MDL, RHS);
-  // if RHS contains unknown non-invariant SCEV then bail out.
-  if (SplitRHS.first == getCouldNotCompute())
-    return false;
-  assert (SplitRHS.second != getCouldNotCompute() && "Unexpected CNC");
-  // It is possible that init SCEV contains an invariant load but it does
-  // not dominate MDL and is not available at MDL loop entry, so we should
-  // check it here.
-  if (!isAvailableAtLoopEntry(SplitLHS.first, MDL) ||
-      !isAvailableAtLoopEntry(SplitRHS.first, MDL))
-    return false;
-
-  // It seems backedge guard check is faster than entry one so in some cases
-  // it can speed up whole estimation by short circuit
-  return isLoopBackedgeGuardedByCond(MDL, Pred, SplitLHS.second,
-                                     SplitRHS.second) &&
-         isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first);
+  return isKnownOnEveryIteration(Pred, LHS, RHS, MDL);
 }
 
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
@@ -11409,6 +11386,45 @@ bool ScalarEvolution::isKnownOnEveryIteration(CmpPredicate Pred,
   const Loop *L = LHS->getLoop();
   return isLoopEntryGuardedByCond(L, Pred, LHS->getStart(), RHS) &&
          isLoopBackedgeGuardedByCond(L, Pred, LHS->getPostIncExpr(*this), RHS);
+}
+
+bool ScalarEvolution::isKnownOnEveryIteration(CmpPredicate Pred,
+                                              const SCEV *LHS, const SCEV *RHS,
+                                              const Loop *L) {
+  // Get init and post increment value for LHS.
+  auto SplitLHS = SplitIntoInitAndPostInc(L, LHS);
+  // if LHS contains unknown non-invariant SCEV then bail out.
+  if (SplitLHS.first == getCouldNotCompute())
+    return false;
+  assert(SplitLHS.second != getCouldNotCompute() && "Unexpected CNC");
+  // Get init and post increment value for RHS.
+  auto SplitRHS = SplitIntoInitAndPostInc(L, RHS);
+  // if RHS contains unknown non-invariant SCEV then bail out.
+  if (SplitRHS.first == getCouldNotCompute())
+    return false;
+  assert(SplitRHS.second != getCouldNotCompute() && "Unexpected CNC");
+  // It is possible that init SCEV contains an invariant load but it does
+  // not dominate L and is not available at L loop entry, so we should
+  // check it here.
+  if (!isAvailableAtLoopEntry(SplitLHS.first, L) ||
+      !isAvailableAtLoopEntry(SplitRHS.first, L))
+    return false;
+
+  // It seems backedge guard check is faster than entry one so in some cases
+  // it can speed up whole estimation by short circuit
+  if (isLoopBackedgeGuardedByCond(L, Pred, SplitLHS.second, SplitRHS.second))
+    return isLoopEntryGuardedByCond(L, Pred, SplitLHS.first, SplitRHS.first);
+
+  // If one side is a recurrence of L and the other side is invariant in L,
+  // and the predicate can only change from false to true as the loop
+  // iterates, it holds on every iteration once it holds on entry.
+  auto MP = getMonotonicPredicate(Pred, LHS, RHS, L);
+  if (!MP || MP->Type != MonotonicallyIncreasing)
+    return false;
+  const SCEV *Start = MP->AR->getStart();
+  return isAvailableAtLoopEntry(Start, L) &&
+         isAvailableAtLoopEntry(MP->Inv, L) &&
+         isLoopEntryGuardedByCond(L, MP->Pred, Start, MP->Inv);
 }
 
 std::optional<ScalarEvolution::MonotonicPredicateType>
@@ -11474,10 +11490,9 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
   return std::nullopt;
 }
 
-std::optional<ScalarEvolution::LoopInvariantPredicate>
-ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
-                                           const SCEV *RHS, const Loop *L,
-                                           const Instruction *CtxI) {
+std::optional<ScalarEvolution::MonotonicPredicate>
+ScalarEvolution::getMonotonicPredicate(CmpPredicate Pred, const SCEV *LHS,
+                                       const SCEV *RHS, const Loop *L) {
   // If there is a loop-invariant, force it into the RHS, otherwise bail out.
   if (!isLoopInvariant(RHS, L)) {
     if (!isLoopInvariant(LHS, L))
@@ -11487,17 +11502,30 @@ ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
     Pred = ICmpInst::getSwappedCmpPredicate(Pred);
   }
 
-  const SCEVAddRecExpr *ArLHS = dyn_cast<SCEVAddRecExpr>(LHS);
-  if (!ArLHS || ArLHS->getLoop() != L)
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
+  if (!AR || AR->getLoop() != L)
     return std::nullopt;
 
   // Even if both are valid, we need to consistently choose the unsigned or the
   // signed predicate for the monotonicity and backedge checks below, not
   // mixtures of both. For now, prefer the unsigned predicate.
   Pred = Pred.dropSameSign();
-  auto MonotonicType = getMonotonicPredicateType(ArLHS, Pred);
-  if (!MonotonicType)
+  auto Type = getMonotonicPredicateType(AR, Pred);
+  if (!Type)
     return std::nullopt;
+  return MonotonicPredicate{Pred, AR, RHS, *Type};
+}
+
+std::optional<ScalarEvolution::LoopInvariantPredicate>
+ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
+                                           const SCEV *RHS, const Loop *L,
+                                           const Instruction *CtxI) {
+  auto MP = getMonotonicPredicate(Pred, LHS, RHS, L);
+  if (!MP)
+    return std::nullopt;
+  Pred = MP->Pred;
+  const SCEVAddRecExpr *ArLHS = MP->AR;
+  RHS = MP->Inv;
   // If the predicate "ArLHS `Pred` RHS" monotonically increases from false to
   // true as the loop iterates, and the backedge is control dependent on
   // "ArLHS `Pred` RHS" == true then we can reason as follows:
@@ -11515,10 +11543,10 @@ ScalarEvolution::getLoopInvariantPredicate(CmpPredicate Pred, const SCEV *LHS,
   //
   // A similar reasoning applies for a monotonically decreasing predicate, by
   // replacing true with false and false with true in the above two bullets.
-  bool Increasing = *MonotonicType == ScalarEvolution::MonotonicallyIncreasing;
+  bool Increasing = MP->Type == ScalarEvolution::MonotonicallyIncreasing;
   auto P = Increasing ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
 
-  if (isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
+  if (isLoopBackedgeGuardedByCond(L, P, ArLHS, RHS))
     return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
                                                    RHS);
 

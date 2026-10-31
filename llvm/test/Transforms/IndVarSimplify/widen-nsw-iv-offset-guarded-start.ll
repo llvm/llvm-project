@@ -9,7 +9,6 @@ target datalayout = "e-m:e-i64:64-n8:16:32:64-S128"
 
 declare void @use(i64)
 
-; FIXME: %iv - 32 should be computed in i64.
 ; %start >=s 32, %iv steps by one with nsw, so %iv - 32 >=s 0 on every iteration.
 define void @sge_guard(i32 %start, i32 %n) {
 ; CHECK-LABEL: define void @sge_guard(
@@ -22,8 +21,8 @@ define void @sge_guard(i32 %start, i32 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], %[[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -32
+; CHECK-NEXT:    [[IDX:%.*]] = trunc nsw i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
 ; CHECK-NEXT:    call void @use(i64 [[IDX_EXT]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -50,8 +49,8 @@ exit:
   ret void
 }
 
-; FIXME: %iv - 32 should be computed in i64.
 ; Same as @sge_guard, but with a constant exit bound: i < 10000.
+; TODO: the exit truncation should be nuw.
 define void @sge_guard_const_exit(i32 %start) {
 ; CHECK-LABEL: define void @sge_guard_const_exit(
 ; CHECK-SAME: i32 [[START:%.*]]) {
@@ -60,16 +59,18 @@ define void @sge_guard_const_exit(i32 %start) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START]] to i64
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[START]], i32 9999)
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[SMAX]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], %[[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[INDVARS_IV]], -32
+; CHECK-NEXT:    [[IDX:%.*]] = trunc nsw i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
 ; CHECK-NEXT:    call void @use(i64 [[IDX_EXT]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[DONE:%.*]] = icmp sgt i32 [[TMP2]], 9998
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
@@ -91,7 +92,6 @@ exit:
   ret void
 }
 
-; FIXME: %iv - 32 should be computed in i64.
 ; %start <u %len and %len >=s 0, so %start >=s 0 and so %iv >=s 0.
 ; %iv - 32 may be negative, but then the zext nneg is poison.
 define void @ult_guard_nonneg_len(i32 %start, i32 %n, ptr %p) {
@@ -106,9 +106,7 @@ define void @ult_guard_nonneg_len(i32 %start, i32 %n, ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], %[[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
-; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[IDX]] to i64
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = add nsw i64 [[INDVARS_IV]], -32
 ; CHECK-NEXT:    call void @use(i64 [[IDX_EXT]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV_NEXT]] to i32
