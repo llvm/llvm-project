@@ -83,10 +83,11 @@ using VPlanPtr = std::unique_ptr<VPlan>;
 /// Different methods of handling early exits.
 ///
 enum class UncountableExitStyle {
-  /// No side effects to worry about, so we can process any uncountable exits
-  /// in the loop and branch either to the middle block if the trip count was
-  /// reached, or an early exitblock to determine which exit was taken.
-  ReadOnly,
+  /// Any side effects come after all the uncountable exits and are masked off,
+  /// so we can process any uncountable exits in the loop and branch either to
+  /// the middle block if the trip count was reached, or an early exitblock to
+  /// determine which exit was taken.
+  MaskedHandleExitInVectorLoop,
   /// All memory operations other than the load(s) required to determine whether
   /// an uncountable exit occurre will be masked based on that condition. If an
   /// uncountable exit is taken, then all lanes before the exiting lane will
