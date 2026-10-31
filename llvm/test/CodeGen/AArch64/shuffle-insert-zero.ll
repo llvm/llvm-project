@@ -23,8 +23,7 @@ entry:
 define <2 x double> @testv2f64_1(<2 x double> noundef %vec) {
 ; CHECK-SD-LABEL: testv2f64_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    mov v0.d[1], xzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv2f64_1:
@@ -93,8 +92,9 @@ entry:
 define <2 x float> @testv2f32_1(<2 x float> noundef %vec) {
 ; CHECK-SD-LABEL: testv2f32_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    mov v0.s[1], wzr
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv2f32_1:
@@ -122,9 +122,9 @@ entry:
 define <8 x half> @testv8f16_1(<8 x half> noundef %vec) {
 ; CHECK-SD-LABEL: testv8f16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    adrp x8, .LCPI7_0
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI7_0]
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv8f16_1:
@@ -164,7 +164,7 @@ entry:
 define <4 x half> @testv4f16_1(<4 x half> noundef %vec) {
 ; CHECK-SD-LABEL: testv4f16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    movi d1, #0000000000000000
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
 ; CHECK-SD-NEXT:    fmov d0, d1
@@ -198,9 +198,9 @@ entry:
 define <8 x bfloat> @testv8bf16_1(<8 x bfloat> noundef %vec) {
 ; CHECK-SD-LABEL: testv8bf16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    adrp x8, .LCPI11_0
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI11_0]
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv8bf16_1:
@@ -240,7 +240,7 @@ entry:
 define <4 x bfloat> @testv4bf16_1(<4 x bfloat> noundef %vec) {
 ; CHECK-SD-LABEL: testv4bf16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    movi d1, #0000000000000000
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
 ; CHECK-SD-NEXT:    fmov d0, d1
@@ -279,8 +279,7 @@ entry:
 define <2 x i64> @testv2i64_1(<2 x i64> noundef %vec) {
 ; CHECK-SD-LABEL: testv2i64_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    mov v0.d[1], xzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv2i64_1:
@@ -348,8 +347,9 @@ entry:
 define <2 x i32> @testv2i32_1(<2 x i32> noundef %vec) {
 ; CHECK-SD-LABEL: testv2i32_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    mov v0.s[1], wzr
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv2i32_1:
@@ -375,12 +375,19 @@ entry:
 }
 
 define <8 x i16> @testv8i16_1(<8 x i16> noundef %vec) {
-; CHECK-LABEL: testv8i16_1:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI21_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: testv8i16_1:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testv8i16_1:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    adrp x8, .LCPI21_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vecins = shufflevector <8 x i16> <i16 0, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison>, <8 x i16> %vec, <8 x i32> <i32 8, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <8 x i16> %vecins
