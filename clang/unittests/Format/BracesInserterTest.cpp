@@ -265,6 +265,67 @@ TEST_F(BracesInserterTest, InsertBraces) {
                "} while (0);",
                Style);
 
+  verifyFormat("auto l = [] {\n"
+               "  if (a) {\n"
+               "    f();\n"
+               "  }\n"
+               "#if X\n"
+               "#endif\n"
+               "  if (b) {\n"
+               "    g();\n"
+               "  }\n"
+               "};",
+               "auto l = [] {\n"
+               "  if (a) f();\n"
+               "#if X\n"
+               "#endif\n"
+               "  if (b) g();\n"
+               "};",
+               Style);
+
+  verifyFormat("auto l = [] {\n"
+               "  if (a)\n"
+               "#ifdef A\n"
+               "    f();\n"
+               "#else\n"
+               "    g();\n"
+               "#endif\n"
+               "  if (b) {\n"
+               "    h();\n"
+               "  }\n"
+               "};",
+               "auto l = [] {\n"
+               "  if (a)\n"
+               "#ifdef A\n"
+               "    f();\n"
+               "#else\n"
+               "    g();\n"
+               "#endif\n"
+               "  if (b) h();\n"
+               "};",
+               Style);
+
+  verifyFormat("auto l = [&] {\n"
+               "#if X\n"
+               "#endif\n"
+               "  if (a)\n"
+               "    if (b)\n"
+               "#if Y\n"
+               "      f();\n"
+               "#else\n"
+               "      g();\n"
+               "#endif\n"
+               "};",
+               Style);
+
+  verifyFormat("if (a\n"
+               "#if X\n"
+               "    && b\n"
+               "#endif\n"
+               ")\n"
+               "  f();",
+               Style);
+
   Style.RemoveBracesLLVM = true;
   verifyFormat("if (a) //\n"
                "  return b;",
