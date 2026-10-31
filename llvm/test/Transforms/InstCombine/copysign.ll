@@ -404,3 +404,45 @@ define double @copysign_floor_fabs_no_fold_different_sign(double %x, double %y) 
   %result = call double @llvm.copysign.f64(double %fl, double %y)
   ret double %result
 }
+
+; A select of two copysign calls that differ only in the magnitude can be
+; sunk into the magnitude argument, even if it is a constant: unlike pow, a
+; constant magnitude does not enable cheaper lowering.
+define float @select_two_copysigns_const_mag(i1 %c, float %v, float %x) {
+; CHECK-LABEL: @select_two_copysigns_const_mag(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], float 0.000000e+00, float [[V:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[R_V]], float [[X:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call float @llvm.copysign.f32(float %v, float %x)
+  %q = call float @llvm.copysign.f32(float 0.000000e+00, float %x)
+  %r = select i1 %c, float %q, float %p
+  ret float %r
+}
+
+
+define float @select_two_copysigns_two_const_mags(i1 %c, float %x) {
+; CHECK-LABEL: @select_two_copysigns_two_const_mags(
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], float 2.000000e+00, float 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[R_V]], float [[X:%.*]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %p = call float @llvm.copysign.f32(float 1.000000e+00, float %x)
+  %q = call float @llvm.copysign.f32(float 2.000000e+00, float %x)
+  %r = select i1 %c, float %q, float %p
+  ret float %r
+}
+
+define <2 x float> @select_two_copysigns_const_mag_vec(<2 x i1> %c, <2 x float> %v, <2 x float> %x) {
+; CHECK-LABEL: @select_two_copysigns_const_mag_vec(
+; CHECK-NEXT:    [[R_V:%.*]] = select <2 x i1> [[C:%.*]], <2 x float> zeroinitializer, <2 x float> [[V:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> [[R_V]], <2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %p = call <2 x float> @llvm.copysign.v2f32(<2 x float> %v, <2 x float> %x)
+  %q = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> %x)
+  %r = select <2 x i1> %c, <2 x float> %q, <2 x float> %p
+  ret <2 x float> %r
+}
+
+
