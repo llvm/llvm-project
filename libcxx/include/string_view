@@ -725,6 +725,10 @@ private:
 
   template <class, class, class>
   friend class basic_string;
+
+#  if _LIBCPP_STD_VER >= 20
+  friend struct __tombstone_traits<basic_string_view>;
+#  endif
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_string_view);
 
@@ -734,15 +738,13 @@ inline constexpr bool ranges::enable_view<basic_string_view<_CharT, _Traits>> = 
 
 template <class _CharT, class _Traits>
 inline constexpr bool ranges::enable_borrowed_range<basic_string_view<_CharT, _Traits> > = true;
-#  endif // _LIBCPP_STD_VER >= 20
 
-#if _LIBCPP_STD_VER >= 17
 template <class _CharT, class _Traits>
 struct __tombstone_traits<__enable_specialization_if<alignof(_CharT) >= 2, basic_string_view<_CharT, _Traits>>>
     : __tombstone_traits_assume_aligned_pointer<const _CharT*> {
   static_assert(__builtin_offsetof(basic_string_view<_CharT, _Traits>, __data_) == 0);
 };
-#endif
+#  endif // _LIBCPP_STD_VER >= 20
 
 // [string.view.deduct]
 
