@@ -112,3 +112,6 @@ if not config.parallelism_group:
 
 if config.target_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
+
+if config.has_profile:
+    config.available_features.add("profile")
