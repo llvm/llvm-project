@@ -61,6 +61,10 @@ BASE_OPTIONAL(const bool, QuarantineDisabled, false)
 // If set to false, return the total available size in the allocation.
 BASE_OPTIONAL(const bool, ExactUsableSize, true)
 
+// If set to true, zero-filling occurs in deallocate instead of allocate
+// when FillContents is set to ZeroFill. Quarantine is not supported yet.
+BASE_OPTIONAL(const bool, DeallocZeroFill, false)
+
 #if SCUDO_FUCHSIA
 // Writes zeros to the memory slot when a allocation is returned to
 // the allocator. This decommits memory on operating systems that
