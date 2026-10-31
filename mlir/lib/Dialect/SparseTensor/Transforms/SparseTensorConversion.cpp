@@ -588,8 +588,8 @@ public:
   LogicalResult
   matchAndRewrite(NumberOfEntriesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Query values array size for the actually stored values size.
     auto stt = getSparseTensorType(op.getTensor());
+    // Query the used extent of the values storage.
     auto vals = genValuesCall(rewriter, op.getLoc(), stt, adaptor.getTensor());
     auto zero = constantIndex(rewriter, op.getLoc(), 0);
     rewriter.replaceOpWithNewOp<memref::DimOp>(op, vals, zero);

@@ -1302,9 +1302,7 @@ public:
   LogicalResult
   matchAndRewrite(NumberOfEntriesOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Query memSizes for the actually stored values.
-    // FIXME: the nse value computed in this way might be wrong when there is
-    // any "loose_compressed" level.
+    // Query memSizes for the used extent of the values storage.
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
                                              op.getTensor().getType());
     rewriter.replaceOp(op, desc.getValMemSize(rewriter, op.getLoc()));
