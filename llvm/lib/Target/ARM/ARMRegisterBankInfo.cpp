@@ -216,6 +216,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_INTTOPTR:
   case G_PTRTOINT:
   case G_CTLZ:
+  case G_CONSTANT_FOLD_BARRIER:
     // FIXME: We're abusing the fact that everything lives in a GPR for now; in
     // the real world we would use different mappings.
     OperandsMapping = &ARM::ValueMappings[ARM::GPR3OpsIdx];
