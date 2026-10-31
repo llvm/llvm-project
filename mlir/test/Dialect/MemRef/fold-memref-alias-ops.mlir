@@ -199,6 +199,28 @@ func.func @fold_rank_reducing_subview_1x8x1x3_to_1x8x3_drop_middle_unit_dim(
 
 // -----
 
+func.func @fold_rank_reducing_subview_drop_trailing_unit_dim_dynamic_strides(
+    %arg0 : memref<2x2x8x4xf32>, %s1 : index, %s2 : index, %s3 : index,
+    %i : index) -> f32 {
+  %c0 = arith.constant 0 : index
+  %0 = memref.subview %arg0[0, 0, 0, 0][2, 1, 3, 1][1, %s1, %s2, %s3]
+      : memref<2x2x8x4xf32> to memref<2x1x3xf32, strided<[64, ?, ?]>>
+  %1 = memref.load %0[%c0, %c0, %i] : memref<2x1x3xf32, strided<[64, ?, ?]>>
+  return %1 : f32
+}
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 * s1)>
+//      CHECK: func @fold_rank_reducing_subview_drop_trailing_unit_dim_dynamic_strides
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<2x2x8x4xf32>
+// CHECK-SAME:   %[[S1:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[S2:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[S3:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[I:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[IDX:.+]] = affine.apply #[[MAP]]()[%[[I]], %[[S2]]]
+//      CHECK:   memref.load %[[ARG0]][%[[C0]], %[[C0]], %[[IDX]], %[[C0]]]
+
+// -----
+
 func.func @fold_vector_transfer_read_with_rank_reduced_subview(
     %arg0 : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>,
     %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,

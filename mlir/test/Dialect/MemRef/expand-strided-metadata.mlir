@@ -281,6 +281,99 @@ func.func @extract_strided_metadata_of_rank_reduced_subview_w_variable_strides(
 
 // -----
 
+// Check that we simplify extract_strided_metadata of subview properly when the
+// subview drops one of several unit dimensions and uses non-unit strides. The
+// dropped dimension must be inferred from the result strides (source stride *
+// subview stride), not from the source strides: both dimensions have size 1,
+// and the result stride 2 can only come from dimension 1 (1 * 2), so
+// dimension 0 is the dropped one.
+//
+// Orig strides: [4, 1]
+// Sub strides: [1, 2]
+// => New strides: [4, 2]
+// Final strides == filterOutReducedDim(new strides, 0) == [2]
+//
+// Orig offset: 0
+// Sub offsets: [0, %offset]
+// => Final offset: 0 * 4 + %offset * 1 + 0 == %offset
+//
+// Final sizes == filterOutReducedDim(subview sizes, 0) == [1]
+//
+// CHECK-LABEL: func @extract_strided_metadata_of_rank_reduced_subview_w_non_unit_strides
+//  CHECK-SAME: (%[[ARG:.*]]: memref<2x4xf32>,
+//  CHECK-SAME: %[[DYN_OFFSET:.*]]: index)
+//
+//   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+//
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
+//
+//       CHECK: return %[[BASE]], %[[DYN_OFFSET]], %[[C1]], %[[C2]]
+func.func @extract_strided_metadata_of_rank_reduced_subview_w_non_unit_strides(
+    %base: memref<2x4xf32>, %offset: index)
+    -> (memref<f32>, index, index, index) {
+
+  %subview = memref.subview %base[0, %offset][1, 1][1, 2] :
+    memref<2x4xf32> to memref<1xf32, strided<[2], offset: ?>>
+
+  %base_buffer, %new_offset, %size, %stride = memref.extract_strided_metadata %subview :
+    memref<1xf32, strided<[2], offset: ?>>
+    -> memref<f32>, index, index, index
+
+  return %base_buffer, %new_offset, %size, %stride :
+    memref<f32>, index, index, index
+}
+
+// -----
+
+// Same check as above with a dynamic source layout and a variable subview
+// stride. Dimensions 0 and 2 both have size 1. The result stride 4 can only
+// come from dimension 2 (2 * 2), so dimension 0 is the dropped one.
+//
+// Orig strides: [s0, 32, 2]
+// Sub strides: [1, %stride, 2]
+// => New strides: [s0, 32 * %stride, 4]
+// Final strides == filterOutReducedDim(new strides, 0) == [32 * %stride, 4]
+//
+// Orig offset: origOff
+// Sub offsets: [0, 1, 4]
+// => Final offset: 0 * s0 + 1 * 32 + 4 * 2 + origOff == origOff + 40
+//
+// Final sizes == filterOutReducedDim(subview sizes, 0) == [3, 1]
+//
+//   CHECK-DAG: #[[$STRIDE1_MAP:.*]] = affine_map<()[s0] -> (s0 * 32)>
+//   CHECK-DAG: #[[$OFFSET_MAP:.*]] = affine_map<()[s0] -> (s0 + 40)>
+// CHECK-LABEL: func @extract_strided_metadata_of_rank_reduced_subview_w_variable_and_non_unit_strides
+//  CHECK-SAME: (%[[ARG:.*]]: memref<1x5x?xi32, strided<[?, 32, 2], offset: ?>>,
+//  CHECK-SAME: %[[DYN_STRIDE:.*]]: index)
+//
+//   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
+//   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+//
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[ARG]]
+//
+//   CHECK-DAG: %[[DIM1_STRIDE:.*]] = affine.apply #[[$STRIDE1_MAP]]()[%[[DYN_STRIDE]]]
+//   CHECK-DAG: %[[FINAL_OFFSET:.*]] = affine.apply #[[$OFFSET_MAP]]()[%[[OFFSET]]]
+//
+//       CHECK: return %[[BASE]], %[[FINAL_OFFSET]], %[[C3]], %[[C1]], %[[DIM1_STRIDE]], %[[C4]]
+func.func @extract_strided_metadata_of_rank_reduced_subview_w_variable_and_non_unit_strides(
+    %base: memref<1x5x?xi32, strided<[?, 32, 2], offset: ?>>, %stride: index)
+    -> (memref<i32>, index, index, index, index, index) {
+
+  %subview = memref.subview %base[0, 1, 4][1, 3, 1][1, %stride, 2] :
+    memref<1x5x?xi32, strided<[?, 32, 2], offset: ?>> to memref<3x1xi32, strided<[?, 4], offset: ?>>
+
+  %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %subview :
+    memref<3x1xi32, strided<[?, 4], offset: ?>>
+    -> memref<i32>, index, index, index, index, index
+
+  return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
+    memref<i32>, index, index, index, index, index
+}
+
+// -----
+
 // Check that we simplify extract_strided_metadata of subview properly
 // when the subview uses variable offsets.
 // See extract_strided_metadata_of_subview for an explanation of the actual
