@@ -66,24 +66,31 @@ define void @Test_check_none(i64 %a, i32 %b, ptr %retptr) {
   ret void
 }
 
-; In case of unsigned long division with a short dividend,
-; the long division is not needed any more.
+; For a short unsigned dividend, check the divisor's width to choose
+; between 32-bit and 64-bit div/rem.
 define void @Test_special_case(i32 %a, i64 %b, ptr %retptr) {
 ; CHECK-LABEL: @Test_special_case(
 ; CHECK-NEXT:    [[A_1:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i64 [[A_1]], [[B:%.*]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP9:%.*]]
-; CHECK:         [[TMP3:%.*]] = trunc i64 [[B]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[A_1]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = udiv i32 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = urem i32 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[B:%.*]], -4294967296
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP10:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[B]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[A_1]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = udiv i32 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = urem i32 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP6]] to i64
-; CHECK-NEXT:    br label [[TMP9]]
-; CHECK:         [[TMP10:%.*]] = phi i64 [ [[TMP7]], [[TMP2]] ], [ 0, [[TMP0:%.*]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i64 [ [[TMP8]], [[TMP2]] ], [ [[A_1]], [[TMP0]] ]
-; CHECK-NEXT:    [[RES:%.*]] = add i64 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    store i64 [[RES]], ptr [[RETPTR:%.*]]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP7]] to i64
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP11:%.*]] = udiv i64 [[A_1]], [[B]]
+; CHECK-NEXT:    [[TMP12:%.*]] = urem i64 [[A_1]], [[B]]
+; CHECK-NEXT:    br label [[DOTSPLIT]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i64 [ [[TMP8]], [[TMP3]] ], [ [[TMP11]], [[TMP10]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi i64 [ [[TMP9]], [[TMP3]] ], [ [[TMP12]], [[TMP10]] ]
+; CHECK-NEXT:    [[RES:%.*]] = add i64 [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    store i64 [[RES]], ptr [[RETPTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a.1 = zext i32 %a to i64

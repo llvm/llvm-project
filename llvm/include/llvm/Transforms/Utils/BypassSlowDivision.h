@@ -61,11 +61,16 @@ template <> struct DenseMapInfo<DivRemMapKey> {
 ///
 /// This optimization may add basic blocks immediately after BB; for obvious
 /// reasons, you shouldn't pass those blocks to bypassSlowDivision.
+///
+/// If HasBranchDivergence is true, skip the shortcut for unsigned division
+/// with a dividend known to fit in the narrow type. Use the existing width
+/// check instead.
 LLVM_ABI bool
 bypassSlowDivision(BasicBlock *BB,
                    const DenseMap<unsigned int, unsigned int> &BypassWidth,
                    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
-                   BranchProbabilityInfo *BPI = nullptr);
+                   BranchProbabilityInfo *BPI = nullptr,
+                   bool HasBranchDivergence = false);
 
 } // end namespace llvm
 
