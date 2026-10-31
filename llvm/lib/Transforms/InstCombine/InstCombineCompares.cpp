@@ -4609,6 +4609,33 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
     }
   }
 
+  // Narrow icmp Pred (select Cond, C1, C2), (zext/sext X) ->
+  // icmp NewPred (select Cond, NarrowC1, NarrowC2), X.
+  Value *X;
+  Constant *C1, *C2;
+  if (SI->hasOneUse() && match(RHS, m_ZExtOrSExt(m_Value(X))) &&
+      match(SI->getTrueValue(), m_Constant(C1)) &&
+      match(SI->getFalseValue(), m_Constant(C2))) {
+    auto *CastRHS = cast<CastInst>(RHS);
+    Type *SrcTy = X->getType();
+    Constant *Res1 = getLosslessInvCast(C1, SrcTy, CastRHS->getOpcode(), DL);
+    Constant *Res2 = getLosslessInvCast(C2, SrcTy, CastRHS->getOpcode(), DL);
+    if (Res1 && Res2) {
+      bool IsSignedExt = CastRHS->getOpcode() == Instruction::SExt;
+      CmpInst::Predicate NewPred;
+      if (ICmpInst::isEquality(Pred) ||
+          (IsSignedExt && ICmpInst::isSigned(Pred)))
+        NewPred = Pred.dropSameSign();
+      else
+        NewPred = ICmpInst::getUnsignedPredicate(Pred);
+      BuilderTy::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(SI);
+      Value *NewSel = Builder.CreateSelect(SI->getCondition(), Res1, Res2,
+                                           SI->getName() + ".narrow", SI);
+      return new ICmpInst(NewPred, NewSel, X);
+    }
+  }
+
   return nullptr;
 }
 
