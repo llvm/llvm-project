@@ -31,6 +31,7 @@ struct llvm::gsym::CUInfo {
   std::vector<uint32_t> FileCache;
   uint64_t Language = 0;
   uint8_t AddrSize = 0;
+  uint64_t StmtListOffset = 0;
 
   CUInfo(DWARFContext &DICtx, DWARFCompileUnit *CU) {
     LineTable = DICtx.getLineTableForUnit(CU);
@@ -39,6 +40,8 @@ struct llvm::gsym::CUInfo {
     if (LineTable)
       FileCache.assign(LineTable->Prologue.FileNames.size() + 1, UINT32_MAX);
     DWARFDie Die = CU->getUnitDIE();
+    StmtListOffset =
+        dwarf::toSectionOffset(Die.find(dwarf::DW_AT_stmt_list), 0);
     Language = dwarf::toUnsigned(Die.find(dwarf::DW_AT_language), 0);
     AddrSize = CU->getAddressByteSize();
   }
@@ -329,8 +332,11 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
     const uint64_t InvalidOffset =
         Die.getDwarfUnit()->getFormParams().getDwarfMaxOffset();
     uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, InvalidOffset);
-    if (StmtSeqVal != InvalidOffset)
+    if (StmtSeqVal != InvalidOffset) {
+      if (Die.getDwarfUnit()->isDWOUnit())
+        StmtSeqVal += CUI.StmtListOffset;
       StmtSeqOffset = StmtSeqVal;
+    }
   }
 
   if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector,
