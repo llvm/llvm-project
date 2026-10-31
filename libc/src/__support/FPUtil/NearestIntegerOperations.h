@@ -299,11 +299,11 @@ fromfp(T x, int rnd, unsigned int width) {
       raise_except_if_required(FE_INVALID);
       return FPBits<T>::quiet_nan().get_val();
     }
-    // rounded_value > 2^(width - 1) - 1
+    // Use the exclusive upper bound: subtracting one can round back up to
+    // the bound when width exceeds the precision of T.
     T range_max =
-        FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val() -
-        T(1.0);
-    if (rounded_value > range_max) {
+        FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val();
+    if (rounded_value >= range_max) {
       raise_except_if_required(FE_INVALID);
       return FPBits<T>::quiet_nan().get_val();
     }
@@ -321,11 +321,10 @@ fromfp(T x, int rnd, unsigned int width) {
     return rounded_value;
 
   StorageType range_exp = static_cast<StorageType>(width + FPBits<T>::EXP_BIAS);
-  // rounded_value > 2^width - 1
+  // Check the exactly representable exclusive upper bound.
   T range_max =
-      FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val() -
-      T(1.0);
-  if (rounded_value > range_max) {
+      FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val();
+  if (rounded_value >= range_max) {
     raise_except_if_required(FE_INVALID);
     return FPBits<T>::quiet_nan().get_val();
   }
