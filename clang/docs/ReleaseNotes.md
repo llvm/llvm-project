@@ -850,6 +850,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fix a crash when using `__builtin_assume_aligned` with dynamic allocations
   during constant evaluation. (#GH173767)
 - Fixed a crash on an invalid pointer argument to `__builtin_assume_aligned`. (#GH194289)
+- Fixed a crash when `__builtin_constant_p` is applied to a `_Complex` value that could not be constant folded. (#GH119126)
 - Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
   or `__builtin_is_aligned` with pointers without an underlying object. Null pointers
   are handled as aligned values, while other base-less pointers are rejected during constant

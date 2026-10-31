@@ -153,3 +153,108 @@ void test15(void) {
   int a, b;
   (void)__builtin_constant_p((a = b, test15_f()));
 }
+
+/* --- Complex types (GH119126) */
+
+__complex double test_complex_cond(void) {
+  // CHECK-LABEL: test_complex_cond
+  // CHECK: [[R:%.*]] = call i1 @llvm.is.constant.f64(double %f.real)
+  // CHECK: [[I:%.*]] = call i1 @llvm.is.constant.f64(double %f.imag)
+  // CHECK: and i1 [[R]], [[I]]
+  __complex double f;
+  return (__builtin_constant_p(f) ? f : 0);
+}
+
+int test_complex_float(_Complex float x) {
+  // CHECK-LABEL: test_complex_float
+  // CHECK: [[R:%.*]] = call i1 @llvm.is.constant.f32(float %x.real)
+  // CHECK: [[I:%.*]] = call i1 @llvm.is.constant.f32(float %x.imag)
+  // CHECK: [[AND:%.*]] = and i1 [[R]], [[I]]
+  // CHECK: zext i1 [[AND]] to i32
+  int r = __builtin_constant_p(x);
+  return r;
+}
+
+int test_complex_long_double(_Complex long double x) {
+  // CHECK-LABEL: test_complex_long_double
+  // CHECK: [[R:%.*]] = call i1 @llvm.is.constant.f80(x86_fp80 %x.real)
+  // CHECK: [[I:%.*]] = call i1 @llvm.is.constant.f80(x86_fp80 %x.imag)
+  // CHECK: and i1 [[R]], [[I]]
+  return __builtin_constant_p(x);
+}
+
+int test_complex_float16(_Complex _Float16 x) {
+  // CHECK-LABEL: test_complex_float16
+  // CHECK: [[R:%.*]] = call i1 @llvm.is.constant.f16(half %x.real)
+  // CHECK: [[I:%.*]] = call i1 @llvm.is.constant.f16(half %x.imag)
+  // CHECK: and i1 [[R]], [[I]]
+  return __builtin_constant_p(x);
+}
+
+int test_complex_int(_Complex int x) {
+  // CHECK-LABEL: test_complex_int
+  // CHECK: [[R:%.*]] = call i1 @llvm.is.constant.i32(i32 %x.real)
+  // CHECK: [[I:%.*]] = call i1 @llvm.is.constant.i32(i32 %x.imag)
+  // CHECK: and i1 [[R]], [[I]]
+  return __builtin_constant_p(x);
+}
+
+int test_complex_const1(void) {
+  // CHECK-LABEL: test_complex_const1
+  // CHECK: ret i32 1
+  return __builtin_constant_p(1.0i);
+}
+
+int test_complex_const2(void) {
+  // CHECK-LABEL: test_complex_const2
+  // CHECK: ret i32 1
+  return __builtin_constant_p(__builtin_complex(1.0f, 2.0f));
+}
+
+const _Complex long double c_cld = __builtin_complex(1.0L, 2.0L);
+
+int test_complex_const3(void) {
+  // CHECK-LABEL: test_complex_const3
+  // CHECK: ret i32 1
+  return __builtin_constant_p(c_cld);
+}
+
+_Complex double test_complex_f(void);
+
+int test_complex_side_effect(void) {
+  // CHECK-LABEL: test_complex_side_effect
+  // CHECK-NOT: test_complex_f
+  // CHECK-NOT: llvm.is.constant
+  // CHECK: ret i32 0
+  return __builtin_constant_p(test_complex_f());
+}
+
+/* --- Scalar controls */
+
+int test_double(double x) {
+  // CHECK-LABEL: test_double
+  // CHECK: call i1 @llvm.is.constant.f64(double %
+  // CHECK-NOT: and i1
+  // CHECK: ret i32
+  return __builtin_constant_p(x);
+}
+
+enum test_enum_t { TEST_ENUM_A };
+
+int test_enum(enum test_enum_t x) {
+  // CHECK-LABEL: test_enum
+  // CHECK: call i1 @llvm.is.constant.i32(i32 %
+  return __builtin_constant_p(x);
+}
+
+int test_bitint(_BitInt(37) x) {
+  // CHECK-LABEL: test_bitint
+  // CHECK: call i1 @llvm.is.constant.i37(i37 %
+  return __builtin_constant_p(x);
+}
+
+int test_pointer(int *p) {
+  // CHECK-LABEL: test_pointer
+  // CHECK: ret i32 0
+  return __builtin_constant_p(p);
+}
