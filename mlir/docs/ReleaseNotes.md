@@ -73,6 +73,18 @@ Each header provides its own registration function (for example
 to match, e.g. `mlirCreateGPUGpuNVVMAttachTarget` is now
 `mlirCreateGPUNVVMGpuNVVMAttachTarget`.
 
+### ArmSVE Lowering via `convert-to-llvm`
+
+The ArmSVE dialect now implements `ConvertToLLVMPatternInterface`; register it
+with `registerConvertArmSVEToLLVMInterface()`. `convert-to-llvm` therefore
+lowers ArmSVE operations, and, when the ArmSVE dialect is loaded, lowers
+predicate-sized 1-D scalable `vector.create_mask` ops to
+`arm_sve.intr.whilelt`. The new `convert-to-llvm{add-lowering=...}` option
+loads the listed dialects and uses their conversion patterns regardless of the
+input (and of `filter-dialects`), so `add-lowering=arm_sve` enables this
+lowering for inputs without ArmSVE ops. `configureArmSVELegalizeForExportTarget`
+now takes a `ConversionTarget`.
+
 ## LLVM 21
 
 ### GPU/NVVM Changes
