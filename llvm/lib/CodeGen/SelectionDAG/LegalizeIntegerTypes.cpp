@@ -6074,6 +6074,41 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT DstVT = N->getValueType(0);
+
+  // A signed type wider than semanticsIntSizeInBits has bounds of at least
+  // 2^(MaxExponent + 1) in magnitude, which overflow DstVT in every rounding
+  // mode. If the half-width type is that wide, clamp to its bounds and convert
+  // from it, so that e.g. f16 needs no libcall. Unsigned inputs are clamped to
+  // the signed maximum so that the signed conversion can be used.
+  EVT OpVT = Op.getValueType();
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OpVT);
+  unsigned NBits = NVT.getSizeInBits();
+  unsigned MinIntBits = APFloat::semanticsIntSizeInBits(DstVT.getFltSemantics(),
+                                                        /*isSigned=*/true);
+  if (MinIntBits < NBits) {
+    SDLoc dl(N);
+    unsigned OpBits = OpVT.getSizeInBits();
+    SDValue Max =
+        DAG.getConstant(APInt::getSignedMaxValue(NBits).sext(OpBits), dl, OpVT);
+    SDValue Clamped;
+    if (IsSigned) {
+      SDValue Min = DAG.getConstant(
+          APInt::getSignedMinValue(NBits).sext(OpBits), dl, OpVT);
+      Clamped = DAG.getNode(ISD::SMIN, dl, OpVT, Op, Max);
+      Clamped = DAG.getNode(ISD::SMAX, dl, OpVT, Clamped, Min);
+    } else {
+      Clamped = DAG.getNode(ISD::UMIN, dl, OpVT, Op, Max);
+    }
+    Clamped = DAG.getNode(ISD::TRUNCATE, dl, NVT, Clamped);
+    if (!IsStrict)
+      return DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Clamped);
+    SDValue Res = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {DstVT, MVT::Other},
+                              {Chain, Clamped});
+    ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+    ReplaceValueWith(SDValue(N, 0), Res);
+    return SDValue();
+  }
+
   RTLIB::Libcall LC = IsSigned ? RTLIB::getSINTTOFP(Op.getValueType(), DstVT)
                                : RTLIB::getUINTTOFP(Op.getValueType(), DstVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&

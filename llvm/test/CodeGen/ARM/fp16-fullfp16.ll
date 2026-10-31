@@ -157,12 +157,22 @@ define void @test_uitofp_i32(i32 %a, ptr %p) {
 
 define void @test_sitofp_i64(i64 %a, ptr %p) {
 ; CHECK-LABEL: test_sitofp_i64:
-; CHECK:         .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    bl __floatdihf
-; CHECK-NEXT:    vstr.16 s0, [r4]
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK:         mvn r12, #-2147483648
+; CHECK-NEXT:    subs r3, r0, r12
+; CHECK-NEXT:    sbcs r3, r1, #0
+; CHECK-NEXT:    movlt r12, r0
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    movwlt r0, #1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    movne r0, r1
+; CHECK-NEXT:    rsbs r3, r12, #-2147483648
+; CHECK-NEXT:    mvn r1, #0
+; CHECK-NEXT:    sbcs r0, r1, r0
+; CHECK-NEXT:    movge r12, #-2147483648
+; CHECK-NEXT:    vmov s0, r12
+; CHECK-NEXT:    vcvt.f16.s32 s0, s0
+; CHECK-NEXT:    vstr.16 s0, [r2]
+; CHECK-NEXT:    bx lr
   %r = sitofp i64 %a to half
   store half %r, ptr %p
   ret void
@@ -170,12 +180,15 @@ define void @test_sitofp_i64(i64 %a, ptr %p) {
 
 define void @test_uitofp_i64(i64 %a, ptr %p) {
 ; CHECK-LABEL: test_uitofp_i64:
-; CHECK:         .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    bl __floatundihf
-; CHECK-NEXT:    vstr.16 s0, [r4]
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK:         mvn r3, #-2147483648
+; CHECK-NEXT:    cmn r0, #-2147483647
+; CHECK-NEXT:    movhs r0, r3
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    movne r0, r3
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvt.f16.s32 s0, s0
+; CHECK-NEXT:    vstr.16 s0, [r2]
+; CHECK-NEXT:    bx lr
   %r = uitofp i64 %a to half
   store half %r, ptr %p
   ret void
@@ -758,30 +771,79 @@ define half @uitofp_f16_i32(i32 %x) #0 {
 
 define half @sitofp_f16_i64(i64 %x) #0 {
 ; CHECK-LABEL: sitofp_f16_i64:
-; CHECK:         .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl __floatdihf
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK:         mvn r2, #-2147483648
+; CHECK-NEXT:    subs r3, r0, r2
+; CHECK-NEXT:    sbcs r3, r1, #0
+; CHECK-NEXT:    movlt r2, r0
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    movwlt r0, #1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    movne r0, r1
+; CHECK-NEXT:    rsbs r3, r2, #-2147483648
+; CHECK-NEXT:    mvn r1, #0
+; CHECK-NEXT:    sbcs r0, r1, r0
+; CHECK-NEXT:    movge r2, #-2147483648
+; CHECK-NEXT:    vmov s0, r2
+; CHECK-NEXT:    vcvt.f16.s32 s0, s0
+; CHECK-NEXT:    bx lr
   %val = call half @llvm.experimental.constrained.sitofp.f16.i64(i64 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
 }
 
 define half @uitofp_f16_i64(i64 %x) #0 {
 ; CHECK-LABEL: uitofp_f16_i64:
-; CHECK:         .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl __floatundihf
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK:         mvn r2, #-2147483648
+; CHECK-NEXT:    cmn r0, #-2147483647
+; CHECK-NEXT:    movhs r0, r2
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    movne r0, r2
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvt.f16.s32 s0, s0
+; CHECK-NEXT:    bx lr
   %val = call half @llvm.experimental.constrained.uitofp.f16.i64(i64 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
 }
 
 define half @sitofp_f16_i128(i128 %x) #0 {
 ; CHECK-LABEL: sitofp_f16_i128:
-; CHECK:         .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl __floattihf
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK:         .save {r4, r5, r11, lr}
+; CHECK-NEXT:    push {r4, r5, r11, lr}
+; CHECK-NEXT:    mvn lr, #0
+; CHECK-NEXT:    subs r5, r0, lr
+; CHECK-NEXT:    mvn r4, #-2147483648
+; CHECK-NEXT:    sbcs r5, r1, r4
+; CHECK-NEXT:    sbcs r5, r2, #0
+; CHECK-NEXT:    mov r12, #0
+; CHECK-NEXT:    sbcs r5, r3, #0
+; CHECK-NEXT:    mov r5, #0
+; CHECK-NEXT:    movwlt r5, #1
+; CHECK-NEXT:    cmp r5, #0
+; CHECK-NEXT:    moveq r3, r5
+; CHECK-NEXT:    movne r5, r2
+; CHECK-NEXT:    moveq r1, r4
+; CHECK-NEXT:    moveq r0, lr
+; CHECK-NEXT:    rsbs r2, r0, #0
+; CHECK-NEXT:    rscs r2, r1, #-2147483648
+; CHECK-NEXT:    sbcs r2, lr, r5
+; CHECK-NEXT:    sbcs r2, lr, r3
+; CHECK-NEXT:    mov r2, #0
+; CHECK-NEXT:    movwlt r2, #1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    movne r2, r0
+; CHECK-NEXT:    mov r0, #-2147483648
+; CHECK-NEXT:    moveq r1, r0
+; CHECK-NEXT:    subs r3, r2, r4
+; CHECK-NEXT:    sbcs r3, r1, #0
+; CHECK-NEXT:    movge r2, r4
+; CHECK-NEXT:    movwlt r12, #1
+; CHECK-NEXT:    cmp r12, #0
+; CHECK-NEXT:    movne r12, r1
+; CHECK-NEXT:    rsbs r1, r2, #-2147483648
+; CHECK-NEXT:    sbcs r1, lr, r12
+; CHECK-NEXT:    movge r2, r0
+; CHECK-NEXT:    vmov s0, r2
+; CHECK-NEXT:    vcvt.f16.s32 s0, s0
+; CHECK-NEXT:    pop {r4, r5, r11, pc}
   %val = call half @llvm.experimental.constrained.sitofp.f16.i128(i128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
 }
@@ -790,7 +852,26 @@ define half @uitofp_f16_i128(i128 %x) #0 {
 ; CHECK-LABEL: uitofp_f16_i128:
 ; CHECK:         .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl __floatuntihf
+; CHECK-NEXT:    mvn r12, #0
+; CHECK-NEXT:    cmn r1, #1
+; CHECK-NEXT:    mvn lr, #-2147483648
+; CHECK-NEXT:    movle r0, r12
+; CHECK-NEXT:    movle r1, lr
+; CHECK-NEXT:    orrs r2, r2, r3
+; CHECK-NEXT:    movne r1, lr
+; CHECK-NEXT:    movne r0, r12
+; CHECK-NEXT:    subs r2, r0, lr
+; CHECK-NEXT:    sbcs r2, r1, #0
+; CHECK-NEXT:    mov r2, #0
+; CHECK-NEXT:    movge r0, lr
+; CHECK-NEXT:    movwlt r2, #1
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    movne r2, r1
+; CHECK-NEXT:    rsbs r1, r0, #-2147483648
+; CHECK-NEXT:    sbcs r1, r12, r2
+; CHECK-NEXT:    movge r0, #-2147483648
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvt.f16.s32 s0, s0
 ; CHECK-NEXT:    pop {r11, pc}
   %val = call half @llvm.experimental.constrained.uitofp.f16.i128(i128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret half %val
