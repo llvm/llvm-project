@@ -128,29 +128,24 @@ Language *Language::FindPlugin(LanguageType language,
 
 Language *
 Language::FindPluginForManglingScheme(Mangled::ManglingScheme scheme) {
-  if (scheme == Mangled::eManglingSchemeNone)
-    return nullptr;
-
-  // Mangled calls this for every name it demangles with a plugin, so avoid
-  // taking the lock in ForEach() each time. Language instances are never
-  // destroyed, so the plugin can be cached once it's found. Misses aren't
-  // cached, since the plugin may not be registered yet.
-  static std::array<std::atomic<Language *>, Mangled::kNumManglingSchemes>
+  // Mangled calls this for every name it demangles, so avoid the lock in
+  // FindPlugin(). Language instances are never destroyed, and the language of
+  // a scheme never changes, so the plugin can be cached once it's found.
+  static std::array<std::atomic<Language *>, Mangled::g_num_mangling_schemes>
       g_plugins;
+  if (scheme >= g_plugins.size())
+    return nullptr;
   if (Language *language = g_plugins[scheme].load(std::memory_order_acquire))
     return language;
 
-  Language *result = nullptr;
-  ForEach([&result, scheme](Language *language) {
-    if (language->HandlesManglingScheme(scheme)) {
-      result = language;
-      return IterationAction::Stop;
-    }
-    return IterationAction::Continue;
-  });
-  if (result)
-    g_plugins[scheme].store(result, std::memory_order_release);
-  return result;
+  lldb::LanguageType language_type =
+      Mangled::GetLanguageForManglingScheme(scheme);
+  if (language_type == eLanguageTypeUnknown)
+    return nullptr;
+  Language *language = FindPlugin(language_type);
+  if (language)
+    g_plugins[scheme].store(language, std::memory_order_release);
+  return language;
 }
 
 void Language::ForEach(

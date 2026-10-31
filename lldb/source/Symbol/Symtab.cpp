@@ -276,9 +276,9 @@ void Symtab::InitNameIndexes() {
   // can reuse its demangler. Parsers are only created for the schemes that
   // occur, and a nullptr means that no language parses the scheme.
   std::array<std::unique_ptr<Language::MangledNameParser>,
-             Mangled::kNumManglingSchemes>
+             Mangled::g_num_mangling_schemes>
       parsers;
-  std::bitset<Mangled::kNumManglingSchemes> created_parsers;
+  std::bitset<Mangled::g_num_mangling_schemes> created_parsers;
   auto parse_function_name =
       [&](const Mangled &mangled) -> std::optional<Mangled::FunctionNameParts> {
     Mangled::ManglingScheme scheme =

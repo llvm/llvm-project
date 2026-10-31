@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
@@ -1475,7 +1476,7 @@ struct AsmLabelTestCase {
 class TestTypeSystemClangAsmLabel
     : public testing::TestWithParam<AsmLabelTestCase> {
 public:
-  SubsystemRAII<FileSystem, HostInfo> subsystems;
+  SubsystemRAII<FileSystem, HostInfo, CPlusPlusLanguage> subsystems;
 
   void SetUp() override {
     m_holder =

@@ -954,8 +954,9 @@ public:
     /// \param[in] lang_type
     ///     The language to create lookups for. If eLanguageTypeUnknown is
     ///     passed, creates one LookupInfo for each language plugin currently
-    ///     available in LLDB. If a specific language is provided, creates only
-    ///     a single LookupInfo for that language.
+    ///     available in LLDB, except for full-name lookups that would repeat
+    ///     the lookup of another language. If a specific language is provided,
+    ///     creates only a single LookupInfo for that language.
     ///
     /// \param[in] lookup_name_override
     ///     Manually override the name used for lookup. This parameter is
@@ -983,7 +984,13 @@ public:
 
     void Prune(SymbolContextList &sc_list, size_t start_idx) const;
 
+    /// Returns true if this lookup equals \p other in everything but the
+    /// language.
+    bool EqualsIgnoringLanguage(const LookupInfo &other) const;
+
   protected:
+    // When adding a member, also compare it in EqualsIgnoringLanguage().
+
     /// What the user originally typed
     ConstString m_name;
 
