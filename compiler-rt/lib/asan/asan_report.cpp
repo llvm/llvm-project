@@ -429,14 +429,24 @@ static bool IsInvalidPointerPair(uptr a1, uptr a2) {
   uptr left = a1 < a2 ? a1 : a2;
   uptr right = a1 < a2 ? a2 : a1;
   uptr offset = right - left;
-  if (offset <= kMaxOffset)
-    return __asan_region_is_poisoned(left, offset);
+  if (offset <= kMaxOffset) {
+    uptr bad = __asan_region_is_poisoned(left, offset);
+    if (!bad)
+      return false;
+    // Container annotations poison the unused part of a single object, so let
+    // the checks below decide. Any other poison (redzones, freed memory) makes
+    // the pair invalid.
+    u8 shadow = *reinterpret_cast<u8*>(MemToShadow(bad));
+    if (shadow != kAsanContiguousContainerOOBMagic &&
+        shadow >= ASAN_SHADOW_GRANULARITY)
+      return true;
+  }
 
   AsanThread *t = GetCurrentThread();
 
   // check whether left is a stack memory pointer
   if (uptr shadow_offset1 = t->GetStackVariableShadowStart(left)) {
-    uptr shadow_offset2 = t->GetStackVariableShadowStart(right);
+    uptr shadow_offset2 = t->GetStackVariableShadowStart(right - 1);
     return shadow_offset2 == 0 || shadow_offset1 != shadow_offset2;
   }
 
@@ -459,8 +469,9 @@ static bool IsInvalidPointerPair(uptr a1, uptr a2) {
       GetGlobalAddressInformation(right - 1, 0, &gdesc2))
     return true;
 
-  // At this point we know nothing about both a1 and a2 addresses.
-  return false;
+  // At this point we know nothing about both a1 and a2 addresses. If they are
+  // close, the poison between them still suggests different objects.
+  return offset <= kMaxOffset;
 }
 
 static inline void CheckForInvalidPointerPair(void *p1, void *p2) {
