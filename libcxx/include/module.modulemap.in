@@ -966,6 +966,10 @@ module std {
 
   module chrono {
     module calendar                   { header "__chrono/calendar.h" }
+    module clock_cast {
+      header "__chrono/clock_cast.h"
+      export std.chrono.time_point
+    }
     module concepts                   { header "__chrono/concepts.h" }
     module convert_to_timespec        { header "__chrono/convert_to_timespec.h" }
     module convert_to_tm              { header "__chrono/convert_to_tm.h" }

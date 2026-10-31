@@ -357,6 +357,48 @@ void test_clocks() { // [time.clock]
     std::chrono::get_leap_second_info(std::chrono::utc_seconds{});
   }
 #endif // TEST_STD_VER >= 20
+
+#if TEST_STD_VER >= 20
+  { // [time.clock.cast]
+    namespace cr = std::chrono;
+
+    // [time.clock.cast.id]
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_time_conversion<cr::file_clock, cr::file_clock>{}(cr::file_time<cr::seconds>{});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_time_conversion<cr::system_clock, cr::system_clock>{}(cr::sys_seconds{});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_time_conversion<cr::utc_clock, cr::utc_clock>{}(cr::utc_seconds{});
+
+    // [time.clock.cast.sys.utc]
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_time_conversion<cr::utc_clock, cr::system_clock>{}(cr::sys_seconds{});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_time_conversion<cr::system_clock, cr::utc_clock>{}(cr::utc_seconds{});
+
+    // [time.clock.cast.sys]
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_time_conversion<cr::system_clock, cr::file_clock>{}(cr::file_time<cr::seconds>{});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_time_conversion<cr::file_clock, cr::system_clock>{}(cr::sys_seconds{});
+
+    // [time.clock.cast.utc]
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_time_conversion<cr::utc_clock, cr::tai_clock>{}(cr::tai_seconds{});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_time_conversion<cr::tai_clock, cr::utc_clock>{}(cr::utc_seconds{});
+
+    // [time.clock.cast.fn]
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_cast<cr::system_clock>(cr::sys_seconds{});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_cast<cr::file_clock>(cr::sys_seconds{});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_cast<cr::gps_clock>(cr::tai_seconds{});
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cr::clock_cast<cr::tai_clock>(cr::file_time<cr::seconds>{});
+  }
+#endif // TEST_STD_VER >= 20
 }
 
 #if TEST_STD_VER >= 20
