@@ -350,8 +350,9 @@ public:
       case Kind::Imm:
         return "imm";
       case Kind::Mem:
-      case Kind::Func:
         return "mem";
+      case Kind::Func:
+        return "func";
       }
       llvm_unreachable("impossible kind");
     }
