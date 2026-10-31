@@ -156,6 +156,28 @@ bool NVPTXABIInfo::isUnsupportedType(QualType T) const {
   return false;
 }
 
+/// Whether \p Ty is or contains a union. Unions are lowered to the LLVM type of
+/// one member, so bytes that are padding in that member, but hold data of
+/// another, are not part of the LLVM type and are not copied by an aggregate
+/// load or store.
+static bool isOrContainsUnion(const ASTContext &Ctx, QualType Ty) {
+  if (const ConstantArrayType *AT = Ctx.getAsConstantArrayType(Ty))
+    return isOrContainsUnion(Ctx, AT->getElementType());
+  const RecordDecl *RD = Ty->getAsRecordDecl();
+  if (!RD)
+    return false;
+  if (RD->isUnion())
+    return true;
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    for (const CXXBaseSpecifier &Base : CXXRD->bases())
+      if (isOrContainsUnion(Ctx, Base.getType()))
+        return true;
+  for (const FieldDecl *FD : RD->fields())
+    if (isOrContainsUnion(Ctx, FD->getType()))
+      return true;
+  return false;
+}
+
 /// Coerce the given type into an array with maximum allowed size of elements.
 ABIArgInfo NVPTXABIInfo::coerceToIntArrayWithLimit(QualType Ty,
                                                    unsigned MaxSize) const {
@@ -176,6 +198,16 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
       getContext().getLangOpts().OpenMPIsTargetDevice &&
       isUnsupportedType(RetTy))
     return coerceToIntArrayWithLimit(RetTy, 64);
+
+  // Return an aggregate that contains a union as an integer array of the same
+  // size. Use the original LLVM type's ABI alignment for the array elements
+  // so the PTX return parameter keeps its alignment while all bytes of the
+  // active union member are returned.
+  if (isOrContainsUnion(getContext(), RetTy)) {
+    unsigned Align =
+        getDataLayout().getABITypeAlign(CGT.ConvertType(RetTy)).value() * 8;
+    return coerceToIntArrayWithLimit(RetTy, Align);
+  }
 
   // note: this is different from default ABI
   if (!RetTy->isScalarType())
