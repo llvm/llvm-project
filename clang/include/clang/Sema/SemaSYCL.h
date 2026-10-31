@@ -115,10 +115,12 @@ public:
   /// Sema::FunctionScopeInfo for later use in synthesized calls to the
   /// SYCL runtime library after the function body has been parsed.
   ///
-  /// KernelLaunchIdExpr is an UnresolvedLookupExpr or UnresolvedMemberExpr
-  /// for the SYCL kernel launch function.
+  /// KernelLaunchIdExpr and ReifyKernelParamsIdExpr are either an
+  /// UnresolvedLookupExpr or UnresolvedMemberExpr for the SYCL runtime
+  /// sycl_kernel_launch and sycl_reify_kernel_parameters functions.
   struct SYCLKernelCallStmtASTFragments {
-    Expr *KernelLaunchIdExpr;
+    Expr *KernelLaunchIdExpr = nullptr;
+    Expr *ReifyKernelParamsIdExpr = nullptr;
   };
 
   /// BuildSYCLKernelCallStmtASTFragments builds portions of the AST needed

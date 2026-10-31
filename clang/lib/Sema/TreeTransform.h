@@ -13689,15 +13689,22 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
       SKEPAttr->getKernelName());
   assert(!InfoType.isNull());
 
-  ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
-  if (IdExpr.isInvalid())
+  ExprResult LaunchIdExpr =
+      getDerived().TransformExpr(S->getKernelLaunchIdExpr());
+  if (LaunchIdExpr.isInvalid())
+    return StmtError();
+
+  ExprResult ReifyParamsIdExpr =
+      getDerived().TransformExpr(S->getReifyKernelParamsIdExpr());
+  if (ReifyParamsIdExpr.isInvalid())
     return StmtError();
 
   StmtResult Body = getDerived().TransformStmt(S->getOriginalStmt());
   if (Body.isInvalid())
     return StmtError();
 
-  SemaSYCL::SYCLKernelCallStmtASTFragments ASTFragments{IdExpr.get()};
+  SemaSYCL::SYCLKernelCallStmtASTFragments ASTFragments{
+      LaunchIdExpr.get(), ReifyParamsIdExpr.get()};
   StmtResult SR = SemaRef.SYCL().BuildSYCLKernelCallStmt(
       FD, cast<CompoundStmt>(Body.get()), ASTFragments);
   if (SR.isInvalid())

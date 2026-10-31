@@ -7906,6 +7906,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_SYCLKernelEntryPoint:
     S.SYCL().handleKernelEntryPointAttr(D, AL);
     break;
+  case ParsedAttr::AT_SYCLReifiedKernelParameter:
+    handleSimpleAttribute<SYCLReifiedKernelParameterAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_SYCLSpecialClass:
     handleSimpleAttribute<SYCLSpecialClassAttr>(S, D, AL);
     break;

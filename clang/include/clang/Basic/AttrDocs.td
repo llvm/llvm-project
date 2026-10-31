@@ -864,6 +864,45 @@ expression.
   }];
 }
 
+def SYCLReifiedKernelParameterDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `sycl_reified_kernel_parameter` attribute is used to mark a class type
+whose objects require special handling when passed as kernel arguments to a
+function declared with the `sycl_kernel_entry_point` attribute. This attribute
+is intended for use by SYCL library implementations to annotate types such as
+`sycl::accessor` and `sycl::stream` that are not trivially copyable and
+therefore cannot be copied to device memory as if by `memcpy()`.
+
+The attribute only appertains to C++ class or struct types and is only valid
+in SYCL host or device compilation modes.
+
+When a parameter of a function declared with the `sycl_kernel_entry_point`
+attribute contains a subobject whose type is marked with this attribute, the
+synthesized call to `sycl_kernel_launch` is expected to return a callable
+object. This callable is then invoked with references to the subobjects that
+require reification (found by traversing the kernel function object's members)
+so that the SYCL runtime can process them. The return type of that second call
+must be `void`. The synthesized host code looks approximately as follows:
+
+```c++
+sycl_kernel_launch<KI>(kernelFunc)(kernelFunc.member);
+```
+
+Where `member` is a subobject of the kernel function object whose type
+is marked with `sycl_reified_kernel_parameter`.
+
+Use of this attribute might look as follows:
+
+```c++
+class [[clang::sycl_reified_kernel_parameter]] accessor {
+  int *ptr;
+  size_t range;
+};
+```
+  }];
+}
+
 def SYCLAddressSpaceDocs : Documentation {
   let Category = DocCatType;
   let Heading = "SYCL Address Spaces";

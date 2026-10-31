@@ -13500,9 +13500,25 @@ public:
       /// template named 'sycl_kernel_launch'.
       SYCLKernelLaunchLookup,
 
+      /// We are performing name lookup for a function template or variable
+      /// template named 'sycl_reify_kernel_parameters'.
+      SYCLReifyKernelParamsLookup,
+
       /// We are performing overload resolution for a call to a function
       /// template or variable template named 'sycl_kernel_launch'.
       SYCLKernelLaunchOverloadResolution,
+
+      /// We are performing overload resolution for a call to a function
+      /// template or variable template named 'sycl_reify_kernel_parameters'.
+      SYCLReifyKernelParamsOverloadResolution,
+
+      /// We are performing overload resolution for a call to the result of
+      /// a call to 'sycl_kernel_launch'.
+      SYCLKernelLaunchCallbackOverloadResolution,
+
+      /// We are performing overload resolution for a call to the result of
+      /// a call to 'sycl_reify_kernel_parameters'.
+      SYCLReifyKernelParamsCallbackOverloadResolution,
 
       /// We are instantiating an expansion statement.
       ExpansionStmtInstantiation,

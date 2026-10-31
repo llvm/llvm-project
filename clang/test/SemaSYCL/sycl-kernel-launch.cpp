@@ -220,6 +220,20 @@ namespace ok13 {
   template void skep<KN<13>>(KT<13>, nested::S13);
 }
 
+// sycl_kernel_launch returns a callable.
+namespace ok14 {
+  template<typename KI, typename... Ts>
+  auto sycl_kernel_launch(Ts...) {
+    return []{};
+  }
+  template<typename KN, typename KT>
+  [[clang::sycl_kernel_entry_point(KN)]]
+  void skep(KT k) {
+    k();
+  }
+  template void skep<KN<14>>(KT<14>);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Invalid declarations.
@@ -557,4 +571,42 @@ namespace bad18 {
   void sycl_kernel_launch(Ts...) {}
   // expected-note@+1 {{in instantiation of function template specialization 'bad18::skep<BADKN<18>, BADKT<18>>' requested here}}
   template void skep<BADKN<18>>(BADKT<18>);
+}
+
+// sycl_kernel_launch returns non-void, but not a callable.
+namespace bad19 {
+  template<typename KI, typename... Ts>
+  auto sycl_kernel_launch(Ts...) {
+    return 19;
+  }
+  // expected-error@+5 {{called object type 'int' is not a function or function pointer}}
+  // expected-note@+3  {{this indicates a problem with the SYCL runtime header files; please consider reporting this to your SYCL runtime provider}}
+  // expected-note@+2  {{in implicit call to the callable returned by 'sycl_kernel_launch' with function arguments () required here}}
+  template<typename KN, typename KT>
+  [[clang::sycl_kernel_entry_point(KN)]]
+  void skep(KT k) {
+    k();
+  }
+  // expected-note@+1 {{in instantiation of function template specialization 'bad19::skep<BADKN<19>, BADKT<19>>' requested here}}
+  template void skep<BADKN<19>>(BADKT<19>);
+}
+
+// sycl_kernel_launch returns a callable, but overload resolution fails.
+namespace bad20 {
+  template<typename KI, typename... Ts>
+  auto sycl_kernel_launch(Ts...) {
+    // expected-note@+2   {{candidate function not viable: requires 1 argument, but 0 were provided}}
+    // expected-note@+1   {{conversion candidate of type 'void (*)(int)'}}
+    return [](int){};
+  }
+  // expected-error-re@+5 {{no matching function for call to object of type '(lambda at {{.*}})'}}
+  // expected-note@+3     {{this indicates a problem with the SYCL runtime header files; please consider reporting this to your SYCL runtime provider}}
+  // expected-note@+2     {{in implicit call to the callable returned by 'sycl_kernel_launch' with function arguments () required here}}
+  template<typename KN, typename KT>
+  [[clang::sycl_kernel_entry_point(KN)]]
+  void skep(KT k) {
+    k();
+  }
+  // expected-note@+1 {{in instantiation of function template specialization 'bad20::skep<BADKN<20>, BADKT<20>>' requested here}}
+  template void skep<BADKN<20>>(BADKT<20>);
 }
