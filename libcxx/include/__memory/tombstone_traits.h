@@ -100,11 +100,12 @@ struct __tombstone_traits<__enable_specialization_if<is_fundamental_v<_Tp> && al
 
 template <class _Tp>
 struct __tombstone_traits<_Tp**> : __tombstone_traits_assume_aligned_pointer<_Tp*> {
-  static_assert(alignof(_Tp*) >= 2, "alignment of a pointer isn't at least 2!?");
+  static_assert(alignof(_Tp*) >= 2, "Alignment of a pointer isn't at least 2!");
 };
 
 inline constexpr struct __init_engaged_t {
 } __init_engaged;
+
 inline constexpr struct __init_disengaged_t {
 } __init_disengaged;
 
@@ -144,8 +145,9 @@ union _MaybeTombstone {
     if consteval {
       return __builtin_is_within_lifetime(&__value_);
     } else {
-      _DummyTombstone __dummy;
       static_assert(sizeof(_DummyTombstone) <= sizeof(*this));
+
+      _DummyTombstone __dummy;
       __builtin_memcpy(&__dummy, this, sizeof(_DummyTombstone));
 
       return !__dummy.__is_tombstone();
@@ -205,7 +207,7 @@ struct __tombstoned_value final {
   static_assert(sizeof(_Tombstone) == sizeof(_DummyTombstone));
   static_assert(alignof(_Tombstone) == alignof(_DummyTombstone));
   static_assert(__datasizeof_v<_Tombstone> == __datasizeof_v<_DummyTombstone>);
-  static_assert(sizeof(_Tombstone) <= sizeof(_Tp), "Trying to use tobstone which can't hold T");
+  static_assert(sizeof(_Tombstone) <= sizeof(_Tp), "Trying to use tombstone which can't hold T");
 
   _MaybeTombstone<_Tp, _Payload> __data_;
 
@@ -250,25 +252,25 @@ struct __tombstoned_value final {
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_payload() && noexcept {
-    _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to get the payload of an enagaged tombstoned value");
+    _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to get the payload of an engaged tombstoned value");
     return std::move(__data_.__tombstone_.__payload_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_payload() const&& noexcept {
-    _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to get the payload of an enagaged tombstoned value");
+    _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to get the payload of an engaged tombstoned value");
     return std::move(__data_.__tombstone_.__payload_);
   }
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr void __engage(in_place_t, _Args&&... __args) {
-    _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to enage a already engaged tombstoned value");
+    _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to engage a already engaged tombstoned value");
     std::destroy_at(&__data_.__tombstone_);
     std::__construct_at(&__data_.__value_, std::forward<_Args>(__args)...);
   }
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr void __disengage(in_place_t, _Args&&... __args) {
-    _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to disenage a disengaged tombstoned value");
+    _LIBCPP_ASSERT_INTERNAL(__is_engaged(), "Trying to disengage a disengaged tombstoned value");
     std::destroy_at(&__data_.__value_);
     std::__construct_at(&__data_.__tombstone_, std::forward<_Args>(__args)...);
   }
