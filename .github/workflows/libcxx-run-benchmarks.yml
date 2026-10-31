@@ -104,6 +104,7 @@ jobs:
 
       - name: Run the benchmarks
         env:
+          CI_JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
           COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
           LIBRARY_BUILD: ${{ steps.build.outcome }}
@@ -139,7 +140,7 @@ jobs:
             --benchmark-commit "${COMMIT}"                              \
             --test-config "${TEST_CONFIG}"                              \
             --run-parameter "library_build=${LIBRARY_BUILD}"            \
-            --run-parameter "ci_run=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --run-parameter "ci_job=${CI_JOB_URL}"                      \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"                                   \
             -- "${lit_params[@]}" --param "libcxx_installation=${INSTALL_DIR}"

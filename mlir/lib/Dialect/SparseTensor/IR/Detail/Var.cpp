@@ -38,10 +38,12 @@ void Var::print(llvm::raw_ostream &os) const {
   os << toChar(getKind()) << getNum();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Var::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // `Ranks` implementation.

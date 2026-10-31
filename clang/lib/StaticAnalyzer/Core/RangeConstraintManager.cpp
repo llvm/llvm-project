@@ -2062,7 +2062,7 @@ private:
 /// Derived class can control which types we handle by defining methods of the
 /// following form:
 ///
-///   bool handle${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
+///   bool assign${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
 ///                                       CONSTRAINT Constraint);
 ///
 /// where SYMBOL is the type of the symbol (e.g. SymSymExpr, SymbolCast, etc.)

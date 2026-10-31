@@ -7,8 +7,9 @@ define void @test(ptr %src, i8 %0, i32 %conv2) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr i8, ptr [[SRC]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[SRC]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = freeze i8 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[TMP13]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 0>

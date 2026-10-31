@@ -3808,11 +3808,9 @@ SparcTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
     return FPImmAction::ConstantPool;
   if (Subtarget->isVIS() && Imm.isZero())
     return FPImmAction::Legal;
-  if (Subtarget->isVIS3())
-    return Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5) ||
-                   Imm.getExactLog2Abs() == -1
-               ? FPImmAction::Legal
-               : FPImmAction::ConstantPool;
+  // Check for +/-0.5.
+  if (Subtarget->isVIS3() && Imm.getExactLog2Abs() == -1)
+    return FPImmAction::Legal;
   return FPImmAction::ConstantPool;
 }
 

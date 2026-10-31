@@ -21471,6 +21471,14 @@ ARMTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
   return FPImmAction::ConstantPool;
 }
 
+TargetLowering::FPImmAction
+ARMTargetLowering::getFPImmAction(const APFloat &Imm, LLT Ty,
+                                  bool ForCodeSize) const {
+  if (Subtarget->useSoftFloat() || !Subtarget->hasVFP2Base())
+    return FPImmAction::Bitcast;
+  return FPImmAction::ConstantPool;
+}
+
 /// getTgtMemIntrinsic - Represent NEON load and store intrinsics as
 /// MemIntrinsicNodes.  The associated MachineMemOperands record the alignment
 /// specified in the intrinsic calls.
