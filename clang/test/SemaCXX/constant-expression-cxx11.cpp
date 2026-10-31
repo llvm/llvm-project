@@ -2755,3 +2755,13 @@ namespace GH111378 {
     auto &&L = [&]() { return b; };
   }
 }
+
+namespace GH227733 {
+  // An invalid redefinition used to suppress the type merge in MergeVarDecl,
+  // so this mismatched redeclaration was accepted, crashing the constant
+  // evaluator when the variable was used.
+  constexpr char e = 1;     // expected-note 2 {{previous definition is here}}
+  constexpr char e = 1;     // expected-error {{redefinition of 'e'}}
+  constexpr unsigned e = 2; // expected-error {{redefinition of 'e' with a different type: 'const unsigned int' vs 'const char'}}
+  constexpr int x = e;
+}
