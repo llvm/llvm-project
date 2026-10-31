@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "mlir/IR/PatternMatch.h"
@@ -28,6 +29,8 @@ namespace {
 /// Loop invariant code motion (LICM) pass.
 struct LoopInvariantCodeMotion
     : public impl::LoopInvariantCodeMotionPassBase<LoopInvariantCodeMotion> {
+  using impl::LoopInvariantCodeMotionPassBase<
+      LoopInvariantCodeMotion>::LoopInvariantCodeMotionPassBase;
   void runOnOperation() override;
 };
 
@@ -39,11 +42,20 @@ struct LoopInvariantSubsetHoisting
 } // namespace
 
 void LoopInvariantCodeMotion::runOnOperation() {
+  AliasAnalysis *aa = nullptr;
+  if (useAliasAnalysis) {
+    aa = &getAnalysis<AliasAnalysis>();
+  }
+
   // Walk through all loops in a function in innermost-loop-first order. This
   // way, we first LICM from the inner loop, and place the ops in
   // the outer loop, which in turn can be further LICM'ed.
-  getOperation()->walk(
-      [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
+  getOperation()->walk([&](LoopLikeOpInterface loopLike) {
+    moveLoopInvariantCode(loopLike);
+    if (aa) {
+      hoistLoopInvariantLoadOps(loopLike, *aa);
+    }
+  });
 }
 
 void LoopInvariantSubsetHoisting::runOnOperation() {
