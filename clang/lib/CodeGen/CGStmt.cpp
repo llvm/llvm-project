@@ -3389,7 +3389,11 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
-      Dest = CGF.MakeAddrLValue(A, Ty);
+      // The store writes all of the destination's members at once, so it must
+      // be allowed to alias an access to any of them. A TBAA access type must
+      // be a scalar, so use may-alias (char), which aliases any access.
+      Dest = CGF.MakeAddrLValue(A, Ty, Dest.getBaseInfo(),
+                                TBAAAccessInfo::getMayAliasInfo());
     }
 
     CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);
