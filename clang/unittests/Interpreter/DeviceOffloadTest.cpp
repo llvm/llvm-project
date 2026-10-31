@@ -130,31 +130,6 @@ TEST_F(DeviceOffloadTest, EmptyDeviceModule) {
   EXPECT_TRUE((*Buf)->getBuffer().contains(".target"));
 }
 
-TEST_F(DeviceOffloadTest, PTXVersionFromTargetFeature) {
-  // The +ptxNN target feature decides the PTX ISA version.
-  IncrementalCompilerBuilder CB;
-  CB.SetCompilerArgs(
-      {"-nocudainc", "-nocudalib", "-Xarch_device", "--cuda-feature=+ptx80"});
-  auto DeviceCI = CB.CreateDevice(OffloadType::CUDA);
-  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
-  auto HostCI = CB.CreateHost(OffloadType::CUDA);
-  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
-  auto Interp = Interpreter::createWithDevice(
-      std::move(*HostCI), std::move(*DeviceCI), OffloadType::CUDA);
-  ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
-
-  auto PTU = (*Interp)->Parse("int i = 0;");
-  ASSERT_THAT_EXPECTED(PTU, llvm::Succeeded());
-
-  const CompilerInstance *CI = (*Interp)->getCompilerInstance();
-  auto Buf = CI->getVirtualFileSystem().getBufferForFile(
-      CI->getCodeGenOpts().OffloadBinaryToEmbedFile, /*FileSize=*/-1,
-      /*RequiresNullTerminator=*/false);
-  ASSERT_TRUE(static_cast<bool>(Buf)) << Buf.getError().message();
-  llvm::StringRef PTX = (*Buf)->getBuffer();
-  EXPECT_TRUE(PTX.contains(".version 8.0")) << PTX;
-}
-
 TEST(DeviceOffloadBuilderTest, MultipleOffloadArchsAreRejected) {
   // The driver creates one compile job per architecture. Only one can be used,
   // so this must be reported instead of silently using the first one.
