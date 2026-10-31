@@ -332,6 +332,18 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineSinkingLegacy, DEBUG_TYPE, "Machine code sinking",
                     false, false)
 
+/// Return the insertion point after any labels, CFI, or target block-prologue
+/// instructions at the start of MBB. Debug instructions that follow the last
+/// such prefix instruction remain after the sunk instruction.
+static MachineBasicBlock::iterator getSinkInsertPoint(MachineBasicBlock &MBB) {
+  MachineBasicBlock::iterator InsertPos =
+      MBB.SkipPHIsLabelsAndDebug(MBB.begin(), Register(),
+                                 /*SkipPseudoOp=*/false);
+  while (InsertPos != MBB.begin() && std::prev(InsertPos)->isDebugInstr())
+    --InsertPos;
+  return InsertPos;
+}
+
 /// Return true if a target defined block prologue instruction interferes
 /// with a sink candidate.
 static bool blockPrologueInterferes(const MachineBasicBlock *BB,
@@ -1614,6 +1626,68 @@ static bool attemptDebugCopyProp(MachineInstr &SinkInst, MachineInstr &DbgMI,
 }
 
 using MIRegs = std::pair<MachineInstr *, SmallVector<Register, 2>>;
+
+/// Return true if DbgMI refers to a value defined by MI.
+static bool isDebugUseOf(const MachineInstr &DbgMI, const MachineInstr &MI,
+                         const TargetRegisterInfo *TRI) {
+  auto OverlapsDef = [&](Register DbgReg) {
+    return llvm::any_of(MI.all_defs(), [&](const MachineOperand &DefMO) {
+      Register DefReg = DefMO.getReg();
+      return DefReg && ((DefReg.isVirtual() || DbgReg.isVirtual())
+                            ? DefReg == DbgReg
+                            : TRI->regsOverlap(DefReg, DbgReg));
+    });
+  };
+
+  if (DbgMI.isDebugPHI())
+    return DbgMI.getOperand(0).isReg() && DbgMI.getOperand(0).getReg() &&
+           OverlapsDef(DbgMI.getOperand(0).getReg());
+
+  if (DbgMI.isDebugRef()) {
+    unsigned InstrNum = MI.peekDebugInstrNum();
+    return InstrNum &&
+           llvm::any_of(DbgMI.debug_operands(), [&](const MachineOperand &MO) {
+             return MO.isDbgInstrRef() &&
+                    MO.getInstrRefInstrIndex() == InstrNum;
+           });
+  }
+
+  if (!DbgMI.isDebugValue())
+    return false;
+
+  return llvm::any_of(DbgMI.debug_operands(), [&](const MachineOperand &MO) {
+    return MO.isReg() && MO.getReg() && OverlapsDef(MO.getReg());
+  });
+}
+
+/// Moving MI past labels or block-prologue instructions can also move it past
+/// debug records at the beginning of the block. If one of those records refers
+/// to MI, move it and the following debug values or PHIs after MI while
+/// preserving their order.
+static void moveCrossedDebugRecords(MachineInstr &MI,
+                                    MachineBasicBlock::iterator InsertPos,
+                                    const TargetRegisterInfo *TRI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineBasicBlock::iterator MIIt(MI);
+  MachineBasicBlock::iterator FirstToMove = MIIt;
+  for (auto I = MBB.begin(), E = MIIt; I != E; ++I) {
+    if ((I->isDebugValueLike() || I->isDebugPHI()) &&
+        isDebugUseOf(*I, MI, TRI)) {
+      FirstToMove = I;
+      break;
+    }
+  }
+  if (FirstToMove == MIIt)
+    return;
+
+  SmallVector<MachineInstr *, 4> DbgValuesToMove;
+  for (auto I = FirstToMove, E = MIIt; I != E; ++I)
+    if (I->isDebugValueLike() || I->isDebugPHI())
+      DbgValuesToMove.push_back(&*I);
+  for (MachineInstr *DbgMI : DbgValuesToMove)
+    MBB.splice(InsertPos, &MBB, DbgMI->getIterator());
+}
+
 /// Sink an instruction and its associated debug instructions.
 static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
                         MachineBasicBlock::iterator InsertPos,
@@ -1813,8 +1887,8 @@ bool MachineSinking::aggressivelySinkIntoCycle(
         NewMI->substituteRegister(DefMO.getReg(), DestReg, DefMO.getSubReg(),
                                   *TRI);
       }
-      SinkBlock->insert(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()),
-                        NewMI);
+      MachineBasicBlock::iterator InsertPos = getSinkInsertPoint(*SinkBlock);
+      SinkBlock->insert(InsertPos, NewMI);
       SunkInstrs.insert({MapEntry, NewMI});
     }
 
@@ -1833,6 +1907,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
     RegSubRegPair &UseReg = Entry.first;
     MI->substituteRegister(UseReg.Reg, NewMI->getOperand(0).getReg(),
                            UseReg.SubReg, *TRI);
+    moveCrossedDebugRecords(*NewMI, std::next(NewMI->getIterator()), TRI);
   }
   // If we have replaced all uses, then delete the dead instruction
   if (I.isDead(*MRI))
@@ -1951,8 +2026,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   }
 
   // Determine where to insert into. Skip phi nodes.
-  MachineBasicBlock::iterator InsertPos =
-      SuccToSinkTo->SkipPHIsAndLabels(SuccToSinkTo->begin());
+  MachineBasicBlock::iterator InsertPos = getSinkInsertPoint(*SuccToSinkTo);
   if (blockPrologueInterferes(SuccToSinkTo, InsertPos, MI, TRI, TII, MRI)) {
     LLVM_DEBUG(dbgs() << " *** Not sinking: prologue interference\n");
     return false;
@@ -1990,6 +2064,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     SalvageUnsunkDebugUsersOfCopy(MI, SuccToSinkTo);
 
   performSink(MI, *SuccToSinkTo, InsertPos, DbgUsersToSink);
+  moveCrossedDebugRecords(MI, InsertPos, TRI);
 
   // Conservatively, clear any kill flags, since it's possible that they are no
   // longer correct.
@@ -2354,8 +2429,7 @@ bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
 
     LLVM_DEBUG(dbgs() << "Sink instr " << MI << "\tinto block " << *SuccBB);
 
-    MachineBasicBlock::iterator InsertPos =
-        SuccBB->SkipPHIsAndLabels(SuccBB->begin());
+    MachineBasicBlock::iterator InsertPos = getSinkInsertPoint(*SuccBB);
     if (blockPrologueInterferes(SuccBB, InsertPos, MI, TRI, TII, nullptr)) {
       LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
                                         TRI);
@@ -2367,6 +2441,7 @@ bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
     // block.
     clearKillFlags(&MI, CurBB, UsedOpsInCopy, UsedRegUnits, TRI);
     performSink(MI, *SuccBB, InsertPos, DbgValsToSink);
+    moveCrossedDebugRecords(MI, InsertPos, TRI);
     updateLiveIn(&MI, SuccBB, UsedOpsInCopy, DefedRegsInCopy);
 
     Changed = true;

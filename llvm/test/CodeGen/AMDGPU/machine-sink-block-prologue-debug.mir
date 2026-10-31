@@ -1,0 +1,70 @@
+# RUN: llc -mtriple=amdgpu10.10 -run-pass=machine-sink -o - %s | FileCheck %s
+
+# A leading debug record must not hide a target block-prologue instruction
+# from MachineSink's insertion point.
+
+# CHECK-LABEL: name: block_prologue
+# CHECK: bb.2:
+# CHECK: DBG_VALUE
+# CHECK-NEXT: $exec_lo = S_OR_B32
+# CHECK-NEXT: %{{[0-9]+}}:vgpr_32 = V_LSHRREV_B32_e64
+
+--- |
+  define void @block_prologue() !dbg !5 {
+  entry:
+      #dbg_value(i32 0, !9, !DIExpression(), !11)
+    unreachable, !dbg !11
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "machine-sink-block-prologue-debug.mir", directory: "/")
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = distinct !DISubprogram(name: "block_prologue", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{}
+  !8 = !{!9}
+  !9 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 1, type: !10)
+  !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !11 = !DILocation(line: 1, column: 1, scope: !5)
+...
+---
+name: block_prologue
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = V_LSHRREV_B32_e64 %0, %1, implicit $exec
+    $exec_lo = S_MOV_B32_term %0
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3, %bb.4
+    DBG_VALUE 0, $noreg, !9, !DIExpression(), debug-location !11
+    $exec_lo = S_OR_B32 $exec_lo, %0, implicit-def $scc
+    $exec_lo = S_MOV_B32_term %0
+    S_CBRANCH_EXECZ %bb.4, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.4
+    S_BRANCH %bb.4
+
+  bb.4:
+    %3:vgpr_32 = V_LSHL_ADD_U32_e64 %2, %0, %0, implicit $exec
+    S_ENDPGM 0, implicit %3
+...
