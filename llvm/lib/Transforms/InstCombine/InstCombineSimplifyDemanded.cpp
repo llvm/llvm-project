@@ -3484,22 +3484,58 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         if ((DemandedMask & fcQNan) != fcNone)
           SrcDemandedMask |= fcSNan;
 
-        if (Mode != DenormalMode::getIEEE()) {
-          // Any zero results may have come from flushed denormals.
-          if (DemandedMask & fcPosZero)
+        // Output flushing is not guaranteed.
+        switch (Mode.Output) {
+        case DenormalMode::IEEE: {
+          break;
+        }
+        case DenormalMode::PreserveSign: {
+          if ((DemandedMask & fcPosZero) != fcNone)
             SrcDemandedMask |= fcPosSubnormal;
-          if (DemandedMask & fcNegZero)
+          if ((DemandedMask & fcNegZero) != fcNone)
             SrcDemandedMask |= fcNegSubnormal;
+          break;
+        }
+        case DenormalMode::PositiveZero: {
+          if ((DemandedMask & fcPosZero) != fcNone)
+            SrcDemandedMask |= fcSubnormal;
+          break;
+        }
+        default: {
+          if ((DemandedMask & fcPosZero) != fcNone)
+            SrcDemandedMask |= fcSubnormal;
+          if ((DemandedMask & fcNegZero) != fcNone)
+            SrcDemandedMask |= fcNegSubnormal;
+          break;
+        }
         }
 
-        if (Mode == DenormalMode::getPreserveSign()) {
-          // If a denormal input will be flushed, and we don't need zeros, we
-          // don't need denormals either.
-          if ((DemandedMask & fcPosZero) == fcNone)
-            SrcDemandedMask &= ~fcPosSubnormal;
-
-          if ((DemandedMask & fcNegZero) == fcNone)
-            SrcDemandedMask &= ~fcNegSubnormal;
+        // Input flushing is guaranteed.
+        switch (Mode.Input) {
+        case DenormalMode::IEEE: {
+          break;
+        }
+        case DenormalMode::PreserveSign: {
+          SrcDemandedMask &= ~fcSubnormal;
+          if ((DemandedMask & fcPosZero) != fcNone)
+            SrcDemandedMask |= fcPosSubnormal;
+          if ((DemandedMask & fcNegZero) != fcNone)
+            SrcDemandedMask |= fcNegSubnormal;
+          break;
+        }
+        case DenormalMode::PositiveZero: {
+          SrcDemandedMask &= ~fcSubnormal;
+          if ((DemandedMask & fcPosZero) != fcNone)
+            SrcDemandedMask |= fcSubnormal;
+          break;
+        }
+        default: {
+          if ((DemandedMask & fcPosZero) != fcNone)
+            SrcDemandedMask |= fcSubnormal;
+          if ((DemandedMask & fcNegZero) != fcNone)
+            SrcDemandedMask |= fcNegSubnormal;
+          break;
+        }
         }
 
         KnownFPClass KnownSrc;
@@ -3510,7 +3546,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           return I;
 
         // Perform the canonicalization to see if this folded to a constant.
-        Known = KnownFPClass::canonicalize(KnownSrc, Mode);
+        Known = KnownFPClass::canonicalize(KnownSrc, EltTy->getFltSemantics(),
+                                           Mode);
         Known.knownNot(~DemandedMask);
 
         if (Constant *SingleVal =
