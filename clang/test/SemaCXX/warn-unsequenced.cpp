@@ -830,16 +830,35 @@ namespace muliple_read_volatile {
     x = v1 + (y++, v1); // cxx11-warning    {{unsequenced accesses to volatile qualified 'v1'}}
                         // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}
     x = v1 + v1 || y;   // cxx11-warning    {{unsequenced accesses to volatile qualified 'v1'}}
-                        // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}            
+                        // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}  
+               
+    //FIXME: tracking pointer ownership in SequenceChecker
+    volatile int *pv1 = &v1;
+    volatile int *pv2 = &v1;
+    x = *pv1 + *pv2;    // no-warning now    
   }
-  
+
+  void PositiveTest_BeforeCXX17(){
+    (v1, v2) = v1;      // cxx11-warning    {{unsequenced accesses to volatile qualified 'v1'}}   
+    
+    int array[] = { 0, 1, 2, 3};
+    array[v1] = v1;     // cxx11-warning    {{unsequenced accesses to volatile qualified 'v1'}}  
+
+    int x = 0;
+    x = v1 << v1;       // cxx11-warning    {{unsequenced accesses to volatile qualified 'v1'}} 
+    x = v1 >> v1;       // cxx11-warning    {{unsequenced accesses to volatile qualified 'v1'}} 
+  }
+
   void NegativeTest(){
     int x = 0;
     int y = 0;
     x = v1 + y;   // no-warning
     x = v1 + v2;  // no-warning
-    v1 = v1 * y;  // no-warning
+    x = v1 << v2; // no-warning
+    x = v1 >> v2; // no-warning
+    v1 = v1 * y;  // no-warning 
     x = (v1, v1); // no-warning
+    v1, v2 = v1;  // no-warning
     x = v1 || v1; // no-warning
     x = v1 && v1; // no-warning
   }
