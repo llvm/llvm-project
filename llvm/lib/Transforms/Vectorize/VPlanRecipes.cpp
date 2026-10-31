@@ -4550,6 +4550,7 @@ void VPWidenLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = load ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4607,6 +4608,7 @@ void VPWidenLoadEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vp.load ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4637,6 +4639,7 @@ void VPWidenStoreRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN store ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4693,6 +4696,7 @@ void VPWidenStoreEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN vp.store ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
