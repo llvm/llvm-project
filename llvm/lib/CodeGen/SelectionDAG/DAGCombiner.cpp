@@ -28018,20 +28018,23 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   }
 
   // Fold any combination of BUILD_VECTOR, SCALAR_TO_VECTOR, or UNDEF nodes
-  // into one BUILD_VECTOR. Do not fold SCALAR_TO_VECTOR after operation
-  // legalization because that may create a new illegal BUILD_VECTOR.
+  // into one BUILD_VECTOR. After operation legalization, only fold
+  // SCALAR_TO_VECTOR if the resulting BUILD_VECTOR is legal.
   // We have already tested above for an UNDEF only concatenation.
   // fold (concat_vectors (BUILD_VECTOR A, B, ...), (BUILD_VECTOR C, D, ...))
   // -> (BUILD_VECTOR A, B, ..., C, D, ...)
-  auto IsFoldableToBuildVector = [this](const SDValue &Op) {
-    return Op.isUndef() || ISD::BUILD_VECTOR == Op.getOpcode() ||
-           (!LegalOperations && Op.getValueType().isFixedLengthVector() &&
-            ISD::SCALAR_TO_VECTOR == Op.getOpcode());
+  auto IsFoldableToBuildVector = [this, VT](const SDValue &Op) {
+    return Op.isUndef() || Op.getOpcode() == ISD::BUILD_VECTOR ||
+           (Op.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+            Op.getValueType().isFixedLengthVector() &&
+            (!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT)));
   };
   if (llvm::all_of(N->ops(), IsFoldableToBuildVector)) {
     SmallVector<SDValue, 8> Opnds;
     EVT SVT = VT.getScalarType();
 
+    // Only integer scalars may be wider than the vector element type.
+    // FP scalars already have the required type and need no conversion.
     EVT MinVT = SVT;
     if (!SVT.isFloatingPoint()) {
       // Integer BUILD_VECTOR and SCALAR_TO_VECTOR operands may be implicitly
@@ -28039,8 +28042,8 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
       // truncate all scalars to it.
       bool FoundMinVT = false;
       for (const SDValue &Op : N->ops())
-        if (ISD::BUILD_VECTOR == Op.getOpcode() ||
-            ISD::SCALAR_TO_VECTOR == Op.getOpcode()) {
+        if (Op.getOpcode() == ISD::BUILD_VECTOR ||
+            Op.getOpcode() == ISD::SCALAR_TO_VECTOR) {
           EVT OpSVT = Op.getOperand(0).getValueType();
           MinVT = (!FoundMinVT || OpSVT.bitsLE(MinVT)) ? OpSVT : MinVT;
           FoundMinVT = true;
@@ -28048,39 +28051,51 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
       assert(FoundMinVT && "Concat vector type mismatch");
     }
 
-    for (const SDValue &Op : N->ops()) {
-      EVT OpVT = Op.getValueType();
-      unsigned NumElts = OpVT.getVectorNumElements();
+    // Do not introduce an illegal truncation when normalizing integer scalars.
+    bool CanTruncate =
+        !LegalOperations || !SVT.isInteger() ||
+        TLI.isOperationLegal(ISD::TRUNCATE, MinVT) ||
+        llvm::all_of(N->ops(), [MinVT](SDValue Op) {
+          return Op.isUndef() || Op.getOperand(0).getValueType() == MinVT;
+        });
+    if (CanTruncate) {
+      for (const SDValue &Op : N->ops()) {
+        EVT OpVT = Op.getValueType();
+        unsigned NumElts = OpVT.getVectorNumElements();
 
-      if (Op.isUndef())
-        Opnds.append(NumElts, DAG.getNode(Op.getOpcode(), SDLoc(), MinVT));
+        if (Op.isUndef())
+          Opnds.append(NumElts, DAG.getNode(Op.getOpcode(), SDLoc(), MinVT));
 
-      if (ISD::BUILD_VECTOR == Op.getOpcode()) {
-        if (SVT.isFloatingPoint()) {
-          assert(SVT == OpVT.getScalarType() && "Concat vector type mismatch");
-          Opnds.append(Op->op_begin(), Op->op_begin() + NumElts);
-        } else {
-          for (unsigned i = 0; i != NumElts; ++i)
+        if (Op.getOpcode() == ISD::BUILD_VECTOR) {
+          if (SVT.isFloatingPoint()) {
+            assert(SVT == OpVT.getScalarType() &&
+                   "Concat vector type mismatch");
+            Opnds.append(Op->op_begin(), Op->op_begin() + NumElts);
+          } else {
+            for (unsigned i = 0; i != NumElts; ++i)
+              Opnds.push_back(DAG.getNode(ISD::TRUNCATE, SDLoc(N), MinVT,
+                                          Op.getOperand(i)));
+          }
+        }
+
+        if (Op.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+          SDValue Scalar = Op.getOperand(0);
+          if (SVT.isFloatingPoint()) {
+            assert(SVT == Scalar.getValueType() &&
+                   "Concat vector type mismatch");
+            Opnds.push_back(Scalar);
+          } else {
             Opnds.push_back(
-                DAG.getNode(ISD::TRUNCATE, SDLoc(N), MinVT, Op.getOperand(i)));
+                DAG.getNode(ISD::TRUNCATE, SDLoc(N), MinVT, Scalar));
+          }
+          Opnds.append(NumElts - 1, DAG.getPOISON(MinVT));
         }
       }
 
-      if (ISD::SCALAR_TO_VECTOR == Op.getOpcode()) {
-        SDValue Scalar = Op.getOperand(0);
-        if (SVT.isFloatingPoint()) {
-          assert(SVT == Scalar.getValueType() && "Concat vector type mismatch");
-          Opnds.push_back(Scalar);
-        } else {
-          Opnds.push_back(DAG.getNode(ISD::TRUNCATE, SDLoc(N), MinVT, Scalar));
-        }
-        Opnds.append(NumElts - 1, DAG.getPOISON(MinVT));
-      }
+      assert(VT.getVectorNumElements() == Opnds.size() &&
+             "Concat vector type mismatch");
+      return DAG.getBuildVector(VT, SDLoc(N), Opnds);
     }
-
-    assert(VT.getVectorNumElements() == Opnds.size() &&
-           "Concat vector type mismatch");
-    return DAG.getBuildVector(VT, SDLoc(N), Opnds);
   }
 
   if (SDValue V =
