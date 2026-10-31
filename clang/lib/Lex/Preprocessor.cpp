@@ -548,7 +548,8 @@ void Preprocessor::CreateString(StringRef Str, Token &Tok,
     Tok.setLiteralData(DestPtr);
 }
 
-SourceLocation Preprocessor::SplitToken(SourceLocation Loc, unsigned Length) {
+SourceLocation Preprocessor::SplitToken(SourceLocation Loc, unsigned Length,
+                                        tok::TokenKind SplitKind) {
   auto &SM = getSourceManager();
   SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
   FileIDAndOffset LocInfo = SM.getDecomposedLoc(SpellingLoc);
@@ -561,7 +562,11 @@ SourceLocation Preprocessor::SplitToken(SourceLocation Loc, unsigned Length) {
   const char *DestPtr;
   SourceLocation Spelling =
       ScratchBuf->getToken(Buffer.data() + LocInfo.second, Length, DestPtr);
-  return SM.createTokenSplitLoc(Spelling, Loc, Loc.getLocWithOffset(Length));
+  SourceLocation SplitLoc =
+      SM.createTokenSplitLoc(Spelling, Loc, Loc.getLocWithOffset(Length));
+  if (OnTokenSplit)
+    OnTokenSplit(Loc, Length, SplitKind, SplitLoc);
+  return SplitLoc;
 }
 
 Module *Preprocessor::getCurrentModule() {
