@@ -14749,8 +14749,9 @@ std::pair<SDValue, SDValue> SelectionDAG::SplitEVL(SDValue N, EVT VecVT,
 /// Widen the vector up to the next power of two using INSERT_SUBVECTOR.
 SDValue SelectionDAG::WidenVector(const SDValue &N, const SDLoc &DL) {
   EVT VT = N.getValueType();
-  EVT WideVT = EVT::getVectorVT(*getContext(), VT.getVectorElementType(),
-                                NextPowerOf2(VT.getVectorNumElements()));
+  EVT WideVT = VT.changeElementCount(
+      *getContext(),
+      ElementCount::getFixed(NextPowerOf2(VT.getVectorNumElements())));
   return getInsertSubvector(DL, getPOISON(WideVT), N, 0);
 }
 
