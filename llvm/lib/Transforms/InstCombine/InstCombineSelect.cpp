@@ -5319,6 +5319,25 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Value *V = foldSelectIntoAddConstant(SI, Builder))
     return replaceInstUsesWith(SI, V);
 
+  // Fold the inactive lanes through freeze without changing active-lane poison.
+  Value *GatherPtr;
+  if (match(FalseVal, m_Zero()) &&
+      match(TrueVal,
+            m_OneUse(m_Freeze(m_OneUse(m_MaskedGather(
+                m_Value(GatherPtr), m_Specific(CondVal), m_Poison())))))) {
+    auto *Frozen = cast<FreezeInst>(TrueVal);
+    auto *Gather = cast<IntrinsicInst>(Frozen->getOperand(0));
+    // Keep the memory access in place. Rebuild without result or passthrough
+    // annotations, which may exclude the new zero lanes.
+    Builder.SetInsertPoint(Gather);
+    auto *NewGather = Builder.CreateMaskedGather(
+        SelType, GatherPtr, Gather->getParamAlign(0).valueOrOne(), CondVal,
+        FalseVal);
+    NewGather->setAAMetadata(Gather->getAAMetadata());
+    replaceOperand(*Frozen, 0, NewGather);
+    return replaceInstUsesWith(SI, Frozen);
+  }
+
   // select(mask, mload(ptr,mask,0), 0) -> mload(ptr,mask,0)
   // Load inst is intentionally not checked for hasOneUse()
   if (match(FalseVal, m_Zero()) &&
