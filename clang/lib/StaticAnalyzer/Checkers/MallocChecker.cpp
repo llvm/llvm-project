@@ -3830,7 +3830,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
   // but it will not if closefn is not specified.
   // Currently, we do not inspect the 'closefn' function (PR12101).
   if (FName == "funopen")
-    if (Call->getNumArgs() >= 4 && Call->getArgSVal(4).isConstant(0))
+    if (Call->getNumArgs() >= 5 && Call->getArgSVal(4).isConstant(0))
       return false;
 
   // Do not warn on pointers passed to 'setbuf' when used with std streams,
