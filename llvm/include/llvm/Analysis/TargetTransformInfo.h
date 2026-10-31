@@ -488,6 +488,11 @@ public:
   /// profitable to inline the call.
   LLVM_ABI uint64_t getMaxMemIntrinsicInlineSizeThreshold() const;
 
+  /// Returns the maximum total size in bytes of a constant-length
+  /// llvm.experimental.memset.pattern that is profitable to expand into
+  /// straight-line stores instead of a library call or a loop.
+  LLVM_ABI uint64_t getMaxMemSetPatternInlineSizeThreshold() const;
+
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.

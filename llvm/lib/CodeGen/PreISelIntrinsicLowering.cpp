@@ -288,6 +288,38 @@ static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
+// Expand a memset.pattern with a small constant length into straight-line
+// stores.
+static bool expandSmallMemSetPatternAsStores(MemSetPatternInst *Memset,
+                                             const TargetTransformInfo &TTI) {
+  auto *Len = dyn_cast<ConstantInt>(Memset->getLength());
+  if (!Len || Memset->isVolatile())
+    return false;
+
+  Value *Val = Memset->getValue();
+  const DataLayout &DL = Memset->getDataLayout();
+  TypeSize EltSize = DL.getTypeAllocSize(Val->getType());
+  if (EltSize.isScalable() || EltSize.isZero())
+    return false;
+
+  uint64_t NumStores = Len->getZExtValue();
+  uint64_t Stride = EltSize.getFixedValue();
+  if (NumStores > TTI.getMaxMemSetPatternInlineSizeThreshold() / Stride)
+    return false;
+
+  IRBuilder<> Builder(Memset);
+  Value *Dest = Memset->getRawDest();
+  Align DestAlign = Memset->getDestAlign().valueOrOne();
+  for (uint64_t I = 0; I != NumStores; ++I) {
+    uint64_t Offset = I * Stride;
+    Value *Ptr = Offset ? Builder.CreateConstInBoundsGEP1_64(Builder.getInt8Ty(),
+                                                             Dest, Offset)
+                        : Dest;
+    Builder.CreateAlignedStore(Val, Ptr, commonAlignment(DestAlign, Offset));
+  }
+  return true;
+}
+
 // Return a value appropriate for use with the memset_pattern16 libcall, if
 // possible and if we know how. (Adapted from equivalent helper in
 // LoopIdiomRecognize).
@@ -436,12 +468,17 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
       Function *ParentFunc = Memset->getFunction();
+      const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+      if (expandSmallMemSetPatternAsStores(Memset, TTI)) {
+        Changed = true;
+        Memset->eraseFromParent();
+        break;
+      }
       const TargetLibraryInfo &TLI = LookupTLI(*ParentFunc);
       Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
       if (!PatternValue) {
         // If it isn't possible to emit a memset_pattern16 libcall, expand to
         // a loop instead.
-        const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
         expandMemSetPatternAsLoop(Memset, TTI);
         Changed = true;
         Memset->eraseFromParent();
