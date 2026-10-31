@@ -266,56 +266,56 @@ define agx_kernel void @transcendental(ptr addrspace(1) %out, float %a, float %b
 ; CHECK-NEXT:    fcmpsel eq, r13, r3, 0.0, r19, r13
 ; CHECK-NEXT:    fcmpsel gte, r3, r3, 0.0, r13, r20
 ; CHECK-NEXT:    mov_imm r13, 2147483647
-; CHECK-NEXT:    and r22, r3, r13
+; CHECK-NEXT:    and r13, r3, r13
 ; CHECK-NEXT:    fmul32 r5, r3.abs, r5
-; CHECK-NEXT:    fcmpsel lt, r5, r3.abs, r18, r5, r22
-; CHECK-NEXT:    bfi r25, r5, 127, 23, mask 0x1FF
+; CHECK-NEXT:    fcmpsel lt, r5, r3.abs, r18, r5, r13
+; CHECK-NEXT:    bfi r22, r5, 127, 23, mask 0x1FF
 ; CHECK-NEXT:    bfeil r5, 0, r5, 23
-; CHECK-NEXT:    fmul32 r33, r25, 0.5
+; CHECK-NEXT:    fmul32 r25, r22, 0.5
 ; CHECK-NEXT:    isub r5l, r5l, 127
-; CHECK-NEXT:    fcmpsel gt, r33, r25, r21, r33, r25
+; CHECK-NEXT:    fcmpsel gt, r25, r22, r21, r25, r22
 ; CHECK-NEXT:    convert s16_to_f, r5, r5l, rte
-; CHECK-NEXT:    fadd32 r33, r33, -1.0
-; CHECK-NEXT:    fmadd32 r23, r33, r24, r23
-; CHECK-NEXT:    fmul32 r24, r33, r33
-; CHECK-NEXT:    fmadd32 r23, r23, r33, r26
-; CHECK-NEXT:    fmul32 r26, r33, r24
-; CHECK-NEXT:    fmadd32 r23, r23, r33, r27
+; CHECK-NEXT:    fadd32 r25, r25, -1.0
+; CHECK-NEXT:    fmadd32 r23, r25, r24, r23
+; CHECK-NEXT:    fmul32 r24, r25, r25
+; CHECK-NEXT:    fmadd32 r23, r23, r25, r26
+; CHECK-NEXT:    fmul32 r26, r25, r24
+; CHECK-NEXT:    fmadd32 r23, r23, r25, r27
 ; CHECK-NEXT:    fadd32 r27, r5, -23.0
-; CHECK-NEXT:    fmadd32 r23, r23, r33, r28
+; CHECK-NEXT:    fmadd32 r23, r23, r25, r28
 ; CHECK-NEXT:    fcmpsel lt, r5, r3.abs, r18, r27, r5
-; CHECK-NEXT:    fmadd32 r23, r23, r33, r29
-; CHECK-NEXT:    fmadd32 r23, r23, r33, r30
-; CHECK-NEXT:    fmadd32 r23, r23, r33, r31
-; CHECK-NEXT:    fmadd32 r23, r23, r33, r32
+; CHECK-NEXT:    fmadd32 r23, r23, r25, r29
+; CHECK-NEXT:    fmadd32 r23, r23, r25, r30
+; CHECK-NEXT:    fmadd32 r23, r23, r25, r31
+; CHECK-NEXT:    fmadd32 r23, r23, r25, r32
 ; CHECK-NEXT:    fmul32 r23, r26, r23
 ; CHECK-NEXT:    fmadd32 r18, r24, -0.5, r23
 ; CHECK-NEXT:    fadd32 r23, r5, 1.0
-; CHECK-NEXT:    fadd32 r24, r33, r18
-; CHECK-NEXT:    fcmpsel gt, r5, r25, r21, r23, r5
-; CHECK-NEXT:    fadd32 r21, r24, r33.neg
-; CHECK-NEXT:    fmul32 r23, r5, r4
-; CHECK-NEXT:    fadd32 r25, r24, r21.neg
-; CHECK-NEXT:    fadd32 r26, r23, r24
+; CHECK-NEXT:    fadd32 r24, r25, r18
+; CHECK-NEXT:    fcmpsel gt, r5, r22, r21, r23, r5
+; CHECK-NEXT:    fadd32 r21, r24, r25.neg
+; CHECK-NEXT:    fmul32 r22, r5, r4
+; CHECK-NEXT:    fadd32 r23, r24, r21.neg
+; CHECK-NEXT:    fadd32 r26, r22, r24
+; CHECK-NEXT:    fadd32 r23, r25, r23.neg
+; CHECK-NEXT:    fadd32 r25, r26, r22.neg
 ; CHECK-NEXT:    fadd32 r18, r18, r21.neg
-; CHECK-NEXT:    fadd32 r27, r26, r23.neg
-; CHECK-NEXT:    fadd32 r25, r33, r25.neg
-; CHECK-NEXT:    fadd32 r21, r26, r27.neg
-; CHECK-NEXT:    fadd32 r18, r25, r18
-; CHECK-NEXT:    fadd32 r21, r23, r21.neg
-; CHECK-NEXT:    fmul32 r23, u3, r26
-; CHECK-NEXT:    fadd32 r24, r24, r27.neg
+; CHECK-NEXT:    fadd32 r21, r26, r25.neg
+; CHECK-NEXT:    fadd32 r18, r23, r18
+; CHECK-NEXT:    fadd32 r21, r22, r21.neg
+; CHECK-NEXT:    fmul32 r22, u3, r26
+; CHECK-NEXT:    fadd32 r23, r24, r25.neg
 ; CHECK-NEXT:    fmul32 r5, r5, r11
-; CHECK-NEXT:    fadd32 r21, r21, r24
-; CHECK-NEXT:    fcmpsel lt, r25, r23, r6, r6, r23
+; CHECK-NEXT:    fadd32 r21, r21, r23
+; CHECK-NEXT:    fcmpsel lt, r24, r22, r6, r6, r22
 ; CHECK-NEXT:    fadd32 r18, r18, r21
-; CHECK-NEXT:    fcmpsel gt, r24, r23, r8, r8, r25
+; CHECK-NEXT:    fcmpsel gt, r23, r22, r8, r8, r24
 ; CHECK-NEXT:    fadd32 r5, r18, r5
-; CHECK-NEXT:    fmul32 r9, r24, r9
-; CHECK-NEXT:    fmadd32 r18, u3, r26, r23.neg
+; CHECK-NEXT:    fmul32 r9, r23, r9
+; CHECK-NEXT:    fmadd32 r18, u3, r26, r22.neg
 ; CHECK-NEXT:    rint r9, r9
 ; CHECK-NEXT:    fmadd32 r5, u3, r5, r18
-; CHECK-NEXT:    fmadd32 r4, r9.neg, r4, r24
+; CHECK-NEXT:    fmadd32 r4, r9.neg, r4, r23
 ; CHECK-NEXT:    fmadd32 r4, r9.neg, r11, r4
 ; CHECK-NEXT:    fadd32 r4, r4, r5
 ; CHECK-NEXT:    fmul32 r11, r4, r4
@@ -335,39 +335,36 @@ define agx_kernel void @transcendental(ptr addrspace(1) %out, float %a, float %b
 ; CHECK-NEXT:    iadd r7, r7, r17
 ; CHECK-NEXT:    bfi r5, 0, r5, 23
 ; CHECK-NEXT:    fmul32 r4, r4, r7
-; CHECK-NEXT:    icmpsel ueq, r7, r22, r10, r22, r26
 ; CHECK-NEXT:    iadd r5, r5, r17
 ; CHECK-NEXT:    fmul32 r4, r4, r5
-; CHECK-NEXT:    fcmpsel eq, r5, r3.abs, 0.0, r19, r7
-; CHECK-NEXT:    fmul32 r7, u3, 0.5
+; CHECK-NEXT:    fcmpsel eq, r5, r3.abs, r10, r13, r26
+; CHECK-NEXT:    fcmpsel lt, r4, r22, r6, r1, r4
+; CHECK-NEXT:    fmul32 r6, u3, 0.5
+; CHECK-NEXT:    fcmpsel eq, r5, r3.abs, 0.0, r19, r5
+; CHECK-NEXT:    trunc r7, r6
 ; CHECK-NEXT:    fcmpsel gte, r5, r3.abs, 0.0, r5, r20
-; CHECK-NEXT:    fcmpsel lt, r4, r23, r6, r1, r4
+; CHECK-NEXT:    fcmpsel gt, r4, r22, r8, r10, r4
 ; CHECK-NEXT:    fmul32 r5, u3, r5
-; CHECK-NEXT:    fcmpsel gt, r4, r23, r8, r10, r4
-; CHECK-NEXT:    and r6, r5, r13
+; CHECK-NEXT:    fcmpsel eq, r4, r22, r22, r4, r22
 ; CHECK-NEXT:    fcmpsel gt, r1, r5, 0.0, r10, r1
-; CHECK-NEXT:    trunc r5, r7
-; CHECK-NEXT:    fcmpsel eq, r4, r23, r23, r4, r23
-; CHECK-NEXT:    icmpsel ueq, r1, r6, r10, r1, r4
+; CHECK-NEXT:    fcmpsel eq, r1, r5.abs, r10, r1, r4
+; CHECK-NEXT:    fcmpsel lt, r4, r7, r6, 1, 0
+; CHECK-NEXT:    fcmpsel gt, r5, r7, r6, 1, 0
 ; CHECK-NEXT:    trunc r6, u3
-; CHECK-NEXT:    fcmpsel lt, r4, r5, r7, 1, 0
-; CHECK-NEXT:    fcmpsel gt, r5, r5, r7, 1, 0
 ; CHECK-NEXT:    or r4, r5, r4
 ; CHECK-NEXT:    xor r5, r1, r2
 ; CHECK-NEXT:    and r2, r3, r2
 ; CHECK-NEXT:    icmpsel ueq, r4, r4, 0, r1, r5
 ; CHECK-NEXT:    or r2, r2, r17
-; CHECK-NEXT:    mov_imm r5, -16777216
 ; CHECK-NEXT:    fcmpsel eq, r4, r6, u3, r4, r1
-; CHECK-NEXT:    fcmpsel lt, r1, r2, 0.0, r4, r1
-; CHECK-NEXT:    bfi r2, 0, u3, 1
-; CHECK-NEXT:    fcmpsel eq, r4, r6, u3, r1, r20
-; CHECK-NEXT:    icmpsel ult, r4, r2, r5, r4, r1
-; CHECK-NEXT:    fcmpsel gt, r4, r3, r19, r4, r1
-; CHECK-NEXT:    fcmpsel lt, r1, r3, 0.0, r4, r1
-; CHECK-NEXT:    fcmpsel eq, r4, r3, r3, 0, 1
-; CHECK-NEXT:    icmpsel ult, r2, r2, r5, r1, r17
 ; CHECK-NEXT:    fcmpsel eq, r5, u3, u3, 0, 1
+; CHECK-NEXT:    fcmpsel lt, r1, r2, 0.0, r4, r1
+; CHECK-NEXT:    fcmpsel eq, r4, r3, r3, 0, 1
+; CHECK-NEXT:    fcmpsel eq, r2, r6, u3, r1, r20
+; CHECK-NEXT:    fcmpsel lt, r2, u3.abs, r10, r2, r1
+; CHECK-NEXT:    fcmpsel gt, r2, r3, r19, r2, r1
+; CHECK-NEXT:    fcmpsel lt, r1, r3, 0.0, r2, r1
+; CHECK-NEXT:    fcmpsel lt, r2, u3.abs, r10, r1, r17
 ; CHECK-NEXT:    fcmpsel eq, r1, r3.abs, 1.0, r2, r1
 ; CHECK-NEXT:    or r2, r4, r5
 ; CHECK-NEXT:    icmpsel ueq, r1, r2, 0, r1, r20

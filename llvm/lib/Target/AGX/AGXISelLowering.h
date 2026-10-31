@@ -50,6 +50,16 @@ class AGXTargetLowering final : public TargetLowering {
   SDValue performBRCONDCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
 public:
+  // Negation and absolute value are source modifiers of the float operations
+  // (.neg, .abs): free, so the DAG combiner keeps fneg / fabs of a bitcast
+  // rather than making them integer xor / and on the bits (which a strict
+  // mode's values on the bits otherwise get, one instruction each).
+  bool isFNegFree(EVT VT) const override {
+    return VT == MVT::f32 || VT == MVT::f16;
+  }
+  bool isFAbsFree(EVT VT) const override {
+    return VT == MVT::f32 || VT == MVT::f16;
+  }
   AGXTargetLowering(const TargetMachine &TM, const AGXSubtarget &ST);
 
   const AGXSubtarget &getSubtarget() const { return ST; }
