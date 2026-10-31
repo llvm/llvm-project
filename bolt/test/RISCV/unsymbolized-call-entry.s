@@ -12,6 +12,9 @@
 // RUN:     --function-order=%t.order \
 // RUN:     -o %t.bolt %t | FileCheck --check-prefix=BOLT %s
 // RUN: llvm-objdump -d %t.bolt | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-bolt --skip-funcs=_start --reorder-functions=user \
+// RUN:     --function-order=%t.order -o %t.retained %t
+// RUN: llvm-objdump -d %t.retained | FileCheck --check-prefix=RETAINED %s
 
 // INPUT-LABEL: <_start>:
 // INPUT:       auipc t0, 0x200
@@ -29,6 +32,10 @@
 // OBJDUMP:       ret
 // OBJDUMP-LABEL: <_start>:
 // OBJDUMP:       jal t0, {{.*}} <target_entry>
+
+// RETAINED-LABEL: <_start>:
+// RETAINED:       auipc t0, {{.*}}
+// RETAINED-NEXT:  jalr t0, {{.*}}(t0) <target_entry>
 
   .text
   .option norvc

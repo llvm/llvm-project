@@ -1572,6 +1572,128 @@ void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
   }
 }
 
+using InstructionPatch = std::pair<uint64_t, MCInst>;
+
+struct RISCVReference {
+  const MCSymbol *Symbol = nullptr;
+  uint64_t Addend = 0;
+  uint32_t RelType = ELF::R_RISCV_NONE;
+  bool IsLow = false;
+};
+
+// Resolve the target for reference filtering without changing the instruction's
+// expression: PCREL_LO12 must still name its AUIPC label when emitted.
+static RISCVReference getRISCVReference(BinaryFunction &Function,
+                                        const MCInst &Instruction,
+                                        uint64_t Offset, uint64_t Size) {
+  BinaryContext &BC = Function.getBinaryContext();
+  RISCVReference Reference;
+  const Relocation *Rel = Function.getRelocationInRange(Offset, Offset + Size);
+  Reference.IsLow =
+      Rel && BC.getRelocationHandler().isInstructionReference(Rel->Type);
+  if (Reference.IsLow) {
+    const uint64_t HighOffset = Rel->Value - Function.getAddress();
+    // ALIGN processing can leave a relocation inside its instruction.
+    Rel = Function.getRelocationInRange(HighOffset, HighOffset + 4);
+  }
+  if (Rel)
+    Reference.RelType = Rel->Type;
+
+  if (Reference.IsLow && Rel) {
+    Reference.Symbol = Rel->Symbol;
+    Reference.Addend = Rel->Addend;
+  } else {
+    for (const MCOperand &Operand : MCPlus::primeOperands(Instruction)) {
+      if (Operand.isExpr()) {
+        std::tie(Reference.Symbol, Reference.Addend) =
+            BC.MIB->getTargetSymbolInfo(Operand.getExpr());
+        break;
+      }
+    }
+  }
+  return Reference;
+}
+
+// Collect a patch for a reference that passed the common target filter. Return
+// its target so the caller can retain it if the full scan fails.
+static BinaryFunction *collectRISCVExternalReferencePatch(
+    BinaryFunction &Function, const MCInst &Instruction, uint64_t Offset,
+    uint64_t &Size, const RISCVReference &Reference,
+    std::vector<InstructionPatch> &InstructionPatches,
+    SmallPtrSetImpl<BinaryFunction *> &InvalidTargets) {
+  BinaryContext &BC = Function.getBinaryContext();
+  const uint64_t AbsoluteInstrAddr = Function.getAddress() + Offset;
+  const MCSymbol *Symbol = Reference.Symbol;
+
+  // Linker-defined symbols can move independently of function layout.
+  if (BC.forceSymbolRelocations(Symbol->getName())) {
+    BC.errs() << "BOLT-ERROR: cannot update RISC-V instruction reference to "
+              << Symbol->getName() << " at address 0x"
+              << Twine::utohexstr(AbsoluteInstrAddr) << " in ignored function "
+              << Function << '\n';
+    exit(1);
+  }
+
+  // The symbolizer resolves GOT references to the original, fixed GOT slot.
+  // Function addresses stored there are updated by patchELFGOT(), so neither
+  // instruction needs a patch, and the function stored in the slot can move.
+  if (BC.getRelocationHandler().isGOT(Reference.RelType))
+    return nullptr;
+
+  BinaryFunction *Target = BC.getFunctionForSymbol(Symbol);
+
+  // An interior target needs a symbol that follows that instruction.
+  // After CFG construction only previously discovered entries are safe.
+  if (const uint64_t Addend = Reference.Addend) {
+    ErrorOr<uint64_t> SymbolAddress = BC.getSymbolValue(*Symbol);
+    if (!SymbolAddress || *SymbolAddress + Addend < Target->getAddress() ||
+        *SymbolAddress + Addend >= Target->getAddress() + Target->getSize()) {
+      InvalidTargets.insert(Target);
+      return nullptr;
+    }
+    const uint64_t Address = *SymbolAddress + Addend;
+    const uint64_t EntryOffset = Address - Target->getAddress();
+    Symbol = EntryOffset ? Target->getSecondaryEntryPointSymbol(
+                               Target->getLabelAtOffset(EntryOffset))
+                         : Target->getSymbol();
+    if (!Symbol && !Target->hasCFG())
+      Symbol = BC.handleExternalBranchTarget(Address, Function, *Target);
+    if (!Symbol) {
+      InvalidTargets.insert(Target);
+      return nullptr;
+    }
+  }
+
+  // Only call references need the adjacent JALR. A symbolized reference with
+  // no input relocation is a call recovered by the symbolizer.
+  const bool NeedsNext = Reference.RelType == ELF::R_RISCV_CALL ||
+                         Reference.RelType == ELF::R_RISCV_CALL_PLT ||
+                         Reference.RelType == ELF::R_RISCV_NONE;
+  MCInst Next;
+  uint64_t NextSize = 0;
+  const uint64_t NextOffset = Offset + Size;
+  const bool HasNext =
+      NeedsNext && NextOffset + 4 <= Function.getSize() &&
+      !Function.getSizeOfDataInCodeAt(NextOffset) &&
+      !Function.getRelocationInRange(NextOffset, NextOffset + 4) &&
+      BC.DisAsm->getInstruction(Next, NextSize,
+                                Function.getData()->slice(NextOffset),
+                                AbsoluteInstrAddr + Size, nulls());
+  InstructionListType Instructions = BC.MIB->createReferencePatch(
+      Instruction, HasNext ? &Next : nullptr, Symbol, Reference.RelType,
+      Reference.IsLow, BC.Ctx.get());
+  if (Instructions.empty()) {
+    InvalidTargets.insert(Target);
+    return nullptr;
+  }
+  if (Instructions.size() == 2)
+    Size += NextSize;
+  for (auto [Index, Inst] : llvm::enumerate(Instructions))
+    InstructionPatches.push_back(
+        {AbsoluteInstrAddr + Index * 4, std::move(Inst)});
+  return Target;
+}
+
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
@@ -1604,8 +1726,8 @@ bool BinaryFunction::scanExternalRefs() {
       BC.MIB->createTargetSymbolizer(*this, /*CreateSymbols*/ false));
 
   // A list of patches for this function.
-  using PatchTy = std::pair<uint64_t, MCInst>;
-  std::vector<PatchTy> InstructionPatches;
+  std::vector<InstructionPatch> InstructionPatches;
+  SmallPtrSet<BinaryFunction *, 4> RISCVPatchTargets;
 
   // Disassemble contents of the function. Detect code entry points and create
   // relocations for references to code that will be moved.
@@ -1668,7 +1790,9 @@ bool BinaryFunction::scanExternalRefs() {
     // Handle calls and branches separately as symbolization doesn't work for
     // them yet.
     MCSymbol *BranchTargetSymbol = nullptr;
-    if (BC.MIB->isCall(Instruction) || BC.MIB->isBranch(Instruction)) {
+    if ((BC.MIB->isCall(Instruction) || BC.MIB->isBranch(Instruction)) &&
+        !(BC.isRISCV() && (BC.MIB->isIndirectCall(Instruction) ||
+                           BC.MIB->isIndirectBranch(Instruction)))) {
       uint64_t TargetAddress = 0;
       BC.MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                              TargetAddress);
@@ -1688,6 +1812,26 @@ bool BinaryFunction::scanExternalRefs() {
         InvalidTargets.insert(TargetFunction);
         continue;
       }
+
+      // Optional relocations support two- and four-byte direct branches.
+      // Entry patches may clobber registers live at interior entries or a
+      // non-standard call's return address.
+      if (BC.isRISCV() && BC.HasRelocations) {
+        if (Size > 4 || TargetAddress != TargetFunction->getAddress()) {
+          InvalidTargets.insert(TargetFunction);
+          continue;
+        }
+        // Compressed direct calls implicitly use ra as the link register.
+        if (BC.MIB->isCall(Instruction) && Size == 4) {
+          const unsigned LinkReg =
+              BC.MRI->getEncodingValue(Instruction.getOperand(0).getReg());
+          // RISC-V uses x1 (ra) and x5 (t0) as link registers.
+          if (LinkReg != 1 && LinkReg != 5) {
+            InvalidTargets.insert(TargetFunction);
+            continue;
+          }
+        }
+      }
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1700,13 +1844,28 @@ bool BinaryFunction::scanExternalRefs() {
                                   Emitter.LocalCtx.get());
     } else {
       analyzeInstructionForFuncReference(Instruction);
-      const bool NeedsPatch = llvm::any_of(
-          MCPlus::primeOperands(Instruction), [&](const MCOperand &Op) {
-            return Op.isExpr() &&
-                   !ignoreReference(BC.MIB->getTargetSymbol(Op.getExpr()));
-          });
+      RISCVReference Reference;
+      if (BC.isRISCV())
+        Reference = getRISCVReference(*this, Instruction, Offset, Size);
+      const bool NeedsPatch =
+          BC.isRISCV()
+              ? !ignoreReference(Reference.Symbol)
+              : llvm::any_of(MCPlus::primeOperands(Instruction),
+                             [&](const MCOperand &Op) {
+                               return Op.isExpr() &&
+                                      !ignoreReference(BC.MIB->getTargetSymbol(
+                                          Op.getExpr()));
+                             });
       if (!NeedsPatch)
         continue;
+
+      if (BC.isRISCV()) {
+        if (BinaryFunction *Target = collectRISCVExternalReferencePatch(
+                *this, Instruction, Offset, Size, Reference, InstructionPatches,
+                InvalidTargets))
+          RISCVPatchTargets.insert(Target);
+        continue;
+      }
     }
 
     // For AArch64, we need to undo relaxation done by the linker if the target
@@ -1818,23 +1977,27 @@ bool BinaryFunction::scanExternalRefs() {
       if (ignoreReference(Rel->Symbol))
         continue;
 
-      if (BC.getRelocationHandler().getSizeForType(Rel->Type) < 4) {
+      if (!BC.isRISCV() &&
+          BC.getRelocationHandler().getSizeForType(Rel->Type) < 4) {
         // If the instruction uses a short form, then we might not be able
         // to handle the rewrite without relaxation, and hence cannot reliably
-        // create an external reference relocation.
+        // create an external reference relocation. RISC-V short branches use
+        // optional relocations with entry patches as a fallback.
         Success = false;
         continue;
       }
 
-      if (BC.isAArch64()) {
+      if (BC.isAArch64() || BC.isRISCV()) {
         // Allow the relocation to be skipped in case of the overflow during the
         // relocation value encoding.
         Rel->setOptional();
 
-        // In compact code model, only CALL26/JUMP26 relocations are assumed to
-        // reach the moved target; patch the target for other branch types.
-        const bool IsBranch26 = Rel->Type == ELF::R_AARCH64_CALL26 ||
-                                Rel->Type == ELF::R_AARCH64_JUMP26;
+        // Only AArch64 CALL26/JUMP26 relocations in the compact code model
+        // are assumed to reach the moved target. Other branches need an entry
+        // patch if their optional relocation overflows.
+        const bool IsBranch26 =
+            BC.isAArch64() && (Rel->Type == ELF::R_AARCH64_CALL26 ||
+                               Rel->Type == ELF::R_AARCH64_JUMP26);
         if (!opts::CompactCodeModel || !IsBranch26)
           if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol))
             TargetBF->setNeedsPatch(true);
@@ -1849,6 +2012,13 @@ bool BinaryFunction::scanExternalRefs() {
 
   // Reset symbolizer for the disassembler.
   BC.SymbolicDisAsm->setSymbolizer(nullptr);
+
+  // A failed RISC-V scan between a HI20 and its LO12 must neither update half
+  // the address nor allow the target to move.
+  if (BC.isRISCV() && !Success) {
+    InstructionPatches.clear();
+    InvalidTargets.insert(RISCVPatchTargets.begin(), RISCVPatchTargets.end());
+  }
 
   // Add relocations unless disassembly failed for this function.
   if (!DisassemblyFailed)

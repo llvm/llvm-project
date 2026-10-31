@@ -197,17 +197,48 @@ bool RISCVRelocationHandler::canEncodeValue(uint32_t Type, uint64_t Value,
   case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
     return true;
+  case ELF::R_RISCV_JAL:
+    return isInt<21>(Value - PC) && !((Value - PC) & 1);
+  case ELF::R_RISCV_BRANCH:
+    return isInt<13>(Value - PC) && !((Value - PC) & 1);
+  case ELF::R_RISCV_RVC_JUMP:
+    return isInt<12>(Value - PC) && !((Value - PC) & 1);
+  case ELF::R_RISCV_RVC_BRANCH:
+    return isInt<9>(Value - PC) && !((Value - PC) & 1);
   }
 }
 
 uint64_t RISCVRelocationHandler::encodeValue(uint32_t Type, uint64_t Value,
-                                             uint64_t PC, uint32_t) const {
+                                             uint64_t PC,
+                                             uint32_t OriginalInst) const {
+  assert(canEncodeValue(Type, Value, PC) &&
+         "RISC-V relocation is out of range or misaligned");
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
   case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
     break;
+  case ELF::R_RISCV_JAL:
+    Value -= PC;
+    return (OriginalInst & 0x00000fff) | ((Value & 0x100000) << 11) |
+           ((Value & 0x7fe) << 20) | ((Value & 0x800) << 9) | (Value & 0xff000);
+  case ELF::R_RISCV_BRANCH:
+    Value -= PC;
+    return (OriginalInst & 0x01fff07f) | ((Value & 0x1000) << 19) |
+           ((Value & 0x7e0) << 20) | ((Value & 0x1e) << 7) |
+           ((Value & 0x800) >> 4);
+  case ELF::R_RISCV_RVC_JUMP:
+    Value -= PC;
+    return (OriginalInst & 0xe003) | ((Value & 0x800) << 1) |
+           ((Value & 0x10) << 7) | ((Value & 0x300) << 1) |
+           ((Value & 0x400) >> 2) | ((Value & 0x40) << 1) |
+           ((Value & 0x80) >> 1) | ((Value & 0xe) << 2) | ((Value & 0x20) >> 3);
+  case ELF::R_RISCV_RVC_BRANCH:
+    Value -= PC;
+    return (OriginalInst & 0xe383) | ((Value & 0x100) << 4) |
+           ((Value & 0x18) << 7) | ((Value & 0xc0) >> 1) |
+           ((Value & 0x6) << 2) | ((Value & 0x20) >> 3);
   }
   return Value;
 }
