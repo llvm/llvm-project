@@ -393,30 +393,22 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
     base = arith::MulFOp::create(b, baseType, base, base);
   }
 
-  // Make sure not to introduce UB in case of negative power.
+  // Make sure not to introduce UB in case of negative power. A zero `res`
+  // (`oeq` holds for both +0.0 and -0.0) gives an infinity with its sign.
   if (isNegative) {
     auto &sem = dyn_cast<mlir::FloatType>(getElementTypeOrSelf(baseType))
                     .getFloatSemantics();
     Value zero =
         createFloatConst(op->getLoc(), baseType,
                          APFloat::getZero(sem, /*Negative=*/false), rewriter);
-    Value negZero =
-        createFloatConst(op->getLoc(), baseType,
-                         APFloat::getZero(sem, /*Negative=*/true), rewriter);
     Value posInfinity =
         createFloatConst(op->getLoc(), baseType,
                          APFloat::getInf(sem, /*Negative=*/false), rewriter);
-    Value negInfinity =
-        createFloatConst(op->getLoc(), baseType,
-                         APFloat::getInf(sem, /*Negative=*/true), rewriter);
     Value zeroEqCheck =
         arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, res, zero);
-    Value negZeroEqCheck =
-        arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, res, negZero);
+    Value signedInfinity = math::CopySignOp::create(b, posInfinity, res);
     res = arith::DivFOp::create(b, baseType, one, res);
-    res =
-        arith::SelectOp::create(b, op->getLoc(), zeroEqCheck, posInfinity, res);
-    res = arith::SelectOp::create(b, op->getLoc(), negZeroEqCheck, negInfinity,
+    res = arith::SelectOp::create(b, op->getLoc(), zeroEqCheck, signedInfinity,
                                   res);
   }
 
