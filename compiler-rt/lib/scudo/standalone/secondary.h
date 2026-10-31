@@ -33,8 +33,10 @@ namespace scudo {
 // This allocator wraps the platform allocation primitives, and as such is on
 // the slower side and should preferably be used for larger sized allocations.
 // Blocks allocated will be preceded and followed by a guard page, and hold
-// their own header that is not checksummed: the guard pages and the Combined
-// header should be enough for our purpose.
+// their own header. That header lives in the same mapping as the user data, so
+// the fields that decide what gets cached, unmapped or reported as the end of
+// the block are checksummed with a per-allocator cookie, like the Combined
+// header is.
 
 namespace LargeBlock {
 
@@ -47,6 +49,10 @@ struct alignas(Max<uptr>(archSupportsMemoryTagging()
   uptr CommitBase;
   uptr CommitSize;
   MemMapT MemMap;
+  // Covers the address of the header, CommitBase, CommitSize and the range of
+  // MemMap. Prev and Next are not covered: they change when neighboring blocks
+  // are added or removed, and the list validates them on removal.
+  u16 Checksum;
 };
 
 static_assert(sizeof(Header) % (1U << SCUDO_MIN_ALIGNMENT_LOG) == 0, "");
@@ -68,6 +74,30 @@ template <typename Config> Header *getHeader(uptr Ptr) {
 
 template <typename Config> Header *getHeader(const void *Ptr) {
   return getHeader<Config>(reinterpret_cast<uptr>(Ptr));
+}
+
+inline u16 computeHeaderChecksum(u32 Cookie, uptr Address, Header *H) {
+  uptr Fields[] = {H->CommitBase, H->CommitSize, H->MemMap.getBase(),
+                   H->MemMap.getCapacity()};
+  return computeChecksum(Cookie, Address, Fields, ARRAY_SIZE(Fields));
+}
+
+inline void storeHeaderChecksum(u32 Cookie, Header *H) {
+  H->Checksum = computeHeaderChecksum(Cookie, reinterpret_cast<uptr>(H), H);
+}
+
+// Copies the header of the block at Ptr into NewHeader and verifies the
+// checksum of that copy, so that only verified values are used afterwards.
+// Returns the address of the header.
+template <typename Config>
+Header *loadHeader(u32 Cookie, const void *Ptr, Header *NewHeader) {
+  Header *H = getHeader<Config>(Ptr);
+  *NewHeader = *H;
+  const u16 Checksum =
+      computeHeaderChecksum(Cookie, reinterpret_cast<uptr>(H), NewHeader);
+  if (UNLIKELY(NewHeader->Checksum != Checksum))
+    reportSecondaryHeaderCorruption(H);
+  return H;
 }
 
 } // namespace LargeBlock
@@ -733,6 +763,9 @@ public:
             s32 ReleaseToOsInterval = -1) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK_EQ(AllocatedBytes, 0U);
     DCHECK_EQ(FreedBytes, 0U);
+    if (UNLIKELY(!getRandom(&Cookie, sizeof(Cookie))))
+      Cookie = static_cast<u32>(getMonotonicTime() ^
+                                (reinterpret_cast<uptr>(this) >> 4));
     Cache.init(ReleaseToOsInterval);
     Stats.init();
     if (LIKELY(S))
@@ -748,12 +781,13 @@ public:
   void *tryAllocateFromCache(const Options &Options, uptr Size, uptr Alignment,
                              uptr *BlockEndPtr, FillContentsMode FillContents);
 
-  static uptr getBlockEnd(void *Ptr) {
-    auto *B = LargeBlock::getHeader<Config>(Ptr);
-    return B->CommitBase + B->CommitSize;
+  uptr getBlockEnd(void *Ptr) const {
+    LargeBlock::Header Header;
+    LargeBlock::loadHeader<Config>(Cookie, Ptr, &Header);
+    return Header.CommitBase + Header.CommitSize;
   }
 
-  static uptr getBlockSize(void *Ptr) {
+  uptr getBlockSize(void *Ptr) const {
     return getBlockEnd(Ptr) - reinterpret_cast<uptr>(Ptr);
   }
 
@@ -811,6 +845,7 @@ public:
 private:
   typename Config::template CacheT<typename Config::CacheConfig> Cache;
 
+  u32 Cookie = 0;
   mutable HybridMutex Mutex;
   DoublyLinkedList<LargeBlock::Header> InUseBlocks GUARDED_BY(Mutex);
   uptr AllocatedBytes GUARDED_BY(Mutex) = 0;
@@ -907,6 +942,7 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
   H->CommitBase = Entry.CommitBase;
   H->CommitSize = Entry.CommitSize;
   H->MemMap = Entry.MemMap;
+  LargeBlock::storeHeaderChecksum(Cookie, H);
 
   const uptr BlockEnd = H->CommitBase + H->CommitSize;
   if (BlockEndPtr)
@@ -1029,6 +1065,7 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
   H->CommitBase = CommitBase;
   H->CommitSize = CommitSize;
   H->MemMap = MemMap;
+  LargeBlock::storeHeaderChecksum(Cookie, H);
   if (BlockEndPtr)
     *BlockEndPtr = CommitBase + CommitSize;
   {
@@ -1048,27 +1085,32 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
 template <typename Config>
 void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
     EXCLUDES(Mutex) {
-  LargeBlock::Header *H = LargeBlock::getHeader<Config>(Ptr);
-  const uptr CommitSize = H->CommitSize;
+  // Only the verified copy of the header is used from here on: the header
+  // itself is in memory the user can write to.
+  LargeBlock::Header Header;
+  LargeBlock::Header *H = LargeBlock::loadHeader<Config>(Cookie, Ptr, &Header);
+  const uptr CommitSize = Header.CommitSize;
   {
     ScopedLock L(Mutex);
     InUseBlocks.remove(H);
     FreedBytes += CommitSize;
-    FragmentedBytes -= H->MemMap.getCapacity() - CommitSize;
+    FragmentedBytes -= Header.MemMap.getCapacity() - CommitSize;
     NumberOfFrees++;
     Stats.sub(StatAllocated, CommitSize);
-    Stats.sub(StatMapped, H->MemMap.getCapacity());
+    Stats.sub(StatMapped, Header.MemMap.getCapacity());
   }
 
-  if (Cache.canCache(H->CommitSize)) {
-    Cache.store(Options, H->CommitBase, H->CommitSize,
-                reinterpret_cast<uptr>(H + 1), H->MemMap);
+  if (Cache.canCache(CommitSize)) {
+    // A cached block can be reused with its header at another position, which
+    // leaves this one in the user data of the new block: clear its checksum.
+    H->Checksum = 0;
+    Cache.store(Options, Header.CommitBase, CommitSize,
+                reinterpret_cast<uptr>(H + 1), Header.MemMap);
   } else {
-    // Note that the `H->MemMap` is stored on the pages managed by itself. Take
-    // over the ownership before unmap() so that any operation along with
-    // unmap() won't touch inaccessible pages.
-    MemMapT MemMap = H->MemMap;
-    unmap(MemMap);
+    // Note that the `Header.MemMap` is a copy of the one stored on the pages
+    // managed by itself, so that any operation along with unmap() won't touch
+    // inaccessible pages.
+    unmap(Header.MemMap);
     ScopedLock L(Mutex);
     UncacheableUnmaps++;
   }
