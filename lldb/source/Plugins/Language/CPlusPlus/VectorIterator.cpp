@@ -62,7 +62,7 @@ VectorIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
 }
 
 llvm::Expected<size_t>
-VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "item")
     return 0;
   return llvm::createStringErrorV("type has no child named '{0}'", name);

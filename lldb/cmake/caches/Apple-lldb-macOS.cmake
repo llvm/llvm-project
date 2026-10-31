@@ -26,4 +26,5 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   lldb-mcp
   darwin-debug
   debugserver
+  lldbPluginScriptInterpreterPython
   CACHE STRING "")

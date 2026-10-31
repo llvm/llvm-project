@@ -14,7 +14,7 @@ define void @f25() nounwind {
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $96, %rsp
+; X64-NEXT:    subq $64, %rsp
 ; X64-NEXT:    movq g2@GOTPCREL(%rip), %rax
 ; X64-NEXT:    movzwl (%rax), %ecx
 ; X64-NEXT:    andl $7, %ecx
@@ -33,7 +33,7 @@ define void @f25() nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $96, %esp
+; X86-NEXT:    subl $64, %esp
 ; X86-NEXT:    movzwl g2, %eax
 ; X86-NEXT:    andl $7, %eax
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = [60,0,0,0]

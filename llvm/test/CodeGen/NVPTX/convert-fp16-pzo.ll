@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_107f -mattr=+ptx94 | FileCheck %s
 ; RUN: %if ptxas-sm_107f && ptxas-isa-9.4 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_107f -mattr=+ptx94 | %ptxas-verify -arch=sm_107f %}
 
-; Conversions to fp16 types with the preserve-zero-order modifier. The RS
-; (stochastic rounding) variants need sm_107a and live in convert-fp16-rs-pzo.ll.
+; Conversions to fp16 types with the preserve-zero-order modifier. The modifier
+; is not supported with the RS (stochastic rounding) rounding mode.
 
 ; F16X2 conversions
 

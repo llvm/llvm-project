@@ -48,6 +48,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -79,7 +80,6 @@ namespace acc {
 #define DEBUG_TYPE "acc-recipe-materialization"
 
 namespace {
-
 using namespace mlir;
 
 static void setLocation(Region &region, Location loc) {
@@ -173,6 +173,12 @@ class ACCRecipeMaterialization
 public:
   using acc::impl::ACCRecipeMaterializationBase<
       ACCRecipeMaterialization>::ACCRecipeMaterializationBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCRecipeMaterializationBase<
+        ACCRecipeMaterialization>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
   void runOnOperation() override;
 
 private:
@@ -643,5 +649,4 @@ void ACCRecipeMaterialization::runOnOperation() {
       removeRecipe(recipe, moduleOp, usedSymbols);
   });
 }
-
 } // namespace

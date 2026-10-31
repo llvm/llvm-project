@@ -80,7 +80,7 @@ void foo() {
 //
 //
 // CHECK-LABEL: define internal void @foo.omp_outlined(
-// CHECK-SAME: ptr noalias nofree noundef readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[X_ALLOC:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ptr noalias nofree noundef readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[X_ALLOC:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4

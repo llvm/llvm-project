@@ -52,8 +52,8 @@ public:
   /// default, handled automatically. For data types which need custom
   /// subscripting behavior - for example a sparse array, disable automatic
   /// subscripting with TypeOptions::eTypeOptionCustomSubscripting.
-  virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
-    return llvm::createStringErrorV("Type has no child named '{0}'", name);
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) {
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   /// This function is assumed to always succeed and if it fails, the front-end
@@ -78,10 +78,10 @@ public:
   // made to this ValueObject
   virtual lldb::ValueObjectSP GetSyntheticValue() { return nullptr; }
 
-  // if this function returns a non-empty ConstString, then clients are
+  // if this function returns a non-empty string, then clients are
   // expected to use the return as the name of the type of this ValueObject for
   // display purposes
-  virtual ConstString GetSyntheticTypeName() { return ConstString(); }
+  virtual std::string GetSyntheticTypeName() { return std::string(); }
 
   virtual void *GetImplementation() { return nullptr; }
 
@@ -120,8 +120,9 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    return llvm::createStringErrorV("Type has no child named '{0}'", name);
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   lldb::ChildCacheState Update() override {
@@ -317,25 +318,15 @@ public:
       AddExpressionPath(path);
   }
 
-  void AddExpressionPath(const char *path) {
-    AddExpressionPath(std::string(path));
-  }
-
   void Clear() { m_expression_paths.clear(); }
 
   size_t GetCount() const { return m_expression_paths.size(); }
 
-  const char *GetExpressionPathAtIndex(size_t i) const {
-    return m_expression_paths[i].c_str();
-  }
+  llvm::StringRef GetExpressionPathAtIndex(size_t i) const;
 
-  bool SetExpressionPathAtIndex(size_t i, const char *path) {
-    return SetExpressionPathAtIndex(i, std::string(path));
-  }
+  void AddExpressionPath(llvm::StringRef path);
 
-  void AddExpressionPath(const std::string &path);
-
-  bool SetExpressionPathAtIndex(size_t i, const std::string &path);
+  bool SetExpressionPathAtIndex(size_t i, llvm::StringRef path);
 
   bool IsScripted() override { return false; }
 
@@ -365,7 +356,8 @@ public:
 
     bool MightHaveChildren() override { return filter->GetCount() > 0; }
 
-    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t>
+    GetIndexOfChildWithName(llvm::StringRef name) override;
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 
@@ -465,11 +457,12 @@ public:
 
     bool MightHaveChildren() override;
 
-    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t>
+    GetIndexOfChildWithName(llvm::StringRef name) override;
 
     lldb::ValueObjectSP GetSyntheticValue() override;
 
-    ConstString GetSyntheticTypeName() override;
+    std::string GetSyntheticTypeName() override;
 
     void *GetImplementation() override;
 
@@ -507,6 +500,8 @@ private:
 class BytecodeSyntheticChildren : public SyntheticChildren {
 public:
   struct SyntheticBytecodeImplementation {
+    /// The version of this record. Specs are found in formatterbytecode.md.
+    uint32_t version = 1;
     std::unique_ptr<llvm::MemoryBuffer> init;
     std::unique_ptr<llvm::MemoryBuffer> update;
     std::unique_ptr<llvm::MemoryBuffer> num_children;
@@ -522,7 +517,8 @@ private:
     lldb::ChildCacheState Update() override;
     llvm::Expected<uint32_t> CalculateNumChildren() override;
     lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
-    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+    llvm::Expected<size_t>
+    GetIndexOfChildWithName(llvm::StringRef name) override;
 
   private:
     const SyntheticBytecodeImplementation &m_impl;

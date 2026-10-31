@@ -1870,9 +1870,7 @@ namespace {
     bool evaluateHexExt(const MachineInstr &MI, const CellMap &Inputs,
           CellMap &Outputs);
     bool evaluateHexVector1(const MachineInstr &MI, const CellMap &Inputs,
-          CellMap &Outputs);
-    bool evaluateHexVector2(const MachineInstr &MI, const CellMap &Inputs,
-          CellMap &Outputs);
+                            CellMap &Outputs);
 
     void replaceAllRegUsesWith(Register FromReg, Register ToReg);
     bool rewriteHexBranch(MachineInstr &BrI, const CellMap &Inputs);

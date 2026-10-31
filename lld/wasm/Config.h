@@ -15,6 +15,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/CachePruning.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include <optional>
 
 namespace llvm {
@@ -136,6 +137,7 @@ struct Config {
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
+  llvm::cl::LibraryOptionsContext libraryOptions;
 
   bool isMultithreaded() const { return sharedMemory || cooperativeThreading; }
 };

@@ -235,11 +235,11 @@ void l4() {
 // CIR:   }
 
 // LLVM: define{{.*}} void @_Z2l4v(){{.*}} {
+// LLVM:   %[[A_ADDR:.*]] = alloca [10 x i32]
 // LLVM:   %[[RANGE_ADDR:.*]] = alloca ptr
 // LLVM:   %[[BEGIN_ADDR:.*]] = alloca ptr
 // LLVM:   %[[END_ADDR:.*]] = alloca ptr
 // LLVM:   %[[N_ADDR:.*]] = alloca i32
-// LLVM:   %[[A_ADDR:.*]] = alloca [10 x i32]
 // LLVM:   br label %[[SETUP:.*]]
 // LLVM: [[SETUP]]:
 // LLVM:   store ptr %[[A_ADDR]], ptr %[[RANGE_ADDR]]
@@ -316,7 +316,7 @@ void l5() {
 // CIR:     %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init
 // CIR:     %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} init
 // CIR:     %[[ARR_INIT:.*]] = cir.get_global @[[L5_ARR]]
-// CIR:     cir.copy %[[ARR_INIT]] to %[[ARR_ADDR]]
+// CIR:     cir.copy %[[ARR_INIT]] align(16) to %[[ARR_ADDR]] align(16)
 // CIR:     cir.store{{.*}} %[[ARR_ADDR]], %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_LOAD:.*]] = cir.load %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_CAST:.*]] = cir.cast array_to_ptrdecay %[[RANGE_LOAD]] : {{.*}}
@@ -353,7 +353,7 @@ void l5() {
 // LLVM:   %[[X_ADDR:.*]] = alloca i32
 // LLVM:   br label %[[SETUP:.*]]
 // LLVM: [[SETUP]]:
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR_ADDR]], ptr align 4 @[[L5_ARR]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 16 %[[ARR_ADDR]], ptr align 16 @[[L5_ARR]], i64 16, i1 false)
 // LLVM:   store ptr %[[ARR_ADDR]], ptr %[[RANGE_ADDR]]
 // LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[RANGE_ADDR]]
 // LLVM:   %[[BEGIN_CAST:.*]] = getelementptr i32, ptr %[[BEGIN]], i32 0

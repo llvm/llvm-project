@@ -1272,6 +1272,19 @@ define <64 x i8> @shuffle_v64i8_00_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_
   ret <64 x i8> %r
 }
 
+define <64 x i8> @shuffle_v16i8_v64i8_00_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_00_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_16_17_18_19_20_21_22_23_24_25_26_27_28_29_30_31_16_17_18_19_20_21_22_23_24_25_26_27_28_29_30_31(<16 x i8> %a0, <16 x i8> %a1) nounwind {
+; ALL-LABEL: shuffle_v16i8_v64i8_00_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_00_01_02_03_04_05_06_07_08_09_10_11_12_13_14_15_16_17_18_19_20_21_22_23_24_25_26_27_28_29_30_31_16_17_18_19_20_21_22_23_24_25_26_27_28_29_30_31:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <16 x i8> %a0, <16 x i8> %a1, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <64 x i8> %shuffle
+}
+
 define <64 x i8> @shuffle_v64i8_ashr_00_01_04_05_08_09_12_13_64_65_68_69_72_73_76_77_16_17_20_21_24_25_28_29_80_81_84_85_88_89_92_93_32_33_36_37_40_41_44_45_96_97_100_101_104_105_108_109_48_49_52_53_56_57_60_61_112_113_116_117_120_121_124_125(<16 x i32> %a0, <16 x i32> %a1) nounwind {
 ; AVX512F-LABEL: shuffle_v64i8_ashr_00_01_04_05_08_09_12_13_64_65_68_69_72_73_76_77_16_17_20_21_24_25_28_29_80_81_84_85_88_89_92_93_32_33_36_37_40_41_44_45_96_97_100_101_104_105_108_109_48_49_52_53_56_57_60_61_112_113_116_117_120_121_124_125:
 ; AVX512F:       # %bb.0:
@@ -1851,7 +1864,7 @@ define <512 x i8> @PR153457(<512 x i8> %a0, <512 x i8> %a1) nounwind {
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm6 = ymm6[0,1,2,3,4,5],ymm9[6,7]
 ; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm6[0,1,2,3],zmm0[4,5,6,7]
 ; AVX512F-NEXT:    vpsrlq $56, %xmm7, %xmm6
-; AVX512F-NEXT:    vmovdqa %ymm6, 416(%rdi)
+; AVX512F-NEXT:    vmovdqa %xmm6, 416(%rdi)
 ; AVX512F-NEXT:    vmovdqa %ymm3, 384(%rdi)
 ; AVX512F-NEXT:    vmovdqa64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    vmovdqa64 %zmm5, 320(%rdi)
@@ -1987,7 +2000,7 @@ define <512 x i8> @PR153457(<512 x i8> %a0, <512 x i8> %a1) nounwind {
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm6 = ymm6[0,1,2,3,4,5],ymm9[6,7]
 ; AVX512DQ-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm6[0,1,2,3],zmm0[4,5,6,7]
 ; AVX512DQ-NEXT:    vpsrlq $56, %xmm7, %xmm6
-; AVX512DQ-NEXT:    vmovdqa %ymm6, 416(%rdi)
+; AVX512DQ-NEXT:    vmovdqa %xmm6, 416(%rdi)
 ; AVX512DQ-NEXT:    vmovdqa %ymm3, 384(%rdi)
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm0, (%rdi)
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm5, 320(%rdi)

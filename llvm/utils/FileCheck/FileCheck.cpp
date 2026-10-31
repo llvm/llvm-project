@@ -177,14 +177,6 @@ static cl::opt<unsigned> DumpInputLabelWidth(
              "option to avoid a fluctuating column width when checking input\n"
              "dumps.  This option is not expected to be useful elsewhere.\n"));
 
-typedef cl::list<std::string>::const_iterator prefix_iterator;
-
-
-
-
-
-
-
 static void DumpCommandLine(int argc, char **argv) {
   errs() << "FileCheck command line: ";
   for (int I = 0; I < argc; I++)

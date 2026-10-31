@@ -11,6 +11,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
+#include "llvm/ExecutionEngine/Orc/DlfcnSPS.h"
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -19,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
@@ -601,10 +603,6 @@ namespace llvm {
 namespace orc {
 
 Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
-  using llvm::orc::shared::SPSExecutorAddr;
-  using llvm::orc::shared::SPSString;
-  using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-  using SPSDLUpdateSig = int32_t(SPSExecutorAddr);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -615,57 +613,52 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   auto &ES = J.getExecutionSession();
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
-  StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
-  bool dlupdate = false;
+
   if (InitializedDylib.contains(&JD)) {
-    WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
-    dlupdate = true;
-  } else
-    InitializedDylib.insert(&JD);
+    // Already initialized: re-run initializers via dlupdate.
+    DlfcnUpdateProxy Update;
+    if (auto Err =
+            lookupAndApply(LookupKind::Static, MainSearchOrder,
+                           {recordProxy<sps::DlfcnUpdateProxySpec>(&Update)}))
+      return Err;
+    auto Result = Update(ES, DSOHandles[&JD]);
+    if (!Result)
+      return Result.takeError();
+    if (*Result)
+      return make_error<StringError>("dlupdate failed",
+                                     inconvertibleErrorCode());
+    return Error::success();
+  }
 
-  if (auto WrapperAddr =
-          ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
-    if (dlupdate) {
-      int32_t result;
-      auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
-                                                 result, DSOHandles[&JD]);
-      if (E)
-        return E;
-      else if (result)
-        return make_error<StringError>("dlupdate failed",
-                                       inconvertibleErrorCode());
-    } else
-      return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
-                                             DSOHandles[&JD], JD.getName(),
-                                             int32_t(ORC_RT_RTLD_LAZY));
-  } else
-    return WrapperAddr.takeError();
-
+  InitializedDylib.insert(&JD);
+  DlfcnOpenProxy Open;
+  if (auto Err = lookupAndApply(LookupKind::Static, MainSearchOrder,
+                                {recordProxy<sps::DlfcnOpenProxySpec>(&Open)}))
+    return Err;
+  auto H = Open(ES, JD.getName(), int32_t(ORC_RT_RTLD_LAZY));
+  if (!H)
+    return H.takeError();
+  DSOHandles[&JD] = *H;
   return Error::success();
 }
 
 Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
-  using llvm::orc::shared::SPSExecutorAddr;
-  using SPSDLCloseSig = int32_t(SPSExecutorAddr);
-
   auto &ES = J.getExecutionSession();
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
 
-  if (auto WrapperAddr = ES.lookup(
-          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlclose_wrapper"))) {
-    int32_t result;
-    auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
-        WrapperAddr->getAddress(), result, DSOHandles[&JD]);
-    if (E)
-      return E;
-    else if (result)
-      return make_error<StringError>("dlclose failed",
-                                     inconvertibleErrorCode());
-    DSOHandles.erase(&JD);
-    InitializedDylib.erase(&JD);
-  } else
-    return WrapperAddr.takeError();
+  DlfcnCloseProxy Close;
+  if (auto Err =
+          lookupAndApply(LookupKind::Static, MainSearchOrder,
+                         {recordProxy<sps::DlfcnCloseProxySpec>(&Close)}))
+    return Err;
+  auto Result = Close(ES, DSOHandles[&JD]);
+  if (!Result)
+    return Result.takeError();
+  if (*Result)
+    return make_error<StringError>("dlclose failed", inconvertibleErrorCode());
+  DSOHandles.erase(&JD);
+  InitializedDylib.erase(&JD);
   return Error::success();
 }
 

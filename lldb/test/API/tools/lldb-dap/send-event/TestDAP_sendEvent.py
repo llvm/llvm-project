@@ -23,7 +23,6 @@ class CustomEvent(Event, event="my-custom-event"):
 
 
 class TestDAP_sendEvent(DAPTestCaseBase):
-    @skipIfWindows
     def test_send_event(self):
         """
         Test sending a custom event.
@@ -56,7 +55,6 @@ class TestDAP_sendEvent(DAPTestCaseBase):
         self.assertEqual(custom_event_with_body.event, "my-custom-event")
         self.assertEqual(custom_event_with_body.body, custom_event_body)
 
-    @skipIfWindows
     def test_send_internal_event(self):
         """
         Test sending an internal event produces an error.

@@ -150,7 +150,9 @@ protected:
   /// Put this vector in a state of being small.
   void resetToSmall() {
     this->BeginX = getFirstEl();
-    this->Size = this->Capacity = 0; // FIXME: Setting Capacity to 0 is suspect.
+    // The inline capacity is unknown here. SmallVector restores it when moving
+    // from the same concrete type; moves through SmallVectorImpl leave it at 0.
+    this->Size = this->Capacity = 0;
   }
 
   /// Return true if V is an internal reference to the given range.
@@ -1172,6 +1174,13 @@ struct SmallVectorStorage {
 /// well-defined.
 template <typename T> struct alignas(T) SmallVectorStorage<T, 0> {};
 
+/// A tag for constructors that leave new elements default-initialized, like
+/// resize_for_overwrite.
+struct for_overwrite_t {
+  explicit for_overwrite_t() = default;
+};
+inline constexpr for_overwrite_t for_overwrite{};
+
 /// Forward declaration of SmallVector so that
 /// calculateSmallVectorDefaultInlinedElements can reference
 /// `sizeof(SmallVector<T, 0>)`.
@@ -1266,6 +1275,12 @@ public:
     this->assign(SizeArg, Value);
   }
 
+  template <typename Tag,
+            typename = std::enable_if_t<std::is_same_v<Tag, for_overwrite_t>>>
+  SmallVector(size_t SizeArg, Tag) : SmallVectorImpl<T>(N) {
+    this->resize_for_overwrite(SizeArg);
+  }
+
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
   SmallVector(ItTy S, ItTy E) : SmallVectorImpl<T>(N) {
     this->append(S, E);
@@ -1304,10 +1319,15 @@ public:
   // types with an unconstrained assignment operator whose body is ill-formed.
   SmallVector(SmallVector &&RHS) : SmallVectorImpl<T>(N) {
     if (!RHS.empty()) {
+      bool StoleAllocation = N > 0 && !RHS.isSmall();
       if constexpr (std::is_trivially_move_assignable_v<T>)
         SmallVectorImpl<T>::operator=(::std::move(RHS));
       else
         this->moveConstructFrom(::std::move(RHS));
+      if constexpr (N > 0) {
+        if (StoleAllocation)
+          RHS.set_allocation_range(RHS.begin(), N);
+      }
     }
   }
 
@@ -1322,7 +1342,11 @@ public:
 
   SmallVector &operator=(SmallVector &&RHS) {
     if (N) {
+      bool StoleAllocation = this != &RHS && !RHS.isSmall();
       SmallVectorImpl<T>::operator=(::std::move(RHS));
+      // Restore the inline capacity after stealing RHS's allocation.
+      if (StoleAllocation)
+        RHS.set_allocation_range(RHS.begin(), N);
       return *this;
     }
     // SmallVectorImpl<T>::operator= does not leverage N==0. Optimize the

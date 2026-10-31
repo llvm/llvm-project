@@ -34,18 +34,11 @@ static bool deviceContextTornDown() {
     using GetStateFn = CUresult(CUDAAPI *)(CUdevice, unsigned *, int *);
     static GetStateFn getState{[]() -> GetStateFn {
       void *fn{nullptr};
-      // Prefer ByVersion(driver): unversioned lookup uses the runtime version
-      // and fails when the runtime is newer than the driver.
       int driverVersion{0};
       if (cudaDriverGetVersion(&driverVersion) == cudaSuccess &&
           cudaGetDriverEntryPointByVersion("cuDevicePrimaryCtxGetState", &fn,
               static_cast<unsigned>(driverVersion), cudaEnableDefault,
               nullptr) == cudaSuccess &&
-          fn) {
-        return reinterpret_cast<GetStateFn>(fn);
-      }
-      if (cudaGetDriverEntryPoint("cuDevicePrimaryCtxGetState", &fn,
-              cudaEnableDefault, nullptr) == cudaSuccess &&
           fn) {
         return reinterpret_cast<GetStateFn>(fn);
       }

@@ -97,9 +97,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (!ST.hasFlatScratchEnabled()) {
       // Non-entry functions have no special inputs for now, other registers
       // required for scratch access.
-      ScratchRSrcReg = AMDGPU::isChainCC(CC)
-                           ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                           : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+      ScratchRSrcReg = AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CC);
 
       ArgInfo.PrivateSegmentBuffer =
           ArgDescriptor::createRegister(ScratchRSrcReg);
@@ -824,11 +822,4 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
     ScavengeFI = std::nullopt;
   }
   return false;
-}
-
-bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
-  auto [MinNumAGPR, MaxNumAGPR] =
-      AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", {~0u, ~0u},
-                                      /*OnlyFirstRequired=*/true);
-  return MinNumAGPR != 0u;
 }

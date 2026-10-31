@@ -15,6 +15,7 @@
 #include "nsan.h"
 #include "nsan_allocator.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 
 #include <stddef.h>
@@ -36,6 +37,11 @@ enum class align_val_t : size_t {};
   }                                                                            \
   return res
 #define OPERATOR_NEW_BODY_ALIGN(nothrow)                                       \
+  if (UNLIKELY(!CheckAlignedNewAlignment((uptr)align))) {                      \
+    BufferedStackTrace stack;                                                  \
+    GET_FATAL_STACK_TRACE_IF_EMPTY(&stack);                                    \
+    ReportInvalidAllocationAlignment((uptr)align, &stack);                     \
+  }                                                                            \
   void *res = nsan_memalign((uptr)align, size);                                \
   if (!nothrow && UNLIKELY(!res)) {                                            \
     BufferedStackTrace stack;                                                  \

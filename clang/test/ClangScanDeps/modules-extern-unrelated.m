@@ -92,6 +92,7 @@ module second { header "second.h" }
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/zeroth/module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK-NOT:          "-fmodule-map-file=[[PREFIX]]/second/module.modulemap"
+// CHECK:              "-fmodule-map-file=[[PREFIX]]/second/second.modulemap"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [

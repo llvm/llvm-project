@@ -9,11 +9,6 @@
 
 end program
 
-! At -O0 on the host (no OpenMP target-device compilation), InlineHLFIRAssign
-! is no longer scheduled. See PR #197092 follow-up restricting the -O0 pass
-! to OpenMP target-device compilation.
-! O0-NOT: InlineHLFIRAssign
-
 ! ALL: Pass statistics report
 ! ALL: Fortran::lower::VerifierPass
 
@@ -37,22 +32,27 @@ end program
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
 ! ALL-NEXT:  SeparateAllocatableAssign
+! O0-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT:'func.func' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
 ! ALL-NEXT:  SeparateAllocatableAssign
+! O0-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT:'omp.declare_mapper' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
 ! ALL-NEXT:  SeparateAllocatableAssign
+! O0-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT:'omp.declare_reduction' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
 ! ALL-NEXT:  SeparateAllocatableAssign
+! O0-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT:'omp.private' Pipeline
 ! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL:       InlineElementals
 ! ALL-NEXT:  SeparateAllocatableAssign
+! O0-NEXT:   InlineHLFIRAssign
 ! O2-NEXT: Canonicalizer
 ! O2-NEXT: CSE
 ! O2-NEXT: (S) {{.*}} num-cse'd
@@ -166,7 +166,8 @@ end program
 ! ALL-NEXT:      CFGConversion
 
 ! ALL-NEXT: SCFToControlFlow
-! ALL-NEXT: Canonicalizer
+! O0-NEXT: O0CanonicalizerPass
+! O2-NEXT: Canonicalizer
 ! ALL-NEXT: SimplifyRegionLite
 ! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE

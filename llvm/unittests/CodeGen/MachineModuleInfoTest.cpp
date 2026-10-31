@@ -44,7 +44,7 @@ protected:
     TargetOptions Options;
     TM.reset(T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt,
                                     std::nullopt, CodeGenOptLevel::None));
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
   }
 
   Function *createEmptyFunction(StringRef Name) {

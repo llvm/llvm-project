@@ -908,11 +908,8 @@ define i32 @extract_v8i32_vector_non_half_insert_const(<8 x i32> %a, <2 x i32> %
 ;
 ; CHECK-GI-LABEL: extract_v8i32_vector_non_half_insert_const:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI32_0
-; CHECK-GI-NEXT:    fmov d31, d2
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI32_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.d[0], v2.d[0]
 ; CHECK-GI-NEXT:    mov s0, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -931,11 +928,8 @@ define i32 @extract_v4i32_vector_non_half_insert(<8 x i32> %a, <2 x i32> %b, i32
 ;
 ; CHECK-GI-LABEL: extract_v4i32_vector_non_half_insert:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI33_0
-; CHECK-GI-NEXT:    fmov d31, d2
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI33_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.d[0], v2.d[0]
 ; CHECK-GI-NEXT:    mov s0, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -953,11 +947,8 @@ define i32 @extract_v8i32_vector_non_half_non_zero_insert_const(<8 x i32> %a, <2
 ;
 ; CHECK-GI-LABEL: extract_v8i32_vector_non_half_non_zero_insert_const:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
-; CHECK-GI-NEXT:    fmov d1, d2
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI34_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v3.16b
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    mov s0, v0.s[1]
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -990,14 +981,11 @@ define i32 @extract_v8i32_vector_non_half_non_zero_insert(<8 x i32> %a, <2 x i32
 ; CHECK-GI-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    mov v3.16b, v0.16b
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
-; CHECK-GI-NEXT:    mov x9, sp
-; CHECK-GI-NEXT:    fmov d4, d2
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI35_0]
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    and x8, x8, #0x7
-; CHECK-GI-NEXT:    tbl v0.16b, { v3.16b, v4.16b }, v0.16b
 ; CHECK-GI-NEXT:    stp q0, q1, [sp]
 ; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
 ; CHECK-GI-NEXT:    mov sp, x29
@@ -1111,15 +1099,12 @@ define i32 @extract_v4i32_shuffle(<4 x i32> %a, <4 x i32> %b, i32 %c) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    adrp x8, .LCPI41_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    mov x9, sp
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI41_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    uzp1 v1.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    str q0, [sp]
+; CHECK-GI-NEXT:    mov v1.s[3], v0.s[3]
+; CHECK-GI-NEXT:    str q1, [sp]
 ; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret

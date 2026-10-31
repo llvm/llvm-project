@@ -6,9 +6,7 @@ define fp128 @f128_select_soft(fp128 %a, fp128 %b) #0 {
 ; V9:         .cfi_startproc
 ; V9-NEXT:  ! %bb.0: ! %entry
 ; V9-NEXT:    add %sp, -144, %sp
-; V9-NEXT:    .cfi_def_cfa_register %fp
-; V9-NEXT:    .cfi_window_save
-; V9-NEXT:    .cfi_register %o7, %i7
+; V9-NEXT:    .cfi_def_cfa_offset 2191
 ; V9-NEXT:    add %sp, 2175, %o0
 ; V9-NEXT:    or %o0, 8, %o0
 ; V9-NEXT:    std %f6, [%o0]
@@ -48,9 +46,7 @@ define fp128 @f128_select_hard(fp128 %a, fp128 %b) #1 {
 ; V9:         .cfi_startproc
 ; V9-NEXT:  ! %bb.0: ! %entry
 ; V9-NEXT:    add %sp, -144, %sp
-; V9-NEXT:    .cfi_def_cfa_register %fp
-; V9-NEXT:    .cfi_window_save
-; V9-NEXT:    .cfi_register %o7, %i7
+; V9-NEXT:    .cfi_def_cfa_offset 2191
 ; V9-NEXT:    stq %f4, [%sp+2175]
 ; V9-NEXT:    add %sp, 2175, %o0
 ; V9-NEXT:    or %o0, 8, %o0

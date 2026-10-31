@@ -1235,7 +1235,7 @@ static Error writeDWARFLists(raw_ostream &OS,
     // from the 'Offsets' field in the YAML description. If the 'Offsets' field
     // isn't specified either, yaml2obj will infer it from the auto-generated
     // offsets.
-    uint32_t OffsetEntryCount;
+    uint64_t OffsetEntryCount;
     if (Table.OffsetEntryCount)
       OffsetEntryCount = *Table.OffsetEntryCount;
     else

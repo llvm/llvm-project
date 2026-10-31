@@ -155,6 +155,8 @@
 ; CHECK-O-NEXT: Running pass: DropTypeTestsPass
 ; CHECK-O23-NEXT: Running pass: LoopSink
 ; CHECK-O23-NEXT: Running pass: DivRemPairs
+; CHECK-O23-NEXT: Running pass: MergeICmpsPass
+; CHECK-O23-NEXT: Running pass: ExpandMemCmpPass
 ; CHECK-O23-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O23-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O23-NEXT: Running pass: GlobalDCEPass

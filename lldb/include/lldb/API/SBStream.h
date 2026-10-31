@@ -73,6 +73,7 @@ protected:
   friend class SBBreakpointLocation;
   friend class SBBreakpointName;
   friend class SBCommandReturnObject;
+  friend class SBCommandInterpreter;
   friend class SBCompileUnit;
   friend class SBData;
   friend class SBDebugger;
@@ -105,6 +106,7 @@ protected:
   friend class SBTypeEnumMember;
   friend class SBTypeMemberFunction;
   friend class SBTypeMember;
+  friend class SBTypeSummary;
   friend class SBValue;
   friend class SBWatchpoint;
 
@@ -119,6 +121,7 @@ protected:
 private:
   SBStream(const SBStream &) = delete;
   const SBStream &operator=(const SBStream &) = delete;
+  const char *GetString() const;
   std::unique_ptr<lldb_private::Stream> m_opaque_up;
   bool m_is_file = false;
 };

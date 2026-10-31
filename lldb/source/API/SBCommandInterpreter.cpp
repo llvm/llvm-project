@@ -221,7 +221,7 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   if (!file.IsValid()) {
     SBStream s;
     file.GetDescription(s);
-    result->AppendErrorWithFormat("File is not valid: %s", s.GetData());
+    result->AppendErrorWithFormat("File is not valid: %s", s.GetString());
   }
 
   FileSpec tmp_spec = file.ref();
@@ -594,9 +594,8 @@ SBStructuredData SBCommandInterpreter::GetStatistics() {
   if (!IsValid())
     return data;
 
-  std::string json_str =
-      llvm::formatv("{0:2}", m_opaque_ptr->GetStatistics()).str();
-  data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
+  llvm::json::Value stats = m_opaque_ptr->GetStatistics();
+  data.m_impl_up->SetObjectSP(StructuredData::ParseJSONValue(stats));
   return data;
 }
 

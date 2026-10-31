@@ -73,7 +73,7 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
   ProgramStateRef StInBound, StOutBound;
   std::tie(StInBound, StOutBound) = state->assumeInBoundDual(Idx, ElementCount);
   if (StOutBound && !StInBound) {
-    ExplodedNode *N = C.generateErrorNode(StOutBound);
+    ExplodedNode *N = C.addSink(StOutBound);
 
     if (!N)
       return;

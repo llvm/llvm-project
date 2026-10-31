@@ -293,6 +293,7 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 8)
+; CHECK-TF-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 8, i64 [[TMP1]])
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
 ; CHECK-TF-NEXT:    [[TMP3:%.*]] = mul <vscale x 8 x i64> [[TMP2]], splat (i64 2)
 ; CHECK-TF-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP1]], 1
@@ -318,11 +319,11 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-TF-NEXT:    store i64 0, ptr [[H]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[I]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[L]], align 8
-; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX_NEXT]], i64 8)
+; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-TF-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
 ; CHECK-TF-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NEXT:    br label %[[EXIT:.*]]
@@ -390,16 +391,13 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP20:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP41:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[VEC_PHI4:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP42:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 0
-; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 1
+; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], [[TMP5]]
 ; CHECK-NOTF-NEXT:    [[TMP22:%.*]] = shl i64 [[TMP2]], 1
-; CHECK-NOTF-NEXT:    [[TMP23:%.*]] = add i64 [[TMP22]], 0
-; CHECK-NOTF-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP23]], 1
+; CHECK-NOTF-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP22]], 1
 ; CHECK-NOTF-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], [[TMP24]]
 ; CHECK-NOTF-NEXT:    [[TMP32:%.*]] = mul i64 [[TMP2]], 3
-; CHECK-NOTF-NEXT:    [[TMP35:%.*]] = add i64 [[TMP32]], 0
-; CHECK-NOTF-NEXT:    [[TMP36:%.*]] = mul i64 [[TMP35]], 1
+; CHECK-NOTF-NEXT:    [[TMP36:%.*]] = mul i64 [[TMP32]], 1
 ; CHECK-NOTF-NEXT:    [[TMP39:%.*]] = add i64 [[INDEX]], [[TMP36]]
 ; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[INDEX]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP6]], i32 0
@@ -506,6 +504,7 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
+; CHECK-TF-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP1]])
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF:       [[VECTOR_BODY]]:
 ; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -522,10 +521,10 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-TF-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i32> [[TMP6]], [[TMP4]]
 ; CHECK-TF-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[TMP7]], [[TMP5]]
 ; CHECK-TF-NEXT:    [[TMP9]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]]
-; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
+; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-TF-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-NEXT:    [[TMP11:%.*]] = xor i1 [[TMP10]], true
+; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP9]])
@@ -700,16 +699,13 @@ define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP43:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[VEC_PHI4:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP44:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = add i64 [[TMP2]], 0
-; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 1
+; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], [[TMP7]]
 ; CHECK-NOTF-NEXT:    [[TMP24:%.*]] = shl i64 [[TMP2]], 1
-; CHECK-NOTF-NEXT:    [[TMP25:%.*]] = add i64 [[TMP24]], 0
-; CHECK-NOTF-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP25]], 1
+; CHECK-NOTF-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP24]], 1
 ; CHECK-NOTF-NEXT:    [[TMP33:%.*]] = add i64 [[INDEX]], [[TMP26]]
 ; CHECK-NOTF-NEXT:    [[TMP34:%.*]] = mul i64 [[TMP2]], 3
-; CHECK-NOTF-NEXT:    [[TMP37:%.*]] = add i64 [[TMP34]], 0
-; CHECK-NOTF-NEXT:    [[TMP38:%.*]] = mul i64 [[TMP37]], 1
+; CHECK-NOTF-NEXT:    [[TMP38:%.*]] = mul i64 [[TMP34]], 1
 ; CHECK-NOTF-NEXT:    [[TMP41:%.*]] = add i64 [[INDEX]], [[TMP38]]
 ; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[INDEX]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP8]], i32 0

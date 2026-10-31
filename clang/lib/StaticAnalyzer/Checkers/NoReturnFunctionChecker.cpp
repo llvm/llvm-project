@@ -83,7 +83,7 @@ void NoReturnFunctionChecker::checkPostCall(const CallEvent &CE,
   }
 
   if (BuildSinks)
-    C.generateSink(C.getState(), C.getPredecessor());
+    C.addSink();
 }
 
 void NoReturnFunctionChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
@@ -92,7 +92,7 @@ void NoReturnFunctionChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
   if (const ObjCMethodDecl *MD = Msg.getDecl()) {
     MD = MD->getCanonicalDecl();
     if (MD->hasAttr<AnalyzerNoReturnAttr>()) {
-      C.generateSink(C.getState(), C.getPredecessor());
+      C.addSink();
       return;
     }
   }
@@ -138,7 +138,7 @@ void NoReturnFunctionChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
   }
 
   // If we got here, it's one of the messages we care about.
-  C.generateSink(C.getState(), C.getPredecessor());
+  C.addSink();
 }
 
 void ento::registerNoReturnFunctionChecker(CheckerManager &mgr) {

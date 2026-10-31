@@ -307,6 +307,15 @@ Error HTTPClient::perform(const HTTPRequest &Request,
                           Session->TimeoutMs, Session->TimeoutMs))
     return createStringError(errc::io_error, "Failed to set WinHTTP timeout");
 
+  // WinHttpSetTimeouts does not cover the wait inside WinHttpReceiveResponse,
+  // which keeps its own 90 second default.
+  DWORD ResponseTimeoutMs = Session->TimeoutMs;
+  if (!WinHttpSetOption(Session->SessionHandle,
+                        WINHTTP_OPTION_RECEIVE_RESPONSE_TIMEOUT,
+                        &ResponseTimeoutMs, sizeof(ResponseTimeoutMs)))
+    return createStringError(errc::io_error,
+                             "Failed to set WinHTTP response timeout");
+
   // Prevent fallback to TLS 1.0/1.1
   DWORD SecureProtocols =
       WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;
@@ -418,15 +427,28 @@ Error HTTPClient::perform(const HTTPRequest &Request,
 
   // Read response body
   DWORD BytesAvailable = 0;
-  while (WinHttpQueryDataAvailable(Session->RequestHandle, &BytesAvailable)) {
+  while (true) {
+    // A failure here is not the end of the body: it is how a timeout waiting
+    // for the next chunk reports itself.
+    if (!WinHttpQueryDataAvailable(Session->RequestHandle, &BytesAvailable)) {
+      bool TimedOut = GetLastError() == ERROR_WINHTTP_TIMEOUT;
+      return createStringError(errc::io_error,
+                               TimedOut ? "Timeout was reached"
+                                        : "Failed to read HTTP response");
+    }
+
     if (BytesAvailable == 0)
       break;
 
     std::vector<char> Buffer(BytesAvailable);
     DWORD BytesRead = 0;
     if (!WinHttpReadData(Session->RequestHandle, Buffer.data(), BytesAvailable,
-                         &BytesRead))
-      return createStringError(errc::io_error, "Failed to read HTTP response");
+                         &BytesRead)) {
+      bool TimedOut = GetLastError() == ERROR_WINHTTP_TIMEOUT;
+      return createStringError(errc::io_error,
+                               TimedOut ? "Timeout was reached"
+                                        : "Failed to read HTTP response");
+    }
 
     if (BytesRead > 0) {
       if (Error Err =

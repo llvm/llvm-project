@@ -16,7 +16,7 @@ module Test
 
         ! CHECK-LABEL: func.func @_QMtestPinit_arrays
         ! CHECK: %[[ONE:.*]] = arith.constant 1 : i64
-        ! CHECK: %[[DECL_N:.*]] = fir.declare %{{.*}} {uniq_name = "_QMtestEn"} : (!fir.ref<i64>) -> !fir.ref<i64>
+        ! CHECK: %[[DECL_N:.*]] = fir.declare %{{.*}} uniq_name("_QMtestEn") : (!fir.ref<i64>) -> !fir.ref<i64>
         ! CHECK: %[[HOST_N:.*]] = fir.load %[[DECL_N]] : !fir.ref<i64>
         ! CHECK:      omp.target
         ! CHECK-SAME: host_eval(%[[ONE]] -> %[[LB:[[:alnum:]]+]], %[[HOST_N]] -> %[[UB:[[:alnum:]]+]], %[[ONE]] -> %[[STEP:[[:alnum:]]+]] : i64, i64, i64)
@@ -40,8 +40,8 @@ module Test
 
         ! CHECK-LABEL: func.func @_QMtestPinit_arrays_mixed
         ! CHECK: %[[STEP2:.*]] = arith.constant 1 : i64
-        ! CHECK: %[[DECL_M:.*]] = fir.declare %{{.*}} {uniq_name = "_QMtestEm"} : (!fir.ref<i32>) -> !fir.ref<i32>
-        ! CHECK: %[[DECL_N2:.*]] = fir.declare %{{.*}} {uniq_name = "_QMtestEn"} : (!fir.ref<i64>) -> !fir.ref<i64>
+        ! CHECK: %[[DECL_M:.*]] = fir.declare %{{.*}} uniq_name("_QMtestEm") : (!fir.ref<i32>) -> !fir.ref<i32>
+        ! CHECK: %[[DECL_N2:.*]] = fir.declare %{{.*}} uniq_name("_QMtestEn") : (!fir.ref<i64>) -> !fir.ref<i64>
         ! CHECK: %[[HOST_M:.*]] = fir.load %[[DECL_M]] : !fir.ref<i32>
         ! CHECK: %[[HOST_N2:.*]] = fir.load %[[DECL_N2]] : !fir.ref<i64>
         ! CHECK: %[[LB2_CONV:.*]] = fir.convert %[[HOST_M]] : (i32) -> i64

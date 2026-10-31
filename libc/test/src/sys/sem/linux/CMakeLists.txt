@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_sem_unittests)
+add_libc_testsuite(libc-sys-sem-tests)
 
 add_libc_test(
   sem_test
   SUITE
-    libc_sys_sem_unittests
+    libc-sys-sem-tests
   SRCS
     sem_test.cpp
   DEPENDS
@@ -11,7 +11,6 @@ add_libc_test(
     libc.hdr.sys_sem_macros
     libc.hdr.types.struct_sembuf
     libc.hdr.types.struct_semid_ds
-    libc.src.errno.errno
     libc.src.sys.sem.semget
     libc.src.sys.sem.semctl
     libc.src.sys.sem.semop

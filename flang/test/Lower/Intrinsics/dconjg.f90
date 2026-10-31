@@ -5,8 +5,8 @@ subroutine test_dconjg(r, c)
   complex(8), intent(in) :: c
 
 ! CHECK-LABEL: func @_QPtest_dconjg(
-! CHECK-SAME: %[[ARG_0:.*]]: !fir.ref<complex<f64>> {fir.bindc_name = "r"},
-! CHECK-SAME: %[[ARG_1:.*]]: !fir.ref<complex<f64>> {fir.bindc_name = "c", fir.read_only}) {
+! CHECK-SAME: %[[ARG_0:.*]]: !fir.ref<complex<f64>> {fir.bindc_name = "r", fir.fortran_attrs = #fir.var_attrs<intent_out>},
+! CHECK-SAME: %[[ARG_1:.*]]: !fir.ref<complex<f64>> {fir.bindc_name = "c", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}) {
 ! CHECK:   %[[DS:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:   %[[C_DECL:.*]]:2 = hlfir.declare %[[ARG_1]] dummy_scope %[[DS]] {{.*}}
 ! CHECK:   %[[R_DECL:.*]]:2 = hlfir.declare %[[ARG_0]] dummy_scope %[[DS]] {{.*}}

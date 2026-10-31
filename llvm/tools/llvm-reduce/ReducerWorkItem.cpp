@@ -274,7 +274,6 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     if (SrcMBB.isMachineBlockAddressTaken())
       DstMBB->setMachineBlockAddressTaken();
 
-    // FIXME: This is not serialized
     if (SrcMBB.hasLabelMustBeEmitted())
       DstMBB->setLabelMustBeEmitted();
 
@@ -799,7 +798,7 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
   const bool ShouldPreserveUseListOrder = true;
 
   if (LTOInfo && LTOInfo->IsThinLTO && LTOInfo->EnableSplitLTOUnit) {
-    PassBuilder PB;
+    PassBuilder PB(M->getContext());
     LoopAnalysisManager LAM;
     FunctionAnalysisManager FAM;
     CGSCCAnalysisManager CGAM;
@@ -856,9 +855,10 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
       if (TheTriple.getTriple().empty())
         TheTriple.setTriple(sys::getDefaultTargetTriple());
       ExitOnError ExitOnErr(std::string(ToolName) + ": error: ");
-      TM = ExitOnErr(codegen::createTargetMachineForTriple(TheTriple));
+      TM = ExitOnErr(codegen::createTargetMachineForTriple(
+          Ctxt.getLibraryOptions(), TheTriple));
 
-      return TM->createDataLayout().getStringRepresentation();
+      return TheTriple.computeDataLayout();
     };
 
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);

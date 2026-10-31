@@ -9,18 +9,17 @@
 define void @store_chain_splat_subtree(ptr %matrix, double %a) {
 ; CHECK-LABEL: @store_chain_splat_subtree(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call double @llvm.fmuladd.f64(double [[A1:%.*]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[A:%.*]] = tail call double @llvm.fmuladd.f64(double [[A1]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[MUL0:%.*]] = fmul double [[A]], 0.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP3]], double 0.000000e+00, double [[MUL0]])
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP2]], double 0.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[A:%.*]] = tail call double @llvm.fmuladd.f64(double [[A1:%.*]], double 0.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call double @llvm.fmuladd.f64(double [[A1]], double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[MATRIX:%.*]], i64 24
-; CHECK-NEXT:    store double [[TMP6]], ptr [[GEP0]], align 8
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[A]], 0.000000e+00
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP3]], double 0.000000e+00, double [[MUL1]])
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP4]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 32
-; CHECK-NEXT:    store double [[TMP5]], ptr [[GEP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> zeroinitializer, <2 x double> [[TMP4]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP7]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)
+; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[GEP0]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

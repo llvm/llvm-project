@@ -37,24 +37,30 @@ entry:
   ; M2-M3:  andi    $[[T0:[0-9]+]], $4, 1
   ; M2:     bnez    $[[T0]], [[BB0:\$BB[0-9_]+]]
   ; M3:     bnez    $[[T0]], [[BB0:\.LBB[0-9_]+]]
-  ; M2-M3:  nop
-  ; M2-M3:  move    $5, $6
+  ; M2:     move    $2, $5
+  ; M2:     move    $2, $6
+  ; M3:     nop
+  ; M3:     jr      $ra
+  ; M3:     move    $2, $6
   ; M2-M3:  [[BB0]]:
   ; M2-M3:  jr      $ra
-  ; M2-M3:  move    $2, $5
+  ; M2:     nop
+  ; M3:     move    $2, $5
 
-  ; CMOV:   andi    $[[T0:[0-9]+]], $4, 1
-  ; CMOV:   movn    $6, $5, $[[T0]]
   ; CMOV:   move    $2, $6
+  ; CMOV:   andi    $[[T0:[0-9]+]], $4, 1
+  ; CMOV:   jr      $ra
+  ; CMOV:   movn    $2, $5, $[[T0]]
 
   ; SEL:    andi    $[[T0:[0-9]+]], $4, 1
   ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
   ; SEL:    selnez  $[[T2:[0-9]+]], $5, $[[T0]]
   ; SEL:    or      $2, $[[T2]], $[[T1]]
 
+  ; MM32R3:   move    $2, $6
   ; MM32R3:   andi16  $[[T0:[0-9]+]], $4, 1
-  ; MM32R3:   movn    $[[T1:[0-9]+]], $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
-  ; MM32R3:   move    $2, $[[T1]]
+  ; MM32R3:   jr      $ra
+  ; MM32R3:   movn    $2, $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
 
   ; MMR6:     andi16  $[[T0:[0-9]+]], $4, 1
   ; MMR6:     seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
@@ -73,24 +79,30 @@ entry:
   ; M2-M3:  andi    $[[T0:[0-9]+]], $4, 1
   ; M2:     bnez    $[[T0]], [[BB0:\$BB[0-9_]+]]
   ; M3:     bnez    $[[T0]], [[BB0:\.LBB[0-9_]+]]
-  ; M2-M3:  nop
-  ; M2-M3:  move    $5, $6
+  ; M2:     move    $2, $5
+  ; M2:     move    $2, $6
+  ; M3:     nop
+  ; M3:     jr      $ra
+  ; M3:     move    $2, $6
   ; M2-M3:  [[BB0]]:
   ; M2-M3:  jr      $ra
-  ; M2-M3:  move    $2, $5
+  ; M2:     nop
+  ; M3:     move    $2, $5
 
-  ; CMOV:   andi    $[[T0:[0-9]+]], $4, 1
-  ; CMOV:   movn    $6, $5, $[[T0]]
   ; CMOV:   move    $2, $6
+  ; CMOV:   andi    $[[T0:[0-9]+]], $4, 1
+  ; CMOV:   jr      $ra
+  ; CMOV:   movn    $2, $5, $[[T0]]
 
   ; SEL:    andi    $[[T0:[0-9]+]], $4, 1
   ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
   ; SEL:    selnez  $[[T2:[0-9]+]], $5, $[[T0]]
   ; SEL:    or      $2, $[[T2]], $[[T1]]
 
+  ; MM32R3:   move    $2, $6
   ; MM32R3:   andi16  $[[T0:[0-9]+]], $4, 1
-  ; MM32R3:   movn    $[[T1:[0-9]+]], $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
-  ; MM32R3:   move    $2, $[[T1]]
+  ; MM32R3:   jr      $ra
+  ; MM32R3:   movn    $2, $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
 
   ; MMR6:     andi16  $[[T0:[0-9]+]], $4, 1
   ; MMR6:     seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
@@ -109,15 +121,22 @@ entry:
   ; M2-M3:  andi    $[[T0:[0-9]+]], $4, 1
   ; M2:     bnez    $[[T0]], [[BB0:\$BB[0-9_]+]]
   ; M3:     bnez    $[[T0]], [[BB0:\.LBB[0-9_]+]]
-  ; M2-M3:  nop
-  ; M2-M3:  move    $5, $6
+  ; M2:     move    $2, $5
+  ; M2:     move    $2, $6
+  ; M3:     nop
+  ; M3:     move    $5, $6
   ; M2-M3:  [[BB0]]:
   ; M2-M3:  jr      $ra
+  ; M2:     nop
   ; M3:     sll     $2, $5, 0
 
-  ; CMOV:   andi    $[[T0:[0-9]+]], $4, 1
-  ; CMOV:   movn    $6, $5, $[[T0]]
-  ; CMOV-64:sll     $2, $6, 0
+  ; CMOV-32:  move    $2, $6
+  ; CMOV-32:  andi    $[[T0:[0-9]+]], $4, 1
+  ; CMOV-32:  jr      $ra
+  ; CMOV-32:  movn    $2, $5, $[[T0]]
+  ; CMOV-64:  andi    $[[T0:[0-9]+]], $4, 1
+  ; CMOV-64:  movn    $6, $5, $[[T0]]
+  ; CMOV-64:  sll     $2, $6, 0
 
   ; SEL:    andi    $[[T0:[0-9]+]], $4, 1
   ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
@@ -125,9 +144,10 @@ entry:
   ; SEL:    or      $[[T3:[0-9]+]], $[[T2]], $[[T1]]
   ; SEL-64: sll     $2, $[[T3]], 0
 
+  ; MM32R3:     move    $2, $6
   ; MM32R3:     andi16  $[[T0:[0-9]+]], $4, 1
-  ; MM32R3:     movn    $[[T1:[0-9]+]], $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
-  ; MM32R3:     move    $2, $[[T1]]
+  ; MM32R3:     jr      $ra
+  ; MM32R3:     movn    $2, $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
 
   ; MMR6:       andi16  $[[T0:[0-9]+]], $4, 1
   ; MMR6:       seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
@@ -143,19 +163,24 @@ define signext i64 @tst_select_i1_i64(i1 signext %s,
 entry:
   ; ALL-LABEL: tst_select_i1_i64:
 
+  ; M2:     move    $3, $7
   ; M2:     andi    $[[T0:[0-9]+]], $4, 1
-  ; M2:     bnez    $[[T0]], $[[BB0:BB[0-9_]+]]
-  ; M2:     nop
-  ; M2:     lw      $[[T1:[0-9]+]], 16($sp)
-  ; M2:     $[[BB0]]:
+  ; M2:     beqz    $[[T0]], $[[BB0:BB[0-9_]+]]
+  ; M2:     move    $2, $6
   ; FIXME: This branch is redundant
-  ; M2:     bnez    $[[T0]], $[[BB1:BB[0-9_]+]]
+  ; M2:     beqz    $[[T0]], $[[BB1:BB[0-9_]+]]
   ; M2:     nop
-  ; M2:     lw      $[[T2:[0-9]+]], 20($sp)
-  ; M2:     $[[BB1]]:
-  ; M2:     move    $2, $[[T1]]
+  ; M2:     $[[BB2:BB[0-9_]+]]:
   ; M2:     jr      $ra
-  ; M2:     move    $3, $[[T2]]
+  ; M2:     nop
+  ; M2:     $[[BB0]]:
+  ; M2:     lw      $[[T1:[0-9]+]], 16($sp)
+  ; M2:     bnez    $[[T0]], $[[BB2]]
+  ; M2:     nop
+  ; M2:     $[[BB1]]:
+  ; M2:     lw      $[[T2:[0-9]+]], 20($sp)
+  ; M2:     jr      $ra
+  ; M2:     nop
 
   ; CMOV-32:    andi    $[[T0:[0-9]+]], $4, 1
   ; CMOV-32:    lw      $2, 16($sp)
@@ -175,15 +200,16 @@ entry:
 
   ; M3:         andi    $[[T0:[0-9]+]], $4, 1
   ; M3:         bnez    $[[T0]], [[BB0:\.LBB[0-9_]+]]
-  ; M3:         nop
-  ; M3:         move    $5, $6
+  ; M3:         move    $2, $5
+  ; M3:         move    $2, $6
   ; M3:         [[BB0]]:
   ; M3:         jr      $ra
-  ; M3:         move    $2, $5
+  ; M3:         nop
 
-  ; CMOV-64:    andi    $[[T0:[0-9]+]], $4, 1
-  ; CMOV-64:    movn    $6, $5, $[[T0]]
   ; CMOV-64:    move    $2, $6
+  ; CMOV-64:    andi    $[[T0:[0-9]+]], $4, 1
+  ; CMOV-64:    jr      $ra
+  ; CMOV-64:    movn    $2, $5, $[[T0]]
 
   ; SEL-64:     andi    $[[T0:[0-9]+]], $4, 1
   ; FIXME: This shift is redundant
@@ -233,11 +259,11 @@ define ptr @tst_select_word_cst(ptr %a, ptr %b) {
   ; M3: [[BB0]]:
   ; M3:         jr      $ra
 
+  ; CMOV-32:    move    $2, $4
   ; CMOV-32:    addiu   $[[T0:[0-9]+]], $zero, -1
   ; CMOV-32:    xor     $[[T1:[0-9]+]], $5, $[[T0]]
-  ; CMOV-32:    movn    $[[T2:[0-9]+]], $zero, $[[T1]]
   ; CMOV-32:    jr      $ra
-  ; CMOV-32:    move    $2, $[[T2]]
+  ; CMOV-32:    movn    $2, $zero, $[[T1]]
 
   ; SEL-32:     addiu   $[[T0:[0-9]+]], $zero, -1
   ; SEL-32:     xor     $[[T1:[0-9]+]], $5, $[[T0]]
@@ -245,10 +271,11 @@ define ptr @tst_select_word_cst(ptr %a, ptr %b) {
   ; SEL-32:     jr      $ra
   ; SEL-32:     seleqz  $2, $4, $[[T2]]
 
+  ; CMOV-64:    move    $2, $4
   ; CMOV-64:    daddiu  $[[T0:[0-9]+]], $zero, -1
   ; CMOV-64:    xor     $[[T1:[0-9]+]], $5, $[[T0]]
-  ; CMOV-64:    movn    $[[T2:[0-9]+]], $zero, $[[T1]]
-  ; CMOV-64:    move    $2, $[[T2]]
+  ; CMOV-64:    jr      $ra
+  ; CMOV-64:    movn    $2, $zero, $[[T1]]
 
   ; SEL-64:     daddiu  $[[T0:[0-9]+]], $zero, -1
   ; SEL-64:     xor     $[[T1:[0-9]+]], $5, $[[T0]]
@@ -257,11 +284,12 @@ define ptr @tst_select_word_cst(ptr %a, ptr %b) {
   ; SEL-64:     sll     $[[T2]], $[[T2]], 0
   ; SEL-64:     seleqz  $2, $4, $[[T2]]
 
+  ; MM32R3:     move    $2, $4
   ; MM32R3:     li16    $[[T0:[0-9]+]], -1
   ; MM32R3:     xor     $[[T1:[0-9]+]], $5, $[[T0]]
   ; MM32R3:     li16    $[[T2:[0-9]+]], 0
-  ; MM32R3:     movn    $[[T3:[0-9]+]], $[[T2]], $[[T1]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
-  ; MM32R3:     move    $2, $[[T3]]
+  ; MM32R3:     jr      $ra
+  ; MM32R3:     movn    $2, $[[T2]], $[[T1]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
 
   ; MM32R6:     li16    $[[T0:[0-9]+]], -1
   ; MM32R6:     xor     $[[T1:[0-9]+]], $5, $[[T0]]

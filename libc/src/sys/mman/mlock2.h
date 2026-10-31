@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 #ifdef SYS_mlock2
-int mlock2(const void *addr, size_t len, int flags);
+int mlock2(const void *addr, size_t len, unsigned int flags);
 #endif
 
 } // namespace LIBC_NAMESPACE_DECL

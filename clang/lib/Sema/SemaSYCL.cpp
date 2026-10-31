@@ -676,7 +676,7 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
 
   void emitObjectAccessPathNotes() {
     for (auto Parent : llvm::reverse(ObjectAccessPath)) {
-      if (auto *FD = Parent.dyn_cast<const FieldDecl *>()) {
+      if (auto *FD = dyn_cast<const FieldDecl *>(Parent)) {
         const CXXRecordDecl *ParentRD = cast<CXXRecordDecl>(FD->getParent());
         if (ParentRD->isLambda()) {
           SemaSYCLRef.Diag(ParentRD->getLocation(), diag::note_within_capture)
@@ -686,7 +686,7 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
                            diag::note_within_field_of_type)
               << ParentRD;
         }
-      } else if (auto *BS = Parent.dyn_cast<const CXXBaseSpecifier *>()) {
+      } else if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(Parent)) {
         CXXRecordDecl *RD = BS->getType()->getAsCXXRecordDecl();
         assert(RD);
         SemaSYCLRef.Diag(BS->getBeginLoc(), diag::note_within_base_of_type)

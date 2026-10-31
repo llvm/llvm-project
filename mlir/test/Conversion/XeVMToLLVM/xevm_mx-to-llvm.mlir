@@ -1,18 +1,18 @@
 // RUN: mlir-opt --convert-xevm-to-llvm --split-input-file %s | FileCheck %s
 
-// CHECK: llvm.func spir_funccc @__builtin_IB_hftobf8_16(vector<16xf16>) -> vector<16xi8>
+// CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE5M2EXTDv16_Dh(vector<16xf16>) -> vector<16xi8>
 // CHECK-SAME: attributes {convergent, memory_effects = #llvm.memory_effects<other = none,
 // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
 // CHECK-SAME:   targetMem0 = none, targetMem1 = none>, no_unwind, will_return}
 // CHECK-LABEL: llvm.func @truncf_f16_to_bf8
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xf16>
 llvm.func @truncf_f16_to_bf8(%src: vector<16xf16>) -> vector<16xi8> {
-  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_hftobf8_16(%[[ARG0]])
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE5M2EXTDv16_Dh(%[[ARG0]])
   // CHECK-SAME: {convergent, function_type = !llvm.func<vector<16xi8> (vector<16xf16>)>,
   // CHECK-SAME: linkage = #llvm.linkage<external>, memory_effects = #llvm.memory_effects<other = none,
   // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
   // CHECK-SAME:   targetMem0 = none, targetMem1 = none>,
-  // CHECK-SAME: no_unwind, sym_name = "__builtin_IB_hftobf8_16",
+  // CHECK-SAME: no_unwind, sym_name = "_Z36__builtin_spirv_ConvertFP16ToE5M2EXTDv16_Dh",
   // CHECK-SAME: visibility_ = 0 : i64, will_return} :
   // CHECK-SAME: (vector<16xf16>) -> vector<16xi8>
   %dst = xevm.truncf %src { src_etype = f16, dst_etype = bf8 } : (vector<16xf16>) -> vector<16xi8>
@@ -21,19 +21,19 @@ llvm.func @truncf_f16_to_bf8(%src: vector<16xf16>) -> vector<16xi8> {
 
 // -----
 
-// CHECK: llvm.func spir_funccc @__builtin_IB_hftohf8_16(vector<16xf16>) -> vector<16xi8>
+// CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE4M3EXTDv16_Dh(vector<16xf16>) -> vector<16xi8>
 // CHECK-SAME: attributes {convergent, memory_effects = #llvm.memory_effects<other = none,
 // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
 // CHECK-SAME:   targetMem0 = none, targetMem1 = none>, no_unwind, will_return}
 // CHECK-LABEL: llvm.func @truncf_f16_to_hf8
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xf16>
 llvm.func @truncf_f16_to_hf8(%src: vector<16xf16>) -> vector<16xi8> {
-  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_hftohf8_16(%[[ARG0]])
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE4M3EXTDv16_Dh(%[[ARG0]])
   // CHECK-SAME: {convergent, function_type = !llvm.func<vector<16xi8> (vector<16xf16>)>,
   // CHECK-SAME: linkage = #llvm.linkage<external>, memory_effects = #llvm.memory_effects<other = none,
   // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
   // CHECK-SAME:   targetMem0 = none, targetMem1 = none>,
-  // CHECK-SAME: no_unwind, sym_name = "__builtin_IB_hftohf8_16",
+  // CHECK-SAME: no_unwind, sym_name = "_Z36__builtin_spirv_ConvertFP16ToE4M3EXTDv16_Dh",
   // CHECK-SAME: visibility_ = 0 : i64, will_return} :
   // CHECK-SAME: (vector<16xf16>) -> vector<16xi8>
   %dst = xevm.truncf %src { src_etype = f16, dst_etype = f8 } : (vector<16xf16>) -> vector<16xi8>
@@ -42,38 +42,26 @@ llvm.func @truncf_f16_to_hf8(%src: vector<16xf16>) -> vector<16xi8> {
 
 // -----
 
-// CHECK: llvm.func spir_funccc @__builtin_IB_hftobf8_16(vector<16xf16>) -> vector<16xi8>
-// CHECK: llvm.func spir_funccc @_Z14convert_half16Dv16_f(vector<16xf32>) -> vector<16xf16>
-// CHECK: llvm.func spir_funccc @__builtin_IB_bftof_16(vector<16xi16>) -> vector<16xf32>
+// CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertBF16ToE5M2EXTDv16_s(vector<16xi16>) -> vector<16xi8>
 // CHECK-LABEL: llvm.func @truncf_bf16_to_bf8
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xbf16>
 llvm.func @truncf_bf16_to_bf8(%src: vector<16xbf16>) -> vector<16xi8> {
   // CHECK: %[[VAR0:.*]] = llvm.bitcast %[[ARG0]] : vector<16xbf16> to vector<16xi16>
-  // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @__builtin_IB_bftof_16(%[[VAR0]])
-  // CHECK-SAME: : (vector<16xi16>) -> vector<16xf32>
-  // CHECK: %[[VAR2:.*]] = llvm.call spir_funccc @_Z14convert_half16Dv16_f(%[[VAR1]])
-  // CHECK-SAME: : (vector<16xf32>) -> vector<16xf16>
-  // CHECK: %[[VAR3:.*]] = llvm.call spir_funccc @__builtin_IB_hftobf8_16(%[[VAR2]])
-  // CHECK-SAME: : (vector<16xf16>) -> vector<16xi8>
+  // CHECK: %[[VAR3:.*]] = llvm.call spir_funccc @_Z36__builtin_spirv_ConvertBF16ToE5M2EXTDv16_s(%[[VAR0]])
+  // CHECK-SAME: : (vector<16xi16>) -> vector<16xi8>
   %dst = xevm.truncf %src { src_etype = bf16, dst_etype = bf8 } : (vector<16xbf16>) -> vector<16xi8>
   llvm.return %dst : vector<16xi8>
 }
 
 // -----
 
-// CHECK: llvm.func spir_funccc @__builtin_IB_hftohf8_16(vector<16xf16>) -> vector<16xi8>
-// CHECK: llvm.func spir_funccc @_Z14convert_half16Dv16_f(vector<16xf32>) -> vector<16xf16>
-// CHECK: llvm.func spir_funccc @__builtin_IB_bftof_16(vector<16xi16>) -> vector<16xf32>
+// CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertBF16ToE4M3EXTDv16_s(vector<16xi16>) -> vector<16xi8>
 // CHECK-LABEL: llvm.func @truncf_bf16_to_hf8
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xbf16>
 llvm.func @truncf_bf16_to_hf8(%src: vector<16xbf16>) -> vector<16xi8> {
   // CHECK: %[[VAR0:.*]] = llvm.bitcast %[[ARG0]] : vector<16xbf16> to vector<16xi16>
-  // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @__builtin_IB_bftof_16(%[[VAR0]])
-  // CHECK-SAME: : (vector<16xi16>) -> vector<16xf32>
-  // CHECK: %[[VAR2:.*]] = llvm.call spir_funccc @_Z14convert_half16Dv16_f(%[[VAR1]])
-  // CHECK-SAME: : (vector<16xf32>) -> vector<16xf16>
-  // CHECK: %[[VAR3:.*]] = llvm.call spir_funccc @__builtin_IB_hftohf8_16(%[[VAR2]])
-  // CHECK-SAME: : (vector<16xf16>) -> vector<16xi8>
+  // CHECK: %[[VAR3:.*]] = llvm.call spir_funccc @_Z36__builtin_spirv_ConvertBF16ToE4M3EXTDv16_s(%[[VAR0]])
+  // CHECK-SAME: : (vector<16xi16>) -> vector<16xi8>
   %dst = xevm.truncf %src { src_etype = bf16, dst_etype = f8 } : (vector<16xbf16>) -> vector<16xi8>
   llvm.return %dst : vector<16xi8>
 }
@@ -162,19 +150,19 @@ llvm.func @truncf_bf16_to_e2m1(%src: vector<16xbf16>) -> vector<8xi8> {
 
 // -----
 
-// CHECK: llvm.func spir_funccc @__builtin_IB_bf8tohf_16(vector<16xi8>) -> vector<16xf16>
+// CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertE5M2ToFP16EXTDv16_c(vector<16xi8>) -> vector<16xf16>
 // CHECK-SAME: attributes {convergent, memory_effects = #llvm.memory_effects<other = none,
 // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
 // CHECK-SAME:   targetMem0 = none, targetMem1 = none>, no_unwind, will_return}
 // CHECK-LABEL: llvm.func @extf_bf8_to_f16
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xi8>
 llvm.func @extf_bf8_to_f16(%src: vector<16xi8>) -> vector<16xf16> {
-  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_bf8tohf_16(%[[ARG0]])
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z36__builtin_spirv_ConvertE5M2ToFP16EXTDv16_c(%[[ARG0]])
   // CHECK-SAME: {convergent, function_type = !llvm.func<vector<16xf16> (vector<16xi8>)>,
   // CHECK-SAME: linkage = #llvm.linkage<external>, memory_effects = #llvm.memory_effects<other = none,
   // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
   // CHECK-SAME:   targetMem0 = none, targetMem1 = none>,
-  // CHECK-SAME: no_unwind, sym_name = "__builtin_IB_bf8tohf_16",
+  // CHECK-SAME: no_unwind, sym_name = "_Z36__builtin_spirv_ConvertE5M2ToFP16EXTDv16_c",
   // CHECK-SAME: visibility_ = 0 : i64, will_return} :
   // CHECK-SAME: (vector<16xi8>) -> vector<16xf16>
   %dst = xevm.extf %src { src_etype = bf8, dst_etype = f16 } : (vector<16xi8>) -> vector<16xf16>
@@ -183,19 +171,19 @@ llvm.func @extf_bf8_to_f16(%src: vector<16xi8>) -> vector<16xf16> {
 
 // -----
 
-// CHECK: llvm.func spir_funccc @__builtin_IB_hf8tohf_16(vector<16xi8>) -> vector<16xf16>
+// CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertE4M3ToFP16EXTDv16_c(vector<16xi8>) -> vector<16xf16>
 // CHECK-SAME: attributes {convergent, memory_effects = #llvm.memory_effects<other = none,
 // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
 // CHECK-SAME:   targetMem0 = none, targetMem1 = none>, no_unwind, will_return}
 // CHECK-LABEL: llvm.func @extf_f8_to_f16
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xi8>
 llvm.func @extf_f8_to_f16(%src: vector<16xi8>) -> vector<16xf16> {
-  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_hf8tohf_16(%[[ARG0]])
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z36__builtin_spirv_ConvertE4M3ToFP16EXTDv16_c(%[[ARG0]])
   // CHECK-SAME: {convergent, function_type = !llvm.func<vector<16xf16> (vector<16xi8>)>,
   // CHECK-SAME: linkage = #llvm.linkage<external>, memory_effects = #llvm.memory_effects<other = none,
   // CHECK-SAME:   argMem = none, inaccessibleMem = none, errnoMem = none,
   // CHECK-SAME:   targetMem0 = none, targetMem1 = none>,
-  // CHECK-SAME: no_unwind, sym_name = "__builtin_IB_hf8tohf_16",
+  // CHECK-SAME: no_unwind, sym_name = "_Z36__builtin_spirv_ConvertE4M3ToFP16EXTDv16_c",
   // CHECK-SAME: visibility_ = 0 : i64, will_return} :
   // CHECK-SAME: (vector<16xi8>) -> vector<16xf16>
   %dst = xevm.extf %src { src_etype = f8, dst_etype = f16 } : (vector<16xi8>) -> vector<16xf16>
@@ -204,38 +192,26 @@ llvm.func @extf_f8_to_f16(%src: vector<16xi8>) -> vector<16xf16> {
 
 // -----
 
-// CHECK: llvm.func spir_funccc @__builtin_IB_ftobf_16(vector<16xf32>) -> vector<16xi16>
-// CHECK: llvm.func spir_funccc @_Z15convert_float16Dv16_Dh(vector<16xf16>) -> vector<16xf32>
-// CHECK: llvm.func spir_funccc @__builtin_IB_bf8tohf_16(vector<16xi8>) -> vector<16xf16>
+// CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertE5M2ToBF16EXTDv16_c(vector<16xi8>) -> vector<16xi16>
 // CHECK-LABEL: llvm.func @extf_bf8_to_bf16
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xi8>
 llvm.func @extf_bf8_to_bf16(%src: vector<16xi8>) -> vector<16xbf16> {
-  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_bf8tohf_16(%[[ARG0]])
-  // CHECK-SAME: : (vector<16xi8>) -> vector<16xf16>
-  // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @_Z15convert_float16Dv16_Dh(%[[VAR0]])
-  // CHECK-SAME: : (vector<16xf16>) -> vector<16xf32>
-  // CHECK: %[[VAR2:.*]] = llvm.call spir_funccc @__builtin_IB_ftobf_16(%[[VAR1]])
-  // CHECK-SAME: : (vector<16xf32>) -> vector<16xi16>
-  // CHECK: %[[VAR3:.*]] = llvm.bitcast %[[VAR2]] : vector<16xi16> to vector<16xbf16>
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z36__builtin_spirv_ConvertE5M2ToBF16EXTDv16_c(%[[ARG0]])
+  // CHECK-SAME: : (vector<16xi8>) -> vector<16xi16>
+  // CHECK: %[[VAR3:.*]] = llvm.bitcast %[[VAR0]] : vector<16xi16> to vector<16xbf16>
   %dst = xevm.extf %src { src_etype = bf8, dst_etype = bf16 } : (vector<16xi8>) -> vector<16xbf16>
   llvm.return %dst : vector<16xbf16>
 }
 
 // -----
 
-// CHECK: llvm.func spir_funccc @__builtin_IB_ftobf_16(vector<16xf32>) -> vector<16xi16>
-// CHECK: llvm.func spir_funccc @_Z15convert_float16Dv16_Dh(vector<16xf16>) -> vector<16xf32>
-// CHECK: llvm.func spir_funccc @__builtin_IB_hf8tohf_16(vector<16xi8>) -> vector<16xf16>
+// CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertE4M3ToBF16EXTDv16_c(vector<16xi8>) -> vector<16xi16>
 // CHECK-LABEL: llvm.func @extf_f8_to_bf16
 // CHECK-SAME: %[[ARG0:.*]]: vector<16xi8>
 llvm.func @extf_f8_to_bf16(%src: vector<16xi8>) -> vector<16xbf16> {
-  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @__builtin_IB_hf8tohf_16(%[[ARG0]])
-  // CHECK-SAME: : (vector<16xi8>) -> vector<16xf16>
-  // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @_Z15convert_float16Dv16_Dh(%[[VAR0]])
-  // CHECK-SAME: : (vector<16xf16>) -> vector<16xf32>
-  // CHECK: %[[VAR2:.*]] = llvm.call spir_funccc @__builtin_IB_ftobf_16(%[[VAR1]])
-  // CHECK-SAME: : (vector<16xf32>) -> vector<16xi16>
-  // CHECK: %[[VAR3:.*]] = llvm.bitcast %[[VAR2]] : vector<16xi16> to vector<16xbf16>
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z36__builtin_spirv_ConvertE4M3ToBF16EXTDv16_c(%[[ARG0]])
+  // CHECK-SAME: : (vector<16xi8>) -> vector<16xi16>
+  // CHECK: %[[VAR3:.*]] = llvm.bitcast %[[VAR0]] : vector<16xi16> to vector<16xbf16>
   %dst = xevm.extf %src { src_etype = f8, dst_etype = bf16 } : (vector<16xi8>) -> vector<16xbf16>
   llvm.return %dst : vector<16xbf16>
 }

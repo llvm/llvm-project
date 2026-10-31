@@ -37,6 +37,11 @@
 // CHECK-MULTIPLESOURCEOK2: "-o" "cl-outputs.obj"
 // CHECK-MULTIPLESOURCEOK2: "-o" "cl-outputs.obj"
 
+// RUN: %clang_cl /c /Foa.obj -Xlinker -foo -### -- %s foo.obj foo.lib 2>&1 | FileCheck -check-prefix=FoLINKERINPUT %s
+// RUN: %clang_cl /Foa.obj -Xlinker -foo -### -- %s foo.lib 2>&1 | FileCheck -check-prefix=FoLINKERINPUT %s
+// FoLINKERINPUT-NOT: error: cannot specify '/Foa.obj' when compiling multiple source files
+// FoLINKERINPUT: "-o" "a.obj"
+
 // RUN: %clang_cl /c /oa -### -- %s 2>&1 | FileCheck -check-prefix=oNAME1 %s
 // oNAME1:  "-o" "a.obj"
 
@@ -243,6 +248,9 @@
 // RUN: %clang_cl /Fa -### -- %s %s 2>&1 | FileCheck -check-prefix=FaMULTIPLESOURCEOK %s
 // FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"
 // FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"
+// RUN: %clang_cl /Faa.asm -Xlinker -foo -### -- %s foo.obj 2>&1 | FileCheck -check-prefix=FaLINKERINPUT %s
+// FaLINKERINPUT-NOT: error: cannot specify '/Faa.asm' when compiling multiple source files
+// FaLINKERINPUT: "-o" "a.asm"
 
 // Copy of the same tests above, but with /FAcsu
 // RUN: %clang_cl /FAcsu -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU %s

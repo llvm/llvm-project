@@ -9,6 +9,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
@@ -24,6 +25,9 @@ using namespace mlir::acc;
 class OpenACCUtilsGPUTest : public ::testing::Test {
 protected:
   OpenACCUtilsGPUTest() : b(&context), loc(UnknownLoc::get(&context)) {
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context.loadDialect<arith::ArithDialect, gpu::GPUDialect>();
   }
 

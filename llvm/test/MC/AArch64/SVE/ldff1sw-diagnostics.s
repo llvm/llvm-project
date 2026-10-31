@@ -93,27 +93,27 @@ ldff1sw z0.s, p0/z, [z0.s, #4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1sw z0.d, p0/z, [z0.d, #-4]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #-4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1sw z0.d, p0/z, [z0.d, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1sw z0.d, p0/z, [z0.d, #125]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #125]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1sw z0.d, p0/z, [z0.d, #128]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #128]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldff1sw z0.d, p0/z, [z0.d, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: ldff1sw z0.d, p0/z, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

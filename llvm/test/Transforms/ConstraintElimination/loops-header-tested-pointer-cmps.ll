@@ -6,7 +6,8 @@ declare void @use(i1)
 define void @test1(ptr %src, ptr noundef %lower, ptr noundef %upper, i8 %N) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i8 [[N:%.*]]
+; CHECK-NEXT:    [[SRC_END_IDX:%.*]] = sext i8 [[N:%.*]] to i64
+; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[SRC_END_IDX]]
 ; CHECK-NEXT:    [[CMP_SRC_START:%.*]] = icmp ult ptr [[SRC]], [[LOWER:%.*]]
 ; CHECK-NEXT:    [[CMP_SRC_END:%.*]] = icmp uge ptr [[SRC_END]], [[UPPER:%.*]]
 ; CHECK-NEXT:    [[OR_0:%.*]] = or i1 [[CMP_SRC_START]], [[CMP_SRC_END]]
@@ -18,7 +19,8 @@ define void @test1(ptr %src, ptr noundef %lower, ptr noundef %upper, i8 %N) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp uge i8 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_BODY:%.*]]
 ; CHECK:       loop.body:
-; CHECK-NEXT:    [[SRC_IV:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[IV]]
+; CHECK-NEXT:    [[SRC_IV_IDX:%.*]] = sext i8 [[IV]] to i64
+; CHECK-NEXT:    [[SRC_IV:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_END:%.*]] = icmp uge ptr [[SRC_IV]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, [[CMP_IV_END]]
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP_BB]], label [[LOOP_BODY_1:%.*]]
@@ -26,7 +28,8 @@ define void @test1(ptr %src, ptr noundef %lower, ptr noundef %upper, i8 %N) {
 ; CHECK-NEXT:    [[PTR_SRC_IV:%.*]] = bitcast ptr [[SRC_IV]] to ptr
 ; CHECK-NEXT:    store i32 0, ptr [[PTR_SRC_IV]], align 4
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[SRC_IV_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[ADD_1]]
+; CHECK-NEXT:    [[SRC_IV_1_IDX:%.*]] = sext i8 [[ADD_1]] to i64
+; CHECK-NEXT:    [[SRC_IV_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_1_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_1_END:%.*]] = icmp uge ptr [[SRC_IV_1]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i1 false, [[CMP_IV_1_END]]
 ; CHECK-NEXT:    br i1 [[OR_2]], label [[TRAP_BB]], label [[LOOP_BODY_2:%.*]]
@@ -34,7 +37,8 @@ define void @test1(ptr %src, ptr noundef %lower, ptr noundef %upper, i8 %N) {
 ; CHECK-NEXT:    [[PTR_SRC_IV_1:%.*]] = bitcast ptr [[SRC_IV_1]] to ptr
 ; CHECK-NEXT:    store i32 0, ptr [[PTR_SRC_IV_1]], align 4
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[IV]], 2
-; CHECK-NEXT:    [[SRC_IV_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[ADD_2]]
+; CHECK-NEXT:    [[SRC_IV_2_IDX:%.*]] = sext i8 [[ADD_2]] to i64
+; CHECK-NEXT:    [[SRC_IV_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_2_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_2_END:%.*]] = icmp uge ptr [[SRC_IV_2]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_3:%.*]] = or i1 false, [[CMP_IV_2_END]]
 ; CHECK-NEXT:    br i1 [[OR_3]], label [[TRAP_BB]], label [[LOOP_LATCH]]
@@ -47,7 +51,8 @@ define void @test1(ptr %src, ptr noundef %lower, ptr noundef %upper, i8 %N) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %src.end = getelementptr inbounds i8, ptr %src, i8 %N
+  %src.end.idx = sext i8 %N to i64
+  %src.end = getelementptr inbounds i8, ptr %src, i64 %src.end.idx
   %cmp.src.start = icmp ult ptr %src, %lower
   %cmp.src.end = icmp uge ptr %src.end, %upper
   %or.0 = or i1 %cmp.src.start, %cmp.src.end
@@ -62,7 +67,8 @@ loop.header:
   br i1 %ec, label %exit, label %loop.body
 
 loop.body:
-  %src.iv = getelementptr inbounds i8, ptr %src, i8 %iv
+  %src.iv.idx = sext i8 %iv to i64
+  %src.iv = getelementptr inbounds i8, ptr %src, i64 %src.iv.idx
   %cmp.iv.start = icmp ult ptr %src.iv, %lower
   %cmp.iv.end = icmp uge ptr %src.iv, %upper
   %or.1 = or i1 %cmp.iv.start, %cmp.iv.end
@@ -72,7 +78,8 @@ loop.body.1:
   %ptr.src.iv = bitcast ptr %src.iv to ptr
   store i32 0, ptr %ptr.src.iv, align 4
   %add.1 = add nuw nsw i8 %iv, 1
-  %src.iv.1 = getelementptr inbounds i8, ptr %src, i8 %add.1
+  %src.iv.1.idx = sext i8 %add.1 to i64
+  %src.iv.1 = getelementptr inbounds i8, ptr %src, i64 %src.iv.1.idx
   %cmp.iv.1.start = icmp ult ptr %src.iv.1, %lower
   %cmp.iv.1.end = icmp uge ptr %src.iv.1, %upper
   %or.2 = or i1 %cmp.iv.1.start, %cmp.iv.1.end
@@ -82,7 +89,8 @@ loop.body.2:
   %ptr.src.iv.1 = bitcast ptr %src.iv.1 to ptr
   store i32 0, ptr %ptr.src.iv.1, align 4
   %add.2 = add nuw nsw i8 %iv, 2
-  %src.iv.2 = getelementptr inbounds i8, ptr %src, i8 %add.2
+  %src.iv.2.idx = sext i8 %add.2 to i64
+  %src.iv.2 = getelementptr inbounds i8, ptr %src, i64 %src.iv.2.idx
   %cmp.iv.2.start = icmp ult ptr %src.iv.2, %lower
   %cmp.iv.2.end = icmp uge ptr %src.iv.2, %upper
   %or.3 = or i1 %cmp.iv.2.start, %cmp.iv.2.end
@@ -101,7 +109,8 @@ exit:
 define void @test2(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i8 [[N:%.*]]
+; CHECK-NEXT:    [[SRC_END_IDX:%.*]] = sext i8 [[N:%.*]] to i64
+; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[SRC_END_IDX]]
 ; CHECK-NEXT:    [[CMP_SRC_START:%.*]] = icmp ult ptr [[SRC]], [[LOWER:%.*]]
 ; CHECK-NEXT:    [[CMP_SRC_END:%.*]] = icmp uge ptr [[SRC_END]], [[UPPER:%.*]]
 ; CHECK-NEXT:    [[CMP_OVERFLOW:%.*]] = icmp ugt ptr [[SRC]], [[SRC_END]]
@@ -116,19 +125,22 @@ define void @test2(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp uge i8 [[NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_BODY:%.*]]
 ; CHECK:       loop.body:
-; CHECK-NEXT:    [[SRC_IV:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[IV]]
+; CHECK-NEXT:    [[SRC_IV_IDX:%.*]] = sext i8 [[IV]] to i64
+; CHECK-NEXT:    [[SRC_IV:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_END:%.*]] = icmp uge ptr [[SRC_IV]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, [[CMP_IV_END]]
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP_BB]], label [[LOOP_BODY_1:%.*]]
 ; CHECK:       loop.body.1:
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[SRC_IV_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[ADD_1]]
+; CHECK-NEXT:    [[SRC_IV_1_IDX:%.*]] = sext i8 [[ADD_1]] to i64
+; CHECK-NEXT:    [[SRC_IV_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_1_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_1_END:%.*]] = icmp uge ptr [[SRC_IV_1]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i1 false, [[CMP_IV_1_END]]
 ; CHECK-NEXT:    br i1 [[OR_2]], label [[TRAP_BB]], label [[LOOP_BODY_2:%.*]]
 ; CHECK:       loop.body.2:
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[IV]], 2
-; CHECK-NEXT:    [[SRC_IV_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[ADD_2]]
+; CHECK-NEXT:    [[SRC_IV_2_IDX:%.*]] = sext i8 [[ADD_2]] to i64
+; CHECK-NEXT:    [[SRC_IV_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_2_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_2_END:%.*]] = icmp uge ptr [[SRC_IV_2]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_3:%.*]] = or i1 false, [[CMP_IV_2_END]]
 ; CHECK-NEXT:    br i1 [[OR_3]], label [[TRAP_BB]], label [[LOOP_LATCH]]
@@ -141,7 +153,8 @@ define void @test2(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %src.end = getelementptr inbounds i8, ptr %src, i8 %N
+  %src.end.idx = sext i8 %N to i64
+  %src.end = getelementptr inbounds i8, ptr %src, i64 %src.end.idx
   %cmp.src.start = icmp ult ptr %src, %lower
   %cmp.src.end = icmp uge ptr %src.end, %upper
   %cmp.overflow = icmp ugt ptr %src, %src.end
@@ -159,7 +172,8 @@ loop.header:
   br i1 %ec, label %exit, label %loop.body
 
 loop.body:
-  %src.iv = getelementptr inbounds i8, ptr %src, i8 %iv
+  %src.iv.idx = sext i8 %iv to i64
+  %src.iv = getelementptr inbounds i8, ptr %src, i64 %src.iv.idx
   %cmp.iv.start = icmp ult ptr %src.iv, %lower
   %cmp.iv.end = icmp uge ptr %src.iv, %upper
   %or.1 = or i1 %cmp.iv.start, %cmp.iv.end
@@ -167,7 +181,8 @@ loop.body:
 
 loop.body.1:
   %add.1 = add nuw nsw i8 %iv, 1
-  %src.iv.1 = getelementptr inbounds i8, ptr %src, i8 %add.1
+  %src.iv.1.idx = sext i8 %add.1 to i64
+  %src.iv.1 = getelementptr inbounds i8, ptr %src, i64 %src.iv.1.idx
   %cmp.iv.1.start = icmp ult ptr %src.iv.1, %lower
   %cmp.iv.1.end = icmp uge ptr %src.iv.1, %upper
   %or.2 = or i1 %cmp.iv.1.start, %cmp.iv.1.end
@@ -175,7 +190,8 @@ loop.body.1:
 
 loop.body.2:
   %add.2 = add nuw nsw i8 %iv, 2
-  %src.iv.2 = getelementptr inbounds i8, ptr %src, i8 %add.2
+  %src.iv.2.idx = sext i8 %add.2 to i64
+  %src.iv.2 = getelementptr inbounds i8, ptr %src, i64 %src.iv.2.idx
   %cmp.iv.2.start = icmp ult ptr %src.iv.2, %lower
   %cmp.iv.2.end = icmp uge ptr %src.iv.2, %upper
   %or.3 = or i1 %cmp.iv.2.start, %cmp.iv.2.end
@@ -194,7 +210,8 @@ exit:
 define void @test2_with_ne(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-LABEL: @test2_with_ne(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i8 [[N:%.*]]
+; CHECK-NEXT:    [[SRC_END_IDX:%.*]] = sext i8 [[N:%.*]] to i64
+; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[SRC_END_IDX]]
 ; CHECK-NEXT:    [[CMP_SRC_START:%.*]] = icmp ult ptr [[SRC]], [[LOWER:%.*]]
 ; CHECK-NEXT:    [[CMP_SRC_END:%.*]] = icmp uge ptr [[SRC_END]], [[UPPER:%.*]]
 ; CHECK-NEXT:    [[CMP_OVERFLOW:%.*]] = icmp ugt ptr [[SRC]], [[SRC_END]]
@@ -209,19 +226,22 @@ define void @test2_with_ne(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_BODY:%.*]]
 ; CHECK:       loop.body:
-; CHECK-NEXT:    [[SRC_IV:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[IV]]
+; CHECK-NEXT:    [[SRC_IV_IDX:%.*]] = sext i8 [[IV]] to i64
+; CHECK-NEXT:    [[SRC_IV:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_END:%.*]] = icmp uge ptr [[SRC_IV]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, [[CMP_IV_END]]
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP_BB]], label [[LOOP_BODY_1:%.*]]
 ; CHECK:       loop.body.1:
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[SRC_IV_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[ADD_1]]
+; CHECK-NEXT:    [[SRC_IV_1_IDX:%.*]] = sext i8 [[ADD_1]] to i64
+; CHECK-NEXT:    [[SRC_IV_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_1_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_1_END:%.*]] = icmp uge ptr [[SRC_IV_1]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i1 false, [[CMP_IV_1_END]]
 ; CHECK-NEXT:    br i1 [[OR_2]], label [[TRAP_BB]], label [[LOOP_BODY_2:%.*]]
 ; CHECK:       loop.body.2:
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[IV]], 2
-; CHECK-NEXT:    [[SRC_IV_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[ADD_2]]
+; CHECK-NEXT:    [[SRC_IV_2_IDX:%.*]] = sext i8 [[ADD_2]] to i64
+; CHECK-NEXT:    [[SRC_IV_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_2_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_2_END:%.*]] = icmp uge ptr [[SRC_IV_2]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_3:%.*]] = or i1 false, [[CMP_IV_2_END]]
 ; CHECK-NEXT:    br i1 [[OR_3]], label [[TRAP_BB]], label [[LOOP_LATCH]]
@@ -234,7 +254,8 @@ define void @test2_with_ne(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %src.end = getelementptr inbounds i8, ptr %src, i8 %N
+  %src.end.idx = sext i8 %N to i64
+  %src.end = getelementptr inbounds i8, ptr %src, i64 %src.end.idx
   %cmp.src.start = icmp ult ptr %src, %lower
   %cmp.src.end = icmp uge ptr %src.end, %upper
   %cmp.overflow = icmp ugt ptr %src, %src.end
@@ -252,7 +273,8 @@ loop.header:
   br i1 %ec, label %exit, label %loop.body
 
 loop.body:
-  %src.iv = getelementptr inbounds i8, ptr %src, i8 %iv
+  %src.iv.idx = sext i8 %iv to i64
+  %src.iv = getelementptr inbounds i8, ptr %src, i64 %src.iv.idx
   %cmp.iv.start = icmp ult ptr %src.iv, %lower
   %cmp.iv.end = icmp uge ptr %src.iv, %upper
   %or.1 = or i1 %cmp.iv.start, %cmp.iv.end
@@ -260,7 +282,8 @@ loop.body:
 
 loop.body.1:
   %add.1 = add nuw nsw i8 %iv, 1
-  %src.iv.1 = getelementptr inbounds i8, ptr %src, i8 %add.1
+  %src.iv.1.idx = sext i8 %add.1 to i64
+  %src.iv.1 = getelementptr inbounds i8, ptr %src, i64 %src.iv.1.idx
   %cmp.iv.1.start = icmp ult ptr %src.iv.1, %lower
   %cmp.iv.1.end = icmp uge ptr %src.iv.1, %upper
   %or.2 = or i1 %cmp.iv.1.start, %cmp.iv.1.end
@@ -268,7 +291,8 @@ loop.body.1:
 
 loop.body.2:
   %add.2 = add nuw nsw i8 %iv, 2
-  %src.iv.2 = getelementptr inbounds i8, ptr %src, i8 %add.2
+  %src.iv.2.idx = sext i8 %add.2 to i64
+  %src.iv.2 = getelementptr inbounds i8, ptr %src, i64 %src.iv.2.idx
   %cmp.iv.2.start = icmp ult ptr %src.iv.2, %lower
   %cmp.iv.2.end = icmp uge ptr %src.iv.2, %upper
   %or.3 = or i1 %cmp.iv.2.start, %cmp.iv.2.end
@@ -287,7 +311,8 @@ exit:
 define void @test3(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i8 [[N:%.*]]
+; CHECK-NEXT:    [[SRC_END_IDX:%.*]] = sext i8 [[N:%.*]] to i64
+; CHECK-NEXT:    [[SRC_END:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[SRC_END_IDX]]
 ; CHECK-NEXT:    [[CMP_SRC_START:%.*]] = icmp ult ptr [[SRC]], [[LOWER:%.*]]
 ; CHECK-NEXT:    [[CMP_SRC_END:%.*]] = icmp uge ptr [[SRC_END]], [[UPPER:%.*]]
 ; CHECK-NEXT:    [[CMP_OVERFLOW:%.*]] = icmp ugt ptr [[SRC]], [[SRC_END]]
@@ -302,18 +327,21 @@ define void @test3(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i8 [[NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_BODY:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.body:
-; CHECK-NEXT:    [[SRC_IV:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[IV]]
+; CHECK-NEXT:    [[SRC_IV_IDX:%.*]] = sext i8 [[IV]] to i64
+; CHECK-NEXT:    [[SRC_IV:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_END:%.*]] = icmp uge ptr [[SRC_IV]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, [[CMP_IV_END]]
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP_BB]], label [[LOOP_BODY_1:%.*]]
 ; CHECK:       loop.body.1:
-; CHECK-NEXT:    [[SRC_IV_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[NEXT]]
+; CHECK-NEXT:    [[SRC_IV_1_IDX:%.*]] = sext i8 [[NEXT]] to i64
+; CHECK-NEXT:    [[SRC_IV_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_1_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_1_END:%.*]] = icmp uge ptr [[SRC_IV_1]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i1 false, [[CMP_IV_1_END]]
 ; CHECK-NEXT:    br i1 [[OR_2]], label [[TRAP_BB]], label [[LOOP_BODY_2:%.*]]
 ; CHECK:       loop.body.2:
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i8 [[IV]], 2
-; CHECK-NEXT:    [[SRC_IV_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 [[ADD_2]]
+; CHECK-NEXT:    [[SRC_IV_2_IDX:%.*]] = sext i8 [[ADD_2]] to i64
+; CHECK-NEXT:    [[SRC_IV_2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[SRC_IV_2_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_2_END:%.*]] = icmp uge ptr [[SRC_IV_2]], [[UPPER]]
 ; CHECK-NEXT:    [[OR_3:%.*]] = or i1 false, [[CMP_IV_2_END]]
 ; CHECK-NEXT:    br i1 [[OR_3]], label [[TRAP_BB]], label [[LOOP_LATCH]]
@@ -326,7 +354,8 @@ define void @test3(ptr %src, ptr %lower, ptr %upper, i8 %N) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %src.end = getelementptr inbounds i8, ptr %src, i8 %N
+  %src.end.idx = sext i8 %N to i64
+  %src.end = getelementptr inbounds i8, ptr %src, i64 %src.end.idx
   %cmp.src.start = icmp ult ptr %src, %lower
   %cmp.src.end = icmp uge ptr %src.end, %upper
   %cmp.overflow = icmp ugt ptr %src, %src.end
@@ -344,14 +373,16 @@ loop.header:
   br i1 %ec, label %loop.body, label %exit
 
 loop.body:
-  %src.iv = getelementptr inbounds i8, ptr %src, i8 %iv
+  %src.iv.idx = sext i8 %iv to i64
+  %src.iv = getelementptr inbounds i8, ptr %src, i64 %src.iv.idx
   %cmp.iv.start = icmp ult ptr %src.iv, %lower
   %cmp.iv.end = icmp uge ptr %src.iv, %upper
   %or.1 = or i1 %cmp.iv.start, %cmp.iv.end
   br i1 %or.1, label %trap.bb, label %loop.body.1
 
 loop.body.1:
-  %src.iv.1 = getelementptr inbounds i8, ptr %src, i8 %next
+  %src.iv.1.idx = sext i8 %next to i64
+  %src.iv.1 = getelementptr inbounds i8, ptr %src, i64 %src.iv.1.idx
   %cmp.iv.1.start = icmp ult ptr %src.iv.1, %lower
   %cmp.iv.1.end = icmp uge ptr %src.iv.1, %upper
   %or.2 = or i1 %cmp.iv.1.start, %cmp.iv.1.end
@@ -359,7 +390,8 @@ loop.body.1:
 
 loop.body.2:
   %add.2 = add nuw nsw i8 %iv, 2
-  %src.iv.2 = getelementptr inbounds i8, ptr %src, i8 %add.2
+  %src.iv.2.idx = sext i8 %add.2 to i64
+  %src.iv.2 = getelementptr inbounds i8, ptr %src, i64 %src.iv.2.idx
   %cmp.iv.2.start = icmp ult ptr %src.iv.2, %lower
   %cmp.iv.2.end = icmp uge ptr %src.iv.2, %upper
   %or.3 = or i1 %cmp.iv.2.start, %cmp.iv.2.end
@@ -382,7 +414,8 @@ define void @ne_check_in_loop_no_zext_n_may_be_negative(ptr %ptr, ptr %lower, pt
 ; CHECK-NEXT:    [[CMP_PTR_LOWER:%.*]] = icmp ult ptr [[PTR:%.*]], [[LOWER:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_PTR_LOWER]], label [[TRAP:%.*]], label [[PRE:%.*]]
 ; CHECK:       pre:
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[N:%.*]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i16 [[N:%.*]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[CMP_PTR_N_UPPER:%.*]] = icmp ult ptr [[ADD_PTR]], [[UPPER:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_PTR_N_UPPER]], label [[FOR_COND_PREHEADER:%.*]], label [[TRAP]]
 ; CHECK:       for.cond.preheader:
@@ -394,13 +427,15 @@ define void @ne_check_in_loop_no_zext_n_may_be_negative(ptr %ptr, ptr %lower, pt
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i16 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IV]]
+; CHECK-NEXT:    [[GEP_IV_IDX:%.*]] = sext i16 [[IV]] to i64
+; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[GEP_IV_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[GEP_IV]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 false, [[CMP_IV_UPPER]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[TRAP]], label [[FOR_BODY_1:%.*]]
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[GEP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[ADD]]
+; CHECK-NEXT:    [[GEP_IV_1_IDX:%.*]] = sext i16 [[ADD]] to i64
+; CHECK-NEXT:    [[GEP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[GEP_IV_1_IDX]]
 ; CHECK-NEXT:    [[CMP_IV_1_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[GEP_IV_1]]
 ; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, [[CMP_IV_1_UPPER]]
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP]], label [[FOR_LATCH]]
@@ -416,7 +451,8 @@ entry:
   br i1 %cmp.ptr.lower, label %trap, label %pre
 
 pre:
-  %add.ptr = getelementptr inbounds i8, ptr %ptr, i16 %n
+  %add.ptr.idx = sext i16 %n to i64
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %add.ptr.idx
   %cmp.ptr.n.upper = icmp ult ptr %add.ptr, %upper
   br i1 %cmp.ptr.n.upper, label %for.cond.preheader, label %trap
 
@@ -432,7 +468,8 @@ for.header:
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:
-  %gep.iv = getelementptr inbounds i8, ptr %ptr, i16 %iv
+  %gep.iv.idx = sext i16 %iv to i64
+  %gep.iv = getelementptr inbounds i8, ptr %ptr, i64 %gep.iv.idx
   %cmp.iv.lower = icmp ugt ptr %lower, %gep.iv
   %cmp.iv.upper = icmp ule ptr %upper, %gep.iv
   %or = or i1 %cmp.iv.lower, %cmp.iv.upper
@@ -440,7 +477,8 @@ for.body:
 
 for.body.1:
   %add = add nuw nsw i16 %iv, 1
-  %gep.iv.1 = getelementptr inbounds i8, ptr %ptr, i16 %add
+  %gep.iv.1.idx = sext i16 %add to i64
+  %gep.iv.1 = getelementptr inbounds i8, ptr %ptr, i64 %gep.iv.1.idx
   %cmp.iv.1.lower = icmp ugt ptr %lower, %gep.iv.1
   %cmp.iv.1.upper = icmp ule ptr %upper, %gep.iv.1
   %or.1 = or i1 %cmp.iv.1.lower, %cmp.iv.1.upper
@@ -464,7 +502,8 @@ define void @ne_check_in_loop_no_zext_n_positive_check(ptr %ptr, ptr %lower, ptr
 ; CHECK-NEXT:    [[OR_T:%.*]] = or i1 [[N_SIGNED_POSITIVE]], [[CMP_PTR_LOWER]]
 ; CHECK-NEXT:    br i1 [[OR_T]], label [[TRAP:%.*]], label [[PRE:%.*]]
 ; CHECK:       pre:
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[N]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i16 [[N]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[CMP_PTR_N_UPPER:%.*]] = icmp ult ptr [[ADD_PTR]], [[UPPER:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_PTR_N_UPPER]], label [[FOR_COND_PREHEADER:%.*]], label [[TRAP]]
 ; CHECK:       for.cond.preheader:
@@ -476,12 +515,14 @@ define void @ne_check_in_loop_no_zext_n_positive_check(ptr %ptr, ptr %lower, ptr
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i16 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IV]]
+; CHECK-NEXT:    [[GEP_IV_IDX:%.*]] = sext i16 [[IV]] to i64
+; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[GEP_IV_IDX]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR]], label [[TRAP]], label [[FOR_BODY_1:%.*]]
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[GEP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[ADD]]
+; CHECK-NEXT:    [[GEP_IV_1_IDX:%.*]] = sext i16 [[ADD]] to i64
+; CHECK-NEXT:    [[GEP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[GEP_IV_1_IDX]]
 ; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP]], label [[FOR_LATCH]]
 ; CHECK:       for.latch:
@@ -498,7 +539,8 @@ entry:
   br i1 %or.t, label %trap, label %pre
 
 pre:
-  %add.ptr = getelementptr inbounds i8, ptr %ptr, i16 %n
+  %add.ptr.idx = sext i16 %n to i64
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %add.ptr.idx
   %cmp.ptr.n.upper = icmp ult ptr %add.ptr, %upper
   br i1 %cmp.ptr.n.upper, label %for.cond.preheader, label %trap
 
@@ -514,7 +556,8 @@ for.header:
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:
-  %gep.iv = getelementptr inbounds i8, ptr %ptr, i16 %iv
+  %gep.iv.idx = sext i16 %iv to i64
+  %gep.iv = getelementptr inbounds i8, ptr %ptr, i64 %gep.iv.idx
   %cmp.iv.lower = icmp ugt ptr %lower, %gep.iv
   %cmp.iv.upper = icmp ule ptr %upper, %gep.iv
   %or = or i1 %cmp.iv.lower, %cmp.iv.upper
@@ -522,7 +565,8 @@ for.body:
 
 for.body.1:
   %add = add nuw nsw i16 %iv, 1
-  %gep.iv.1 = getelementptr inbounds i8, ptr %ptr, i16 %add
+  %gep.iv.1.idx = sext i16 %add to i64
+  %gep.iv.1 = getelementptr inbounds i8, ptr %ptr, i64 %gep.iv.1.idx
   %cmp.iv.1.lower = icmp ugt ptr %lower, %gep.iv.1
   %cmp.iv.1.upper = icmp ule ptr %upper, %gep.iv.1
   %or.1 = or i1 %cmp.iv.1.lower, %cmp.iv.1.upper
@@ -546,7 +590,8 @@ define void @ne_check_in_loop_with_zext(ptr %ptr, ptr %lower, ptr %upper, i8 %n)
 ; CHECK-NEXT:    br i1 [[CMP_PTR_LOWER]], label [[TRAP:%.*]], label [[PRE:%.*]]
 ; CHECK:       pre:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i8 [[N:%.*]] to i16
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IDX_EXT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = zext i8 [[N]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[CMP_PTR_N_UPPER:%.*]] = icmp ult ptr [[ADD_PTR]], [[UPPER:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_PTR_N_UPPER]], label [[FOR_COND_PREHEADER:%.*]], label [[TRAP]]
 ; CHECK:       for.cond.preheader:
@@ -558,12 +603,14 @@ define void @ne_check_in_loop_with_zext(ptr %ptr, ptr %lower, ptr %upper, i8 %n)
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i16 [[IV]], [[IDX_EXT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IV]]
+; CHECK-NEXT:    [[GEP_IV_IDX:%.*]] = sext i16 [[IV]] to i64
+; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[GEP_IV_IDX]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR]], label [[TRAP]], label [[FOR_BODY_1:%.*]]
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[GEP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[ADD]]
+; CHECK-NEXT:    [[GEP_IV_1_IDX:%.*]] = sext i16 [[ADD]] to i64
+; CHECK-NEXT:    [[GEP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[GEP_IV_1_IDX]]
 ; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP]], label [[FOR_LATCH]]
 ; CHECK:       for.latch:
@@ -579,7 +626,8 @@ entry:
 
 pre:
   %idx.ext = zext i8 %n to i16
-  %add.ptr = getelementptr inbounds i8, ptr %ptr, i16 %idx.ext
+  %add.ptr.idx = zext i8 %n to i64
+  %add.ptr = getelementptr inbounds i8, ptr %ptr, i64 %add.ptr.idx
   %cmp.ptr.n.upper = icmp ult ptr %add.ptr, %upper
   br i1 %cmp.ptr.n.upper, label %for.cond.preheader, label %trap
 
@@ -595,7 +643,8 @@ for.header:
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:
-  %gep.iv = getelementptr inbounds i8, ptr %ptr, i16 %iv
+  %gep.iv.idx = sext i16 %iv to i64
+  %gep.iv = getelementptr inbounds i8, ptr %ptr, i64 %gep.iv.idx
   %cmp.iv.lower = icmp ugt ptr %lower, %gep.iv
   %cmp.iv.upper = icmp ule ptr %upper, %gep.iv
   %or = or i1 %cmp.iv.lower, %cmp.iv.upper
@@ -603,7 +652,8 @@ for.body:
 
 for.body.1:
   %add = add nuw nsw i16 %iv, 1
-  %gep.iv.1 = getelementptr inbounds i8, ptr %ptr, i16 %add
+  %gep.iv.1.idx = sext i16 %add to i64
+  %gep.iv.1 = getelementptr inbounds i8, ptr %ptr, i64 %gep.iv.1.idx
   %cmp.iv.1.lower = icmp ugt ptr %lower, %gep.iv.1
   %cmp.iv.1.upper = icmp ule ptr %upper, %gep.iv.1
   %or.1 = or i1 %cmp.iv.1.lower, %cmp.iv.1.upper

@@ -1,5 +1,4 @@
-//===- LowerWorkdistribute.cpp
-//-------------------------------------------------===//
+//===- LowerWorkdistribute.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,6 +31,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/Dialect/Utils/IndexingUtils.h>
@@ -416,33 +416,28 @@ workdistributeDoLower(omp::WorkdistributeOp workdistribute,
   return false;
 }
 
-/// Check if the enclosed type in fir.ref is fir.box and fir.box encloses array
-static bool isEnclosedTypeRefToBoxArray(Type type) {
-  // Check if it's a reference type
-  if (auto refType = dyn_cast<fir::ReferenceType>(type)) {
-    // Get the referenced type (should be fir.box)
-    auto referencedType = refType.getEleTy();
-    // Check if referenced type is a box
-    if (auto boxType = dyn_cast<fir::BoxType>(referencedType)) {
-      // Get the boxed type and check if it's an array
-      auto boxedType = boxType.getEleTy();
-      // Check if boxed type is a sequence (array)
-      return isa<fir::SequenceType>(boxedType);
-    }
+/// Returns the box type of a FortranAAssign operand if it describes an array of
+/// known rank, peeling a fir.ref when \p isRef is set. Returns null otherwise.
+/// Allocatable and pointer descriptors (box of heap/ptr array) are accepted.
+static fir::BaseBoxType getAssignArrayBoxType(Type type, bool isRef) {
+  if (isRef) {
+    if (!fir::isBoxAddress(type))
+      return {};
+    type = fir::unwrapRefType(type);
   }
-  return false;
+  auto boxTy = dyn_cast<fir::BaseBoxType>(type);
+  if (!boxTy)
+    return {};
+  auto seqTy =
+      dyn_cast_or_null<fir::SequenceType>(fir::extractSequenceType(boxTy));
+  if (!seqTy || seqTy.hasUnknownShape())
+    return {};
+  return boxTy;
 }
 
-/// Check if the enclosed type in fir.box is scalar (not array)
-static bool isEnclosedTypeBoxScalar(Type type) {
-  // Check if it's a box type
-  if (auto boxType = dyn_cast<fir::BoxType>(type)) {
-    // Get the boxed type
-    auto boxedType = boxType.getEleTy();
-    // Check if boxed type is NOT a sequence (array)
-    return !isa<fir::SequenceType>(boxedType);
-  }
-  return false;
+/// Returns the sequence type described by an array box value.
+static fir::SequenceType getBoxSequenceType(Value arrayBox) {
+  return cast<fir::SequenceType>(fir::extractSequenceType(arrayBox.getType()));
 }
 
 /// Check if the FortranAAssign call has src as scalar and dest as array
@@ -464,9 +459,32 @@ static bool isFortranAssignSrcScalarAndDestArray(fir::CallOp callOp) {
   auto destOrigType = destConvert.getValue().getType();
 
   // Check if src is scalar and dest is array
-  bool srcIsScalar = isEnclosedTypeBoxScalar(srcOrigType);
-  bool destIsArray = isEnclosedTypeRefToBoxArray(destOrigType);
-  return srcIsScalar && destIsArray;
+  auto srcBoxTy = dyn_cast<fir::BoxType>(srcOrigType);
+  return srcBoxTy && !srcBoxTy.isArray() &&
+         getAssignArrayBoxType(destOrigType, /*isRef=*/true);
+}
+
+/// Check if the FortranAAssign call has both src and dest as array descriptors.
+/// This is the array-section copy case (e.g. a(0,:,:) = b(n,:,:)) that a flat
+/// omp_target_memcpy would get wrong for strided sections. Matching the runtime
+/// signature, dest is a reference to a box and src is a box passed by value.
+static bool isFortranAssignSrcArrayAndDestArray(fir::CallOp callOp) {
+  if (callOp.getNumOperands() < 2)
+    return false;
+  auto srcConvert = callOp.getOperand(1).getDefiningOp<fir::ConvertOp>();
+  auto destConvert = callOp.getOperand(0).getDefiningOp<fir::ConvertOp>();
+  if (!srcConvert || !destConvert)
+    return false;
+  fir::BaseBoxType srcBoxTy =
+      getAssignArrayBoxType(srcConvert.getValue().getType(), /*isRef=*/false);
+  fir::BaseBoxType destBoxTy =
+      getAssignArrayBoxType(destConvert.getValue().getType(), /*isRef=*/true);
+  if (!srcBoxTy || !destBoxTy)
+    return false;
+  // The raw element load/store only handles trivial, matching element types.
+  // Derived types need finalization and characters need length parameters.
+  Type srcEleTy = srcBoxTy.unwrapInnerType();
+  return fir::isa_trivial(srcEleTy) && srcEleTy == destBoxTy.unwrapInnerType();
 }
 
 /// Convert a flat index to multi-dimensional indices for an array box
@@ -483,9 +501,7 @@ static SmallVector<Value> convertFlatToMultiDim(OpBuilder &builder,
                                                 Location loc, Value flatIdx,
                                                 Value arrayBox) {
   // Get array type and rank
-  auto boxType = cast<fir::BoxType>(arrayBox.getType());
-  auto seqType = cast<fir::SequenceType>(boxType.getEleTy());
-  int rank = seqType.getDimension();
+  int rank = getBoxSequenceType(arrayBox).getDimension();
 
   // Get all extents
   SmallVector<Value> extents;
@@ -518,9 +534,7 @@ static SmallVector<Value> convertFlatToMultiDim(OpBuilder &builder,
 /// (totalElems = extent(1) * extent(2) * ... * extent(n))
 static Value CalculateTotalElements(OpBuilder &builder, Location loc,
                                     Value arrayBox) {
-  auto boxType = cast<fir::BoxType>(arrayBox.getType());
-  auto seqType = cast<fir::SequenceType>(boxType.getEleTy());
-  int rank = seqType.getDimension();
+  int rank = getBoxSequenceType(arrayBox).getDimension();
 
   Value totalElems = nullptr;
   for (int i = 0; i < rank; ++i) {
@@ -536,11 +550,11 @@ static Value CalculateTotalElements(OpBuilder &builder, Location loc,
   return totalElems;
 }
 
-/// Replace the FortranAAssign runtime call with an unordered do loop
-static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
-                                       omp::TeamsOp teamsOp,
-                                       omp::WorkdistributeOp workdistribute,
-                                       fir::CallOp callOp) {
+/// Replace a scalar-to-array FortranAAssign (broadcast) runtime call with an
+/// unordered do loop that stores the scalar into every element.
+static void replaceScalarToArrayAssignWithUnorderedDoLoop(OpBuilder &builder,
+                                                          Location loc,
+                                                          fir::CallOp callOp) {
   auto destConvert = callOp.getOperand(0).getDefiningOp<fir::ConvertOp>();
   auto srcConvert = callOp.getOperand(1).getDefiningOp<fir::ConvertOp>();
 
@@ -563,7 +577,7 @@ static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
     }
   }
 
-  builder.setInsertionPoint(teamsOp);
+  builder.setInsertionPoint(callOp);
   // Load destination array box (if it's a reference)
   Value arrayBox = destBox;
   if (isa<fir::ReferenceType>(destBox.getType()))
@@ -576,11 +590,10 @@ static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
   auto c0 = arith::ConstantIndexOp::create(builder, loc, 0);
   auto c1 = arith::ConstantIndexOp::create(builder, loc, 1);
   Value totalElems = CalculateTotalElements(builder, loc, arrayBox);
+  // fir.do_loop upper bound is inclusive, so iterate [0, totalElems - 1].
+  Value ub = arith::SubIOp::create(builder, loc, totalElems, c1);
 
-  auto *workdistributeBlock = &workdistribute.getRegion().front();
-  builder.setInsertionPointToStart(workdistributeBlock);
-  // Create single unordered loop for flattened array
-  auto doLoop = fir::DoLoopOp::create(builder, loc, c0, totalElems, c1, true);
+  auto doLoop = fir::DoLoopOp::create(builder, loc, c0, ub, c1, true);
   Block *loopBlock = &doLoop.getRegion().front();
   builder.setInsertionPointToStart(doLoop.getBody());
 
@@ -595,10 +608,84 @@ static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
   fir::StoreOp::create(builder, loc, scalar, elemPtr);
 }
 
+/// Return the array descriptor (fir.box) value behind a FortranAAssign arg.
+/// The arg is the address of a descriptor temp: prefer the box value stored
+/// into it, otherwise load the reference.
+static Value getAssignArrayBox(OpBuilder &builder, Location loc, Value box) {
+  if (auto alloca = box.getDefiningOp<fir::AllocaOp>()) {
+    for (auto *user : alloca->getUsers())
+      if (auto storeOp = dyn_cast<fir::StoreOp>(user)) {
+        box = storeOp.getValue();
+        break;
+      }
+  }
+  if (isa<fir::ReferenceType>(box.getType()))
+    box = fir::LoadOp::create(builder, loc, box);
+  return box;
+}
+
+/// Replace an array-to-array FortranAAssign runtime call with two unordered do
+/// loops that copy src into a heap temporary and then the temporary into dest.
+/// Addressing goes through fir.array_coor on both descriptors, so each
+/// section's own strides and bounds are honored - unlike a flat memcpy, this is
+/// correct for strided sections.
+static void replaceArrayToArrayAssignWithUnorderedDoLoop(OpBuilder &builder,
+                                                         Location loc,
+                                                         fir::CallOp callOp) {
+  auto destConvert = callOp.getOperand(0).getDefiningOp<fir::ConvertOp>();
+  auto srcConvert = callOp.getOperand(1).getDefiningOp<fir::ConvertOp>();
+
+  builder.setInsertionPoint(callOp);
+  Value destBox = getAssignArrayBox(builder, loc, destConvert.getValue());
+  Value srcBox = getAssignArrayBox(builder, loc, srcConvert.getValue());
+
+  // Element type comes from the destination sequence.
+  Type eleTy = getBoxSequenceType(destBox).getEleTy();
+  auto eleRefTy = fir::ReferenceType::get(eleTy);
+
+  auto c0 = arith::ConstantIndexOp::create(builder, loc, 0);
+  auto c1 = arith::ConstantIndexOp::create(builder, loc, 1);
+  Value totalElems = CalculateTotalElements(builder, loc, destBox);
+  // fir.do_loop upper bound is inclusive, so iterate [0, totalElems - 1].
+  Value ub = arith::SubIOp::create(builder, loc, totalElems, c1);
+
+  // Fortran evaluates the whole RHS before storing, and src and dest may
+  // overlap. Fission later puts each loop in its own kernel, so every read
+  // finishes before any write.
+  auto tmpTy =
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, eleTy);
+  Value tmp = fir::AllocMemOp::create(builder, loc, tmpTy, ValueRange{},
+                                      ValueRange{totalElems});
+
+  // Copies between box[indices] and tmp[flatIdx] over the flattened dest index
+  // space. Dest and src conform, so one index set fits both.
+  auto genCopyLoop = [&](Value box, bool toTmp) {
+    builder.setInsertionPoint(callOp);
+    auto doLoop = fir::DoLoopOp::create(builder, loc, c0, ub, c1, true);
+    builder.setInsertionPointToStart(doLoop.getBody());
+    Value flatIdx = doLoop.getInductionVar();
+    SmallVector<Value> indices =
+        convertFlatToMultiDim(builder, loc, flatIdx, destBox);
+    Value boxPtr = fir::ArrayCoorOp::create(
+        builder, loc, eleRefTy, box, nullptr, nullptr, indices, ValueRange{});
+    Value tmpPtr = fir::CoordinateOp::create(builder, loc, eleRefTy, tmp,
+                                             ValueRange{flatIdx});
+    Value from = toTmp ? boxPtr : tmpPtr;
+    Value to = toTmp ? tmpPtr : boxPtr;
+    Value value = fir::LoadOp::create(builder, loc, from);
+    fir::StoreOp::create(builder, loc, value, to);
+  };
+  genCopyLoop(srcBox, /*toTmp=*/true);
+  genCopyLoop(destBox, /*toTmp=*/false);
+
+  builder.setInsertionPoint(callOp);
+  fir::FreeMemOp::create(builder, loc, tmp);
+}
+
 /// workdistributeRuntimeCallLower method finds the runtime calls
-/// nested in teams {workdistribute{}} and
-/// lowers FortranAAssign to unordered do loop if src is scalar and dest is
-/// array. Other runtime calls are not handled currently.
+/// nested in teams {workdistribute{}} and lowers FortranAAssign to an
+/// unordered do loop for scalar-to-array and array-to-array assigns.
+/// Unsupported assign shapes error out. Other runtime calls are left as is.
 static FailureOr<bool>
 workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
                                SetVector<omp::TargetOp> &targetOpsToProcess) {
@@ -620,6 +707,9 @@ workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
   bool changed = false;
   // Get the target op parent of teams
   omp::TargetOp targetOp = dyn_cast<omp::TargetOp>(teams->getParentOp());
+  // Runtime-call lowering only applies inside omp.target.
+  if (!targetOp)
+    return false;
   SmallVector<Operation *> opsToErase;
   for (auto &op : workdistribute.getOps()) {
     if (isRuntimeCall(&op)) {
@@ -627,13 +717,28 @@ workdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
       auto funcName = runtimeCall.getCallee()->getRootReference().getValue();
       if (isFortranAssignCall(funcName)) {
-        if (isFortranAssignSrcScalarAndDestArray(runtimeCall) && targetOp) {
+        if (isFortranAssignSrcScalarAndDestArray(runtimeCall)) {
           // Record the target ops to process later
           targetOpsToProcess.insert(targetOp);
-          replaceWithUnorderedDoLoop(rewriter, loc, teams, workdistribute,
-                                     runtimeCall);
+          replaceScalarToArrayAssignWithUnorderedDoLoop(rewriter, loc,
+                                                        runtimeCall);
           opsToErase.push_back(&op);
           changed = true;
+        } else if (isFortranAssignSrcArrayAndDestArray(runtimeCall)) {
+          // Array-section copy: element-wise loop honors strides, unlike the
+          // flat omp_target_memcpy fallback used otherwise.
+          targetOpsToProcess.insert(targetOp);
+          replaceArrayToArrayAssignWithUnorderedDoLoop(rewriter, loc,
+                                                       runtimeCall);
+          opsToErase.push_back(&op);
+          changed = true;
+        } else {
+          // Recognized runtime call, but its argument shape has no lowering.
+          emitError(runtimeCall->getLoc(),
+                    "Runtime call " + funcName +
+                        " with this argument shape is not supported in "
+                        "workdistribute yet.\n");
+          return failure();
         }
       }
     }
@@ -720,33 +825,60 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   }
 
   rewriter.setInsertionPoint(targetOp);
-  SmallVector<Value> innerMapInfos;
+  // Pre-sized so inner clones stay aligned with the inner target's block args.
+  SmallVector<Value> innerMapInfos(mapInfos.size());
   SmallVector<Value> outerMapInfos;
-  // Create new mapinfo ops for the inner target region
-  for (auto mapInfo : mapInfos) {
-    mlir::omp::ClauseMapFlags originalMapType = mapInfo.getMapType();
-    auto originalCaptureType = mapInfo.getMapCaptureType();
-    mlir::omp::ClauseMapFlags newMapType;
-    mlir::omp::VariableCaptureKind newCaptureType;
-    // For bycopy, we keep the same map type and capture type
-    // For byref, we change the map type to none and keep the capture type
-    if (originalCaptureType == mlir::omp::VariableCaptureKind::ByCopy) {
-      newMapType = originalMapType;
-      newCaptureType = originalCaptureType;
-    } else if (originalCaptureType == mlir::omp::VariableCaptureKind::ByRef) {
-      newMapType = mlir::omp::ClauseMapFlags::storage;
-      newCaptureType = originalCaptureType;
-      outerMapInfos.push_back(mapInfo);
-    } else {
-      emitError(targetOp->getLoc(), "Unhandled case");
-      return failure();
+
+  // A mapinfo's "members" may point at another mapinfo in this set (an
+  // allocatable's descriptor map references its data map). Cloning with
+  // outerToInner retargets those operands to the inner clones, so a member must
+  // be cloned before the parent that references it. The pending set plus
+  // fixed-point loop is a topological sort without an explicit graph.
+  mlir::IRMapping outerToInner;
+  llvm::SmallPtrSet<Operation *, 8> pending;
+  for (auto mapInfo : mapInfos)
+    pending.insert(mapInfo);
+  for (bool progress = true; progress;) {
+    progress = false;
+    for (auto mapInfo : mapInfos) {
+      if (!pending.contains(mapInfo))
+        continue;
+      // Defer until every member also being split has been cloned.
+      if (llvm::any_of(mapInfo.getMembers(), [&](Value member) {
+            return pending.contains(member.getDefiningOp());
+          }))
+        continue;
+
+      mlir::omp::ClauseMapFlags originalMapType = mapInfo.getMapType();
+      auto originalCaptureType = mapInfo.getMapCaptureType();
+      mlir::omp::ClauseMapFlags newMapType = originalMapType;
+      // ByRef is split: inner target keeps only storage, outer data region
+      // keeps the original map. ByCopy is unchanged.
+      if (originalCaptureType == mlir::omp::VariableCaptureKind::ByRef) {
+        newMapType = mlir::omp::ClauseMapFlags::storage;
+        outerMapInfos.push_back(mapInfo);
+      } else if (originalCaptureType !=
+                 mlir::omp::VariableCaptureKind::ByCopy) {
+        emitError(targetOp->getLoc(), "Unhandled case");
+        return failure();
+      }
+
+      // clone(op, outerToInner) remaps "members" to sibling inner clones.
+      auto innerMapInfo =
+          cast<omp::MapInfoOp>(rewriter.clone(*mapInfo, outerToInner));
+      innerMapInfo.setMapTypeAttr(
+          rewriter.getAttr<omp::ClauseMapFlagsAttr>(newMapType));
+      pending.erase(mapInfo);
+      progress = true;
     }
-    auto innerMapInfo = cast<omp::MapInfoOp>(rewriter.clone(*mapInfo));
-    innerMapInfo.setMapTypeAttr(
-        rewriter.getAttr<omp::ClauseMapFlagsAttr>(newMapType));
-    innerMapInfo.setMapCaptureType(newCaptureType);
-    innerMapInfos.push_back(innerMapInfo.getResult());
   }
+  // Loop stalls with maps still pending only if their members form a cycle.
+  assert(pending.empty() &&
+         "cyclic mapinfo members: cannot topologically order clones");
+
+  // map_entries may repeat a map result, resolve every index to its clone.
+  for (auto [idx, mapInfo] : llvm::enumerate(mapInfos))
+    innerMapInfos[idx] = outerToInner.lookup(mapInfo.getResult());
 
   rewriter.setInsertionPoint(targetOp);
   auto device = targetOp.getDevice();
@@ -880,8 +1012,58 @@ static bool usedOutsideSplit(Value v, Operation *split) {
   return false;
 }
 
+/// Returns the map block argument of \p targetOp that \p addr is derived from
+/// through fir.declare and fir.convert, or nullptr otherwise.
+static BlockArgument getMappedBlockArg(Value addr, omp::TargetOp targetOp) {
+  while (Operation *def = addr.getDefiningOp()) {
+    if (auto declare = dyn_cast<fir::DeclareOp>(def))
+      addr = declare.getMemref();
+    else if (auto convert = dyn_cast<fir::ConvertOp>(def))
+      addr = convert.getValue();
+    else
+      return nullptr;
+  }
+  auto argIface = cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
+  auto arg = cast<BlockArgument>(addr);
+  return llvm::is_contained(argIface.getMapBlockArgs(), arg) ? arg : nullptr;
+}
+
+/// Returns true if \p addr, or a fir.declare or fir.convert of it, has a user
+/// other than fir.load that runs after \p load and no later than
+/// \p splitBefore. The split op counts since the post target recomputes after
+/// it runs.
+static bool isWrittenAfterLoad(Value addr, fir::LoadOp load,
+                               Operation *splitBefore) {
+  Block *targetBlock = splitBefore->getBlock();
+  for (Operation *user : addr.getUsers()) {
+    if (isa<fir::LoadOp>(user))
+      continue;
+    if (isa<fir::DeclareOp, fir::ConvertOp>(user)) {
+      if (isWrittenAfterLoad(user->getResult(0), load, splitBefore))
+        return true;
+      continue;
+    }
+    Operation *ancestor = targetBlock->findAncestorOpInBlock(*user);
+    if (ancestor && load->isBeforeInBlock(ancestor) &&
+        !splitBefore->isBeforeInBlock(ancestor))
+      return true;
+  }
+  return false;
+}
+
 /// isRecomputableAfterFission checks if an operation can be recomputed
 static bool isRecomputableAfterFission(Operation *op, Operation *splitBefore) {
+  // A descriptor load must be recomputed from the mapped descriptor in each
+  // split target. Caching the box by value captures a host base_addr that the
+  // flat to/from copy cannot re-attach to the device data. Only safe when the
+  // descriptor is not written between the load and the split op.
+  if (auto load = dyn_cast<fir::LoadOp>(op)) {
+    if (isa<fir::BaseBoxType>(load.getType())) {
+      auto targetOp = cast<omp::TargetOp>(splitBefore->getParentOp());
+      BlockArgument arg = getMappedBlockArg(load.getMemref(), targetOp);
+      return arg && !isWrittenAfterLoad(arg, load, splitBefore);
+    }
+  }
   // If the op has side effects, it cannot be recomputed.
   // We consider fir.declare as having no side effects.
   return isa<fir::DeclareOp>(op) || isMemoryEffectFree(op);
@@ -1825,17 +2007,8 @@ public:
     if (verify.wasInterrupted())
       return signalPassFailure();
 
-    auto fission =
-        moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
-          auto res = fissionWorkdistribute(workdistribute);
-          if (failed(res))
-            return WalkResult::interrupt();
-          changed |= *res;
-          return WalkResult::advance();
-        });
-    if (fission.wasInterrupted())
-      return signalPassFailure();
-
+    // Runs before fission so the loops it emits get split into their own
+    // teams regions.
     auto rtCallLower =
         moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
           auto res = workdistributeRuntimeCallLower(workdistribute,
@@ -1846,6 +2019,17 @@ public:
           return WalkResult::advance();
         });
     if (rtCallLower.wasInterrupted())
+      return signalPassFailure();
+
+    auto fission =
+        moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+          auto res = fissionWorkdistribute(workdistribute);
+          if (failed(res))
+            return WalkResult::interrupt();
+          changed |= *res;
+          return WalkResult::advance();
+        });
+    if (fission.wasInterrupted())
       return signalPassFailure();
 
     moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {

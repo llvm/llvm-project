@@ -70,6 +70,41 @@ def LoopOpInterface : OpInterface<"LoopOpInterface", [
       /*defaultImplementation=*/"return {};"
     >,
     InterfaceMethod<[{
+        Returns the loop's `#cir.loop_hint` attribute, or a null attribute if
+        the loop has none.
+      }],
+      /*retTy=*/"::cir::LoopHintAttr",
+      /*methodName=*/"getLoopHintsAttr",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return {};"
+    >,
+    InterfaceMethod<[{
+        Returns the loop's id, a `distinct` attribute that identifies the loop
+        (and, once the loop is flattened, the branches that belong to it), or a
+        null attribute if the loop has none.
+      }],
+      /*retTy=*/"::mlir::DistinctAttr",
+      /*methodName=*/"getLoopIdAttr",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return {};"
+    >,
+    InterfaceMethod<[{
+        Sets the loop's `#cir.loop_hint` attribute.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setLoopHintsAttr",
+      /*args=*/(ins "::cir::LoopHintAttr":$hints)
+    >,
+    InterfaceMethod<[{
+        Sets the loop's id, see `getLoopIdAttr`.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setLoopIdAttr",
+      /*args=*/(ins "::mlir::DistinctAttr":$id)
+    >,
+    InterfaceMethod<[{
         Returns the first region to be executed in the loop.
       }],
       /*retTy=*/"mlir::Region &",

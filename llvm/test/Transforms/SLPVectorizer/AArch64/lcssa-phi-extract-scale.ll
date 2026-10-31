@@ -63,6 +63,7 @@ define double @test(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[DOTSINK6_I]] = select i1 [[DOTNOT4_I]], i32 16, i32 [[V55]]
 ; CHECK-NEXT:    [[SPEC_SELECT_I13:%.*]] = select i1 [[V42]], i32 [[V41]], i32 [[V40]]
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT_I13]], ptr [[V38]], align 4
+; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
 ; CHECK-NEXT:    [[V47:%.*]] = load i32, ptr [[V46]], align 4
 ; CHECK-NEXT:    [[V50:%.*]] = load i32, ptr [[V49]], align 4
 ; CHECK-NEXT:    [[V51:%.*]] = sub i32 [[V47]], [[V50]]
@@ -73,7 +74,6 @@ define double @test(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    store i32 [[DOTSINK_I]], ptr [[POS1]], align 4
 ; CHECK-NEXT:    store i32 [[DOTSINK6_I]], ptr [[POS2]], align 8
 ; CHECK-NEXT:    [[V56:%.*]] = sitofp i32 [[SPEC_SELECT_I]] to double
-; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V43]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V56]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul nnan <2 x double> [[TMP1]], splat (double f0x3E00000000200000)
@@ -294,6 +294,7 @@ define double @test_inloop_first(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    [[DOTSINK6_I]] = select i1 [[DOTNOT4_I]], i32 16, i32 [[V55]]
 ; CHECK-NEXT:    [[SPEC_SELECT_I13:%.*]] = select i1 [[V42]], i32 [[V41]], i32 [[V40]]
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT_I13]], ptr [[V38]], align 4
+; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
 ; CHECK-NEXT:    [[V47:%.*]] = load i32, ptr [[V46]], align 4
 ; CHECK-NEXT:    [[V50:%.*]] = load i32, ptr [[V49]], align 4
 ; CHECK-NEXT:    [[V51:%.*]] = sub i32 [[V47]], [[V50]]
@@ -304,7 +305,6 @@ define double @test_inloop_first(ptr %obj, ptr %arr, i32 %n) {
 ; CHECK-NEXT:    store i32 [[DOTSINK_I]], ptr [[POS1]], align 4
 ; CHECK-NEXT:    store i32 [[DOTSINK6_I]], ptr [[POS2]], align 8
 ; CHECK-NEXT:    [[V56:%.*]] = sitofp i32 [[SPEC_SELECT_I]] to double
-; CHECK-NEXT:    [[V43:%.*]] = sitofp i32 [[SPEC_SELECT_I13]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V43]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V56]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul nnan <2 x double> [[TMP1]], splat (double f0x3E00000000200000)

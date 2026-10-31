@@ -13,19 +13,36 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 
 #define RISCV_MOVE_MERGE_NAME "RISC-V Zcmp move merging pass"
 
 namespace {
-struct RISCVMoveMerge : public MachineFunctionPass {
+class RISCVMoveMergeLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  RISCVMoveMerge() : MachineFunctionPass(ID) {}
+  RISCVMoveMergeLegacy() : MachineFunctionPass(ID) {}
+  bool runOnMachineFunction(MachineFunction &Fn) override;
 
+  StringRef getPassName() const override { return RISCV_MOVE_MERGE_NAME; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+class RISCVMoveMergeImpl {
   const RISCVSubtarget *ST;
   const RISCVInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -63,16 +80,16 @@ struct RISCVMoveMerge : public MachineFunctionPass {
   MachineBasicBlock::iterator findMatchingPLI(MachineBasicBlock::iterator &MBBI,
                                               bool EvenRegPair);
   bool mergeMovePairs(MachineBasicBlock &MBB);
-  bool runOnMachineFunction(MachineFunction &Fn) override;
 
-  StringRef getPassName() const override { return RISCV_MOVE_MERGE_NAME; }
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
 };
 
-char RISCVMoveMerge::ID = 0;
+char RISCVMoveMergeLegacy::ID = 0;
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(RISCVMoveMerge, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
+INITIALIZE_PASS(RISCVMoveMergeLegacy, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
                 false, false)
 
 static unsigned getCM_MVOpcode(const RISCVSubtarget &ST, bool MoveFromSToA) {
@@ -99,8 +116,8 @@ static unsigned getPairedPLIOpcode(unsigned Opc) {
   }
 }
 
-bool RISCVMoveMerge::isGPRPairCopyCandidate(const DestSourcePair &RegPair,
-                                            bool EvenRegPair) {
+bool RISCVMoveMergeImpl::isGPRPairCopyCandidate(const DestSourcePair &RegPair,
+                                                bool EvenRegPair) {
   Register Destination = RegPair.Destination->getReg();
   Register Source = RegPair.Source->getReg();
 
@@ -121,7 +138,8 @@ bool RISCVMoveMerge::isGPRPairCopyCandidate(const DestSourcePair &RegPair,
 }
 
 // Check if registers meet CM.MVA01S constraints.
-bool RISCVMoveMerge::isCandidateToMergeMVA01S(const DestSourcePair &RegPair) {
+bool RISCVMoveMergeImpl::isCandidateToMergeMVA01S(
+    const DestSourcePair &RegPair) {
   Register Destination = RegPair.Destination->getReg();
   Register Source = RegPair.Source->getReg();
   // If destination is not a0 or a1.
@@ -133,7 +151,8 @@ bool RISCVMoveMerge::isCandidateToMergeMVA01S(const DestSourcePair &RegPair) {
 }
 
 // Check if registers meet CM.MVSA01 constraints.
-bool RISCVMoveMerge::isCandidateToMergeMVSA01(const DestSourcePair &RegPair) {
+bool RISCVMoveMergeImpl::isCandidateToMergeMVSA01(
+    const DestSourcePair &RegPair) {
   Register Destination = RegPair.Destination->getReg();
   Register Source = RegPair.Source->getReg();
   // If Source is s0 - s7.
@@ -146,8 +165,8 @@ bool RISCVMoveMerge::isCandidateToMergeMVSA01(const DestSourcePair &RegPair) {
 
 // Check if MI is a single-reg pli/plui whose destination is a half of a
 // GPRPair.
-bool RISCVMoveMerge::isPLIPairCandidate(const MachineInstr &MI,
-                                        bool EvenRegPair) {
+bool RISCVMoveMergeImpl::isPLIPairCandidate(const MachineInstr &MI,
+                                            bool EvenRegPair) {
   if (!ST->hasStdExtP() || ST->is64Bit())
     return false;
   if (!getPairedPLIOpcode(MI.getOpcode()))
@@ -160,9 +179,9 @@ bool RISCVMoveMerge::isPLIPairCandidate(const MachineInstr &MI,
 }
 
 MachineBasicBlock::iterator
-RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
-                                  MachineBasicBlock::iterator Paired,
-                                  bool RegPairIsEven) {
+RISCVMoveMergeImpl::mergeGPRPairInsns(MachineBasicBlock::iterator I,
+                                      MachineBasicBlock::iterator Paired,
+                                      bool RegPairIsEven) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
   DestSourcePair FirstPair = *TII->isCopyInstrImpl(*I);
@@ -196,9 +215,9 @@ RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
 }
 
 MachineBasicBlock::iterator
-RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
-                                 MachineBasicBlock::iterator Paired,
-                                 bool MoveFromSToA) {
+RISCVMoveMergeImpl::mergePairedInsns(MachineBasicBlock::iterator I,
+                                     MachineBasicBlock::iterator Paired,
+                                     bool MoveFromSToA) {
   const MachineOperand *Sreg1, *Sreg2;
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
@@ -250,9 +269,9 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
 }
 
 MachineBasicBlock::iterator
-RISCVMoveMerge::mergePLIPair(MachineBasicBlock::iterator I,
-                             MachineBasicBlock::iterator Paired,
-                             bool RegPairIsEven) {
+RISCVMoveMergeImpl::mergePLIPair(MachineBasicBlock::iterator I,
+                                 MachineBasicBlock::iterator Paired,
+                                 bool RegPairIsEven) {
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
 
@@ -275,9 +294,9 @@ RISCVMoveMerge::mergePLIPair(MachineBasicBlock::iterator I,
 }
 
 MachineBasicBlock::iterator
-RISCVMoveMerge::findMatchingGPRPairCopy(MachineBasicBlock::iterator &MBBI,
-                                        bool EvenRegPair,
-                                        const DestSourcePair &RegPair) {
+RISCVMoveMergeImpl::findMatchingGPRPairCopy(MachineBasicBlock::iterator &MBBI,
+                                            bool EvenRegPair,
+                                            const DestSourcePair &RegPair) {
   MachineBasicBlock::iterator E = MBBI->getParent()->end();
   ModifiedRegUnits.clear();
   UsedRegUnits.clear();
@@ -290,8 +309,15 @@ RISCVMoveMerge::findMatchingGPRPairCopy(MachineBasicBlock::iterator &MBBI,
       RegPair.Source->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
   Register DestGPRPair = TRI->getMatchingSuperReg(
       RegPair.Destination->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
+
+  if (!SrcGPRPair.isValid() || !DestGPRPair.isValid())
+    return E;
+
   Register ExpectedSourceReg = TRI->getSubReg(SrcGPRPair, SecondPairIdx);
   Register ExpectedDestReg = TRI->getSubReg(DestGPRPair, SecondPairIdx);
+
+  if (!ExpectedSourceReg.isValid() || !ExpectedDestReg.isValid())
+    return E;
 
   for (MachineBasicBlock::iterator I = next_nodbg(MBBI, E); I != E;
        I = next_nodbg(I, E)) {
@@ -324,9 +350,9 @@ RISCVMoveMerge::findMatchingGPRPairCopy(MachineBasicBlock::iterator &MBBI,
 }
 
 MachineBasicBlock::iterator
-RISCVMoveMerge::findMatchingSACopy(MachineBasicBlock::iterator &MBBI,
-                                   bool MoveFromSToA,
-                                   const DestSourcePair &RegPair) {
+RISCVMoveMergeImpl::findMatchingSACopy(MachineBasicBlock::iterator &MBBI,
+                                       bool MoveFromSToA,
+                                       const DestSourcePair &RegPair) {
   MachineBasicBlock::iterator E = MBBI->getParent()->end();
 
   // Track which register units have been modified and used between the first
@@ -374,8 +400,8 @@ RISCVMoveMerge::findMatchingSACopy(MachineBasicBlock::iterator &MBBI,
 // Look for a same-opcode pli/plui writing the other lane of the same GPRPair
 // with the same immediate. Return the matching instruction if one exists.
 MachineBasicBlock::iterator
-RISCVMoveMerge::findMatchingPLI(MachineBasicBlock::iterator &MBBI,
-                                bool EvenRegPair) {
+RISCVMoveMergeImpl::findMatchingPLI(MachineBasicBlock::iterator &MBBI,
+                                    bool EvenRegPair) {
   MachineBasicBlock::iterator E = MBBI->getParent()->end();
   ModifiedRegUnits.clear();
   UsedRegUnits.clear();
@@ -389,7 +415,9 @@ RISCVMoveMerge::findMatchingPLI(MachineBasicBlock::iterator &MBBI,
   // Get the expected destination register of the matching lane.
   Register DestGPRPair = TRI->getMatchingSuperReg(FirstDestReg, RegPairIdx,
                                                   &RISCV::GPRPairRegClass);
+  assert(DestGPRPair.isValid());
   Register ExpectedDestReg = TRI->getSubReg(DestGPRPair, SecondPairIdx);
+  assert(ExpectedDestReg.isValid());
 
   for (MachineBasicBlock::iterator I = next_nodbg(MBBI, E); I != E;
        I = next_nodbg(I, E)) {
@@ -420,7 +448,7 @@ RISCVMoveMerge::findMatchingPLI(MachineBasicBlock::iterator &MBBI,
 
 // Finds instructions, which could be represented as C.MV instructions and
 // merged into CM.MVA01S or CM.MVSA01.
-bool RISCVMoveMerge::mergeMovePairs(MachineBasicBlock &MBB) {
+bool RISCVMoveMergeImpl::mergeMovePairs(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
@@ -473,11 +501,8 @@ bool RISCVMoveMerge::mergeMovePairs(MachineBasicBlock &MBB) {
   return Modified;
 }
 
-bool RISCVMoveMerge::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
-  ST = &Fn.getSubtarget<RISCVSubtarget>();
+bool RISCVMoveMergeImpl::runOnMachineFunction(MachineFunction &MF) {
+  ST = &MF.getSubtarget<RISCVSubtarget>();
   bool HasGPRPairCopy =
       !ST->is64Bit() && (ST->hasStdExtZdinx() || ST->hasStdExtP());
   if (!ST->hasStdExtZcmp() && !ST->hasVendorXqccmp() && !HasGPRPairCopy)
@@ -491,11 +516,29 @@ bool RISCVMoveMerge::runOnMachineFunction(MachineFunction &Fn) {
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
   bool Modified = false;
-  for (auto &MBB : Fn)
+  for (auto &MBB : MF)
     Modified |= mergeMovePairs(MBB);
   return Modified;
 }
 
-/// createRISCVMoveMergePass - returns an instance of the
-/// move merge pass.
-FunctionPass *llvm::createRISCVMoveMergePass() { return new RISCVMoveMerge(); }
+/// Returns an instance of the move merge pass.
+FunctionPass *llvm::createRISCVMoveMergeLegacyPass() {
+  return new RISCVMoveMergeLegacy();
+}
+
+bool RISCVMoveMergeLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  RISCVMoveMergeImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+RISCVMoveMergePass::run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
+  RISCVMoveMergeImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
+}

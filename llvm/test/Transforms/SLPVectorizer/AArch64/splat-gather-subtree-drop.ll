@@ -11,8 +11,8 @@ define i32 @test1(ptr %p, ptr %q, i32 %seed) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[V0:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    [[V3:%.*]] = load i8, ptr [[Q]], align 1
-; CHECK-NEXT:    [[V4:%.*]] = zext i8 [[V3]] to i32
 ; CHECK-NEXT:    [[V1:%.*]] = zext i8 [[V0]] to i32
+; CHECK-NEXT:    [[V4:%.*]] = zext i8 [[V3]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[V1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 -2>

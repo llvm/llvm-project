@@ -111,7 +111,7 @@ integer function iany_test_optional_4(x, use_mask)
 integer :: x(:)
 logical :: use_mask
 logical, allocatable :: mask(:)
-! CHECK: %[[MASK:.*]]:2 = hlfir.declare %{{.*}}mask"}
+! CHECK: %[[MASK:.*]]:2 = hlfir.declare %{{.*}}uniq_name({{.*}}mask")
 if (use_mask) then
   allocate(mask(size(x, 1)))
   call set_mask(mask)

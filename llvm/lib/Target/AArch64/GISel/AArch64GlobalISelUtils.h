@@ -23,17 +23,6 @@ namespace llvm {
 
 namespace AArch64GISelUtils {
 
-/// \returns A value when \p MI is a vector splat of a Register or constant.
-/// Checks for generic opcodes and AArch64-specific generic opcodes.
-std::optional<RegOrConstant>
-getAArch64VectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI);
-
-/// \returns A value when \p MI is a constant vector splat.
-/// Checks for generic opcodes and AArch64-specific generic opcodes.
-std::optional<int64_t>
-getAArch64VectorSplatScalar(const MachineInstr &MI,
-                            const MachineRegisterInfo &MRI);
-
 /// \returns true if \p MaybeSub and \p Pred are part of a CMN tree for an
 /// integer compare.
 bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,

@@ -392,7 +392,6 @@ void foo() {
 
 #include <list>
 #include <map>
-
 #include "path/to/header.h"
 
 void foo() {
@@ -413,7 +412,6 @@ void foo() {
 })";
   const char *PostCode = R"(
 #include "clang_tidy/tests/insert_includes_test_header.h"
-
 #include "path/to/header.h"
 
 void foo() {
@@ -524,7 +522,6 @@ void foo() {
 })";
   const char *PostCode = R"(
 #include "clang_tidy/tests/insert_includes_test_header.h"
-
 #include <set>
 
 #include "path/to/a/header.h"
@@ -553,7 +550,6 @@ void foo() {
 #include "clang_tidy/tests/insert_includes_test_header.h"
 
 #include <stdlib.h>
-
 #include <set>
 
 #include "path/to/a/header.h"
@@ -576,7 +572,6 @@ void foo() {
 })";
   const char *PostCode = R"(
 #include <set>
-
 #include "path/to/a/header.h"
 
 void foo() {
@@ -600,7 +595,6 @@ void foo() {
 })";
   const char *PostCode = R"(
 #include <stdlib.h>
-
 #include <set>
 
 #include "path/to/a/header.h"
@@ -718,7 +712,6 @@ void foo() {
 })";
   const char *PostCode = R"(
 #include "clang_tidy/tests/insert_includes_test_header.h"
-
 #include <c.h>
 
 #include <d>
@@ -747,7 +740,6 @@ void foo() {
 })";
   const char *PostCode = R"(
 #import "clang_tidy/tests/insert_includes_test_header.h"
-
 #import "a/header.h"
 
 void foo() {
@@ -798,7 +790,6 @@ void foo() {
 #include <map>
 
 #include "path/to/a/header.h"
-
 #import "clang_tidy/tests/generated_file.proto.h"
 
 void foo() {

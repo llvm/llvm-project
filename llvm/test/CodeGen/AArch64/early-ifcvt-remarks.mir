@@ -1,13 +1,23 @@
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
-# RUN:   -enable-early-ifcvt-data-dependent \
-# RUN:   -pass-remarks-analysis='early-ifcvt' -o /dev/null %s 2>&1 | FileCheck %s
+# RUN:   -enable-early-ifcvt-data-dependent -pass-remarks-analysis='early-ifcvt' \
+# RUN:   -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
+# RUN:   -enable-early-ifcvt-data-dependent -early-ifcvt-cold-edge-threshold=0 \
+# RUN:   -pass-remarks-analysis='early-ifcvt' \
+# RUN:   -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=NO-COLD-EDGE
 
-# Test that we emit an analysis remark when the branch condition is data-dependent
-# (derived from a memory load).
+# Test the reasons for changing the critical-path extension budget.
 
+# CHECK: remark: <unknown>:0:0: branch has a cold edge below 1%, using a critical-path extension budget of 0 cycles
 # CHECK: remark: <unknown>:0:0: branch condition is data-dependent (from memory load), using higher CritLimit of {{[0-9]+}} cycles
 
+# NO-COLD-EDGE-NOT: branch has a cold edge
+# NO-COLD-EDGE: remark: <unknown>:0:0: branch condition is data-dependent (from memory load), using higher CritLimit of {{[0-9]+}} cycles
+# NO-COLD-EDGE-NOT: branch has a cold edge
+
 --- |
+  define i32 @biased_branch(i32 %x, i32 %y) { ret i32 0 }
+
   define i32 @data_dependent_branch(ptr %p, i32 %x, i32 %y) {
     ret i32 0
   }
@@ -41,5 +51,27 @@ body:             |
   bb.2:
     %100:gpr32 = PHI %1, %bb.0, %20, %bb.1
     $w0 = COPY %100
+    RET_ReallyLR implicit $w0
+...
+
+---
+name: biased_branch
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.2(0x7fef9fcb), %bb.1(0x00106035)
+    liveins: $w0, $w1
+    %0:gpr32sp = COPY $w0
+    %1:gpr32 = COPY $w1
+    $wzr = SUBSWri %0, 0, 0, implicit-def $nzcv
+    Bcc 0, %bb.1, implicit $nzcv
+    B %bb.2
+  bb.1:
+    successors: %bb.2(0x80000000)
+    %2:gpr32 = ADDWrr %1, %1
+    B %bb.2
+  bb.2:
+    %3:gpr32 = PHI %1, %bb.0, %2, %bb.1
+    $w0 = COPY %3
     RET_ReallyLR implicit $w0
 ...

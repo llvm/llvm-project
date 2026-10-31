@@ -113,6 +113,12 @@ int baz() { return y + x; }
 // RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=PASSES
 // PASSES: Running pass: ForceFunctionAttrsPass
 
+// Check that -mllvm options apply to the LTO pipeline and backend.
+
+// RUN: clang-nvlink-wrapper --dry-run %t.o %t-u.o %t-y.a --lto-debug-pass-manager -mllvm -enable-merge-functions -mllvm -print-isel-input -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=MLLVM
+// MLLVM: Running pass: MergeFunctionsPass
+// MLLVM: *** Final LLVM Code input to ISel ***
+
 //
 // Check that '-plugin` is ingored like in `ld.lld`
 //

@@ -15,4 +15,4 @@ module attributes {
 
 }
 
-// CHECK: op x86_64 calling-convention lowering not yet implemented for type
+// CHECK: op calling-convention lowering not yet implemented for type

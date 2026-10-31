@@ -10,10 +10,10 @@ define void @foo(ptr %dst, ptr %src, i32 %m, i32 %n) vscale_range(1,16) {
 ; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw nsw i64 [[TMP0]], 5
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[TMP11]], -1
-; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[OUTER_LOOP]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ [[OUTER_IV_NEXT:%.*]], %[[INNER_EXIT:.*]] ], [ 0, %[[ENTRY]] ]

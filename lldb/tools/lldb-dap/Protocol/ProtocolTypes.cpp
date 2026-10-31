@@ -869,8 +869,8 @@ llvm::json::Value toJSON(const SourceBreakpoint &SB) {
     result.insert({"column", *SB.column});
   if (SB.condition)
     result.insert({"condition", *SB.condition});
-  if (SB.hitCondition)
-    result.insert({"hitCondition", *SB.hitCondition});
+  if (!SB.hitCondition.empty())
+    result.insert({"hitCondition", SB.hitCondition});
   if (!SB.logMessage.empty())
     result.insert({"logMessage", SB.logMessage});
   if (SB.mode)
@@ -892,8 +892,8 @@ llvm::json::Value toJSON(const FunctionBreakpoint &FB) {
 
   if (FB.condition)
     result.insert({"condition", *FB.condition});
-  if (FB.hitCondition)
-    result.insert({"hitCondition", *FB.hitCondition});
+  if (!FB.hitCondition.empty())
+    result.insert({"hitCondition", FB.hitCondition});
 
   return result;
 }
@@ -947,8 +947,8 @@ llvm::json::Value toJSON(const DataBreakpoint &DBI) {
     result.insert({"accessType", *DBI.accessType});
   if (DBI.condition)
     result.insert({"condition", *DBI.condition});
-  if (DBI.hitCondition)
-    result.insert({"hitCondition", *DBI.hitCondition});
+  if (!DBI.hitCondition.empty())
+    result.insert({"hitCondition", DBI.hitCondition});
 
   return result;
 }
@@ -1172,6 +1172,8 @@ json::Value toJSON(const ExceptionDetails &ED) {
 
 llvm::json::Value toJSON(const CompileUnit &CU) {
   json::Object result{{"id", CU.id}, {"compileUnitPath", CU.compileUnitPath}};
+  if (CU.language)
+    result.insert({"language", *CU.language});
   return result;
 }
 
@@ -1226,6 +1228,8 @@ llvm::json::Value toJSON(const StackFrame &SF) {
     result.insert({"moduleId", *SF.moduleId});
   if (SF.compileUnitId)
     result.insert({"compileUnitId", *SF.compileUnitId});
+  if (SF.languageSpecificData)
+    result.insert({"$__lldb_languageSpecificData", *SF.languageSpecificData});
   if (SF.presentationHint != StackFrame::ePresentationHintNone)
     result.insert({"presentationHint", SF.presentationHint});
 

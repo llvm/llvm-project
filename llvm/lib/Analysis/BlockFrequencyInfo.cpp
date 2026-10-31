@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
@@ -77,9 +78,6 @@ cl::opt<PGOViewCountsType> PGOViewCounts(
     cl::values(clEnumValN(PGOVCT_None, "none", "do not show."),
                clEnumValN(PGOVCT_Graph, "graph", "show a graph."),
                clEnumValN(PGOVCT_Text, "text", "show in text.")));
-
-static cl::opt<bool> PrintBFI("print-bfi", cl::init(false), cl::Hidden,
-                              cl::desc("Print the block frequency info."));
 
 cl::opt<std::string>
     PrintBFIFuncName("print-bfi-func-name", cl::Hidden,
@@ -191,7 +189,7 @@ void BlockFrequencyInfo::calculate(const Function &F,
       (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
     view();
   }
-  if (PrintBFI &&
+  if (getAnalysisOptions(F).print_bfi &&
       (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
     print(dbgs());
   }
@@ -202,8 +200,7 @@ BlockFrequency BlockFrequencyInfo::getBlockFreq(const BasicBlock *BB) const {
 }
 
 std::optional<uint64_t>
-BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
-                                         bool AllowSynthetic) const {
+BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB) const {
   if (!BFI)
     return std::nullopt;
 

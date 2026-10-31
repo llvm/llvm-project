@@ -207,5 +207,5 @@ body:             |
     ;CHECK-NEXT: tBX_RET 14 /* CC::al */, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[SHARED]]
-    ;CHECK: $r0 = tMOVr killed $r1, 14 /* CC::al */, $noreg
+    ;CHECK: $r0 = tMOVr $r1, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: tTAILJMPdND @foo, 14 /* CC::al */, $noreg, implicit $sp

@@ -18,22 +18,22 @@ ld1sh z29.h, p0/z, [x3, #1, MUL VL]
 // Immediate out of lower bound [-8, 7].
 
 ld1sh z30.s, p6/z, [x25, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ld1sh z30.s, p6/z, [x25, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z29.s, p5/z, [x15, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ld1sh z29.s, p5/z, [x15, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z28.d, p2/z, [x28, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ld1sh z28.d, p2/z, [x28, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z27.d, p1/z, [x26, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ld1sh z27.d, p1/z, [x26, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -143,52 +143,52 @@ ld1sh z0.d, p0/z, [x0, z0.d, sxtw #2]
 // Invalid vector + immediate addressing modes
 
 ld1sh z0.s, p0/z, [z0.s, #-2]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.s, p0/z, [z0.s, #-2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z0.s, p0/z, [z0.s, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.s, p0/z, [z0.s, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z0.s, p0/z, [z0.s, #63]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.s, p0/z, [z0.s, #63]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z0.s, p0/z, [z0.s, #64]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.s, p0/z, [z0.s, #64]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z0.s, p0/z, [z0.s, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.s, p0/z, [z0.s, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z0.d, p0/z, [z0.d, #-2]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.d, p0/z, [z0.d, #-2]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z0.d, p0/z, [z0.d, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.d, p0/z, [z0.d, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z0.d, p0/z, [z0.d, #63]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.d, p0/z, [z0.d, #63]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z0.d, p0/z, [z0.d, #64]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.d, p0/z, [z0.d, #64]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1sh z0.d, p0/z, [z0.d, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: ld1sh z0.d, p0/z, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

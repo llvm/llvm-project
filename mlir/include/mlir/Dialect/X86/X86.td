@@ -25,7 +25,6 @@ include "mlir/IR/BuiltinTypes.td"
 
 def X86_Dialect : Dialect {
   let name = "x86";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::x86";
 
   let useDefaultTypePrinterParser = 1;

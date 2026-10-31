@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx2a %s
-// RUN: %clang_cc1 -std=c++23 -verify=expected %s
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx2a -Wunused-function %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected -Wunused-function %s
 
 // This test is for [class.compare.default]p3 as modified and renumbered to p4
 // by P2002R0.
@@ -18,7 +18,7 @@ namespace std {
 
 namespace N {
   struct A {
-    friend constexpr std::strong_ordering operator<=>(const A&, const A&) = default; // expected-note 2{{declared here}}
+    friend constexpr std::strong_ordering operator<=>(const A&, const A&) = default; // expected-note {{declared here}}
   };
 
   constexpr std::strong_ordering (*test_a_threeway_not_found)(const A&, const A&) = &operator<=>; // expected-error {{undeclared}}
@@ -32,8 +32,7 @@ namespace N {
 
   constexpr bool operator==(const A&, const A&) noexcept;
   constexpr bool (*test_a_equal)(const A&, const A&) noexcept = &operator==;
-  static_assert((*test_a_equal)(A(), A())); // expected-error {{static assertion expression is not an integral constant expression}}
-                                            // expected-note@-1 {{undefined function 'operator==' cannot be used in a constant expression}}
+  static_assert((*test_a_equal)(A(), A()));
 }
 
 struct B1 {
@@ -180,3 +179,51 @@ namespace Constrained {
     return a != A<int>();
   }
 }
+
+namespace GH104720 {
+
+struct A {
+  friend constexpr auto operator<=>(const A &, const A &) = default;
+};
+
+constexpr bool operator ==(const A &, const A &) noexcept;
+
+static_assert( ((bool(*)(const A &, const A &))&operator==)( A{}, A{} ) );
+
+}
+
+namespace GH104720_2 {
+
+struct A {
+  friend constexpr bool operator==(const A &, const A &) = default; // #GH104720_2_A
+};
+
+// FIXME: This should probably be accepted - we only look at the recent declaration when defining a default function.
+//
+// bool foo() {
+//   return A() == A();
+// }
+//
+// ^^^ activating this function would make the assertion valid!
+
+constexpr bool operator ==(const A &, const A &) noexcept;
+static_assert( ((bool(*)(const A &, const A &))&operator==)( A{}, A{} ) );
+// expected-error@-1 {{not an integral}}
+// expected-note@-2 {{undefined function}} expected-note@#GH104720_2_A {{here}}
+
+}
+
+namespace GH125233 {
+
+namespace {
+
+struct S {
+    friend auto operator<=>(const S&, const S&) = default;
+};
+
+[[maybe_unused]] bool awoo(S a, S b) { return a == b; }
+
+}
+
+}
+

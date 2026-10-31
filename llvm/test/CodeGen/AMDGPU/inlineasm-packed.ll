@@ -28,10 +28,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}inline_asm_output_v2f16:
-; GCN: v_mov_b32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @inline_asm_output_v2f16(ptr addrspace(1) %out, i32 %in) #0 {
 entry:
-  %val = call <2 x half> asm "v_mov_b32 $0, $1", "=v,r"(i32 %in) #0
+  %val = call <2 x half> asm "v_mov_b32_e32 $0, $1", "=v,r"(i32 %in) #0
   store <2 x half> %val, ptr addrspace(1) %out
   ret void
 }

@@ -34,7 +34,7 @@ entry:
 ; CHECK-NEXT: phi i32 [ 0, %entry.split ], [ %[[LONGJMP_RESULT:.*]], %if.end ]
 ; CHECK-NEXT: %[[JMPBUF:.*]] = ptrtoint ptr %buf to [[PTR]]
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
-; CHECK-NEXT: call cc{{.*}} void @__invoke_void_[[PTR]]_i32(ptr @emscripten_longjmp, [[PTR]] %[[JMPBUF]], i32 1)
+; CHECK-NEXT: call wasm_emscripten_invokecc void @__invoke_void_[[PTR]]_i32(ptr @emscripten_longjmp, [[PTR]] %[[JMPBUF]], i32 1)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], ptr @__THREW__
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
 ; CHECK-NEXT: %[[CMP0:.*]] = icmp ne [[PTR]] %__THREW__.val, 0
@@ -189,7 +189,7 @@ define ptr @allocsize() {
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
   %call = call i32 @setjmp(ptr %buf) #0
-; CHECK: call cc{{.*}} ptr @__invoke_ptr_i32_ptr([[ARGS:.*]]) #[[ALLOCSIZE_ATTR:[0-9]+]]
+; CHECK: call wasm_emscripten_invokecc ptr @__invoke_ptr_i32_ptr([[ARGS:.*]]) #[[ALLOCSIZE_ATTR:[0-9]+]]
   %alloc = call ptr @allocator(i32 20, ptr %buf) #3
   ret ptr %alloc
 }

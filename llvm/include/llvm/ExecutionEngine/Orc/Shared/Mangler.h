@@ -14,9 +14,12 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_MANGLER_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
@@ -75,8 +78,45 @@ public:
   }
 
 private:
-  LLVM_ABI static Mode fromDataLayoutStr(StringRef DLStr);
-  LLVM_ABI static Mode fromTriple(const Triple &TT, StringRef ABIName);
+  // TODO: Sink this back into a .cpp file once OrcJIT and OrcSupport have
+  //       been reorganized.
+  static Mode fromDataLayoutStr(StringRef DLStr) {
+
+    for (StringRef Spec : split(DLStr, '-')) {
+      if (!Spec.starts_with("m:"))
+        continue;
+      auto ModeStr = Spec.drop_front(2);
+      assert(ModeStr.size() == 1 &&
+             "invalid data layout string from Triple::computeDataLayout");
+      switch (ModeStr[0]) {
+      case 'e':
+        return Mode::ELF;
+      case 'l':
+        return Mode::GOFF;
+      case 'o':
+        return Mode::MachO;
+      case 'm':
+        return Mode::Mips;
+      case 'w':
+        return Mode::WinCOFF;
+      case 'x':
+        return Mode::WinCOFFX86;
+      case 'a':
+        return Mode::XCOFF;
+      default:
+        llvm_unreachable(
+            "Invalid mangling mode from Triple::computeDataLayout");
+      }
+    }
+    return Mode::None;
+  }
+
+  // TODO: Sink this back into a .cpp file once OrcJIT and OrcSupport have
+  //       been reorganized.
+  static Mode fromTriple(const Triple &TT, StringRef ABIName) {
+    return fromDataLayoutStr(TT.computeDataLayout(ABIName));
+  }
+
   bool doNotMangleLeadingQuestionMark() const {
     return MM == Mode::WinCOFF || MM == Mode::WinCOFFX86;
   }

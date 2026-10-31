@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -36,6 +37,9 @@ static OpTy createEmptyOp(OpBuilder &builder, Location loc) {
 class OpenACCOpsTest : public ::testing::Test {
 protected:
   OpenACCOpsTest() : b(&context), loc(UnknownLoc::get(&context)) {
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                         memref::MemRefDialect>();
   }
@@ -569,6 +573,87 @@ TEST_F(OpenACCOpsTest, routineOpTest) {
   op->removeBindStrNameDeviceTypeAttr();
   op->removeBindIdNameAttr();
   op->removeBindStrNameAttr();
+}
+
+TEST_F(OpenACCOpsTest, routineOpGetEffectiveBindName) {
+  OwningOpRef<RoutineOp> op = createEmptyOp<RoutineOp>(b, loc);
+  // No bind clauses: no effective bind name.
+  EXPECT_FALSE(op->getEffectiveBindName(DeviceType::Nvidia));
+  EXPECT_FALSE(op->getEffectiveBindName(DeviceType::None));
+
+  auto defaultName = b.getStringAttr("impl_default");
+  auto radeonName = b.getStringAttr("impl_radeon");
+  auto nvidiaName = b.getStringAttr("impl_nvidia");
+  auto starName = b.getStringAttr("impl_star");
+  auto dtypeNone = DeviceTypeAttr::get(&context, DeviceType::None);
+  auto dtypeRadeon = DeviceTypeAttr::get(&context, DeviceType::Radeon);
+  auto dtypeNvidia = DeviceTypeAttr::get(&context, DeviceType::Nvidia);
+  auto dtypeStar = DeviceTypeAttr::get(&context, DeviceType::Star);
+
+  // bind("impl_default") &
+  // device_type(radeon) bind("impl_radeon") &
+  // device_type(nvidia) bind("impl_nvidia")
+  op->setBindStrNameDeviceTypeAttr(
+      b.getArrayAttr({dtypeNone, dtypeRadeon, dtypeNvidia}));
+  op->setBindStrNameAttr(b.getArrayAttr({defaultName, radeonName, nvidiaName}));
+
+  // For Radeon and NVIDIA, expect their specific binds; default bind for all
+  // others
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Radeon)),
+            radeonName);
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Nvidia)),
+            nvidiaName);
+  for (DeviceType deviceType :
+       {DeviceType::Multicore, DeviceType::Default, DeviceType::Host})
+    EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(deviceType)),
+              defaultName);
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::None)),
+            defaultName);
+
+  // bind("impl_default") &
+  // device_type(radeon) bind("impl_radeon") &
+  // device_type(nvidia) bind("impl_nvidia") &
+  // device_type(*) bind("impl_star")
+  op->setBindStrNameDeviceTypeAttr(
+      b.getArrayAttr({dtypeNone, dtypeRadeon, dtypeNvidia, dtypeStar}));
+  op->setBindStrNameAttr(
+      b.getArrayAttr({defaultName, radeonName, nvidiaName, starName}));
+
+  // device_type(*) bind applies to all unnamed devices only
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Radeon)),
+            radeonName);
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Nvidia)),
+            nvidiaName);
+  for (DeviceType deviceType :
+       {DeviceType::Multicore, DeviceType::Default, DeviceType::Host})
+    EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(deviceType)),
+              starName);
+
+  // default bind clause applies to `DeviceType::None`
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::None)),
+            defaultName);
+
+  // bind("impl_default") device_type(nvidia) seq &
+  // device_type(*) bind("impl_star")
+  op->setSeqAttr(b.getArrayAttr({dtypeNvidia}));
+  op->setBindStrNameDeviceTypeAttr(b.getArrayAttr({dtypeNone, dtypeStar}));
+  op->setBindStrNameAttr(b.getArrayAttr({defaultName, starName}));
+
+  // NVIDIA is named by seq, so the device_type(*) bind does not apply to it.
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Nvidia)),
+            defaultName);
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Radeon)),
+            starName);
+
+  // device_type(nvidia) seq device_type(*) bind("impl_star")
+  op->setBindStrNameDeviceTypeAttr(b.getArrayAttr({dtypeStar}));
+  op->setBindStrNameAttr(b.getArrayAttr({starName}));
+
+  // Without a default bind, NVIDIA has no applicable bind.
+  EXPECT_FALSE(op->getEffectiveBindName(DeviceType::Nvidia));
+  EXPECT_FALSE(op->getEffectiveBindName(DeviceType::None));
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Radeon)),
+            starName);
 }
 
 TEST_F(OpenACCOpsTest, routineOpGetBindNameValueOnlyBindStrOrOnlyBindId) {

@@ -143,7 +143,7 @@ define void @sitofp_4i64_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $48, %esp
+; X32-NEXT:    subl $40, %esp
 ; X32-NEXT:    movl 8(%ebp), %edx
 ; X32-NEXT:    movl 24(%edx), %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill

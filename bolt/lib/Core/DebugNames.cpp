@@ -329,18 +329,17 @@ std::optional<std::string> DWARF5AcceleratorTable::getName(
   }
   auto &It = Entries[Name];
   if (It.Values.empty()) {
-    if (DWOID && NameToUse.empty()) {
-      // For DWO Unit the offset is in the .debug_str.dwo section.
-      // Need to find offset for the name in the .debug_str section.
+    if (DWOID || !NameToUse.empty()) {
+      // The offset in hand is into .debug_str.dwo, or absent for a synthesized
+      // name. Look for its offset in the main .debug_str.
       llvm::hash_code Hash = llvm::hash_value(llvm::StringRef(Name));
       auto ItCache = StrCacheToOffsetMap.find(Hash);
+      // New string not in the main .debug_str, we'll assign an offset later.
       if (ItCache == StrCacheToOffsetMap.end())
-        NameIndexOffset = MainBinaryStrWriter.addString(Name);
+        It.NeedsStrOffset = true;
       else
         NameIndexOffset = ItCache->second;
     }
-    if (!NameToUse.empty())
-      NameIndexOffset = MainBinaryStrWriter.addString(Name);
     It.StrOffset = NameIndexOffset;
     // This is the same hash function used in DWARF5AccelTableData.
     It.HashValue = caseFoldingDjbHash(Name);
@@ -546,9 +545,11 @@ void DWARF5AcceleratorTable::finalize() {
   // data structures.
   computeBucketCount();
 
-  // Compute bucket contents and final ordering.
+  // Compute bucket contents and final ordering. Entries is done growing, so
+  // its keys have settled and an entry can point back at its own name.
   Buckets.resize(BucketCount);
   for (auto &E : Entries) {
+    E.second.Name = &E.first;
     uint32_t Bucket = E.second.HashValue % BucketCount;
     Buckets[Bucket].push_back(&E.second);
   }
@@ -557,7 +558,8 @@ void DWARF5AcceleratorTable::finalize() {
   // up together. Stable sort makes testing easier and doesn't cost much more.
   for (HashList &Bucket : Buckets) {
     llvm::stable_sort(Bucket, [](const HashData *LHS, const HashData *RHS) {
-      return LHS->HashValue < RHS->HashValue;
+      return std::tie(LHS->HashValue, *LHS->Name) <
+             std::tie(RHS->HashValue, *RHS->Name);
     });
     for (HashData *H : Bucket)
       llvm::stable_sort(H->Values, [](const BOLTDWARF5AccelTableData *LHS,
@@ -571,12 +573,24 @@ void DWARF5AcceleratorTable::finalize() {
       });
   }
 
+  assignStrOffsets();
+
   CUIndexForm = DIEInteger::BestForm(/*IsSigned*/ false, CUList.size() - 1);
   TUIndexForm = DIEInteger::BestForm(
       /*IsSigned*/ false, LocalTUList.size() + ForeignTUList.size() - 1);
   const dwarf::FormParams FormParams{5, 4, Format, false};
   CUIndexEncodingSize = *dwarf::getFixedFormByteSize(CUIndexForm, FormParams);
   TUIndexEncodingSize = *dwarf::getFixedFormByteSize(TUIndexForm, FormParams);
+}
+
+void DWARF5AcceleratorTable::assignStrOffsets() {
+  // Walk the buckets, which finalize() has just put in a total order.
+  for (HashList &Bucket : Buckets)
+    for (HashData *Hash : Bucket)
+      if (Hash->NeedsStrOffset) {
+        assert(Hash->Name && "Name back-pointer was not set");
+        Hash->StrOffset = MainBinaryStrWriter.addString(*Hash->Name);
+      }
 }
 
 std::optional<DWARF5AccelTable::UnitIndexAndEncoding>

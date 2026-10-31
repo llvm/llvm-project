@@ -506,6 +506,9 @@ Error WasmObjectFile::parseDylink0Section(ReadContext &Ctx) {
       }
       break;
     }
+    case wasm::WASM_DYLINK_TARGET_ARCH:
+      DylinkInfo.TargetArch = readString(Ctx);
+      break;
     default:
       LLVM_DEBUG(dbgs() << "unknown dylink.0 sub-section: " << Type << "\n");
       Ctx.Ptr += Size;
@@ -693,6 +696,9 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
     case wasm::WASM_COMDAT_INFO:
       if (Error Err = parseLinkingSectionComdat(Ctx))
         return Err;
+      break;
+    case wasm::WASM_TARGET_ARCH:
+      LinkingData.TargetArch = readString(Ctx);
       break;
     default:
       Ctx.Ptr += Size;
@@ -2191,12 +2197,19 @@ section_iterator WasmObjectFile::section_end() const {
 }
 
 uint8_t WasmObjectFile::getBytesInAddress() const {
-  return HasMemory64 ? 8 : 4;
+  return getArch() == Triple::wasm64 ? 8 : 4;
 }
 
 StringRef WasmObjectFile::getFileFormatName() const { return "WASM"; }
 
 Triple::ArchType WasmObjectFile::getArch() const {
+  if (!LinkingData.TargetArch.empty())
+    return Triple(LinkingData.TargetArch).getArch();
+  if (!DylinkInfo.TargetArch.empty())
+    return Triple(DylinkInfo.TargetArch).getArch();
+  // Fall back to the HasMemory64 heuristic for backwards compatibility with
+  // older object files/shared libraries that lack target architecture metadata,
+  // as well as final executables that lack custom linking/dylink sections.
   return HasMemory64 ? Triple::wasm64 : Triple::wasm32;
 }
 

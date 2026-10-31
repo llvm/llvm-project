@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
             while (st.KeepRunningBatch(BatchSize * size)) {
               for (std::size_t i = 0; i != BatchSize; ++i) {
                 benchmark::DoNotOptimize(c[i]);
-                for (size_t k = 0; k != c[i].size(); ++k)
+                for (size_t k = 1; k <= c[i].size(); ++k)
                   std::push_heap(c[i].begin(), c[i].begin() + k, pred);
                 benchmark::DoNotOptimize(c[i]);
               }

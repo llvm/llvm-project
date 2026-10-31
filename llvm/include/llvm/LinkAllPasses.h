@@ -24,7 +24,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/RegionPass.h"
 #include "llvm/Analysis/RegionPrinter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
@@ -147,7 +146,6 @@ struct ForcePassLinking {
     (void)new llvm::ScalarEvolutionWrapperPass();
     llvm::Function::Create(nullptr, llvm::GlobalValue::ExternalLinkage)
         ->viewCFGOnly();
-    llvm::RGPassManager RGM;
     llvm::TargetLibraryInfoImpl TLII((llvm::Triple()));
     llvm::TargetLibraryInfo TLI(TLII);
     llvm::AliasAnalysis AA(TLI);

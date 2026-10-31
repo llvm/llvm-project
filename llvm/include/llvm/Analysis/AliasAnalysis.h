@@ -192,6 +192,13 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   /// This is used for cache invalidation purposes.
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
+  /// Cached result of Function::callsFunctionThatReturnsTwice(), used to
+  /// account for longjmp re-entry paths not visible to the forward CFG.
+  std::optional<bool> CallsReturnsTwiceFn;
+
+  /// Whether the function contains a call that may return twice (e.g., setjmp).
+  bool callsReturnsTwiceFn();
+
 public:
   EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr,
                          const CycleInfo *CI = nullptr)
@@ -298,6 +305,9 @@ public:
   /// Whether alias analysis is allowed to use the dominator tree, for use by
   /// passes that lazily update the DT while performing AA queries.
   bool UseDominatorTree = true;
+
+  /// Whether ephemeral values should be allowed when checking assumes.
+  bool AllowEphemerals = true;
 
   AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
 };
@@ -499,16 +509,6 @@ public:
   /// memory locations.
   LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
                                     const Instruction *I2);
-
-  /// Return information about whether a particular call site modifies
-  /// or reads the specified memory location \p MemLoc before instruction \p I
-  /// in a BasicBlock.
-  ModRefInfo callCapturesBefore(const Instruction *I,
-                                const MemoryLocation &MemLoc,
-                                DominatorTree *DT) {
-    SimpleAAQueryInfo AAQIP(*this);
-    return callCapturesBefore(I, MemLoc, DT, AAQIP);
-  }
 
   /// @}
   //===--------------------------------------------------------------------===//

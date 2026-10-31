@@ -49,6 +49,55 @@ namespace clang {
 
 class ASTContext;
 
+/// One item in an OpenMP 'adjust_args' parameter list.
+struct OMPAdjustArgsItem {
+  /// One bound of a parameter range.
+  struct Bound {
+    enum BoundKind : uint8_t { Omitted, Expression, NumArgs };
+
+    BoundKind Kind = Omitted;
+    /// The bound expression, or the logical offset for a NumArgs bound.
+    Expr *E = nullptr;
+    bool IsSubtraction = false;
+  };
+
+  enum ItemKind : uint8_t { Single, Range };
+
+  ItemKind Kind = Single;
+  /// A named parameter or positional expression for a Single item.
+  Expr *E = nullptr;
+  Bound Lower;
+  Bound Upper;
+};
+
+/// Describes the source-level contents of one OpenMP 'adjust_args' clause.
+class OMPAdjustArgsDescriptor final
+    : private llvm::TrailingObjects<OMPAdjustArgsDescriptor,
+                                    OMPAdjustArgsItem> {
+  friend TrailingObjects;
+
+  unsigned NumItems;
+
+  OMPAdjustArgsDescriptor(OpenMPAdjustArgsOpKind AdjustOp,
+                          OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+                          unsigned NumItems)
+      : NumItems(NumItems), AdjustOp(AdjustOp),
+        NeedDevicePtrModifier(NeedDevicePtrModifier) {}
+
+public:
+  OpenMPAdjustArgsOpKind AdjustOp;
+  OpenMPNeedDevicePtrModifier NeedDevicePtrModifier;
+
+  static OMPAdjustArgsDescriptor *
+  Create(const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
+         OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+         ArrayRef<OMPAdjustArgsItem> Items);
+
+  ArrayRef<OMPAdjustArgsItem> items() const {
+    return {getTrailingObjects(), NumItems};
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // AST classes for clauses.
 //===----------------------------------------------------------------------===//
@@ -441,6 +490,7 @@ class OMPAlignClause final
   /// Set alignment value.
   void setAlignment(Expr *A) { setStmt(A); }
 
+public:
   /// Build 'align' clause with the given alignment
   ///
   /// \param A Alignment value.
@@ -453,18 +503,6 @@ class OMPAlignClause final
 
   /// Build an empty clause.
   OMPAlignClause() : OMPOneStmtClause() {}
-
-public:
-  /// Build 'align' clause with the given alignment
-  ///
-  /// \param A Alignment value.
-  /// \param StartLoc Starting location of the clause.
-  /// \param LParenLoc Location of '('.
-  /// \param EndLoc Ending location of the clause.
-  static OMPAlignClause *Create(const ASTContext &C, Expr *A,
-                                SourceLocation StartLoc,
-                                SourceLocation LParenLoc,
-                                SourceLocation EndLoc);
 
   /// Returns alignment
   Expr *getAlignment() const { return getStmtAs<Expr>(); }
@@ -1331,24 +1369,16 @@ public:
 /// for (int i = 0; i < 64; ++i)
 /// \endcode
 class OMPFullClause final : public OMPNoChildClause<llvm::omp::OMPC_full> {
-  friend class OMPClauseReader;
-
-  /// Build an empty clause.
-  explicit OMPFullClause() : OMPNoChildClause() {}
-
 public:
   /// Build an AST node for a 'full' clause.
   ///
-  /// \param C        Context of the AST.
   /// \param StartLoc Starting location of the clause.
   /// \param EndLoc   Ending location of the clause.
-  static OMPFullClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                               SourceLocation EndLoc);
+  OMPFullClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
 
-  /// Build an empty 'full' AST node for deserialization.
-  ///
-  /// \param C Context of the AST.
-  static OMPFullClause *CreateEmpty(const ASTContext &C);
+  /// Build an empty clause.
+  explicit OMPFullClause() : OMPNoChildClause() {}
 };
 
 /// This class represents the 'looprange' clause in the
@@ -1379,19 +1409,20 @@ class OMPLoopRangeClause final : public OMPClause {
   /// Set looprange 'count' expression
   void setCount(Expr *E) { Args[CountExpr] = E; }
 
+public:
+  /// Build a 'looprange' clause.
+  OMPLoopRangeClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                     SourceLocation FirstLoc, SourceLocation CountLoc,
+                     SourceLocation EndLoc, Expr *First, Expr *Count)
+      : OMPClause(llvm::omp::OMPC_looprange, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), FirstLoc(FirstLoc), CountLoc(CountLoc) {
+    setFirst(First);
+    setCount(Count);
+  }
+
   /// Build an empty clause for deserialization.
   explicit OMPLoopRangeClause()
       : OMPClause(llvm::omp::OMPC_looprange, {}, {}) {}
-
-public:
-  /// Build a 'looprange' clause AST node.
-  static OMPLoopRangeClause *
-  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
-         SourceLocation FirstLoc, SourceLocation CountLoc,
-         SourceLocation EndLoc, Expr *First, Expr *Count);
-
-  /// Build an empty 'looprange' clause node.
-  static OMPLoopRangeClause *CreateEmpty(const ASTContext &C);
 
   // Location getters/setters
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -1439,10 +1470,7 @@ class OMPPartialClause final : public OMPClause {
   SourceLocation LParenLoc;
 
   /// Optional argument to the clause (unroll factor).
-  Stmt *Factor;
-
-  /// Build an empty clause.
-  explicit OMPPartialClause() : OMPClause(llvm::omp::OMPC_partial, {}, {}) {}
+  Stmt *Factor = nullptr;
 
   /// Set the unroll factor.
   void setFactor(Expr *E) { Factor = E; }
@@ -1453,19 +1481,17 @@ class OMPPartialClause final : public OMPClause {
 public:
   /// Build an AST node for a 'partial' clause.
   ///
-  /// \param C         Context of the AST.
   /// \param StartLoc  Location of the 'partial' identifier.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc    Location of ')'.
   /// \param Factor    Clause argument.
-  static OMPPartialClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                  SourceLocation LParenLoc,
-                                  SourceLocation EndLoc, Expr *Factor);
+  OMPPartialClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                   SourceLocation EndLoc, Expr *Factor)
+      : OMPClause(llvm::omp::OMPC_partial, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Factor(Factor) {}
 
-  /// Build an empty 'partial' AST node for deserialization.
-  ///
-  /// \param C     Context of the AST.
-  static OMPPartialClause *CreateEmpty(const ASTContext &C);
+  /// Build an empty clause.
+  explicit OMPPartialClause() : OMPClause(llvm::omp::OMPC_partial, {}, {}) {}
 
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -1487,6 +1513,70 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_partial;
+  }
+};
+
+/// This represents the 'depth' clause on the '#pragma omp flatten' (and
+/// '#pragma omp fuse') loop-transformation directives.
+///
+/// \code
+/// #pragma omp flatten depth(3)
+/// \endcode
+/// In this example the 'flatten' directive has a 'depth' clause whose argument
+/// '3' specifies how many perfectly nested loops are combined into one.
+/// The argument must be a positive integer constant expression that evaluates
+/// to at most the loop nest depth of the associated loop nest.
+class OMPDepthClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// The depth expression (e.g. number of loops to flatten or nest-levels to
+  /// fuse).
+  Stmt *Depth = nullptr;
+
+  /// Build an empty clause.
+  explicit OMPDepthClause() : OMPClause(llvm::omp::OMPC_depth, {}, {}) {}
+
+  /// Set the depth expression.
+  void setDepth(Expr *E) { Depth = E; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build an AST node for a 'depth' clause.
+  ///
+  /// \param StartLoc  Location of the 'depth' identifier.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc    Location of ')'.
+  /// \param Depth     The depth expression.
+  OMPDepthClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc, Expr *Depth)
+      : OMPClause(llvm::omp::OMPC_depth, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Depth(Depth) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the depth expression or nullptr if not set.
+  Expr *getDepth() const { return cast_or_null<Expr>(Depth); }
+
+  child_range children() { return child_range(&Depth, &Depth + 1); }
+  const_child_range children() const {
+    return const_child_range(&Depth, &Depth + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_depth;
   }
 };
 
@@ -5721,42 +5811,26 @@ class OMPDepobjClause final : public OMPClause {
   /// Chunk size.
   Expr *Depobj = nullptr;
 
-  /// Build clause with number of variables \a N.
-  ///
-  /// \param StartLoc Starting location of the clause.
-  /// \param LParenLoc Location of '('.
-  /// \param EndLoc Ending location of the clause.
-  OMPDepobjClause(SourceLocation StartLoc, SourceLocation LParenLoc,
-                  SourceLocation EndLoc)
-      : OMPClause(llvm::omp::OMPC_depobj, StartLoc, EndLoc),
-        LParenLoc(LParenLoc) {}
-
-  /// Build an empty clause.
-  ///
-  explicit OMPDepobjClause()
-      : OMPClause(llvm::omp::OMPC_depobj, SourceLocation(), SourceLocation()) {}
-
   void setDepobj(Expr *E) { Depobj = E; }
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
 
 public:
-  /// Creates clause.
+  /// Build a 'depobj' clause.
   ///
-  /// \param C AST context.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   /// \param Depobj depobj expression associated with the 'depobj' directive.
-  static OMPDepobjClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                 SourceLocation LParenLoc,
-                                 SourceLocation EndLoc, Expr *Depobj);
+  OMPDepobjClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc, Expr *Depobj)
+      : OMPClause(llvm::omp::OMPC_depobj, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Depobj(Depobj) {}
 
-  /// Creates an empty clause.
-  ///
-  /// \param C AST context.
-  static OMPDepobjClause *CreateEmpty(const ASTContext &C);
+  /// Build an empty clause.
+  explicit OMPDepobjClause()
+      : OMPClause(llvm::omp::OMPC_depobj, SourceLocation(), SourceLocation()) {}
 
   /// Returns depobj expression associated with the clause.
   Expr *getDepobj() { return Depobj; }
@@ -9212,7 +9286,8 @@ public:
     unsigned N = getNumPrefs();
     Expr *const *E = getTrailingObjects<Expr *>();
     ArrayRef<unsigned> Ends = getAttrEnds();
-    return llvm::map_range(llvm::seq<unsigned>(0, N), [=](unsigned I) {
+    return llvm::map_range(llvm::seq<unsigned>(0, N), [this, E,
+                                                       Ends](unsigned I) {
       unsigned Start = (I == 0) ? 0 : Ends[I - 1];
       return PrefView{
           const_cast<Expr *>(E[1 + I]),
@@ -9945,6 +10020,7 @@ class OMPBindClause final : public OMPNoChildClause<llvm::omp::OMPC_bind> {
   /// Set the binding kind location.
   void setBindKindLoc(SourceLocation KLoc) { KindLoc = KLoc; }
 
+public:
   /// Build 'bind' clause with kind \a K ('teams', 'parallel', or 'thread').
   ///
   /// \param K Binding kind of the clause ('teams', 'parallel' or 'thread').
@@ -9960,24 +10036,6 @@ class OMPBindClause final : public OMPNoChildClause<llvm::omp::OMPC_bind> {
 
   /// Build an empty clause.
   OMPBindClause() : OMPNoChildClause() {}
-
-public:
-  /// Build 'bind' clause with kind \a K ('teams', 'parallel', or 'thread').
-  ///
-  /// \param C AST context
-  /// \param K Binding kind of the clause ('teams', 'parallel' or 'thread').
-  /// \param KLoc Starting location of the binding kind.
-  /// \param StartLoc Starting location of the clause.
-  /// \param LParenLoc Location of '('.
-  /// \param EndLoc Ending location of the clause.
-  static OMPBindClause *Create(const ASTContext &C, OpenMPBindClauseKind K,
-                               SourceLocation KLoc, SourceLocation StartLoc,
-                               SourceLocation LParenLoc, SourceLocation EndLoc);
-
-  /// Build an empty 'bind' clause.
-  ///
-  /// \param C AST context
-  static OMPBindClause *CreateEmpty(const ASTContext &C);
 
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -10675,6 +10733,28 @@ public:
   /// Build an empty clause.
   OMPXBareClause() = default;
 };
+
+/// Resolve one 'adjust_args' parameter-list item to the 1-based argument
+/// positions it identifies (OpenMP 6.0 [5.2.1]).
+///
+/// \param Item     A named item, positional item, or parameter range.
+/// \param FD       The base function the OMPDeclareVariantAttr is attached to.
+/// \param NumArgs  The value of 'omp_num_args' at the point of resolution:
+///                 \c max(FD->getNumParams(), Call->getNumArgs()) at a call
+///                 site, or \c FD->getNumParams() with no call site available
+///                 (OpenMP 6.0 [20.1]).
+/// \param Positions Resolved positions are appended here, ascending. Positions
+///                 outside [1, NumArgs] are silently dropped
+///                 (OpenMP 6.0 [9.6.2]).
+/// \returns false if \p Item is not a resolvable item shape, or if a bound is
+///          dependent or not a constant expression.
+///
+/// Emits no diagnostics; callers are responsible for diagnosing invalid items
+/// before calling this function.
+bool resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
+                              const FunctionDecl *FD, unsigned NumArgs,
+                              const ASTContext &Ctx,
+                              SmallVectorImpl<unsigned> &Positions);
 
 } // namespace clang
 

@@ -62,11 +62,6 @@ struct __tgt_target_table {
       *EntriesEnd; // End of the table with all the entries (non inclusive)
 };
 
-/// This struct contains a handle to a loaded binary in the plugin device.
-struct __tgt_device_binary {
-  uintptr_t handle;
-};
-
 // clang-format on
 
 /// This struct contains information exchanged between different asynchronous
@@ -88,6 +83,11 @@ struct __tgt_async_info {
   /// ensure it is a valid location while the transfer to the device is
   /// happening.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+
+  /// Opaque handle for profiler-specific data (e.g., OMPT trace record info).
+  /// Owned by the profiler; the runtime threads this pointer through the plugin
+  /// layer to associate async operations with trace records.
+  void *ProfilerData = nullptr;
 };
 
 /// This struct contains all of the arguments to a target kernel region launch.

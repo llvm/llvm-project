@@ -1020,11 +1020,21 @@ void Preprocessor::Lex(Token &Result) {
     // This token is injected to represent the translation of '#include "a.h"'
     // into "import a.h;". Mimic the notional ';'.
     case tok::annot_module_include:
-    case tok::annot_repl_input_end:
     case tok::semi:
       TrackGMFState.handleSemi();
       StdCXXImportSeqState.handleSemi();
       ModuleDeclState.handleSemi();
+      break;
+    case tok::eof:
+      if (getLangOpts().IncrementalExtensions) {
+        TrackGMFState.handleSemi();
+        StdCXXImportSeqState.handleSemi();
+        ModuleDeclState.handleSemi();
+      } else {
+        TrackGMFState.handleMisc();
+        StdCXXImportSeqState.handleMisc();
+        ModuleDeclState.handleMisc();
+      }
       break;
     case tok::header_name:
     case tok::annot_header_unit:
@@ -1098,8 +1108,7 @@ void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
   while (1) {
     Token Tok;
     Lex(Tok);
-    if (Tok.isOneOf(tok::unknown, tok::eof, tok::eod,
-                    tok::annot_repl_input_end))
+    if (Tok.isOneOf(tok::unknown, tok::eof, tok::eod))
       break;
     if (Tokens != nullptr)
       Tokens->push_back(Tok);

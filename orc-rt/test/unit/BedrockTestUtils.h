@@ -19,9 +19,10 @@
 
 #include "gtest/gtest.h"
 
-inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
-  return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384,
-                                     "+neon, +fullfp16");
+namespace orc_rt::test {
+
+inline ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
+  return ExecutorProcessInfo("arm64-apple-darwin", 16384, "+neon, +fullfp16");
 }
 
 /// DispatchFn for tests that should never dispatch a task. Records a test
@@ -29,12 +30,14 @@ inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
 /// awaiting a result unblocks (rather than hanging) and the keepalive token
 /// is released, even in -Asserts builds or when the dispatch arrives on a
 /// non-test thread.
-inline void noDispatch(orc_rt::Session::Task T) {
+inline void noDispatch(Session::Task T) {
   ADD_FAILURE() << "unexpected dispatch in a no-dispatch session";
   T();
 }
 
 /// DispatchFn that runs tasks on the current thread.
-inline void inlineDispatch(orc_rt::Session::Task T) { T(); }
+inline void inlineDispatch(Session::Task T) { T(); }
+
+} // namespace orc_rt::test
 
 #endif // ORC_RT_UNITTEST_BEDROCKTESTUTILS_H

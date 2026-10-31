@@ -11,9 +11,9 @@ define i64 @main() {
 ; CHECK: %1:addr64bit = LARL @c
 ; CHECK: %2:gr64bit = LLGC %1, 0, $noreg :: (dereferenceable load (s8) from @c, align 4)
 ; CHECK-NEXT: %4:gr64bit = IMPLICIT_DEF
-; CHECK-NEXT: %3:gr64bit = RISBGN %4, killed %2, 63, 191, 0
-; CHECK-NEXT: %5:gr64bit = LCGR killed %3, implicit-def dead $cc
-; CHECK-NEXT: CGHI killed %5, 1, implicit-def $cc
+; CHECK-NEXT: %3:gr64bit = RISBGN %4, %2, 63, 191, 0
+; CHECK-NEXT: %5:gr64bit = LCGR %3, implicit-def dead $cc
+; CHECK-NEXT: CGHI %5, 1, implicit-def $cc
 entry:
   %0 = load ptr, ptr @bPtr
   store i1 true, ptr @c

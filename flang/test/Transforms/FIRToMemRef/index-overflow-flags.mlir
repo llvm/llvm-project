@@ -16,9 +16,9 @@ func.func @addi_nsw_preserved(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.
   %c100 = arith.constant 100 : index
   %dscope = fir.undefined !fir.dscope
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>
-  %a = fir.declare %arg0(%shape) dummy_scope %dscope {uniq_name = "a"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<100xf32>>
-  %i = fir.declare %arg1 dummy_scope %dscope {uniq_name = "i"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-  %j = fir.declare %arg2 dummy_scope %dscope {uniq_name = "j"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %a = fir.declare %arg0(%shape) dummy_scope %dscope uniq_name("a") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<100xf32>>
+  %i = fir.declare %arg1 dummy_scope %dscope uniq_name("i") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %j = fir.declare %arg2 dummy_scope %dscope uniq_name("j") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %iv = fir.load %i : !fir.ref<i32>
   %jv = fir.load %j : !fir.ref<i32>
   %sum = arith.addi %iv, %jv overflow<nsw> : i32
@@ -40,9 +40,9 @@ func.func @addi_nsw_dropped_on_narrowing(%arg0: !fir.ref<!fir.array<100xf32>>, %
   %c100 = arith.constant 100 : index
   %dscope = fir.undefined !fir.dscope
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>
-  %a = fir.declare %arg0(%shape) dummy_scope %dscope {uniq_name = "a"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<100xf32>>
-  %i = fir.declare %arg1 dummy_scope %dscope {uniq_name = "i"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-  %j = fir.declare %arg2 dummy_scope %dscope {uniq_name = "j"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %a = fir.declare %arg0(%shape) dummy_scope %dscope uniq_name("a") : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<100xf32>>
+  %i = fir.declare %arg1 dummy_scope %dscope uniq_name("i") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %j = fir.declare %arg2 dummy_scope %dscope uniq_name("j") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %iv = fir.load %i : !fir.ref<i32>
   %jv = fir.load %j : !fir.ref<i32>
   %ie = arith.extsi %iv : i32 to i64

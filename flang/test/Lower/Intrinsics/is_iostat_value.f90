@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
   ! CHECK-LABEL: func @_QQmain
-  ! CHECK: %[[V_0:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFEi"}
+  ! CHECK: %[[V_0:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEi")
   ! CHECK: fir.do_loop
   do i=-20,20
     ! CHECK: %[[V_5:.*]] = fir.load %[[V_0]]#0 : !fir.ref<i32>

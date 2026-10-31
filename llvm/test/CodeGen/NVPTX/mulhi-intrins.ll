@@ -15,7 +15,7 @@ define i16 @test_mulhi_i16(i16 %x, i16 %y) {
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-  %1 = call i16 @llvm.nvvm.mulhi.s(i16 %x, i16 %y)
+  %1 = call i16 @llvm.smulh.i16(i16 %x, i16 %y)
   ret i16 %1
 }
 
@@ -32,7 +32,7 @@ define i16 @test_mulhi_u16(i16 %x, i16 %y) {
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
-  %1 = call i16 @llvm.nvvm.mulhi.us(i16 %x, i16 %y)
+  %1 = call i16 @llvm.umulh.i16(i16 %x, i16 %y)
   ret i16 %1
 }
 
@@ -47,7 +47,7 @@ define i32 @test_mulhi_i32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    mul.hi.s32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %1 = call i32 @llvm.nvvm.mulhi.i(i32 %x, i32 %y)
+  %1 = call i32 @llvm.smulh.i32(i32 %x, i32 %y)
   ret i32 %1
 }
 
@@ -62,7 +62,7 @@ define i32 @test_mulhi_u32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    mul.hi.u32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %1 = call i32 @llvm.nvvm.mulhi.ui(i32 %x, i32 %y)
+  %1 = call i32 @llvm.umulh.i32(i32 %x, i32 %y)
   ret i32 %1
 }
 
@@ -77,7 +77,7 @@ define i64 @test_mulhi_i64(i64 %x, i64 %y) {
 ; CHECK-NEXT:    mul.hi.s64 %rd3, %rd1, %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
-  %1 = call i64 @llvm.nvvm.mulhi.ll(i64 %x, i64 %y)
+  %1 = call i64 @llvm.smulh.i64(i64 %x, i64 %y)
   ret i64 %1
 }
 
@@ -92,13 +92,13 @@ define i64 @test_mulhi_u64(i64 %x, i64 %y) {
 ; CHECK-NEXT:    mul.hi.u64 %rd3, %rd1, %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
-  %1 = call i64 @llvm.nvvm.mulhi.ull(i64 %x, i64 %y)
+  %1 = call i64 @llvm.umulh.i64(i64 %x, i64 %y)
   ret i64 %1
 }
 
-declare i16 @llvm.nvvm.mulhi.s(i16, i16)
-declare i16 @llvm.nvvm.mulhi.us(i16, i16)
-declare i32 @llvm.nvvm.mulhi.i(i32, i32)
-declare i32 @llvm.nvvm.mulhi.ui(i32, i32)
-declare i64 @llvm.nvvm.mulhi.ll(i64, i64)
-declare i64 @llvm.nvvm.mulhi.ull(i64, i64)
+declare i16 @llvm.smulh.i16(i16, i16)
+declare i16 @llvm.umulh.i16(i16, i16)
+declare i32 @llvm.smulh.i32(i32, i32)
+declare i32 @llvm.umulh.i32(i32, i32)
+declare i64 @llvm.smulh.i64(i64, i64)
+declare i64 @llvm.umulh.i64(i64, i64)

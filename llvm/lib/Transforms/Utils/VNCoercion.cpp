@@ -322,13 +322,14 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
                                          Type *LoadTy, IRBuilderBase &Builder,
                                          const DataLayout &DL) {
   LLVMContext &Ctx = SrcVal->getType()->getContext();
+  Type *SrcTy = SrcVal->getType();
 
-  // If two pointers are in the same address space, they have the same size,
-  // so we don't need to do any truncation, etc. This avoids introducing
-  // ptrtoint instructions for pointers that may be non-integral.
-  if (SrcVal->getType()->isPointerTy() && LoadTy->isPointerTy() &&
-      cast<PointerType>(SrcVal->getType())->getAddressSpace() ==
-          cast<PointerType>(LoadTy)->getAddressSpace()) {
+  // If two pointers or pointer vectors have the same size and address space,
+  // we don't need to do any truncation, etc. This avoids introducing
+  // ptrtoint, which drops provenance and is invalid for non-integral pointers.
+  if (SrcTy->isPtrOrPtrVectorTy() && LoadTy->isPtrOrPtrVectorTy() &&
+      SrcTy->getPointerAddressSpace() == LoadTy->getPointerAddressSpace() &&
+      DL.getTypeSizeInBits(SrcTy) == DL.getTypeSizeInBits(LoadTy)) {
     return SrcVal;
   }
 
@@ -352,6 +353,30 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   uint64_t StoreSize =
       (DL.getTypeSizeInBits(SrcVal->getType()).getFixedValue() + 7) / 8;
   uint64_t LoadSize = (DL.getTypeSizeInBits(LoadTy).getFixedValue() + 7) / 8;
+
+  // Shift the bits to the least significant depending on endianness.
+  unsigned ShiftAmt;
+  if (DL.isLittleEndian())
+    ShiftAmt = Offset * 8;
+  else
+    ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
+
+  // Integers drop provenance, and one poison bit poisons the whole value.
+  if (SrcTy->isByteOrByteVectorTy() ||
+      (SrcTy->isPtrOrPtrVectorTy() && LoadTy->isByteOrByteVectorTy())) {
+    unsigned SrcBits = DL.getTypeSizeInBits(SrcTy).getFixedValue();
+    unsigned LoadBits = DL.getTypeSizeInBits(LoadTy).getFixedValue();
+    if (LoadBits == SrcBits)
+      return Builder.CreateBitCast(SrcVal, LoadTy);
+    // bitextract needs a scalar byte source and can't return a vector.
+    SrcVal = Builder.CreateBitCast(SrcVal, Type::getByteNTy(Ctx, SrcBits));
+    Type *ExtractTy =
+        LoadTy->isVectorTy() ? Type::getByteNTy(Ctx, LoadBits) : LoadTy;
+    SrcVal =
+        Builder.CreateBitExtract(ExtractTy, SrcVal, Builder.getInt32(ShiftAmt));
+    return Builder.CreateBitCast(SrcVal, LoadTy);
+  }
+
   // Compute which bits of the stored value are being used by the load.  Convert
   // to an integer type to start with.
   if (SrcVal->getType()->isPtrOrPtrVectorTy())
@@ -361,12 +386,6 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
     SrcVal =
         Builder.CreateBitCast(SrcVal, IntegerType::get(Ctx, StoreSize * 8));
 
-  // Shift the bits to the least significant depending on endianness.
-  unsigned ShiftAmt;
-  if (DL.isLittleEndian())
-    ShiftAmt = Offset * 8;
-  else
-    ShiftAmt = (StoreSize - LoadSize - Offset) * 8;
   if (ShiftAmt)
     SrcVal = Builder.CreateLShr(SrcVal,
                                 ConstantInt::get(SrcVal->getType(), ShiftAmt));

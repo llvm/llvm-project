@@ -8,8 +8,8 @@ subroutine test_cstrarray(cstrarray, fstrptr)
   use iso_c_binding
   character(len=1, kind=c_char), dimension(*), target, intent(in) :: cstrarray
   character(len=:), pointer, intent(out) :: fstrptr
-  ! CHECK-DAG: %[[CSTRARRAY_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{{.*}}uniq_name = "_QFtest_cstrarrayEcstrarray"}
-  ! CHECK-DAG: %[[FSTRPTR_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{{.*}}uniq_name = "_QFtest_cstrarrayEfstrptr"}
+  ! CHECK-DAG: %[[CSTRARRAY_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{.*}}uniq_name("_QFtest_cstrarrayEcstrarray")
+  ! CHECK-DAG: %[[FSTRPTR_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{.*}}uniq_name("_QFtest_cstrarrayEfstrptr")
   ! CHECK: %[[NCHARS:.*]] = arith.constant 100 : i32
   ! CHECK: %[[NCHARS_IDX:.*]] = fir.convert %[[NCHARS]] : (i32) -> index
   ! CHECK: %[[PTR:.*]] = fir.convert %[[CSTRARRAY_DECL]]#1 : (!fir.ref<!fir.array<?x!fir.char<1>>>) -> !fir.ptr<!fir.char<1,?>>
@@ -23,8 +23,8 @@ subroutine test_cstrarray_no_nchars(fstrptr)
   use iso_c_binding
   character(len=1, kind=c_char), dimension(100), target :: cstrarray
   character(len=:), pointer, intent(out) :: fstrptr
-  ! CHECK-DAG: %[[CSTRARRAY_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{{.*}}uniq_name = "_QFtest_cstrarray_no_ncharsEcstrarray"}
-  ! CHECK-DAG: %[[FSTRPTR_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{{.*}}uniq_name = "_QFtest_cstrarray_no_ncharsEfstrptr"}
+  ! CHECK-DAG: %[[CSTRARRAY_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{.*}}uniq_name("_QFtest_cstrarray_no_ncharsEcstrarray")
+  ! CHECK-DAG: %[[FSTRPTR_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{.*}}uniq_name("_QFtest_cstrarray_no_ncharsEfstrptr")
   ! CHECK: hlfir.assign %{{.*}} to %[[CSTRARRAY_DECL]]#0
   ! CHECK: %[[I8PTR:.*]] = fir.convert %[[CSTRARRAY_DECL]]#0 : (!fir.ref<!fir.array<100x!fir.char<1>>>) -> !fir.ref<i8>
   ! CHECK: %[[STRLEN:.*]] = fir.call @strlen(%[[I8PTR]]) {{.*}} : (!fir.ref<i8>) -> i64
@@ -42,9 +42,9 @@ subroutine test_cstrptr(cptr, fstrptr, nchars)
   type(c_ptr), intent(in) :: cptr
   character(len=:), pointer, intent(out) :: fstrptr
   integer, intent(in) :: nchars
-  ! CHECK-DAG: %[[CPTR_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{{.*}}uniq_name = "_QFtest_cstrptrEcptr"}
-  ! CHECK-DAG: %[[FSTRPTR_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{{.*}}uniq_name = "_QFtest_cstrptrEfstrptr"}
-  ! CHECK-DAG: %[[NCHARS_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{{.*}}uniq_name = "_QFtest_cstrptrEnchars"}
+  ! CHECK-DAG: %[[CPTR_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{.*}}uniq_name("_QFtest_cstrptrEcptr")
+  ! CHECK-DAG: %[[FSTRPTR_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{.*}}uniq_name("_QFtest_cstrptrEfstrptr")
+  ! CHECK-DAG: %[[NCHARS_DECL:.*]]:2 = hlfir.declare %{{.*}} {{.*}} {{.*}}uniq_name("_QFtest_cstrptrEnchars")
   ! CHECK: %[[NCHARS_LOAD:.*]] = fir.load %[[NCHARS_DECL]]#0
   ! CHECK: %[[ADDR_REF:.*]] = fir.coordinate_of %[[CPTR_DECL]]#0, __address
   ! CHECK: %[[ADDR_VAL:.*]] = fir.load %[[ADDR_REF]] : !fir.ref<i64>

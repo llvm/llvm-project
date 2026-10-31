@@ -30,33 +30,15 @@ using namespace llvm::MachO;
 namespace clang {
 namespace installapi {
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "InstallAPIOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "InstallAPIOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_UNION_CODE
-#include "InstallAPIOpts.inc"
-#undef OPTTABLE_PREFIXES_UNION_CODE
-
-/// Create table mapping all options defined in InstallAPIOpts.td.
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "InstallAPIOpts.inc"
-#undef OPTION
-};
 
 namespace {
 
 /// \brief Create OptTable class for parsing actual command line arguments.
-class DriverOptTable : public opt::PrecomputedOptTable {
+class DriverOptTable : public opt::OptTable {
 public:
-  DriverOptTable()
-      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                            OptionPrefixesUnion) {}
+  DriverOptTable() : OptTable(optionTables()) {}
 };
 
 } // end anonymous namespace.

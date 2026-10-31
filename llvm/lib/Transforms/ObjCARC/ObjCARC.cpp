@@ -80,7 +80,7 @@ CallInst *BundledRetainClaimRVs::insertRVCall(BasicBlock::iterator InsertPt,
 CallInst *BundledRetainClaimRVs::insertRVCallWithColors(
     BasicBlock::iterator InsertPt, CallBase *AnnotatedCall,
     const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
-  IRBuilder<> Builder(InsertPt->getParent(), InsertPt);
+  IRBuilder<> Builder(InsertPt);
   Function *Func = *objcarc::getAttachedARCFunction(AnnotatedCall);
   assert(Func && "operand isn't a Function");
   Type *ParamTy = Func->getArg(0)->getType();

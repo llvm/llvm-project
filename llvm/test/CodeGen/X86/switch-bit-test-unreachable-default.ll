@@ -17,7 +17,7 @@ define i32 @baz(i32 %0) {
 ; CHECK-SDISEL: ; predecessors: %bb.0
 ; CHECK-SDISEL:   successors: %bb.3(0x55555555), %bb.1(0x2aaaaaab); %bb.3(66.67%), %bb.1(33.33%)
 ; CHECK-SDISEL:   %4:gr32 = MOV32ri 13056
-; CHECK-SDISEL:   BT32rr killed %4:gr32, %3:gr32, implicit-def $eflags
+; CHECK-SDISEL:   BT32rr %4:gr32, %3:gr32, implicit-def $eflags
 ; CHECK-SDISEL:   JCC_1 %bb.3, 2, implicit $eflags
 ; CHECK-SDISEL:   JMP_1 %bb.1
 ; CHECK-SDISEL: bb.5 (%ir-block.1):

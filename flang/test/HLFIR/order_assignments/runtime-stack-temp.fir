@@ -9,8 +9,8 @@ func.func @test_runtime_stack(%arg0: !fir.box<!fir.array<?xi32>>, %n: !fir.ref<i
   %c99_i32 = arith.constant 99 : i32
   %c100_i32 = arith.constant 100 : i32
   %c1_i32 = arith.constant 1 : i32
-  %1:2 = hlfir.declare %n {uniq_name = "n"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1:2 = hlfir.declare %n uniq_name("n") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %3 = fir.load %1#1 : !fir.ref<i32>
   hlfir.forall lb {
     hlfir.yield %c1_i32 : i32
@@ -63,8 +63,8 @@ func.func @test_runtime_stack(%arg0: !fir.box<!fir.array<?xi32>>, %n: !fir.ref<i
 // CHECK:           %[[VAL_7:.*]] = arith.constant 99 : i32
 // CHECK:           %[[VAL_8:.*]] = arith.constant 100 : i32
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i32
-// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "n"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("n") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("x") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 // CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_10]]#1 : !fir.ref<i32>
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_8]] : (i32) -> index

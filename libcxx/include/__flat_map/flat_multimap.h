@@ -82,10 +82,15 @@ class flat_multimap {
   template <class, class, class, class, class>
   friend class flat_multimap;
 
-  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
-  static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>);
-  static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
-  static_assert(!is_same_v<_MappedContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
+  static_assert(is_same_v<_Key, typename _KeyContainer::value_type>,
+                "The stored elements' key type must match the underlying key container's value_type.");
+  static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>,
+                "The stored elements' mapped type must match the underlying mapped container's value_type.");
+  static_assert(!__is_std_vector_bool_v<_KeyContainer>,
+                "The underlying key container must not be std::vector<bool> because it is not a sequence container.");
+  static_assert(
+      !__is_std_vector_bool_v<_MappedContainer>,
+      "The underlying mapped container must not be std::vector<bool> because it is not a sequence container.");
 
   template <bool _Const>
   using __iterator _LIBCPP_NODEBUG = __key_value_iterator<flat_multimap, _KeyContainer, _MappedContainer, _Const>;
@@ -152,16 +157,12 @@ public:
 #  endif // _LIBCPP_HAS_EXCEPTIONS
       : __containers_(std::move(__other.__containers_)), __compare_(std::move(__other.__compare_)) {
     __other.clear();
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __other.clear();
-    // gcc does not like the `throw` keyword in a conditionally noexcept function
-    if constexpr (!(is_nothrow_move_constructible_v<_KeyContainer> &&
-                    is_nothrow_move_constructible_v<_MappedContainer> && is_nothrow_move_constructible_v<_Compare>)) {
-      throw;
-    }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   }
+#  if _LIBCPP_HAS_EXCEPTIONS
+  catch (...) {
+    __other.clear();
+  }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
@@ -185,12 +186,12 @@ public:
                       std::move(__other.__containers_.values),
                       std::move(__other.__compare_)) {
     __other.clear();
-#  if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    __other.clear();
-    throw;
-#  endif // _LIBCPP_HAS_EXCEPTIONS
   }
+#  if _LIBCPP_HAS_EXCEPTIONS
+  catch (...) {
+    __other.clear();
+  }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_multimap(
       key_container_type __key_cont, mapped_container_type __mapped_cont, const key_compare& __comp = key_compare())

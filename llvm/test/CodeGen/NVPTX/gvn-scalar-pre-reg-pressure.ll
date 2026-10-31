@@ -35,8 +35,8 @@ define void @test_scalar_pre_option(ptr %arr, i8 %cond) {
 ; NO-SCALAR-PRE-NEXT:    .reg .b64 %rd<2>;
 ; NO-SCALAR-PRE-EMPTY:
 ; NO-SCALAR-PRE-NEXT:  // %bb.0: // %entry
-; NO-SCALAR-PRE-NEXT:    ld.param::func.b8 %rs1, [test_scalar_pre_option_param_1];
 ; NO-SCALAR-PRE-NEXT:    ld.param::func.b64 %rd1, [test_scalar_pre_option_param_0];
+; NO-SCALAR-PRE-NEXT:    ld.param::func.b8 %rs1, [test_scalar_pre_option_param_1];
 ; NO-SCALAR-PRE-NEXT:    setp.eq.b16 %p1, %rs1, 0;
 ; NO-SCALAR-PRE-NEXT:    ld.b32 %r1, [%rd1];
 ; NO-SCALAR-PRE-NEXT:    @%p1 bra $L__BB0_2;
@@ -58,8 +58,8 @@ define void @test_scalar_pre_option(ptr %arr, i8 %cond) {
 ; SCALAR-PRE-NEXT:    .reg .b64 %rd<2>;
 ; SCALAR-PRE-EMPTY:
 ; SCALAR-PRE-NEXT:  // %bb.0: // %entry
-; SCALAR-PRE-NEXT:    ld.param::func.b8 %rs1, [test_scalar_pre_option_param_1];
 ; SCALAR-PRE-NEXT:    ld.param::func.b64 %rd1, [test_scalar_pre_option_param_0];
+; SCALAR-PRE-NEXT:    ld.param::func.b8 %rs1, [test_scalar_pre_option_param_1];
 ; SCALAR-PRE-NEXT:    setp.ne.b16 %p1, %rs1, 0;
 ; SCALAR-PRE-NEXT:    ld.b32 %r1, [%rd1];
 ; SCALAR-PRE-NEXT:    @%p1 bra $L__BB0_2;

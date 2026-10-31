@@ -99,15 +99,19 @@ gpu.module @load_store_check {
                                    %z: index) kernel {
         %c0 = arith.constant 0 : index
         // CHECK-DAG: %[[C4I32:.+]] = arith.constant 4 : i32
+        // CHECK-DAG: %[[C1I32:.+]] = arith.constant 1 : i32
 
         // In-plane offset is 0, so canonicalize folds the add away.
+        // base_height is the row extent size[1] + (size[0] - 1) * batch_rows.
         // CHECK: %{{.+}}, %{{.+}}, %[[LSZ:.+]]:3, %[[LSTR:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
-        // CHECK: %[[LH:.+]] = arith.index_cast %[[LSZ]]#1 : index to i32
-        // CHECK: %[[LBATCH:.+]] = arith.index_cast %[[LSZ]]#0 : index to i32
-        // CHECK: %[[LFLAT_H:.+]] = arith.muli %[[LH]], %[[LBATCH]] : i32
         // CHECK: %[[LPITCH:.+]] = arith.index_cast %[[LSTR]]#1 : index to i32
         // CHECK: %[[LSTRIDE:.+]] = arith.index_cast %[[LSTR]]#0 : index to i32
         // CHECK: %[[LROWS:.+]] = arith.divui %[[LSTRIDE]], %[[LPITCH]] : i32
+        // CHECK: %[[LH:.+]] = arith.index_cast %[[LSZ]]#1 : index to i32
+        // CHECK: %[[LBATCH:.+]] = arith.index_cast %[[LSZ]]#0 : index to i32
+        // CHECK: %[[LBATCHM1:.+]] = arith.subi %[[LBATCH]], %[[C1I32]] : i32
+        // CHECK: %[[LBATCH_ROWS:.+]] = arith.muli %[[LBATCHM1]], %[[LROWS]] : i32
+        // CHECK: %[[LFLAT_H:.+]] = arith.addi %[[LH]], %[[LBATCH_ROWS]] : i32
         // CHECK: %[[LBASE:.+]] = vector.extract %{{.+}}[0] : i64 from vector<4xi64>
         // CHECK: %[[LZ:.+]] = arith.index_cast %[[Z]] : index to i32
         // CHECK: %[[LY:.+]] = arith.muli %[[LZ]], %[[LROWS]] : i32
@@ -118,12 +122,14 @@ gpu.module @load_store_check {
 
         // Store: same handling.
         // CHECK: %{{.+}}, %{{.+}}, %[[SSZ:.+]]:3, %[[SSTR:.+]]:3 = memref.extract_strided_metadata %[[DST]]
-        // CHECK: %[[SH:.+]] = arith.index_cast %[[SSZ]]#1 : index to i32
-        // CHECK: %[[SBATCH:.+]] = arith.index_cast %[[SSZ]]#0 : index to i32
-        // CHECK: %[[SFLAT_H:.+]] = arith.muli %[[SH]], %[[SBATCH]] : i32
         // CHECK: %[[SPITCH:.+]] = arith.index_cast %[[SSTR]]#1 : index to i32
         // CHECK: %[[SSTRIDE:.+]] = arith.index_cast %[[SSTR]]#0 : index to i32
         // CHECK: %[[SROWS:.+]] = arith.divui %[[SSTRIDE]], %[[SPITCH]] : i32
+        // CHECK: %[[SH:.+]] = arith.index_cast %[[SSZ]]#1 : index to i32
+        // CHECK: %[[SBATCH:.+]] = arith.index_cast %[[SSZ]]#0 : index to i32
+        // CHECK: %[[SBATCHM1:.+]] = arith.subi %[[SBATCH]], %[[C1I32]] : i32
+        // CHECK: %[[SBATCH_ROWS:.+]] = arith.muli %[[SBATCHM1]], %[[SROWS]] : i32
+        // CHECK: %[[SFLAT_H:.+]] = arith.addi %[[SH]], %[[SBATCH_ROWS]] : i32
         // CHECK: %[[SBASE:.+]] = vector.extract %{{.+}}[0] : i64 from vector<4xi64>
         // CHECK: %[[SZ:.+]] = arith.index_cast %[[Z]] : index to i32
         // CHECK: %[[SY:.+]] = arith.muli %[[SZ]], %[[SROWS]] : i32

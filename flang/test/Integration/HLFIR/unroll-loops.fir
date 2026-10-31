@@ -24,7 +24,7 @@ func.func @unroll(%arg0: !fir.ref<!fir.array<1000 x index>> {fir.bindc_name = "a
   %scope = fir.dummy_scope : !fir.dscope
   %c1000 = arith.constant 1000 : index
   %shape = fir.shape %c1000 : (index) -> !fir.shape<1>
-  %a:2 = hlfir.declare %arg0(%shape) dummy_scope %scope {uniq_name = "unrollEa"} : (!fir.ref<!fir.array<1000xindex>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1000 x index>>, !fir.ref<!fir.array<1000 x index>>)
+  %a:2 = hlfir.declare %arg0(%shape) dummy_scope %scope uniq_name("unrollEa") : (!fir.ref<!fir.array<1000xindex>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1000 x index>>, !fir.ref<!fir.array<1000 x index>>)
   %c1 = arith.constant 1 : index
   fir.do_loop %arg1 = %c1 to %c1000 step %c1 {
     // CHECK: br label %[[BLK:.*]]

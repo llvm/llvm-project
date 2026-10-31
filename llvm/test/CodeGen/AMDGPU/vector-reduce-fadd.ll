@@ -1409,6 +1409,58 @@ entry:
   ret float %res
 }
 
+define float @test_vector_reduce_fadd_reassoc_v3float(<3 x float> %v) {
+; GFX7-LABEL: test_vector_reduce_fadd_reassoc_v3float:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: test_vector_reduce_fadd_reassoc_v3float:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX8-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: test_vector_reduce_fadd_reassoc_v3float:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: test_vector_reduce_fadd_reassoc_v3float:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: test_vector_reduce_fadd_reassoc_v3float:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_vector_reduce_fadd_reassoc_v3float:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %res = call reassoc float @llvm.vector.reduce.fadd.v3float(float -0.0, <3 x float> %v)
+  ret float %res
+}
+
 define float @test_vector_reduce_fadd_v4float(float %sp, <4 x float> %v) {
 ; GFX7-LABEL: test_vector_reduce_fadd_v4float:
 ; GFX7:       ; %bb.0: ; %entry

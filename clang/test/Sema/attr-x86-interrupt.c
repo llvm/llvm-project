@@ -40,6 +40,9 @@ __attribute__((interrupt)) void foo6(float *a, int b) {}
 __attribute__((interrupt)) void foo7(int *a, unsigned b) {}
 __attribute__((interrupt)) void foo8(int *a) {}
 
+typedef int *int_ptr;
+__attribute__((interrupt)) void b(int_ptr a) {}
+
 void g(void (*fp)(int *));
 int main(int argc, char **argv) {
   void *ptr = (void *)&foo7;

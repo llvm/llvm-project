@@ -97,6 +97,9 @@ struct RegionTraits<Function> {
   static unsigned getNumSuccessors(BasicBlock *BB) {
     return BB->getTerminator()->getNumSuccessors();
   }
+
+  /// Update statistics about created regions.
+  LLVM_ABI static void updateStatistics(Region *R);
 };
 
 /// Marker class to iterate over the elements of a Region in flat mode.
@@ -541,13 +544,6 @@ public:
   /// the complete CFG of the Region will be walked.
   void verifyRegion() const;
 
-  /// Clear the cache for BB RegionNodes.
-  ///
-  /// After calling this function the BasicBlock RegionNodes will be stored at
-  /// different memory locations. RegionNodes obtained before this function is
-  /// called are therefore not comparable to RegionNodes abtained afterwords.
-  void clearNodeCache();
-
   /// @name Subregion Iterators
   ///
   /// These iterators iterator over all subregions of this Region.
@@ -708,7 +704,7 @@ class RegionInfoBase {
     return *this;
   }
 
-  virtual ~RegionInfoBase();
+  ~RegionInfoBase();
 
   DomTreeT *DT;
   PostDomTreeT *PDT;
@@ -787,9 +783,6 @@ private:
   // Build the region hierarchy after all region detected.
   void buildRegionsTree(DomTreeNodeT *N, RegionT *region);
 
-  // Update statistic about created regions.
-  virtual void updateStatistics(RegionT *R) = 0;
-
   // Detect all regions in function and build the region tree.
   void calculate(FuncT &F);
 
@@ -863,14 +856,6 @@ public:
 
   RegionT *getTopLevelRegion() const { return TopLevelRegion; }
 
-  /// Clear the Node Cache for all Regions.
-  ///
-  /// @see Region::clearNodeCache()
-  void clearNodeCache() {
-    if (TopLevelRegion)
-      TopLevelRegion->clearNodeCache();
-  }
-
   void verifyAnalysis() const;
 };
 
@@ -901,11 +886,11 @@ public:
 
 extern template class LLVM_TEMPLATE_ABI RegionInfoBase<RegionTraits<Function>>;
 
-class LLVM_ABI RegionInfo : public RegionInfoBase<RegionTraits<Function>> {
+class RegionInfo : public RegionInfoBase<RegionTraits<Function>> {
 public:
   using Base = RegionInfoBase<RegionTraits<Function>>;
 
-  explicit RegionInfo();
+  LLVM_ABI explicit RegionInfo();
 
   RegionInfo(RegionInfo &&Arg) : Base(std::move(static_cast<Base &>(Arg))) {
     updateRegionTree(*this, TopLevelRegion);
@@ -917,29 +902,26 @@ public:
     return *this;
   }
 
-  ~RegionInfo() override;
+  LLVM_ABI ~RegionInfo();
 
   /// Handle invalidation explicitly.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &);
 
-  // updateStatistics - Update statistic about created regions.
-  void updateStatistics(Region *R) final;
-
-  void recalculate(Function &F, DominatorTree *DT, PostDominatorTree *PDT,
-                   DominanceFrontier *DF);
+  LLVM_ABI void recalculate(Function &F, DominatorTree *DT,
+                            PostDominatorTree *PDT, DominanceFrontier *DF);
 
 #ifndef NDEBUG
   /// Opens a viewer to show the GraphViz visualization of the regions.
   ///
   /// Useful during debugging as an alternative to dump().
-  void view();
+  LLVM_ABI void view();
 
   /// Opens a viewer to show the GraphViz visualization of this region
   /// without instructions in the BasicBlocks.
   ///
   /// Useful during debugging as an alternative to dump().
-  void viewOnly();
+  LLVM_ABI void viewOnly();
 #endif
 };
 

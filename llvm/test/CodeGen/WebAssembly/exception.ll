@@ -1,8 +1,8 @@
-; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
-; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs -O0
-; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling
-; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -filetype=obj
-; RUN: llc < %s -mtriple=wasm64-unknown-unknown -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s --check-prefix=WASM64
+; RUN: llc < %s -asm-verbose=false -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
+; RUN: llc < %s -asm-verbose=false -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs -O0
+; RUN: llc < %s -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling
+; RUN: llc < %s -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -filetype=obj
+; RUN: llc < %s -mtriple=wasm64-unknown-unknown -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s --check-prefix=WASM64
 
 target triple = "wasm32-unknown-unknown"
 
@@ -46,7 +46,7 @@ define void @throw(ptr %p) {
 ; CHECK:   local.set  2
 ; CHECK:   local.get  0
 ; CHECK:   global.set  __stack_pointer
-; CHECK:   i32.store  __wasm_lpad_context
+; CHECK:   call  _Unwind_GetWasmLPadContext
 ; CHECK:   call  __gxx_wasm_personality_v0
 ; CHECK:   block
 ; CHECK:     br_if     0

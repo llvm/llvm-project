@@ -1,7 +1,7 @@
 add_mlir_dialect_library(MLIRMemRefDialect
   MemRefDialect.cpp
   MemoryAccessOpInterfaces.cpp
-  MemRefMemorySlot.cpp
+  MemorySlotInterfacesImpl.cpp
   MemRefOps.cpp
   ValueBoundsOpInterfaceImpl.cpp
 

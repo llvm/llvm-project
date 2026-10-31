@@ -5,11 +5,11 @@
 
 func.func @_QParg_nocapture(%arg0: !fir.ref<i32> {fir.bindc_name = "tar", fir.target}, %arg1: !fir.ref<i32> {fir.asynchronous, fir.bindc_name = "asynch"}, %arg2: !fir.ref<i32> {fir.bindc_name = "vol", fir.volatile}, %arg3: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "ptr"}, %arg4: !fir.ref<i32> {fir.bindc_name = "nocap"}) {
     %0 = fir.dummy_scope : !fir.dscope
-    %1 = fir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFarg_nocaptureEtar"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-    %2 = fir.declare %arg1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<asynchronous>, uniq_name = "_QFarg_nocaptureEasynch"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-    %3 = fir.declare %arg2 dummy_scope %0 {uniq_name = "_QFarg_nocaptureEvol"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-    %4 = fir.declare %arg3 dummy_scope %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFarg_nocaptureEptr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-    %5 = fir.declare %arg4 dummy_scope %0 {uniq_name = "_QFarg_nocaptureEnocap"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %1 = fir.declare %arg0 dummy_scope %0 uniq_name("_QFarg_nocaptureEtar") fortran_attrs<target> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %2 = fir.declare %arg1 dummy_scope %0 uniq_name("_QFarg_nocaptureEasynch") fortran_attrs<asynchronous> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %3 = fir.declare %arg2 dummy_scope %0 uniq_name("_QFarg_nocaptureEvol") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %4 = fir.declare %arg3 dummy_scope %0 uniq_name("_QFarg_nocaptureEptr") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+    %5 = fir.declare %arg4 dummy_scope %0 uniq_name("_QFarg_nocaptureEnocap") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
     return
 }
 // CHECK-LABEL: func.func @_QParg_nocapture(
@@ -23,8 +23,8 @@ func.func @_QParg_nocapture(%arg0: !fir.ref<i32> {fir.bindc_name = "tar", fir.ta
 
 func.func @arg_nocapture_bindc(%arg0: !fir.ref<i32> {fir.bindc_name = "tar", fir.target}, %arg1: !fir.ref<i32> {fir.bindc_name = "nocap"}) attributes {fir.bindc_name = "arg_nocapture_bindc", fir.proc_attrs = #fir.proc_attrs<bind_c>} {
     %0 = fir.dummy_scope : !fir.dscope
-    %1 = fir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFarg_nocapture_bindcEtar"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-    %2 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFarg_nocapture_bindcEnocap"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %1 = fir.declare %arg0 dummy_scope %0 uniq_name("_QFarg_nocapture_bindcEtar") fortran_attrs<target> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    %2 = fir.declare %arg1 dummy_scope %0 uniq_name("_QFarg_nocapture_bindcEnocap") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
     return
 }
 // CHECK-LABEL: func.func @arg_nocapture_bindc(

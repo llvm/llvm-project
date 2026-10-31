@@ -22,6 +22,7 @@ add_flang_library(FIRAnalysis
   MLIROpenMPDialect
 
   MLIR_LIBS
+  MLIRAnalysisBase
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRMathTransforms

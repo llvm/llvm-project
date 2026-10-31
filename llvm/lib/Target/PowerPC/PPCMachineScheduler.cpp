@@ -11,10 +11,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> 
-DisableAddiLoadHeuristic("disable-ppc-sched-addi-load",
-                         cl::desc("Disable scheduling addi instruction before" 
-                                  "load for ppc"), cl::Hidden);
+static cl::opt<bool> EnableAddiLoadHeuristic(
+    "ppc-sched-addi-load",
+    cl::desc("Enable scheduling addi instruction before load for ppc"),
+    cl::init(true), cl::Hidden);
 static cl::opt<bool>
     EnableAddiHeuristic("ppc-postra-bias-addi",
                         cl::desc("Enable scheduling addi instruction as early"
@@ -29,7 +29,7 @@ static bool isADDIInstr(const GenericScheduler::SchedCandidate &Cand) {
 bool PPCPreRASchedStrategy::biasAddiLoadCandidate(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
                                                   SchedBoundary &Zone) const {
-  if (DisableAddiLoadHeuristic)
+  if (!EnableAddiLoadHeuristic)
     return false;
 
   SchedCandidate &FirstCand = Zone.isTop() ? TryCand : Cand;

@@ -40,7 +40,7 @@ external run_static_ctors : llexecutionengine -> unit
   = "llvm_ee_run_static_ctors"
 external run_static_dtors : llexecutionengine -> unit
   = "llvm_ee_run_static_dtors"
-external data_layout : llexecutionengine -> Llvm_target.DataLayout.t
+external data_layout : llexecutionengine -> Llvm.DataLayout.t
   = "llvm_ee_get_data_layout"
 external add_global_mapping_ : Llvm.llvalue -> nativeint -> llexecutionengine -> unit
   = "llvm_ee_add_global_mapping"

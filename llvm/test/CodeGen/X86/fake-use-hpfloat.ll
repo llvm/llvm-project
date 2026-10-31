@@ -4,7 +4,7 @@
 ;
 ; CHECK:      bb.0.entry:
 ; CHECK-NEXT: %0:fr16 = FsFLD0SH
-; CHECK-NEXT: FAKE_USE killed %0
+; CHECK-NEXT: FAKE_USE %0
 ;
 target triple = "x86_64-unknown-unknown"
 

@@ -13,6 +13,7 @@ add_llvm_component_library(LLVMDXILBitWriter
   Analysis
   BitWriter
   Core
+  DirectXDesc
   DirectXIRPasses
   MC
   Object

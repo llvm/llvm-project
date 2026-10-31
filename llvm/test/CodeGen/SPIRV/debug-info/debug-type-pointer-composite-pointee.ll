@@ -1,11 +1,12 @@
 ; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; DW_TAG_array_type composite not yet supported
+; Pointer to int[8]. The array is emitted before the pointer that names it.
 
 ; CHECK: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK: OpExtInst {{.*}} DebugCompilationUnit
-; CHECK-NOT: DebugTypePointer
+; CHECK: DebugTypeArray
+; CHECK: DebugTypePointer
 
 define spir_func void @ptr_to_array() !dbg !10 {
 entry:

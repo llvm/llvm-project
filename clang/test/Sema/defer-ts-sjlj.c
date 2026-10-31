@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -std=gnu23 -fdefer-ts -fsyntax-only -fblocks -verify %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -std=gnu23 -fdefer-ts -Wno-redundant-defer -fsyntax-only -fblocks -verify %s
 
 typedef void** jmp_buf;
 typedef void** sigjmp_buf;

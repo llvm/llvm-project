@@ -10,6 +10,7 @@
 
 #include "list.h"
 
+#include <algorithm>
 #include <array>
 
 struct ListItemLinkedWithPtr {
@@ -260,4 +261,79 @@ static void testDoublyLinkedList() {
 TEST(ScudoListTest, DoublyLinkedList) {
   testDoublyLinkedList<scudo::DoublyLinkedList, ListItemLinkedWithPtr>();
   testDoublyLinkedList<scudo::DoublyLinkedList, ListItemLinkedWithIndex>();
+}
+
+template <typename ListItemTy> static void testDoublyLinkedListRemove() {
+  ListItemTy Items[4];
+  scudo::DoublyLinkedList<ListItemTy> L;
+  L.init(Items, sizeof(Items));
+  std::array<unsigned int, 4> Order = {0, 1, 2, 3};
+  do {
+    L.clear();
+    for (auto &Item : Items)
+      L.push_back(&Item);
+    unsigned int Remaining = Order.size();
+    for (unsigned int I : Order) {
+      L.remove(&Items[I]);
+      EXPECT_EQ(L.size(), --Remaining);
+      L.checkConsistency();
+    }
+    EXPECT_TRUE(L.empty());
+  } while (std::next_permutation(Order.begin(), Order.end()));
+}
+
+TEST(ScudoListTest, DoublyLinkedListRemove) {
+  testDoublyLinkedListRemove<ListItemLinkedWithPtr>();
+  testDoublyLinkedListRemove<ListItemLinkedWithIndex>();
+}
+
+template <typename ListItemTy>
+static void testDoublyLinkedListRemoveCorrupted() {
+  ListItemTy Items[3];
+  ListItemTy *X = &Items[0];
+  ListItemTy *Y = &Items[1];
+  ListItemTy *Z = &Items[2];
+  scudo::DoublyLinkedList<ListItemTy> L;
+  L.init(Items, sizeof(Items));
+
+  setList(&L, X);
+
+  // Removing from an empty list must fail before accessing the node's links.
+  L.clear();
+  SCUDO_EXPECT_DEATH(L.remove(X), "!empty");
+
+  // A first/last node must not have a predecessor/successor, even if the
+  // corresponding reciprocal link is consistent.
+  setList(&L, X, Y, Z);
+  L.setPrev(X, Z);
+  L.setNext(Z, X);
+  SCUDO_EXPECT_DEATH(L.remove(X), "First == X");
+
+  setList(&L, X, Y, Z);
+  L.setNext(Z, X);
+  L.setPrev(X, Z);
+  SCUDO_EXPECT_DEATH(L.remove(Z), "Last == X");
+
+  // A node other than the first/last must have a predecessor/successor.
+  setList(&L, X, Y, Z);
+  L.setPrev(Y, nullptr);
+  SCUDO_EXPECT_DEATH(L.remove(Y), "First == X");
+
+  setList(&L, X, Y, Z);
+  L.setNext(Y, nullptr);
+  SCUDO_EXPECT_DEATH(L.remove(Y), "Last == X");
+
+  // Both neighboring nodes must link back to the node being removed.
+  setList(&L, X, Y, Z);
+  L.setNext(X, Z);
+  SCUDO_EXPECT_DEATH(L.remove(Y), "getNext");
+
+  setList(&L, X, Y, Z);
+  L.setPrev(Z, X);
+  SCUDO_EXPECT_DEATH(L.remove(Y), "getPrev");
+}
+
+TEST(ScudoListDeathTest, DoublyLinkedListRemoveCorrupted) {
+  testDoublyLinkedListRemoveCorrupted<ListItemLinkedWithPtr>();
+  testDoublyLinkedListRemoveCorrupted<ListItemLinkedWithIndex>();
 }

@@ -12,12 +12,11 @@ void binaryOpMatrixSubscriptExpr(int index, half2x3 M) {
     // CHECK: %col = alloca i32, align 4
     // CHECK: [[row_load:%.*]] = load i32, ptr %row, align 4
     // CHECK-NEXT: [[col_load:%.*]] = load i32, ptr %col, align 4
-    // ROW-CHECK-NEXT: [[row_offset:%.*]] = mul i32 [[row_load]], 3
-    // ROW-CHECK-NEXT: [[row_major_index:%.*]] = add i32 [[row_offset]], [[col_load]]
-    // COL-CHECK-NEXT: [[col_offset:%.*]] = mul i32 [[col_load]], 2
-    // COL-CHECK-NEXT: [[col_major_index:%.*]] = add i32 [[col_offset]], [[row_load]]
+    // CHECK-NEXT: [[col_offset:%.*]] = mul i32 [[col_load]], 2
+    // CHECK-NEXT: [[col_major_index:%.*]] = add i32 [[col_offset]], [[row_load]]
     // CHECK-NEXT: [[matrix_as_vec:%.*]] = load <6 x half>, ptr %M.addr, align 2
-    // ROW-CHECK-NEXT: %matrixext = extractelement <6 x half> [[matrix_as_vec]], i32 [[row_major_index]]
+    // ROW-CHECK-NEXT: [[normalized:%.*]] = call {{.*}} <6 x half> @llvm.matrix.transpose.v6f16(<6 x half> [[matrix_as_vec]], i32 3, i32 2)
+    // ROW-CHECK-NEXT: %matrixext = extractelement <6 x half> [[normalized]], i32 [[col_major_index]]
     // COL-CHECK-NEXT: %matrixext = extractelement <6 x half> [[matrix_as_vec]], i32 [[col_major_index]]
     const uint COLS = 3;
     uint row = index / COLS;
@@ -27,12 +26,11 @@ void binaryOpMatrixSubscriptExpr(int index, half2x3 M) {
 
 half returnMatrixSubscriptExpr(int row, int col, half2x3 M) {
     // CHECK-LABEL: returnMatrixSubscriptExpr
-    // ROW-CHECK: [[row_offset:%.*]] = mul i32 [[row_load:%.*]], 3
-    // ROW-CHECK-NEXT: [[row_major_index:%.*]] = add i32 [[row_offset]], [[col_load:%.*]]
-    // COL-CHECK: [[col_offset:%.*]] = mul i32 [[col_load:%.*]], 2
-    // COL-CHECK-NEXT: [[col_major_index:%.*]] = add i32 [[col_offset]], [[row_load:%.*]]
+    // CHECK: [[col_offset:%.*]] = mul i32 [[col_load:%.*]], 2
+    // CHECK-NEXT: [[col_major_index:%.*]] = add i32 [[col_offset]], [[row_load:%.*]]
     // CHECK-NEXT: [[matrix_as_vec:%.*]] = load <6 x half>, ptr %M.addr, align 2
-    // ROW-CHECK-NEXT: %matrixext = extractelement <6 x half> [[matrix_as_vec]], i32 [[row_major_index]]
+    // ROW-CHECK-NEXT: [[normalized:%.*]] = call {{.*}} <6 x half> @llvm.matrix.transpose.v6f16(<6 x half> [[matrix_as_vec]], i32 3, i32 2)
+    // ROW-CHECK-NEXT: %matrixext = extractelement <6 x half> [[normalized]], i32 [[col_major_index]]
     // COL-CHECK-NEXT: %matrixext = extractelement <6 x half> [[matrix_as_vec]], i32 [[col_major_index]]
     return M[row][col];
 }

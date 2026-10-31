@@ -22,6 +22,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 
@@ -57,6 +58,9 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   // linker knows about the symbol; this pass replaces the function body.
   F->deleteBody();
   F->setAlignment(Align(4096));
+  // __cfi_check is synthesized by this pass, so there is no profile data for
+  // it.
+  setExplicitlyUnknownFunctionEntryCount(*F, DEBUG_TYPE);
 
   Triple T(M.getTargetTriple());
   if (T.isARM() || T.isThumb())
@@ -87,6 +91,8 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
 
   IRBuilder<> IRB(BB);
   SwitchInst *SI = IRB.CreateSwitch(&CallSiteTypeId, TrapBB, TypeIds.size());
+  // The distribution of type ids at the call sites is not known.
+  setExplicitlyUnknownBranchWeights(*SI, DEBUG_TYPE);
   for (uint64_t TypeId : TypeIds) {
     ConstantInt *CaseTypeId = ConstantInt::get(Type::getInt64Ty(Ctx), TypeId);
     BasicBlock *TestBB = BasicBlock::Create(Ctx, "test", F);

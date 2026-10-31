@@ -28,8 +28,8 @@ define void @store_texture2d_float4(<4 x float> %data, <2 x i32> %coords) {
   ; CHECK: %[[DATA1:.*]] = extractelement <4 x float> %data, i32 1
   ; CHECK: %[[DATA2:.*]] = extractelement <4 x float> %data, i32 2
   ; CHECK: %[[DATA3:.*]] = extractelement <4 x float> %data, i32 3
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
   ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, float %[[DATA0]], float %[[DATA1]], float %[[DATA2]], float %[[DATA3]], i8 15)
   call void @llvm.dx.resource.store.texture(
       target("dx.Texture", <4 x float>, 1, 0, 0, 2) %texture,
@@ -47,9 +47,9 @@ define void @store_texture3d_float4(<4 x float> %data, <3 x i32> %coords) {
   ; CHECK: %[[DATA1:.*]] = extractelement <4 x float> %data, i32 1
   ; CHECK: %[[DATA2:.*]] = extractelement <4 x float> %data, i32 2
   ; CHECK: %[[DATA3:.*]] = extractelement <4 x float> %data, i32 3
-  ; CHECK: %[[COORD0:.*]] = extractelement <3 x i32> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <3 x i32> %coords, i64 1
-  ; CHECK: %[[COORD2:.*]] = extractelement <3 x i32> %coords, i64 2
+  ; CHECK: %[[COORD0:.*]] = extractelement <3 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <3 x i32> %coords, i32 1
+  ; CHECK: %[[COORD2:.*]] = extractelement <3 x i32> %coords, i32 2
   ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 %[[COORD2]], float %[[DATA0]], float %[[DATA1]], float %[[DATA2]], float %[[DATA3]], i8 15)
   call void @llvm.dx.resource.store.texture(
       target("dx.Texture", <4 x float>, 1, 0, 0, 4) %texture,
@@ -67,8 +67,8 @@ define void @store_texture1darray_float4(<4 x float> %data, <2 x i32> %coords) {
   ; CHECK: %[[DATA1:.*]] = extractelement <4 x float> %data, i32 1
   ; CHECK: %[[DATA2:.*]] = extractelement <4 x float> %data, i32 2
   ; CHECK: %[[DATA3:.*]] = extractelement <4 x float> %data, i32 3
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
   ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, float %[[DATA0]], float %[[DATA1]], float %[[DATA2]], float %[[DATA3]], i8 15)
   call void @llvm.dx.resource.store.texture(
       target("dx.Texture", <4 x float>, 1, 0, 0, 6) %texture,
@@ -86,9 +86,9 @@ define void @store_texture2darray_float4(<4 x float> %data, <3 x i32> %coords) {
   ; CHECK: %[[DATA1:.*]] = extractelement <4 x float> %data, i32 1
   ; CHECK: %[[DATA2:.*]] = extractelement <4 x float> %data, i32 2
   ; CHECK: %[[DATA3:.*]] = extractelement <4 x float> %data, i32 3
-  ; CHECK: %[[COORD0:.*]] = extractelement <3 x i32> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <3 x i32> %coords, i64 1
-  ; CHECK: %[[COORD2:.*]] = extractelement <3 x i32> %coords, i64 2
+  ; CHECK: %[[COORD0:.*]] = extractelement <3 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <3 x i32> %coords, i32 1
+  ; CHECK: %[[COORD2:.*]] = extractelement <3 x i32> %coords, i32 2
   ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 %[[COORD2]], float %[[DATA0]], float %[[DATA1]], float %[[DATA2]], float %[[DATA3]], i8 15)
   call void @llvm.dx.resource.store.texture(
       target("dx.Texture", <4 x float>, 1, 0, 0, 7) %texture,
@@ -104,8 +104,8 @@ define void @store_texture2d_float(float %data, <2 x i32> %coords) {
   %texture = call target("dx.Texture", float, 1, 0, 0, 2)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, ptr null)
 
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
   ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, float %data, float %data, float %data, float %data, i8 15)
   call void @llvm.dx.resource.store.texture(
       target("dx.Texture", float, 1, 0, 0, 2) %texture,
@@ -123,8 +123,8 @@ define void @store_texture2d_int3(<3 x i32> %data, <2 x i32> %coords) {
   ; CHECK: %[[DATA0:.*]] = extractelement <3 x i32> %data, i32 0
   ; CHECK: %[[DATA1:.*]] = extractelement <3 x i32> %data, i32 1
   ; CHECK: %[[DATA2:.*]] = extractelement <3 x i32> %data, i32 2
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
   ; CHECK: call void @dx.op.textureStore.i32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, i32 %[[DATA0]], i32 %[[DATA1]], i32 %[[DATA2]], i32 %[[DATA0]], i8 15)
   call void @llvm.dx.resource.store.texture(
       target("dx.Texture", <3 x i32>, 1, 0, 1, 2) %texture,
@@ -142,8 +142,8 @@ define void @store_texture2d_half4(<4 x half> %data, <2 x i32> %coords) {
   ; CHECK: %[[DATA1:.*]] = extractelement <4 x half> %data, i32 1
   ; CHECK: %[[DATA2:.*]] = extractelement <4 x half> %data, i32 2
   ; CHECK: %[[DATA3:.*]] = extractelement <4 x half> %data, i32 3
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
   ; CHECK: call void @dx.op.textureStore.f16(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, half %[[DATA0]], half %[[DATA1]], half %[[DATA2]], half %[[DATA3]], i8 15)
   call void @llvm.dx.resource.store.texture(
       target("dx.Texture", <4 x half>, 1, 0, 0, 2) %texture,
@@ -165,12 +165,74 @@ define void @store_texture2d_scalarized(float %x, float %y, float %z, float %w, 
   %vec.3 = insertelement <4 x float> %vec.2, float %w, i32 3
 
   ; CHECK-NOT: insertelement
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x i32> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x i32> %coords, i32 1
   ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 undef, float %x, float %y, float %z, float %w, i8 15)
   call void @llvm.dx.resource.store.texture(
       target("dx.Texture", <4 x float>, 1, 0, 0, 2) %texture,
       <2 x i32> %coords, <4 x float> %vec.3)
+
+  ret void
+}
+
+; DXIL has no vector instructions, so the scalars the coordinate vector was
+; built from are forwarded into the store rather than extracted again.
+; CHECK-LABEL: define void @store_texture2darray_scalarized_coords(
+define void @store_texture2darray_scalarized_coords(float %data, i32 %x, i32 %y, i32 %z) {
+  %texture = call target("dx.Texture", float, 1, 0, 0, 7)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 9, i32 1, i32 0, ptr null)
+
+  %coords.0 = insertelement <3 x i32> poison, i32 %x, i32 0
+  %coords.1 = insertelement <3 x i32> %coords.0, i32 %y, i32 1
+  %coords.2 = insertelement <3 x i32> %coords.1, i32 %z, i32 2
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 %x, i32 %y, i32 %z, float %data, float %data, float %data, float %data, i8 15)
+  call void @llvm.dx.resource.store.texture(
+      target("dx.Texture", float, 1, 0, 0, 7) %texture,
+      <3 x i32> %coords.2, float %data)
+
+  ; CHECK: ret void
+  ret void
+}
+
+; Coordinates that don't come from an insertelement still have to be extracted.
+; CHECK-LABEL: define void @store_texture2darray_partial_coords(
+define void @store_texture2darray_partial_coords(float %data, <3 x i32> %coords, i32 %z) {
+  %texture = call target("dx.Texture", float, 1, 0, 0, 7)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 10, i32 1, i32 0, ptr null)
+
+  %coords.z = insertelement <3 x i32> %coords, i32 %z, i32 2
+
+  ; CHECK: %[[COORD0:.*]] = extractelement <3 x i32> %coords.z, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <3 x i32> %coords.z, i32 1
+  ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 %[[COORD0]], i32 %[[COORD1]], i32 %z, float %data, float %data, float %data, float %data, i8 15)
+  call void @llvm.dx.resource.store.texture(
+      target("dx.Texture", float, 1, 0, 0, 7) %texture,
+      <3 x i32> %coords.z, float %data)
+
+  ret void
+}
+
+; An index can be inserted more than once; the outermost insert is the live
+; value for that component.
+; CHECK-LABEL: define void @store_texture2d_repeated_index(
+define void @store_texture2d_repeated_index(float %x, float %y, float %z, float %w,
+                                            float %live, <2 x i32> %coords) {
+  %texture = call target("dx.Texture", <4 x float>, 1, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 11, i32 1, i32 0, ptr null)
+
+  %vec.0 = insertelement <4 x float> poison, float %x, i32 0
+  %vec.1 = insertelement <4 x float> %vec.0, float %y, i32 1
+  %vec.2 = insertelement <4 x float> %vec.1, float %z, i32 2
+  %vec.3 = insertelement <4 x float> %vec.2, float %w, i32 3
+  %vec.4 = insertelement <4 x float> %vec.3, float %live, i32 0
+
+  ; CHECK: call void @dx.op.textureStore.f32(i32 67, %dx.types.Handle %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 undef, float %live, float %y, float %z, float %w, i8 15)
+  call void @llvm.dx.resource.store.texture(
+      target("dx.Texture", <4 x float>, 1, 0, 0, 2) %texture,
+      <2 x i32> %coords, <4 x float> %vec.4)
 
   ret void
 }

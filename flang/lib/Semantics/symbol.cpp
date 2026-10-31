@@ -279,6 +279,7 @@ void ObjectEntityDetails::set_shape(const ArraySpec &shape) {
   for (const auto &shapeSpec : shape) {
     shape_.push_back(shapeSpec);
   }
+  shape_.set_rankOneBounds(shape.lboundIsRankOne(), shape.uboundIsRankOne());
 }
 void ObjectEntityDetails::set_coshape(const ArraySpec &coshape) {
   CHECK(coshape_.empty());

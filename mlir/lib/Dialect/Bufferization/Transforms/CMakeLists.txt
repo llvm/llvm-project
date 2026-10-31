@@ -1,5 +1,8 @@
-add_mlir_dialect_library(MLIRBufferizationTransforms
+set(LLVM_OPTIONAL_SOURCES
   BufferizableOpInterfaceImpl.cpp
+  )
+
+add_mlir_dialect_library(MLIRBufferizationTransforms
   Bufferize.cpp
   BufferDeallocationSimplification.cpp
   BufferOptimizations.cpp
@@ -27,6 +30,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRBufferizationEnumsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRBufferizationDialect
   MLIRCallInterfaces
@@ -44,4 +48,16 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRTransforms
   MLIRViewLikeInterface
   MLIRSupport
+)
+
+add_mlir_dialect_library(MLIRBufferizationBufferizableOpInterfaceImpl
+  BufferizableOpInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Bufferization
+
+  LINK_LIBS PUBLIC
+  MLIRBufferizationDialect
+  MLIRIR
+  MLIRMemRefDialect
 )

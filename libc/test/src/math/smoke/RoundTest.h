@@ -68,10 +68,10 @@ public:
   }
 };
 
-#define LIST_ROUND_TESTS(T, func)                                              \
-  using LlvmLibcRoundTest = RoundTest<T>;                                      \
-  TEST_F(LlvmLibcRoundTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcRoundTest, RoundedNubmers) { testRoundedNumbers(&func); }     \
-  TEST_F(LlvmLibcRoundTest, Fractions) { testFractions(&func); }
+#define LIST_ROUND_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = RoundTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testRoundedNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTEST_H

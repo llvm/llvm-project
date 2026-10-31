@@ -49,6 +49,12 @@ public:
 
   bool matchConstantIs32BitMask(Register Reg) const;
 
+  /// Match an s64 and/or where one operand is a 32-bit mask (see
+  /// matchConstantIs32BitMask), used to narrow it into two s32 ops. Bails when
+  /// both operands are constants, since folding the binop to a single constant
+  /// is strictly better than narrowing.
+  bool matchBinopWith32BitMask(Register X, Register Y) const;
+
   /// fmin_legacy/fmax_legacy select s1 on NaN, and on a +0.0/-0.0 tie (s1 for
   /// min, s0 for max). Returns true if that tie cannot be observed: nsz on
   /// \p MI, or a known non-logical-zero \p LHS or \p RHS.

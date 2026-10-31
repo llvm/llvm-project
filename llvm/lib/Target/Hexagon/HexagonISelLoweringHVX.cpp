@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
 #include <string>
@@ -34,6 +35,10 @@ static cl::opt<unsigned> HvxWidenThreshold("hexagon-hvx-widen",
 static cl::opt<bool>
     EnableFpFastConvert("hexagon-fp-fast-convert", cl::Hidden, cl::init(false),
                         cl::desc("Enable FP fast conversion routine."));
+
+static cl::opt<bool>
+    EnableXQFFastConvert("hexagon-qf-fast-convert", cl::Hidden, cl::init(false),
+                         cl::desc("Enable XQF fast conversion routine."));
 
 static const MVT LegalV64[] =  { MVT::v64i8,  MVT::v32i16,  MVT::v16i32 };
 static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
@@ -175,9 +180,8 @@ HexagonTargetLowering::initializeHVXLowering() {
 
     // BUILD_VECTOR with f16 operands cannot be promoted without
     // promoting the result, so lower the node to vsplat or constant pool
-    setOperationAction(ISD::BUILD_VECTOR,      MVT::f16, Custom);
-    setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::f16, Custom);
-    setOperationAction(ISD::SPLAT_VECTOR,      MVT::f16, Custom);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
+    setOperationAction(ISD::SPLAT_VECTOR, MVT::f16, Custom);
 
     // Vector shuffle is always promoted to ByteV and a bitcast to f16 is
     // generated.
@@ -224,7 +228,6 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::CONCAT_VECTORS, MVT::v128bf16, Custom);
 
       setOperationAction(ISD::SPLAT_VECTOR, MVT::bf16, Custom);
-      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::bf16, Custom);
       setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
     }
 
@@ -1954,21 +1957,12 @@ SDValue
 HexagonTargetLowering::LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG)
       const {
   const SDLoc &dl(Op);
-  MVT VecTy = ty(Op);
   SDValue VecV = Op.getOperand(0);
   SDValue ValV = Op.getOperand(1);
   SDValue IdxV = Op.getOperand(2);
   MVT ElemTy = ty(VecV).getVectorElementType();
   if (ElemTy == MVT::i1)
     return insertHvxElementPred(VecV, IdxV, ValV, dl, DAG);
-
-  if (ElemTy == MVT::f16 || ElemTy == MVT::bf16) {
-    SDValue T0 = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl,
-        tyVector(VecTy, MVT::i16),
-        DAG.getBitcast(tyVector(VecTy, MVT::i16), VecV),
-        DAG.getBitcast(MVT::i16, ValV), IdxV);
-    return DAG.getBitcast(tyVector(VecTy, ElemTy), T0);
-  }
 
   return insertHvxElementReg(VecV, IdxV, ValV, dl, DAG);
 }
@@ -2497,7 +2491,74 @@ HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getMergeValues({P.getValue(1), P.getValue(0)}, dl);
   };
 
+  const SDLoc &DL(Op);
   switch (IntNo) {
+  // Translate IEEE intrinsic to XQF.
+  // In v79, the instruction v0.h = vcvt(v0.hf) is not an exact conversion.
+  // The bit exactness is mimicked using a library call.
+  case Intrinsic::hexagon_V6_vcvt_b_hf_128B:
+  case Intrinsic::hexagon_V6_vcvt_h_hf_128B:
+  case Intrinsic::hexagon_V6_vcvt_ub_hf_128B:
+  case Intrinsic::hexagon_V6_vcvt_uh_hf_128B: {
+    MachineFunction &MF = DAG.getMachineFunction();
+    auto &HST = MF.getSubtarget<HexagonSubtarget>();
+    // Generate the call only on v79 only.
+    if (!HST.useHVXV79OpsOnly())
+      return Op;
+
+    ArgListTy Args;
+    EVT ArgVT;
+    for (unsigned i = 1; i < Op.getNumOperands(); ++i) {
+      SDValue Arg = Op.getOperand(i);
+      ArgVT = Arg.getValueType();
+      assert(ArgVT.isVector() &&
+             "Expecting a vector argument type for V6_vcvt_h_hf instrinsic.");
+      ArgListEntry Entry(Arg, ArgVT.getTypeForEVT(*DAG.getContext()));
+      Args.push_back(Entry);
+    }
+    Type *RetTy = ArgVT.getTypeForEVT(*DAG.getContext());
+
+    bool LongCalls = HST.useLongCalls();
+    unsigned Flag = LongCalls ? HexagonII::HMOTF_ConstExtended : 0;
+
+    const char *Name = nullptr;
+    switch (IntNo) {
+    case Intrinsic::hexagon_V6_vcvt_b_hf_128B: {
+      Name = EnableXQFFastConvert ? "__qf_fast_convert_hf_to_b_rne"
+                                  : "__qf_convert_hf_to_b_rne";
+      break;
+    }
+    case Intrinsic::hexagon_V6_vcvt_h_hf_128B: {
+      Name = EnableXQFFastConvert ? "__qf_fast_convert_hf_to_h_rne"
+                                  : "__qf_convert_hf_to_h_rne";
+      break;
+    }
+    case Intrinsic::hexagon_V6_vcvt_ub_hf_128B: {
+      Name = EnableXQFFastConvert ? "__qf_fast_convert_hf_to_ub_rne"
+                                  : "__qf_convert_hf_to_ub_rne";
+      break;
+    }
+    case Intrinsic::hexagon_V6_vcvt_uh_hf_128B: {
+      Name = EnableXQFFastConvert ? "__qf_fast_convert_hf_to_uh_rne"
+                                  : "__qf_convert_hf_to_uh_rne";
+      break;
+    }
+    default:
+      report_fatal_error("Unhandled intrinsic '" +
+                         Intrinsic::getName(static_cast<Intrinsic::ID>(IntNo)) +
+                         "' in HexagonTargetLowering::LowerHvxIntrinsic");
+    }
+
+    SDValue Callee = DAG.getTargetExternalSymbol(
+        Name, getPointerTy(DAG.getDataLayout()), Flag);
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(DL)
+        .setChain(DAG.getEntryNode())
+        .setLibCallee(CallingConv::Fast, RetTy, Callee, std::move(Args));
+    std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+    return CallResult.first;
+  }
   case Intrinsic::hexagon_V6_pred_typecast:
   case Intrinsic::hexagon_V6_pred_typecast_128B: {
     MVT ResTy = ty(Op), InpTy = ty(Ops[1]);
@@ -4505,12 +4566,12 @@ SDValue HexagonTargetLowering::LowerHvxVecReduceFMinMax(
 
 SDValue HexagonTargetLowering::LowerHvxVecReduceFMin(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  return LowerHvxVecReduceFMinMax(Op, ISD::FMINNUM, /*IgnoreNaN=*/true, DAG);
+  return LowerHvxVecReduceFMinMax(Op, ISD::FMINIMUM, /*IgnoreNaN=*/true, DAG);
 }
 
 SDValue HexagonTargetLowering::LowerHvxVecReduceFMax(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  return LowerHvxVecReduceFMinMax(Op, ISD::FMAXNUM, /*IgnoreNaN=*/true, DAG);
+  return LowerHvxVecReduceFMinMax(Op, ISD::FMAXIMUM, /*IgnoreNaN=*/true, DAG);
 }
 
 SDValue

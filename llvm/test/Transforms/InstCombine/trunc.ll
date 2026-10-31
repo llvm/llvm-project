@@ -201,11 +201,9 @@ define i16 @ashr_mul_sign_bits(i8 %X, i8 %Y) {
 
 define i16 @ashr_mul(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @ashr_mul(
-; CHECK-NEXT:    [[A:%.*]] = sext i8 [[X:%.*]] to i16
-; CHECK-NEXT:    [[B:%.*]] = sext i8 [[Y:%.*]] to i16
-; CHECK-NEXT:    [[C:%.*]] = mul nsw i16 [[A]], [[B]]
-; CHECK-NEXT:    [[D:%.*]] = ashr i16 [[C]], 8
-; CHECK-NEXT:    ret i16 [[D]]
+; CHECK-NEXT:    [[Y:%.*]] = call i8 @llvm.smulh.i8(i8 [[X:%.*]], i8 [[Y1:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = sext i8 [[Y]] to i16
+; CHECK-NEXT:    ret i16 [[B]]
 ;
   %A = sext i8 %X to i20
   %B = sext i8 %Y to i20

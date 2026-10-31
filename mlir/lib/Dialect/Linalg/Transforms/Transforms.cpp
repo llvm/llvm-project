@@ -218,10 +218,50 @@ private:
 
 } // namespace
 
+/// Rewrite index operations in a packed Linalg op to preserve their values in
+/// the original iteration space. Packing loop dimension `d` by `tileSize`
+/// splits its index into an outer and inner index, so the original index is
+/// `outer * tileSize + inner`.
+static void
+remapPackedIndexOps(RewriterBase &rewriter, LinalgOp packedLinalgOp,
+                    ArrayRef<OpFoldResult> packedSizes,
+                    ArrayRef<std::optional<int64_t>> packedLoopToInnerLoop) {
+  if (!packedLinalgOp.hasIndexSemantics())
+    return;
+
+  SmallVector<IndexOp> indexOps =
+      llvm::to_vector(packedLinalgOp.getBlock()->getOps<IndexOp>());
+  for (IndexOp indexOp : indexOps) {
+    unsigned dim = indexOp.getDim();
+    assert(dim < packedLoopToInnerLoop.size() && "invalid linalg.index dim");
+    std::optional<int64_t> innerDim = packedLoopToInnerLoop[dim];
+    if (!innerDim)
+      continue;
+
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(indexOp);
+    Value outerIndex =
+        IndexOp::create(rewriter, indexOp.getLoc(), dim).getResult();
+    Value innerIndex =
+        IndexOp::create(rewriter, indexOp.getLoc(), *innerDim).getResult();
+
+    AffineExpr outer, inner, tileSize;
+    bindDims(rewriter.getContext(), outer, inner);
+    bindSymbols(rewriter.getContext(), tileSize);
+    OpFoldResult originalIndex = affine::makeComposedFoldedAffineApply(
+        rewriter, indexOp.getLoc(), outer * tileSize + inner,
+        {outerIndex, innerIndex, packedSizes[dim]});
+    rewriter.replaceOp(indexOp, getValueOrCreateConstantIndexOp(
+                                    rewriter, indexOp.getLoc(), originalIndex));
+  }
+}
+
 FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                                              linalg::PackOp packOp,
                                              bool lowerPadLikeWithInsertSlice) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -355,7 +395,9 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 FailureOr<LowerUnPackOpResult>
 linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
                     bool lowerUnpadLikeWithExtractSlice) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unPackOp.hasPureTensorSemantics())
     return failure();
 
@@ -501,6 +543,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
   SmallVector<linalg::UnPackOp> unPackOps;
   // Step 1. Pack each dim of the LinalgOp metadata by packedSizes[i].
   PackedOperandsDimList listOfPackedOperandsDim;
+  SmallVector<std::optional<int64_t>> packedLoopToInnerLoop(packedSizes.size());
   for (int64_t i = 0, e = packedSizes.size(); i < e; ++i) {
     std::optional<int64_t> maybeConstant = getConstantIntValue(packedSizes[i]);
     // Skip tile sizes explicitly set to 0.
@@ -514,6 +557,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
             packLinalgMetadataOnce(indexingMaps, iteratorTypes, i);
     if (failed(maybePackedDimForEachOperand))
       return failure();
+    packedLoopToInnerLoop[i] = iteratorTypes.size() - 1;
     packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
 
     LDBG() << "++++ After pack size #" << i << ": " << packedSizes[i];
@@ -582,6 +626,8 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
       linalg::GenericOp::create(rewriter, linalgOp.getLoc(), inits.getTypes(),
                                 inputs, inits, indexingMaps, iteratorTypes);
   packedLinalgOp.getRegion().takeBody(linalgOp->getRegion(0));
+  remapPackedIndexOps(rewriter, packedLinalgOp, packedSizes,
+                      packedLoopToInnerLoop);
 
   // Step 4. Propagate packing to all the op results.
   for (OpResult result : packedLinalgOp->getResults()) {
@@ -1044,7 +1090,9 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                            linalg::PackOp packOp) {
   Value input = packOp.getSource();
-  // TODO: Support Memref PackOp. Temporarily return just Op Source.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return input;
 
@@ -1164,7 +1212,9 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 
 LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     linalg::PackOp packOp, PatternRewriter &rewriter) const {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 

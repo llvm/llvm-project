@@ -404,3 +404,27 @@ func.func @za_q() {
   "test.some_use"(%next_tile) : (vector<[1]x[1]xi128>) -> ()
   return
 }
+
+// -----
+
+// Functions with no ArmSME tile ops should be left completely unmodified.
+// This also means the preprocessing steps must not run.
+
+// CHECK-LABEL: func.func @no_sme_ops(
+// CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32) -> i32 {
+// CHECK-NEXT: cf.cond_br %[[COND]], ^bb1, ^bb2
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT: cf.br ^bb3(%[[A]] : i32)
+// CHECK-NEXT: ^bb2:
+// CHECK-NEXT: cf.br ^bb3(%[[B]] : i32)
+// CHECK-NEXT: ^bb3(%[[R:.*]]: i32):
+// CHECK-NEXT: return %[[R]] : i32
+func.func @no_sme_ops(%cond: i1, %a: i32, %b: i32) -> i32 {
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb3(%a : i32)
+^bb2:
+  cf.br ^bb3(%b : i32)
+^bb3(%r: i32):
+  return %r : i32
+}

@@ -474,7 +474,7 @@ define i32 @access_i33(ptr %f) {
 ; V8M-COMMON-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; V8M-LE-NEXT:        and r0, r1, #1
 ; V8M-BE-NEXT:        and r0, r0, #1
-; V8M-COMMON-NEXT:    rsb.w r0, r0, #0
+; V8M-COMMON-NEXT:    rsbs r0, r0, #0
 ; V8M-COMMON-NEXT:    pop {r7, pc}
 ;
 ; V81M-COMMON-LABEL: access_i33:
@@ -491,7 +491,7 @@ define i32 @access_i33(ptr %f) {
 ; V81M-COMMON-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; V81M-LE-NEXT:        and r0, r1, #1
 ; V81M-BE-NEXT:        and r0, r0, #1
-; V81M-COMMON-NEXT:    rsb.w r0, r0, #0
+; V81M-COMMON-NEXT:    rsbs r0, r0, #0
 ; V81M-COMMON-NEXT:    pop {r7, pc}
 entry:
   %call = tail call i33 %f() "cmse_nonsecure_call"

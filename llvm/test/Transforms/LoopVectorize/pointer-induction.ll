@@ -8,10 +8,10 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define void @a(ptr readnone %b) {
 ; CHECK-LABEL: @a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP_NOT4:%.*]] = icmp eq ptr [[B:%.*]], null
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[CMP_NOT4:%.*]] = icmp eq ptr [[B]], null
 ; CHECK-NEXT:    br i1 [[CMP_NOT4]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[TMP0]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -44,25 +44,25 @@ define void @a(ptr readnone %b) {
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP10]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; CHECK:       pred.store.if4:
+; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP1]], i64 -1
 ; CHECK-NEXT:    store i8 95, ptr [[TMP13]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; CHECK:       pred.store.continue5:
+; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP10]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
-; CHECK:       pred.store.if6:
+; CHECK:       pred.store.if7:
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP2]], i64 -1
 ; CHECK-NEXT:    store i8 95, ptr [[TMP15]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; CHECK:       pred.store.continue7:
+; CHECK:       pred.store.continue8:
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP10]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
-; CHECK:       pred.store.if8:
+; CHECK:       pred.store.if9:
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP3]], i64 -1
 ; CHECK-NEXT:    store i8 95, ptr [[TMP17]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE9]]
-; CHECK:       pred.store.continue9:
+; CHECK:       pred.store.continue10:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

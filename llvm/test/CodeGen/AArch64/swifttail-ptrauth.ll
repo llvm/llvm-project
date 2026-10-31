@@ -35,6 +35,7 @@ define swifttailcc void @caller_to0_from0() "branch-protection-pauth-lr" "sign-r
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp0
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp0:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp0
@@ -103,6 +104,7 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp1
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp1:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp1
@@ -119,29 +121,38 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset -16
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
+; CHECK-NEXT:    sub x16, sp, #16
 
-; COMPAT-NEXT:   adrp x16, .Ltmp1
-; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp1
+; COMPAT-NEXT:   mov x17, x30
+; COMPAT-NEXT:   adrp x15, .Ltmp1
+; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp1
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   hint #29
+; COMPAT-NEXT:   hint #12
 ; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
+; COMPAT-NEXT:   mov x30, x17
 
-; V83A-NEXT:     adrp x16, .Ltmp1
-; V83A-NEXT:     add x16, x16, :lo12:.Ltmp1
+; V83A-NEXT:     mov x17, x30
+; V83A-NEXT:     adrp x15, .Ltmp1
+; V83A-NEXT:     add x15, x15, :lo12:.Ltmp1
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     autiasp
+; V83A-NEXT:     autia1716
 ; V83A-NEXT:     .cfi_set_ra_state 0, 0
+; V83A-NEXT:     mov x30, x17
 
-; V9A-NEXT:      autiasppc .Ltmp1
+; V9A-NEXT:      mov x17, x30
+; V9A-NEXT:      adrp x15, .Ltmp1
+; V9A-NEXT:      add x15, x15, :lo12:.Ltmp1
+; V9A-NEXT:      autia171615
 ; V9A-NEXT:      .cfi_set_ra_state 0, 0
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autiasp
+; PAUTH-NEXT:    autia x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    b callee_stack0
 
 ; MIR-LABEL:  name: caller_to0_from8
@@ -168,6 +179,7 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
 ; V83A-NEXT:     paciasp
 ; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp2
 
+; V9A-NEXT:      .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp2:
 ; V9A-NEXT:      paciasppc
 ; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp2
@@ -243,6 +255,7 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; V83A-NEXT:           paciasp
 ; V83A-NEXT:           .cfi_set_ra_state 2, .Ltmp3
 
+; V9A-NEXT:            .cfi_non_hint_pauth_frame
 ; V9A-NEXT:    .Ltmp3:
 ; V9A-NEXT:            paciasppc
 ; V9A-NEXT:            .cfi_set_ra_state 2, .Ltmp3
@@ -266,29 +279,38 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; CHECK-NEXT:          .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:          ldp     x29, x30, [sp], #16
 ; CHECK-NEXT:          .cfi_def_cfa_offset 0
+; CHECK-NEXT:          add     sp, sp, #80
 ; CHECK-NEXT:          .cfi_def_cfa_offset -80
 ; CHECK-NEXT:          .cfi_restore w30
 ; CHECK-NEXT:          .cfi_restore w29
+; CHECK-NEXT:          sub x16, sp, #80
 
-; COMPAT-NEXT:         adrp    x16, .Ltmp3
-; COMPAT-NEXT:         add     x16, x16, :lo12:.Ltmp3
+; COMPAT-NEXT:         mov x17, x30
+; COMPAT-NEXT:         adrp    x15, .Ltmp3
+; COMPAT-NEXT:         add     x15, x15, :lo12:.Ltmp3
 ; COMPAT-NEXT:         hint    #39
-; COMPAT-NEXT:         hint    #29
+; COMPAT-NEXT:         hint    #12
 ; COMPAT-NEXT:         .cfi_set_ra_state 0, 0
+; COMPAT-NEXT:         mov x30, x17
 
-; V83A-NEXT:           adrp    x16, .Ltmp3
-; V83A-NEXT:           add     x16, x16, :lo12:.Ltmp3
+; V83A-NEXT:           mov x17, x30
+; V83A-NEXT:           adrp    x15, .Ltmp3
+; V83A-NEXT:           add     x15, x15, :lo12:.Ltmp3
 ; V83A-NEXT:           hint    #39
-; V83A-NEXT:           autiasp
+; V83A-NEXT:           autia1716
 ; V83A-NEXT:           .cfi_set_ra_state 0, 0
+; V83A-NEXT:           mov x30, x17
 
-; V9A-NEXT:            autiasppc .Ltmp3
+; V9A-NEXT:            mov x17, x30
+; V9A-NEXT:            adrp    x15, .Ltmp3
+; V9A-NEXT:            add     x15, x15, :lo12:.Ltmp3
+; V9A-NEXT:            autia171615
 ; V9A-NEXT:            .cfi_set_ra_state 0, 0
+; V9A-NEXT:            mov x30, x17
 
-; PAUTH-NEXT:          autiasp
+; PAUTH-NEXT:          autia x30, x16
 ; PAUTH-NEXT:          .cfi_negate_ra_state
 
-; CHECK-NEXT:          add     sp, sp, #80
 ; CHECK-NEXT:          ret
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:          .cfi_restore_state
@@ -296,29 +318,38 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; CHECK-NEXT:          .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:          ldp     x29, x30, [sp], #16
 ; CHECK-NEXT:          .cfi_def_cfa_offset 0
+; CHECK-NEXT:          add     sp, sp, #80
 ; CHECK-NEXT:          .cfi_def_cfa_offset -80
 ; CHECK-NEXT:          .cfi_restore w30
 ; CHECK-NEXT:          .cfi_restore w29
+; CHECK-NEXT:          sub x16, sp, #80
 
-; COMPAT-NEXT:         adrp    x16, .Ltmp3
-; COMPAT-NEXT:         add     x16, x16, :lo12:.Ltmp3
+; COMPAT-NEXT:         mov x17, x30
+; COMPAT-NEXT:         adrp    x15, .Ltmp3
+; COMPAT-NEXT:         add     x15, x15, :lo12:.Ltmp3
 ; COMPAT-NEXT:         hint    #39
-; COMPAT-NEXT:         hint    #29
+; COMPAT-NEXT:         hint    #12
 ; COMPAT-NEXT:         .cfi_set_ra_state 0, 0
+; COMPAT-NEXT:         mov x30, x17
 
-; V83A-NEXT:           adrp    x16, .Ltmp3
-; V83A-NEXT:           add     x16, x16, :lo12:.Ltmp3
+; V83A-NEXT:           mov x17, x30
+; V83A-NEXT:           adrp    x15, .Ltmp3
+; V83A-NEXT:           add     x15, x15, :lo12:.Ltmp3
 ; V83A-NEXT:           hint    #39
-; V83A-NEXT:           autiasp
+; V83A-NEXT:           autia1716
 ; V83A-NEXT:           .cfi_set_ra_state 0, 0
+; V83A-NEXT:           mov x30, x17
 
-; V9A-NEXT:            autiasppc .Ltmp3
+; V9A-NEXT:            mov x17, x30
+; V9A-NEXT:            adrp    x15, .Ltmp3
+; V9A-NEXT:            add     x15, x15, :lo12:.Ltmp3
+; V9A-NEXT:            autia171615
 ; V9A-NEXT:            .cfi_set_ra_state 0, 0
+; V9A-NEXT:            mov x30, x17
 
-; PAUTH-NEXT:          autiasp
+; PAUTH-NEXT:          autia x30, x16
 ; PAUTH-NEXT:          .cfi_negate_ra_state
 
-; CHECK-NEXT:          add     sp, sp, #80
 ; CHECK-NEXT:          b       callee_stack0
 
 ; MIR-LABEL:  name: crash_tc

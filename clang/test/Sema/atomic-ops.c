@@ -147,6 +147,18 @@ _Static_assert(__atomic_always_lock_free(2, (int[2]){}), "");
 void dummyfn();
 _Static_assert(__atomic_always_lock_free(2, dummyfn) || 1, "");
 
+// GH170139, GH120082
+_Static_assert(!__atomic_always_lock_free(0, 0), "");
+_Static_assert(!__atomic_always_lock_free(0, 1), ""); // expected-error {{incompatible integer to pointer conversion}}
+_Static_assert(!__atomic_always_lock_free(0, (void*)4), "");
+_Static_assert(!__atomic_always_lock_free(0, &i32), "");
+_Static_assert(__atomic_is_lock_free(0, 0), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(0, (void*)4), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(0, &i32), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__c11_atomic_is_lock_free(0), ""); // expected-error {{not an integral constant expression}}
+_Static_assert(!__atomic_always_lock_free(SIZE_MAX / 2 + 1, 0), "");
+_Static_assert(__c11_atomic_is_lock_free(SIZE_MAX / 2 + 1), ""); // expected-error {{not an integral constant expression}}
+
 
 
 #define _AS1 __attribute__((address_space(1)))

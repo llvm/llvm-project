@@ -322,14 +322,17 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                            {tok::plus, tok::star, tok::greater},
                            {tok::minusequal, tok::greater},
                            {tok::minus, tok::star, tok::greater},
-                           {tok::less, tok::arrow},
                            {tok::equal, tok::greater},
                            {tok::star, tok::greater},
                            {tok::pipeequal, tok::greater},
                            {tok::pipe, tok::arrow}},
-                          TT_BinaryOperator) ||
-        Tokens.back()->is(tok::arrow)) {
+                          TT_BinaryOperator)) {
       Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+    if (tryMergeTokens({tok::less, tok::arrow}, TT_BinaryOperator) ||
+        Tokens.back()->is(tok::arrow)) {
+      Tokens.back()->Tok.setKind(tok::equalequal);
       return;
     }
     if (Tokens.size() >= 3 &&
@@ -1473,10 +1476,14 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column += FormatTok->ColumnWidth;
   } else {
     FormatTok->IsMultiline = true;
+    // Exclude the '\r' of a CRLF line ending from the first line's width.
+    StringRef FirstLine = Text.substr(0, FirstNewlinePos);
+    if (FirstLine.ends_with("\r"))
+      FirstLine = FirstLine.drop_back();
     // FIXME: ColumnWidth actually depends on the start column, we need to
     // take this into account when the token is moved.
     FormatTok->ColumnWidth = encoding::columnWidthWithTabs(
-        Text.substr(0, FirstNewlinePos), Column, Style.TabWidth, Encoding);
+        FirstLine, Column, Style.TabWidth, Encoding);
 
     // The last line of the token always starts in column 0.
     // Thus, the length can be precomputed even in the presence of tabs.

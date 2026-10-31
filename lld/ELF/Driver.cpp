@@ -405,6 +405,17 @@ static void checkOptions(Ctx &ctx) {
       ctx.arg.zCetReport != ReportPolicy::None)
     ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 
+  if (ctx.arg.zMarkPlt) {
+    if (ctx.arg.emachine != EM_X86_64)
+      ErrAlways(ctx) << "-z mark-plt only supported on X86_64";
+    // The PLT entry address is stored in the JUMP_SLOT relocation's addend, so
+    // -z mark-plt requires RELA relocations. REL relocations have no addend
+    // field and the .got.plt entry is already occupied by the lazy-binding
+    // address, so the information would be silently lost.
+    else if (!ctx.arg.isRela)
+      ErrAlways(ctx) << "-z mark-plt requires -z rela";
+  }
+
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
 
@@ -688,6 +699,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
+  initLLVM();
   readConfigs(ctx, args);
   checkZOptions(ctx, args);
 
@@ -705,7 +717,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope("ExecuteLinker");
 
-    initLLVM();
     createFiles(args);
     if (errCount(ctx))
       return;
@@ -1357,7 +1368,9 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  // Called after initLLVM() to ensure target-specific RegisterLibraryOptions
+  // have been called.
+  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, argv, "", &os))
     return;
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }
@@ -1466,8 +1479,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.cmseOutputLib = args.getLastArgValue(OPT_out_implib);
   ctx.arg.fixCortexA8 =
       args.hasArg(OPT_fix_cortex_a8) && !args.hasArg(OPT_relocatable);
-  ctx.arg.fortranCommon =
-      args.hasFlag(OPT_fortran_common, OPT_no_fortran_common, false);
   ctx.arg.gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   ctx.arg.gnuUnique = args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   ctx.arg.gdbIndex = args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
@@ -1516,7 +1527,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mergeArmExidx =
       args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
   ctx.arg.mmapOutputFile =
-      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
+      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, true);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
   ctx.arg.oFormatBinary = isOutputFormatBinary(ctx, args);
@@ -1673,6 +1684,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
       getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+  ctx.arg.zMarkPlt = getZFlag(args, "mark-plt", "nomark-plt", false);
   ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
   ctx.arg.zNodelete = hasZOption(args, "nodelete");
@@ -3236,7 +3248,8 @@ static void postParseObjectFile(ELFFileBase *file) {
 // extract these embedded ELF files to make a consolidated unoptimized
 // relocatable ELF file to embed in an ELF Dynamic Debugging section in the
 // output. See llvm/docs/DynamicDebugging.md for more details.
-template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
+template <class ELFT>
+static void linkDynamicDebug(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
   Ctx dctx;
   LinkerScript script(dctx);
   dctx.e.initialize(ctx.e.outs(), ctx.e.errs(), ctx.e.exitEarly,
@@ -3257,11 +3270,14 @@ template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
   if (errCount(ctx))
     return;
 
+  auto saveArg = [&](const Twine &arg) { return dctx.saver.save(arg).data(); };
   std::vector<const char *> args{
       dctx.arg.progName.data(), "-r", "-o", "-",
-      dctx.saver.save(Twine("-O") + Twine(ctx.arg.optimize)).data()};
+      saveArg(Twine("-O") + Twine(ctx.arg.optimize))};
   if (ctx.arg.resolveGroups)
     args.push_back("--force-group-allocation");
+  for (const auto &ws : wrapped)
+    args.push_back(saveArg(Twine("--wrap=") + ws.sym->getName()));
   dctx.driver.linkerMain(args);
   if (errCount(dctx) > 0 || !dctx.dynDbgOutput) {
     Err(ctx) << "failed to create relocatable dynamic debug object";
@@ -3574,7 +3590,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   if (ctx.hasDynDbg) {
     llvm::TimeTraceScope timeScope("Link dynamic debugging");
-    linkDynamicDebug<ELFT>(ctx);
+    linkDynamicDebug<ELFT>(ctx, wrapped);
     if (errCount(ctx))
       return;
   }

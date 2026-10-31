@@ -22,6 +22,8 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
@@ -174,6 +176,9 @@ TEST_F(InterpreterTest, TranslationUnitRedeclChainAcrossManyPTUs) {
 }
 
 TEST_F(InterpreterTest, UndoLeavesDeclsInTranslationUnitChain) {
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Undo is not supported for Emscripten builds";
+#endif
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
   cantFail(Interp->Parse("struct Kept {};"));
@@ -469,6 +474,21 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_STREQ(prettyPrint.c_str(), "(D) (One) : unsigned int 1\n");
 }
 
+TEST_F(InterpreterTest, ValueOfVoidCallExecutesTheCall) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("int calls = 0; void bump() { ++calls; }"));
+  Value V;
+  llvm::cantFail(Interp->ParseAndExecute("bump()", &V));
+  EXPECT_TRUE(V.isValid());
+  EXPECT_EQ(V.getKind(), Value::K_Void);
+
+  Value Calls;
+  llvm::cantFail(Interp->ParseAndExecute("calls", &Calls));
+  EXPECT_EQ(Calls.getInt(), 1);
+}
+
 // Regression: Value::setRawBits's NBytes parameter must be interpreted as a
 // byte count end-to-end. Before this was fixed, the parameter was named
 // NBits and the memcpy divided by 8, so a caller passing sizeof(T) (the
@@ -505,6 +525,11 @@ TEST_F(InterpreterTest, ValueSetRawBitsCopiesByteCount) {
 // Earlier the move ctor called Release() on the just-moved-into storage,
 // double-releasing on the next read.
 TEST_F(InterpreterTest, ValueMoveSemantics) {
+  // FIXME: Emscripten cannot resolve MoveT's destructor symbol
+  // `_ZN5MoveTD2Ev` from the incrementally loaded Wasm side module.
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Unresolved destructor symbol: _ZN5MoveTD2Ev";
+#endif
   std::vector<const char *> Args = {"-fno-sized-deallocation"};
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 
@@ -551,6 +576,81 @@ TEST_F(InterpreterTest, ValueMoveSemantics) {
   Interp.reset();
 }
 
+TEST_F(InterpreterTest, SetOptLevel) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  // -O0 emits functions with the 'optnone' attribute.
+  auto &PTU0 = cantFail(Interp->Parse("extern \"C\" int f0() { return 0; }"));
+  llvm::Function *F0 = PTU0.TheModule->getFunction("f0");
+  ASSERT_NE(F0, nullptr);
+  EXPECT_TRUE(F0->hasFnAttribute(llvm::Attribute::OptimizeNone));
+
+  // A change only takes effect on the next parsed module.
+  Interp->setOptLevel(2);
+
+  auto &PTU1 = cantFail(Interp->Parse("extern \"C\" int f1() { return 1; }"));
+  llvm::Function *F1 = PTU1.TheModule->getFunction("f1");
+  ASSERT_NE(F1, nullptr);
+  EXPECT_FALSE(F1->hasFnAttribute(llvm::Attribute::OptimizeNone));
+  EXPECT_FALSE(F1->hasFnAttribute(llvm::Attribute::NoInline));
+
+  // -Oz is level 2, size 2.
+  Interp->setOptLevel(2, 2);
+
+  auto &PTU2 = cantFail(Interp->Parse("extern \"C\" int f2() { return 2; }"));
+  llvm::Function *F2 = PTU2.TheModule->getFunction("f2");
+  ASSERT_NE(F2, nullptr);
+  EXPECT_TRUE(F2->hasFnAttribute(llvm::Attribute::OptimizeForSize));
+  EXPECT_TRUE(F2->hasFnAttribute(llvm::Attribute::MinSize));
+}
+
+TEST_F(InterpreterTest, PragmaOptimizeLevel) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  auto HasAttr = [](PartialTranslationUnit &PTU, const char *Name,
+                    llvm::Attribute::AttrKind Kind) {
+    llvm::Function *F = PTU.TheModule->getFunction(Name);
+    EXPECT_NE(F, nullptr);
+    return F && F->hasFnAttribute(Kind);
+  };
+
+  // Default -O0: 'optnone' present.
+  auto &PTU0 = cantFail(Interp->Parse("extern \"C\" int f0() { return 0; }"));
+  EXPECT_TRUE(HasAttr(PTU0, "f0", llvm::Attribute::OptimizeNone));
+
+  // The pragma applies to the code that follows it; f1 is emitted at -O2.
+  auto &PTU1 = cantFail(Interp->Parse("#pragma clang repl optimize(O2)\n"
+                                      "extern \"C\" int f1() { return 1; }"));
+  EXPECT_FALSE(HasAttr(PTU1, "f1", llvm::Attribute::OptimizeNone));
+  EXPECT_FALSE(HasAttr(PTU1, "f1", llvm::Attribute::NoInline));
+
+  // The level is sticky across inputs.
+  auto &PTU2 = cantFail(Interp->Parse("extern \"C\" int f2() { return 2; }"));
+  EXPECT_FALSE(HasAttr(PTU2, "f2", llvm::Attribute::OptimizeNone));
+
+  // -Os sets 'optsize' only; -Oz additionally sets 'minsize'.
+  auto &PTU3 = cantFail(Interp->Parse("#pragma clang repl optimize(Os)\n"
+                                      "extern \"C\" int f3() { return 3; }"));
+  EXPECT_TRUE(HasAttr(PTU3, "f3", llvm::Attribute::OptimizeForSize));
+  EXPECT_FALSE(HasAttr(PTU3, "f3", llvm::Attribute::MinSize));
+
+  auto &PTU4 = cantFail(Interp->Parse("#pragma clang repl optimize(Oz)\n"
+                                      "extern \"C\" int f4() { return 4; }"));
+  EXPECT_TRUE(HasAttr(PTU4, "f4", llvm::Attribute::MinSize));
+
+  // A lower level can be selected again, not just a higher one.
+  auto &PTU5 = cantFail(Interp->Parse("#pragma clang repl optimize(O0)\n"
+                                      "extern \"C\" int f5() { return 5; }"));
+  EXPECT_TRUE(HasAttr(PTU5, "f5", llvm::Attribute::OptimizeNone));
+  EXPECT_FALSE(HasAttr(PTU5, "f5", llvm::Attribute::OptimizeForSize));
+
+  // Code parsed ahead of the pragma stays in the module of its input.
+  auto &PTU6 = cantFail(Interp->Parse("extern \"C\" int f6() { return 6; }\n"
+                                      "extern \"C\" int f7() { return 7; }\n"
+                                      "#pragma clang repl optimize(O2)\n"));
+  EXPECT_TRUE(HasAttr(PTU6, "f6", llvm::Attribute::OptimizeNone));
+}
+
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
   std::vector<const char *> Args;
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
@@ -571,6 +671,21 @@ TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
 
   EXPECT_EQ(TU,
             sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+}
+
+TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
+#ifndef __EMSCRIPTEN__
+  GTEST_SKIP() << "This test only applies to Emscripten builds.";
+#endif
+
+  using Args = std::vector<const char *>;
+  Args ExtraArgs = {"-std=c++23", "-v", "-fwasm-exceptions", "-mllvm",
+                    "-wasm-enable-sjlj"};
+
+  std::unique_ptr<Interpreter> Interp = createInterpreter(ExtraArgs);
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("try { throw 1; } catch (...) { 0; }"));
 }
 
 } // end anonymous namespace

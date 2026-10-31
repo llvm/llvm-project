@@ -12,6 +12,44 @@ int fooPR10616 (int qX ) {
 
 }
 
+namespace issue227349 {
+  int f(bool b) {
+    bool condition = (b && b || b && b);
+    int y = condition ? 0 : 1;
+    return 1 / y; // expected-warning {{Division by zero}}
+  }
+
+  int f2(bool b1, bool b2, bool b3, bool b4) {
+    bool condition = (b1 && b2 || b3 && b4);
+    int y = condition ? 0 : 1;
+    return 1 / y; // expected-warning {{Division by zero}}
+  }
+
+  int f3(bool b) {
+    bool condition = (b && b || b && b) && (b && b || b && b);
+    int y = condition ? 0 : 1;
+    return 1 / y; // expected-warning {{Division by zero}}
+  }
+
+  int f4(bool b) {
+    bool condition = (b && b && b && b);
+    int y = condition ? 0 : 1;
+    return 1 / y; // expected-warning {{Division by zero}}
+  }
+
+  int f5(bool b) {
+    bool condition = (b || b || b || b);
+    int y = condition ? 0 : 1;
+    return 1 / y; // expected-warning {{Division by zero}}
+  }
+
+  int f6(bool b1, bool b2, bool b3, bool b4) {
+    bool condition = (b1 || b2 && b3 && b4);
+    int y = condition ? 0 : 1;
+    return 1 / y; // expected-warning {{Division by zero}}
+  }
+}
+
 namespace GH148875 {
 struct A {
   int x;

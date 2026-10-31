@@ -14,15 +14,21 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_CONTROLHEIGHTREDUCTION_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_CONTROLHEIGHTREDUCTION_H
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
+struct InstrumentationOptions;
+
 class ControlHeightReductionPass
     : public OptionalPassInfoMixin<ControlHeightReductionPass> {
 public:
-  LLVM_ABI ControlHeightReductionPass();
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+private:
+  const InstrumentationOptions *ParsedOpts = nullptr;
+  StringSet<> CHRModules, CHRFunctions;
 };
 } // end namespace llvm
 

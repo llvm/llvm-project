@@ -12,21 +12,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void MemoryRegionInfoCache::Clear() {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  m_region_infos.clear();
-}
+void MemoryRegionInfoCache::Clear() { m_region_infos.Lock()->clear(); }
 
 size_t MemoryRegionInfoCache::GetSize() {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  return m_region_infos.size();
+  return m_region_infos.Lock()->size();
 }
 
 std::optional<MemoryRegionInfo>
 MemoryRegionInfoCache::GetMemoryRegion(addr_t load_addr) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  auto it = m_region_infos.upper_bound(load_addr);
-  if (it == m_region_infos.begin())
+  auto region_infos = m_region_infos.Lock();
+  auto it = region_infos->upper_bound(load_addr);
+  if (it == region_infos->begin())
     return std::nullopt;
   --it;
   if (load_addr < it->second.GetRange().GetRangeEnd())
@@ -36,6 +32,5 @@ MemoryRegionInfoCache::GetMemoryRegion(addr_t load_addr) {
 }
 
 void MemoryRegionInfoCache::AddRegion(const MemoryRegionInfo &ri) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  m_region_infos.insert_or_assign(ri.GetRange().GetRangeBase(), ri);
+  m_region_infos.Lock()->insert_or_assign(ri.GetRange().GetRangeBase(), ri);
 }

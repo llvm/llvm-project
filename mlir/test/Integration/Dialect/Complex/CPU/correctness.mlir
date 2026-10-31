@@ -377,13 +377,40 @@ func.func @entry() {
 
     // In this case, the overflow of exp(real_part) is compensated when
     // sin(imag_part) is close to zero, yielding a finite imaginary part.
-    (90.0238094, 5.900613e-39)
+    (90.0238094, 5.900613e-39),
     // CHECK-NEXT:  inf
     // CHECK-NOT:   inf
     // CHECK-NEXT:  7.3746
-  ]> : tensor<3xcomplex<f32>>
+
+    // C99 Annex G special values: exp(-inf + I*y) = +-0 +- 0*I and
+    // exp(+inf + I*y) = +-inf + NaN*I for y = +-inf or NaN, not NaN + NaN*I.
+    // (-inf, inf)
+    (0xFF800000, 0x7F800000),
+    // CHECK-NEXT:  0
+    // CHECK-NEXT:  0
+    // (-inf, -inf)
+    (0xFF800000, 0xFF800000),
+    // CHECK-NEXT:  0
+    // CHECK-NEXT:  0
+    // (-inf, nan)
+    (0xFF800000, 0x7FC00000),
+    // CHECK-NEXT:  0
+    // CHECK-NEXT:  0
+    // (inf, inf)
+    (0x7F800000, 0x7F800000),
+    // CHECK-NEXT:  inf
+    // CHECK-NEXT:  nan
+    // (inf, -inf)
+    (0x7F800000, 0xFF800000),
+    // CHECK-NEXT:  inf
+    // CHECK-NEXT:  nan
+    // (inf, nan)
+    (0x7F800000, 0x7FC00000)
+    // CHECK-NEXT:  inf
+    // CHECK-NEXT:  nan
+  ]> : tensor<9xcomplex<f32>>
   %exp_test_cast = tensor.cast %exp_test
-    :  tensor<3xcomplex<f32>> to tensor<?xcomplex<f32>>
+    :  tensor<9xcomplex<f32>> to tensor<?xcomplex<f32>>
 
   %exp_func = func.constant @exp : (complex<f32>) -> complex<f32>
   call @test_unary(%exp_test_cast, %exp_func)

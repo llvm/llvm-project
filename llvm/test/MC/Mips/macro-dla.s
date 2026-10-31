@@ -751,5 +751,32 @@ dla $4, extern_sym+8($6) # CHECK: lui $4, %highest(extern_sym+8)        # encodi
 
 .set at
 
+# Absolute aliases, parenthesized expressions, and symbolic aliases.
+.set absolute, 24
+.set alias, symbol+16
+dla $2, absolute          # CHECK: daddiu $2, $zero, 24
+
+dla $2, absolute($4)      # CHECK: daddiu $2, $4, 24
+
+dla $2, (8+16)($4)        # CHECK: daddiu $2, $4, 24
+
+dla $2, ($4)              # CHECK: daddiu $2, $4, 0
+
+dla $2, (symbol+8)($4)    # CHECK: lui $2, %highest(symbol+8)
+                          # CHECK: lui $1, %hi(symbol+8)
+                          # CHECK: daddiu $2, $2, %higher(symbol+8)
+                          # CHECK: daddiu $1, $1, %lo(symbol+8)
+                          # CHECK: dsll32 $2, $2, 0
+                          # CHECK: daddu $2, $2, $1
+                          # CHECK: daddu $2, $2, $4
+
+dla $2, alias($4)         # CHECK: lui $2, %highest(alias)
+                          # CHECK: lui $1, %hi(alias)
+                          # CHECK: daddiu $2, $2, %higher(alias)
+                          # CHECK: daddiu $1, $1, %lo(alias)
+                          # CHECK: dsll32 $2, $2, 0
+                          # CHECK: daddu $2, $2, $1
+                          # CHECK: daddu $2, $2, $4
+
 .option pic2
 #dla $5, symbol

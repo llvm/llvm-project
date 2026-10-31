@@ -61,14 +61,18 @@ public:
   }
 };
 
-#define LIST_RSQRT_TESTS(T, func)                                              \
-  using LlvmLibcRsqrtTest = RsqrtTest<T, T>;                                   \
-  TEST_F(LlvmLibcRsqrtTest, DenormalValues) { test_denormal_values(&func); }   \
-  TEST_F(LlvmLibcRsqrtTest, NormalRange) { test_normal_range(&func); }
+#define LIST_RSQRT_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = RsqrtTest<T, T>;                                \
+  TEST_F(LlvmLibc##Name##Test, DenormalValues) {                               \
+    test_denormal_values(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
-#define LIST_NARROWING_RSQRT_TESTS(OutType, InType, func)                      \
-  using LlvmLibcRsqrtTest = RsqrtTest<OutType, InType>;                        \
-  TEST_F(LlvmLibcRsqrtTest, DenormalValues) { test_denormal_values(&func); }   \
-  TEST_F(LlvmLibcRsqrtTest, NormalRange) { test_normal_range(&func); }
+#define LIST_NARROWING_RSQRT_TESTS(Name, OutType, InType, func)                \
+  using LlvmLibc##Name##Test = RsqrtTest<OutType, InType>;                     \
+  TEST_F(LlvmLibc##Name##Test, DenormalValues) {                               \
+    test_denormal_values(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_RSQRTTEST_H

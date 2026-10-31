@@ -8,15 +8,15 @@
 
 define void @clmul() {
 ; RV32-LABEL: 'clmul'
-; RV32-NEXT:  Cost Model: Found costs of RThru:1152 CodeSize:384 Lat:384 SizeLat:384 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
-; RV32-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:192 Lat:192 SizeLat:192 for: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
+; RV32-NEXT:  Cost Model: Found costs of RThru:1536 CodeSize:384 Lat:384 SizeLat:384 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
+; RV32-NEXT:  Cost Model: Found costs of RThru:384 CodeSize:192 Lat:192 SizeLat:192 for: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
 ; RV32-NEXT:  Cost Model: Found costs of 96 for: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
 ; RV32-NEXT:  Cost Model: Found costs of 48 for: %call_i16 = call i16 @llvm.clmul.i16(i16 poison, i16 poison)
 ; RV32-NEXT:  Cost Model: Found costs of 24 for: %call_i8 = call i8 @llvm.clmul.i8(i8 poison, i8 poison)
 ; RV32-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; RV64-LABEL: 'clmul'
-; RV64-NEXT:  Cost Model: Found costs of RThru:640 CodeSize:384 Lat:384 SizeLat:384 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
+; RV64-NEXT:  Cost Model: Found costs of RThru:768 CodeSize:384 Lat:384 SizeLat:384 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
 ; RV64-NEXT:  Cost Model: Found costs of 192 for: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
 ; RV64-NEXT:  Cost Model: Found costs of 96 for: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
 ; RV64-NEXT:  Cost Model: Found costs of 48 for: %call_i16 = call i16 @llvm.clmul.i16(i16 poison, i16 poison)
@@ -40,8 +40,8 @@ define void @clmul() {
 ; RV64ZBC-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; RV32ZVBC-LABEL: 'clmul'
-; RV32ZVBC-NEXT:  Cost Model: Found costs of RThru:1152 CodeSize:384 Lat:384 SizeLat:384 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
-; RV32ZVBC-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:192 Lat:192 SizeLat:192 for: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
+; RV32ZVBC-NEXT:  Cost Model: Found costs of RThru:1536 CodeSize:384 Lat:384 SizeLat:384 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
+; RV32ZVBC-NEXT:  Cost Model: Found costs of RThru:384 CodeSize:192 Lat:192 SizeLat:192 for: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
 ; RV32ZVBC-NEXT:  Cost Model: Found costs of 96 for: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
 ; RV32ZVBC-NEXT:  Cost Model: Found costs of 48 for: %call_i16 = call i16 @llvm.clmul.i16(i16 poison, i16 poison)
 ; RV32ZVBC-NEXT:  Cost Model: Found costs of 24 for: %call_i8 = call i8 @llvm.clmul.i8(i8 poison, i8 poison)

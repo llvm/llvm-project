@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 
 unsigned long page_size;
@@ -43,10 +44,19 @@ int main() {
   assert(a.sa_flags & SA_SIGINFO);
 
   guard = mmap(0, 3 * page_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
-  guard = (char*)guard + page_size;  // work around a kernel bug 
+  guard = (char *)guard + page_size; // work around a kernel bug
+
+  struct timespec start, now;
+  clock_gettime(CLOCK_MONOTONIC, &start);
+
   for (int i = 0; i < 1000000; i++) {
+    if (i % 1000 == 0 && i > 0) {
+      clock_gettime(CLOCK_MONOTONIC, &now);
+      if (now.tv_sec - start.tv_sec >= 10)
+        break;
+    }
     mprotect(guard, page_size, PROT_NONE);
-    *(int*)guard = 1;
+    *(int *)guard = 1;
   }
   sigaction(SIGSEGV, &old, 0);
   fprintf(stderr, "DONE\n");

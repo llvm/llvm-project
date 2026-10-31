@@ -1,5 +1,5 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -mcpu=tahiti -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -mcpu=gfx908 -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu9.08-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 ; Make sure nothing crashes on targets with or without AGPRs
 
 ; CHECK-LABEL: for function 'inline_asm_1_sgpr_virtreg_output':

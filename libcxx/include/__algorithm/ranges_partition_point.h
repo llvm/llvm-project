@@ -38,8 +38,7 @@ namespace ranges {
 struct __partition_point {
   // TODO(ranges): delegate to the classic algorithm.
   template <class _Iter, class _Sent, class _Proj, class _Pred>
-  _LIBCPP_HIDE_FROM_ABI constexpr static _Iter
-  __partition_point_fn_impl(_Iter&& __first, _Sent&& __last, _Pred& __pred, _Proj& __proj) {
+  constexpr static _Iter __partition_point_fn_impl(_Iter&& __first, _Sent&& __last, _Pred& __pred, _Proj& __proj) {
     auto __len = ranges::distance(__first, __last);
 
     while (__len != 0) {
@@ -62,15 +61,14 @@ struct __partition_point {
             sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iter operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) const {
+  constexpr _Iter operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) const {
     return __partition_point_fn_impl(std::move(__first), std::move(__last), __pred, __proj);
   }
 
   template <forward_range _Range,
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
-  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range>
-  operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
+  constexpr borrowed_iterator_t<_Range> operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
     return __partition_point_fn_impl(ranges::begin(__range), ranges::end(__range), __pred, __proj);
   }
 };

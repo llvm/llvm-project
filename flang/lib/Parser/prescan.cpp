@@ -35,6 +35,7 @@ Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
     bool isNestedInIncludeDirective)
     : messages_{that.messages_}, cooked_{that.cooked_}, preprocessor_{prepro},
       allSources_{that.allSources_}, features_{that.features_},
+      preprocessingEnabled_{that.preprocessingEnabled_},
       preprocessingOnly_{that.preprocessingOnly_},
       expandIncludeLines_{that.expandIncludeLines_},
       isNestedInIncludeDirective_{isNestedInIncludeDirective},
@@ -68,6 +69,17 @@ static inline int IsSpaceOrTab(const char *p) {
 
 static inline constexpr bool IsFixedFormCommentChar(char ch) {
   return ch == '!' || ch == '*' || ch == 'C' || ch == 'c';
+}
+
+static bool HasTabInLabelField(const char *col1, const char *limit) {
+  std::uint64_t len{static_cast<std::uint64_t>(limit - col1)};
+  int n{len < 6 ? static_cast<int>(len) : 6};
+  for (int i{0}; i < n && col1[i] != '\n'; ++i) {
+    if (col1[i] == '\t') {
+      return true;
+    }
+  }
+  return false;
 }
 
 static void NormalizeCompilerDirectiveCommentMarker(TokenSequence &dir) {
@@ -436,6 +448,25 @@ void Prescanner::LabelField(TokenSequence &token) {
   int colOffset{column_ - 1};
   const char *start{at_};
   std::optional<int> badColumn;
+
+  // Skip C-style comments.
+  if (preprocessingEnabled_) {
+    const char *p{SkipWhiteSpace(start)};
+    std::uint64_t spaces{HasTabInLabelField(start - colOffset, limit_)
+            ? 6
+            : static_cast<std::uint64_t>(p - start)};
+    if (colOffset + spaces < 6 && IsCComment(p)) {
+      at_ += spaces;
+      column_ += spaces;
+      SkipCComments(/*reportUnterminated=*/true);
+      if (at_ > start + spaces) {
+        WarnCComment(p);
+        colOffset = column_ - 1;
+        start = at_;
+      }
+    }
+  }
+
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -572,7 +603,8 @@ void Prescanner::SkipToEndOfLine() {
 }
 
 bool Prescanner::MustSkipToEndOfLine() const {
-  if (inFixedForm_ && column_ > fixedFormColumnLimit_ && !tabInCurrentLine_) {
+  if (inFixedForm_ && IsPastFixedFormColumnLimit(column_) &&
+      !tabInCurrentLine_) {
     return true; // skip over ignored columns in right margin (73:80)
   } else if (*at_ == '!' && !inCharLiteral_ &&
       (!inFixedForm_ || tabInCurrentLine_ || column_ != 6)) {
@@ -602,7 +634,7 @@ void Prescanner::NextChar() {
 // fixed form, and all forms of line continuation.
 bool Prescanner::SkipToNextSignificantCharacter() {
   if (inPreprocessorDirective_) {
-    SkipCComments();
+    SkipCComments(/*reportUnterminated=*/false);
     return false;
   } else {
     auto anyContinuationLine{false};
@@ -626,15 +658,22 @@ bool Prescanner::SkipToNextSignificantCharacter() {
   }
 }
 
-void Prescanner::SkipCComments() {
+void Prescanner::SkipCComments(bool reportUnterminated) {
   while (true) {
     if (IsCComment(at_)) {
       if (const char *after{SkipCComment(at_)}) {
         UpdateSourcePositionAfterSkip(after);
       } else {
-        // Don't emit any messages about unclosed C-style comments, because
-        // the sequence /* can appear legally in a FORMAT statement.  There's
-        // no ambiguity, since the sequence */ cannot appear legally.
+        // Error messages for unterminated C-style comments should be emitted
+        // only when preprocessing is enabled, since the sequence /* can
+        // appear legally in a FORMAT statement.
+        // At the moment, errors are emitted only for some code paths, such as
+        // when processing label fields, while others keep the old behavior of
+        // ignoring unterminated C-style comments.
+        // TODO Always emit an error when preprocessing is enabled.
+        if (preprocessingEnabled_ && reportUnterminated) {
+          Say(GetProvenance(at_), "unterminated C-style comment"_err_en_US);
+        }
         break;
       }
     } else if (inPreprocessorDirective_ && at_[0] == '\\' && at_ + 2 < limit_ &&
@@ -766,39 +805,46 @@ void Prescanner::UpdateSourcePositionAfterSkip(const char *after) {
 
 bool Prescanner::NextToken(TokenSequence &tokens) {
   CHECK(at_ >= start_ && at_ < limit_);
-  if (InFixedFormSource() && !preprocessingOnly_) {
+  bool compilingFixedForm{InFixedFormSource() && !preprocessingOnly_};
+  if (compilingFixedForm) {
     SkipSpaces();
-  } else {
-    if (*at_ == '/' && IsCComment(at_)) {
-      // Recognize and skip over classic C style /*comments*/ when
-      // outside a character literal.
-      WarnCComment(at_);
-      SkipCComments();
+  }
+  if (*at_ == '/' && IsCComment(at_) &&
+      (!compilingFixedForm || preprocessingEnabled_)) {
+    // Recognize and skip over classic C style /*comments*/ when
+    // outside a character literal.
+    const char *before{at_};
+    SkipCComments(/*reportUnterminated=*/false);
+    if (at_ > before) {
+      WarnCComment(before);
     }
-    if (IsSpaceOrTab(at_)) {
-      // Compress free-form white space into a single space character.
-      const auto theSpace{at_};
-      char previous{at_ <= start_ ? ' ' : at_[-1]};
-      NextChar();
+    if (compilingFixedForm) {
       SkipSpaces();
-      if (*at_ == '\n' && !omitNewline_) {
-        // Discard white space at the end of a line.
-      } else if (!inPreprocessorDirective_ &&
-          (previous == '(' || *at_ == '(' || *at_ == ')')) {
-        // Discard white space before/after '(' and before ')', unless in a
-        // preprocessor directive.  This helps yield space-free contiguous
-        // names for generic interfaces like OPERATOR( + ) and
-        // READ ( UNFORMATTED ), without misinterpreting #define f (notAnArg).
-        // This has the effect of silently ignoring the illegal spaces in
-        // the array constructor ( /1,2/ ) but that seems benign; it's
-        // hard to avoid that while still removing spaces from OPERATOR( / )
-        // and OPERATOR( // ).
-      } else {
-        // Preserve the squashed white space as a single space character.
-        tokens.PutNextTokenChar(' ', GetProvenance(theSpace));
-        tokens.CloseToken();
-        return true;
-      }
+    }
+  }
+  if (!compilingFixedForm && IsSpaceOrTab(at_)) {
+    // Compress free-form white space into a single space character.
+    const auto theSpace{at_};
+    char previous{at_ <= start_ ? ' ' : at_[-1]};
+    NextChar();
+    SkipSpaces();
+    if (*at_ == '\n' && !omitNewline_) {
+      // Discard white space at the end of a line.
+    } else if (!inPreprocessorDirective_ &&
+        (previous == '(' || *at_ == '(' || *at_ == ')')) {
+      // Discard white space before/after '(' and before ')', unless in a
+      // preprocessor directive.  This helps yield space-free contiguous
+      // names for generic interfaces like OPERATOR( + ) and
+      // READ ( UNFORMATTED ), without misinterpreting #define f (notAnArg).
+      // This has the effect of silently ignoring the illegal spaces in
+      // the array constructor ( /1,2/ ) but that seems benign; it's
+      // hard to avoid that while still removing spaces from OPERATOR( / )
+      // and OPERATOR( // ).
+    } else {
+      // Preserve the squashed white space as a single space character.
+      tokens.PutNextTokenChar(' ', GetProvenance(theSpace));
+      tokens.CloseToken();
+      return true;
     }
   }
   brokenToken_ = false;
@@ -880,12 +926,13 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
           !preprocessingOnly_ && IsSpaceOrTab(at_)) {
         const char *probe{at_};
         int col{column_};
-        while (col <= fixedFormColumnLimit_ && IsSpaceOrTab(probe)) {
+        while (!IsPastFixedFormColumnLimit(col) && IsSpaceOrTab(probe)) {
           probe += IsSpaceOrTab(probe);
           ++col;
         }
-        if (col > fixedFormColumnLimit_ || *probe == '\n' || *probe == '\r' ||
-            (*probe == '!' && col <= fixedFormColumnLimit_)) {
+        if (IsPastFixedFormColumnLimit(col) || *probe == '\n' ||
+            *probe == '\r' ||
+            (*probe == '!' && !IsPastFixedFormColumnLimit(col))) {
           SkipSpaces();
           hadContinuation = SkipToNextSignificantCharacter();
         }
@@ -1201,11 +1248,14 @@ void Prescanner::Hollerith(
   inCharLiteral_ = false;
 }
 
-// In fixed form, source card images must be processed as if they were at
-// least 72 columns wide, at least in character literal contexts.
+// In fixed form with a column limit, source card images must be processed as
+// if they were at least that many columns wide, at least in character literal
+// contexts. With no limit (-ffixed-line-length=none or =0), no padding is
+// done, which matches gfortran.
 bool Prescanner::PadOutCharacterLiteral(TokenSequence &tokens) {
-  while (inFixedForm_ && !tabInCurrentLine_ && at_[1] == '\n') {
-    if (column_ < fixedFormColumnLimit_) {
+  while (inFixedForm_ && fixedFormColumnLimit_ && !tabInCurrentLine_ &&
+      at_[1] == '\n') {
+    if (column_ < *fixedFormColumnLimit_) {
       tokens.PutNextTokenChar(' ', spaceProvenance_);
       ++column_;
       return true;
@@ -1254,7 +1304,7 @@ bool Prescanner::IsFixedFormCommentLine(const char *start) const {
       break;
     }
   }
-  if (!anyTabs && p >= start + fixedFormColumnLimit_) {
+  if (!anyTabs && IsPastFixedFormColumnLimit(p - start + 1)) {
     return true;
   }
   if (*p == '!' && !inCharLiteral_ && (anyTabs || p != start + 5)) {
@@ -1424,18 +1474,44 @@ bool Prescanner::SkipCommentLine(bool afterAmpersand) {
   return false;
 }
 
-const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
+const char *Prescanner::FixedFormContinuationLine(
+    bool atNewline, const char *&cComment, const char *&unterminatedCComment) {
+  cComment = nullptr;
+  unterminatedCComment = nullptr;
   if (IsAtEnd()) {
     return nullptr;
   }
   tabInCurrentLine_ = false;
   char col1{*nextLine_};
+  const char *afterWhiteSpace{SkipWhiteSpace(nextLine_)};
+  const char *afterCComment{nullptr};
+  if (preprocessingEnabled_ && IsCComment(afterWhiteSpace) &&
+      !HasTabInLabelField(nextLine_, limit_)) {
+    afterCComment = SkipCComment(afterWhiteSpace);
+    if (afterCComment == nullptr) {
+      unterminatedCComment = afterWhiteSpace;
+    } else {
+      cComment = afterWhiteSpace;
+    }
+  }
+  std::uint64_t maxLineLength{static_cast<std::uint64_t>(limit_ - nextLine_)};
+  std::uint64_t n{maxLineLength < 5 ? maxLineLength - 1 : 4};
+  int trailingSpaces{0};
+  for (std::uint64_t i{afterCComment
+               ? static_cast<std::uint64_t>(afterCComment - nextLine_)
+               : 1};
+      i <= n && nextLine_[i] == ' '; ++i) {
+    ++trailingSpaces;
+  }
+  bool cCommentAndSpaces{afterCComment &&
+      afterCComment - nextLine_ + trailingSpaces == 5 &&
+      std::memchr(nextLine_, '\n', n + 1) == nullptr};
   bool canBeNonDirectiveContinuation{
-      (col1 == ' ' ||
-          ((col1 == 'D' || col1 == 'd') &&
-              features_.IsEnabled(LanguageFeature::OldDebugLines))) &&
-      nextLine_[1] == ' ' && nextLine_[2] == ' ' && nextLine_[3] == ' ' &&
-      nextLine_[4] == ' '};
+      ((col1 == ' ' ||
+           ((col1 == 'D' || col1 == 'd') &&
+               features_.IsEnabled(LanguageFeature::OldDebugLines))) &&
+          trailingSpaces == 4) ||
+      cCommentAndSpaces};
   if (InCompilerDirective() && !(InConditionalLine() && !preprocessingOnly_)) {
     // !$ under -E is not continued, but deferred to later compilation
     if (IsFixedFormCommentChar(col1) &&
@@ -1500,10 +1576,22 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
     if (canBeNonDirectiveContinuation) {
       const char *col6{nextLine_ + 5};
       if (*col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6)) {
-        if ((*col6 == 'i' || *col6 == 'I') && IsIncludeLine(nextLine_)) {
-          // It's an INCLUDE line, not a continuation
-        } else {
-          return nextLine_ + 6;
+        const char *afterCol6CComment{nullptr};
+        if (preprocessingEnabled_ && IsCComment(col6) &&
+            !unterminatedCComment) {
+          afterCol6CComment = SkipCComment(col6);
+          if (afterCol6CComment == nullptr) {
+            unterminatedCComment = col6;
+          } else if (!cComment) {
+            cComment = col6;
+          }
+        }
+        if (afterCol6CComment == nullptr) {
+          if ((*col6 == 'i' || *col6 == 'I') && IsIncludeLine(nextLine_)) {
+            // It's an INCLUDE line, not a continuation
+          } else {
+            return nextLine_ + 6;
+          }
         }
       }
     }
@@ -1633,7 +1721,17 @@ bool Prescanner::FixedFormContinuation(bool atNewline) {
     return false;
   }
   do {
-    if (const char *cont{FixedFormContinuationLine(atNewline)}) {
+    const char *cComment{nullptr};
+    const char *unterminatedCComment{nullptr};
+    if (const char *cont{FixedFormContinuationLine(
+            atNewline, cComment, unterminatedCComment)}) {
+      if (cComment) {
+        WarnCComment(cComment);
+      }
+      if (unterminatedCComment) {
+        Say(GetProvenance(unterminatedCComment),
+            "unterminated C-style comment"_err_en_US);
+      }
       BeginSourceLine(cont);
       column_ = 7;
       NextLine();
@@ -1755,7 +1853,7 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
       (features_.IsEnabled(LanguageFeature::OpenMP) &&
           std::strcmp(sentinel, "$omp") == 0)};
   if (isOpenMPSentinelScan) {
-    for (; column <= fixedFormColumnLimit_; ++column, ++p) {
+    for (; !IsPastFixedFormColumnLimit(column); ++column, ++p) {
       if (IsSpaceOrTab(p)) {
       } else if (*p == '!') {
         return std::nullopt; // sentinel + blanks + ! is a comment, not a

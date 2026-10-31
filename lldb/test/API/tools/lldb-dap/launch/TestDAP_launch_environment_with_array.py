@@ -12,7 +12,6 @@ class TestDAP_launch_environment_with_array(DAPTestCaseBase):
     Tests launch of a simple program with environment variables
     """
 
-    @skipIfWindows
     def test(self):
         program = self.getBuildArtifact("a.out")
         expected_env = [

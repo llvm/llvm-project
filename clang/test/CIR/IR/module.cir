@@ -17,3 +17,8 @@ module attributes {cir.lang = #cir.lang<opencl_c>} { }
 
 // CHECK: module attributes {cir.lang = #cir.lang<opencl_cxx>}
 module attributes {cir.lang = #cir.lang<opencl_cxx>} { }
+
+// -----
+
+// CHECK: module attributes {cir.frame_pointer = #cir.frame_pointer<all>}
+module attributes {cir.frame_pointer = #cir.frame_pointer<all>} { }

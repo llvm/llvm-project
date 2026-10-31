@@ -46,7 +46,9 @@ static cl::opt<unsigned> ModuleIndex("n", cl::Required,
 
 int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&ModextractCategory, &getColorCategory()});
-  cl::ParseCommandLineOptions(argc, argv, "Module extractor");
+  LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
+                              "Module extractor");
 
   ExitOnError ExitOnErr("llvm-modextract: error: ");
 
@@ -54,7 +56,6 @@ int main(int argc, char **argv) {
       ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(InputFilename)));
   std::vector<BitcodeModule> Ms = ExitOnErr(getBitcodeModuleList(*MB));
 
-  LLVMContext Context;
   if (ModuleIndex >= Ms.size()) {
     errs() << "llvm-modextract: error: module index out of range; bitcode file "
               "contains "

@@ -102,9 +102,9 @@ public:
   }
 };
 
-#define LIST_MODF_TESTS(T, func)                                               \
-  using LlvmLibcModfTest = ModfTest<T>;                                        \
-  TEST_F(LlvmLibcModfTest, SpecialNumbers) { testSpecialNumbers(&func); }      \
-  TEST_F(LlvmLibcModfTest, RoundedNubmers) { testIntegers(&func); }            \
-  TEST_F(LlvmLibcModfTest, Fractions) { testFractions(&func); }                \
-  TEST_F(LlvmLibcModfTest, Range) { testRange(&func); }
+#define LIST_MODF_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = ModfTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testIntegers(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }

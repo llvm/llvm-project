@@ -3,10 +3,12 @@
 
 import re
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
 class MixedLanguagesTestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_language_of_frame(self):
         """Test that the language defaults to the language of the current frame."""
         self.build()

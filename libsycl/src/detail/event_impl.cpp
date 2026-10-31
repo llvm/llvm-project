@@ -12,6 +12,8 @@
 #include <detail/platform_impl.hpp>
 #include <detail/queue_impl.hpp>
 
+#include <tuple>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {

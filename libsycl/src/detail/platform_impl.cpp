@@ -16,13 +16,15 @@
 #include <detail/platform_impl.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <memory>
+#include <utility>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-bool PlatformImpl::rediscoverIfEmpty = false;
+bool PlatformImpl::MRediscoverIfEmpty = false;
 
 const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
   static auto InitPlatforms = []() {
@@ -47,7 +49,7 @@ const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
     return true;
   }();
   auto &PlatformCache = getPlatformCache();
-  if (rediscoverIfEmpty && PlatformCache.empty())
+  if (MRediscoverIfEmpty && PlatformCache.empty())
     InitPlatforms();
 
   return PlatformCache;
@@ -92,7 +94,7 @@ bool PlatformImpl::has(aspect Aspect) const {
 
 void PlatformImpl::iterateDevices(
     info::device_type DeviceType,
-    std::function<void(DeviceImpl *)> callback) const {
+    const std::function<void(DeviceImpl *)> &Callback) const {
   // Early exit if host/custom/accelerator device is requested:
   // - host device is deprecated and not required by the SYCL 2020
   // specification.
@@ -110,14 +112,14 @@ void PlatformImpl::iterateDevices(
   // As a temporal solution just return the first device for DeviceType ==
   // automatic.
   if (DeviceType == info::device_type::automatic) {
-    callback(DeviceImpls[0].get());
+    Callback(DeviceImpls[0].get());
     return;
   }
 
   bool KeepAll = DeviceType == info::device_type::all;
   for (auto &Impl : DeviceImpls) {
     if (KeepAll || DeviceType == Impl->getDeviceType())
-      callback(Impl.get());
+      Callback(Impl.get());
   }
 }
 

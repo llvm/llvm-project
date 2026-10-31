@@ -151,7 +151,15 @@ set(MLIR_ENABLE_NVPTXCOMPILER 0 CACHE BOOL
     "Statically link the nvptxlibrary instead of calling ptxas as a subprocess \
     for compiling PTX to cubin")
 
-set(MLIR_ENABLE_PDL_IN_PATTERNMATCH 1 CACHE BOOL "Enable PDL in PatternMatch")
+# Avoid pulling PDL into builds that only use MLIR as a dependency.
+if("mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  set(MLIR_ENABLE_PDL_IN_PATTERNMATCH_default 0)
+else()
+  set(MLIR_ENABLE_PDL_IN_PATTERNMATCH_default 1)
+endif()
+set(MLIR_ENABLE_PDL_IN_PATTERNMATCH
+    ${MLIR_ENABLE_PDL_IN_PATTERNMATCH_default} CACHE BOOL
+    "Enable PDL in PatternMatch")
 
 option(MLIR_INCLUDE_TESTS
        "Generate build targets for the MLIR unit tests."

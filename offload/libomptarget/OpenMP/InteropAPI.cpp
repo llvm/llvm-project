@@ -8,6 +8,7 @@
 
 #include "OpenMP/InteropAPI.h"
 #include "OpenMP/InternalTypes.h"
+#include "OpenMP/OffloadRTL.h"
 #include "OpenMP/omp.h"
 
 #include "OffloadPolicy.h"

@@ -27,7 +27,6 @@
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <map>
@@ -761,7 +760,6 @@ std::unique_ptr<Module> llvm::parseModule(const uint8_t *Data, size_t Size,
       StringRef(reinterpret_cast<const char *>(Data), Size), "Fuzzer input",
       /*RequiresNullTerminator=*/false);
 
-  SMDiagnostic Err;
   auto M = parseBitcodeFile(Buffer->getMemBufferRef(), Context);
   if (Error E = M.takeError()) {
     errs() << toString(std::move(E)) << "\n";

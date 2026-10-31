@@ -43,6 +43,16 @@ define <vscale x 2 x i64> @uclampi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 16 x i8> @uclampi8_commuted_min(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: uclampi8_commuted_min:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uclamp z0.b, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %max = tail call <vscale x 16 x i8> @llvm.umax.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  %res = tail call <vscale x 16 x i8> @llvm.umin.nxv16i8(<vscale x 16 x i8> %c, <vscale x 16 x i8> %max)
+  ret <vscale x 16 x i8> %res
+}
+
 define <vscale x 16 x i8> @sclampi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
 ; CHECK-LABEL: sclampi8:
 ; CHECK:       // %bb.0:
@@ -83,6 +93,16 @@ define <vscale x 2 x i64> @sclampi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 16 x i8> @sclampi8_commuted_min(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: sclampi8_commuted_min:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sclamp z0.b, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %max = tail call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  %res = tail call <vscale x 16 x i8> @llvm.smin.nxv16i8(<vscale x 16 x i8> %c, <vscale x 16 x i8> %max)
+  ret <vscale x 16 x i8> %res
+}
+
 define <vscale x 8 x bfloat> @fclampbf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c) {
 ; CHECK-LABEL: fclampbf16:
 ; CHECK:       // %bb.0:
@@ -121,6 +141,16 @@ define <vscale x 2 x double> @fclampf64(<vscale x 2 x double> %a, <vscale x 2 x 
   %min = tail call <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b)
   %res = tail call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> %min, <vscale x 2 x double> %c)
   ret <vscale x 2 x double> %res
+}
+
+define <vscale x 4 x float> @fclampf32_commuted_min(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
+; CHECK-LABEL: fclampf32_commuted_min:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fclamp z0.s, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %max = tail call <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b)
+  %res = tail call <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float> %c, <vscale x 4 x float> %max)
+  ret <vscale x 4 x float> %res
 }
 
 declare <vscale x 16 x i8> @llvm.umax.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)

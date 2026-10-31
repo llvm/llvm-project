@@ -113,12 +113,12 @@ for.cond.cleanup:
 
 !0 = !{ !1 }
 !1 = distinct !{ !1, !2 }
-!2 = distinct !{ !2 }
+!2 = distinct !{ !2, i1 false }
 !3 = distinct !{ !3, !2 }
 !4 = !{ !3 }
 
 ; CHECK: [[SCOPE0_LIST]] = !{[[SCOPE0:!.*]]}
 ; CHECK: [[SCOPE0]] = distinct !{[[SCOPE0]], [[SCOPE0_DOM:!.*]]}
-; CHECK: [[SCOPE0_DOM]] = distinct !{[[SCOPE0_DOM]]}
+; CHECK: [[SCOPE0_DOM]] = distinct !{[[SCOPE0_DOM]], i1 false}
 ; CHECK: [[SCOPE4_LIST]] = !{[[SCOPE4:!.*]]}
 ; CHECK: [[SCOPE4]] = distinct !{[[SCOPE4]], [[SCOPE0_DOM]]}

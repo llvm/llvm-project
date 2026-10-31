@@ -40,7 +40,7 @@ module m
   end
   attributes(device) subroutine s6_bad
     badstmt(x) = hostfunc(x)
-    !ERROR: 'hostfunc' may not be called in device code
+    !ERROR: 'hostfunc', a procedure with the HOST attribute, may not be called from device code
     x = badstmt(x)
   end
   !ERROR: A function may not have ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)

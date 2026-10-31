@@ -41,9 +41,9 @@ M m;
 // already a 32-bit integer here.
 // CIR-DAG: !rec_M = !cir.struct<"M" {data !s32i, data !s32i}>
 // CIR-DAG: !cir.ptr<!cir.void> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32, index = 32>
-// CIR: cir.global external @s = #cir.zero : !rec_S {alignment = 4 : i64}
-// CIR: cir.global external @m = #cir.const_record<{#cir.int<-1> : !s32i, #cir.int<0> : !s32i}> : !rec_M {alignment = 4 : i64}
-// CIR: cir.global{{.*}}@_ZTV1A = #cir.vtable<{{.*}}{alignment = 4 : i64}
+// CIR: cir.global external @s = #cir.zero : !rec_S align(4)
+// CIR: cir.global external @m = #cir.const_record<{#cir.int<-1> : !s32i, #cir.int<0> : !s32i}> : !rec_M align(4)
+// CIR: cir.global{{.*}}@_ZTV1A = #cir.vtable<{{.*}}align(4)
 
 // LLVM: @s = global %struct.S zeroinitializer, align 4
 // LLVM: @m = global %struct.M { i32 -1, i32 0 }, align 4

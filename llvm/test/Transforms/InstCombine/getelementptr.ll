@@ -1737,6 +1737,9 @@ define ptr @gep_to_i8_nusw_nuw(ptr %p) {
   ret ptr %gep
 }
 
+@CA = constant [4 x i32] [i32 0, i32 1, i32 2, i32 3]
+@CB = constant [4 x i32] [i32 4, i32 5, i32 6, i32 7]
+
 define ptr @gep_sel_const(i1 %c) {
 ; CHECK-LABEL: @gep_sel_const(
 ; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[C:%.*]], ptr getelementptr (i8, ptr @A, i64 5), ptr getelementptr (i8, ptr @B, i64 5)
@@ -1755,6 +1758,53 @@ define ptr @gep_sel_const_nuw(i1 %c) {
   %sel = select i1 %c, ptr @A, ptr @B
   %gep = getelementptr nuw i8, ptr %sel, i64 5
   ret ptr %gep
+}
+
+; Negative test: threading the gep through a shared select replaces one select
+; with one select per user.
+define ptr @gep_sel_const_multi_use(i1 %c) {
+; CHECK-LABEL: @gep_sel_const_multi_use(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr @A, ptr @B
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[SEL]], i64 5
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw i8, ptr [[SEL]], i64 9
+; CHECK-NEXT:    call void @use(ptr nonnull [[GEP1]])
+; CHECK-NEXT:    ret ptr [[GEP2]]
+;
+  %sel = select i1 %c, ptr @A, ptr @B
+  %gep1 = getelementptr nuw i8, ptr %sel, i64 5
+  %gep2 = getelementptr nuw i8, ptr %sel, i64 9
+  call void @use(ptr %gep1)
+  ret ptr %gep2
+}
+
+define i32 @gep_sel_const_global_load(i1 %c) {
+; CHECK-LABEL: @gep_sel_const_global_load(
+; CHECK-NEXT:    [[LOAD:%.*]] = select i1 [[C:%.*]], i32 1, i32 5
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %gep = getelementptr nuw i8, ptr %sel, i64 4
+  %load = load i32, ptr %gep, align 4
+  ret i32 %load
+}
+
+; Both arms are constant globals with a definitive initializer, so each load
+; folds to a constant even though the select is shared and cannot be threaded.
+define i32 @gep_sel_const_global_three_uses(i1 %c) {
+; CHECK-LABEL: @gep_sel_const_global_three_uses(
+; CHECK-NEXT:    [[ADD2:%.*]] = select i1 [[C:%.*]], i32 6, i32 18
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %sel = select i1 %c, ptr @CA, ptr @CB
+  %gep1 = getelementptr nuw i8, ptr %sel, i64 4
+  %gep2 = getelementptr nuw i8, ptr %sel, i64 8
+  %gep3 = getelementptr nuw i8, ptr %sel, i64 12
+  %l1 = load i32, ptr %gep1, align 4
+  %l2 = load i32, ptr %gep2, align 4
+  %l3 = load i32, ptr %gep3, align 4
+  %add1 = add i32 %l1, %l2
+  %add2 = add i32 %add1, %l3
+  ret i32 %add2
 }
 
 define ptr @gep_of_udiv(ptr %p, i64 %x) {

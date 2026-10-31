@@ -25,7 +25,11 @@
 #include "mlir/Dialect/EmitC/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/NVVM/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/ROCDL/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/SPIRV/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/XeVM/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MLProgram/Transforms/Passes.h"
@@ -73,6 +77,10 @@ void mlir::registerAllPasses() {
   bufferization::registerBufferizationPasses();
   func::registerFuncPasses();
   registerGPUPasses();
+  registerGPUNVVMPasses();
+  registerGPUROCDLPasses();
+  registerGPUSPIRVPasses();
+  registerGPUXeVMPasses();
   registerLinalgPasses();
   registerNVGPUPasses();
   NVVM::registerNVVMPasses();

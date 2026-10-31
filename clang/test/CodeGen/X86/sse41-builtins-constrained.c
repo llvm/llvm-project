@@ -58,8 +58,8 @@ __m128 test_mm_round_ps_fround_no_exc(__m128 x) {
 __m128d test_mm_round_sd_ceil(__m128d x, __m128d y) {
   // CHECK-LABEL: test_mm_round_sd_ceil
   // CHECK: %[[A:.*]] = extractelement <2 x double> %{{.*}}, i32 0
-  // CHECK: %[[B:.*]] = call double @llvm.experimental.constrained.ceil.f64(double %[[A:.*]], metadata !"fpexcept.ignore")
-  // CHECK: %{{.*}} = insertelement <2 x double> %0, double %[[B:.*]], i32 0
+  // CHECK: %[[B:.*]] = call double @llvm.experimental.constrained.ceil.f64(double %[[A]], metadata !"fpexcept.ignore")
+  // CHECK: %{{.*}} = insertelement <2 x double> %{{.*}}, double %[[B]], i32 0
   return _mm_round_sd(x, y, 0b1010);
 }
 
@@ -78,19 +78,19 @@ __m128d test_mm_round_sd_fround_no_exc(__m128d x, __m128d y) {
 __m128 test_mm_round_ss_trunc(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_round_ss_trunc
   // CHECK: %[[A:.*]] = extractelement <4 x float> %{{.*}}, i32 0
-  // CHECK: %[[B:.*]] = call float @llvm.experimental.constrained.trunc.f32(float %[[A:.*]], metadata !"fpexcept.ignore") 
-  // CHECK: %{{.*}} = insertelement <4 x float> %0, float %[[B:.*]], i32 0
+  // CHECK: %[[B:.*]] = call float @llvm.experimental.constrained.trunc.f32(float %[[A]], metadata !"fpexcept.ignore")
+  // CHECK: %{{.*}} = insertelement <4 x float> %{{.*}}, float %[[B]], i32 0
   return _mm_round_ss(x, y, 0b1011);
 }
 
 __m128 test_mm_round_ss_mxcsr(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_round_ss_mxcsr
-  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %1, i32 12)
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 12)
   return _mm_round_ss(x, y, 0b1100);
 }
 
 __m128 test_mm_round_ss_fround_no_exc(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_round_ss_fround_no_exc
-  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %1, i32 0)
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 0)
   return _mm_round_ss(x, y, 0b0000);
 }

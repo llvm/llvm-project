@@ -40,11 +40,11 @@ test.format_opt_symbol_name_attr_op
 test.format_opt_symbol_ref_attr_op @foo {test.unit}
 test.format_opt_symbol_ref_attr_op {test.unit}
 
-// CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
-test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
+// CHECK: test.format_attr_dict_w_keyword <attr = 10>
+test.format_attr_dict_w_keyword <attr = 10>
 
-// CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64, opt_attr = 10 : i64}
-test.format_attr_dict_w_keyword attributes {attr = 10 : i64, opt_attr = 10 : i64}
+// CHECK: test.format_attr_dict_w_keyword <attr = 10, opt_attr = 10> attributes {tag = "test"}
+test.format_attr_dict_w_keyword <attr = 10, opt_attr = 10> attributes {tag = "test"}
 
 // CHECK: test.format_buildable_type_op %[[I64]]
 %ignored = test.format_buildable_type_op %i64

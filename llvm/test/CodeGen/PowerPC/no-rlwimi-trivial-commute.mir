@@ -1,4 +1,4 @@
-# RUN: llc -start-after=dead-mi-elimination -stop-after=twoaddressinstruction -o - %s | FileCheck %s
+# RUN: llc -start-after=dead-mi-elimination -stop-after=two-address-instruction -o - %s | FileCheck %s
 
 --- |
   target datalayout = "E-m:e-i64:64-n32:64"
@@ -71,14 +71,14 @@ body:             |
     liveins: $x2
 
     %0 = ADDIStocHA8 $x2, @b
-    %1 = LD target-flags(ppc-toc-lo) @b, killed %0 :: (load (s64) from @b)
+    %1 = LD target-flags(ppc-toc-lo) @b, %0 :: (load (s64) from @b)
     %2 = LWZ 0, %1 :: (load (s32) from %ir.0)
     %3 = LI 0
-    %4 = RLWIMI %3, killed %2, 0, 0, 31
+    %4 = RLWIMI %3, %2, 0, 0, 31
     ; CHECK-LABEL: name: main
     ; CHECK: %[[REG1:[0-9]+]]:gprc = LI 0
     ; CHECK: %[[REG2:[0-9]+]]:gprc = COPY %[[REG1]]
-    ; CHECK: %[[REG2]]:gprc = RLWIMI %[[REG2]], killed %2, 0, 0, 31
+    ; CHECK: %[[REG2]]:gprc = RLWIMI %[[REG2]], %2, 0, 0, 31
     %8 = RLWIMI %3, %4, 0, 0, 31
     STW %4, 0, %1 :: (store (s32) into %ir.0)
     %10 = EXTSW_32_64 %8

@@ -22,4 +22,4 @@ L:
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-1, 62]
 
    cbls x3, w5, L
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-1, 62]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

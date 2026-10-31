@@ -46,6 +46,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -640,7 +641,9 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
           << (New->getTemplateSpecializationKind() ==TSK_ExplicitSpecialization)
           << New->getDeclName()
           << NewParam->getDefaultArgRange();
-      } else if (New->getDeclContext()->isDependentContext()) {
+      } else if (New->getDeclContext()
+                     ->getEnclosingNonExpansionStatementContext()
+                     ->isDependentContext()) {
         // C++ [dcl.fct.default]p6 (DR217):
         //   Default arguments for a member function of a class template shall
         //   be specified on the initial declaration of the member function
@@ -2074,9 +2077,6 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       //   - using-enum-declaration
       continue;
 
-    case Decl::CXXExpansionStmt:
-      continue;
-
     case Decl::Typedef:
     case Decl::TypeAlias: {
       //   - typedef declarations and alias-declarations that do not define
@@ -2263,15 +2263,34 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     //   - null statements,
     return true;
 
-  case Stmt::DeclStmtClass:
+  case Stmt::DeclStmtClass: {
+    auto *DS = cast<DeclStmt>(S);
+
+    // Expansion statement 'declarations' have substatements, so we need to
+    // handle them separately.
+    if (DS->isSingleDecl()) {
+      if (auto *ESD = dyn_cast<CXXExpansionStmtDecl>(DS->getSingleDecl())) {
+        // Don't check unexpanded expansion statements.
+        if (!ESD->getInstantiations())
+          return true;
+        for (auto *BodyIt : ESD->getInstantiations()->getInstantiations()) {
+          if (!CheckConstexprFunctionStmt(SemaRef, Dcl, BodyIt, ReturnStmts,
+                                          Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
+            return false;
+        }
+        return true;
+      }
+    }
+
     //   - static_assert-declarations
     //   - using-declarations,
     //   - using-directives,
     //   - typedef declarations and alias-declarations that do not define
     //     classes or enumerations,
-    if (!CheckConstexprDeclStmt(SemaRef, Dcl, cast<DeclStmt>(S), Cxx1yLoc, Kind))
+    if (!CheckConstexprDeclStmt(SemaRef, Dcl, DS, Cxx1yLoc, Kind))
       return false;
     return true;
+  }
 
   case Stmt::ReturnStmtClass:
     //   - and exactly one return statement;
@@ -4240,6 +4259,12 @@ ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
                                                     SourceLocation InitLoc) {
   InitializedEntity Entity =
       InitializedEntity::InitializeMemberFromDefaultMemberInitializer(FD);
+  return ConvertMemberDefaultInitExpression(FD, Entity, InitExpr, InitLoc);
+}
+
+ExprResult Sema::ConvertMemberDefaultInitExpression(
+    FieldDecl *FD, const InitializedEntity &Entity, Expr *InitExpr,
+    SourceLocation InitLoc) {
   InitializationKind Kind =
       FD->getInClassInitStyle() == ICIS_ListInit
           ? InitializationKind::CreateDirectList(InitExpr->getBeginLoc(),
@@ -4511,9 +4536,9 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
     Diag(DS.getTypeSpecTypeLoc(), diag::err_decltype_auto_invalid);
     return true;
   } else if (DS.getTypeSpecType() == TST_typename_pack_indexing) {
-    BaseType =
-        BuildPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
-                              DS.getBeginLoc(), DS.getEllipsisLoc());
+    BaseType = GetTypeFromParser(DS.getRepAsType(), &TInfo);
+    if (BaseType.isNull())
+      return true;
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
     LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
@@ -4679,6 +4704,10 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     Args = MultiExprArg(ParenList->getExprs(), ParenList->getNumExprs());
   } else if (InitListExpr *InitList = dyn_cast<InitListExpr>(Init)) {
     Args = MultiExprArg(InitList->getInits(), InitList->getNumInits());
+  } else if (auto *ParenListInit = dyn_cast<CXXParenListInitExpr>(Init)) {
+    // Template instantiation reverts the elements to their syntactic form;
+    // redo the initialization from the written arguments.
+    Args = ParenListInit->getUserSpecifiedInitExprs();
   } else {
     // Template instantiation doesn't reconstruct ParenListExprs for us.
     Args = Init;
@@ -5340,7 +5369,7 @@ static bool CollectFieldInitializer(Sema &SemaRef, BaseAndFieldInfo &Info,
 
   if (Field->hasInClassInitializer() && !Info.isImplicitCopyOrMove()) {
     ExprResult DIE =
-        SemaRef.BuildCXXDefaultInitExpr(Info.Ctor->getLocation(), Field);
+        SemaRef.BuildCXXCtorDefaultInitExpr(Info.Ctor->getLocation(), Field);
     if (DIE.isInvalid())
       return true;
 
@@ -9640,7 +9669,7 @@ bool SpecialMemberDeletionInfo::isAccessible(Subobject Subobj,
   /// type of this special member.
   CanQualType objectTy;
   AccessSpecifier access = target->getAccess();
-  if (CXXBaseSpecifier *base = Subobj.dyn_cast<CXXBaseSpecifier*>()) {
+  if (CXXBaseSpecifier *base = dyn_cast<CXXBaseSpecifier *>(Subobj)) {
     objectTy = S.Context.getCanonicalTagType(MD->getParent());
     access = CXXRecordDecl::MergeAccess(base->getAccessSpecifier(), access);
 
@@ -9659,7 +9688,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
     Subobject Subobj, Sema::SpecialMemberOverloadResult SMOR,
     bool IsDtorCallInCtor) {
   CXXMethodDecl *Decl = SMOR.getMethod();
-  FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
+  FieldDecl *Field = dyn_cast<FieldDecl *>(Subobj);
 
   enum {
     NotSet = -1,
@@ -9738,7 +9767,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
 /// direct or virtual base class or non-static data member of class type M.
 bool SpecialMemberDeletionInfo::shouldDeleteForClassSubobject(
     CXXRecordDecl *Class, Subobject Subobj, unsigned Quals) {
-  FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
+  FieldDecl *Field = dyn_cast<FieldDecl *>(Subobj);
   bool IsMutable = Field && Field->isMutable();
 
   // C++11 [class.ctor]p5:
@@ -14124,7 +14153,7 @@ bool SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
       // FIXME: We should have a single context note pointing at Loc, and
       // this location should be MD->getLocation() instead, since that's
       // the location where we actually use the default init expression.
-      E = S.BuildCXXDefaultInitExpr(Loc, FD).get();
+      E = S.BuildCXXCtorDefaultInitExpr(Loc, FD).get();
     if (E)
       ExceptSpec.CalledExpr(E);
   } else if (auto *RD = S.Context.getBaseElementType(FD->getType())
@@ -14137,7 +14166,7 @@ bool SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
 void SpecialMemberExceptionSpecInfo::visitClassSubobject(CXXRecordDecl *Class,
                                                          Subobject Subobj,
                                                          unsigned Quals) {
-  FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
+  FieldDecl *Field = dyn_cast<FieldDecl *>(Subobj);
   bool IsMutable = Field && Field->isMutable();
   visitSubobjectCall(Subobj, lookupIn(Class, Quals, IsMutable));
 }
@@ -14167,7 +14196,7 @@ bool Sema::tryResolveExplicitSpecifier(ExplicitSpecifier &ExplicitSpec) {
 
 ExplicitSpecifier Sema::ActOnExplicitBoolSpecifier(Expr *ExplicitExpr) {
   ExplicitSpecifier ES(ExplicitExpr, ExplicitSpecKind::Unresolved);
-  if (!ExplicitExpr->isTypeDependent())
+  if (!ExplicitExpr->isTypeDependent() && !ExplicitExpr->containsErrors())
     tryResolveExplicitSpecifier(ES);
   return ES;
 }
@@ -16571,7 +16600,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, CXXRecordDecl *ClassDecl) {
     if (VD->getInit() && !VD->getInit()->isValueDependent())
       HasConstantInit = VD->evaluateValue();
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    if (!VD->evaluateDestruction(Notes) && VD->isConstexpr() &&
+    sema::EvalProxy SProxy(*this);
+    if (!VD->evaluateConstantDestruction(Notes, SProxy) && VD->isConstexpr() &&
         HasConstantInit) {
       Diag(VD->getLocation(),
            diag::err_constexpr_var_requires_const_destruction) << VD;
@@ -17504,6 +17534,30 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
     Invalid = true;
   }
 
+  // Reject catch types that need a cross-AS conversion.
+  // cause runtimes don't yet support cross-address-
+  // space conversions
+  if (Mode == 1) {
+    if (ExDeclType.getAddressSpace() != LangAS::Default ||
+        BaseType.getAddressSpace() != LangAS::Default) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
+      Invalid = true;
+    }
+  } else if (Mode == 2) {
+    if (const PointerType *PT = BaseType->getAs<PointerType>();
+        PT && (BaseType.getAddressSpace() != LangAS::Default ||
+               PT->getPointeeType().getAddressSpace() != LangAS::Default)) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
+      Invalid = true;
+    } else if (BaseType.getAddressSpace() != LangAS::Default) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/1 << ExDeclType;
+      Invalid = true;
+    }
+  }
+
   if (!Invalid && Mode != 1 && BaseType->isSizelessType()) {
     Diag(Loc, diag::err_catch_sizeless) << (Mode == 2 ? 1 : 0) << BaseType;
     Invalid = true;
@@ -17988,8 +18042,10 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
   Expr::EvalResult Status;
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Status.Diag = &Notes;
+  sema::EvalProxy SProxy(SemaRef);
   if (!Message->EvaluateCharRangeAsString(Result, EvaluatedSize.get(),
-                                          EvaluatedData.get(), Ctx, Status) ||
+                                          EvaluatedData.get(), Ctx, SProxy,
+                                          Status) ||
       !Notes.empty()) {
     SemaRef.Diag(Message->getBeginLoc(),
                  ErrorOnInvalidMessage ? diag::err_user_defined_msg_constexpr
@@ -18792,8 +18848,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     FriendDecl *Friend = FriendDecl::Create(
         Context, CurContext, D.getIdentifierLoc(), ND, DS.getFriendSpecLoc());
     Friend->setAccess(AS_public);
-    if (!isa<FunctionTemplateDecl>(ND))
-      Friend->setInvalidDecl();
+    Friend->setInvalidDecl();
     CurContext->addDecl(Friend);
     return ND;
   }

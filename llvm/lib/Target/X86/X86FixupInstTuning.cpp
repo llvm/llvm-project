@@ -62,8 +62,6 @@ public:
   StringRef getPassName() const override { return "X86 Fixup Inst Tuning"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator &I);
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {

@@ -625,7 +625,7 @@ define dso_local void @fadd_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    movl 20(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %ecx
 ; X86-NOSSE-NEXT:    fildll (%ecx,%eax,8)
@@ -1339,7 +1339,7 @@ define dso_local void @fsub_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    movl 20(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %ecx
 ; X86-NOSSE-NEXT:    fildll (%ecx,%eax,8)
@@ -2043,7 +2043,7 @@ define dso_local void @fmul_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    movl 20(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %ecx
 ; X86-NOSSE-NEXT:    fildll (%ecx,%eax,8)
@@ -2751,7 +2751,7 @@ define dso_local void @fdiv_array(ptr %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-NEXT:    movl %esp, %ebp
 ; X86-NOSSE-NEXT:    pushl %esi
 ; X86-NOSSE-NEXT:    andl $-8, %esp
-; X86-NOSSE-NEXT:    subl $32, %esp
+; X86-NOSSE-NEXT:    subl $24, %esp
 ; X86-NOSSE-NEXT:    movl 20(%ebp), %eax
 ; X86-NOSSE-NEXT:    movl 8(%ebp), %ecx
 ; X86-NOSSE-NEXT:    fildll (%ecx,%eax,8)

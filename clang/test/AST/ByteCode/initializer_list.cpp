@@ -94,3 +94,17 @@ namespace CopiedForRangeIterator {
   }
   static_assert(copies() == 0);
 }
+
+namespace Primitive {
+  constexpr auto A = std::initializer_list<int>{42};
+  static_assert(A.size() == 1);
+  static_assert(*A.begin() == 42);
+}
+
+namespace Ignored {
+  constexpr int foo() {
+    std::initializer_list<int>{42}; // both-warning {{expression result unused}}
+    return 1;
+  }
+  static_assert(foo() == 1);
+}

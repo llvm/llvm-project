@@ -276,3 +276,91 @@ entry:
   %v7 = insertelement <8 x i32> %v6, i32 %l7, i64 7
   ret <8 x i32> %v7
 }
+
+define void @test_base_align_lanes(ptr noalias %c, ptr noalias %A, ptr noalias %B, ptr noalias %dst) {
+; CHECK-LABEL: define void @test_base_align_lanes(
+; CHECK-SAME: ptr noalias [[C:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[C]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[A]], <4 x i1> [[TMP2]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[B]], <4 x i1> [[TMP3]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP4]], <4 x i32> [[TMP5]]
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[DST]], align 4
+; CHECK-NEXT:    ret void
+;
+  %cv0 = load i32, ptr %c, align 4
+  %cond0 = icmp ne i32 %cv0, 0
+  %sel0 = select i1 %cond0, ptr %A, ptr %B
+  %v0 = load i32, ptr %sel0, align 8
+  store i32 %v0, ptr %dst, align 4
+  %cp1 = getelementptr inbounds i32, ptr %c, i64 1
+  %cv1 = load i32, ptr %cp1, align 4
+  %cond1 = icmp ne i32 %cv1, 0
+  %sel1 = select i1 %cond1, ptr %A, ptr %B
+  %p1 = getelementptr inbounds i32, ptr %sel1, i64 1
+  %v1 = load i32, ptr %p1, align 8
+  %dp1 = getelementptr inbounds i32, ptr %dst, i64 1
+  store i32 %v1, ptr %dp1, align 4
+  %cp2 = getelementptr inbounds i32, ptr %c, i64 2
+  %cv2 = load i32, ptr %cp2, align 4
+  %cond2 = icmp ne i32 %cv2, 0
+  %sel2 = select i1 %cond2, ptr %A, ptr %B
+  %p2 = getelementptr inbounds i32, ptr %sel2, i64 2
+  %v2 = load i32, ptr %p2, align 8
+  %dp2 = getelementptr inbounds i32, ptr %dst, i64 2
+  store i32 %v2, ptr %dp2, align 4
+  %cp3 = getelementptr inbounds i32, ptr %c, i64 3
+  %cv3 = load i32, ptr %cp3, align 4
+  %cond3 = icmp ne i32 %cv3, 0
+  %sel3 = select i1 %cond3, ptr %A, ptr %B
+  %p3 = getelementptr inbounds i32, ptr %sel3, i64 3
+  %v3 = load i32, ptr %p3, align 8
+  %dp3 = getelementptr inbounds i32, ptr %dst, i64 3
+  store i32 %v3, ptr %dp3, align 4
+  ret void
+}
+
+define void @test_base_align_preserved(ptr noalias %c, ptr noalias %A, ptr noalias %B, ptr noalias %dst) {
+; CHECK-LABEL: define void @test_base_align_preserved(
+; CHECK-SAME: ptr noalias [[C:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[C]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[A]], <4 x i1> [[TMP2]], <4 x i64> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[B]], <4 x i1> [[TMP3]], <4 x i64> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> [[TMP4]], <4 x i64> [[TMP5]]
+; CHECK-NEXT:    store <4 x i64> [[TMP6]], ptr [[DST]], align 8
+; CHECK-NEXT:    ret void
+;
+  %cv0 = load i32, ptr %c, align 4
+  %cond0 = icmp ne i32 %cv0, 0
+  %sel0 = select i1 %cond0, ptr %A, ptr %B
+  %v0 = load i64, ptr %sel0, align 8
+  store i64 %v0, ptr %dst, align 8
+  %cp1 = getelementptr inbounds i32, ptr %c, i64 1
+  %cv1 = load i32, ptr %cp1, align 4
+  %cond1 = icmp ne i32 %cv1, 0
+  %sel1 = select i1 %cond1, ptr %A, ptr %B
+  %p1 = getelementptr inbounds i64, ptr %sel1, i64 1
+  %v1 = load i64, ptr %p1, align 8
+  %dp1 = getelementptr inbounds i64, ptr %dst, i64 1
+  store i64 %v1, ptr %dp1, align 8
+  %cp2 = getelementptr inbounds i32, ptr %c, i64 2
+  %cv2 = load i32, ptr %cp2, align 4
+  %cond2 = icmp ne i32 %cv2, 0
+  %sel2 = select i1 %cond2, ptr %A, ptr %B
+  %p2 = getelementptr inbounds i64, ptr %sel2, i64 2
+  %v2 = load i64, ptr %p2, align 8
+  %dp2 = getelementptr inbounds i64, ptr %dst, i64 2
+  store i64 %v2, ptr %dp2, align 8
+  %cp3 = getelementptr inbounds i32, ptr %c, i64 3
+  %cv3 = load i32, ptr %cp3, align 4
+  %cond3 = icmp ne i32 %cv3, 0
+  %sel3 = select i1 %cond3, ptr %A, ptr %B
+  %p3 = getelementptr inbounds i64, ptr %sel3, i64 3
+  %v3 = load i64, ptr %p3, align 8
+  %dp3 = getelementptr inbounds i64, ptr %dst, i64 3
+  store i64 %v3, ptr %dp3, align 8
+  ret void
+}

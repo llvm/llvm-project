@@ -762,6 +762,13 @@ bool fir::acc::isValidSymbolUse(mlir::Operation *user,
           fir::FIROpsDialect::getFirRuntimeAttrName()))
     return true;
 
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::intrinsic>(
+          definingOp))
+    return true;
+
+  if (fir::hasBindcAttr(definingOp))
+    return true;
+
   if (auto cufProcAttr = definingOp->getAttrOfType<cuf::ProcAttributeAttr>(
           cuf::getProcAttrName())) {
     if (cufProcAttr.getValue() != cuf::ProcAttribute::Host)
@@ -771,8 +778,9 @@ bool fir::acc::isValidSymbolUse(mlir::Operation *user,
   return false;
 }
 
-bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
-  if (mlir::acc::isValidValueUse(val, region))
+bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region,
+                               mlir::SymbolTableCollection *symbolTables) {
+  if (mlir::acc::isValidValueUse(val, region, symbolTables))
     return true;
 
   if (isFIRPassByValueScalar(val.getType()))

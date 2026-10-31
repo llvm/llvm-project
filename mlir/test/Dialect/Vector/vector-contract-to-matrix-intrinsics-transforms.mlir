@@ -75,3 +75,13 @@ func.func @matmul_scalable(%arg0: vector<2x4xf32>,
     : vector<2x4xf32>, vector<4x[3]xf32> into vector<2x[3]xf32>
   return %0 : vector<2x[3]xf32>
 }
+
+// CHECK-LABEL: func @matmul_scalable_reduction
+// CHECK-NOT: llvm.intr.matrix.multiply
+func.func @matmul_scalable_reduction(%arg0: vector<2x[4]xf32>,
+                                     %arg1: vector<[4]x3xf32>,
+                                     %arg2: vector<2x3xf32>) -> vector<2x3xf32> {
+  %0 = vector.contract #matmat_trait %arg0, %arg1, %arg2
+    : vector<2x[4]xf32>, vector<[4]x3xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
+}

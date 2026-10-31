@@ -11,6 +11,7 @@
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/LLJITUtils.h"
 #include "llvm-c/Orc.h"
+#include "llvm-c/Target.h"
 #include "gtest/gtest.h"
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -220,6 +221,7 @@ protected:
                                                      StringRef Name) {
     auto Ctx = std::make_unique<LLVMContext>();
     auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+    M->setTargetTriple(Triple(TargetTriple));
     return wrap(new ThreadSafeModule(std::move(M), std::move(Ctx)));
   }
 
@@ -227,6 +229,7 @@ protected:
                                               StringRef Name) {
     auto Ctx = std::make_unique<LLVMContext>();
     auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+    M->setTargetTriple(Triple(TargetTriple));
 
     auto JTMB = cantFail(JITTargetMachineBuilder::detectHost());
     M->setDataLayout(cantFail(JTMB.getDefaultDataLayoutForTarget()));

@@ -66,7 +66,7 @@ public:
   /// Access the regular expression text.
   ///
   /// \return
-  ///     The NULL terminated C string that was used to compile the
+  ///     The null-terminated C string that was used to compile the
   ///     current regular expression
   llvm::StringRef GetText() const;
 

@@ -12,8 +12,8 @@
 #include <__config>
 #include <__cstddef/byte.h>
 #include <__cstddef/size_t.h>
+#include <__memory/allocator.h>
 #include <__memory/construct_at.h>
-#include <__new/allocate.h>
 #include <__new/launder.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_trivially_constructible.h>
@@ -68,7 +68,7 @@ public:
     if constexpr (__fits_in_buffer<_Stored>) {
       return std::launder(reinterpret_cast<_Stored*>(__buffer_));
     } else {
-      byte* __allocation = reinterpret_cast<byte*>(std::__libcpp_allocate<_Stored>(__element_count(1)));
+      byte* __allocation = reinterpret_cast<byte*>(std::allocator<_Stored>().allocate(1));
       std::construct_at(reinterpret_cast<byte**>(__buffer_), __allocation);
       return std::launder(reinterpret_cast<_Stored*>(__allocation));
     }
@@ -77,7 +77,7 @@ public:
   template <class _Stored>
   _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
     if constexpr (!__fits_in_buffer<_Stored>)
-      std::__libcpp_deallocate<_Stored>(__get<_Stored>(), __element_count(1));
+      std::allocator<_Stored>().deallocate(__get<_Stored>(), 1);
   }
 
   template <class _Stored, class... _Args>

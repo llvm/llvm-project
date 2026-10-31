@@ -42,4 +42,4 @@ entry:
 !0 = !{}
 !1 = !{!2}
 !2 = !{!"buffer: {index:1, offset:0, size:20000}", !3}
-!3 = !{!"XLA global AA domain"}
+!3 = !{!"XLA global AA domain", i1 false}

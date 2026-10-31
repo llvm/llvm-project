@@ -1443,3 +1443,514 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// Tests for hoisting masked (`vector.mask`-wrapped) transfers
+///
+/// * vector.transfer_read + (optional) vector.transfer_write
+///----------------------------------------------------------------------------------------
+
+// A masked read/write pair sharing the same mask is hoisted as a whole: the
+// masked read/write move to the loop boundary while the value is carried
+// unmasked through an iter_arg.
+
+// CHECK-LABEL:   func.func @hoist_masked_transfer_pair(
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?xf32>,
+// CHECK-SAME:      %[[MASK:[a-zA-Z0-9]+]]: vector<4xi1>,
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] {{.*}}transfer_read %[[MEM]]
+// CHECK:           %[[FOR:.*]] = scf.for {{.*}} iter_args(%[[IARG:.*]] = %[[READ]]) -> (vector<4xf32>) {
+// CHECK-NEXT:        %[[USE:.*]] = "test.val_use"(%[[IARG]])
+// CHECK-NEXT:        scf.yield %[[USE]]
+// CHECK-NEXT:      }
+// CHECK:           vector.mask %[[MASK]] {{.*}}transfer_write %[[FOR]], %[[MEM]]
+func.func @hoist_masked_transfer_pair(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
+  scf.for %i = %lb to %ub step %step {
+    %r = vector.mask %mask { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+    %u = "test.val_use"(%r) : (vector<4xf32>) -> vector<4xf32>
+    vector.mask %mask { vector.transfer_write %u, %mem[%c0] : vector<4xf32>, memref<?xf32> } : vector<4xi1>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A lone masked read is hoisted as its `vector.mask` op.
+
+// CHECK-LABEL:   func.func @hoist_masked_singleton_read(
+// CHECK:           %[[READ:.*]] = vector.mask %{{.*}}transfer_read
+// CHECK:           scf.for
+// CHECK:             "test.some_use"(%[[READ]])
+func.func @hoist_masked_singleton_read(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
+  scf.for %i = %lb to %ub step %step {
+    %r = vector.mask %mask { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+    "test.some_use"(%r) : (vector<4xf32>) -> ()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A masked read paired with an unmasked write must not be hoisted: the boundary
+// masking would not be preserved.
+
+// CHECK-LABEL:   func.func @negative_hoist_masked_read_unmasked_write(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.mask {{.*}}transfer_read
+// CHECK:             vector.transfer_write
+// CHECK:           }
+func.func @negative_hoist_masked_read_unmasked_write(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
+  scf.for %i = %lb to %ub step %step {
+    %r = vector.mask %mask { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+    %u = "test.val_use"(%r) : (vector<4xf32>) -> vector<4xf32>
+    vector.transfer_write %u, %mem[%c0] : vector<4xf32>, memref<?xf32>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A masked pair carrying two distinct masks must not be hoisted.
+
+// CHECK-LABEL:   func.func @negative_hoist_masked_pair_distinct_masks(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.mask {{.*}}transfer_read
+// CHECK:             vector.mask {{.*}}transfer_write
+// CHECK:           }
+func.func @negative_hoist_masked_pair_distinct_masks(%mem: memref<?xf32>, %mask_read: vector<4xi1>, %mask_write: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
+  scf.for %i = %lb to %ub step %step {
+    %r = vector.mask %mask_read { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+    %u = "test.val_use"(%r) : (vector<4xf32>) -> vector<4xf32>
+    vector.mask %mask_write { vector.transfer_write %u, %mem[%c0] : vector<4xf32>, memref<?xf32> } : vector<4xi1>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// An unmasked read paired with a masked write must not be hoisted: the boundary
+// masking would not be preserved.
+
+// CHECK-LABEL:   func.func @negative_hoist_unmasked_read_masked_write(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.transfer_read
+// CHECK:             vector.mask {{.*}}transfer_write
+// CHECK:           }
+func.func @negative_hoist_unmasked_read_masked_write(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
+  scf.for %i = %lb to %ub step %step {
+    %r = vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32>
+    %u = "test.val_use"(%r) : (vector<4xf32>) -> vector<4xf32>
+    vector.mask %mask { vector.transfer_write %u, %mem[%c0] : vector<4xf32>, memref<?xf32> } : vector<4xi1>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A singleton masked read whose mask is recomputed in the loop is not hoisted:
+// the mask is not loop-invariant.
+
+// CHECK-LABEL:   func.func @negative_hoist_masked_singleton_read_loop_variant_mask(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.mask {{.*}}transfer_read
+// CHECK:           }
+func.func @negative_hoist_masked_singleton_read_loop_variant_mask(%mem: memref<?xf32>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
+  scf.for %i = %lb to %ub step %step {
+    %mask = vector.create_mask %i : vector<4xi1>
+    %r = vector.mask %mask { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+    "test.some_use"(%r) : (vector<4xf32>) -> ()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A singleton masked read whose passthru is recomputed in the loop is not
+// hoisted: the passthru is not loop-invariant, so the read value changes every
+// iteration.
+
+// CHECK-LABEL:   func.func @negative_hoist_masked_singleton_read_loop_variant_passthru(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.mask {{.*}}transfer_read
+// CHECK:           }
+func.func @negative_hoist_masked_singleton_read_loop_variant_passthru(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
+  scf.for %i = %lb to %ub step %step {
+    %idx = arith.index_cast %i : index to i32
+    %f = arith.sitofp %idx : i32 to f32
+    %pt = vector.broadcast %f : f32 to vector<4xf32>
+    %r = vector.mask %mask, %pt { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+    "test.some_use"(%r) : (vector<4xf32>) -> ()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// Tests for hoisting masked (`vector.mask`-wrapped) transfers
+///
+/// * singleton vector.transfer_write
+///----------------------------------------------------------------------------------------
+
+// A lone masked write whose operands are loop-invariant, sole accessor of its
+// memref, in a loop proven to run at least once, is sunk past the loop as its
+// `vector.mask` op (the emptied loop is then folded away).
+
+// CHECK-LABEL:   func.func @hoist_masked_singleton_write(
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<?xf32>,
+// CHECK-SAME:      %[[MASK:[a-zA-Z0-9]+]]: vector<4xi1>,
+// CHECK-SAME:      %[[VEC:[a-zA-Z0-9]+]]: vector<4xf32>,
+// CHECK-NOT:       scf.for
+// CHECK:           vector.mask %[[MASK]] {{.*}}transfer_write %[[VEC]], %[[MEM]]
+func.func @hoist_masked_singleton_write(%mem: memref<?xf32>, %mask: vector<4xi1>, %vec: vector<4xf32>, %c0: index) {
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 8 : index
+  %step = arith.constant 1 : index
+  scf.for %i = %lb to %ub step %step {
+    vector.mask %mask { vector.transfer_write %vec, %mem[%c0] : vector<4xf32>, memref<?xf32> } : vector<4xi1>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 verify_non_zero_trip
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A lone masked write must not be sunk past a loop that may not execute: the
+// store would run when the original loop body never did.
+
+// CHECK-LABEL:   func.func @negative_hoist_masked_singleton_write_maybe_zero_trip(
+// CHECK:           scf.for
+// CHECK:             vector.mask %{{.*}}transfer_write
+func.func @negative_hoist_masked_singleton_write_maybe_zero_trip(%mem: memref<?xf32>, %mask: vector<4xi1>, %vec: vector<4xf32>, %lb: index, %ub: index, %step: index, %c0: index) {
+  scf.for %i = %lb to %ub step %step {
+    vector.mask %mask { vector.transfer_write %vec, %mem[%c0] : vector<4xf32>, memref<?xf32> } : vector<4xi1>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 verify_non_zero_trip
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A singleton masked write whose mask is recomputed in the loop is not sunk:
+// the mask is not loop-invariant.
+
+// CHECK-LABEL:   func.func @negative_hoist_masked_singleton_write_loop_variant_mask(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.mask {{.*}}transfer_write
+// CHECK:           }
+func.func @negative_hoist_masked_singleton_write_loop_variant_mask(%mem: memref<?xf32>, %vec: vector<4xf32>, %c0: index) {
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 8 : index
+  %step = arith.constant 1 : index
+  scf.for %i = %lb to %ub step %step {
+    %mask = vector.create_mask %i : vector<4xi1>
+    vector.mask %mask { vector.transfer_write %vec, %mem[%c0] : vector<4xf32>, memref<?xf32> } : vector<4xi1>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 verify_non_zero_trip
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Only the read is masked, so hoisting is not safe. The second element must
+// be read as zero on every iteration, leaving 1 in memory after the loop.
+
+// CHECK-LABEL: func.func @negative_masked_read_unmasked_write()
+// CHECK:         %[[MASK:.*]] = arith.constant dense<[true, false]>
+// CHECK:         scf.for {{.*}} {
+// CHECK-NEXT:      %[[READ:.*]] = vector.transfer_read {{.*}}, %[[MASK]]
+// CHECK-NEXT:      %[[NEXT:.*]] = arith.addi %[[READ]],
+// CHECK-NEXT:      vector.transfer_write %[[NEXT]],
+// CHECK-NEXT:    }{{$}}
+// CHECK:         memref.load
+func.func @negative_masked_read_unmasked_write() -> i32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %zero = arith.constant 0 : i32
+  %zeros = arith.constant dense<0> : vector<2xi32>
+  %ones = arith.constant dense<1> : vector<2xi32>
+  %mask = arith.constant dense<[true, false]> : vector<2xi1>
+  %buffer = memref.alloca() : memref<2xi32>
+  vector.transfer_write %zeros, %buffer[%c0]
+      {in_bounds = [true]} : vector<2xi32>, memref<2xi32>
+  scf.for %i = %c0 to %c2 step %c1 {
+    %v = vector.transfer_read %buffer[%c0], %zero, %mask
+        {in_bounds = [true]} : memref<2xi32>, vector<2xi32>
+    %next = arith.addi %v, %ones : vector<2xi32>
+    vector.transfer_write %next, %buffer[%c0]
+        {in_bounds = [true]} : vector<2xi32>, memref<2xi32>
+  }
+  %result = memref.load %buffer[%c1] : memref<2xi32>
+  return %result : i32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %funcs = transform.structured.match ops{["func.func"]} in %root
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %funcs verify_non_zero_trip
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Only the write is masked, so hoisting is not safe. The next read must see
+// the elements that the masked write leaves unchanged in memory.
+
+// CHECK-LABEL: func.func @negative_unmasked_read_masked_write(
+// CHECK-SAME:    %[[MEM:.*]]: memref<2xi32>, %[[MASK:.*]]: vector<2xi1>
+// CHECK:         scf.for {{.*}} {
+// CHECK-NEXT:      %[[READ:.*]] = vector.transfer_read %[[MEM]]
+// CHECK-NEXT:      %[[SWAP:.*]] = vector.shuffle %[[READ]], %{{.*}} [1, 0]
+// CHECK-NEXT:      %[[NEXT:.*]] = arith.addi %[[SWAP]],
+// CHECK-NEXT:      vector.transfer_write %[[NEXT]], %[[MEM]]{{.*}}, %[[MASK]]
+// CHECK-NEXT:    }{{$}}
+func.func @negative_unmasked_read_masked_write(
+    %mem: memref<2xi32>, %mask: vector<2xi1>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %zero = arith.constant 0 : i32
+  %ones = arith.constant dense<1> : vector<2xi32>
+  scf.for %i = %c0 to %c2 step %c1 {
+    %v = vector.transfer_read %mem[%c0], %zero
+        {in_bounds = [true]} : memref<2xi32>, vector<2xi32>
+    %swap = vector.shuffle %v, %v [1, 0] : vector<2xi32>, vector<2xi32>
+    %next = arith.addi %swap, %ones : vector<2xi32>
+    vector.transfer_write %next, %mem[%c0], %mask
+        {in_bounds = [true]} : vector<2xi32>, memref<2xi32>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %funcs = transform.structured.match ops{["func.func"]} in %root
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %funcs verify_non_zero_trip
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The read and write use separate mask arguments. Hoisting is not safe
+// because the masks may select different elements.
+
+// CHECK-LABEL: func.func @negative_distinct_transfer_masks(
+// CHECK-SAME:    %[[MEM:.*]]: memref<2xi32>,
+// CHECK-SAME:    %[[MASK:.*]]: vector<2xi1>,
+// CHECK-SAME:    %[[READ_MASK:.*]]: vector<2xi1>
+// CHECK:         scf.for {{.*}} {
+// CHECK-NEXT:      %[[READ:.*]] = vector.transfer_read %[[MEM]]{{.*}}, %[[READ_MASK]]
+// CHECK-NEXT:      %[[SWAP:.*]] = vector.shuffle %[[READ]], %{{.*}} [1, 0]
+// CHECK-NEXT:      %[[NEXT:.*]] = arith.addi %[[SWAP]],
+// CHECK-NEXT:      vector.transfer_write %[[NEXT]], %[[MEM]]{{.*}}, %[[MASK]]
+// CHECK-NEXT:    }{{$}}
+func.func @negative_distinct_transfer_masks(
+    %mem: memref<2xi32>, %mask: vector<2xi1>, %read_mask: vector<2xi1>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %zero = arith.constant 0 : i32
+  %ones = arith.constant dense<1> : vector<2xi32>
+  scf.for %i = %c0 to %c2 step %c1 {
+    %v = vector.transfer_read %mem[%c0], %zero, %read_mask
+        {in_bounds = [true]} : memref<2xi32>, vector<2xi32>
+    %swap = vector.shuffle %v, %v [1, 0] : vector<2xi32>, vector<2xi32>
+    %next = arith.addi %swap, %ones : vector<2xi32>
+    vector.transfer_write %next, %mem[%c0], %mask
+        {in_bounds = [true]} : vector<2xi32>, memref<2xi32>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %funcs = transform.structured.match ops{["func.func"]} in %root
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %funcs verify_non_zero_trip
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Hoisting is safe when both transfers use the same mask and the loop
+// updates each vector element independently.
+
+// CHECK-LABEL: func.func @same_transfer_mask(
+// CHECK-SAME:    %[[MEM:.*]]: memref<2xi32>, %[[MASK:.*]]: vector<2xi1>
+// CHECK:         %[[READ:.*]] = vector.transfer_read %[[MEM]]{{.*}}, %[[MASK]]
+// CHECK-NEXT:    %[[LOOP:.*]] = scf.for {{.*}} iter_args(%[[ARG:.*]] = %[[READ]])
+// CHECK-NEXT:      %[[NEXT:.*]] = arith.addi %[[ARG]],
+// CHECK-NEXT:      scf.yield %[[NEXT]]
+// CHECK-NEXT:    }{{$}}
+// CHECK-NEXT:    vector.transfer_write %[[LOOP]], %[[MEM]]{{.*}}, %[[MASK]]
+func.func @same_transfer_mask(%mem: memref<2xi32>, %mask: vector<2xi1>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %zero = arith.constant 0 : i32
+  %ones = arith.constant dense<1> : vector<2xi32>
+  scf.for %i = %c0 to %c2 step %c1 {
+    %v = vector.transfer_read %mem[%c0], %zero, %mask
+        {in_bounds = [true]} : memref<2xi32>, vector<2xi32>
+    %next = arith.addi %v, %ones : vector<2xi32>
+    vector.transfer_write %next, %mem[%c0], %mask
+        {in_bounds = [true]} : vector<2xi32>, memref<2xi32>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %funcs = transform.structured.match ops{["func.func"]} in %root
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %funcs verify_non_zero_trip
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The read is unmasked and the write uses a loop-variant mask.
+// Their masks differ, so the transfers must remain inside the loop.
+
+// CHECK-LABEL: func.func @negative_loop_variant_write_mask(
+// CHECK:         scf.for %[[IV:.*]] = {{.*}} {
+// CHECK-NEXT:      %[[MASK:.*]] = vector.create_mask %[[IV]]
+// CHECK-NEXT:      %[[READ:.*]] = vector.transfer_read
+// CHECK-NEXT:      %[[NEXT:.*]] = arith.addi %[[READ]],
+// CHECK-NEXT:      vector.transfer_write %[[NEXT]], {{.*}}, %[[MASK]]
+// CHECK-NEXT:    }{{$}}
+func.func @negative_loop_variant_write_mask(%mem: memref<2xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %zero = arith.constant 0 : i32
+  %ones = arith.constant dense<1> : vector<2xi32>
+  scf.for %i = %c0 to %c2 step %c1 {
+    %mask = vector.create_mask %i : vector<2xi1>
+    %v = vector.transfer_read %mem[%c0], %zero
+        {in_bounds = [true]} : memref<2xi32>, vector<2xi32>
+    %next = arith.addi %v, %ones : vector<2xi32>
+    vector.transfer_write %next, %mem[%c0], %mask
+        {in_bounds = [true]} : vector<2xi32>, memref<2xi32>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %funcs = transform.structured.match ops{["func.func"]} in %root
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %funcs verify_non_zero_trip
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}

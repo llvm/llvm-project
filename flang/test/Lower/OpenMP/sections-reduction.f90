@@ -37,14 +37,14 @@ end subroutine
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.ref<f32> {fir.bindc_name = "x"},
 ! CHECK-SAME:                                    %[[VAL_1:.*]]: !fir.ref<f32> {fir.bindc_name = "y"}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFsectionsreductionEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFsectionsreductionEy"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFsectionsreductionEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFsectionsreductionEy") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           omp.parallel {
 ! CHECK:             omp.sections reduction(@add_reduction_f32 %[[VAL_3]]#0 -> %[[VAL_5:.*]], @add_reduction_f32 %[[VAL_4]]#0 -> %[[VAL_6:.*]] : !fir.ref<f32>, !fir.ref<f32>) {
 ! CHECK:               omp.section {
 ! CHECK:               ^bb0(%[[VAL_7:.*]]: !fir.ref<f32>, %[[VAL_8:.*]]: !fir.ref<f32>):
-! CHECK:                 %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFsectionsreductionEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:                 %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFsectionsreductionEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name("_QFsectionsreductionEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]] uniq_name("_QFsectionsreductionEy") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:                 %[[VAL_11:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<f32>
 ! CHECK:                 %[[VAL_12:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:                 %[[VAL_13:.*]] = arith.addf %[[VAL_11]], %[[VAL_12]] fastmath<contract> : f32
@@ -55,8 +55,8 @@ end subroutine
 ! CHECK:               }
 ! CHECK:               omp.section {
 ! CHECK:               ^bb0(%[[VAL_15:.*]]: !fir.ref<f32>, %[[VAL_16:.*]]: !fir.ref<f32>):
-! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsectionsreductionEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:                 %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = "_QFsectionsreductionEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] uniq_name("_QFsectionsreductionEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_16]] uniq_name("_QFsectionsreductionEy") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:                 %[[VAL_19:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<f32>
 ! CHECK:                 %[[VAL_20:.*]] = arith.constant 2.000000e+00 : f32
 ! CHECK:                 %[[VAL_21:.*]] = arith.addf %[[VAL_19]], %[[VAL_20]] fastmath<contract> : f32
@@ -73,8 +73,8 @@ end subroutine
 ! CHECK:             omp.sections reduction(@add_reduction_f32 %[[VAL_3]]#0 -> %[[VAL_23:.*]], @add_reduction_f32 %[[VAL_4]]#0 -> %[[VAL_24:.*]] : !fir.ref<f32>, !fir.ref<f32>) {
 ! CHECK:               omp.section {
 ! CHECK:               ^bb0(%[[VAL_25:.*]]: !fir.ref<f32>, %[[VAL_26:.*]]: !fir.ref<f32>):
-! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFsectionsreductionEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:                 %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_26]] {uniq_name = "_QFsectionsreductionEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_25]] uniq_name("_QFsectionsreductionEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_26]] uniq_name("_QFsectionsreductionEy") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:                 %[[VAL_29:.*]] = fir.load %[[VAL_27]]#0 : !fir.ref<f32>
 ! CHECK:                 %[[VAL_30:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:                 %[[VAL_31:.*]] = arith.addf %[[VAL_29]], %[[VAL_30]] fastmath<contract> : f32
@@ -85,8 +85,8 @@ end subroutine
 ! CHECK:               }
 ! CHECK:               omp.section {
 ! CHECK:               ^bb0(%[[VAL_33:.*]]: !fir.ref<f32>, %[[VAL_34:.*]]: !fir.ref<f32>):
-! CHECK:                 %[[VAL_35:.*]]:2 = hlfir.declare %[[VAL_33]] {uniq_name = "_QFsectionsreductionEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:                 %[[VAL_36:.*]]:2 = hlfir.declare %[[VAL_34]] {uniq_name = "_QFsectionsreductionEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_35:.*]]:2 = hlfir.declare %[[VAL_33]] uniq_name("_QFsectionsreductionEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_36:.*]]:2 = hlfir.declare %[[VAL_34]] uniq_name("_QFsectionsreductionEy") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:                 %[[VAL_37:.*]] = fir.load %[[VAL_35]]#0 : !fir.ref<f32>
 ! CHECK:                 %[[VAL_38:.*]] = arith.constant 2.000000e+00 : f32
 ! CHECK:                 %[[VAL_39:.*]] = arith.addf %[[VAL_37]], %[[VAL_38]] fastmath<contract> : f32

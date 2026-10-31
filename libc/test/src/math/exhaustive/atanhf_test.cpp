@@ -21,7 +21,7 @@ using LlvmLibcAtanhfExhaustiveTest =
 static const uint32_t POS_START = 0x0000'0000U;
 static const uint32_t POS_STOP = FPBits(1.0f).uintval();
 
-TEST_F(LlvmLibcAtanhfExhaustiveTest, PostiveRange) {
+TEST_F(LlvmLibcAtanhfExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);
 }
 

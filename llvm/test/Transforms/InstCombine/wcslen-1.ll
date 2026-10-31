@@ -275,7 +275,7 @@ define i64 @test_no_simplify3_no_null_opt(i32 %x) #0 {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[AND]] to i64
 ; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw [4 x i8], ptr @null_hello_mid, i64 [[TMP1]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %and = and i32 %x, 15

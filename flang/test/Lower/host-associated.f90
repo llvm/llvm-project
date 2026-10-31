@@ -12,7 +12,7 @@ subroutine test1
   implicit none
   integer i
   ! CHECK: %[[i_alloca:.*]] = fir.alloca i32 {{.*}}uniq_name = "_QFtest1Ei"
-  ! CHECK: %[[i:.*]]:2 = hlfir.declare %[[i_alloca]] {{.*}}uniq_name = "_QFtest1Ei"
+  ! CHECK: %[[i:.*]]:2 = hlfir.declare %[[i_alloca]] {{.*}}uniq_name("_QFtest1Ei")
   ! CHECK: %[[tup:.*]] = fir.alloca tuple<!fir.ref<i32>>
   ! CHECK: fir.store %[[i]]#0 to %{{.*}} : !fir.llvm_ptr<!fir.ref<i32>>
   ! CHECK: fir.call @_QFtest1Ptest1_internal(%[[tup]])
@@ -22,7 +22,7 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest1Ptest1_internal(
   ! CHECK-SAME: %[[arg:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc})
   ! CHECK: %[[i_ref:.*]] = fir.load %{{.*}} : !fir.llvm_ptr<!fir.ref<i32>>
-  ! CHECK: %[[i:.*]]:2 = hlfir.declare %[[i_ref]] {{.*}}uniq_name = "_QFtest1Ei"
+  ! CHECK: %[[i:.*]]:2 = hlfir.declare %[[i_ref]] {{.*}}uniq_name("_QFtest1Ei")
   ! CHECK: %[[val:.*]] = fir.call @_QPifoo()
   ! CHECK: hlfir.assign %[[val]] to %[[i]]#0 : i32, !fir.ref<i32>
   subroutine test1_internal
@@ -37,8 +37,8 @@ end subroutine test1
 subroutine test2
   a = 1.0
   b = 2.0
-  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest2Ea"
-  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest2Eb"
+  ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest2Ea")
+  ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest2Eb")
   ! CHECK: fir.alloca tuple<!fir.ref<f32>, !fir.ref<f32>>
   ! CHECK: fir.call @_QFtest2Ptest2_internal
   call test2_internal
@@ -47,8 +47,8 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest2Ptest2_internal(
   ! CHECK-SAME: %[[arg:.*]]: !fir.ref<tuple<!fir.ref<f32>, !fir.ref<f32>>> {fir.host_assoc})
   subroutine test2_internal
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest2Ea"
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest2Eb"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest2Ea")
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest2Eb")
     c = a
     a = b
     b = c
@@ -58,8 +58,8 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest2Ptest2_inner(
   ! CHECK-SAME: %[[arg:.*]]: !fir.ref<tuple<!fir.ref<f32>, !fir.ref<f32>>> {fir.host_assoc})
   subroutine test2_inner
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest2Ea"
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest2Eb"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest2Ea")
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest2Eb")
     if (a > b) then
        b = b + 2.0
     end if
@@ -73,7 +73,7 @@ end subroutine test2
 ! CHECK-LABEL: func.func @_QPtest6(
 subroutine test6(c)
   character(*) :: c
-  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest6Ec"
+  ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest6Ec")
   ! CHECK: fir.alloca tuple<!fir.boxchar<1>>
   ! CHECK: fir.call @_QFtest6Ptest6_inner
   call test6_inner
@@ -84,7 +84,7 @@ contains
   ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.boxchar<1>>> {fir.host_assoc})
   subroutine test6_inner
     ! CHECK: %[[load:.*]] = fir.load %{{.*}} : !fir.ref<!fir.boxchar<1>>
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest6Ec"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest6Ec")
     c = "Hi there"
   end subroutine test6_inner
 end subroutine test6
@@ -98,9 +98,9 @@ subroutine test3(p,q,i)
   integer(8) :: i
   real :: p(i:)
   real :: q(:)
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest3Ei"
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest3Ep"
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest3Eq"
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest3Ei")
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest3Ep")
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest3Eq")
   ! CHECK: fir.alloca tuple<!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>>
   ! CHECK: fir.call @_QFtest3Ptest3_inner
   call test3_inner
@@ -108,8 +108,8 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest3Ptest3_inner(
   ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>>> {fir.host_assoc})
   subroutine test3_inner
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest3Ep"
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest3Eq"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest3Ep")
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest3Eq")
     p(2) = q(1)
   end subroutine test3_inner
 end subroutine test3
@@ -118,8 +118,8 @@ end subroutine test3
 subroutine test3a(p)
   real :: p(10)
   real :: q(10)
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest3aEp"
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest3aEq"
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest3aEp")
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest3aEq")
   ! CHECK: fir.alloca tuple<!fir.box<!fir.array<10xf32>>, !fir.box<!fir.array<10xf32>>>
   ! CHECK: fir.call @_QFtest3aPtest3a_inner
   call test3a_inner
@@ -127,8 +127,8 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest3aPtest3a_inner(
   ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.box<!fir.array<10xf32>>, !fir.box<!fir.array<10xf32>>>> {fir.host_assoc})
   subroutine test3a_inner
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest3aEp"
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest3aEq"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest3aEp")
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest3aEq")
     p(1) = q(1)
   end subroutine test3a_inner
 end subroutine test3a
@@ -141,8 +141,8 @@ end subroutine test3a
 subroutine test4
   real, pointer :: p
   real, allocatable, target :: ally
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest4Eally"
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest4Ep"
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest4Eally")
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest4Ep")
   ! CHECK: fir.alloca tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>
   ! CHECK: fir.call @_QFtest4Ptest4_inner
   allocate(ally)
@@ -152,8 +152,8 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest4Ptest4_inner(
   ! CHECK-SAME:%[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>>> {fir.host_assoc})
   subroutine test4_inner
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest4Ep"
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest4Eally"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest4Ep")
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest4Eally")
     p => ally
   end subroutine test4_inner
 end subroutine test4
@@ -166,8 +166,8 @@ end subroutine test4
 subroutine test5
   real, pointer :: p(:)
   real, allocatable, target :: ally(:)
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest5Eally"
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest5Ep"
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest5Eally")
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest5Ep")
   ! CHECK: fir.alloca tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   ! CHECK: fir.call @_QFtest5Ptest5_inner
   allocate(ally(10))
@@ -177,8 +177,8 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest5Ptest5_inner(
   ! CHECK-SAME:%[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>> {fir.host_assoc})
   subroutine test5_inner
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest5Ep"
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest5Eally"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest5Ep")
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest5Eally")
     p => ally
   end subroutine test5_inner
 end subroutine test5
@@ -193,8 +193,8 @@ subroutine test7(j, k)
   implicit none
   integer :: j
   integer :: k(:)
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest7Ej"
-  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name = "_QFtest7Ek"
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest7Ej")
+  ! CHECK-DAG: hlfir.declare %{{.*}}uniq_name("_QFtest7Ek")
   ! CHECK: fir.alloca tuple<!fir.ref<i32>>
   ! CHECK: fir.call @_QFtest7Ptest7_inner
   k = test7_inner(k)
@@ -204,7 +204,7 @@ contains
 elemental integer function test7_inner(i)
   implicit none
   integer, intent(in) :: i
-  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest7Ej"
+  ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest7Ej")
   test7_inner = i + j
 end function
 end subroutine
@@ -219,7 +219,7 @@ contains
 subroutine bar()
   integer :: stmt_func, i
   stmt_func(i) = i + captured
-  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFcaptured_stmt_functionEcaptured"
+  ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFcaptured_stmt_functionEcaptured")
   print *, stmt_func(10)
 end subroutine
 end subroutine
@@ -246,7 +246,7 @@ subroutine test10(i)
  implicit none
  integer, pointer :: i(:)
  namelist /a_namelist/ i
- ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest10Ei"
+ ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest10Ei")
  ! CHECK: fir.alloca tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
  ! CHECK: fir.call @_QFtest10Pbar
  call bar()
@@ -254,7 +254,7 @@ contains
 ! CHECK-LABEL: func.func private @_QFtest10Pbar(
 ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>> {fir.host_assoc})
 subroutine bar()
-  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest10Ei"
+  ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest10Ei")
   read (88, NML = a_namelist)
 end subroutine
 end subroutine
@@ -263,7 +263,7 @@ end subroutine
 subroutine test_proc_dummy
   integer i
   i = 1
-  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest_proc_dummyEi"
+  ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest_proc_dummyEi")
   ! CHECK: fir.alloca tuple<!fir.ref<i32>>
   ! CHECK: fir.emboxproc
   call test_proc_dummy_other(test_proc_dummy_a)
@@ -272,7 +272,7 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest_proc_dummyPtest_proc_dummy_a(
   ! CHECK-SAME: %{{.*}}, %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc})
   subroutine test_proc_dummy_a(j)
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest_proc_dummyEi"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest_proc_dummyEi")
     i = i + j
   end subroutine test_proc_dummy_a
 end subroutine test_proc_dummy
@@ -282,7 +282,7 @@ subroutine test_proc_dummy_char
   external get_message
   character(10) message
   message = "Hi there!"
-  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest_proc_dummy_charEmessage"
+  ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest_proc_dummy_charEmessage")
   ! CHECK: fir.alloca tuple<!fir.boxchar<1>>
   ! CHECK: fir.emboxproc
   print *, get_message(gen_message)
@@ -290,7 +290,7 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest_proc_dummy_charPgen_message(
   ! CHECK-SAME: %{{.*}}, %{{.*}}, %[[tup:.*]]: !fir.ref<tuple<!fir.boxchar<1>>> {fir.host_assoc})
   function gen_message
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest_proc_dummy_charEmessage"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest_proc_dummy_charEmessage")
     character(10) :: gen_message
     gen_message = message
   end function gen_message
@@ -304,7 +304,7 @@ contains
   ! CHECK-LABEL: func.func private @_QFtest_pdt_with_init_do_not_crash_host_symbol_analysisPsub(
   ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc})
   subroutine sub()
-    ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFtest_pdt_with_init_do_not_crash_host_symbol_analysisEi"
+    ! CHECK: hlfir.declare %{{.*}}uniq_name("_QFtest_pdt_with_init_do_not_crash_host_symbol_analysisEi")
     type type1 (k)
       integer, KIND :: k
       integer :: x = k

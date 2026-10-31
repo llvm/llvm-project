@@ -38,7 +38,7 @@ LLVMModuleRef createDemoModule(LLVMContextRef Ctx) {
       LLVMAppendBasicBlockInContext(Ctx, SumFunction, "entry");
 
   //  - Add an IR builder and point it at the end of the basic block.
-  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(M);
   LLVMPositionBuilderAtEnd(Builder, EntryBB);
 
   //  - Get the two function arguments and use them co construct an "add"
@@ -86,6 +86,10 @@ int main(int argc, const char *argv[]) {
 
     // Get the Target.
     const char *Triple = LLVMOrcLLJITGetTripleString(J);
+
+    // Set the triple on the module.
+    LLVMSetTarget(M, Triple);
+
     LLVMTargetRef Target = 0;
     char *ErrorMsg = 0;
     if (LLVMGetTargetFromTriple(Triple, &Target, &ErrorMsg)) {

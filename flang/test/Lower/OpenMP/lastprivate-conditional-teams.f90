@@ -27,7 +27,7 @@ end subroutine
 ! CHECK:         omp.teams
 ! The reduction struct is a per-team (pinned) stack allocation inside the teams
 ! region, initialized before the enclosing parallel.
-! CHECK:           %[[STRUCT:.*]] = fir.alloca {{.*}}_lp_cond_t{{.*}} {pinned}
+! CHECK:           %[[STRUCT:.*]] = fir.alloca {{.*}}_lp_cond_t{{.*}} <{pinned}>
 ! CHECK:           fir.coordinate_of %[[STRUCT]], x
 ! CHECK:           fir.coordinate_of %[[STRUCT]], $x
 ! CHECK:           fir.store %{{.*}} to %{{.*}} : !fir.ref<i64>

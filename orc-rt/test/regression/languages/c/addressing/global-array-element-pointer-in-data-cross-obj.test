@@ -1,0 +1,28 @@
+# Check that a pointer to an element of a global array defined in another
+# object, stored in initialized data, points to that element.
+#
+# Stresses: fixups with addends for pointers stored in data, targeting data
+# defined in another object.
+
+RUN: rm -rf %t && split-file %s %t
+RUN: %{cc} -O0 -c -o %t/def.O0.o %t/def.c
+RUN: %{cc} -O0 -c -o %t/main.O0.o %t/main.c
+RUN: %{obj-jit} -show-jit-result %t/main.O0.o %t/def.O0.o | FileCheck %s
+RUN: %{cc} -O2 -c -o %t/def.O2.o %t/def.c
+RUN: %{cc} -O2 -c -o %t/main.O2.o %t/main.c
+RUN: %{obj-jit} -show-jit-result %t/main.O2.o %t/def.O2.o | FileCheck %s
+
+CHECK: JIT result: 0
+
+#--- def.c
+int Array[4096] = {[1500] = 42};
+
+#--- main.c
+extern int Array[4096];
+int *ElementPtr = &Array[1500];
+
+int main(void) {
+  if (*ElementPtr != 42)
+    return 1;
+  return 0;
+}

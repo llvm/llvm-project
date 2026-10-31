@@ -141,7 +141,7 @@ define <4 x i64> @llrint_v4i64_v4f32(<4 x float> %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $56, %esp
+; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    flds 24(%ebp)
 ; X86-NEXT:    flds 20(%ebp)
@@ -301,7 +301,7 @@ define <8 x i64> @llrint_v8i64_v8f32(<8 x float> %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $120, %esp
+; X86-NEXT:    subl $112, %esp
 ; X86-NEXT:    flds 12(%ebp)
 ; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds 16(%ebp)
@@ -586,7 +586,7 @@ define <16 x i64> @llrint_v16i64_v16f32(<16 x float> %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $248, %esp
+; X86-NEXT:    subl $240, %esp
 ; X86-NEXT:    flds 12(%ebp)
 ; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds 16(%ebp)
@@ -1254,7 +1254,7 @@ define <4 x i64> @llrint_v4i64_v4f64(<4 x double> %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $56, %esp
+; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    fldl 36(%ebp)
 ; X86-NEXT:    fldl 28(%ebp)
@@ -1417,7 +1417,7 @@ define <8 x i64> @llrint_v8i64_v8f64(<8 x double> %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $120, %esp
+; X86-NEXT:    subl $112, %esp
 ; X86-NEXT:    fldl 12(%ebp)
 ; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldl 20(%ebp)

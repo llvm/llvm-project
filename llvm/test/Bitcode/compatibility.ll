@@ -521,6 +521,10 @@ declare cc96 void @f.cc96()
 ; CHECK: declare amdgpu_es void @f.cc96()
 declare amdgpu_es void @f.amdgpu_es()
 ; CHECK: declare amdgpu_es void @f.amdgpu_es()
+declare cc99 void @f.cc99()
+; CHECK: declare wasm_emscripten_invokecc void @f.cc99()
+declare wasm_emscripten_invokecc void @f.wasm_emscripten_invokecc()
+; CHECK: declare wasm_emscripten_invokecc void @f.wasm_emscripten_invokecc()
 declare cc112 void @f.cc112()
 ; CHECK: declare riscv_vls_cc(32) void @f.cc112()
 declare cc113 void @f.cc113()
@@ -1622,6 +1626,21 @@ define void @instructions.bitwise_binops(i8 %op1, i8 %op2) {
   or disjoint i8 %op1, %op2
   ; CHECK: or disjoint i8 %op1, %op2
 
+  ret void
+}
+
+; Instructions -- Byte Operations
+define void @instructions.byteops(b32 %v32, b64 %v64, i8 %v8, i16 %v16, i32 %off) {
+  bitinsert b32 %v32, i8 %v8, i32 3
+  ; CHECK: bitinsert b32 %v32, i8 %v8, i32 3
+  bitinsert b32 %v32, i16 %v16, i32 %off
+  ; CHECK: bitinsert b32 %v32, i16 %v16, i32 %off
+  bitextract i8, b32 %v32, i32 24
+  ; CHECK: bitextract i8, b32 %v32, i32 24
+  bitextract i16, b32 %v32, i32 %off
+  ; CHECK: bitextract i16, b32 %v32, i32 %off
+  bitextract i8, b64 %v64, i32 0
+  ; CHECK: bitextract i8, b64 %v64, i32 0
   ret void
 }
 

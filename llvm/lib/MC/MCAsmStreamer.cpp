@@ -473,6 +473,7 @@ public:
   void emitIdent(StringRef IdentString) override;
   void emitCFIBKeyFrame() override;
   void emitCFIMTETaggedFrame() override;
+  void emitCFINonHintPAuthFrame() override;
   void emitCFISections(bool EH, bool Debug, bool SFrame) override;
   void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc) override;
   void emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc) override;
@@ -690,7 +691,8 @@ bool MCAsmStreamer::popSection() {
   if (!MCStreamer::popSection())
     return false;
   auto [Sec, Subsec] = getCurrentSection();
-  MAI->printSwitchToSection(*Sec, Subsec, getContext().getTargetTriple(), OS);
+  if (Sec)
+    MAI->printSwitchToSection(*Sec, Subsec, getContext().getTargetTriple(), OS);
   return true;
 }
 
@@ -2433,6 +2435,12 @@ void MCAsmStreamer::emitCFIBKeyFrame() {
 void MCAsmStreamer::emitCFIMTETaggedFrame() {
   MCStreamer::emitCFIMTETaggedFrame();
   OS << "\t.cfi_mte_tagged_frame";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFINonHintPAuthFrame() {
+  MCStreamer::emitCFINonHintPAuthFrame();
+  OS << "\t.cfi_non_hint_pauth_frame";
   EmitEOL();
 }
 

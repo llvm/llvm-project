@@ -1485,69 +1485,69 @@ TEST_F(FileCheckTest, Substitution) {
 }
 
 TEST_F(FileCheckTest, FileCheckContext) {
-  FileCheckPatternContext Cxt;
+  FileCheckPatternContext Ctx;
   SourceMgr SM;
 
   // No definition.
-  EXPECT_THAT_ERROR(Cxt.defineCmdlineVariables({}, SM), Succeeded());
+  EXPECT_THAT_ERROR(Ctx.defineCmdlineVariables({}, SM), Succeeded());
 
   // Missing equal sign.
   expectDiagnosticError("missing equal sign in global definition",
-                        Cxt.defineCmdlineVariables({"LocalVar"}, SM));
+                        Ctx.defineCmdlineVariables({"LocalVar"}, SM));
   expectDiagnosticError("missing equal sign in global definition",
-                        Cxt.defineCmdlineVariables({"#LocalNumVar"}, SM));
+                        Ctx.defineCmdlineVariables({"#LocalNumVar"}, SM));
 
   // Empty variable name.
   expectDiagnosticError("empty variable name",
-                        Cxt.defineCmdlineVariables({"=18"}, SM));
+                        Ctx.defineCmdlineVariables({"=18"}, SM));
   expectDiagnosticError("empty variable name",
-                        Cxt.defineCmdlineVariables({"#=18"}, SM));
+                        Ctx.defineCmdlineVariables({"#=18"}, SM));
 
   // Invalid variable name.
   expectDiagnosticError("invalid variable name",
-                        Cxt.defineCmdlineVariables({"18LocalVar=18"}, SM));
+                        Ctx.defineCmdlineVariables({"18LocalVar=18"}, SM));
   expectDiagnosticError("invalid variable name",
-                        Cxt.defineCmdlineVariables({"#18LocalNumVar=18"}, SM));
+                        Ctx.defineCmdlineVariables({"#18LocalNumVar=18"}, SM));
 
   // Name conflict between pattern and numeric variable.
   expectDiagnosticError(
       "string variable with name 'LocalVar' already exists",
-      Cxt.defineCmdlineVariables({"LocalVar=18", "#LocalVar=36"}, SM));
-  Cxt = FileCheckPatternContext();
+      Ctx.defineCmdlineVariables({"LocalVar=18", "#LocalVar=36"}, SM));
+  Ctx = FileCheckPatternContext();
   expectDiagnosticError(
       "numeric variable with name 'LocalNumVar' already exists",
-      Cxt.defineCmdlineVariables({"#LocalNumVar=18", "LocalNumVar=36"}, SM));
-  Cxt = FileCheckPatternContext();
+      Ctx.defineCmdlineVariables({"#LocalNumVar=18", "LocalNumVar=36"}, SM));
+  Ctx = FileCheckPatternContext();
 
   // Invalid numeric value for numeric variable.
-  expectUndefErrors({"x"}, Cxt.defineCmdlineVariables({"#LocalNumVar=x"}, SM));
+  expectUndefErrors({"x"}, Ctx.defineCmdlineVariables({"#LocalNumVar=x"}, SM));
 
   // Define local variables from command-line.
   std::vector<StringRef> GlobalDefines;
   // Clear local variables to remove dummy numeric variable x that
   // parseNumericSubstitutionBlock would have created and stored in
   // GlobalNumericVariableTable.
-  Cxt.clearLocalVars();
+  Ctx.clearLocalVars();
   GlobalDefines.emplace_back("LocalVar=FOO");
   GlobalDefines.emplace_back("EmptyVar=");
   GlobalDefines.emplace_back("#LocalNumVar1=18");
   GlobalDefines.emplace_back("#%x,LocalNumVar2=LocalNumVar1+2");
   GlobalDefines.emplace_back("#LocalNumVar3=0xc");
-  ASSERT_THAT_ERROR(Cxt.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
+  ASSERT_THAT_ERROR(Ctx.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
 
   // Create @LINE pseudo numeric variable and check it is present by matching
   // it.
   size_t LineNumber = 1;
-  Pattern P(Check::CheckPlain, &Cxt, LineNumber);
+  Pattern P(Check::CheckPlain, &Ctx, LineNumber);
   FileCheckRequest Req;
-  Cxt.createLineVariable();
+  Ctx.createLineVariable();
   ASSERT_FALSE(P.parsePattern("[[@LINE]]", "CHECK", SM, Req));
   Pattern::MatchResult Res = P.match("1", SM);
   ASSERT_THAT_ERROR(std::move(Res.TheError), Succeeded());
 
 #ifndef NDEBUG
   // Recreating @LINE pseudo numeric variable fails.
-  EXPECT_DEATH(Cxt.createLineVariable(),
+  EXPECT_DEATH(Ctx.createLineVariable(),
                "@LINE pseudo numeric variable already created");
 #endif
 
@@ -1558,31 +1558,31 @@ TEST_F(FileCheckTest, FileCheckContext) {
   StringRef LocalNumVar3Ref = bufferize(SM, "LocalNumVar3");
   StringRef EmptyVarStr = "EmptyVar";
   StringRef UnknownVarStr = "UnknownVar";
-  Expected<StringRef> LocalVar = Cxt.getPatternVarValue(LocalVarStr);
-  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
+  Expected<StringRef> LocalVar = Ctx.getPatternVarValue(LocalVarStr);
+  P = Pattern(Check::CheckPlain, &Ctx, ++LineNumber);
   std::optional<NumericVariable *> DefinedNumericVariable;
   Expected<std::unique_ptr<Expression>> ExpressionPointer =
       P.parseNumericSubstitutionBlock(LocalNumVar1Ref, DefinedNumericVariable,
                                       /*IsLegacyLineExpr=*/false, LineNumber,
-                                      &Cxt, SM);
+                                      &Ctx, SM);
   ASSERT_THAT_EXPECTED(LocalVar, Succeeded());
   EXPECT_EQ(*LocalVar, "FOO");
-  Expected<StringRef> EmptyVar = Cxt.getPatternVarValue(EmptyVarStr);
-  Expected<StringRef> UnknownVar = Cxt.getPatternVarValue(UnknownVarStr);
+  Expected<StringRef> EmptyVar = Ctx.getPatternVarValue(EmptyVarStr);
+  Expected<StringRef> UnknownVar = Ctx.getPatternVarValue(UnknownVarStr);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   Expected<APInt> ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
   EXPECT_EQ(ExpressionVal->getSExtValue(), 18);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar2Ref, DefinedNumericVariable,
-      /*IsLegacyLineExpr=*/false, LineNumber, &Cxt, SM);
+      /*IsLegacyLineExpr=*/false, LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
   EXPECT_EQ(ExpressionVal->getSExtValue(), 20);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar3Ref, DefinedNumericVariable,
-      /*IsLegacyLineExpr=*/false, LineNumber, &Cxt, SM);
+      /*IsLegacyLineExpr=*/false, LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
@@ -1592,8 +1592,8 @@ TEST_F(FileCheckTest, FileCheckContext) {
   expectUndefErrors({std::string(UnknownVarStr)}, UnknownVar.takeError());
 
   // Clear local variables and check they become absent.
-  Cxt.clearLocalVars();
-  LocalVar = Cxt.getPatternVarValue(LocalVarStr);
+  Ctx.clearLocalVars();
+  LocalVar = Ctx.getPatternVarValue(LocalVarStr);
   expectUndefErrors({std::string(LocalVarStr)}, LocalVar.takeError());
   // Check a numeric expression's evaluation fails if called after clearing of
   // local variables, if it was created before. This is important because local
@@ -1601,50 +1601,50 @@ TEST_F(FileCheckTest, FileCheckContext) {
   // expressions are linked to the numeric variables they use.
   expectUndefErrors({"LocalNumVar3"},
                     (*ExpressionPointer)->getAST()->eval().takeError());
-  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
+  P = Pattern(Check::CheckPlain, &Ctx, ++LineNumber);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar1Ref, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      LineNumber, &Cxt, SM);
+      LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   expectUndefErrors({"LocalNumVar1"}, ExpressionVal.takeError());
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar2Ref, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      LineNumber, &Cxt, SM);
+      LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   expectUndefErrors({"LocalNumVar2"}, ExpressionVal.takeError());
-  EmptyVar = Cxt.getPatternVarValue(EmptyVarStr);
+  EmptyVar = Ctx.getPatternVarValue(EmptyVarStr);
   expectUndefErrors({"EmptyVar"}, EmptyVar.takeError());
   // Clear again because parseNumericSubstitutionBlock would have created a
   // dummy variable and stored it in GlobalNumericVariableTable.
-  Cxt.clearLocalVars();
+  Ctx.clearLocalVars();
 
   // Redefine global variables and check variables are defined again.
   GlobalDefines.emplace_back("$GlobalVar=BAR");
   GlobalDefines.emplace_back("#$GlobalNumVar=36");
-  ASSERT_THAT_ERROR(Cxt.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
+  ASSERT_THAT_ERROR(Ctx.defineCmdlineVariables(GlobalDefines, SM), Succeeded());
   StringRef GlobalVarStr = "$GlobalVar";
   StringRef GlobalNumVarRef = bufferize(SM, "$GlobalNumVar");
-  Expected<StringRef> GlobalVar = Cxt.getPatternVarValue(GlobalVarStr);
+  Expected<StringRef> GlobalVar = Ctx.getPatternVarValue(GlobalVarStr);
   ASSERT_THAT_EXPECTED(GlobalVar, Succeeded());
   EXPECT_EQ(*GlobalVar, "BAR");
-  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
+  P = Pattern(Check::CheckPlain, &Ctx, ++LineNumber);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       GlobalNumVarRef, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      LineNumber, &Cxt, SM);
+      LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
   EXPECT_EQ(ExpressionVal->getSExtValue(), 36);
 
   // Clear local variables and check global variables remain defined.
-  Cxt.clearLocalVars();
-  EXPECT_THAT_EXPECTED(Cxt.getPatternVarValue(GlobalVarStr), Succeeded());
-  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
+  Ctx.clearLocalVars();
+  EXPECT_THAT_EXPECTED(Ctx.getPatternVarValue(GlobalVarStr), Succeeded());
+  P = Pattern(Check::CheckPlain, &Ctx, ++LineNumber);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       GlobalNumVarRef, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      LineNumber, &Cxt, SM);
+      LineNumber, &Ctx, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());

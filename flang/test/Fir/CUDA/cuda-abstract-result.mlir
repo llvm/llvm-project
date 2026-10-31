@@ -4,12 +4,12 @@ gpu.module @test {
  gpu.func @_QMinterval_mPtest1(%arg0: !fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>, %arg1: !fir.ref<f32>) -> !fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}> {
     %c1_i32 = arith.constant 1 : i32
     %18 = fir.dummy_scope : !fir.dscope
-    %19 = fir.declare %arg0 dummy_scope %18 {uniq_name = "_QMinterval_mFtest1Ea"} : (!fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>
-    %20 = fir.declare %arg1 dummy_scope %18 {uniq_name = "_QMinterval_mFtest1Eb"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+    %19 = fir.declare %arg0 dummy_scope %18 uniq_name("_QMinterval_mFtest1Ea") : (!fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>
+    %20 = fir.declare %arg1 dummy_scope %18 uniq_name("_QMinterval_mFtest1Eb") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
     %21 = fir.alloca !fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}> {bindc_name = "c", uniq_name = "_QMinterval_mFtest1Ec"}
-    %22 = fir.declare %21 {uniq_name = "_QMinterval_mFtest1Ec"} : (!fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>) -> !fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>
+    %22 = fir.declare %21 uniq_name("_QMinterval_mFtest1Ec") : (!fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>) -> !fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>
     %23 = fir.alloca i32 {bindc_name = "warpsize", uniq_name = "_QMcudadeviceECwarpsize"}
-    %24 = fir.declare %23 {uniq_name = "_QMcudadeviceECwarpsize"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %24 = fir.declare %23 uniq_name("_QMcudadeviceECwarpsize") : (!fir.ref<i32>) -> !fir.ref<i32>
     %26 = fir.coordinate_of %19, inf : (!fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>) -> !fir.ref<f32>
     %27 = fir.load %20 : !fir.ref<f32>
     %28 = arith.negf %27 fastmath<contract> : f32

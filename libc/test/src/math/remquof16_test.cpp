@@ -15,4 +15,4 @@
 
 #include "src/math/remquof16.h"
 
-LIST_REMQUO_TESTS(float16, LIBC_NAMESPACE::remquof16)
+LIST_REMQUO_TESTS(Remquof16, float16, LIBC_NAMESPACE::remquof16)

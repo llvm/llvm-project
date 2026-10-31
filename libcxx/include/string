@@ -2306,16 +2306,16 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
-  __get_amortized_growth_capacity(size_type __required_capacity) {
+  __get_amortized_growth_capacity(size_type __old_cap, size_type __additional_characters) {
     size_type __max_size = max_size();
-    if (__required_capacity > __max_size)
+    if (__additional_characters > __max_size - __old_cap)
       __throw_length_error();
     size_type __current_cap = capacity();
-    _LIBCPP_ASSERT_INTERNAL(
-        __current_cap < __required_capacity, "Trying to grow string even though there is enough capacity already?");
+    _LIBCPP_ASSERT_INTERNAL(__current_cap < __old_cap + __additional_characters,
+                            "Trying to grow string even though there is enough capacity already?");
     if (__current_cap > __max_size / 2 - __alignment)
       return __max_size;
-    return std::max(__required_capacity, 2 * __current_cap);
+    return std::max(__old_cap + __additional_characters, 2 * __current_cap);
   }
 
   inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(const value_type* __s, size_type __sz);
@@ -2370,11 +2370,12 @@ private:
       size_type __n_add,
       const value_type* __p_new_stuff);
 
-  // __assign_no_alias is invoked for assignment operations where we
-  // have proof that the input does not alias the current instance.
-  // For example, operator=(basic_string) performs a 'self' check.
+  // This function can be called if it is known that
+  // - __n <= max_size() or __s is from an allocator of the same family, and
+  // - __s is null terminated at __n.
+  // __s may point into *this.
   template <bool __is_short>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_no_alias(const value_type* __s, size_type __n);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void __assign_c_str(const value_type* __s, size_type __n);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __erase_to_end(size_type __pos) {
     _LIBCPP_ASSERT_INTERNAL(__pos <= capacity(), "Trying to erase at position outside the strings capacity!");
@@ -2436,7 +2437,6 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __move_assign_alloc(basic_string&, false_type) _NOEXCEPT {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_external(const value_type* __s);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_external(const value_type* __s, size_type __n);
 
   // Assigns the value in __s, guaranteed to be __n < __min_cap in length.
@@ -2659,7 +2659,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
     size_type __n_del,
     size_type __n_add,
     const value_type* __p_new_stuff) {
-  __long __buffer     = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap + __delta_cap));
+  __long __buffer     = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap, __delta_cap));
   value_type* __old_p = __data();
   __annotate_delete();
   auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
@@ -2691,7 +2691,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by(
     size_type __n_copy,
     size_type __n_del,
     size_type __n_add) {
-  __long __buffer     = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap + __delta_cap));
+  __long __buffer     = __allocate_long_buffer(__alloc_, 0, __get_amortized_growth_capacity(__old_cap, __delta_cap));
   value_type* __old_p = __data();
   if (__n_copy != 0)
     traits_type::copy(std::__to_address(__buffer.__data_), __old_p, __n_copy);
@@ -2727,28 +2727,43 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_without_replace(
 
 template <class _CharT, class _Traits, class _Allocator>
 template <bool __is_short>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(const value_type* __s, size_type __n) {
-  const auto __cap  = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
-  const auto __size = __is_short ? __get_short_size() : __get_long_size();
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void
+basic_string<_CharT, _Traits, _Allocator>::__assign_c_str(const value_type* __s, size_type __n) {
+  _LIBCPP_ASSERT_INTERNAL(_Traits::eq(__s[__n], value_type()), "`__s` should be null-terminated at __s[__n]");
+
+  const auto __cap = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
   if (__n >= __cap) {
-    __grow_by_and_replace(__cap - 1, __n - __cap + 1, __size, 0, __size, __n, __s);
-    return *this;
+    return [] [[__gnu__::__noinline__]] (basic_string& __this, const value_type* __ls, size_type __ln) static {
+      std::__assume(__this.__is_long() == !__is_short);
+      std::__assume(!__alloc_traits::is_always_equal::value || __ln <= __this.max_size());
+      __this.__annotate_delete();
+      auto __annotate_guard = std::__make_scope_guard(__annotate_new_size(__this));
+      if _LIBCPP_CONSTEXPR (!__is_short)
+        __alloc_traits::deallocate(__this.__alloc_, __this.__get_long_pointer(), __this.__get_long_cap());
+      auto __guard   = std::__make_exception_guard([&] {
+        if _LIBCPP_CONSTEXPR (!__is_short)
+          __this.__rep_ = __rep();
+      });
+      auto __new_cap = __this.__get_amortized_growth_capacity(0, __ln);
+      std::__assume(__new_cap <= __this.max_size());
+      __this.__init_internal_buffer(__new_cap);
+      __this.__set_long_size(__ln);
+      __guard.__complete();
+      traits_type::copy(std::__to_address(__this.__get_long_pointer()), __ls, __ln + 1);
+    }(*this, __s, __n);
   }
 
   __annotate_delete();
   auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
   pointer __p;
-  if (__is_short) {
+  if _LIBCPP_CONSTEXPR (__is_short) {
     __p = __get_short_pointer();
     __set_short_size(__n);
   } else {
     __p = __get_long_pointer();
     __set_long_size(__n);
   }
-  traits_type::copy(std::__to_address(__p), __s, __n);
-  traits_type::assign(__p[__n], value_type());
-  return *this;
+  traits_type::move(std::__to_address(__p), __s, __n + 1);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2826,11 +2841,15 @@ basic_string<_CharT, _Traits, _Allocator>::operator=(const basic_string& __str) 
 
   __copy_assign_alloc(__str);
 
-  if (__is_long())
-    return __assign_no_alias<false>(__str.data(), __str.size());
+  if (__is_long()) {
+    __assign_c_str<false>(__str.data(), __str.size());
+    return *this;
+  }
 
-  if (__str.__is_long())
-    return __assign_no_alias<true>(__str.data(), __str.size());
+  if (__str.__is_long()) {
+    __assign_c_str<true>(__str.data(), __str.size());
+    return *this;
+  }
 
   __annotate_delete();
   auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
@@ -2917,16 +2936,19 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_trivial(_Iterator __first, _
   size_type __old_size = size();
   size_type __cap      = capacity();
   if (__cap < __n) {
-    // Unlike `append` functions, if the input range points into the string itself, there is no case that the input
-    // range could get invalidated by reallocation:
-    // 1. If the input range is a subset of the string itself, its size cannot exceed the capacity of the string,
-    //    thus no reallocation would happen.
-    // 2. In the exotic case where the input range is the byte representation of the string itself, the string
-    //    object itself stays valid even if reallocation happens.
-    size_type __sz = size();
-    __grow_by_without_replace(__cap, __n - __cap, __sz, 0, __sz);
-    __annotate_increase(__n);
-  } else if (__n > __old_size)
+    // __cap < __n does not mean the range is outside the string: it can be [data(), data() + size() + 1) of a full
+    // buffer, or the bytes of the object itself. Copy into the new buffer before releasing the old one.
+    __long __buffer = __allocate_long_buffer(__alloc_, __n, __get_amortized_growth_capacity(0, __n));
+    auto __end      = __copy_non_overlapping_range(__first, __last, std::__to_address(__buffer.__data_));
+    traits_type::assign(*__end, value_type());
+
+    __annotate_delete();
+    auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
+    __reset_internal_buffer(__buffer);
+    return;
+  }
+
+  if (__n > __old_size)
     __annotate_increase(__n - __old_size);
   pointer __p = __get_pointer();
   for (; __first != __last; ++__p, (void)++__first)
@@ -2947,18 +2969,21 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const basic_string& __str, siz
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::__assign_external(const value_type* __s) {
-  return __assign_external(__s, traits_type::length(__s));
-}
-
-template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s) {
   _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "string::assign received nullptr");
-  if (auto __len = traits_type::length(__s); __builtin_constant_p(__len) && __fits_in_sso(__len))
+  auto __len = traits_type::length(__s);
+  if (__fits_in_sso(__len))
     return __assign_short(__s, __len);
-  return __assign_external(__s);
+
+  if (__len > max_size())
+    __throw_length_error();
+  if (__is_long())
+    __assign_c_str<false>(__s, __len);
+  else
+    __assign_c_str<true>(__s, __len);
+
+  return *this;
 }
 // append
 

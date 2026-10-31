@@ -1406,14 +1406,13 @@ define void @test_fccmp(bfloat %in, ptr %out) {
 ; CHECK-CVT-GI-NEXT:    movi v1.2s, #69, lsl #24
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-CVT-GI-NEXT:    shll v2.4s, v0.4h, #16
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI30_0
 ; CHECK-CVT-GI-NEXT:    movi v3.2s, #72, lsl #24
 ; CHECK-CVT-GI-NEXT:    shll v4.4s, v0.4h, #16
-; CHECK-CVT-GI-NEXT:    fcmp s2, s1
-; CHECK-CVT-GI-NEXT:    ldr h1, [x8, :lo12:.LCPI30_0]
 ; CHECK-CVT-GI-NEXT:    fmov w8, s0
-; CHECK-CVT-GI-NEXT:    fmov w9, s1
+; CHECK-CVT-GI-NEXT:    fcmp s2, s1
+; CHECK-CVT-GI-NEXT:    movi v1.4h, #69, lsl #8
 ; CHECK-CVT-GI-NEXT:    fccmp s4, s3, #4, mi
+; CHECK-CVT-GI-NEXT:    fmov w9, s1
 ; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, gt
 ; CHECK-CVT-GI-NEXT:    strh w8, [x0]
 ; CHECK-CVT-GI-NEXT:    ret
@@ -1423,14 +1422,13 @@ define void @test_fccmp(bfloat %in, ptr %out) {
 ; CHECK-BF16-GI-NEXT:    movi v1.2s, #69, lsl #24
 ; CHECK-BF16-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-BF16-GI-NEXT:    shll v2.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    adrp x8, .LCPI30_0
 ; CHECK-BF16-GI-NEXT:    movi v3.2s, #72, lsl #24
 ; CHECK-BF16-GI-NEXT:    shll v4.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    fcmp s2, s1
-; CHECK-BF16-GI-NEXT:    ldr h1, [x8, :lo12:.LCPI30_0]
 ; CHECK-BF16-GI-NEXT:    fmov w8, s0
-; CHECK-BF16-GI-NEXT:    fmov w9, s1
+; CHECK-BF16-GI-NEXT:    fcmp s2, s1
+; CHECK-BF16-GI-NEXT:    movi v1.4h, #69, lsl #8
 ; CHECK-BF16-GI-NEXT:    fccmp s4, s3, #4, mi
+; CHECK-BF16-GI-NEXT:    fmov w9, s1
 ; CHECK-BF16-GI-NEXT:    csel w8, w8, w9, gt
 ; CHECK-BF16-GI-NEXT:    strh w8, [x0]
 ; CHECK-BF16-GI-NEXT:    ret

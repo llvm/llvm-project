@@ -4,6 +4,8 @@
 // RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenacc -fclangir -emit-cir %s -o %t-acc.cir
+// RUN: FileCheck --check-prefix=CIR --input-file=%t-acc.cir %s
 
 typedef struct { char buf[24]; } Big;
 

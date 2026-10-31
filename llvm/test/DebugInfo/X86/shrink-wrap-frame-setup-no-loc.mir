@@ -1,4 +1,4 @@
-# RUN: %llc_dwarf %s -o - -mtriple=x86_64-unknown-unknown --start-after=livedebugvalues | FileCheck %s
+# RUN: %llc_dwarf %s -o - -mtriple=x86_64-unknown-unknown --start-after=live-debug-values | FileCheck %s
 
 ## Check the line number from the ret above `.LBB0_2` doesn't leak onto the
 ## frame setup instructions in the `.LBB0_2` block; `pushq   %rax` should

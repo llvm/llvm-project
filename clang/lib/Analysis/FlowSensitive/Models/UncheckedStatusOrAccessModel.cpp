@@ -32,6 +32,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringMap.h"
 
+#include "GtestModelHelpers.h"
+
 namespace clang::dataflow::statusor_model {
 namespace {
 
@@ -1241,6 +1243,13 @@ buildTransferMatchSwitch(ASTContext &Ctx,
           transferAssertionResultConstructFromBoolCall)
       .CaseOfCFGStmt<CXXMemberCallExpr>(isAssertionResultOperatorBoolCall(),
                                         transferAssertionResultOperatorBoolCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          gtest::isAssertionResultExpectationOperatorBoolCall(),
+          [](const CXXMemberCallExpr *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            return gtest::transferAssertionResultExpectationOperatorBoolCall(
+                Expr, State.Env, locForOk);
+          })
       .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("ok"),
                                         transferStatusOrOkCall)
       .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("status"),

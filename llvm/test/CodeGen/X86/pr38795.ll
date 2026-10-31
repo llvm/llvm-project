@@ -138,6 +138,10 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_19
+; CHECK-NEXT:  # %bb.20: # %for.cond47
+; CHECK-NEXT:    # in Loop: Header=BB0_19 Depth=2
+; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    jne .LBB0_19
 ; CHECK-NEXT:    jmp .LBB0_8
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_12: # %if.end26

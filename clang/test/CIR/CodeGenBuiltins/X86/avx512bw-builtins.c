@@ -866,6 +866,30 @@ __m256i test_mm512_maskz_cvtepi16_epi8(__mmask32 __M, __m512i __A) {
   return _mm512_maskz_cvtepi16_epi8(__M, __A);
 }
 
+__m512i test_mm512_mulhi_epi16(__m512i __A, __m512i __B) {
+  // CIR-LABEL: _mm512_mulhi_epi16
+  // CIR: cir.call_llvm_intrinsic "smulh" %{{.*}}, %{{.*}} : (!cir.vector<32 x !s16i>, !cir.vector<32 x !s16i>) -> !cir.vector<32 x !s16i>
+
+  // LLVM-LABEL: test_mm512_mulhi_epi16
+  // LLVM: call <32 x i16> @llvm.smulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm512_mulhi_epi16
+  // OGCG: call <32 x i16> @llvm.smulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
+  return _mm512_mulhi_epi16(__A, __B);
+}
+
+__m512i test_mm512_mulhi_epu16(__m512i __A, __m512i __B) {
+  // CIR-LABEL: _mm512_mulhi_epu16
+  // CIR: cir.call_llvm_intrinsic "umulh" %{{.*}}, %{{.*}} : (!cir.vector<32 x !u16i>, !cir.vector<32 x !u16i>) -> !cir.vector<32 x !u16i>
+
+  // LLVM-LABEL: test_mm512_mulhi_epu16
+  // LLVM: call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm512_mulhi_epu16
+  // OGCG: call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
+  return _mm512_mulhi_epu16(__A, __B);
+}
+
 __m512i test_mm512_alignr_epi8(__m512i __A,__m512i __B) {
   // CIR-LABEL: _mm512_alignr_epi8
   // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<64 x {{!s8i|!u8i}}>) [#cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i, #cir.int<64> : !s32i, #cir.int<65> : !s32i, #cir.int<18> : !s32i, #cir.int<19> : !s32i, #cir.int<20> : !s32i, #cir.int<21> : !s32i, #cir.int<22> : !s32i, #cir.int<23> : !s32i, #cir.int<24> : !s32i, #cir.int<25> : !s32i, #cir.int<26> : !s32i, #cir.int<27> : !s32i, #cir.int<28> : !s32i, #cir.int<29> : !s32i, #cir.int<30> : !s32i, #cir.int<31> : !s32i, #cir.int<80> : !s32i, #cir.int<81> : !s32i, #cir.int<34> : !s32i, #cir.int<35> : !s32i, #cir.int<36> : !s32i, #cir.int<37> : !s32i, #cir.int<38> : !s32i, #cir.int<39> : !s32i, #cir.int<40> : !s32i, #cir.int<41> : !s32i, #cir.int<42> : !s32i, #cir.int<43> : !s32i, #cir.int<44> : !s32i, #cir.int<45> : !s32i, #cir.int<46> : !s32i, #cir.int<47> : !s32i, #cir.int<96> : !s32i, #cir.int<97> : !s32i, #cir.int<50> : !s32i, #cir.int<51> : !s32i, #cir.int<52> : !s32i, #cir.int<53> : !s32i, #cir.int<54> : !s32i, #cir.int<55> : !s32i, #cir.int<56> : !s32i, #cir.int<57> : !s32i, #cir.int<58> : !s32i, #cir.int<59> : !s32i, #cir.int<60> : !s32i, #cir.int<61> : !s32i, #cir.int<62> : !s32i, #cir.int<63> : !s32i, #cir.int<112> : !s32i, #cir.int<113> : !s32i] : !cir.vector<64 x {{!s8i|!u8i}}>

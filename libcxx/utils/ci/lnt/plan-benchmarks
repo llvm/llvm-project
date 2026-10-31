@@ -7,71 +7,18 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Sequence
 import argparse
 import common
-import json
 import logging
 import pathlib
 import sys
 import tabulate
-import urllib.error
-import urllib.parse
-import urllib.request
-
-
-# LNT instances can be slow: timeout after that many seconds.
-TIMEOUT_SECONDS = 120
 
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
                     argparse.RawDescriptionHelpFormatter):
     """Show defaults, but keep the paragraphs of the description intact."""
-
-class LNTError(Exception):
-    pass
-
-
-def get(url: str) -> Optional[dict]:
-    """GET a JSON resource, returning None if the server answers 404."""
-    logging.debug(f'GET {url}')
-    try:
-        with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
-            return json.loads(response.read().decode())
-    except urllib.error.HTTPError as error:
-        if error.code == 404:
-            return None
-        raise LNTError(f'GET {url} failed with HTTP {error.code}: {error.reason}')
-    except urllib.error.URLError as error:
-        raise LNTError(f'GET {url} failed: {error.reason}')
-    except (json.JSONDecodeError, UnicodeDecodeError) as error:
-        raise LNTError(f'GET {url} returned a malformed response: {error}')
-
-
-def benchmarked_commits(lnt_url: str, test_suite: str, machine: str) -> Optional[Dict[str, int]]:
-    """
-    Return {commit: number of runs} for a machine, or None if the instance has no
-    such machine.
-    """
-    base = f'{lnt_url.rstrip("/")}/api/db_default/v4/{test_suite}'
-    result = get(f'{base}/machines/{urllib.parse.quote(machine)}')
-    if result is None:
-        listing = get(f'{base}/machines')
-        if listing is None:
-            raise LNTError(f'{lnt_url} has no test suite named {test_suite}')
-        named = [m for m in listing.get('machines', []) if m.get('name') == machine]
-        if len(named) > 1:
-            ids = ', '.join(str(m.get('id')) for m in named)
-            raise LNTError(f'ambiguous name: {lnt_url} has {len(named)} machines named {machine} (ids {ids})')
-        return None
-
-    counts: Dict[str, int] = {}
-    for run in result.get('runs', []):
-        if 'git_sha' not in run:
-            raise LNTError(f'run {run.get("id")} has no git_sha field. Is {test_suite} the right test suite?')
-        commit = str(run['git_sha']).strip().lower() # normalize commit SHAs
-        counts[commit] = counts.get(commit, 0) + 1
-    return counts
 
 
 def plan(commits: Sequence[str],
@@ -135,11 +82,6 @@ def main(argv: List[str]) -> int:
         help='The LNT machine to plan work for.')
     parser.add_argument('--samples', type=common.at_least(1), default=3,
         help='How many benchmark runs each commit should have.')
-    parser.add_argument('--allow-missing-machine', action='store_true',
-        help='Accept that the LNT instance has no such machine, and plan despite that. '
-             'Needed when first populating a machine, and withheld by default because a '
-             'mistyped or renamed machine is otherwise indistinguishable from one that '
-             'has no data yet.')
     parser.add_argument('--output', type=pathlib.Path, default=None,
         help='Where to write the plan. Defaults to standard output.')
     parser.add_argument('-q', '--quiet', action='store_true',
@@ -159,13 +101,8 @@ def main(argv: List[str]) -> int:
     if invalid:
         raise ValueError(f'expected full 40-character SHAs on the input, got {invalid[0]!r}')
 
-    have = benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
+    have = common.benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
     if have is None:
-        if not args.allow_missing_machine:
-            raise ValueError(f'{args.lnt_url} has no machine named {args.machine} in test suite '
-                             f'{args.test_suite}. Pass --allow-missing-machine if that is intended, '
-                             f'otherwise check your usage of the tool to avoid generating a potentially '
-                             f'large list of commits to benchmark.')
         logging.warning(f'{args.lnt_url} has no machine named {args.machine} yet: planning as if it had no data')
         have = {}
 
@@ -207,5 +144,5 @@ def main(argv: List[str]) -> int:
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv[1:]))
-    except (ValueError, OSError, LNTError) as error:
+    except (ValueError, OSError, common.LNTError) as error:
         sys.exit(f'error: {error}')

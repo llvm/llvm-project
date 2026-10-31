@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-virtual-class-destructor %t -- --fix-notes
 
-// CHECK-MESSAGES: :[[@LINE+4]]:8: warning: destructor of 'PrivateVirtualBaseStruct' is private and prevents using the type [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+3]]:8: note: make it public and virtual
-// CHECK-MESSAGES: :[[@LINE+2]]:8: note: make it protected
+// CHECK-MESSAGES: :[[@LINE+8]]:11: warning: destructor of 'PrivateVirtualBaseStruct' is private and prevents using the type [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+7]]:11: note: make it public and virtual
+// CHECK-MESSAGES: :[[@LINE+6]]:11: note: make it protected
 // As we have 2 conflicting fixes in notes, no fix is applied.
 struct PrivateVirtualBaseStruct {
   virtual void f();
@@ -16,8 +16,8 @@ struct PublicVirtualBaseStruct { // OK
   virtual ~PublicVirtualBaseStruct() {}
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: destructor of 'ProtectedVirtualBaseStruct' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:8: note: make it protected and non-virtual
+// CHECK-MESSAGES: :[[@LINE+6]]:11: warning: destructor of 'ProtectedVirtualBaseStruct' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+5]]:11: note: make it protected and non-virtual
 struct ProtectedVirtualBaseStruct {
   virtual void f();
 
@@ -26,8 +26,8 @@ protected:
   // CHECK-FIXES: ~ProtectedVirtualBaseStruct() {}
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: destructor of 'ProtectedVirtualDefaultBaseStruct' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:8: note: make it protected and non-virtual
+// CHECK-MESSAGES: :[[@LINE+6]]:11: warning: destructor of 'ProtectedVirtualDefaultBaseStruct' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+5]]:11: note: make it protected and non-virtual
 struct ProtectedVirtualDefaultBaseStruct {
   virtual void f();
 
@@ -36,9 +36,9 @@ protected:
   // CHECK-FIXES: ~ProtectedVirtualDefaultBaseStruct() = default;
 };
 
-// CHECK-MESSAGES: :[[@LINE+4]]:8: warning: destructor of 'PrivateNonVirtualBaseStruct' is private and prevents using the type [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+3]]:8: note: make it public and virtual
-// CHECK-MESSAGES: :[[@LINE+2]]:8: note: make it protected
+// CHECK-MESSAGES: :[[@LINE+8]]:3: warning: destructor of 'PrivateNonVirtualBaseStruct' is private and prevents using the type [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+7]]:3: note: make it public and virtual
+// CHECK-MESSAGES: :[[@LINE+6]]:3: note: make it protected
 // As we have 2 conflicting fixes in notes, no fix is applied.
 struct PrivateNonVirtualBaseStruct {
   virtual void f();
@@ -47,8 +47,8 @@ private:
   ~PrivateNonVirtualBaseStruct() {}
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:8: warning: destructor of 'PublicNonVirtualBaseStruct' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:8: note: make it public and virtual
+// CHECK-MESSAGES: :[[@LINE+4]]:3: warning: destructor of 'PublicNonVirtualBaseStruct' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+3]]:3: note: make it public and virtual
 struct PublicNonVirtualBaseStruct {
   virtual void f();
   ~PublicNonVirtualBaseStruct() {}
@@ -85,9 +85,9 @@ protected:
   ~ProtectedNonVirtualBaseStruct() {}
 };
 
-// CHECK-MESSAGES: :[[@LINE+4]]:7: warning: destructor of 'PrivateVirtualBaseClass' is private and prevents using the type [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+3]]:7: note: make it public and virtual
-// CHECK-MESSAGES: :[[@LINE+2]]:7: note: make it protected
+// CHECK-MESSAGES: :[[@LINE+6]]:11: warning: destructor of 'PrivateVirtualBaseClass' is private and prevents using the type [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+5]]:11: note: make it public and virtual
+// CHECK-MESSAGES: :[[@LINE+4]]:11: note: make it protected
 // As we have 2 conflicting fixes in notes, no fix is applied.
 class PrivateVirtualBaseClass {
   virtual void f();
@@ -101,8 +101,8 @@ public:
   virtual ~PublicVirtualBaseClass() {}
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'ProtectedVirtualBaseClass' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
+// CHECK-MESSAGES: :[[@LINE+6]]:11: warning: destructor of 'ProtectedVirtualBaseClass' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+5]]:11: note: make it protected and non-virtual
 class ProtectedVirtualBaseClass {
   virtual void f();
 
@@ -133,8 +133,8 @@ public:
   int foo = 42;
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'PublicNonVirtualBaseClass' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it public and virtual
+// CHECK-MESSAGES: :[[@LINE+6]]:3: warning: destructor of 'PublicNonVirtualBaseClass' is public and non-virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+5]]:3: note: make it public and virtual
 class PublicNonVirtualBaseClass {
   virtual void f();
 
@@ -275,44 +275,44 @@ namespace macro_tests {
 #define MY_VIRTUAL virtual
 #define CONCAT(x, y) x##y
 
-// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar1' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
+// CHECK-MESSAGES: :[[@LINE+4]]:28: warning: destructor of 'FooBar1' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+3]]:28: note: make it protected and non-virtual
 class FooBar1 {
 protected:
   CONCAT(vir, tual) CONCAT(~Foo, Bar1()); // no-fixit
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar2' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
+// CHECK-MESSAGES: :[[@LINE+4]]:18: warning: destructor of 'FooBar2' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+3]]:18: note: make it protected and non-virtual
 class FooBar2 {
 protected:
   virtual CONCAT(~Foo, Bar2()); // FIXME: We should have a fixit for this.
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar3' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
+// CHECK-MESSAGES: :[[@LINE+4]]:21: warning: destructor of 'FooBar3' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+3]]:21: note: make it protected and non-virtual
 class FooBar3 {
 protected:
   CONCAT(vir, tual) ~FooBar3(); // FIXME: We should have a fixit for this.
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar4' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
+// CHECK-MESSAGES: :[[@LINE+4]]:21: warning: destructor of 'FooBar4' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+3]]:21: note: make it protected and non-virtual
 class FooBar4 {
 protected:
   CONCAT(vir, tual) ~CONCAT(Foo, Bar4()); // FIXME: We should have a fixit for this.
 };
 
-// CHECK-MESSAGES: :[[@LINE+3]]:7: warning: destructor of 'FooBar5' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+2]]:7: note: make it protected and non-virtual
+// CHECK-MESSAGES: :[[@LINE+5]]:29: warning: destructor of 'FooBar5' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+4]]:29: note: make it protected and non-virtual
 #define XMACRO(COLUMN1, COLUMN2) COLUMN1 COLUMN2
 class FooBar5 {
 protected:
   XMACRO(CONCAT(vir, tual), ~CONCAT(Foo, Bar5());) // no-crash, no-fixit
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar6' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
+// CHECK-MESSAGES: :[[@LINE+4]]:14: warning: destructor of 'FooBar6' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+3]]:14: note: make it protected and non-virtual
 class FooBar6 {
 protected:
   MY_VIRTUAL ~FooBar6(); // FIXME: We should have a fixit for this.

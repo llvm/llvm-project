@@ -28,6 +28,12 @@ tablegen(LLVM RISCVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
 tablegen(LLVM RISCVGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="RISCVPostLegalizerCombiner")
 
+set(LLVM_TARGET_DEFINITIONS RISCVOptions.td)
+tablegen(LLVM RISCVOptions.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/RISCVMCOptions.td)
+tablegen(LLVM RISCVMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(RISCVCommonTableGen)
 
 add_llvm_target(RISCVCodeGen
@@ -97,6 +103,7 @@ add_llvm_target(RISCVCodeGen
   GlobalISel
   IPO
   MC
+  Option
   Passes
   RISCVDesc
   RISCVInfo

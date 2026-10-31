@@ -1156,6 +1156,44 @@ TEST_F(SampleProfTest, ProfileSymbolListMD5) {
   EXPECT_EQ(2u, List.size());
 }
 
+TEST_F(SampleProfTest, ProfileSymbolListMD5Merge) {
+  auto Table1 = llvm::EytzingerTable<support::ulittle64_t>::create(
+      std::vector<uint64_t>{llvm::MD5Hash("foo"), llvm::MD5Hash("bar")});
+  ProfileSymbolList List1;
+  List1.setColdGUIDTable(Table1.asSpan());
+
+  auto Table2 = llvm::EytzingerTable<support::ulittle64_t>::create(
+      std::vector<uint64_t>{llvm::MD5Hash("bar"), llvm::MD5Hash("baz")});
+  ProfileSymbolList List2;
+  List2.setColdGUIDTable(Table2.asSpan());
+
+  // Merge two ColdGUIDTable-backed MD5 lists with an overlapping entry ("bar"),
+  // as well as default-constructed empty lists before and after.
+  ProfileSymbolList EmptyList;
+  ProfileSymbolList Merged;
+  Merged.merge(EmptyList);
+  Merged.merge(List1);
+  Merged.merge(EmptyList);
+  Merged.merge(List2);
+
+  EXPECT_TRUE(Merged.isMD5());
+  EXPECT_EQ(3u, Merged.size());
+  EXPECT_TRUE(Merged.contains("foo"));
+  EXPECT_TRUE(Merged.contains("bar"));
+  EXPECT_TRUE(Merged.contains("baz"));
+  EXPECT_FALSE(Merged.contains("qux"));
+
+  std::vector<uint64_t> ExpectedGUIDs = {
+      llvm::MD5Hash("foo"), llvm::MD5Hash("bar"), llvm::MD5Hash("baz")};
+  llvm::sort(ExpectedGUIDs);
+  EXPECT_EQ(ExpectedGUIDs, Merged.collectGUIDs());
+
+  // Transitive merge from a list whose entries are already in GUIDs.
+  ProfileSymbolList Transitive;
+  Transitive.merge(Merged);
+  EXPECT_EQ(ExpectedGUIDs, Transitive.collectGUIDs());
+}
+
 struct ScopedHasUniqSuffix {
   bool OldVal;
   ScopedHasUniqSuffix(bool NewVal) : OldVal(FunctionSamples::HasUniqSuffix) {

@@ -222,8 +222,8 @@ protected:
     DirectiveContext(parser::CharBlock source, D d)
         : directiveSource{source}, directive{d} {}
 
-    parser::CharBlock directiveSource{nullptr};
-    parser::CharBlock clauseSource{nullptr};
+    parser::CharBlock directiveSource;
+    parser::CharBlock clauseSource;
     D directive;
     ClauseSetTy allowedClauses{};
     ClauseSetTy allowedOnceClauses{};
@@ -699,8 +699,7 @@ void DirectiveStructureChecker<D, C, PC,
       context_.Say(GetContext().clauseSource,
           "The %s of the %s clause must be "
           "a positive integer expression"_err_en_US,
-          paramName.str(),
-          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+          paramName, parser::ToUpperCaseLetters(getClauseName(clause).str()));
     }
   }
 }

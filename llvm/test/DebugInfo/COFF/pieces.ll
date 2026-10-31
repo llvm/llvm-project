@@ -69,7 +69,7 @@
 
 ; XXX FIXME: the debug value line after loopskip_start should be repeated
 ; because both fields of 'o' are zero flowing into this block. However, it
-; appears livedebugvalues doesn't account for fragments.
+; appears live-debug-values doesn't account for fragments.
 
 ; ASM-LABEL: pad_right: # @pad_right
 ; ASM:         movq    %rcx, %rax

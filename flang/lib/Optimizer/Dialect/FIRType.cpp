@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -424,8 +425,10 @@ bool isUnlimitedPolymorphicType(mlir::Type ty) {
 }
 
 bool isRecordWithAllocatableMember(mlir::Type ty) {
+  ty = unwrapSequenceType(ty);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty))
     for (auto [field, memTy] : recTy.getTypeList()) {
+      memTy = unwrapSequenceType(memTy);
       if (fir::isAllocatableType(memTy))
         return true;
       // A record type cannot recursively include itself as a direct member.
@@ -1215,7 +1218,7 @@ unsigned fir::RecordType::getFieldIndex(llvm::StringRef ident) {
   for (auto f : llvm::enumerate(getTypeList()))
     if (ident == f.value().first)
       return f.index();
-  return std::numeric_limits<unsigned>::max();
+  return Fortran::common::numeric_limits<unsigned>::max();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1664,6 +1667,25 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
     std::uint64_t size = 0;
     unsigned short align = 1;
+    if (recTy.isPacked()) {
+      // LLVM packed structs (<{ ... }>) place fields back-to-back with no
+      // inter-field alignment padding and no tail padding.  Each component
+      // still occupies its allocation size (llvm::alignTo(storeSize, ABI
+      // alignment)), because LLVM's packed StructLayout advances by
+      // getTypeAllocSize, not getTypeStoreSize.  For example, x86 f80 has
+      // store size 10 bytes but ABI alignment 16 bytes, so its allocation
+      // size is 16 bytes; a packed {f80, i8} therefore occupies 17 bytes,
+      // not 11.  The packed struct's own ABI alignment is always 1.
+      for (auto component : recTy.getTypeList()) {
+        auto result =
+            getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
+        if (!result)
+          return result;
+        auto [compSize, compAlign] = *result;
+        size += llvm::alignTo(compSize, compAlign); // alloc size per field
+      }
+      return std::pair{size, static_cast<unsigned short>(1)};
+    }
     for (auto component : recTy.getTypeList()) {
       auto result = getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
       if (!result)
@@ -1673,6 +1695,8 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
           llvm::alignTo(size, compAlign) + llvm::alignTo(compSize, compAlign);
       align = std::max(align, compAlign);
     }
+    // Round up to the record's alignment to include outermost tail padding.
+    size = llvm::alignTo(size, align);
     return std::pair{size, align};
   }
   if (auto logical = mlir::dyn_cast<fir::LogicalType>(ty)) {
@@ -1689,7 +1713,12 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
       return result;
     auto [compSize, compAlign] = *result;
     if (character.hasConstantLen())
-      compSize *= character.getLen();
+      // Use the code unit's allocation stride (aligned store size) rather than
+      // the bare store size.  Under kind mappings like a1:24 (i24, 3-byte
+      // store, 4-byte stride), multiplying by the store size under-counts the
+      // total byte footprint; using alignTo(compSize, compAlign) matches what
+      // LLVM allocates for each code unit.
+      compSize = llvm::alignTo(compSize, compAlign) * character.getLen();
     return std::pair{compSize, compAlign};
   }
   return std::nullopt;

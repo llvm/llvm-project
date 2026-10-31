@@ -29,11 +29,11 @@ using namespace target;
 using namespace plugin;
 using namespace error;
 
-RecordReplayTy::InstanceTy::InstanceTy(const GenericKernelTy &Kernel,
+RecordReplayTy::InstanceTy::InstanceTy(const KernelInfoTy &Kernel,
                                        uint32_t NumTeams, uint32_t NumThreads,
                                        uint32_t SharedMemorySize,
                                        KernelReplayOutcomeTy *ReplayOutcome)
-    : Kernel(Kernel), NumTeams(NumTeams), NumThreads(NumThreads),
+    : KernelName(Kernel.getName()), NumTeams(NumTeams), NumThreads(NumThreads),
       SharedMemorySize(SharedMemorySize), ReplayOutcome(ReplayOutcome) {
   KernelHash = stable_hash_name(Kernel.getName());
   LaunchConfigHash =
@@ -113,17 +113,16 @@ Error RecordReplayTy::emitInstanceReport() {
   for (const auto *Inst : OrderedInstances)
     *OutStream
         << getFilename(*Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()
-        << ", " << Inst->Kernel.getName() << ", " << Inst->getRecordedTimeNs()
-        << ", " << Inst->Occurrences << "\n";
+        << ", " << Inst->KernelName << ", " << Inst->getRecordedTimeNs() << ", "
+        << Inst->Occurrences << "\n";
   *OutStream << "=== End Kernel Record Report ===\n";
 
   return Plugin::success();
 }
 
 std::pair<const RecordReplayTy::InstanceTy &, bool>
-RecordReplayTy::registerInstance(const GenericKernelTy &Kernel,
-                                 uint32_t NumTeams, uint32_t NumThreads,
-                                 uint32_t SharedMemorySize,
+RecordReplayTy::registerInstance(const KernelInfoTy &Kernel, uint32_t NumTeams,
+                                 uint32_t NumThreads, uint32_t SharedMemorySize,
                                  KernelReplayOutcomeTy *ReplayOutcome) {
   std::lock_guard<std::mutex> LG(InstancesLock);
   auto [It, Inserted] = Instances.emplace(Kernel, NumTeams, NumThreads,
@@ -166,26 +165,26 @@ Expected<void *> RecordReplayTy::allocate(uint64_t Size) {
 
 Error RecordReplayTy::deallocate(void *Ptr) { return Plugin::success(); }
 
-Expected<RecordReplayTy::HandleTy> RecordReplayTy::recordPrologue(
-    const GenericKernelTy &Kernel, const KernelLaunchArgsTy &LaunchArgs,
-    uint32_t NumTeams[3], uint32_t NumThreads[3], uint32_t SharedMemorySize) {
+Expected<RecordReplayTy::HandleTy>
+RecordReplayTy::recordPrologue(const KernelInfoTy &Kernel,
+                               const KernelRecordArgsTy &RecordArgs) {
   if (!isRecordingOrReplaying())
     return HandleTy{nullptr, false};
 
   // Register the instance and avoid recording if it is inactive or replaying.
-  auto [Instance, First] =
-      registerInstance(Kernel, NumTeams[0], NumThreads[0], SharedMemorySize,
-                       LaunchArgs.ReplayOutcome);
+  auto [Instance, First] = registerInstance(
+      Kernel, RecordArgs.NumBlocks[0], RecordArgs.NumThreads[0],
+      RecordArgs.DynCGroupMem, RecordArgs.ReplayOutcome);
 
   HandleTy Handle{&Instance, First};
   if (!First)
     return Handle;
 
   if (isRecording()) {
-    if (auto Err = recordDescImpl(Kernel, Instance, LaunchArgs))
+    if (auto Err = recordDescImpl(Kernel, Instance, RecordArgs))
       return Err;
 
-    if (auto Err = recordPrologueImpl(Kernel, Instance, LaunchArgs))
+    if (auto Err = recordPrologueImpl(Kernel, Instance))
       return Err;
   }
 
@@ -195,7 +194,7 @@ Expected<RecordReplayTy::HandleTy> RecordReplayTy::recordPrologue(
   return Handle;
 }
 
-Error RecordReplayTy::recordEpilogue(const GenericKernelTy &Kernel,
+Error RecordReplayTy::recordEpilogue(const KernelInfoTy &Kernel,
                                      HandleTy Handle) {
   if (!Handle.Active)
     return Plugin::success();
@@ -230,9 +229,8 @@ void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance,
   Outcome.KernelReplayTimeNs = Instance.getRecordedTimeNs();
 }
 
-Error NativeRecordReplayTy::recordPrologueImpl(
-    const GenericKernelTy &Kernel, const InstanceTy &Instance,
-    const KernelLaunchArgsTy &LaunchArgs) {
+Error NativeRecordReplayTy::recordPrologueImpl(const KernelInfoTy &Kernel,
+                                               const InstanceTy &Instance) {
   SmallString<128> SnapshotFilename =
       getFilename(Instance, FileTy::PrologueSnapshot);
   if (auto Err = recordSnapshot(SnapshotFilename.c_str()))
@@ -248,7 +246,7 @@ Error NativeRecordReplayTy::recordPrologueImpl(
   return recordImage(Kernel, ImageFilename.c_str(), IRImageFilename.c_str());
 }
 
-Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
+Error NativeRecordReplayTy::recordEpilogueImpl(const KernelInfoTy &Kernel,
                                                const InstanceTy &Instance) {
   SmallString<128> SnapshotFilename =
       getFilename(Instance, FileTy::EpilogueSnapshot);
@@ -256,22 +254,22 @@ Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
 }
 
 Error NativeRecordReplayTy::recordDescImpl(
-    const GenericKernelTy &Kernel, const InstanceTy &Instance,
-    const KernelLaunchArgsTy &LaunchArgs) {
+    const KernelInfoTy &Kernel, const InstanceTy &Instance,
+    const KernelRecordArgsTy &RecordArgs) {
   json::Object JsonKernelInfo;
-  JsonKernelInfo["Name"] = Kernel.getName();
-  JsonKernelInfo["NumArgs"] = LaunchArgs.NumArgs;
+  JsonKernelInfo["Name"] = Instance.KernelName;
+  JsonKernelInfo["NumArgs"] = RecordArgs.NumArgs;
   JsonKernelInfo["NumTeams"] = Instance.NumTeams;
   JsonKernelInfo["NumThreads"] = Instance.NumThreads;
   JsonKernelInfo["SharedMemorySize"] = Instance.SharedMemorySize;
-  JsonKernelInfo["LoopTripCount"] = LaunchArgs.Tripcount;
+  JsonKernelInfo["LoopTripCount"] = RecordArgs.Tripcount;
   JsonKernelInfo["DeviceId"] = Device.getDeviceId();
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
 
   // Export minimum and maximum for allowed number of teams. If zero, it means
   // there was no restriction provided by the program.
-  uint32_t MinMaxBlocks = std::max(LaunchArgs.UserNumBlocks[0], uint32_t(0));
+  uint32_t MinMaxBlocks = RecordArgs.RequestedNumBlocks;
   json::Array JsonTeamsLimits;
   JsonTeamsLimits.push_back(MinMaxBlocks);
   JsonTeamsLimits.push_back(MinMaxBlocks);
@@ -279,19 +277,19 @@ Error NativeRecordReplayTy::recordDescImpl(
 
   // Export minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
-  uint32_t MaxThreads = Kernel.getMaxThreads();
+  uint32_t MaxThreads = RecordArgs.MaxNumThreads;
   json::Array JsonThreadsLimits;
   JsonThreadsLimits.push_back(1);
   JsonThreadsLimits.push_back(MaxThreads);
   JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;
-  for (uint32_t I = 0; I < LaunchArgs.NumArgs; ++I)
-    JsonArgPtrs.push_back((intptr_t)(*(void **)LaunchArgs.Args[I]));
+  for (uint32_t I = 0; I < RecordArgs.NumArgs; ++I)
+    JsonArgPtrs.push_back((intptr_t)(*(void **)RecordArgs.Args[I]));
   JsonKernelInfo["ArgPtrs"] = json::Value(std::move(JsonArgPtrs));
 
   json::Array JsonArgOffsets;
-  for (uint32_t I = 0; I < LaunchArgs.NumArgs; ++I)
+  for (uint32_t I = 0; I < RecordArgs.NumArgs; ++I)
     JsonArgOffsets.push_back(0);
   JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
@@ -363,21 +361,21 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
   return Plugin::success();
 }
 
-Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
+Error NativeRecordReplayTy::recordImage(const KernelInfoTy &Kernel,
                                         StringRef Filename,
                                         StringRef IRImageFilename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving image file");
-  OS << Kernel.getImage().getMemoryBuffer().getBuffer();
+  OS << Kernel.getImage().getBuffer();
   OS.close();
 
-  if (!IRImageFilename.empty() && Kernel.getImage().hasIRImage()) {
+  if (!IRImageFilename.empty() && Kernel.hasIRImage()) {
     raw_fd_ostream IROS(IRImageFilename, EC);
     if (EC)
       return Plugin::error(ErrorCode::HOST_IO, "saving IR image file");
-    IROS << Kernel.getImage().getIRImageMemoryBuffer().getBuffer();
+    IROS << Kernel.getIRImage().getBuffer();
     IROS.close();
   }
 

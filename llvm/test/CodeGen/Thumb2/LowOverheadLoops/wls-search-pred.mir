@@ -61,9 +61,9 @@ body:             |
   ; CHECK:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
   ; CHECK:   [[MVE_VMOVimmi32_:%[0-9]+]]:mqpr = MVE_VMOVimmi32 0, 0, $noreg, $noreg, [[DEF]]
   ; CHECK:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[COPY]], 15, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri killed [[t2ADDri]], 16, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[t2LSRri:%[0-9]+]]:gprlr = t2LSRri killed [[t2BICri]], 4, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[t2WhileLoopStartTP:%[0-9]+]]:gprlr = t2WhileLoopStartTP killed [[t2LSRri]], [[COPY]], %bb.3, implicit-def $cpsr
+  ; CHECK:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri [[t2ADDri]], 16, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   [[t2LSRri:%[0-9]+]]:gprlr = t2LSRri [[t2BICri]], 4, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   [[t2WhileLoopStartTP:%[0-9]+]]:gprlr = t2WhileLoopStartTP [[t2LSRri]], [[COPY]], %bb.3, implicit-def dead $cpsr
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK:   [[PHI:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.1, %11, %bb.2
@@ -72,7 +72,7 @@ body:             |
   ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI2]], 0, $noreg, $noreg
   ; CHECK:   [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri [[PHI2]], 16, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[MVE_VMOVimmi32_]], [[PHI]], 16, 1, [[MVE_VCTP8_]], [[PHI1]]
-  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI1]], %bb.2, implicit-def $cpsr
+  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI1]], %bb.2, implicit-def dead $cpsr
   ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.prehead:
   ; CHECK:   successors: %bb.4(0x80000000)
@@ -84,9 +84,9 @@ body:             |
   ; CHECK:   [[PHI4:%[0-9]+]]:gpr = PHI [[COPY1]], %bb.3, %21, %bb.4
   ; CHECK:   [[PHI5:%[0-9]+]]:gprlr = PHI [[t2DoLoopStart]], %bb.3, %26, %bb.4
   ; CHECK:   [[t2LDRB_POST:%[0-9]+]]:rgpr, [[t2LDRB_POST1:%[0-9]+]]:gpr = t2LDRB_POST [[PHI3]], 1, 14 /* CC::al */, $noreg :: (load (s8) from %ir.x.addr.08)
-  ; CHECK:   early-clobber %25:gprnopc = t2STRB_POST killed [[t2LDRB_POST]], [[PHI4]], 1, 14 /* CC::al */, $noreg :: (store (s8) into %ir.y.addr.07)
+  ; CHECK:   early-clobber %25:gprnopc = t2STRB_POST [[t2LDRB_POST]], [[PHI4]], 1, 14 /* CC::al */, $noreg :: (store (s8) into %ir.y.addr.07)
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr = COPY %25
-  ; CHECK:   [[t2LoopEndDec1:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI5]], %bb.4, implicit-def $cpsr
+  ; CHECK:   [[t2LoopEndDec1:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI5]], %bb.4, implicit-def dead $cpsr
   ; CHECK:   t2B %bb.5, 14 /* CC::al */, $noreg
   ; CHECK: bb.5.for.cond.cleanup:
   ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
@@ -107,9 +107,9 @@ body:             |
     %12:mqpr = IMPLICIT_DEF
     %11:mqpr = MVE_VMOVimmi32 0, 0, $noreg, $noreg, %12
     %17:rgpr = t2ADDri %9, 15, 14 /* CC::al */, $noreg, $noreg
-    %18:rgpr = t2BICri killed %17, 16, 14 /* CC::al */, $noreg, $noreg
-    %19:gprlr = t2LSRri killed %18, 4, 14 /* CC::al */, $noreg, $noreg
-    %20:gprlr = t2WhileLoopSetup killed %19
+    %18:rgpr = t2BICri %17, 16, 14 /* CC::al */, $noreg, $noreg
+    %19:gprlr = t2LSRri %18, 4, 14 /* CC::al */, $noreg, $noreg
+    %20:gprlr = t2WhileLoopSetup %19
     t2WhileLoopStart %20, %bb.5, implicit-def $cpsr
 
   bb.4:
@@ -138,7 +138,7 @@ body:             |
     %2:gpr = PHI %8, %bb.5, %5, %bb.2
     %3:gprlr = PHI %0, %bb.5, %6, %bb.2
     %13:rgpr, %4:gpr = t2LDRB_POST %1, 1, 14 /* CC::al */, $noreg :: (load (s8) from %ir.x.addr.08)
-    early-clobber %14:gprnopc = t2STRB_POST killed %13, %2, 1, 14 /* CC::al */, $noreg :: (store (s8) into %ir.y.addr.07)
+    early-clobber %14:gprnopc = t2STRB_POST %13, %2, 1, 14 /* CC::al */, $noreg :: (store (s8) into %ir.y.addr.07)
     %15:gprlr = t2LoopDec %3, 1
     %5:gpr = COPY %14
     %6:gpr = COPY %15

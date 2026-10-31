@@ -174,6 +174,34 @@ static LogicalResult checkConstantOperandSilceShape(Operation *op,
   return success();
 }
 
+// MATMUL's data type availability predates variadic batch support, so the
+// generated availability checks cannot distinguish its 1.0 and 1.1 shapes.
+static LogicalResult checkSpecificationVersionConstraint(Operation *op,
+                                                         const TargetEnv &env) {
+  auto matmul = dyn_cast<tosa::MatMulOp>(op);
+  if (!matmul ||
+      env.getSpecVersion().isBackwardsCompatibleWith(
+          TosaSpecificationVersion(SpecificationVersion::V_1_1_DRAFT)))
+    return success();
+
+  auto aType = dyn_cast<RankedTensorType>(matmul.getA().getType());
+  auto bType = dyn_cast<RankedTensorType>(matmul.getB().getType());
+  auto outputType = dyn_cast<RankedTensorType>(matmul.getOutput().getType());
+  auto getBatchDimOrDynamic = [](RankedTensorType type) {
+    return type ? type.getDimSize(0) : ShapedType::kDynamic;
+  };
+  if ((!aType || aType.getRank() == 3) && (!bType || bType.getRank() == 3) &&
+      (!outputType || outputType.getRank() == 3) &&
+      succeeded(verifyCompatibleDims({getBatchDimOrDynamic(aType),
+                                      getBatchDimOrDynamic(bType),
+                                      getBatchDimOrDynamic(outputType)})))
+    return success();
+
+  return op->emitOpError(
+      "MATMUL ranks other than 3 or batch broadcasting require TOSA "
+      "specification version 1.1.draft");
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Validation Pass.
 //===----------------------------------------------------------------------===//
@@ -580,6 +608,14 @@ private:
       const int64_t scaleYD = scale[1];
       const int64_t scaleXN = scale[2];
       const int64_t scaleXD = scale[3];
+
+      // Invalid (non-positive) scale values are reported by the ERROR_IF
+      // check in applyErrorIfCheck(). Skip the level ratio check here to
+      // avoid dividing by a non-positive value and reporting a misleading
+      // level error for an already-invalid scale.
+      if (llvm::any_of(scale, [](int64_t s) { return s <= 0; }))
+        return success();
+
       if (failed(
               levelCheckScale(op, scaleYN / scaleYD, "scale_y_n/scale_y_d")) ||
           failed(
@@ -716,6 +752,21 @@ LogicalResult TosaValidation::levelCheckRanks(tosa::ArgMaxOp tosaOp) {
 }
 
 template <>
+LogicalResult TosaValidation::levelCheckRanks(tosa::ArgMinOp tosaOp) {
+  auto *op = tosaOp.getOperation();
+  if (failed(levelCheckRank(op, tosaOp.getInput(), "operand",
+                            targetEnv.getLevel().MAX_RANK)))
+    return failure();
+
+  // rank(output) = rank(input) - 1
+  if (failed(levelCheckRank(op, tosaOp.getOutput(), "result",
+                            targetEnv.getLevel().MAX_RANK - 1)))
+    return failure();
+
+  return success();
+}
+
+template <>
 LogicalResult TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
   auto *op = tosaOp.getOperation();
 
@@ -771,6 +822,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 
   // Tensor Operators
   CHECK_RANKS_AND_SIZES(ArgMax);
+  CHECK_RANKS_AND_SIZES(ArgMin);
   // Activation Functions
   CHECK_RANKS_AND_SIZES(Clamp);
   CHECK_RANKS_AND_SIZES(Erf);
@@ -859,8 +911,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(DepthwiseConv2D);
   CHECK_SIZES(TransposeConv2D);
   CHECK_SIZES(FFT2d);
-  CHECK_SIZES(MatMul);
-  CHECK_SIZES(MatMulT);
+  CHECK_RANKS_AND_SIZES(MatMul);
+  CHECK_RANKS_AND_SIZES(MatMulT);
   CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
   CHECK_SIZES(MaxPool2dAdaptive);
@@ -1086,6 +1138,10 @@ LogicalResult checkErrorIfResize(Operation *op) {
   if (!tosa::getConstShapeValues(resize.getScale().getDefiningOp(), scale))
     return failure();
 
+  // ERROR_IF(scale <= 0)
+  if (llvm::any_of(scale, [](int64_t s) { return s <= 0; }))
+    return op->emitOpError("expect all scale values to be > 0, got ") << scale;
+
   const int64_t scaleYN = scale[0];
   const int64_t scaleYD = scale[1];
   const int64_t scaleXN = scale[2];
@@ -1132,16 +1188,8 @@ LogicalResult checkErrorIfResize(Operation *op) {
                "expect borderX / scaleXNumerator to be in range [-16, 1), got ")
            << borderX << "/" << scaleXN;
 
-  // The following section of code is mostly duplicated with ResizeOp::verify().
-  //
-  // In TOSA specification, we do not support broadcast behavior.
-  // However, there is a rewrite pattern to materialize broadcast ResizeOp.
-  // It makes invalid TOSA ResizeOp into valid one. To avoid breaking
-  // existing code, we keep the rewrite pattern untouched. So, we need
-  // loose the checking in ResizeOp::verify() to support broadcast ResizeOp.
-  //
-  // Here is a strict checking to conform TOSA specification.
-  // FIXME: Remove the duplicated checkings when broadcast ResizeOp is removed.
+  // In TOSA specification, we do not support broadcast behavior. Here is a
+  // strict check to conform to the specification.
   auto idivCheck = [](const int64_t lhs,
                       const int64_t rhs) -> std::optional<int64_t> {
     if (lhs % rhs != 0)
@@ -1301,6 +1349,16 @@ LogicalResult checkErrorIfRescale(Operation *op) {
   if (outWidth == 32 && outputUnsigned)
     return op->emitOpError() << "i32 output type cannot be unsigned.";
 
+  // ERROR_IF(zp != 0 && !is_same<in_t, i8_t>)
+  // ERROR_IF(zp != 0 && zp != 32768 && is_same<in_t, u16_t>)
+  if (FailureOr<int64_t> maybeIZp = rescale.getInputZeroPoint();
+      succeeded(maybeIZp) && rescale.verifyInputZeroPoint(*maybeIZp).failed())
+    return failure();
+
+  if (FailureOr<int64_t> maybeOZp = rescale.getOutputZeroPoint();
+      succeeded(maybeOZp) && rescale.verifyOutputZeroPoint(*maybeOZp).failed())
+    return failure();
+
   return success();
 }
 
@@ -1363,6 +1421,45 @@ LogicalResult checkErrorIfSlice(Operation *op) {
            << kInferableDimSize
            << ") which "
               "does not conform to the TOSA specification";
+
+  // ERROR_IF(any(start < 0))
+  if (hasStartValues &&
+      llvm::any_of(startValues, [](int64_t v) { return v < 0; }))
+    return op->emitOpError("start values must be non-negative, got [")
+           << startValues << "]";
+
+  // ERROR_IF(any(size <= 0))
+  if (hasSizeValues &&
+      llvm::any_of(sizeValues, [](int64_t v) { return v <= 0; }))
+    return op->emitOpError("size values must be > 0, got [")
+           << sizeValues << "]";
+
+  // MLIR-specific: output shape must match the size values.
+  if (hasSizeValues) {
+    const auto outputType = sliceOp.getOutput().getType();
+    if (const auto rankedOutput = dyn_cast<RankedTensorType>(outputType)) {
+      if (failed(verifyCompatibleShape(rankedOutput.getShape(), sizeValues)))
+        return op->emitOpError(
+                   "expected output shape to match size values, got ")
+               << outputType << " vs [" << sizeValues << "]";
+    }
+  }
+
+  // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
+  // get_innermost_block_size<in_out_t>() != 0)
+  if (hasStartValues && !startValues.empty()) {
+    auto elemType = getElementTypeOrSelf(sliceOp.getInput1().getType());
+    if (auto blockScaledType = dyn_cast<BlockScaledType>(elemType)) {
+      const int64_t startBlock = startValues.back();
+      const int64_t scaleBlock =
+          BlockShapeAttr::getBlockShapeValue(blockScaledType.getBlockShape());
+      if (startBlock % scaleBlock != 0)
+        return op->emitOpError(
+                   "expected start innermost block size to match data type "
+                   "for block scaled input, got start block=")
+               << startBlock << ", scale block=" << scaleBlock;
+    }
+  }
 
   return success();
 }
@@ -1640,6 +1737,10 @@ void TosaValidation::runOnOperation() {
         failed(profileComp.checkExtension(op, targetEnv)))
       return signalPassFailure();
 
+    if (strictOpSpecAlignment &&
+        failed(checkSpecificationVersionConstraint(op, targetEnv)))
+      return signalPassFailure();
+
     if (!allowInvalidOpDatatypeCombinations &&
         failed(profileComp.checkInvalid(op)))
       return signalPassFailure();
@@ -1647,23 +1748,23 @@ void TosaValidation::runOnOperation() {
     // Some uses of TOSA rely on the constant operands of particular
     // operations.
     if (failed(applyConstantOperandCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // do level checks
     if (failed(applyLevelCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // check additional attribute restrictions
     if (failed(applyAttributeCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // do variable type checks
     if (failed(applyVariableCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
 
     // do error if checks
     if (strictOpSpecAlignment && failed(applyErrorIfCheck(op)))
-      signalPassFailure();
+      return signalPassFailure();
   });
 }
 } // namespace

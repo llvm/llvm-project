@@ -105,6 +105,9 @@
 /* Enable the experimental new constant interpreter by default */
 #define CLANG_USE_EXPERIMENTAL_CONST_INTERP 0
 
+/* Define if __emutls_get_address is available in the compiler runtime */
+#define CLANG_HAVE_EMUTLS_GET_ADDRESS 0
+
 /* Directly provide definitions here behind platform preprocessor definitions.
  * The preprocessor conditions are sufficient to handle all of the configuration
  * on platforms targeted by Bazel, and defining these here more faithfully

@@ -80,8 +80,11 @@ void CIRCanonicalizePass::runOnOperation() {
       ops.push_back(op);
   });
 
-  // Apply patterns.
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
+  // Apply patterns. Scope the rewrite to the body region, which encloses
+  // the common ancestor the driver would otherwise search for.
+  GreedyRewriteConfig config;
+  config.setScope(&getOperation()->getRegion(0));
+  if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
     signalPassFailure();
 }
 

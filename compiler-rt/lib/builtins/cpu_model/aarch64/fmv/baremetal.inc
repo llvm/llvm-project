@@ -25,12 +25,13 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
 
   // For baremetal platforms, we don't really initialise
   // '__aarch64_cpu_features', with exception of FEAT_SME that we can get from
-  // '__arm_sme_state'.
+  // '__arm_sme_state', and its prerequisites.
   _Bool has_sme = (__arm_sme_state().x0 & SME_STATE_HAS_SME_BIT_X0) != 0;
 
   uint64_t feat = 0;
   if (has_sme)
-    feat |= 1ULL << FEAT_SME;
+    feat |= (1ULL << FEAT_SME) | (1ULL << FEAT_BF16) | (1ULL << FEAT_FP16) |
+            (1ULL << FEAT_SIMD) | (1ULL << FEAT_FP);
 
   __atomic_store_n(&__aarch64_cpu_features.features, feat, __ATOMIC_RELAXED);
 }

@@ -326,7 +326,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       }
       target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
       debugger.GetTargetList().RegisterInProcessTarget(target_sp);
-      target_sp->SetExecutableModule(exe_module_sp, load_dependent_files);
+      target_sp->RebuildModuleListWithExecutable(exe_module_sp,
+                                                 load_dependent_files);
       if (user_exe_path_is_bundle)
         exe_module_sp->GetFileSpec().GetPath(resolved_bundle_exe_path,
                                              sizeof(resolved_bundle_exe_path));

@@ -11,6 +11,7 @@ set(CLANG_LIBS_TO_LINK
 else()
 set(LLVM_COMPONENTS_TO_LINK
   ${LLVM_TARGETS_TO_BUILD}
+  BitWriter
   Core
   MC
   OrcJIT
@@ -36,6 +37,12 @@ set(CLANG_REPL_TEST_SOURCES
   InterpreterExtensionsTest.cpp
   CodeCompletionTest.cpp
 )
+
+if(NOT EMSCRIPTEN)
+  list(APPEND CLANG_REPL_TEST_SOURCES
+    DeviceOffloadTest.cpp
+    )
+endif()
 
 if(TARGET compiler-rt AND LLVM_ON_UNIX)
   list(APPEND CLANG_REPL_TEST_SOURCES
@@ -76,6 +83,7 @@ get_target_property(LINKED_LIBS ClangReplInterpreterTests LINK_LIBRARIES)
 list(REMOVE_ITEM LINKED_LIBS LLVMSupport)
 set_target_properties(ClangReplInterpreterTests PROPERTIES LINK_LIBRARIES "${LINKED_LIBS}")
 target_link_options(ClangReplInterpreterTests
+  PUBLIC "SHELL: -fwasm-exceptions"
   PUBLIC "SHELL: -s MAIN_MODULE=1"
   PUBLIC "SHELL: -s ALLOW_MEMORY_GROWTH=1"
   PUBLIC "SHELL: -s STACK_SIZE=32mb"
@@ -92,8 +100,8 @@ set_target_properties(ClangReplInterpreterTests PROPERTIES
 )
 endif()
 
-# Exceptions on Windows are not yet supported.
-if(NOT WIN32)
+# Interpreter exception tests are not supported on Windows or Emscripten.
+if(NOT WIN32 AND NOT EMSCRIPTEN)
   add_subdirectory(ExceptionTests)
 endif()
 

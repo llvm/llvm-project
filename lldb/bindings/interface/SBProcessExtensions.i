@@ -5,7 +5,7 @@ STRING_EXTENSION_OUTSIDE(SBProcess)
         def WriteMemoryAsCString(self, addr, str, error):
             '''
               WriteMemoryAsCString(self, addr, str, error):
-                This functions the same as `WriteMemory` except a null-terminator is appended
+                This functions the same as `WriteMemory` except a null terminator is appended
                 to the end of the buffer if it is not there already.
             '''
             if not str or len(str) == 0:

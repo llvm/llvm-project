@@ -559,7 +559,8 @@ def OpenACC_GPUAsyncTokenType : Type<
 def OpenACC_ComputeRegionOp
     : OpenACC_Op<"compute_region",
                  [OffloadRegionOpInterface, AffineScope,
-                  RecursiveMemoryEffects,
+                  AutomaticAllocationScope,
+                  HasParallelRegion, RecursiveMemoryEffects,
                   SingleBlockImplicitTerminator<"YieldOp">,
                   IsolatedFromAbove, AttrSizedOperandSegments]> {
   let summary = "Compute region for GPU execution";
@@ -656,6 +657,10 @@ def OpenACC_ComputeRegionOp
     /// Check whether all parallel dimensions have width 1.
     bool isEffectivelySerial();
 
+    /// Check whether the launch covers more than one thread block. A width that
+    /// is not known at compile time is conservatively counted as more than one.
+    bool launchesMultipleBlocks();
+
     /// Get the block argument representing the width for a given dimension.
     ::mlir::BlockArgument parDimToWidth(
         ::mlir::acc::GPUParallelDimAttr parDim);
@@ -713,8 +718,8 @@ def OpenACC_PredicateRegionOp
     //   !$acc atomic update
     //   !$acc loop vector
     //     !$acc atomic update
-    %w_gang = acc.par_width %cNG {par_dim = #acc.par_dim<block_x>}
-    %w_vector = acc.par_width %cVL {par_dim = #acc.par_dim<thread_x>}
+    %w_gang = acc.par_width %cNG par_dim(#acc.par_dim<block_x>)
+    %w_vector = acc.par_width %cVL par_dim(#acc.par_dim<thread_x>)
     acc.compute_region launch(%ng = %w_gang, %vl = %w_vector)
         ins(%arg_c1 = %c1, %arg_c2 = %c2) : (memref<i32>, memref<i32>) {
       scf.parallel (%i) = (%c1) to (%cN) step (%c1) {

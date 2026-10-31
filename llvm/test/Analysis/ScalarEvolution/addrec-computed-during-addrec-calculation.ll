@@ -64,3 +64,41 @@ loop.latch:
   %iv.next = trunc i64 %iv3 to i32
   br label %loop.header
 }
+
+define void @cached_result(i32 %n) {
+; CHECK-LABEL: 'cached_result'
+; CHECK-NEXT:  Classifying expressions for: @cached_result
+; CHECK-NEXT:    %b = phi i32 [ 2, %entry ], [ %b.n, %loop ]
+; CHECK-NEXT:    --> {2,+,4}<%loop> U: [0,-1) S: [-2147483648,2147483647) Exits: (2 + (4 * ((-2 + (3 umax %n)) /u 2)))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %a = phi i32 [ 1, %entry ], [ %a.n, %loop ]
+; CHECK-NEXT:    --> {1,+,2}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (1 + (2 * ((-2 + (3 umax %n)) /u 2))<nuw>)<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %b.n = add i32 %b, 4
+; CHECK-NEXT:    --> {6,+,4}<%loop> U: [0,-1) S: [-2147483648,2147483647) Exits: (6 + (4 * ((-2 + (3 umax %n)) /u 2))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %a.n = add nsw i32 %a, 2
+; CHECK-NEXT:    --> {3,+,2}<nuw><nsw><%loop> U: [3,-2147483648) S: [3,-2147483648) Exits: (3 + (2 * ((-2 + (3 umax %n)) /u 2))<nuw>)<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %c = add nsw i32 %a, %a
+; CHECK-NEXT:    --> {2,+,4}<nuw><%loop> U: [2,-1) S: [-2147483648,2147483647) Exits: (2 + (4 * ((-2 + (3 umax %n)) /u 2)))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %d = add i32 %b, 0
+; CHECK-NEXT:    --> {2,+,4}<nuw><%loop> U: [2,-1) S: [-2147483648,2147483647) Exits: (2 + (4 * ((-2 + (3 umax %n)) /u 2)))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @cached_result
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-2 + (3 umax %n)) /u 2)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-2 + (3 umax %n)) /u 2)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+
+loop:
+  %b = phi i32 [ 2, %entry ], [ %b.n, %loop ]
+  %a = phi i32 [ 1, %entry ], [ %a.n, %loop ]
+  %b.n = add i32 %b, 4
+  %a.n = add nsw i32 %a, 2
+  %c = add nsw i32 %a, %a
+  %d = add i32 %b, 0
+  %cmp = icmp ult i32 %a.n, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}

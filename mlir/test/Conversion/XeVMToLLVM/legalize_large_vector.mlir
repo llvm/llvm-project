@@ -161,6 +161,41 @@ module @test_select_icmp {
 
 // -----
 
+// Negative: the n-ary hoist only legalizes. A source of 16 or fewer elements is
+// already legal, so the op stays wide even when each lane is read on its own.
+// Splitting it would clone a narrow op next to every read.
+module @test_nary_no_hoist_legal_width {
+  // CHECK-LABEL: llvm.func @test_nary_no_hoist_legal_width
+  // CHECK:         %[[M:.*]] = llvm.fmul %{{.*}}, %{{.*}} : vector<8xf32>
+  // CHECK-NOT:     llvm.fmul
+  // CHECK:         llvm.shufflevector %[[M]], %[[M]] [0] : vector<8xf32>
+  // CHECK:         llvm.shufflevector %[[M]], %[[M]] [1] : vector<8xf32>
+  llvm.func @test_nary_no_hoist_legal_width(%a: vector<8xf32>, %b: vector<8xf32>) -> vector<1xf32> {
+    %0 = llvm.fmul %a, %b : vector<8xf32>
+    %1 = llvm.shufflevector %0, %0 [0] : vector<8xf32>
+    %2 = llvm.shufflevector %0, %0 [1] : vector<8xf32>
+    %3 = llvm.fadd %1, %2 : vector<1xf32>
+    llvm.return %3 : vector<1xf32>
+  }
+}
+
+// -----
+
+// Negative: 16 elements is the widest legal source, so it is not split either.
+module @test_nary_no_hoist_width_16 {
+  // CHECK-LABEL: llvm.func @test_nary_no_hoist_width_16
+  // CHECK:         %[[D:.*]] = llvm.fdiv %{{.*}}, %{{.*}} : vector<16xf32>
+  // CHECK-NOT:     llvm.fdiv
+  // CHECK:         llvm.shufflevector %[[D]], %[[D]] [0, 1, 2, 3, 4, 5, 6, 7] : vector<16xf32>
+  llvm.func @test_nary_no_hoist_width_16(%a: vector<16xf32>, %b: vector<16xf32>) -> vector<8xf32> {
+    %0 = llvm.fdiv %a, %b : vector<16xf32>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3, 4, 5, 6, 7] : vector<16xf32>
+    llvm.return %1 : vector<8xf32>
+  }
+}
+
+// -----
+
 // Negative: the hoist only fires when every operand has the same length as the
 // result. A length-changing bitcast (which is how packed sub-byte payloads are
 // formed) is handled by the dedicated bitcast case, not the n-ary path; here a

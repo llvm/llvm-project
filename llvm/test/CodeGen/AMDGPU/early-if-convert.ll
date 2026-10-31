@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.01 -amdgpu-early-ifcvt=1 -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.01 -amdgpu-early-ifcvt=1 -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck -check-prefix=GCN %s
 ; XUN: llc -mtriple=amdgpu8.02 -amdgpu-early-ifcvt=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; Note: breaking up large PHIs is disabled to prevent some testcases from becoming
@@ -14,7 +14,7 @@
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %v = load float, ptr addrspace(1) %in
+  %v = load volatile float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -33,10 +33,11 @@ endif:
 ; GCN: v_cmp_neq_f32_e32 vcc, 1.0, [[VAL]]
 ; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], [[VAL]], [[VAL]]
 ; GCN-DAG: v_mul_f32_e32 [[MUL:v[0-9]+]], [[VAL]], [[VAL]]
-; GCN: buffer_store_dword [[MUL]]
+; GCN: v_cndmask_b32_e32 [[SEL:v[0-9]+]]
+; GCN: buffer_store_dword [[SEL]]
 define amdgpu_kernel void @test_vccnz_ifcvt_diamond(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %v = load float, ptr addrspace(1) %in
+  %v = load volatile float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
   br i1 %cc, label %if, label %else
 
@@ -57,9 +58,8 @@ endif:
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle_vcc_clobber:
 ; GCN: s_cbranch_vccnz
 ; GCN: ; clobber vcc
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle_vcc_clobber(ptr addrspace(1) %out, ptr addrspace(1) %in, float %k) #0 {
+define i32 @test_vccnz_ifcvt_triangle_vcc_clobber(i32 %v, float inreg %k) #0 {
 entry:
-  %v = load i32, ptr addrspace(1) %in
   %cc = fcmp oeq float %k, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -70,8 +70,7 @@ if:
 
 endif:
   %r = phi i32 [ %v, %entry ], [ %u, %if ]
-  store i32 %r, ptr addrspace(1) %out
-  ret void
+  ret i32 %r
 }
 
 ; Longest chain of cheap instructions to convert
@@ -88,7 +87,7 @@ endif:
 ; GCN: v_cndmask_b32_e32
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle_max_cheap(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %v = load float, ptr addrspace(1) %in
+  %v = load volatile float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -129,7 +128,7 @@ endif:
 ; GCN: buffer_store_dword
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle_min_expensive(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %v = load float, ptr addrspace(1) %in
+  %v = load volatile float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -163,7 +162,7 @@ endif:
 ; GCN: buffer_store_dword
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle_expensive(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
-  %v = load float, ptr addrspace(1) %in
+  %v = load volatile float, ptr addrspace(1) %in
   %cc = fcmp oeq float %v, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -272,10 +271,8 @@ endif:
 ; GCN: v_add_f32_e32
 
 ; GCN: [[ENDIF]]:
-; GCN: buffer_store_dword
-define amdgpu_kernel void @test_scc1_vgpr_ifcvt_triangle(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %cond) #0 {
+define float @test_scc1_vgpr_ifcvt_triangle(float %v, i32 inreg %cond) #0 {
 entry:
-  %v = load float, ptr addrspace(1) %in
   %cc = icmp eq i32 %cond, 1
   br i1 %cc, label %if, label %endif
 
@@ -285,8 +282,7 @@ if:
 
 endif:
   %r = phi float [ %v, %entry ], [ %u, %if ]
-  store float %r, ptr addrspace(1) %out
-  ret void
+  ret float %r
 }
 
 ; GCN-LABEL: {{^}}test_scc1_sgpr_ifcvt_triangle64:
@@ -408,10 +404,8 @@ done:
 ; GCN: v_add_i32
 
 ; GCN: [[ENDIF]]:
-; GCN: buffer_store_dword
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle256(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) #0 {
+define <8 x i32> @test_vccnz_ifcvt_triangle256(<8 x i32> %v, float inreg %cnd) #0 {
 entry:
-  %v = load <8 x i32>, ptr addrspace(1) %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -421,8 +415,7 @@ if:
 
 endif:
   %r = phi <8 x i32> [ %v, %entry ], [ %u, %if ]
-  store <8 x i32> %r, ptr addrspace(1) %out
-  ret void
+  ret <8 x i32> %r
 }
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle512:
@@ -433,10 +426,8 @@ endif:
 ; GCN: v_add_i32
 
 ; GCN: [[ENDIF]]:
-; GCN: buffer_store_dword
-define amdgpu_kernel void @test_vccnz_ifcvt_triangle512(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) #0 {
+define <16 x i32> @test_vccnz_ifcvt_triangle512(<16 x i32> %v, float inreg %cnd) #0 {
 entry:
-  %v = load <16 x i32>, ptr addrspace(1) %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -446,8 +437,7 @@ if:
 
 endif:
   %r = phi <16 x i32> [ %v, %entry ], [ %u, %if ]
-  store <16 x i32> %r, ptr addrspace(1) %out
-  ret void
+  ret <16 x i32> %r
 }
 
 attributes #0 = { nounwind }

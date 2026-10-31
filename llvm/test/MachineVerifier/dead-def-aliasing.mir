@@ -1,0 +1,76 @@
+# RUN: not --crash llc -mtriple=x86_64 -run-pass=none -filetype=null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" %s
+# REQUIRES: x86-registered-target
+
+# Verify the intra-instruction dead-flag consistency check. Dead
+# physreg def is inconsistent if the same instruction has a live def
+# of the same register.
+
+# A dead super-register def with a live sub-register def is the
+# partial use pattern and must not be reported.
+---
+name: dead_super_live_sub_ok
+tracksRegLiveness: true
+body: |
+  bb.0:
+    dead $eax = MOV32ri 0, implicit-def $al
+...
+
+# Same as above, where the super-register has the same register units
+# as the sub-register.
+---
+name: dead_super_live_sub_same_units_ok
+tracksRegLiveness: true
+body: |
+  bb.0:
+    dead $rax = MOV64ri 1, implicit-def $eax
+...
+
+# A dead super-register def whose units are covered by live
+# sub-register defs.
+---
+name: dead_super_live_subs_cover_ok
+tracksRegLiveness: true
+body: |
+  bb.0:
+    dead $ax = MOV16ri 0, implicit-def $al, implicit-def $ah
+...
+
+# A dead def that does not overlap the live def on the same
+# instruction is fine.
+---
+name: independent_dead_def_ok
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $ecx = MOV32ri 0, implicit-def dead $eax
+...
+
+# A dead sub-register def with a live super-register def: only the
+# other part of the super-register is used.
+---
+name: live_super_dead_sub_ok
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $eax = MOV32ri 0, implicit-def dead $al
+...
+
+# Two overlapping dead defs are redundant but not contradictory.
+---
+name: redundant_dead_defs_ok
+tracksRegLiveness: true
+body: |
+  bb.0:
+    dead $eax = MOV32ri 0, implicit-def dead $al
+...
+
+# Dead and live def of the same register.
+---
+name: dead_flag_contradiction_bad
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK: Bad machine code: Dead def has a live def of the same register on the same instruction
+    ; CHECK: - instruction: $eax = MOV32ri 0, implicit-def dead $eax
+    $eax = MOV32ri 0, implicit-def dead $eax
+...

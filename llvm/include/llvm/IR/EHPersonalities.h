@@ -35,6 +35,7 @@ enum class EHPersonality {
   Wasm_CXX,
   XL_CXX,
   ZOS_CXX,
+  Wasm_D
 };
 
 /// See if the given exception handling personality function is one
@@ -85,6 +86,7 @@ inline bool isScopedEHPersonality(EHPersonality Pers) {
   case EHPersonality::MSVC_TableSEH:
   case EHPersonality::CoreCLR:
   case EHPersonality::Wasm_CXX:
+  case EHPersonality::Wasm_D:
     return true;
   default:
     return false;

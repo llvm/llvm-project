@@ -16,7 +16,7 @@
 
 #include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/RISCV/EmulateInstructionRISCV.h"
-#include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
+#include "Register/Arch/lldb-riscv-register-enums.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace lldb;

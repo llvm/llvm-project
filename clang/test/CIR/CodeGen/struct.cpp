@@ -327,11 +327,16 @@ void struct_with_const_member_expr() {
 
 void function_arg_with_default_value(CompleteS a = {1, 2}) {}
 
-// CIR: %[[ARG_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_CompleteS>
-// CIR: cir.store %{{.*}}, %[[ARG_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
+// CIR: %[[COERCE:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+// CIR: cir.store %arg0, %[[COERCE]] : !u64i, !cir.ptr<!u64i>
+// CIR: %[[COERCE_REC:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_CompleteS>
+// CIR: %[[ARG_ADDR:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!rec_CompleteS>
+// CIR: cir.copy %[[COERCE_REC]] align(8) to %[[ARG_ADDR]] align(4) : !cir.ptr<!rec_CompleteS>
 
+// LLVM: %[[COERCE:.*]] = alloca i64, align 8
+// LLVM: store i64 %{{.*}}, ptr %[[COERCE]], align 8
 // LLVM: %[[ARG_ADDR:.*]] = alloca %struct.CompleteS, align 4
-// LLVM: store %struct.CompleteS %{{.*}}, ptr %[[ARG_ADDR]], align 4
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARG_ADDR]], ptr align 8 %[[COERCE]], i64 8, i1 false)
 
 // OGCG: %[[ARG_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG: store i64 %{{.*}}, ptr %[[ARG_ADDR]], align 4
@@ -340,7 +345,6 @@ void calling_function_with_default_values() {
   function_arg_with_default_value();
 }
 
-// CIR: %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR: %[[AGG_ADDR:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_CompleteS>
 // CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[AGG_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
@@ -348,21 +352,16 @@ void calling_function_with_default_values() {
 // CIR: %[[ELEM_1_PTR:.*]] = cir.get_member %[[AGG_ADDR]][1] {name = "b"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s8i>
 // CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s8i
 // CIR: cir.store{{.*}} %[[CONST_2]], %[[ELEM_1_PTR]] : !s8i, !cir.ptr<!s8i>
-// CIR: %[[TMP_AGG:.*]] = cir.load{{.*}} %[[AGG_ADDR]] : !cir.ptr<!rec_CompleteS>, !rec_CompleteS
-// CIR: cir.store %[[TMP_AGG]], %[[COERCE]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
-// CIR: %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!u64i>
-// CIR: %[[ARG:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!u64i>, !u64i
+// CIR: %[[AGG_PTR:.*]] = cir.cast bitcast %[[AGG_ADDR]] : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!u64i>
+// CIR: %[[ARG:.*]] = cir.load align(4) %[[AGG_PTR]] : !cir.ptr<!u64i>, !u64i
 // CIR: cir.call @_Z31function_arg_with_default_value9CompleteS(%[[ARG]]) : (!u64i) -> ()
 
-// LLVM: %[[COERCE:.*]] = alloca %struct.CompleteS, align 8
 // LLVM: %[[AGG_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // LLVM: %[[ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[AGG_ADDR]], i32 0, i32 0
 // LLVM: store i32 1, ptr %[[ELEM_0_PTR]], align 4
 // LLVM: %[[ELEM_1_PTR:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[AGG_ADDR]], i32 0, i32 1
 // LLVM: store i8 2, ptr %[[ELEM_1_PTR]], align 4
-// LLVM: %[[TMP_AGG:.*]] = load %struct.CompleteS, ptr %[[AGG_ADDR]], align 4
-// LLVM: store %struct.CompleteS %[[TMP_AGG]], ptr %[[COERCE]], align 4
-// LLVM: %[[ARG:.*]] = load i64, ptr %[[COERCE]], align 8
+// LLVM: %[[ARG:.*]] = load i64, ptr %[[AGG_ADDR]], align 4
 // LLVM: call void @_Z31function_arg_with_default_value9CompleteS(i64 %[[ARG]])
 
 // OGCG: %[[AGG_ADDR:.*]] = alloca %struct.CompleteS, align 4

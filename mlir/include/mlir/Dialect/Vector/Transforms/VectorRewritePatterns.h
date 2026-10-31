@@ -100,8 +100,13 @@ void populateVectorContractCanonicalizeMatmulToMMT(
 
 /// Collect patterns to convert reduction op to vector.contract and fold
 /// transpose/broadcast ops into the contract.
-void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
-                                               PatternBenefit benefit = 1);
+///
+/// The new contract keeps only the fast-math flags that both the multiply and
+/// the reduction carry. If `allowFastMathFlagLoss` is false, a multiply and a
+/// reduction with different flags are not converted, so no flag is lost.
+void populateVectorReductionToContractPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1,
+    bool allowFastMathFlagLoss = true);
 
 /// Populate `patterns` with the following patterns.
 ///
@@ -330,6 +335,12 @@ SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
 
 /// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
 /// outermost dimension of the operand.
+void populateVectorContractUnrollPatterns(RewritePatternSet &patterns,
+                                          const UnrollVectorOptions &options,
+                                          PatternBenefit benefit = 1);
+
+/// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
+/// outermost dimension of the operand.
 void populateVectorToElementsUnrollPatterns(RewritePatternSet &patterns,
                                             PatternBenefit benefit = 1);
 
@@ -443,6 +454,12 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
 /// conversions for linearizing scf/cf/func operations
 void populateForVectorLinearize(TypeConverter &typeConverter,
                                 ConversionTarget &conversionTarget);
+
+/// Extends `conversionTarget` so that ops whose inner-most vector dimension is
+/// at least `targetBitWidth` bits wide (or has `index` elements) stay legal.
+/// Must be called after `populateForVectorLinearize`.
+void populateVectorLinearizeBitWidthTargetRules(
+    ConversionTarget &conversionTarget, unsigned targetBitWidth);
 
 /// Populates `patterns` for ND vector (N >= 2) linearization. This currently
 /// contains patterns for converting ConstantLike, Vectorizable, and

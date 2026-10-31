@@ -103,7 +103,7 @@ define void @test9(ptr %p) {
 
 ; atomic load with monotonic ordering
 define i32 @load_monotonic(ptr nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite) uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: @load_monotonic(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr [[TMP0:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -114,7 +114,7 @@ define i32 @load_monotonic(ptr nocapture readonly %0) norecurse nounwind uwtable
 
 ; atomic store with monotonic ordering.
 define void @store_monotonic(ptr nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite) uwtable
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: @store_monotonic(
 ; CHECK-NEXT:    store atomic i32 10, ptr [[TMP0:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret void

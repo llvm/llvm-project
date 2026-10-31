@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=aarch64-linux-gnu -global-isel -stop-after=irtranslator %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=aarch64-linux-gnu -global-isel -stop-after=ir-translator %s -o - | FileCheck %s
 
 ; Test that the GlobalISel IRTranslator correctly marks blocks as address-taken
 ; based on whether the BlockAddress actually has users.

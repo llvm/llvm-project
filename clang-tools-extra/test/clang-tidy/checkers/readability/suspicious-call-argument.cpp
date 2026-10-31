@@ -16,6 +16,8 @@ void foo_7(int aaaaaa, int bbbbbb, int cccccc, int ffffff = 7) {}
 
 void foo_8(int frobble1, int frobble2) {}
 
+void foo_9(int distance, int bbbbbb) {}
+
 // Test functions for convertible argument--parameter types.
 void fun(const int &m);
 void fun2() {
@@ -408,6 +410,10 @@ int main() {
   int src = 0;
   foo_2(aaaaaa, src);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 1st argument 'aaaaaa' (passed to 'source') looks like it might be swapped with the 2nd, 'src' (passed to 'aaaaaa')
+
+  int dst = 0;
+  foo_9(cccccc, dst);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 1st argument 'cccccc' (passed to 'distance') looks like it might be swapped with the 2nd, 'dst' (passed to 'bbbbbb')
 
   // Levenshtein test.
   int aaaabb = 0;

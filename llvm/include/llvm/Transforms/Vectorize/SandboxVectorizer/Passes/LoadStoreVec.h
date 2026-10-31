@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/Support/InstructionCost.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
@@ -33,6 +34,7 @@ class Function;
 class Value;
 class Instruction;
 class Type;
+class Constant;
 
 class LLVM_ABI LoadStoreVec final : public RegionPass {
   const DataLayout *DL = nullptr;
@@ -42,7 +44,7 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   InstructionCost CostBefore = 0;
   const Analyses *A = nullptr;
   Context *Ctx = nullptr;
-  std::unique_ptr<Scheduler> Sched;
+  std::unique_ptr<LegalityAnalysis> Legality;
   VecUtils::DeadInstructionMorgue DeadInstrMorgue;
 
   /// Saves the IR along with the current cost of \p Rgn, so that
@@ -55,22 +57,33 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
 
   /// Checks legality of vectorization and \returns the vector type on success,
   /// nullopt otherwise.
-  std::optional<Type *> canVectorize(ArrayRef<Instruction *> Bndl);
+  std::optional<Type *> canVectorize(BndlRef<Instruction *> Bndl);
 
   /// Builds a single vector load out of \p Loads. \returns the new load,
   /// or nullptr if \p Loads are not a vectorizable.
-  LoadInst *createVectorLoad(ArrayRef<Instruction *> Loads);
+  LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
-  /// Builds a ConstantVector from per-lane constant store operands in \p
-  /// Constants. \returns the packed ConstantVector.
-  Value *createConstantVector(ArrayRef<Value *> Constants);
+  /// Reinterprets \p C as type \p DestTy without changing its bits, e.g.,
+  /// float 1.0 to i32 0x3f800000, or a null pointer to i64 0.
+  ///
+  /// \p DestTy must not be a pointer whose size is unknown.
+  Constant *getEquivalentConstantWithType(Constant *C, Type *DestTy);
+
+  /// Packs \p Constants into one constant vector. The element type is chosen
+  /// by VecUtils::getCombinedVectorTypeFor().
+  ///
+  /// \returns the packed constant vector, or nullptr if some constant cannot
+  /// be converted, e.g., a vector constant that is not yet flattened, or a
+  /// wide constant without a known bit pattern such as a ConstantExpr or a
+  /// global's address.
+  Constant *createConstantVector(BndlRef<Constant *> Constants);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive
   /// loads. \returns true on success.
-  bool vectorizeStores(ArrayRef<Instruction *> Stores, Region &Rgn);
+  bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
   /// Vectorizes \p Loads into a single load. \return the packed load.
-  LoadInst *vectorizeLoads(ArrayRef<Instruction *> Loads, Region &Rgn);
+  LoadInst *vectorizeLoads(BndlRef<Instruction *> Loads, Region &Rgn);
 
 public:
   LoadStoreVec(StringRef AuxArg) : RegionPass("load-store-vec") {

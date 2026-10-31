@@ -260,17 +260,18 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  LBB4_3: ; %lpad1
 ; CHECK-SD-NEXT:  Ltmp8: ; EH_LABEL
-; CHECK-SD-NEXT:    mov x20, x0
-; CHECK-SD-NEXT:    mov x0, x19
+; CHECK-SD-NEXT:    mov x1, x19
+; CHECK-SD-NEXT:    mov x19, x0
+; CHECK-SD-NEXT:    mov x0, x1
 ; CHECK-SD-NEXT:    bl _objc_release
 ; CHECK-SD-NEXT:    b LBB4_5
 ; CHECK-SD-NEXT:  LBB4_4: ; %lpad
 ; CHECK-SD-NEXT:  Ltmp5: ; EH_LABEL
-; CHECK-SD-NEXT:    mov x20, x0
+; CHECK-SD-NEXT:    mov x19, x0
 ; CHECK-SD-NEXT:  LBB4_5: ; %ehcleanup
 ; CHECK-SD-NEXT:    add x0, sp, #15
 ; CHECK-SD-NEXT:    bl __ZN1SD1Ev
-; CHECK-SD-NEXT:    mov x0, x20
+; CHECK-SD-NEXT:    mov x0, x19
 ; CHECK-SD-NEXT:    bl __Unwind_Resume
 ; CHECK-SD-NEXT:  Lfunc_end1:
 ; CHECK-SD-NEXT:    .cfi_endproc

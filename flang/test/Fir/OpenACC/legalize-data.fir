@@ -1,7 +1,7 @@
 // RUN: fir-opt -split-input-file --openacc-legalize-data-values %s | FileCheck %s
 
 func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFsub1Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %1 = acc.copyin varPtr(%0#0 : !fir.ref<i32>) dataClause(acc_copy) name("i") -> !fir.ref<i32>
   acc.parallel dataOperands(%1 : !fir.ref<i32>) {
     %c0_i32 = arith.constant 0 : i32
@@ -14,7 +14,7 @@ func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}) {
 
 // CHECK-LABEL: func.func @_QPsub1
 // CHECK-SAME: (%[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i"})
-// CHECK: %[[I:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK: %[[I:.*]]:2 = hlfir.declare %[[ARG0]] uniq_name("_QFsub1Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[I]]#0 : !fir.ref<i32>) dataClause(acc_copy) name("i") -> !fir.ref<i32>
 // CHECK: acc.parallel dataOperands(%[[COPYIN]] : !fir.ref<i32>) {
 // CHECK:   %c0_i32 = arith.constant 0 : i32
@@ -26,7 +26,7 @@ func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}) {
 // -----
 
 func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFsub1Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %1 = acc.copyin varPtr(%0#0 : !fir.ref<i32>) dataClause(acc_copy) name("i") -> !fir.ref<i32>
   acc.data dataOperands(%1 : !fir.ref<i32>) {
     %c0_i32 = arith.constant 0 : i32
@@ -43,7 +43,7 @@ func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i"}) {
 
 // CHECK-LABEL: func.func @_QPsub1
 // CHECK-SAME: (%[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i"})
-// CHECK: %[[I:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK: %[[I:.*]]:2 = hlfir.declare %[[ARG0]] uniq_name("_QFsub1Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[I]]#0 : !fir.ref<i32>) dataClause(acc_copy) name("i") -> !fir.ref<i32>
 // CHECK: acc.data dataOperands(%[[COPYIN]] : !fir.ref<i32>) {
 // CHECK:   %[[C0:.*]] = arith.constant 0 : i32

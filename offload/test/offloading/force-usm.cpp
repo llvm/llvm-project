@@ -55,6 +55,7 @@ int main(void) {
 // NO-USM-NEXT: device 0 info: Copying data from device to host, TgtPtr={{.*}}, HstPtr={{.*}}, Size=4
 // NO-USM-NEXT: device 0 info: Copying data from device to host, TgtPtr={{.*}}, HstPtr={{.*}}, Size=12
 // NO-USM-NEXT: device 0 info: Copying data from device to host, TgtPtr={{.*}}, HstPtr={{.*}}, Size=4
+// NO-USM-NEXT: device 0 info: Waiting for asynchronous operations to complete
 // NO-USM-NEXT: SUCCESS
 
 // FORCE-USM: SUCCESS

@@ -511,3 +511,23 @@ cir.func @dispatch_two_filters() {
 ^bb6(%eh_token.2: !cir.eh_token):
   cir.resume %eh_token.2 : !cir.eh_token
 }
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+cir.func private @_Z8externalv()
+
+// A terminate scope catches everything, so cir.eh.terminate is only valid in
+// a catch-all handler region.
+cir.func @terminate_in_typed_catch() {
+  // expected-error @below {{'cir.eh.terminate' is only allowed in a catch-all handler region}}
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>]
+      (%eh_token : !cir.eh_token) {
+    cir.eh.terminate %eh_token : !cir.eh_token
+  }
+  cir.return
+}

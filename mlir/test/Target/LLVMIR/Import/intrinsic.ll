@@ -407,6 +407,24 @@ define void @pext_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @smulh_test
+define void @smulh_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
+  ; CHECK:   llvm.intr.smulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %5 = call i32 @llvm.smulh.i32(i32 %0, i32 %1)
+  ; CHECK:   llvm.intr.smulh(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  %6 = call <8 x i32> @llvm.smulh.v8i32(<8 x i32> %2, <8 x i32> %3)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @umulh_test
+define void @umulh_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
+  ; CHECK:   llvm.intr.umulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %5 = call i32 @llvm.umulh.i32(i32 %0, i32 %1)
+  ; CHECK:   llvm.intr.umulh(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  %6 = call <8 x i32> @llvm.umulh.v8i32(<8 x i32> %2, <8 x i32> %3)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @maximum_test
 define void @maximum_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
   ; CHECK:   llvm.intr.maximum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
@@ -440,6 +458,24 @@ define void @minnum_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
   %5 = call float @llvm.minnum.f32(float %0, float %1)
   ; CHECK:   llvm.intr.minnum(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %6 = call <8 x float> @llvm.minnum.v8f32(<8 x float> %2, <8 x float> %3)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @minimumnum_test
+define void @minimumnum_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
+  ; CHECK:   llvm.intr.minimumnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %5 = call float @llvm.minimumnum.f32(float %0, float %1)
+  ; CHECK:   llvm.intr.minimumnum(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  %6 = call <8 x float> @llvm.minimumnum.v8f32(<8 x float> %2, <8 x float> %3)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @maximumnum_test
+define void @maximumnum_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
+  ; CHECK:   llvm.intr.maximumnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %5 = call float @llvm.maximumnum.f32(float %0, float %1)
+  ; CHECK:   llvm.intr.maximumnum(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  %6 = call <8 x float> @llvm.maximumnum.v8f32(<8 x float> %2, <8 x float> %3)
   ret void
 }
 
@@ -515,6 +551,10 @@ define void @vector_reductions(float %0, <8 x float> %1, <8 x i32> %2) {
   %19 = call float @llvm.vector.reduce.fmaximum.v8f32(<8 x float> %1)
   ; CHECK: llvm.intr.vector.reduce.fminimum(%{{.*}}) : (vector<8xf32>) -> f32
   %20 = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> %1)
+  ; CHECK: llvm.intr.vector.reduce.fminimumnum(%{{.*}}) : (vector<8xf32>) -> f32
+  %21 = call float @llvm.vector.reduce.fminimumnum.v8f32(<8 x float> %1)
+  ; CHECK: llvm.intr.vector.reduce.fmaximumnum(%{{.*}}) : (vector<8xf32>) -> f32
+  %22 = call float @llvm.vector.reduce.fmaximumnum.v8f32(<8 x float> %1)
   ret void
 }
 
@@ -1058,8 +1098,6 @@ define void @invariant(ptr %0) {
 define void @invariant_group(ptr %0) {
   ; CHECK: %{{.+}} = llvm.intr.launder.invariant.group %{{.*}} : !llvm.ptr
   %2 = call ptr @llvm.launder.invariant.group.p0(ptr %0)
-  ; CHECK: %{{.+}} = llvm.intr.strip.invariant.group %{{.*}} : !llvm.ptr
-  %3 = call ptr @llvm.strip.invariant.group.p0(ptr %0)
   ret void
 }
 
@@ -1083,6 +1121,13 @@ define void @vector_deinterleave2(<4 x double> %0, <vscale x 8 x i32> %1) {
   %3 = call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> %0);
   ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (vector<[8]xi32>) -> !llvm.struct<(vector<[4]xi32>, vector<[4]xi32>)>
   %4 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %1);
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @vector_repeat
+define void @vector_repeat(<4 x float> %0) {
+  ; CHECK: llvm.intr.vector.repeat(%{{.*}}) : (vector<4xf32>) -> vector<[4]xf32>
+  %4 = call <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32(<4 x float> %0);
   ret void
 }
 
@@ -1836,6 +1881,10 @@ declare i32 @llvm.pdep.i32(i32, i32)
 declare <8 x i32> @llvm.pdep.v8i32(<8 x i32>, <8 x i32>)
 declare i32 @llvm.pext.i32(i32, i32)
 declare <8 x i32> @llvm.pext.v8i32(<8 x i32>, <8 x i32>)
+declare i32 @llvm.smulh.i32(i32, i32)
+declare <8 x i32> @llvm.smulh.v8i32(<8 x i32>, <8 x i32>)
+declare i32 @llvm.umulh.i32(i32, i32)
+declare <8 x i32> @llvm.umulh.v8i32(<8 x i32>, <8 x i32>)
 declare float @llvm.maximum.f32(float, float)
 declare <8 x float> @llvm.maximum.v8f32(<8 x float>, <8 x float>)
 declare float @llvm.minimum.f32(float, float)
@@ -1844,6 +1893,10 @@ declare float @llvm.maxnum.f32(float, float)
 declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>)
 declare float @llvm.minnum.f32(float, float)
 declare <8 x float> @llvm.minnum.v8f32(<8 x float>, <8 x float>)
+declare float @llvm.minimumnum.f32(float, float)
+declare <8 x float> @llvm.minimumnum.v8f32(<8 x float>, <8 x float>)
+declare float @llvm.maximumnum.f32(float, float)
+declare <8 x float> @llvm.maximumnum.v8f32(<8 x float>, <8 x float>)
 declare i32 @llvm.smax.i32(i32, i32)
 declare <8 x i32> @llvm.smax.v8i32(<8 x i32>, <8 x i32>)
 declare i32 @llvm.smin.i32(i32, i32)
@@ -1858,6 +1911,8 @@ declare float @llvm.vector.reduce.fmax.v8f32(<8 x float>)
 declare float @llvm.vector.reduce.fmin.v8f32(<8 x float>)
 declare float @llvm.vector.reduce.fmaximum.v8f32(<8 x float>)
 declare float @llvm.vector.reduce.fminimum.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fminimumnum.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fmaximumnum.v8f32(<8 x float>)
 declare i32 @llvm.vector.reduce.mul.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.or.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.smax.v8i32(<8 x i32>)
@@ -2015,6 +2070,9 @@ declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
 declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
 declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
+declare { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double>)
+declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32>)
+declare <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32(<4 x float>)
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float>, <4 x float>, metadata, metadata)
 declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)

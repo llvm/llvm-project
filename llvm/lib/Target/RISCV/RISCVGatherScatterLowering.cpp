@@ -37,7 +37,8 @@ namespace {
 class RISCVGatherScatterLoweringImpl {
   const RISCVSubtarget *ST;
   const RISCVTargetLowering *TLI;
-  LoopInfo *LI;
+  function_ref<LoopInfo &()> GetLI;
+  LoopInfo *LI = nullptr;
   const DataLayout *DL;
 
   SmallVector<WeakTrackingVH> MaybeDeadPHIs;
@@ -48,9 +49,10 @@ class RISCVGatherScatterLoweringImpl {
   DenseMap<GetElementPtrInst *, std::pair<Value *, Value *>> StridedAddrs;
 
 public:
-  RISCVGatherScatterLoweringImpl(const RISCVSubtarget *ST, LoopInfo *LI,
+  RISCVGatherScatterLoweringImpl(const RISCVSubtarget *ST,
+                                 function_ref<LoopInfo &()> GetLI,
                                  const DataLayout *DL)
-      : ST(ST), TLI(ST->getTargetLowering()), LI(LI), DL(DL) {}
+      : ST(ST), TLI(ST->getTargetLowering()), GetLI(GetLI), DL(DL) {}
 
   bool run(Function &F);
 
@@ -467,6 +469,9 @@ RISCVGatherScatterLoweringImpl::determineBaseAndStride(Instruction *Ptr,
     return P;
   }
 
+  if (!LI)
+    LI = &GetLI();
+
   // Make sure we're in a loop and that has a pre-header and a single latch.
   Loop *L = LI->getLoopFor(GEP->getParent());
   if (!L || !L->getLoopPreheader() || !L->getLoopLatch())
@@ -563,9 +568,7 @@ bool RISCVGatherScatterLoweringImpl::tryCreateStridedLoadStore(
   if (!PtrI)
     return false;
 
-  LLVMContext &Ctx = PtrI->getContext();
-  IRBuilder Builder(Ctx, InstSimplifyFolder(*DL));
-  Builder.SetInsertPoint(PtrI);
+  IRBuilder Builder(PtrI->getIterator(), InstSimplifyFolder(*DL));
 
   Value *BasePtr, *Stride;
   std::tie(BasePtr, Stride) = determineBaseAndStride(PtrI, Builder);
@@ -652,16 +655,18 @@ bool RISCVGatherScatterLoweringLegacy::runOnFunction(Function &F) {
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<RISCVTargetMachine>();
   auto *ST = &TM.getSubtarget<RISCVSubtarget>(F);
-  auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  return RISCVGatherScatterLoweringImpl(ST, LI, &F.getDataLayout()).run(F);
+  auto GetLI = [&]() -> LoopInfo & {
+    return getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  };
+  return RISCVGatherScatterLoweringImpl(ST, GetLI, &F.getDataLayout()).run(F);
 }
 
 PreservedAnalyses
 RISCVGatherScatterLoweringPass::run(Function &F, FunctionAnalysisManager &FAM) {
   auto *ST = &TM->getSubtarget<RISCVSubtarget>(F);
-  auto *LI = &FAM.getResult<LoopAnalysis>(F);
+  auto GetLI = [&]() -> LoopInfo & { return FAM.getResult<LoopAnalysis>(F); };
   bool Changed =
-      RISCVGatherScatterLoweringImpl(ST, LI, &F.getDataLayout()).run(F);
+      RISCVGatherScatterLoweringImpl(ST, GetLI, &F.getDataLayout()).run(F);
   if (!Changed)
     return PreservedAnalyses::all();
 

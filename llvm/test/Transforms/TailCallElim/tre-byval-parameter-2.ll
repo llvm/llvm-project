@@ -51,10 +51,10 @@ define dso_local void @_Z7dostuff1AS_i(ptr nocapture byval(%struct.A) align 8 %a
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[I_TR]], 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP1]], ptr align 8 [[AGG_TMP]], i64 80, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP52]], ptr align 8 [[AGG_TMP5]], i64 80, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[AGG_TMP1]], i64 80, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[B]], ptr align 8 [[AGG_TMP52]], i64 80, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP5]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[AGG_TMP1]], i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[B]], ptr align 8 [[AGG_TMP52]], i64 80, i1 false)
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void

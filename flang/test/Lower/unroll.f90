@@ -7,7 +7,7 @@
 subroutine unroll_dir
   integer :: a(10)
   !dir$ unroll
-  !CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #loop_annotation}
+  !CHECK: fir.do_loop {{.*}} <{loopAnnotation = #loop_annotation}>
   do i=1,10
      a(i)=i
   end do
@@ -19,7 +19,7 @@ subroutine intermediate_directive
   integer :: a(10)
   !dir$ unroll
   !dir$ unknown
-  !CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #loop_annotation}
+  !CHECK: fir.do_loop {{.*}} <{loopAnnotation = #loop_annotation}>
   do i=1,10
      a(i)=i
   end do

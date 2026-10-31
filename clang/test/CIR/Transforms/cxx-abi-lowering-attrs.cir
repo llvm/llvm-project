@@ -25,10 +25,18 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
     // cir::PoisonAttr
     %poison1 = cir.const #cir.poison : !rec_Struct
     // CHECK: cir.const #cir.poison : !rec_Struct
+    %poison2 = cir.const #cir.poison : !cir.array<!dmp x 2>
+    // CHECK: cir.const #cir.poison : !cir.array<!s64i x 2>
 
     // cir::UndefAttr
     %undef1 = cir.const #cir.undef : !rec_Struct
     // CHECK: cir.const #cir.undef : !rec_Struct
+    %undef2 = cir.const #cir.undef : !dmp
+    // CHECK: cir.const #cir.undef : !s64i
+    %undef3 = cir.const #cir.undef : !dmp_ptr
+    // CHECK: cir.const #cir.undef : !cir.ptr<!s64i>
+    %undef4 = cir.const #cir.undef : !cir.array<!dmp x 2>
+    // CHECK: cir.const #cir.undef : !cir.array<!s64i x 2>
 
     // cir::ConstPtrAttr
     %constptr1 = cir.const #cir.ptr<null> : !cir.ptr<!rec_Struct>

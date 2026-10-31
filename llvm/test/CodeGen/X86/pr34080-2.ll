@@ -12,7 +12,7 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $40, %esp
+; CHECK-NEXT:    subl $32, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %ebx
 ; CHECK-NEXT:    movl 8(%ebx), %esi
 ; CHECK-NEXT:    xorl %eax, %eax

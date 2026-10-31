@@ -367,6 +367,42 @@ rec:
   ret i32 %acc
 }
 
+; The per-return copy of the accumulator must not keep poison-generating
+; attributes or metadata (like range).
+define i8 @test_drop_poison_attrs(i8 %n, i8 %r) {
+; CHECK-LABEL: define i8 @test_drop_poison_attrs(
+; CHECK-SAME: i8 [[N:%.*]], i8 [[R:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
+; CHECK:       tailrecurse:
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[M:%.*]], [[RECURSE:%.*]] ]
+; CHECK-NEXT:    [[N_TR:%.*]] = phi i8 [ [[N]], [[ENTRY]] ], [ [[SUB:%.*]], [[RECURSE]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[N_TR]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[RECURSE]]
+; CHECK:       recurse:
+; CHECK-NEXT:    [[SUB]] = sub i8 [[N_TR]], 1
+; CHECK-NEXT:    [[M]] = tail call i8 @llvm.umax.i8(i8 [[ACCUMULATOR_TR]], i8 1)
+; CHECK-NEXT:    br label [[TAILRECURSE]]
+; CHECK:       return:
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = tail call i8 @llvm.umax.i8(i8 [[ACCUMULATOR_TR]], i8 [[R]])
+; CHECK-NEXT:    ret i8 [[ACCUMULATOR_RET_TR]]
+;
+entry:
+  %cmp = icmp eq i8 %n, 0
+  br i1 %cmp, label %return, label %recurse
+
+recurse:
+  %sub = sub i8 %n, 1
+  %call = tail call i8 @test_drop_poison_attrs(i8 %sub, i8 %r)
+  %m = call range(i8 1, 3) i8 @llvm.umax.i8(i8 %call, i8 1)
+  ret i8 %m
+
+return:
+  ret i8 %r
+}
+
+declare i8 @llvm.umax.i8(i8, i8)
+
 %struct.VecListNode = type { <4 x i32>, ptr }
 
 ; The identity for a vector add accumulator is the zero vector.

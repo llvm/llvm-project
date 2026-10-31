@@ -68,6 +68,8 @@ public:
 
   static lldb::AccessType GetAccessTypeFromDWARF(uint32_t dwarf_accessibility);
 
+  static DWARFDIE GetAnnotation(const DWARFDIE &die, llvm::StringRef name);
+
   Kind GetKind() const { return m_kind; }
 
 private:

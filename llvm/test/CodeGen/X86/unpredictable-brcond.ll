@@ -10,7 +10,7 @@ define void @cond_branch_1(i1 %cond) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-  ; CHECK-NEXT:   TEST8ri killed [[COPY1]], 1, implicit-def $eflags
+  ; CHECK-NEXT:   TEST8ri [[COPY1]], 1, implicit-def $eflags
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 4, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -49,7 +49,7 @@ define void @cond_branch_2(double %a, double %b, i32 %c, i32 %d) nounwind {
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
   ; CHECK-NEXT:   [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[COPY1]], [[COPY]], implicit-def $eflags
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
-  ; CHECK-NEXT:   [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], killed [[SETCCr1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[OR8rr:%[0-9]+]]:gr8 = OR8rr [[SETCCr]], [[SETCCr1]], implicit-def dead $eflags
   ; CHECK-NEXT:   TEST8rr [[OR8rr]], [[OR8rr]], implicit-def $eflags
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 5, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.1
@@ -85,10 +85,10 @@ define void @isint_branch(double %d) nounwind {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fr64 = COPY $xmm0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr128 = COPY [[COPY]]
-  ; CHECK-NEXT:   [[CVTTPD2DQrr:%[0-9]+]]:vr128 = nofpexcept CVTTPD2DQrr killed [[COPY1]], implicit $mxcsr
-  ; CHECK-NEXT:   [[CVTDQ2PDrr:%[0-9]+]]:vr128 = CVTDQ2PDrr killed [[CVTTPD2DQrr]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fr64 = COPY killed [[CVTDQ2PDrr]]
-  ; CHECK-NEXT:   nofpexcept UCOMISDrr [[COPY]], killed [[COPY2]], implicit-def $eflags, implicit $mxcsr
+  ; CHECK-NEXT:   [[CVTTPD2DQrr:%[0-9]+]]:vr128 = nofpexcept CVTTPD2DQrr [[COPY1]], implicit $mxcsr
+  ; CHECK-NEXT:   [[CVTDQ2PDrr:%[0-9]+]]:vr128 = CVTDQ2PDrr [[CVTTPD2DQrr]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fr64 = COPY [[CVTDQ2PDrr]]
+  ; CHECK-NEXT:   nofpexcept UCOMISDrr [[COPY]], [[COPY2]], implicit-def $eflags, implicit $mxcsr
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 5, implicit $eflags
   ; CHECK-NEXT:   unpredictable JCC_1 %bb.2, 10, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.1

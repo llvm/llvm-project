@@ -34,6 +34,7 @@
 #include "llvm/Support/xxhash.h"
 
 #include <cstdarg>
+#include <list>
 #include <optional>
 
 #define DEBUG_TYPE "lld"

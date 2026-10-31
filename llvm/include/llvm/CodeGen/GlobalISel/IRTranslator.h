@@ -58,12 +58,12 @@ class IRTranslatorPass : public RequiredPassInfoMixin<IRTranslatorPass> {
   std::unique_ptr<IRTranslatorImpl> Impl;
 
 public:
-  IRTranslatorPass(CodeGenOptLevel OptLevel);
-  ~IRTranslatorPass();
-  IRTranslatorPass(IRTranslatorPass &&);
+  LLVM_ABI IRTranslatorPass(CodeGenOptLevel OptLevel);
+  LLVM_ABI ~IRTranslatorPass();
+  LLVM_ABI IRTranslatorPass(IRTranslatorPass &&);
 
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

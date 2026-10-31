@@ -61,7 +61,7 @@ constexpr uint32_t POS_STOP = 0x7f80'0000U;
 constexpr uint32_t NEG_START = 0xb000'0000U;
 constexpr uint32_t NEG_STOP = 0xff80'0000U;
 
-TEST_F(LlvmLibcBfloat16FromFloatTest, PostiveRange) {
+TEST_F(LlvmLibcBfloat16FromFloatTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);
 }
 

@@ -57,7 +57,7 @@ define i4 @func3(i4 %x, i4 %y) {
 ; CHECK-GI-NEXT:    sbfx w8, w0, #0, #4
 ; CHECK-GI-NEXT:    sbfx w9, w1, #0, #4
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    sbfx w0, w8, #2, #6
+; CHECK-GI-NEXT:    asr w0, w8, #2
 ; CHECK-GI-NEXT:    ret
   %tmp = call i4 @llvm.smul.fix.i4(i4 %x, i4 %y, i32 2)
   ret i4 %tmp

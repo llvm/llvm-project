@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -triple spir64-unknown-unknown -cl-std=clc++2021 \
+// RUN:   -fms-extensions -pedantic -fsyntax-only -verify %s
+
+kernel void address_space_qualifiers() {
+  // expected-warning@+1 {{lambda without a parameter clause is a C++23 extension}}
+  auto private_lambda([] __private {});
+  // expected-warning@+1 {{lambda without a parameter clause is a C++23 extension}}
+  auto global_lambda([] __global {});
+  // expected-warning@+1 {{lambda without a parameter clause is a C++23 extension}}
+  auto local_lambda([] __local {});
+  // expected-warning@+1 {{lambda without a parameter clause is a C++23 extension}}
+  auto constant_lambda([] __constant {});
+  // expected-warning@+1 {{lambda without a parameter clause is a C++23 extension}}
+  auto generic_lambda([] __generic {});
+  // expected-warning@+2 {{an attribute specifier sequence in this position is a C++23 extension}}
+  // expected-warning@+1 {{lambda without a parameter clause is a C++23 extension}}
+  auto attributed_lambda([] [[]] __private {});
+}
+
+int microsoft_attribute_control([] __global int *);

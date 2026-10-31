@@ -274,6 +274,8 @@ namespace llvm {
         const APInt &ShiftOrRotateAmt,
         const std::optional<APInt> &AndMask) const override;
 
+    bool preferIncOfAddToSubOfNot(EVT VT) const override;
+
     bool preferScalarizeSplat(SDNode *N) const override;
 
     CondMergingParams
@@ -525,11 +527,9 @@ namespace llvm {
                             const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
-    /// Returns true if the target can instruction select the
-    /// specified FP immediate natively. If false, the legalizer will
-    /// materialize the FP immediate as a load from a constant pool.
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    /// Returns how to materialize the specified FP immediate.
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     /// Targets can use this to indicate that they only support *some*
     /// VECTOR_SHUFFLE operations, those with specific masks. By default, if a
@@ -731,13 +731,19 @@ namespace llvm {
     SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
                                    int JTI, SelectionDAG &DAG) const override;
 
-    Align getPrefLoopAlignment(MachineLoop *ML) const override;
+    Align
+    getPrefLoopAlignment(MachineLoop *ML,
+                         const MachineBasicBlock *BlockToAlign) const override;
 
     EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const override {
       if (VT == MVT::f80)
         return EVT::getIntegerVT(Context, 96);
       return TargetLoweringBase::getTypeToTransformTo(Context, VT);
     }
+
+    /// Return true if \p VT has the rsqrt* based estimate of the square root,
+    /// or of its reciprocal if \p Reciprocal is set.
+    bool hasSqrtEstimate(EVT VT, bool Reciprocal) const;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>

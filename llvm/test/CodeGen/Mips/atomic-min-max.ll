@@ -189,7 +189,7 @@ define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64-LABEL: test_max_32:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:  .LBB0_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -207,7 +207,7 @@ define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64R6-LABEL: test_max_32:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:  .LBB0_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -224,7 +224,7 @@ define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64EL-LABEL: test_max_32:
 ; MIPS64EL:       # %bb.0: # %entry
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:  .LBB0_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -242,7 +242,7 @@ define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64ELR6-LABEL: test_max_32:
 ; MIPS64ELR6:       # %bb.0: # %entry
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:  .LBB0_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -436,7 +436,7 @@ define i32 @test_min_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64-LABEL: test_min_32:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:  .LBB1_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -454,7 +454,7 @@ define i32 @test_min_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64R6-LABEL: test_min_32:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:  .LBB1_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -471,7 +471,7 @@ define i32 @test_min_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64EL-LABEL: test_min_32:
 ; MIPS64EL:       # %bb.0: # %entry
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:  .LBB1_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -489,7 +489,7 @@ define i32 @test_min_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64ELR6-LABEL: test_min_32:
 ; MIPS64ELR6:       # %bb.0: # %entry
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:  .LBB1_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -683,7 +683,7 @@ define i32 @test_umax_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64-LABEL: test_umax_32:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:  .LBB2_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -701,7 +701,7 @@ define i32 @test_umax_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64R6-LABEL: test_umax_32:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:  .LBB2_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -718,7 +718,7 @@ define i32 @test_umax_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64EL-LABEL: test_umax_32:
 ; MIPS64EL:       # %bb.0: # %entry
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:  .LBB2_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -736,7 +736,7 @@ define i32 @test_umax_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64ELR6-LABEL: test_umax_32:
 ; MIPS64ELR6:       # %bb.0: # %entry
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:  .LBB2_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -930,7 +930,7 @@ define i32 @test_umin_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64-LABEL: test_umin_32:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64-NEXT:    sync
 ; MIPS64-NEXT:  .LBB3_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -948,7 +948,7 @@ define i32 @test_umin_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64R6-LABEL: test_umin_32:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64R6-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64R6-NEXT:    sync
 ; MIPS64R6-NEXT:  .LBB3_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -965,7 +965,7 @@ define i32 @test_umin_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64EL-LABEL: test_umin_32:
 ; MIPS64EL:       # %bb.0: # %entry
-; MIPS64EL-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64EL-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64EL-NEXT:    sync
 ; MIPS64EL-NEXT:  .LBB3_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -983,7 +983,7 @@ define i32 @test_umin_32(ptr nocapture %ptr, i32 signext %val) {
 ;
 ; MIPS64ELR6-LABEL: test_umin_32:
 ; MIPS64ELR6:       # %bb.0: # %entry
-; MIPS64ELR6-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
+; MIPS64ELR6-NEXT:    # kill: def $r5 killed $r5 killed $r5_64
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:  .LBB3_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1

@@ -28,9 +28,9 @@ define amdgpu_kernel void @k0() {
 @f0.lds = addrspace(3) global i16 poison
 define void @f0() {
 ; MODULE-LABEL: @f0(
-; MODULE-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !alias.scope [[META1:![0-9]+]], !noalias [[META4:![0-9]+]]
+; MODULE-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 4), align 4, !alias.scope [[META1:![0-9]+]], !noalias [[META4:![0-9]+]]
 ; MODULE-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 3
-; MODULE-NEXT:    store i16 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !alias.scope [[META1]], !noalias [[META4]]
+; MODULE-NEXT:    store i16 [[MUL]], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 4), align 4, !alias.scope [[META1]], !noalias [[META4]]
 ; MODULE-NEXT:    ret void
 ;
 ; TABLE-LABEL: @f0(

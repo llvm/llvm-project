@@ -16,7 +16,7 @@ subroutine test_assumed_shape_1(x)
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %[[c0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   ! CHECK: %[[c1:.*]] = arith.constant 1 : index
   ! CHECK: %[[shape_decl:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
-  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[addr]](%[[shape_decl]]) dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<contiguous>, uniq_name = "_QFtest_assumed_shape_1Ex"} : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
+  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[addr]](%[[shape_decl]]) dummy_scope %{{.*}} arg 1 uniq_name("_QFtest_assumed_shape_1Ex") fortran_attrs<contiguous> : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 
   print *, x
   ! Test extent/lower bound use in the IO statement

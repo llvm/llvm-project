@@ -12,6 +12,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fallocate
+  SRCS
+    fallocate.cpp
+  HDRS
+    ../fallocate.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fallocate
+    libc.hdr.types.off_t
+)
+
+add_entrypoint_object(
   fcntl
   SRCS
     fcntl.cpp
@@ -71,6 +83,20 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.off64_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.posix_fadvise
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  posix_fallocate
+  SRCS
+    posix_fallocate.cpp
+  HDRS
+    ../posix_fallocate.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.off_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fallocate
     libc.src.__support.common
     libc.src.__support.macros.config
 )

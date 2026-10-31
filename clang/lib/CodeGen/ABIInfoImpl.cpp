@@ -302,40 +302,7 @@ bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
   return true;
 }
 
-bool CodeGen::isEmptyFieldForLayout(const ASTContext &Context,
-                                    const FieldDecl *FD) {
-  if (FD->isZeroLengthBitField())
-    return true;
-
-  if (FD->isUnnamedBitField())
-    return false;
-
-  return isEmptyRecordForLayout(Context, FD->getType());
-}
-
-bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
-  const auto *RD = T->getAsRecordDecl();
-  if (!RD)
-    return false;
-
-  // If this is a C++ record, check the bases first.
-  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-    if (CXXRD->isDynamicClass())
-      return false;
-
-    for (const auto &I : CXXRD->bases())
-      if (!isEmptyRecordForLayout(Context, I.getType()))
-        return false;
-  }
-
-  for (const auto *I : RD->fields())
-    if (!isEmptyFieldForLayout(Context, I))
-      return false;
-
-  return true;
-}
-
-const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
+const Type *CodeGen::isSingleElementRecord(QualType T, ASTContext &Context) {
   const auto *RD = T->getAsRecordDecl();
   if (!RD)
     return nullptr;
@@ -358,7 +325,7 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
 
       // If this is non-empty and not a single element struct, the composite
       // cannot be a single element struct.
-      Found = isSingleElementStruct(I.getType(), Context);
+      Found = isSingleElementRecord(I.getType(), Context);
       if (!Found)
         return nullptr;
     }
@@ -387,7 +354,7 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
     if (!isAggregateTypeForABI(FT)) {
       Found = FT.getTypePtr();
     } else {
-      Found = isSingleElementStruct(FT, Context);
+      Found = isSingleElementRecord(FT, Context);
       if (!Found)
         return nullptr;
     }

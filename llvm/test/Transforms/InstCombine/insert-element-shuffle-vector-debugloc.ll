@@ -16,7 +16,7 @@ define <4 x float> @widget(ptr %arg) !dbg !5 {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x float>, ptr [[ARG]], align 4, !dbg [[DBG8:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[LOAD]], <2 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, !dbg [[DBG8]]
-; CHECK-NEXT:    [[INSERTELEMENT:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>, !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:    [[INSERTELEMENT:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, <4 x float> [[TMP0]], <4 x i32> <i32 4, i32 0, i32 0, i32 0>, !dbg [[DBG9:![0-9]+]]
 ; CHECK-NEXT:    ret <4 x float> [[INSERTELEMENT]], !dbg [[DBG10:![0-9]+]]
 ;
 bb:

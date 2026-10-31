@@ -29,6 +29,11 @@ namespace lldb_dap {
 /// `supportsConfigurationDoneRequest` is true.
 llvm::Error
 ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
+  // The callback is only created on successful launch or attach.
+  if (!dap.on_configuration_done)
+    return make_error<DAPError>(
+        "'configurationDone' is only expected after the 'initialized' event.");
+
   dap.configuration_done = true;
 
   // Ensure any command scripts did not leave us in an unexpected state.

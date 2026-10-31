@@ -42,6 +42,11 @@ class BreakpointConditionsTestCase(TestBase):
         self.build()
         self.breakpoint_invalid_conditions_python()
 
+    def test_breakpoint_condition_with_DIL(self):
+        """Test evaluating breakpoint conditions with Data Inspection Language."""
+        self.build()
+        self.breakpoint_conditions_with_DIL()
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -260,3 +265,95 @@ class BreakpointConditionsTestCase(TestBase):
 
         # The hit count for the breakpoint should be 1.
         self.assertEqual(breakpoint.GetHitCount(), 1)
+
+    def breakpoint_conditions_with_DIL(self):
+        """Test evaluating breakpoint conditions with Data Inspection Language."""
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        target = self.dbg.CreateTarget(exe)
+        self.runCmd("settings set target.experimental.use-DIL true")
+
+        def break_on_symbol_with_condition(symbol, condition, mode=""):
+            if mode:
+                mode = "-Z {}".format(mode)
+            lldbutil.run_break_set_by_symbol(
+                self,
+                symbol,
+                extra_options=" -c '{}' -Y C++ {}".format(condition, mode),
+                num_expected_locations=1,
+                sym_exact=True,
+            )
+
+        # Enable logging
+        log_file = self.getBuildArtifact("log-file.txt")
+        if os.path.exists(log_file):
+            os.remove(log_file)
+        self.runCmd("log enable -f '%s' lldb break" % (log_file))
+
+        ## Check that breakpoint "a" is successfully evaluated by DIL.
+        # CHECK: DIL successfully parsed the condition: val == 1
+        # CHECK: Condition successfully evaluated by DIL, result is true.
+        break_on_symbol_with_condition("a", "val == 1")
+
+        ## Run the program until breakpoint "a"
+        self.runCmd("settings set target.breakpoints-condition-mode dwim")
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        ## Check that when DIL's lexer, parser or interpreter fail,
+        ## the evaluation falls back to UserExpression.
+        # CHECK: Lexing condition with DIL failed
+        # CHECK: error: <user expression
+        break_on_symbol_with_condition("b", "val # 1")
+        # CHECK: Parsing condition with DIL failed
+        # CHECK: error: <user expression
+        break_on_symbol_with_condition("b", "val == ?")
+        # CHECK: DIL successfully parsed the condition
+        # CHECK: Evaluating condition with DIL failed
+        # CHECK: error: <user expression
+        break_on_symbol_with_condition("b", "val == no_such_variable")
+
+        # Continue until breakpoint "b"
+        self.runCmd("continue")
+
+        ## Create breakpoints with a valid condition where DIL fails during evaluating
+        ## to test various condition evaluation modes.
+        ## Check that "target.breakpoints-condition-mode" setting changes the default
+        ## mode to "expr" and DIL is not called.
+        # CHECK-NOT: DIL
+        # CHECK: Condition successfully evaluated by UserExpression, result is true
+        self.runCmd("settings set target.breakpoints-condition-mode expr")
+        break_on_symbol_with_condition("c", "val == static_cast<int>(1.0)")
+        ## Check that when condition evaluation fails in "dil" mode,
+        ## the evaluation does not fall back to UserExpression.
+        # CHECK: Evaluating condition with DIL failed
+        # CHECK: Error evaluating condition
+        break_on_symbol_with_condition("c", "val == static_cast<int>(1.0)", "dil")
+        ## Check that condition evaluation in "expr" mode does not attempt DIL
+        ## and successfully uses UserExpression.
+        # CHECK-NOT: DIL
+        # CHECK: Condition successfully evaluated by UserExpression, result is true
+        break_on_symbol_with_condition("c", "val == static_cast<int>(1.0)", "expr")
+        ## Check that when DIL fails during condition evaluation in "dwim" mode,
+        ## the evaluation falls back to UserExpression and succeeds.
+        # CHECK: DIL successfully parsed the condition: val == static_cast<int>(1.0)
+        # CHECK: Evaluating condition with DIL failed
+        # CHECK: Condition successfully evaluated by UserExpression, result is true.
+        break_on_symbol_with_condition("c", "val == static_cast<int>(1.0)", "dwim")
+        ## Check that the breakpoint condition mode is set to DIL via SB API,
+        ## and UserExpression is not called.
+        # CHECK: Evaluating condition with DIL failed
+        # CHECK: Error evaluating condition
+        breakpoint = target.BreakpointCreateByName("c")
+        breakpoint.SetCondition("val == static_cast<int>(1.0)")
+        breakpoint.SetConditionMode(lldb.eBreakpointConditionModeDIL)
+        self.assertEqual(
+            breakpoint.GetConditionMode(), lldb.eBreakpointConditionModeDIL
+        )
+
+        # Continue until breakpoint "c"
+        self.runCmd("continue")
+
+        self.expect("process status", PROCESS_STOPPED, patterns=["Process .* stopped"])
+        self.filecheck_log(log_file, __file__)
+
+        self.runCmd("process kill")

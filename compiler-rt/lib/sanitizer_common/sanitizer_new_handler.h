@@ -13,10 +13,12 @@
 // throwing / nothrow exhaustion policies that compose with it. Each
 // sanitizer's operator new wrapper supplies two small lambdas:
 //
-//   * Alloc        — invokes the sanitizer's internal allocator, returning
-//                    nullptr on OOM (never aborting on OOM). Other detected
-//                    failure modes (e.g. invalid alignment) should abort with
-//                    a diagnostic.
+//   * Alloc        — invokes the sanitizer's internal allocator. Returns
+//                    nullptr, rather than aborting, only when storage cannot
+//                    be obtained: every nullptr return is treated as a
+//                    storage failure by the std::get_new_handler() loop.
+//                    Other detected failures (e.g. invalid alignment) must
+//                    abort with a diagnostic.
 //
 //   * OnExhausted  — invokes the sanitizer's "abort with diagnostic"
 //                    handler (e.g. asan's ReportOutOfMemory + Die()).
@@ -51,8 +53,8 @@ new_handler get_new_handler() noexcept;
 namespace __sanitizer {
 
 // Runs std::get_new_handler() per [new.delete.single]/3+/4 until the
-// allocation succeeds or the chain is exhausted. Returns the allocated
-// pointer on success, nullptr if the handler chain is exhausted.
+// allocation succeeds (returns the allocated pointer) or the chain is
+// exhausted (returns nullptr).
 //
 // NOTE: Exceptions thrown by Alloc or std::new_handler callbacks escape this
 //       function. Callers that need to convert exceptions to a nullptr return

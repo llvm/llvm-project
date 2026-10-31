@@ -9,7 +9,6 @@
 #include "LibStdcpp.h"
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Error.h"
@@ -79,11 +78,12 @@ public:
     return lldb::ChildCacheState::eReuse;
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     if (!m_start)
       return llvm::createStringErrorV("type has no child named '{0}'", name);
 
-    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+    auto optional_idx = formatters::ExtractIndexFromString(name);
     if (!optional_idx) {
       return llvm::createStringErrorV("type has no child named '{0}'", name);
     }

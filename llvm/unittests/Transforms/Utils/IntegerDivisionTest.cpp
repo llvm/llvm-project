@@ -22,7 +22,7 @@ namespace {
 TEST(IntegerDivision, SDiv) {
   LLVMContext C;
   Module M("test division", C);
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(M);
 
   SmallVector<Type*, 2> ArgTys(2, Builder.getInt32Ty());
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
@@ -52,7 +52,7 @@ TEST(IntegerDivision, SDiv) {
 TEST(IntegerDivision, UDiv) {
   LLVMContext C;
   Module M("test division", C);
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(M);
 
   SmallVector<Type*, 2> ArgTys(2, Builder.getInt32Ty());
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
@@ -82,7 +82,7 @@ TEST(IntegerDivision, UDiv) {
 TEST(IntegerDivision, SRem) {
   LLVMContext C;
   Module M("test remainder", C);
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(M);
 
   SmallVector<Type*, 2> ArgTys(2, Builder.getInt32Ty());
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
@@ -112,7 +112,7 @@ TEST(IntegerDivision, SRem) {
 TEST(IntegerDivision, URem) {
   LLVMContext C;
   Module M("test remainder", C);
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(M);
 
   SmallVector<Type*, 2> ArgTys(2, Builder.getInt32Ty());
   Function *F = Function::Create(FunctionType::get(Builder.getInt32Ty(),
@@ -143,7 +143,7 @@ TEST(IntegerDivision, URem) {
 TEST(IntegerDivision, SDiv64) {
   LLVMContext C;
   Module M("test division", C);
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(M);
 
   SmallVector<Type*, 2> ArgTys(2, Builder.getInt64Ty());
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
@@ -173,7 +173,7 @@ TEST(IntegerDivision, SDiv64) {
 TEST(IntegerDivision, UDiv64) {
   LLVMContext C;
   Module M("test division", C);
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(M);
 
   SmallVector<Type*, 2> ArgTys(2, Builder.getInt64Ty());
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
@@ -203,7 +203,7 @@ TEST(IntegerDivision, UDiv64) {
 TEST(IntegerDivision, SRem64) {
   LLVMContext C;
   Module M("test remainder", C);
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(M);
 
   SmallVector<Type*, 2> ArgTys(2, Builder.getInt64Ty());
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),
@@ -233,7 +233,7 @@ TEST(IntegerDivision, SRem64) {
 TEST(IntegerDivision, URem64) {
   LLVMContext C;
   Module M("test remainder", C);
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(M);
 
   SmallVector<Type*, 2> ArgTys(2, Builder.getInt64Ty());
   Function *F = Function::Create(FunctionType::get(Builder.getInt64Ty(),

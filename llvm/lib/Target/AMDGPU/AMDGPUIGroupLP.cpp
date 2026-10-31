@@ -453,7 +453,7 @@ void PipelineSolver::makePipeline() {
       for (auto &SU : SG.Collection) {
         if (SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
           SGBarr = SU;
-        LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ")\n");
+        LLVM_DEBUG(dbgs() << *SU << "\n");
       }
       // Command line requested IGroupLP doesn't have SGBarr
       if (!SGBarr)
@@ -721,8 +721,8 @@ bool PipelineSolver::solveExact() {
   assert(static_cast<size_t>(CurrConflInstNo) <
          PipelineInstrs[CurrSyncGroupIdx].size());
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-  LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
-                    << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
+  LLVM_DEBUG(dbgs() << "Fitting " << *CurrSU.first << " in Pipeline # "
+                    << CurrSyncGroupIdx << "\n");
 
   // SchedGroup -> Cost pairs
   SmallVector<std::pair<int, int>, 4> ReadyList;
@@ -791,7 +791,7 @@ bool PipelineSolver::solveExact() {
   CurrCost += MissPenalty;
   advancePosition();
 
-  LLVM_DEBUG(dbgs() << "NOT Assigned (" << CurrSU.first->NodeNum << ")\n");
+  LLVM_DEBUG(dbgs() << "NOT Assigned " << *CurrSU.first << "\n");
 
   bool FinishedExploring = false;
   if (CurrCost < BestCost || BestCost == -1) {
@@ -820,8 +820,8 @@ void PipelineSolver::greedyFind(
   std::optional<GroupInfo> Best;
 
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
-  LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
-                    << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
+  LLVM_DEBUG(dbgs() << "Fitting " << *CurrSU.first << " in Pipeline # "
+                    << CurrSyncGroupIdx << "\n");
 
   EdgeSetBuilder Builder(CurrSU.first, SyncPipeline, IsBottomUp);
 
@@ -1404,7 +1404,7 @@ private:
 
   // Whether the instruction occurs after the first TRANS instruction. This
   // implies the instruction can not be a predecessor of the first TRANS
-  // insruction
+  // instruction.
   class OccursAfterExp final : public InstructionRule {
   public:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,

@@ -68,10 +68,6 @@ char SIPostRABundlerLegacy::ID = 0;
 
 char &llvm::SIPostRABundlerLegacyID = SIPostRABundlerLegacy::ID;
 
-FunctionPass *llvm::createSIPostRABundlerPass() {
-  return new SIPostRABundlerLegacy();
-}
-
 bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
   if (!MI.mayLoad())
     return false;

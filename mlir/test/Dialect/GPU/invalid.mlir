@@ -473,6 +473,22 @@ func.func @reduce_invalid_op_type_minimumf(%arg0 : i32) {
 
 // -----
 
+func.func @reduce_invalid_op_type_minimumnumf(%arg0 : i32) {
+  // expected-error@+1 {{`minimumnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce minimumnumf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_maximumnumf(%arg0 : i32) {
+  // expected-error@+1 {{`maximumnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce maximumnumf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
 func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
   // expected-error@+1 {{`maximumf` reduction operation is not compatible with type 'i32'}}
   %res = gpu.all_reduce maximumf %arg0 {} : (i32) -> (i32)
@@ -541,6 +557,22 @@ func.func @subgroup_reduce_invalid_op_type_and(%arg0 : f32) {
 func.func @subgroup_reduce_invalid_op_type_maxnumf(%arg0 : i32) {
   // expected-error@+1 {{`maxnumf` reduction operation is not compatible with type 'i32'}}
   %res = gpu.subgroup_reduce maxnumf %arg0 : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_invalid_op_type_minimumnumf(%arg0 : i32) {
+  // expected-error@+1 {{`minimumnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.subgroup_reduce minimumnumf %arg0 : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_invalid_op_type_maximumnumf(%arg0 : vector<2xi32>) {
+  // expected-error@+1 {{`maximumnumf` reduction operation is not compatible with type 'vector<2xi32>'}}
+  %res = gpu.subgroup_reduce maximumnumf %arg0 : (vector<2xi32>) -> vector<2xi32>
   return
 }
 

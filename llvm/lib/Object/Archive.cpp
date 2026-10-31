@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/Archive.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -540,6 +541,26 @@ Expected<bool> ArchiveMemberHeader::isThin() const {
   return Parent->isThin() && Name != "/" && Name != "//" && Name != "/SYM64/";
 }
 
+static Error checkNextMemberOffset(uint64_t NextOffset, uint64_t ArchiveSize,
+                                   function_ref<Expected<StringRef>()> GetName,
+                                   uint64_t MemberOffset) {
+  if (NextOffset <= ArchiveSize)
+    return Error::success();
+
+  std::string Member;
+  if (Expected<StringRef> NameOrErr = GetName()) {
+    Member = NameOrErr->str();
+  } else {
+    consumeError(NameOrErr.takeError());
+    Member = ("at offset " + Twine(MemberOffset)).str();
+  }
+
+  return malformedError(
+      "offset to next archive member (0x" + Twine::utohexstr(NextOffset) +
+      ") past the end of the archive (size 0x" + Twine::utohexstr(ArchiveSize) +
+      ") after member " + Member);
+}
+
 Expected<const char *> ArchiveMemberHeader::getNextChildLoc() const {
   uint64_t Size = getSizeOf();
   Expected<bool> isThinOrErr = isThin();
@@ -573,7 +594,18 @@ Expected<const char *> BigArchiveMemberHeader::getNextChildLoc() const {
   Expected<uint64_t> NextOffsetOrErr = getNextOffset();
   if (!NextOffsetOrErr)
     return NextOffsetOrErr.takeError();
-  return Parent->getData().data() + NextOffsetOrErr.get();
+
+  // NextOffset is read from the member header, so check it against the
+  // archive's size before forming the pointer. Adding a large offset to the
+  // start of the buffer wraps, and the result then compares as though it
+  // pointed inside the archive, so Child::getNext() cannot catch it.
+  uint64_t NextOffset = NextOffsetOrErr.get();
+  if (Error Err = checkNextMemberOffset(
+          NextOffset, Parent->getData().size(),
+          [this]() { return getRawName(); }, getOffset()))
+    return std::move(Err);
+
+  return Parent->getData().data() + NextOffset;
 }
 
 Archive::Child::Child(const Archive *Parent, StringRef Data,
@@ -720,17 +752,11 @@ Expected<Archive::Child> Archive::Child::getNext() const {
     return Child(nullptr, nullptr, nullptr);
 
   // Check to see if this is past the end of the archive.
-  if (NextLoc > Parent->Data.getBufferEnd()) {
-    std::string Msg("offset to next archive member past the end of the archive "
-                    "after member ");
-    Expected<StringRef> NameOrErr = getName();
-    if (!NameOrErr) {
-      consumeError(NameOrErr.takeError());
-      uint64_t Offset = Data.data() - Parent->getData().data();
-      return malformedError(Msg + "at offset " + Twine(Offset));
-    } else
-      return malformedError(Msg + NameOrErr.get());
-  }
+  if (Error Err = checkNextMemberOffset(
+          NextLoc - Parent->getData().data(), Parent->getData().size(),
+          [this]() { return getName(); },
+          Data.data() - Parent->getData().data()))
+    return std::move(Err);
 
   Error Err = Error::success();
   Child Ret(Parent, NextLoc, &Err);

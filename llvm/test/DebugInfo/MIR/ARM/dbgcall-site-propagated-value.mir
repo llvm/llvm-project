@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -run-pass=live-debug-values -o - %s | FileCheck %s
 
 # Based on the following C reproducer:
 #

@@ -12,35 +12,35 @@
 # CHECK-LABEL:  name:            push_pop_same
 # CHECK:        body:
 # CHECK-NEXT:     bb.0
-# CHECK-NEXT:       SEH_UnwindVersion 2
+# CHECK-NEXT:       frame-setup SEH_UnwindVersion 2
 # CHECK-NEXT:       frame-setup PUSH64r undef $rax
 # CHECK-NEXT:       frame-setup SEH_StackAlloc 8
 # CHECK-NEXT:       frame-setup SEH_EndPrologue
-# CHECK-NEXT:       SEH_BeginEpilogue
+# CHECK-NEXT:       frame-destroy SEH_BeginEpilogue
 # CHECK-NEXT:       $rax = frame-destroy
-# CHECK-NEXT:       SEH_UnwindV2Start
-# CHECK-NEXT:       SEH_EndEpilogue
+# CHECK-NEXT:       frame-destroy SEH_UnwindV2Start
+# CHECK-NEXT:       frame-destroy SEH_EndEpilogue
 # CHECK-NEXT:       RET64
 
 # Pushes and pops a different register.
 # CHECK-LABEL:  name:            push_pop_different
 # CHECK:        body:
 # CHECK-NEXT:     bb.0
-# CHECK-NEXT:       SEH_UnwindVersion 2
+# CHECK-NEXT:       frame-setup SEH_UnwindVersion 2
 # CHECK-NEXT:       frame-setup PUSH64r undef $rax
 # CHECK-NEXT:       frame-setup SEH_StackAlloc 8
 # CHECK-NEXT:       frame-setup SEH_EndPrologue
-# CHECK:            SEH_BeginEpilogue
+# CHECK:            frame-destroy SEH_BeginEpilogue
 # CHECK-NEXT:       $rcx = frame-destroy POP64r
-# CHECK-NEXT:       SEH_UnwindV2Start
-# CHECK-NEXT:       SEH_EndEpilogue
+# CHECK-NEXT:       frame-destroy SEH_UnwindV2Start
+# CHECK-NEXT:       frame-destroy SEH_EndEpilogue
 # CHECK-NEXT:       RET64 $eax
 
 # Pushes in the prolog, adds in the epilog.
 # CHECK-LABEL:  name:            push_add
 # CHECK:        body:
 # CHECK-NEXT:     bb.0
-# CHECK-NEXT:       SEH_UnwindVersion 2
+# CHECK-NEXT:       frame-setup SEH_UnwindVersion 2
 # CHECK-NEXT:       frame-setup PUSH64r killed $r15
 # CHECK-NEXT:       frame-setup SEH_PushReg 126
 # CHECK-NEXT:       frame-setup PUSH64r killed $r14
@@ -54,15 +54,15 @@
 # CHECK-NEXT:       frame-setup PUSH64r undef $rax
 # CHECK-NEXT:       frame-setup SEH_StackAlloc 8
 # CHECK-NEXT:       frame-setup SEH_EndPrologue
-# CHECK:            SEH_BeginEpilogue
+# CHECK:            frame-destroy SEH_BeginEpilogue
 # CHECK-NEXT:       $rsp = frame-destroy ADD64ri32 $rsp, 8
-# CHECK-NEXT:       SEH_UnwindV2Start
+# CHECK-NEXT:       frame-destroy SEH_UnwindV2Start
 # CHECK-NEXT:       $rbx = frame-destroy POP64r
 # CHECK-NEXT:       $rdi = frame-destroy POP64r
 # CHECK-NEXT:       $rsi = frame-destroy POP64r
 # CHECK-NEXT:       $r14 = frame-destroy POP64r
 # CHECK-NEXT:       $r15 = frame-destroy POP64r
-# CHECK-NEXT:       SEH_EndEpilogue
+# CHECK-NEXT:       frame-destroy SEH_EndEpilogue
 # CHECK-NEXT:       RET64
 
 --- |
@@ -97,9 +97,9 @@ body:             |
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     frame-setup SEH_StackAlloc 8
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rax = frame-destroy POP64r implicit-def $rsp, implicit $rsp
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...
 ---
@@ -112,9 +112,9 @@ body:             |
     renamable $edx = KILL $edx, implicit-def $rdx
     renamable $ecx = KILL $ecx, implicit-def $rcx
     renamable $eax = LEA64_32r killed renamable $rcx, 1, killed renamable $rdx, 0, $noreg
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 $eax
 ...
 ---
@@ -189,13 +189,13 @@ body:             |
     MOV64mr renamable $r8, 1, $noreg, 8, $noreg, killed renamable $r9 :: (store (s64) into %ir.out + 8, basealign 16)
     MOV64mr renamable $r8, 1, $noreg, 16, $noreg, killed renamable $rax :: (store (s64) into %ir.out + 16, align 16)
     MOV64mr killed renamable $r8, 1, $noreg, 24, $noreg, killed renamable $rdx :: (store (s64) into %ir.out + 24, basealign 16)
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rsp = frame-destroy ADD64ri32 $rsp, 8, implicit-def dead $eflags
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $rsi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64
 ...

@@ -17,7 +17,7 @@ end module
 ! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
-! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QMmEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK:             hlfir.assign %[[C10]] to %[[DECL]]#0 : i32, !fir.ref<i32>
 subroutine test_groupprivate()
@@ -43,9 +43,9 @@ end module
 ! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @blk_ device_type (any) : !fir.ref<!fir.array<12xi8>>
-! CHECK:             %[[DECL_X:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP]][0]) {uniq_name = "_QMm2Ecb_x"}
-! CHECK:             %[[DECL_Y:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP]][4]) {uniq_name = "_QMm2Ecb_y"}
-! CHECK:             %[[DECL_Z:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP]][8]) {uniq_name = "_QMm2Ecb_z"}
+! CHECK:             %[[DECL_X:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP]][0]) uniq_name("_QMm2Ecb_x")
+! CHECK:             %[[DECL_Y:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP]][4]) uniq_name("_QMm2Ecb_y")
+! CHECK:             %[[DECL_Z:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP]][8]) uniq_name("_QMm2Ecb_z")
 ! CHECK:             hlfir.assign %{{.*}} to %[[DECL_X]]#0 : i32, !fir.ref<i32>
 ! CHECK:             hlfir.assign %{{.*}} to %[[DECL_Y]]#0 : i32, !fir.ref<i32>
 ! CHECK:             hlfir.assign %{{.*}} to %[[DECL_Z]]#0 : f32, !fir.ref<f32>
@@ -65,7 +65,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_local_save_groupprivate
 ! CHECK:         omp.teams {
 ! CHECK:           %[[GP:.*]] = omp.groupprivate @_QFtest_local_save_groupprivateElocal_x device_type (any) : !fir.ref<i32>
-! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QFtest_local_save_groupprivateElocal_x"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QFtest_local_save_groupprivateElocal_x") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[C42:.*]] = arith.constant 42 : i32
 ! CHECK:           hlfir.assign %[[C42]] to %[[DECL]]#0 : i32, !fir.ref<i32>
 subroutine test_local_save_groupprivate()
@@ -90,11 +90,11 @@ end module
 ! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP_A:.*]] = omp.groupprivate @_QMm_multiEgp_a device_type (any) : !fir.ref<i32>
-! CHECK:             %[[DECL_A:.*]]:2 = hlfir.declare %[[GP_A]] {uniq_name = "_QMm_multiEgp_a"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[DECL_A:.*]]:2 = hlfir.declare %[[GP_A]] uniq_name("_QMm_multiEgp_a") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[GP_B:.*]] = omp.groupprivate @_QMm_multiEgp_b device_type (any) : !fir.ref<i32>
-! CHECK:             %[[DECL_B:.*]]:2 = hlfir.declare %[[GP_B]] {uniq_name = "_QMm_multiEgp_b"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[DECL_B:.*]]:2 = hlfir.declare %[[GP_B]] uniq_name("_QMm_multiEgp_b") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[GP_C:.*]] = omp.groupprivate @_QMm_multiEgp_c device_type (any) : !fir.ref<f32>
-! CHECK:             %[[DECL_C:.*]]:2 = hlfir.declare %[[GP_C]] {uniq_name = "_QMm_multiEgp_c"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:             %[[DECL_C:.*]]:2 = hlfir.declare %[[GP_C]] uniq_name("_QMm_multiEgp_c") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:             hlfir.assign %{{.*}} to %[[DECL_A]]#0 : i32, !fir.ref<i32>
 ! CHECK:             hlfir.assign %{{.*}} to %[[DECL_B]]#0 : i32, !fir.ref<i32>
 ! CHECK:             hlfir.assign %{{.*}} to %[[DECL_C]]#0 : f32, !fir.ref<f32>
@@ -115,7 +115,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_repeated_ref_groupprivate
 ! CHECK:         omp.teams {
 ! CHECK:           %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
-! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QMmEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-NOT:       omp.groupprivate @_QMmEx
 ! CHECK:           hlfir.assign %{{.*}} to %[[DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:           %{{.*}} = fir.load %[[DECL]]#0 : !fir.ref<i32>
@@ -140,7 +140,7 @@ end subroutine
 ! CHECK-NOT:     omp.target
 ! CHECK:         omp.teams {
 ! CHECK:           %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
-! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QMmEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[C100:.*]] = arith.constant 100 : i32
 ! CHECK:           hlfir.assign %[[C100]] to %[[DECL]]#0 : i32, !fir.ref<i32>
 subroutine test_standalone_teams_groupprivate()
@@ -159,7 +159,7 @@ end subroutine
 ! CHECK:         omp.target kernel_type(generic) {
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
-! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QMmEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[C200:.*]] = arith.constant 200 : i32
 ! CHECK:             hlfir.assign %[[C200]] to %[[DECL]]#0 : i32, !fir.ref<i32>
 subroutine test_target_skip_map_groupprivate()
@@ -183,10 +183,10 @@ end module
 ! CHECK-LABEL: func.func @_QPtest_types_groupprivate
 ! CHECK:         omp.teams {
 ! CHECK:           %[[GP_R8:.*]] = omp.groupprivate @_QMm_typesEgp_r8 device_type (any) : !fir.ref<f64>
-! CHECK:           %[[DECL_R8:.*]]:2 = hlfir.declare %[[GP_R8]] {uniq_name = "_QMm_typesEgp_r8"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK:           %[[DECL_R8:.*]]:2 = hlfir.declare %[[GP_R8]] uniq_name("_QMm_typesEgp_r8") : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:           %[[GP_IARR:.*]] = omp.groupprivate @_QMm_typesEgp_iarr device_type (any) : !fir.ref<!fir.array<4xi32>>
 ! CHECK:           %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-! CHECK:           %[[DECL_IARR:.*]]:2 = hlfir.declare %[[GP_IARR]](%[[SHAPE]]) {uniq_name = "_QMm_typesEgp_iarr"}
+! CHECK:           %[[DECL_IARR:.*]]:2 = hlfir.declare %[[GP_IARR]](%[[SHAPE]]) uniq_name("_QMm_typesEgp_iarr")
 ! CHECK:           hlfir.assign %{{.*}} to %[[DECL_R8]]#0 : f64, !fir.ref<f64>
 ! CHECK:           %[[ELT:.*]] = hlfir.designate %[[DECL_IARR]]#0 (%{{.*}}) : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
 ! CHECK:           hlfir.assign %{{.*}} to %[[ELT]] : i32, !fir.ref<i32>
@@ -212,9 +212,9 @@ end module
 ! CHECK-LABEL: func.func @_QPtest_multi_common_groupprivate
 ! CHECK:         omp.teams {
 ! CHECK:           %[[GP_A:.*]] = omp.groupprivate @blka_ device_type (any) : !fir.ref<!fir.array<8xi8>>
-! CHECK:           %[[DECL_A1:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP_A]][0]) {uniq_name = "_QMm_blocksEa1"}
+! CHECK:           %[[DECL_A1:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP_A]][0]) uniq_name("_QMm_blocksEa1")
 ! CHECK:           %[[GP_B:.*]] = omp.groupprivate @blkb_ device_type (any) : !fir.ref<!fir.array<8xi8>>
-! CHECK:           %[[DECL_B1:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP_B]][0]) {uniq_name = "_QMm_blocksEb1"}
+! CHECK:           %[[DECL_B1:.*]]:2 = hlfir.declare %{{.*}} storage(%[[GP_B]][0]) uniq_name("_QMm_blocksEb1")
 ! CHECK:           hlfir.assign %{{.*}} to %[[DECL_A1]]#0 : i32, !fir.ref<i32>
 ! CHECK:           hlfir.assign %{{.*}} to %[[DECL_B1]]#0 : i32, !fir.ref<i32>
 subroutine test_multi_common_groupprivate()
@@ -238,9 +238,9 @@ end module
 ! CHECK-LABEL: func.func @_QPtest_device_type_groupprivate
 ! CHECK:         omp.teams {
 ! CHECK:           %[[GP_H:.*]] = omp.groupprivate @_QMm_dtEgp_h device_type (host) : !fir.ref<i32>
-! CHECK:           %[[DECL_H:.*]]:2 = hlfir.declare %[[GP_H]] {uniq_name = "_QMm_dtEgp_h"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL_H:.*]]:2 = hlfir.declare %[[GP_H]] uniq_name("_QMm_dtEgp_h") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[GP_NH:.*]] = omp.groupprivate @_QMm_dtEgp_nh device_type (nohost) : !fir.ref<i32>
-! CHECK:           %[[DECL_NH:.*]]:2 = hlfir.declare %[[GP_NH]] {uniq_name = "_QMm_dtEgp_nh"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL_NH:.*]]:2 = hlfir.declare %[[GP_NH]] uniq_name("_QMm_dtEgp_nh") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.assign %{{.*}} to %[[DECL_H]]#0 : i32, !fir.ref<i32>
 ! CHECK:           hlfir.assign %{{.*}} to %[[DECL_NH]]#0 : i32, !fir.ref<i32>
 subroutine test_device_type_groupprivate()
@@ -258,7 +258,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_module_after_subroutine_groupprivate
 ! CHECK:         omp.teams {
 ! CHECK:           %[[GP:.*]] = omp.groupprivate @_QMm_lateEgp_late device_type (host) : !fir.ref<i32>
-! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMm_lateEgp_late"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QMm_lateEgp_late") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[C7:.*]] = arith.constant 7 : i32
 ! CHECK:           hlfir.assign %[[C7]] to %[[DECL]]#0 : i32, !fir.ref<i32>
 subroutine test_module_after_subroutine_groupprivate()
@@ -281,7 +281,7 @@ end module
 ! CHECK:         omp.target kernel_type(generic) {
 ! CHECK-NOT:       omp.teams
 ! CHECK:           %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
-! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QMmEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK:           hlfir.assign %[[C10]] to %[[DECL]]#0 : i32, !fir.ref<i32>
 subroutine test_target_no_teams_groupprivate()
@@ -300,7 +300,7 @@ end subroutine
 ! CHECK-NOT:       omp.groupprivate
 ! CHECK:           omp.teams {
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
-! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QMmEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-NOT:       omp.groupprivate @_QMmEx
 subroutine test_target_nested_teams_groupprivate()
   use m
@@ -319,7 +319,7 @@ end subroutine
 ! CHECK-NOT:       omp.groupprivate
 ! CHECK:           omp.teams
 ! CHECK:             %[[GP:.*]] = omp.groupprivate @_QMmEx device_type (any) : !fir.ref<i32>
-! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] {uniq_name = "_QMmEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[DECL:.*]]:2 = hlfir.declare %[[GP]] uniq_name("_QMmEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-NOT:       omp.groupprivate @_QMmEx
 subroutine test_target_teams_one_groupprivate()
   use m

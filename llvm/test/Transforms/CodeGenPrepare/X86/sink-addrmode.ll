@@ -289,6 +289,36 @@ BB:
   ret void
 }
 
+;; Fold a disjoint or like an add. It has two users, so both must be able to
+;; fold it. A plain or may not be an add.
+define void @or(i1 %cond, ptr %p, ptr %q, i64 %i) {
+; CHECK-LABEL: @or(
+; CHECK:       if.then:
+; CHECK-NEXT:  [[A:%.*]] = getelementptr i8, ptr %p, i64 %i
+; CHECK-NEXT:  getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:  load
+; CHECK-NEXT:  [[B:%.*]] = getelementptr i8, ptr %q, i64 %i
+; CHECK-NEXT:  getelementptr i8, ptr [[B]], i64 8
+; CHECK-NEXT:  load
+; CHECK-NEXT:  getelementptr i8, ptr %p, i64 %n
+entry:
+  %o = or disjoint i64 %i, 8
+  %n = or i64 %i, 8
+  %a1 = getelementptr i8, ptr %p, i64 %o
+  %a2 = getelementptr i8, ptr %q, i64 %o
+  %a3 = getelementptr i8, ptr %p, i64 %n
+  br i1 %cond, label %if.then, label %fallthrough
+
+if.then:
+  %v1 = load i32, ptr %a1, align 4
+  %v2 = load i32, ptr %a2, align 4
+  %v3 = load i32, ptr %a3, align 4
+  br label %fallthrough
+
+fallthrough:
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}

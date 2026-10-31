@@ -705,7 +705,6 @@ define <1 x i64> @smax_v1i64(<1 x i64> %a) {
 ; CHECK-NEON-LABEL: smax_v1i64:
 ; CHECK-NEON:       // %bb.0: // %entry
 ; CHECK-NEON-NEXT:    cmge d1, d0, #0
-; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEON-NEXT:    orn v0.8b, v0.8b, v1.8b
 ; CHECK-NEON-NEXT:    ret
 ;
@@ -887,7 +886,6 @@ define <1 x i64> @smin_v1i64(<1 x i64> %a) {
 ; CHECK-NEON:       // %bb.0: // %entry
 ; CHECK-NEON-NEXT:    movi v1.2d, #0xffffffffffffffff
 ; CHECK-NEON-NEXT:    cmgt d1, d1, d0
-; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEON-NEXT:    orn v0.8b, v0.8b, v1.8b
 ; CHECK-NEON-NEXT:    ret
 ;

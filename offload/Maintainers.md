@@ -6,8 +6,5 @@ the LLVM Offloading library.
 
 # Current Maintainers
 
-Johannes Doerfert \
-jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub)
-
 Joseph Huber \
 joseph.huber@amd.com (email), [jhuber6](https://github.com/jhuber6) (Github)

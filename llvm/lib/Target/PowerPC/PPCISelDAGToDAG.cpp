@@ -88,8 +88,9 @@ STATISTIC(NumP9Setb,
           "Number of compares lowered to setb.");
 
 // FIXME: Remove this once the bug has been fixed!
-cl::opt<bool> ANDIGlueBug("expose-ppc-andi-glue-bug",
-cl::desc("expose the ANDI glue bug on PPC"), cl::Hidden);
+cl::opt<bool> ANDIGlueBug("ppc-expose-andi-glue-bug",
+                          cl::desc("expose the ANDI glue bug on PPC"),
+                          cl::Hidden);
 
 static cl::opt<bool>
     UseBitPermRewriter("ppc-use-bit-perm-rewriter", cl::init(true),
@@ -400,8 +401,9 @@ namespace {
       case InlineAsm::ConstraintCode::Zy:
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
-        const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-        const TargetRegisterClass *TRC = TRI->getPointerRegClass(/*Kind=*/1);
+        const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+        const TargetRegisterClass *TRC =
+            TII->getInlineAsmMemoryOperandRegClass(ConstraintID);
         SDLoc dl(Op);
         SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i32);
         SDValue NewOp =

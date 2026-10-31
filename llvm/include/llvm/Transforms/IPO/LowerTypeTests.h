@@ -30,11 +30,13 @@
 
 namespace llvm {
 
+class BlockFrequencyInfo;
 class Function;
 class GlobalObject;
 class GlobalValue;
 class Module;
 class ModuleSummaryIndex;
+class ProfileSummaryInfo;
 class raw_ostream;
 
 namespace lowertypetests {
@@ -225,14 +227,22 @@ LLVM_ABI SetVector<uint64_t> findCfiTypeIds(const Module &M);
 
 /// Creates cfi.functions, aliases, and symvers named metadata in \p DestM
 /// for CFI functions in \p CfiFunctions from source module \p SrcM.
-LLVM_ABI void createCfiMetadata(Module &DestM, const Module &SrcM,
-                                ArrayRef<GlobalValue *> CfiFunctions);
+LLVM_ABI void createCfiMetadata(
+    Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter);
 
 /// Specifies how to drop type tests.
 enum class DropTestKind {
   Assume, /// Drop only llvm.assumes using type test value.
   All,    /// Drop the type test and all uses.
 };
+
+/// Lower @llvm.type.checked.load[.relative] calls to the guarded load with
+/// the check assumed true, and erase the declaration once it has no users.
+/// Returns true if anything changed. Shared with FatLTOCleanup.
+LLVM_ABI bool cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
+                                     bool IsRelative);
 
 } // end namespace lowertypetests
 

@@ -1,9 +1,18 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("InstrumentationOptions") {
+  visibility = [ ":Instrumentation" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("Instrumentation") {
   output_name = "LLVMInstrumentation"
   deps = [
+    ":InstrumentationOptions",
     "//llvm/lib/Analysis",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
@@ -22,6 +31,7 @@ static_library("Instrumentation") {
     "HWAddressSanitizer.cpp",
     "IndirectCallPromotion.cpp",
     "InstrProfiling.cpp",
+    "InstrumentationOptions.cpp",
     "KCFI.cpp",
     "LowerAllowCheckPass.cpp",
     "MemProfInstrumentation.cpp",

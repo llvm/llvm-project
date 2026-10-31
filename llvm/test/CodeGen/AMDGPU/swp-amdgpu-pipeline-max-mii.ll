@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=DEFAULT
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-enable-pipeliner -pipeliner-max-mii=64 -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=RAISED
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=DEFAULT
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -enable-pipeliner -pipeliner-max-mii=64 -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=RAISED
 
 ; This loop's MII is 32: two independent accumulators each issue one MFMA per
 ; iteration, and each MFMA holds the XDL pipe for 16 cycles (res=32). That

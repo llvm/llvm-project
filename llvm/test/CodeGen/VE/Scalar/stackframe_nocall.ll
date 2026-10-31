@@ -30,8 +30,8 @@ define nonnull ptr @test_frame32(ptr nocapture readonly %0) {
 ; CHECK-LABEL: test_frame32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -32, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -40,7 +40,7 @@ define nonnull ptr @test_frame32(ptr nocapture readonly %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:  .LBB1_1:
 ; CHECK-NEXT:    ld1b.zx %s1, (, %s0)
 ; CHECK-NEXT:    lea %s0, (, %s11)
 ; CHECK-NEXT:    st1b %s1, (, %s11)
@@ -50,8 +50,8 @@ define nonnull ptr @test_frame32(ptr nocapture readonly %0) {
 ; PIC-LABEL: test_frame32:
 ; PIC:       # %bb.0:
 ; PIC-NEXT:    adds.l %s11, -32, %s11
-; PIC-NEXT:    brge.l.t %s11, %s8, .LBB1_2
-; PIC-NEXT:  # %bb.1:
+; PIC-NEXT:    brge.l.t %s11, %s8, .LBB1_1
+; PIC-NEXT:  # %bb.2:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
 ; PIC-NEXT:    or %s62, 0, %s0
 ; PIC-NEXT:    lea %s63, 315
@@ -60,7 +60,7 @@ define nonnull ptr @test_frame32(ptr nocapture readonly %0) {
 ; PIC-NEXT:    shm.l %s11, 16(%s61)
 ; PIC-NEXT:    monc
 ; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB1_2:
+; PIC-NEXT:  .LBB1_1:
 ; PIC-NEXT:    ld1b.zx %s1, (, %s0)
 ; PIC-NEXT:    lea %s0, (, %s11)
 ; PIC-NEXT:    st1b %s1, (, %s11)
@@ -91,8 +91,8 @@ define noalias nonnull ptr @test_align32(i32 signext %0, ptr nocapture readonly 
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -101,7 +101,7 @@ define noalias nonnull ptr @test_align32(i32 signext %0, ptr nocapture readonly 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:  .LBB2_1:
 ; CHECK-NEXT:    or %s2, 0, %s1
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
 ; CHECK-NEXT:    and %s0, -16, %s0
@@ -133,8 +133,8 @@ define noalias nonnull ptr @test_align32(i32 signext %0, ptr nocapture readonly 
 ; PIC-NEXT:    lea %s11, -288(, %s11)
 ; PIC-NEXT:    and %s11, %s11, (59)1
 ; PIC-NEXT:    or %s17, 0, %s11
-; PIC-NEXT:    brge.l.t %s11, %s8, .LBB2_2
-; PIC-NEXT:  # %bb.1:
+; PIC-NEXT:    brge.l.t %s11, %s8, .LBB2_1
+; PIC-NEXT:  # %bb.2:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
 ; PIC-NEXT:    or %s62, 0, %s0
 ; PIC-NEXT:    lea %s63, 315
@@ -143,7 +143,7 @@ define noalias nonnull ptr @test_align32(i32 signext %0, ptr nocapture readonly 
 ; PIC-NEXT:    shm.l %s11, 16(%s61)
 ; PIC-NEXT:    monc
 ; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB2_2:
+; PIC-NEXT:  .LBB2_1:
 ; PIC-NEXT:    or %s2, 0, %s1
 ; PIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; PIC-NEXT:    and %s15, %s15, (32)0
@@ -218,8 +218,8 @@ define nonnull ptr @test_frame32_var(ptr nocapture readnone %0) {
 ; CHECK-LABEL: test_frame32_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -32, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -228,7 +228,7 @@ define nonnull ptr @test_frame32_var(ptr nocapture readnone %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:  .LBB4_1:
 ; CHECK-NEXT:    lea %s0, data@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, data@hi(, %s0)
@@ -243,8 +243,8 @@ define nonnull ptr @test_frame32_var(ptr nocapture readnone %0) {
 ; PIC-NEXT:    st %s15, 24(, %s11)
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    adds.l %s11, -32, %s11
-; PIC-NEXT:    brge.l.t %s11, %s8, .LBB4_2
-; PIC-NEXT:  # %bb.1:
+; PIC-NEXT:    brge.l.t %s11, %s8, .LBB4_1
+; PIC-NEXT:  # %bb.2:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
 ; PIC-NEXT:    or %s62, 0, %s0
 ; PIC-NEXT:    lea %s63, 315
@@ -253,7 +253,7 @@ define nonnull ptr @test_frame32_var(ptr nocapture readnone %0) {
 ; PIC-NEXT:    shm.l %s11, 16(%s61)
 ; PIC-NEXT:    monc
 ; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB4_2:
+; PIC-NEXT:  .LBB4_1:
 ; PIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; PIC-NEXT:    and %s15, %s15, (32)0
 ; PIC-NEXT:    sic %s16
@@ -288,8 +288,8 @@ define noalias nonnull ptr @test_align32_var(i32 signext %0, ptr nocapture reado
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB5_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB5_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -298,7 +298,7 @@ define noalias nonnull ptr @test_align32_var(i32 signext %0, ptr nocapture reado
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:  .LBB5_1:
 ; CHECK-NEXT:    or %s2, 0, %s1
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
 ; CHECK-NEXT:    and %s0, -16, %s0
@@ -330,8 +330,8 @@ define noalias nonnull ptr @test_align32_var(i32 signext %0, ptr nocapture reado
 ; PIC-NEXT:    lea %s11, -288(, %s11)
 ; PIC-NEXT:    and %s11, %s11, (59)1
 ; PIC-NEXT:    or %s17, 0, %s11
-; PIC-NEXT:    brge.l.t %s11, %s8, .LBB5_2
-; PIC-NEXT:  # %bb.1:
+; PIC-NEXT:    brge.l.t %s11, %s8, .LBB5_1
+; PIC-NEXT:  # %bb.2:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
 ; PIC-NEXT:    or %s62, 0, %s0
 ; PIC-NEXT:    lea %s63, 315
@@ -340,7 +340,7 @@ define noalias nonnull ptr @test_align32_var(i32 signext %0, ptr nocapture reado
 ; PIC-NEXT:    shm.l %s11, 16(%s61)
 ; PIC-NEXT:    monc
 ; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB5_2:
+; PIC-NEXT:  .LBB5_1:
 ; PIC-NEXT:    or %s2, 0, %s1
 ; PIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; PIC-NEXT:    and %s15, %s15, (32)0

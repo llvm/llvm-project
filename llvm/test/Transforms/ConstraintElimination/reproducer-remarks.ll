@@ -251,8 +251,8 @@ define <2 x i1> @vector_cmp(<2 x ptr> %vec) {
 define i1 @shared_operand() {
 ; CHECK-LABEL: define i1 @"{{.+}}shared_operandrepro"() {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   %sub = sub i8 0, 0
-; CHECK-NEXT:   %sub.2 = sub nuw i8 %sub, 0
+; CHECK-NEXT:   %sub = sub nuw nsw i8 0, 0
+; CHECK-NEXT:   %sub.2 = sub nuw nsw i8 %sub, 0
 ; CHECK-NEXT:   %c.5 = icmp ult i8 %sub.2, %sub
 ; CHECK-NEXT:   ret i1 %c.5
 ; CHECK-NEXT: }
@@ -272,7 +272,7 @@ define i1 @shared_operand_no_const(i8 %a, i8 %b) {
 ; CHECK-NEXT:   %0 = icmp ule i8 %b, %a
 ; CHECK-NEXT:   call void @llvm.assume(i1 %0)
 ; CHECK-NEXT:   %sub = sub nuw i8 %a, %b
-; CHECK-NEXT:   %sub.2 = sub nuw i8 %sub, 0
+; CHECK-NEXT:   %sub.2 = sub nuw nsw i8 %sub, 0
 ; CHECK-NEXT:   %c.5 = icmp ult i8 %sub.2, %sub
 ; CHECK-NEXT:   ret i1 %c.5
 ; CHECK-NEXT: }
@@ -332,7 +332,8 @@ define i1 @test_both_signed_and_unsigned_conds_needed_in_reproducer(ptr %src, pt
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   %0 = icmp sge i16 %N, 0
 ; CHECK-NEXT:   call void @llvm.assume(i1 %0)
-; CHECK-NEXT:   %src.end = getelementptr inbounds i8, ptr %src, i16 %N
+; CHECK-NEXT:   %src.end.idx = sext i16 %N to i64
+; CHECK-NEXT:   %src.end = getelementptr inbounds i8, ptr %src, i64 %src.end.idx
 ; CHECK-NEXT:   %cmp.src.start = icmp ule ptr %src, %src.end
 ; CHECK-NEXT:   ret i1 %cmp.src.start
 ; CHECK-NEXT: }
@@ -342,7 +343,8 @@ entry:
   br i1 %N.pos, label %then, label %else
 
 then:
-  %src.end = getelementptr inbounds i8, ptr %src, i16 %N
+  %src.end.idx = sext i16 %N to i64
+  %src.end = getelementptr inbounds i8, ptr %src, i64 %src.end.idx
   %cmp.src.start = icmp ule ptr %src, %src.end
   ret i1 %cmp.src.start
 

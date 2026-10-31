@@ -45,7 +45,7 @@ integer :: x(:)
 logical, optional :: mask(:)
 sum_test_optional = sum(x, mask=mask)
 ! CHECK-DAG:  %[[maskDecl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}optional
-! CHECK-DAG:  %[[xDecl:.*]]:2 = hlfir.declare %{{.*}} {{.*}}{uniq_name = "_QFsum_test_optionalEx"}
+! CHECK-DAG:  %[[xDecl:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFsum_test_optionalEx")
 ! CHECK:  %[[isPresent:.*]] = fir.is_present %[[maskDecl]]#0
 ! CHECK:  %[[absent:.*]] = fir.absent !fir.box<!fir.array<?x!fir.logical<4>>>
 ! CHECK:  %[[opt:.*]] = arith.select %[[isPresent]], %[[maskDecl]]#1, %[[absent]]

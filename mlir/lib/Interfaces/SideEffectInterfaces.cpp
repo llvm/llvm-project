@@ -36,77 +36,137 @@ bool mlir::isOpTriviallyDead(Operation *op) {
   return op->use_empty() && wouldOpBeTriviallyDead(op);
 }
 
+/// Return true if the op's own memory effects do not prevent erasure. Allowed
+/// effects are reads and effects on results allocated by the op itself.
+///
+/// If the op only has recursive effects, treat the op itself as having no
+/// effects. Without a memory effect interface or recursive effects, return
+/// false to conservatively assume live effects.
+///
+/// The caller must also check nested effects when `hasRecursiveEffects` is
+/// true. This function does not check uses or restrictions on erasing
+/// terminators and symbols.
+static bool hasOnlyRemovableEffects(Operation *op, bool hasRecursiveEffects) {
+  if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+    SmallVector<MemoryEffects::EffectInstance, 1> effects;
+    effectInterface.getEffects(effects);
+
+    // Gather all results of this op that are allocated.
+    SmallPtrSet<Value, 4> allocResults;
+    for (const MemoryEffects::EffectInstance &effect : effects)
+      if (isa<MemoryEffects::Allocate>(effect.getEffect()) &&
+          effect.getValue() && effect.getValue().getDefiningOp() == op)
+        allocResults.insert(effect.getValue());
+    return llvm::all_of(effects,
+                        [&](const MemoryEffects::EffectInstance &effect) {
+                          // We can drop effects on values allocated by this
+                          // operation and returned as results. Otherwise, the
+                          // effect must be a read.
+                          return allocResults.contains(effect.getValue()) ||
+                                 isa<MemoryEffects::Read>(effect.getEffect());
+                        });
+  }
+  return hasRecursiveEffects;
+}
+
 /// Internal implementation of `mlir::wouldOpBeTriviallyDead` that also
 /// considers terminator operations as dead if they have no side effects. This
 /// allows for marking region operations as trivially dead without always being
 /// conservative of terminators.
-static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
-  // The set of operation intervals (end-exclusive) to consider when checking
-  // for side effects.
-  SmallVector<std::pair<Block::iterator, Block::iterator>, 1> effectingOps = {
-      std::make_pair(Block::iterator(rootOp), ++Block::iterator(rootOp))};
-  while (!effectingOps.empty()) {
-    Block::iterator &it = effectingOps.back().first;
-    Block::iterator end = effectingOps.back().second;
-    if (it == end) {
-      effectingOps.pop_back();
+static bool wouldOpBeTriviallyDeadImpl(
+    Operation *root,
+    DenseMap<Operation *, DeadnessCache::State> *cache = nullptr) {
+  using State = DeadnessCache::State;
+  // Repeated queries on nested operations would otherwise scan the same
+  // subtrees. Cache each subtree after checking its effects, and skip cached
+  // subtrees on later queries. An explicit worklist also bounds C++ stack use
+  // for deeply nested IR. Uncached queries do not look up or record summaries.
+  struct WorkItem {
+    // Keep the unvisited range so a block can resume after a nested operation
+    // without adding every sibling to the worklist.
+    Block::iterator current;
+    Block::iterator end;
+    Operation *complete = nullptr;
+  };
+  SmallVector<WorkItem, 1> worklist = {
+      {Block::iterator(root), ++Block::iterator(root)}};
+  while (!worklist.empty()) {
+    WorkItem &item = worklist.back();
+    if (item.current == item.end) {
+      if (cache && item.complete)
+        (*cache)[item.complete] = State::Dead;
+      worklist.pop_back();
       continue;
     }
-    mlir::Operation *op = &*(it++);
-
-    // If the operation has recursive effects, push all of the nested operations
-    // on to the stack to consider.
-    bool hasRecursiveEffects =
-        op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
-    if (hasRecursiveEffects) {
-      for (Region &region : op->getRegions()) {
-        for (auto &block : region) {
-          effectingOps.push_back(std::make_pair(block.begin(), block.end()));
+    Operation *op = &*item.current++;
+    bool cachedAlive = false;
+    if (cache) {
+      auto cached = cache->find(op);
+      if (cached != cache->end()) {
+        if (cached->second == State::Dead)
+          continue;
+        cachedAlive = true;
+      }
+    }
+    bool recursive = op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+    if (cachedAlive || !hasOnlyRemovableEffects(op, recursive)) {
+      // One live effect keeps every ancestor up to the root live. The
+      // remaining subtrees cannot change the answer.
+      if (cache) {
+        for (Operation *ancestor = op;; ancestor = ancestor->getParentOp()) {
+          (*cache)[ancestor] = State::Alive;
+          if (ancestor == root)
+            break;
         }
       }
+      return false;
     }
-
-    // If the op has memory effects, try to characterize them to see if the op
-    // is trivially dead here.
-    if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
-      // Check to see if this op either has no effects, or only allocates/reads
-      // memory.
-      SmallVector<MemoryEffects::EffectInstance, 1> effects;
-      effectInterface.getEffects(effects);
-
-      // Gather all results of this op that are allocated.
-      SmallPtrSet<Value, 4> allocResults;
-      for (const MemoryEffects::EffectInstance &it : effects)
-        if (isa<MemoryEffects::Allocate>(it.getEffect()) && it.getValue() &&
-            it.getValue().getDefiningOp() == op)
-          allocResults.insert(it.getValue());
-
-      if (!llvm::all_of(effects, [&allocResults](
-                                     const MemoryEffects::EffectInstance &it) {
-            // We can drop effects if the value is an allocation and is a result
-            // of the operation.
-            if (allocResults.contains(it.getValue()))
-              return true;
-            // Otherwise, the effect must be a read.
-            return isa<MemoryEffects::Read>(it.getEffect());
-          })) {
-        return false;
+    if (!recursive) {
+      if (cache)
+        (*cache)[op] = State::Dead;
+      continue;
+    }
+    // The first pushed block is processed last. Record the parent's summary
+    // only when that block is complete and all other blocks have been checked.
+    Operation *complete = cache ? op : nullptr;
+    for (Region &region : op->getRegions()) {
+      for (Block &block : region) {
+        worklist.push_back({block.begin(), block.end(), complete});
+        complete = nullptr;
       }
-      continue;
     }
-    // Otherwise, if the op only has recursive side effects we can treat the
-    // operation itself as having no effects. We will visit its children next.
-    if (hasRecursiveEffects)
-      continue;
-
-    // If there were no effect interfaces, we treat this op as conservatively
-    // having effects.
-    return false;
+    if (complete)
+      (*cache)[complete] = State::Dead;
   }
-
-  // If we get here, none of the operations had effects that prevented marking
-  // 'op' as dead.
   return true;
+}
+
+bool DeadnessCache::isOpTriviallyDead(Operation *root) {
+  // Cache only effects. Uses can change without a change to the defining op.
+  // Nested operations may have internal uses or be terminators even when the
+  // whole root can be erased, so these checks apply only to the root.
+  if (!root->use_empty() || root->mightHaveTrait<OpTrait::IsTerminator>() ||
+      isa<SymbolOpInterface>(root))
+    return false;
+
+  auto cachedRoot = cache.find(root);
+  if (cachedRoot != cache.end())
+    return cachedRoot->second == State::Dead;
+
+  return wouldOpBeTriviallyDeadImpl(root, &cache);
+}
+
+void DeadnessCache::invalidate(Operation *op) {
+  op->walk([&](Operation *nested) { cache.erase(nested); });
+  invalidateAncestors(op);
+}
+
+void DeadnessCache::invalidateAncestors(Operation *op) {
+  // An ancestor may report nested effects through its own effect interface,
+  // without querying the intermediate cache entries. A missing entry cannot
+  // stop invalidation of its ancestors.
+  for (Operation *parent = op; parent; parent = parent->getParentOp())
+    cache.erase(parent);
 }
 
 template <typename EffectTy>

@@ -767,7 +767,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
                "received error while checking for watchpoint hits, pid = "
                "{0}, error = {1}",
                thread.GetID(), error);
-    if (wp_index != LLDB_INVALID_INDEX32) {
+    if (error.Success() && wp_index != LLDB_INVALID_INDEX32) {
       MonitorWatchpoint(thread, wp_index);
       break;
     }
@@ -780,7 +780,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
       LLDB_LOG(log, "received error while checking for hardware "
                     "breakpoint hits, pid = {0}, error = {1}",
                thread.GetID(), error);
-    if (bp_index != LLDB_INVALID_INDEX32) {
+    if (error.Success() && bp_index != LLDB_INVALID_INDEX32) {
       MonitorBreakpoint(thread);
       break;
     }
@@ -1361,6 +1361,16 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
     return std::move(Err);
   llvm::scope_exit restore_regs(
       [&] { reg_ctx.WriteAllRegisterValues(registers_sp); });
+
+  // Running the syscall changes the siginfo of the thread. Restore it
+  // afterwards, as it describes the signal that the thread stopped with (and
+  // the one that gets delivered if the thread is resumed with that signal).
+  siginfo_t siginfo;
+  bool have_siginfo = GetSignalInfo(thread.GetID(), &siginfo).Success();
+  llvm::scope_exit restore_siginfo([&] {
+    if (have_siginfo)
+      PtraceWrapper(PTRACE_SETSIGINFO, thread.GetID(), nullptr, &siginfo);
+  });
 
   llvm::SmallVector<uint8_t, 8> memory(syscall_data.Insn.size());
   size_t bytes_read;

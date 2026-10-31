@@ -204,7 +204,7 @@ define <4 x double> @test_v4f64_align16(ptr %src) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -235,7 +235,7 @@ define <8 x float> @test_v8f32_align16(ptr %src) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -266,7 +266,7 @@ define <4 x i64> @test_v4i64_align16(ptr %src) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -297,7 +297,7 @@ define <8 x i32> @test_v8i32_align16(ptr %src) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -328,7 +328,7 @@ define <16 x i16> @test_v16i16_align16(ptr %src) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -359,7 +359,7 @@ define <32 x i8> @test_v32i8_align16(ptr %src) nounwind {
 ; AVX-NEXT:    pushq %rbp
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
-; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -570,7 +570,7 @@ define <8 x double> @test_v8f64_align16(ptr %src) nounwind {
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
-; AVX1-NEXT:    subq $96, %rsp
+; AVX1-NEXT:    subq $64, %rsp
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -590,7 +590,7 @@ define <8 x double> @test_v8f64_align16(ptr %src) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -610,7 +610,7 @@ define <8 x double> @test_v8f64_align16(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 48(%rdi), %xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %xmm0
@@ -649,7 +649,7 @@ define <16 x float> @test_v16f32_align16(ptr %src) nounwind {
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
-; AVX1-NEXT:    subq $96, %rsp
+; AVX1-NEXT:    subq $64, %rsp
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -669,7 +669,7 @@ define <16 x float> @test_v16f32_align16(ptr %src) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -689,7 +689,7 @@ define <16 x float> @test_v16f32_align16(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 48(%rdi), %xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %xmm0
@@ -728,7 +728,7 @@ define <8 x i64> @test_v8i64_align16(ptr %src) nounwind {
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
-; AVX1-NEXT:    subq $96, %rsp
+; AVX1-NEXT:    subq $64, %rsp
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -748,7 +748,7 @@ define <8 x i64> @test_v8i64_align16(ptr %src) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -768,7 +768,7 @@ define <8 x i64> @test_v8i64_align16(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 48(%rdi), %xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %xmm0
@@ -807,7 +807,7 @@ define <16 x i32> @test_v16i32_align16(ptr %src) nounwind {
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
-; AVX1-NEXT:    subq $96, %rsp
+; AVX1-NEXT:    subq $64, %rsp
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -827,7 +827,7 @@ define <16 x i32> @test_v16i32_align16(ptr %src) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -847,7 +847,7 @@ define <16 x i32> @test_v16i32_align16(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 48(%rdi), %xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %xmm0
@@ -886,7 +886,7 @@ define <32 x i16> @test_v32i16_align16(ptr %src) nounwind {
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
-; AVX1-NEXT:    subq $96, %rsp
+; AVX1-NEXT:    subq $64, %rsp
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -906,7 +906,7 @@ define <32 x i16> @test_v32i16_align16(ptr %src) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -926,7 +926,7 @@ define <32 x i16> @test_v32i16_align16(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 48(%rdi), %xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %xmm0
@@ -965,7 +965,7 @@ define <64 x i8> @test_v64i8_align16(ptr %src) nounwind {
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
-; AVX1-NEXT:    subq $96, %rsp
+; AVX1-NEXT:    subq $64, %rsp
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -985,7 +985,7 @@ define <64 x i8> @test_v64i8_align16(ptr %src) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovntdqa 16(%rdi), %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovntdqa (%rdi), %xmm0
@@ -1005,7 +1005,7 @@ define <64 x i8> @test_v64i8_align16(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 48(%rdi), %xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %xmm0
@@ -1060,7 +1060,7 @@ define <8 x double> @test_v8f64_align32(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %ymm0
 ; AVX512-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
@@ -1111,7 +1111,7 @@ define <16 x float> @test_v16f32_align32(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %ymm0
 ; AVX512-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
@@ -1162,7 +1162,7 @@ define <8 x i64> @test_v8i64_align32(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %ymm0
 ; AVX512-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
@@ -1213,7 +1213,7 @@ define <16 x i32> @test_v16i32_align32(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %ymm0
 ; AVX512-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
@@ -1264,7 +1264,7 @@ define <32 x i16> @test_v32i16_align32(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %ymm0
 ; AVX512-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0
@@ -1315,7 +1315,7 @@ define <64 x i8> @test_v64i8_align32(ptr %src) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vmovntdqa 32(%rdi), %ymm0
 ; AVX512-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovntdqa (%rdi), %ymm0

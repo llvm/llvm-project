@@ -10,6 +10,7 @@ declare ptr @memchr(ptr, i32, i64)
 @a11111 = constant [5 x i8] c"\01\01\01\01\01"
 @a111122 = constant [6 x i8] c"\01\01\01\01\02\02"
 @a1110111 = constant [7 x i8] c"\01\01\01\00\01\01\01"
+@a_fe_ff = constant [6 x i8] c"\FE\FE\FE\FE\FF\FF"
 
 
 ; Fold memchr(a00000, C, 5) to *a00000 == C ? a00000 : null.
@@ -81,6 +82,25 @@ define ptr @fold_memchr_a111122_c_n(i32 %C, i64 %N) !prof !0 {
   ret ptr %ret
 }
 
+; Same as previous, but using characters with top bit set.
+
+define ptr @fold_memchr_a_fe_ff(i32 %C, i64 %N) !prof !0 {
+; CHECK-LABEL: @fold_memchr_a_fe_ff(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[N:%.*]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP4]], ptr getelementptr inbounds nuw (i8, ptr @a_fe_ff, i64 4), ptr null, !prof [[PROF1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP1]], -2
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[N]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = and i1 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP7]], ptr @a_fe_ff, ptr [[MEMCHR_SEL1]], !prof [[PROF1]]
+; CHECK-NEXT:    ret ptr [[MEMCHR_SEL2]]
+;
+
+  %ret = call ptr @memchr(ptr @a_fe_ff, i32 %C, i64 %N)
+  ret ptr %ret
+}
 
 ; Fold memchr(a1110111, C, 3) to a1110111[2] == C ? a1110111 : null.
 

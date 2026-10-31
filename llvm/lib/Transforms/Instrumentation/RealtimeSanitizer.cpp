@@ -93,6 +93,9 @@ PreservedAnalyses RealtimeSanitizerPass::run(Module &M,
     if (F.empty())
       continue;
 
+    if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+      continue;
+
     if (F.hasFnAttribute(Attribute::SanitizeRealtime))
       runSanitizeRealtime(F);
 

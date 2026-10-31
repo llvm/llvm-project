@@ -336,7 +336,13 @@ llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
 HANDLE
 ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
                                        int fd) {
-  const FileAction *action = launch_info.GetFileActionForFD(fd);
+  const FileAction *action = nullptr;
+  for (size_t i = 0; i < launch_info.GetNumFileActions(); ++i) {
+    const FileAction *candidate = launch_info.GetFileActionAtIndex(i);
+    if (candidate->GetFD() == fd &&
+        candidate->GetAction() != FileAction::eFileActionDuplicate)
+      action = candidate;
+  }
   if (action == nullptr)
     return nullptr;
   const std::string path = action->GetFileSpec().GetPath();

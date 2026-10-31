@@ -12,7 +12,7 @@
 // The stack is device accessible here, so -fstack-arrays can keep the automatic
 // arrays on it.
 // RUN: fir-opt --cuda-heap-alloc-promotion=stack-arrays=true %s | FileCheck %s --check-prefix=STACK
-// STACK-NOT: fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name
+// STACK-NOT: fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name
 // STACK-NOT: fir.allocmem !fir.char
 
 // Under fir.cuda_heap_alloc = "unified", named automatic arrays move to the
@@ -28,10 +28,10 @@
 module attributes {fir.cuda_heap_alloc = "unified"} {
 
 // HEAP-LABEL: func.func @vla(
-// HEAP: %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "a", fir.cuda_heap_alloc = "unified", fir.must_be_heap = true, uniq_name = "_QFvlaEa"}
+// HEAP: %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = "a", uniq_name = "_QFvlaEa"}> {fir.cuda_heap_alloc = "unified", fir.must_be_heap = true}
 // HEAP: fir.freemem %[[MEM]] {fir.cuda_heap_alloc = "unified"} : !fir.heap<!fir.array<?xf32>>
 // KEEP-LABEL: func.func @vla(
-// KEEP: %[[KMEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "a", fir.cuda_heap_alloc = "unified", fir.must_be_heap = true, uniq_name = "_QFvlaEa"}
+// KEEP: %[[KMEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = "a", uniq_name = "_QFvlaEa"}> {fir.cuda_heap_alloc = "unified", fir.must_be_heap = true}
 // KEEP: fir.freemem %[[KMEM]] {fir.cuda_heap_alloc = "unified"} : !fir.heap<!fir.array<?xf32>>
 func.func @vla(%arg0: !fir.ref<i32>) {
   %0 = fir.load %arg0 : !fir.ref<i32>
@@ -42,7 +42,7 @@ func.func @vla(%arg0: !fir.ref<i32>) {
 
 // Automatic character is an automatic too.
 // HEAP-LABEL: func.func @autochar(
-// HEAP: fir.allocmem !fir.char<1,?>(%{{.*}} : index) {{{.*}}fir.cuda_heap_alloc = "unified"
+// HEAP: fir.allocmem !fir.char<1,?>(%{{.*}} : index) <{{.*}}> {{{.*}}fir.cuda_heap_alloc = "unified"
 func.func @autochar(%arg0: index) {
   %0 = fir.alloca !fir.char<1,?>(%arg0 : index) {bindc_name = "s", uniq_name = "_QFautocharEs"}
   return
@@ -80,7 +80,7 @@ func.func @device_vla(%arg0: index) attributes {cuf.proc_attr = #cuf.cuda_proc<g
 // unified memory just like any other host code. The device copy of it lives in
 // the gpu.module.
 // HEAP-LABEL: func.func @host_device_vla(
-// HEAP: fir.allocmem !fir.array<?xf32>, %{{.*}} {{{.*}}fir.cuda_heap_alloc = "unified"
+// HEAP: fir.allocmem !fir.array<?xf32>, %{{.*}} <{{.*}}> {{{.*}}fir.cuda_heap_alloc = "unified"
 func.func @host_device_vla(%arg0: index) attributes {cuf.proc_attr = #cuf.cuda_proc<host_device>} {
   %0 = fir.alloca !fir.array<?xf32>, %arg0 {bindc_name = "a", uniq_name = "_QFhost_device_vlaEa"}
   return

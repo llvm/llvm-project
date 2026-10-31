@@ -629,3 +629,42 @@ void test_loop_firstprivate_lastprivate() {
   for (int i = 0; i < 16; ++i)
     ;
 }
+
+namespace GH140243 {
+template <typename T>
+class I { };
+struct R { R () {}; ~R () {}; I<int> r; };
+struct T { T () {}; virtual ~T () {}; I<int> t; };
+// expected-note@+1 {{A defined here}}
+struct A : public R, virtual public T { A () {} I<int> a; void m1 (const I<int> &, const I<int> &); };
+
+// expected-error@+1 {{out-of-line definition of 'm1' does not match any declaration in 'GH140243::A'}}
+void A::m1 (const I<int> &x)
+{
+  int w = 0;
+// expected-error@+5 {{invalid operands to binary expression ('I<int>' and 'int')}}
+// expected-error@+4 {{cannot increment value of type 'I<int>'}}
+// expected-error@+3 {{condition of OpenMP for loop must be a relational comparison}}
+// expected-error@+2 {{increment clause of OpenMP for loop must perform simple addition or subtraction on loop variable 'a'}}
+  #pragma omp parallel for reduction(|:w)
+  for (a = x; A::a < 10; a++)
+    w |= (1 << *A::a); // expected-error {{indirection requires pointer operand ('I<int>' invalid)}}
+}
+
+struct B {
+  GoodIter it;
+  void m1(GoodIter begin, GoodIter end);
+};
+
+void B::m1(GoodIter begin, GoodIter end) {
+#pragma omp parallel for
+  for (it = begin; it < end; ++it)
+    ;
+#pragma omp parallel for
+  for (this->it = begin; B::it < end; ++B::it)
+    ;
+#pragma omp parallel for private(it)
+  for (it = begin; it < end; ++it)
+    ;
+}
+}

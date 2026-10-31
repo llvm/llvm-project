@@ -37,15 +37,65 @@ cl::opt<bool> llvm::NoKernelInfoEndLTO(
 // TargetMachine Class
 //
 
+static bool isExceptionModelSupportedByDefault(const Triple &TT,
+                                               ExceptionHandling Model) {
+  // Each model is valid only where its object format or architecture defines
+  // it. DwarfCFI and SjLj are the generic unwinding schemes, valid on any
+  // target that has exception handling by default.
+  switch (Model) {
+  case ExceptionHandling::DwarfCFI:
+  case ExceptionHandling::SjLj:
+    return TT.getDefaultExceptionHandling() != ExceptionHandling::None;
+  case ExceptionHandling::WinEH:
+    return TT.isOSBinFormatCOFF();
+  case ExceptionHandling::ARM:
+    return (TT.isARM() || TT.isThumb()) && TT.isOSBinFormatELF();
+  case ExceptionHandling::AIX:
+    return TT.isOSBinFormatXCOFF();
+  case ExceptionHandling::ZOS:
+    return TT.isOSBinFormatGOFF();
+  case ExceptionHandling::Wasm:
+  case ExceptionHandling::Emscripten:
+    return TT.isWasm();
+  case ExceptionHandling::None:
+  case ExceptionHandling::Default:
+    break;
+  }
+
+  llvm_unreachable("unexpected exception model");
+}
+
 TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
                              const Triple &TT, StringRef CPU, StringRef FS,
                              const TargetOptions &Options)
     : TheTarget(T), DL(DataLayoutString), TargetTriple(TT),
       TargetCPU(std::string(CPU)), TargetFS(std::string(FS)), AsmInfo(nullptr),
       MRI(nullptr), MII(nullptr), STI(nullptr), RequireStructuredCFG(false),
-      O0WantsFastISel(false), Options(Options) {}
+      O0WantsFastISel(false), EnableTiedFastRegAlloc(true),
+      SupportsDefaultOutlining(false), SupportsDebugEntryValues(false),
+      Options(Options) {
+  for (ExceptionHandling Model :
+       {ExceptionHandling::DwarfCFI, ExceptionHandling::SjLj,
+        ExceptionHandling::ARM, ExceptionHandling::WinEH,
+        ExceptionHandling::Wasm, ExceptionHandling::Emscripten,
+        ExceptionHandling::AIX, ExceptionHandling::ZOS}) {
+    setSupportsExceptionModel(Model,
+                              isExceptionModelSupportedByDefault(TT, Model));
+  }
+}
 
 TargetMachine::~TargetMachine() = default;
+
+/// NOTE: There are targets that still do not support the debug entry values
+/// production and that is being controlled with the SupportsDebugEntryValues.
+/// In addition, SCE debugger does not have the feature implemented, so prefer
+/// not to emit the debug entry values in that case.
+/// The EnableDebugEntryValues can be used for the testing purposes.
+bool TargetMachine::shouldEmitDebugEntryValues() const {
+  return (SupportsDebugEntryValues &&
+          Options.DebuggerTuning != DebuggerKind::SCE) ||
+         Options.EnableDebugEntryValues;
+}
 
 Expected<std::unique_ptr<MCStreamer>>
 TargetMachine::createMCStreamer(raw_pwrite_stream &Out,
