@@ -6,7 +6,7 @@
 !s32i = !cir.int<s, 32>
 !s8i = !cir.int<s, 8>
 
-module attributes {cir.triple = "amdgcn-amd-amdhsa",
+module attributes {cir.triple = "amdgpu-amd-amdhsa",
                    cir.amdgpu_printf_kind = "hostcall"} {
   cir.func @p(%fmt: !cir.ptr<!s8i>, %v: !cir.vector<4 x !s32i>) -> !s32i {
     // expected-error @below {{unsupported argument type '!cir.vector<4 x !cir.int<s, 32>>' for AMDGPU printf}}
