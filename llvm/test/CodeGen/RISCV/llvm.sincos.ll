@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv64-linux-gnu -mattr=+d -global-isel=0 < %s | FileCheck %s --check-prefixes=RV64,SDAG-RV64
 ; RUN: llc -mtriple=riscv32-linux-gnu -mattr=+d -global-isel=0 < %s | FileCheck %s --check-prefixes=RV32,SDAG-RV32
 ; RUN: llc -mtriple=riscv64-linux-gnu -mattr=+d -global-isel=1 -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=RV64,GISEL-RV64
-; RUN: llc -mtriple=riscv32-linux-gnu -mattr=+d -global-isel=1 -global-isel-abort=2 < %s | FileCheck %s --check-prefixes=RV32,GISEL-RV32
+; RUN: llc -mtriple=riscv32-linux-gnu -mattr=+d -global-isel=1 -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=RV32,GISEL-RV32
 
 ; Test the llvm.sincos intrinsic lowering to the sincos libcalls, which glibc
 ; provides (sincosf/sincos/sincosl). RISC-V long double is fp128, so f128 uses
@@ -94,45 +94,45 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) nounwind {
 ; SDAG-RV64-NEXT:    addi sp, sp, 48
 ; SDAG-RV64-NEXT:    ret
 ;
-; RV32-LABEL: test_sincos_f128:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    lw a4, 0(a1)
-; RV32-NEXT:    lw a5, 4(a1)
-; RV32-NEXT:    lw a6, 8(a1)
-; RV32-NEXT:    lw a7, 12(a1)
-; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    addi a0, sp, 24
-; RV32-NEXT:    addi a1, sp, 8
-; RV32-NEXT:    addi a2, sp, 56
-; RV32-NEXT:    addi a3, sp, 40
-; RV32-NEXT:    sw a4, 8(sp)
-; RV32-NEXT:    sw a5, 12(sp)
-; RV32-NEXT:    sw a6, 16(sp)
-; RV32-NEXT:    sw a7, 20(sp)
-; RV32-NEXT:    call sincosl
-; RV32-NEXT:    lw a0, 40(sp)
-; RV32-NEXT:    lw a1, 44(sp)
-; RV32-NEXT:    lw a2, 48(sp)
-; RV32-NEXT:    lw a3, 52(sp)
-; RV32-NEXT:    lw a4, 56(sp)
-; RV32-NEXT:    lw a5, 60(sp)
-; RV32-NEXT:    lw a6, 64(sp)
-; RV32-NEXT:    lw a7, 68(sp)
-; RV32-NEXT:    sw a0, 16(s0)
-; RV32-NEXT:    sw a1, 20(s0)
-; RV32-NEXT:    sw a2, 24(s0)
-; RV32-NEXT:    sw a3, 28(s0)
-; RV32-NEXT:    sw a4, 0(s0)
-; RV32-NEXT:    sw a5, 4(s0)
-; RV32-NEXT:    sw a6, 8(s0)
-; RV32-NEXT:    sw a7, 12(s0)
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 80
-; RV32-NEXT:    ret
+; SDAG-RV32-LABEL: test_sincos_f128:
+; SDAG-RV32:       # %bb.0:
+; SDAG-RV32-NEXT:    addi sp, sp, -80
+; SDAG-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
+; SDAG-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; SDAG-RV32-NEXT:    lw a4, 0(a1)
+; SDAG-RV32-NEXT:    lw a5, 4(a1)
+; SDAG-RV32-NEXT:    lw a6, 8(a1)
+; SDAG-RV32-NEXT:    lw a7, 12(a1)
+; SDAG-RV32-NEXT:    mv s0, a0
+; SDAG-RV32-NEXT:    addi a0, sp, 24
+; SDAG-RV32-NEXT:    addi a1, sp, 8
+; SDAG-RV32-NEXT:    addi a2, sp, 56
+; SDAG-RV32-NEXT:    addi a3, sp, 40
+; SDAG-RV32-NEXT:    sw a4, 8(sp)
+; SDAG-RV32-NEXT:    sw a5, 12(sp)
+; SDAG-RV32-NEXT:    sw a6, 16(sp)
+; SDAG-RV32-NEXT:    sw a7, 20(sp)
+; SDAG-RV32-NEXT:    call sincosl
+; SDAG-RV32-NEXT:    lw a0, 40(sp)
+; SDAG-RV32-NEXT:    lw a1, 44(sp)
+; SDAG-RV32-NEXT:    lw a2, 48(sp)
+; SDAG-RV32-NEXT:    lw a3, 52(sp)
+; SDAG-RV32-NEXT:    lw a4, 56(sp)
+; SDAG-RV32-NEXT:    lw a5, 60(sp)
+; SDAG-RV32-NEXT:    lw a6, 64(sp)
+; SDAG-RV32-NEXT:    lw a7, 68(sp)
+; SDAG-RV32-NEXT:    sw a0, 16(s0)
+; SDAG-RV32-NEXT:    sw a1, 20(s0)
+; SDAG-RV32-NEXT:    sw a2, 24(s0)
+; SDAG-RV32-NEXT:    sw a3, 28(s0)
+; SDAG-RV32-NEXT:    sw a4, 0(s0)
+; SDAG-RV32-NEXT:    sw a5, 4(s0)
+; SDAG-RV32-NEXT:    sw a6, 8(s0)
+; SDAG-RV32-NEXT:    sw a7, 12(s0)
+; SDAG-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
+; SDAG-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; SDAG-RV32-NEXT:    addi sp, sp, 80
+; SDAG-RV32-NEXT:    ret
 ;
 ; GISEL-RV64-LABEL: test_sincos_f128:
 ; GISEL-RV64:       # %bb.0:
@@ -157,9 +157,45 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) nounwind {
 ; GISEL-RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; GISEL-RV64-NEXT:    addi sp, sp, 48
 ; GISEL-RV64-NEXT:    ret
+;
+; GISEL-RV32-LABEL: test_sincos_f128:
+; GISEL-RV32:       # %bb.0:
+; GISEL-RV32-NEXT:    addi sp, sp, -176
+; GISEL-RV32-NEXT:    sw ra, 172(sp) # 4-byte Folded Spill
+; GISEL-RV32-NEXT:    sw s0, 168(sp) # 4-byte Folded Spill
+; GISEL-RV32-NEXT:    lw a3, 0(a1)
+; GISEL-RV32-NEXT:    lw a4, 4(a1)
+; GISEL-RV32-NEXT:    lw a5, 8(a1)
+; GISEL-RV32-NEXT:    lw a6, 12(a1)
+; GISEL-RV32-NEXT:    mv s0, a0
+; GISEL-RV32-NEXT:    mv a0, sp
+; GISEL-RV32-NEXT:    addi a1, sp, 144
+; GISEL-RV32-NEXT:    addi a2, sp, 128
+; GISEL-RV32-NEXT:    sw a3, 0(sp)
+; GISEL-RV32-NEXT:    sw a4, 4(sp)
+; GISEL-RV32-NEXT:    sw a5, 8(sp)
+; GISEL-RV32-NEXT:    sw a6, 12(sp)
+; GISEL-RV32-NEXT:    call sincosl
+; GISEL-RV32-NEXT:    lw a0, 144(sp)
+; GISEL-RV32-NEXT:    lw a1, 148(sp)
+; GISEL-RV32-NEXT:    lw a2, 152(sp)
+; GISEL-RV32-NEXT:    lw a3, 156(sp)
+; GISEL-RV32-NEXT:    lw a4, 128(sp)
+; GISEL-RV32-NEXT:    lw a5, 132(sp)
+; GISEL-RV32-NEXT:    lw a6, 136(sp)
+; GISEL-RV32-NEXT:    lw a7, 140(sp)
+; GISEL-RV32-NEXT:    sw a0, 0(s0)
+; GISEL-RV32-NEXT:    sw a1, 4(s0)
+; GISEL-RV32-NEXT:    sw a2, 8(s0)
+; GISEL-RV32-NEXT:    sw a3, 12(s0)
+; GISEL-RV32-NEXT:    sw a4, 16(s0)
+; GISEL-RV32-NEXT:    sw a5, 20(s0)
+; GISEL-RV32-NEXT:    sw a6, 24(s0)
+; GISEL-RV32-NEXT:    sw a7, 28(s0)
+; GISEL-RV32-NEXT:    lw ra, 172(sp) # 4-byte Folded Reload
+; GISEL-RV32-NEXT:    lw s0, 168(sp) # 4-byte Folded Reload
+; GISEL-RV32-NEXT:    addi sp, sp, 176
+; GISEL-RV32-NEXT:    ret
   %result = call { fp128, fp128 } @llvm.sincos.f128(fp128 %a)
   ret { fp128, fp128 } %result
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GISEL-RV32: {{.*}}
-; SDAG-RV32: {{.*}}
