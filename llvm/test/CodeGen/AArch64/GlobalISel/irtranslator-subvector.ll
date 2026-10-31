@@ -259,7 +259,7 @@ define i32 @extract_v4i32_vector_insert_const_fixed_illegal(<1 x i32> %a, <1 x i
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY [[UV]](i32)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY [[UV2]](i32)
   ; CHECK-NEXT:   G_STORE [[COPY4]](i32), [[COPY3]](p0) :: (store (i32) into %ir.p, align 16)
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -279,7 +279,7 @@ define i32 @extract_v4ptr_vector_insert_const_fixed_illegal(<1 x ptr> %a, <1 x p
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
   ; CHECK-NEXT:   G_STORE [[COPY4]](p0), [[COPY3]](p0) :: (store (p0) into %ir.p, align 16)
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -303,7 +303,7 @@ define i32 @extract_v4ifloat_vector_insert_const_fixed_illegal(<1 x float> %a, <
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(f32) = COPY $s2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(f32) = COPY [[UV]](f32)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(f32) = COPY [[UV2]](f32)
   ; CHECK-NEXT:   G_STORE [[COPY4]](f32), [[COPY3]](p0) :: (store (f32) into %ir.p, align 16)
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -323,7 +323,7 @@ define i32 @extract_v4iptr_vector_insert_const_fixed_illegal(<1 x ptr> %a, <1 x 
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
   ; CHECK-NEXT:   G_STORE [[COPY4]](p0), [[COPY3]](p0) :: (store (p0) into %ir.p, align 16)
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -359,4 +359,19 @@ entry:
   %vector = call <4  x ptr> @llvm.vector.insert.v4ptr.v4ptr(<4 x ptr> %a, <4 x ptr> %b, i64 0)
   store <4 x ptr> %vector, ptr %p, align 16
   ret i32 1
+}
+
+define i32 @insert_one_element_vector() {
+  ; CHECK-LABEL: name: insert_one_element_vector
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY [[C]](i32)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY [[C1]](i32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY [[COPY1]](i32)
+  ; CHECK-NEXT:   $w0 = COPY [[COPY2]](i32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  %vector = call <1 x i32> @llvm.vector.insert.v1i32.v1i32(<1 x i32> <i32 7>, <1 x i32> <i32 42>, i64 0)
+  %value = extractelement <1 x i32> %vector, i64 0
+  ret i32 %value
 }
