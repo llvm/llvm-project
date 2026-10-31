@@ -4787,3 +4787,407 @@ func.func @select_uniform_unselected_poison_vector(%p: i1, %a: vector<4xi32>) ->
   %x = arith.select %m, %a, %bad : vector<4xi1>, vector<4xi32>
   return %x : vector<4xi32>
 }
+
+// -----
+
+// Reduction predicates refine only the uniform path; mixed masks and outside
+// uses retain the elementwise select.
+// CHECK-LABEL: func.func @select_reduction_uniform_paths(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: %[[Y:.*]] = arith.select %{{.*}}, %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: func.call @consume(%[[A]])
+// CHECK-NEXT: func.call @consume(%[[A]])
+// CHECK-NEXT: func.call @consume(%[[Y]])
+// CHECK: } else {
+// CHECK: %[[LOCAL_AND_ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_AND_ELSE]])
+// CHECK-NEXT: func.call @consume(%[[X]])
+// CHECK-NEXT: func.call @consume(%[[Y]])
+// CHECK: scf.if
+// CHECK: %[[LOCAL_OR_THEN:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_OR_THEN]])
+// CHECK-NEXT: func.call @consume(%[[X]])
+// CHECK-NEXT: func.call @consume(%[[Y]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[B]])
+// CHECK-NEXT: func.call @consume(%[[B]])
+// CHECK-NEXT: func.call @consume(%[[Y]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @select_reduction_uniform_paths(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %other: vector<4xi1>) -> vector<4xi32> {
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %y = arith.select %other, %a, %b : vector<4xi1>, vector<4xi32>
+  %and = vector.reduction <and>, %m : vector<4xi1> into i1
+  scf.if %and {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    func.call @consume(%y) : (vector<4xi32>) -> ()
+  } else {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    func.call @consume(%y) : (vector<4xi32>) -> ()
+  }
+  %or = vector.reduction <or>, %m : vector<4xi1> into i1
+  scf.if %or {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    func.call @consume(%y) : (vector<4xi32>) -> ()
+  } else {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    func.call @consume(%y) : (vector<4xi32>) -> ()
+  }
+  return %x : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @select_reduction_in_loop(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: scf.for
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: scf.for
+// CHECK: %[[LOCAL_AND_ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_AND_ELSE]])
+// CHECK: scf.if
+// CHECK: scf.for
+// CHECK: %[[LOCAL_OR_THEN:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_OR_THEN]])
+// CHECK: } else {
+// CHECK: scf.for
+// CHECK: func.call @consume(%[[B]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @select_reduction_in_loop(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %n: index) -> vector<4xi32> {
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %and = vector.reduction <and>, %m : vector<4xi1> into i1
+  scf.if %and {
+    scf.for %i = %c0 to %n step %c1 {
+      %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+    }
+  } else {
+    scf.for %i = %c0 to %n step %c1 {
+      %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+    }
+  }
+  %or = vector.reduction <or>, %m : vector<4xi1> into i1
+  scf.if %or {
+    scf.for %i = %c0 to %n step %c1 {
+      %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+    }
+  } else {
+    scf.for %i = %c0 to %n step %c1 {
+      %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+    }
+  }
+  return %x : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @select_reduction_in_nested_if(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: scf.if
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: scf.if
+// CHECK: %[[LOCAL_AND_ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_AND_ELSE]])
+// CHECK: scf.if
+// CHECK: scf.if
+// CHECK: %[[LOCAL_OR_THEN:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_OR_THEN]])
+// CHECK: } else {
+// CHECK: scf.if
+// CHECK: func.call @consume(%[[B]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @select_reduction_in_nested_if(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %p: i1) -> vector<4xi32> {
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %and = vector.reduction <and>, %m : vector<4xi1> into i1
+  scf.if %and {
+    scf.if %p {
+      %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+    }
+  } else {
+    scf.if %p {
+      %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+    }
+  }
+  %or = vector.reduction <or>, %m : vector<4xi1> into i1
+  scf.if %or {
+    scf.if %p {
+      %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+    }
+  } else {
+    scf.if %p {
+      %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+    }
+  }
+  return %x : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @select_reduction_in_execute_region(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[X]])
+// CHECK: scf.if
+// CHECK: func.call @consume(%[[X]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[B]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @select_reduction_in_execute_region(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>) -> vector<4xi32> {
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %and = vector.reduction <and>, %m : vector<4xi1> into i1
+  scf.if %and {
+    scf.execute_region {
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield
+    }
+  } else {
+    scf.execute_region {
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield
+    }
+  }
+  %or = vector.reduction <or>, %m : vector<4xi1> into i1
+  scf.if %or {
+    scf.execute_region {
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield
+    }
+  } else {
+    scf.execute_region {
+      func.call @consume(%x) : (vector<4xi32>) -> ()
+      scf.yield
+    }
+  }
+  return %x : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @negative_select_reduction_changed_loop_mask(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: scf.for
+// CHECK: %[[ITER_AND_THEN:.*]] = arith.select %{{.*}}, %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ITER_AND_THEN]])
+// CHECK: } else {
+// CHECK: scf.for
+// CHECK: %[[ITER_AND_ELSE:.*]] = arith.select %{{.*}}, %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ITER_AND_ELSE]])
+// CHECK: scf.if
+// CHECK: scf.for
+// CHECK: %[[ITER_OR_THEN:.*]] = arith.select %{{.*}}, %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ITER_OR_THEN]])
+// CHECK: } else {
+// CHECK: scf.for
+// CHECK: %[[ITER_OR_ELSE:.*]] = arith.select %{{.*}}, %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[ITER_OR_ELSE]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @negative_select_reduction_changed_loop_mask(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %other: vector<4xi1>, %n: index) -> vector<4xi32> {
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %and = vector.reduction <and>, %m : vector<4xi1> into i1
+  scf.if %and {
+    %result_then_and = scf.for %i = %c0 to %n step %c1 iter_args(%iter = %m) -> (vector<4xi1>) {
+      %local = arith.select %iter, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+      scf.yield %other : vector<4xi1>
+    }
+  } else {
+    %result_else_and = scf.for %i = %c0 to %n step %c1 iter_args(%iter = %m) -> (vector<4xi1>) {
+      %local = arith.select %iter, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+      scf.yield %other : vector<4xi1>
+    }
+  }
+  %or = vector.reduction <or>, %m : vector<4xi1> into i1
+  scf.if %or {
+    %result_then_or = scf.for %i = %c0 to %n step %c1 iter_args(%iter = %m) -> (vector<4xi1>) {
+      %local = arith.select %iter, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+      scf.yield %other : vector<4xi1>
+    }
+  } else {
+    %result_else_or = scf.for %i = %c0 to %n step %c1 iter_args(%iter = %m) -> (vector<4xi1>) {
+      %local = arith.select %iter, %a, %b : vector<4xi1>, vector<4xi32>
+      func.call @consume(%local) : (vector<4xi32>) -> ()
+      scf.yield %other : vector<4xi1>
+    }
+  }
+  return %x : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @negative_select_reduction_with_accumulator(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: %[[LOCAL_AND_THEN:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_AND_THEN]])
+// CHECK: } else {
+// CHECK: %[[LOCAL_AND_ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_AND_ELSE]])
+// CHECK: scf.if
+// CHECK: %[[LOCAL_OR_THEN:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_OR_THEN]])
+// CHECK: } else {
+// CHECK: %[[LOCAL_OR_ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_OR_ELSE]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @negative_select_reduction_with_accumulator(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %acc: i1) -> vector<4xi32> {
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %and = vector.reduction <and>, %m, %acc : vector<4xi1> into i1
+  scf.if %and {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  } else {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  }
+  %or = vector.reduction <or>, %m, %acc : vector<4xi1> into i1
+  scf.if %or {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  } else {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  }
+  return %x : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @negative_select_reduction_masked_reduction(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: %[[LOCAL_AND_THEN:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_AND_THEN]])
+// CHECK: } else {
+// CHECK: %[[LOCAL_AND_ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_AND_ELSE]])
+// CHECK: scf.if
+// CHECK: %[[LOCAL_OR_THEN:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_OR_THEN]])
+// CHECK: } else {
+// CHECK: %[[LOCAL_OR_ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_OR_ELSE]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @negative_select_reduction_masked_reduction(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %other: vector<4xi1>) -> vector<4xi32> {
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %and = vector.mask %other { vector.reduction <and>, %m : vector<4xi1> into i1 } : vector<4xi1> -> i1
+  scf.if %and {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  } else {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  }
+  %or = vector.mask %other { vector.reduction <or>, %m : vector<4xi1> into i1 } : vector<4xi1> -> i1
+  scf.if %or {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  } else {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  }
+  return %x : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @negative_select_reduction_frozen_predicate(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: scf.if
+// CHECK: %[[LOCAL_AND_THEN:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_AND_THEN]])
+// CHECK: } else {
+// CHECK: %[[LOCAL_AND_ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_AND_ELSE]])
+// CHECK: scf.if
+// CHECK: %[[LOCAL_OR_THEN:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_OR_THEN]])
+// CHECK: } else {
+// CHECK: %[[LOCAL_OR_ELSE:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[LOCAL_OR_ELSE]])
+// CHECK: return %[[X]] : vector<4xi32>
+func.func @negative_select_reduction_frozen_predicate(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>) -> vector<4xi32> {
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %and = vector.reduction <and>, %m : vector<4xi1> into i1
+  %f_and = "llvm.freeze"(%and) : (i1) -> i1
+  scf.if %f_and {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  } else {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  }
+  %or = vector.reduction <or>, %m : vector<4xi1> into i1
+  %f_or = "llvm.freeze"(%or) : (i1) -> i1
+  scf.if %f_or {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  } else {
+    %local = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+    func.call @consume(%local) : (vector<4xi32>) -> ()
+  }
+  return %x : vector<4xi32>
+}
+func.func private @consume(vector<4xi32>)
+
+// -----
+
+// CHECK-LABEL: func.func @negative_select_reduction_while_backedge(
+// CHECK-SAME: %[[M:[^:]+]]: vector<4xi1>, %[[A:[^:]+]]: vector<4xi32>, %[[B:[^:]+]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[M]], %[[A]], %[[B]]
+// CHECK: func.call @consume(%[[X]])
+func.func @negative_select_reduction_while_backedge(%m: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>, %next: i1) {
+  %r = vector.reduction <and>, %m : vector<4xi1> into i1
+  %x = arith.select %m, %a, %b : vector<4xi1>, vector<4xi32>
+  %result = scf.while (%arg = %r) : (i1) -> i1 {
+    scf.condition(%arg) %arg : i1
+  } do {
+  ^bb0(%arg: i1):
+    func.call @consume(%x) : (vector<4xi32>) -> ()
+    scf.yield %next : i1
+  }
+  return
+}
+func.func private @consume(vector<4xi32>)
