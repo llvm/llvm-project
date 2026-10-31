@@ -1705,6 +1705,96 @@ define <2 x i1> @neg_test_logical_and_trunc_nuw_nsw_vec(<2 x i1> %c, <2 x i8> no
   ret <2 x i1> %and
 }
 
+define i1 @not_logical_or_or(i1 %a, i1 %b) {
+; CHECK-LABEL: @not_logical_or_or(
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[OR]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT]], i1 true, i1 [[B]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %or = select i1 %a, i1 true, i1 %b
+  call void @use(i1 %or)
+  %not = xor i1 %or, true
+  %res = select i1 %not, i1 true, i1 %b
+  ret i1 %res
+}
+
+define i1 @not_logical_and_and(i1 %a, i1 %b) {
+; CHECK-LABEL: @not_logical_and_and(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    call void @use(i1 [[AND]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT]], i1 [[B]], i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %and = select i1 %a, i1 %b, i1 false
+  call void @use(i1 %and)
+  %not = xor i1 %and, true
+  %res = select i1 %not, i1 %b, i1 false
+  ret i1 %res
+}
+
+define <2 x i1> @not_logical_or_or_vec(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @not_logical_or_or_vec(
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    call void @use2(<2 x i1> [[OR]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A]], splat (i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[NOT]], <2 x i1> splat (i1 true), <2 x i1> [[B]]
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %or = select <2 x i1> %a, <2 x i1> splat (i1 true), <2 x i1> %b
+  call void @use2(<2 x i1> %or)
+  %not = xor <2 x i1> %or, splat (i1 true)
+  %res = select <2 x i1> %not, <2 x i1> splat (i1 true), <2 x i1> %b
+  ret <2 x i1> %res
+}
+
+define i1 @not_logical_or_or_commuted_neg(i1 %a, i1 %b) {
+; CHECK-LABEL: @not_logical_or_or_commuted_neg(
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B:%.*]], i1 true, i1 [[A:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[OR]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OR]], true
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[B]], [[NOT]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %or = select i1 %b, i1 true, i1 %a
+  call void @use(i1 %or)
+  %not = xor i1 %or, true
+  %res = select i1 %not, i1 true, i1 %b
+  ret i1 %res
+}
+
+define i1 @not_logical_or_or_mismatch_op_neg(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @not_logical_or_or_mismatch_op_neg(
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[C:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[OR]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OR]], true
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %or = select i1 %a, i1 true, i1 %c
+  call void @use(i1 %or)
+  %not = xor i1 %or, true
+  %res = select i1 %not, i1 true, i1 %b
+  ret i1 %res
+}
+
+define i1 @not_logical_or_or_multiuse_not_neg(i1 %a, i1 %b) {
+; CHECK-LABEL: @not_logical_or_or_multiuse_not_neg(
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[OR]], true
+; CHECK-NEXT:    call void @use(i1 [[NOT]])
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT]], i1 true, i1 [[B]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %or = select i1 %a, i1 true, i1 %b
+  %not = xor i1 %or, true
+  call void @use(i1 %not)
+  %res = select i1 %not, i1 true, i1 %b
+  ret i1 %res
+}
+
 !0 = !{!"function_entry_count", i32 5260116}
 ;.
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}

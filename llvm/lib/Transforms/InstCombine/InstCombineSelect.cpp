@@ -4027,6 +4027,16 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   if (match(CondVal, m_Select(m_Value(A), m_Value(B), m_Zero())) &&
       match(TrueVal, m_Specific(B)) && match(FalseVal, m_Zero()))
     return replaceOperand(SI, 0, A);
+  // select (not (select a, true, b)), true, b -> select (not a), true, b
+  if (match(CondVal, m_OneUse(m_Not(m_Select(m_Value(A), m_One(),
+                                             m_Specific(FalseVal))))) &&
+      match(TrueVal, m_Specific(One)))
+    return replaceOperand(SI, 0, Builder.CreateNot(A));
+  // select (not (select a, b, false)), b, false -> select (not a), b, false
+  if (match(CondVal, m_OneUse(m_Not(m_Select(m_Value(A), m_Specific(TrueVal),
+                                             m_Zero())))) &&
+      match(FalseVal, m_Specific(Zero)))
+    return replaceOperand(SI, 0, Builder.CreateNot(A));
 
   // ~(A & B) & (A | B) --> A ^ B
   if (match(&SI, m_c_LogicalAnd(m_Not(m_LogicalAnd(m_Value(A), m_Value(B))),
