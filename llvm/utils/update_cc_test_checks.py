@@ -265,9 +265,9 @@ def get_function_body(
     # TODO Clean up duplication of asm/common build_function_body_dictionary
     for extra_command in extra_commands:
         extra_args = shlex.split(extra_command)
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(raw_tool_output.encode())
-            f.flush()
+        try:
             if extra_args[0] == "opt":
                 if args.opt is None:
                     print(
@@ -278,6 +278,8 @@ def get_function_body(
                     sys.exit(1)
                 extra_args[0] = args.opt
             raw_tool_output = common.invoke_tool(extra_args[0], extra_args[1:], f.name)
+        finally:
+            os.remove(f.name)
     if "-emit-llvm" in clang_args:
         builder.process_run_line(
             common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output, prefixes
