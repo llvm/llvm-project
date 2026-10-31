@@ -1482,57 +1482,90 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   Value *B = Cmp->getOperand(1);
 
   // Normalize "A - B" as the true value of the select.
-  if (match(FI, m_Sub(m_Specific(A), m_Specific(B)))) {
+  if (match(FI, m_Sub(m_ZExtOrSelf(m_Specific(A)), m_ZExtOrSelf(m_Specific(B)))) ||
+      match(FI, m_Sub(m_SExtOrSelf(m_Specific(A)), m_SExtOrSelf(m_Specific(B))))) {
     std::swap(FI, TI);
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
 
+  
   // With any pair of no-wrap subtracts:
   // (A > B) ? (A - B) : (B - A) --> abs(A - B)
-  if (Pred == CmpInst::ICMP_SGT &&
-      match(TI, m_Sub(m_Specific(A), m_Specific(B))) &&
-      match(FI, m_Sub(m_Specific(B), m_Specific(A))) &&
+  bool UnsignedMatch =
+      Pred == CmpInst::ICMP_UGT &&
+      match(TI, m_Sub(m_ZExt(m_Specific(A)), m_ZExt(m_Specific(B)))) &&
+      match(FI, m_Sub(m_ZExt(m_Specific(B)), m_ZExt(m_Specific(A))));
+
+  bool SignedMatch = 
+    Pred == CmpInst::ICMP_SGT &&
+    match(TI, m_Sub(m_SExtOrSelf(m_Specific(A)), m_SExtOrSelf(m_Specific(B)))) &&
+    match(FI, m_Sub(m_SExtOrSelf(m_Specific(B)), m_SExtOrSelf(m_Specific(A))));
+
+  if ((UnsignedMatch || SignedMatch) &&
       (TI->hasNoSignedWrap() || TI->hasNoUnsignedWrap()) &&
       (FI->hasNoSignedWrap() || FI->hasNoUnsignedWrap())) {
     // The remaining subtract is not "nuw" any more.
+    TI->setHasNoUnsignedWrap(false);
+
     // If there's one use of the subtract (no other use than the use we are
     // about to replace), then we know that the sub is "nsw" in this context
     // even if it was only "nuw" before. If there's another use, then we can't
     // add "nsw" to the existing instruction because it may not be safe in the
     // other user's context.
-    TI->setHasNoUnsignedWrap(false);
-    if (!TI->hasNoSignedWrap())
-      TI->setHasNoSignedWrap(TI->hasOneUse());
-    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI, Builder.getTrue());
+    if (SignedMatch) {
+      if (!TI->hasNoSignedWrap())
+        TI->setHasNoSignedWrap(TI->hasOneUse());
+    }
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI, Builder.getInt1(SignedMatch));
   }
 
   // Match: (A > B) ? (A - B) : (0 - (A - B)) --> abs(A - B)
-  if (Pred == CmpInst::ICMP_SGT &&
-      match(TI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
+  UnsignedMatch = Pred == CmpInst::ICMP_UGT &&
+    match(TI, m_NSWSub(m_ZExt(m_Specific(A)), m_ZExt(m_Specific(B))));
+  
+  SignedMatch = Pred == CmpInst::ICMP_SGT &&
+    match(TI, m_NSWSub(m_SExtOrSelf(m_Specific(A)), m_SExtOrSelf(m_Specific(B))));
+  
+  if ((UnsignedMatch || SignedMatch) &&
       match(FI, m_Neg(m_Specific(TI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
                                          Builder.getFalse());
   }
 
   // Match: (A < B) ? (0 - (A - B)) : (A - B) --> abs(A - B)
-  if (Pred == CmpInst::ICMP_SLT &&
-      match(FI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
+  UnsignedMatch = Pred == CmpInst::ICMP_ULT &&
+    match(FI, m_NSWSub(m_ZExt(m_Specific(A)), m_ZExt(m_Specific(B))));
+  
+  SignedMatch = Pred == CmpInst::ICMP_SLT &&
+    match(FI, m_NSWSub(m_SExtOrSelf(m_Specific(A)), m_SExtOrSelf(m_Specific(B))));
+  
+  if ((UnsignedMatch || SignedMatch) &&
       match(TI, m_Neg(m_Specific(FI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
                                          Builder.getFalse());
   }
 
   // Match: (A > B) ? (0 - (B - A)) : (B - A) --> abs(B - A)
-  if (Pred == CmpInst::ICMP_SGT &&
-      match(FI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
+  UnsignedMatch = Pred == CmpInst::ICMP_UGT &&
+    match(FI, m_NSWSub(m_ZExt(m_Specific(B)), m_ZExt(m_Specific(A))));
+  
+  SignedMatch = Pred == CmpInst::ICMP_SGT &&
+    match(FI, m_NSWSub(m_SExtOrSelf(m_Specific(B)), m_SExtOrSelf(m_Specific(A))));
+  
+  if ((UnsignedMatch || SignedMatch) &&
       match(TI, m_Neg(m_Specific(FI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
                                          Builder.getFalse());
   }
 
   // Match: (A < B) ? (B - A) : (0 - (B - A)) --> abs(B - A)
-  if (Pred == CmpInst::ICMP_SLT &&
-      match(TI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
+  UnsignedMatch = Pred == CmpInst::ICMP_ULT &&
+    match(TI, m_NSWSub(m_ZExt(m_Specific(B)), m_ZExt(m_Specific(A))));
+  
+  SignedMatch = Pred == CmpInst::ICMP_SLT &&
+    match(TI, m_NSWSub(m_SExtOrSelf(m_Specific(B)), m_SExtOrSelf(m_Specific(A))));
+  
+  if ((UnsignedMatch || SignedMatch) &&
       match(FI, m_Neg(m_Specific(TI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, TI,
                                          Builder.getFalse());
