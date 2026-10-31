@@ -70,7 +70,9 @@ jobs:
           TEST_SUITE: ${{ inputs.test-suite }}
         run: |
           shopt -s nullglob
-          reports=("${RUNNER_TEMP}"/reports/*/*.json)
+          # When the pattern matches a single artifact, download-artifact extracts it directly into
+          # the target directory, so we need to look for `reports/*.json` too.
+          reports=("${RUNNER_TEMP}"/reports/*/*.json "${RUNNER_TEMP}"/reports/*.json)
           if [ "${#reports[@]}" -eq 0 ]; then
             echo "error: no LNT report was found in the artifacts matching ${ARTIFACTS}"
             exit 1
