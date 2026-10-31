@@ -4002,7 +4002,7 @@ matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
   Register MaybeLoad;
   int64_t Shift;
   if (!mi_match(Reg, MRI,
-                m_OneNonDBGUse(m_GShl(m_Reg(MaybeLoad), m_ICst(Shift))))) {
+                m_OneUse(m_GShl(m_Reg(MaybeLoad), m_ICst(Shift))))) {
     Shift = 0;
     MaybeLoad = Reg;
   }
@@ -4713,9 +4713,8 @@ bool CombinerHelper::matchBitfieldExtractFromSExtInReg(
   int64_t Width = MI.getOperand(2).getImm();
   Register ShiftSrc;
   int64_t ShiftImm;
-  if (!mi_match(
-          Src, MRI,
-          m_OneNonDBGUse(m_any_of(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShiftImm)),
+  if (!mi_match(Src, MRI,
+                m_OneUse(m_any_of(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShiftImm)),
                                   m_GLShr(m_Reg(ShiftSrc), m_ICst(ShiftImm))))))
     return false;
   if (ShiftImm < 0 || ShiftImm + Width > Ty.getScalarSizeInBits())
@@ -4745,7 +4744,7 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(MachineInstr &MI,
   Register ShiftSrc;
   const unsigned Size = Ty.getScalarSizeInBits();
   if (!mi_match(And->getReg(0), MRI,
-                m_GAnd(m_OneNonDBGUse(m_GLShr(m_Reg(ShiftSrc), m_ICst(LSBImm))),
+                m_GAnd(m_OneUse(m_GLShr(m_Reg(ShiftSrc), m_ICst(LSBImm))),
                        m_ICst(AndImm))))
     return false;
 
@@ -4805,7 +4804,7 @@ bool CombinerHelper::matchBitfieldExtractFromShr(
   // Try to match shr (shl x, c1), c2
   if (!mi_match(Dst, MRI,
                 m_BinOp(Opcode,
-                        m_OneNonDBGUse(m_GShl(m_Reg(ShlSrc), m_ICst(ShlAmt))),
+                        m_OneUse(m_GShl(m_Reg(ShlSrc), m_ICst(ShlAmt))),
                         m_ICst(ShrAmt))))
     return false;
 
@@ -4847,7 +4846,7 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   int64_t SMask;
   if (!mi_match(Dst, MRI,
                 m_BinOp(Opcode,
-                        m_OneNonDBGUse(m_GAnd(m_Reg(AndSrc), m_ICst(SMask))),
+                        m_OneUse(m_GAnd(m_Reg(AndSrc), m_ICst(SMask))),
                         m_ICst(ShrAmt))))
     return false;
 
@@ -5005,7 +5004,7 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
   Register LHSBase;
   std::optional<ValueAndVReg> LHSCstOff;
   if (!mi_match(MI.getBaseReg(), MRI,
-                m_OneNonDBGUse(m_GPtrAdd(m_Reg(LHSBase), m_GCst(LHSCstOff)))))
+                m_OneUse(m_GPtrAdd(m_Reg(LHSBase), m_GCst(LHSCstOff)))))
     return false;
 
   auto *LHSPtrAdd = cast<GPtrAdd>(LHS);
@@ -6924,7 +6923,7 @@ bool CombinerHelper::matchFPSelectToMinMax(Register Dst, Register Cond,
   CmpInst::Predicate Pred;
   Register CmpLHS, CmpRHS;
   if (!mi_match(Cond, MRI,
-                m_OneNonDBGUse(
+                m_OneUse(
                     m_GFCmp(m_Pred(Pred), m_Reg(CmpLHS), m_Reg(CmpRHS)))) ||
       CmpInst::isEquality(Pred))
     return false;
@@ -6972,7 +6971,7 @@ bool CombinerHelper::matchSimplifySelectToMinMax(MachineInstr &MI,
   // Condition may be fed by a truncated compare.
   Register Cond = MI.getOperand(1).getReg();
   Register MaybeTrunc;
-  if (mi_match(Cond, MRI, m_OneNonDBGUse(m_GTrunc(m_Reg(MaybeTrunc)))))
+  if (mi_match(Cond, MRI, m_OneUse(m_GTrunc(m_Reg(MaybeTrunc)))))
     Cond = MaybeTrunc;
   Register Dst = MI.getOperand(0).getReg();
   Register TrueVal = MI.getOperand(2).getReg();
@@ -8442,9 +8441,8 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
   Register V;
   bool NeedAdd = true;
   if (mi_match(Src, MRI,
-               m_OneNonDBGUse(
-                   m_GOr(m_OneNonDBGUse(m_GShl(m_Reg(V), m_SpecificICst(1))),
-                         m_SpecificICst(1))))) {
+               m_OneUse(m_GOr(m_OneUse(m_GShl(m_Reg(V), m_SpecificICst(1))),
+                              m_SpecificICst(1))))) {
     NeedAdd = false;
     Src = V;
   }
@@ -8452,11 +8450,10 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
   unsigned BitWidth = Ty.getScalarSizeInBits();
 
   Register X;
-  if (!mi_match(
-          Src, MRI,
-          m_OneNonDBGUse(m_GXor(
-              m_Reg(X), m_OneNonDBGUse(m_GAShr(
-                            m_DeferredReg(X), m_SpecificICst(BitWidth - 1)))))))
+  if (!mi_match(Src, MRI,
+                m_OneUse(m_GXor(m_Reg(X), m_OneUse(m_GAShr(
+                                              m_DeferredReg(X),
+                                              m_SpecificICst(BitWidth - 1)))))))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {

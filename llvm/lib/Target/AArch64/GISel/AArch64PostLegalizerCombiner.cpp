@@ -761,7 +761,7 @@ static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
         Register PtrReg = St->getPointerReg();
         if (mi_match(
                 PtrReg, MRI,
-                m_OneNonDBGUse(m_GPtrAdd(m_Reg(PtrBaseReg), m_ICst(Offset))))) {
+                m_OneUse(m_GPtrAdd(m_Reg(PtrBaseReg), m_ICst(Offset))))) {
           GPtrAdd *PtrAdd = cast<GPtrAdd>(MRI.getVRegDef(PtrReg));
           StoreInfo New = {St, PtrAdd, Offset.getSExtValue(), StoredValTy};
 

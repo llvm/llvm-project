@@ -2456,7 +2456,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
       // If it's a 64-bit compare, it'll have 64-bit sources.
       Register ZExt;
       if (!mi_match(Reg, MRI,
-                    m_OneNonDBGUse(m_GZExt(m_OneNonDBGUse(m_Reg(ZExt))))))
+                    m_OneUse(m_GZExt(m_OneUse(m_Reg(ZExt))))))
         return nullptr;
       auto *Cmp = getOpcodeDef(TargetOpcode::G_ICMP, ZExt, MRI);
       if (!Cmp ||
@@ -2505,8 +2505,8 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     int64_t MaskImm;
     if (!mi_match(
             Dst, MRI,
-            m_GOr(m_OneNonDBGUse(m_GShl(m_Reg(ShiftSrc), m_ICst(ShiftImm))),
-                  m_OneNonDBGUse(m_GAnd(m_Reg(MaskSrc), m_ICst(MaskImm))))))
+            m_GOr(m_OneUse(m_GShl(m_Reg(ShiftSrc), m_ICst(ShiftImm))),
+                  m_OneUse(m_GAnd(m_Reg(MaskSrc), m_ICst(MaskImm))))))
       return false;
 
     if (ShiftImm > Size || ((1ULL << ShiftImm) - 1ULL) != uint64_t(MaskImm))
