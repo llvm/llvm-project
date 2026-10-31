@@ -295,6 +295,7 @@ private:
   bool optimizeExt(Instruction *&I);
   bool optimizeExtUses(Instruction *I);
   bool optimizeLoadExt(LoadInst *Load);
+  bool optimizeMultipleLoadExt(PHINode *P);
   bool optimizeShiftInst(BinaryOperator *BO);
   bool optimizeFunnelShift(IntrinsicInst *Fsh);
   bool optimizeSelectInst(SelectInst *SI);
@@ -8767,6 +8768,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       ++NumPHIsElim;
       return true;
     }
+    AnyChange |= optimizeMultipleLoadExt(P);
     return AnyChange;
   }
 
@@ -9334,4 +9336,72 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
                TmpBB->dump());
   }
   return MadeChange;
+}
+
+/// Suppose we have following code
+///    bb1:
+///       %val1 = load i16, ptr %addr1
+///       br label %bb3
+///    bb2:
+///       %val2 = load i16, ptr %addr2
+///       br label %bb3
+///    bb3:
+///       %phi = phi i16 [ %val1, %bb1 ], [ %val2, %bb2 ]
+///       %val = zext i16 %phi to i64
+///       ...
+/// If the ZExt/SExt can be folded into memory load, we can change it to
+///    bb1:
+///       %val1 = load i16, ptr %addr1
+///       %v1 = zext i16 %val1 to i64
+///       br label %bb3
+///    bb2:
+///       %val2 = load i16, ptr %addr2
+///       %v2 = zext i16 %val2 to i64
+///       br label %bb3
+///    bb3:
+///       %val = phi i64 [ %v1, %bb1 ], [ %v2, %bb2 ]
+///       ...
+/// Currently we require the SExt/ZExt is the only user of the PHI, and the PHI
+/// is the only user of the memory loads. We may relax these constraints if we
+/// find other cases are also important.
+bool CodeGenPrepare::optimizeMultipleLoadExt(PHINode *P) {
+  // Check the only user of PHI is SExt/Zext.
+  if (!P->hasOneUse())
+    return false;
+  auto *ExtInst = dyn_cast<CastInst>(*P->user_begin());
+  if (!ExtInst)
+    return false;
+  if (!isa<ZExtInst>(ExtInst) && !isa<SExtInst>(ExtInst))
+    return false;
+
+  // Check if all operands the PHI is a memory load.
+  for (unsigned i = 0, e = P->getNumIncomingValues(); i != e; ++i) {
+    LoadInst *Load = dyn_cast<LoadInst>(P->getIncomingValue(i));
+    if (!Load || !Load->hasOneUse())
+      return false;
+    if (!TLI->isExtLoad(Load, ExtInst, *DL))
+      return false;
+  }
+
+  // Create a new SExt/ZExt for each load, create a new PHI for the extended
+  // values.
+  Type *DstType = ExtInst->getType();
+  PHINode *NewPhi = PHINode::Create(DstType, P->getNumIncomingValues(),
+                                    ExtInst->getName(), P->getIterator());
+  for (unsigned i = 0, e = P->getNumIncomingValues(); i != e; ++i) {
+    LoadInst *Load = dyn_cast<LoadInst>(P->getIncomingValue(i));
+    auto *NewExtInst = CastInst::Create(ExtInst->getOpcode(), Load, DstType);
+    NewExtInst->insertAfter(Load->getIterator());
+    NewExtInst->setDebugLoc(Load->getDebugLoc());
+    NewPhi->addIncoming(NewExtInst, P->getIncomingBlock(i));
+  }
+
+  replaceAllUsesWith(ExtInst, NewPhi, FreshBBs, IsHugeFunc);
+  RemovedInsts.insert(ExtInst);
+  RemovedInsts.insert(P);
+  ExtInst->removeFromParent();
+  P->removeFromParent();
+
+  CurInstIterator = NewPhi->getIterator();
+  return true;
 }
