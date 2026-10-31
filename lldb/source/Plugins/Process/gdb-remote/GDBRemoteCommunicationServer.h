@@ -31,7 +31,7 @@ public:
       std::function<PacketResult(StringExtractorGDBRemote &packet,
                                  Status &error, bool &interrupt, bool &quit)>;
 
-  GDBRemoteCommunicationServer();
+  explicit GDBRemoteCommunicationServer(llvm::StringRef name);
 
   ~GDBRemoteCommunicationServer() override;
 
