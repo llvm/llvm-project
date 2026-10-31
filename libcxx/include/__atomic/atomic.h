@@ -373,14 +373,6 @@ private:
       _Tp __old = __self.load(memory_order_relaxed);
       _Tp __new = __operation(__old, __operand);
       while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
-#  ifdef _LIBCPP_COMPILER_CLANG_BASED
-        if constexpr (std::__is_fp80_long_double<_Tp>()) {
-          // https://llvm.org/PR47978
-          // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_weak
-          // Note __old = __self.load(memory_order_relaxed) will not work
-          std::__cxx_atomic_load_inplace(std::addressof(__self.__a_), std::addressof(__old), memory_order_relaxed);
-        }
-#  endif
         __new = __operation(__old, __operand);
       }
       return __old;
