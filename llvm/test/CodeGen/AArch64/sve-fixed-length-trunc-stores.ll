@@ -249,11 +249,14 @@ define void @store_trunc_concat_v8i32i8(ptr %ap, ptr %bp, ptr %dest) vscale_rang
 define void @store_concat_trunc_v8i8_illegal(ptr %ap, ptr %bp, ptr %dest) vscale_range(2,2) #0 {
 ; CHECK-LABEL: store_concat_trunc_v8i8_illegal:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x1]
-; CHECK-NEXT:    ldr z1, [x0]
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1b { z0.d }, p0, [x2, #1, mul vl]
-; CHECK-NEXT:    st1b { z1.d }, p0, [x2]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    str d0, [x2]
 ; CHECK-NEXT:    ret
   %a = load <4 x i64>, ptr %ap
   %b = load <4 x i64>, ptr %bp

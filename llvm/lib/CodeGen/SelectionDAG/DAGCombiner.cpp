@@ -24866,6 +24866,12 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
   if (T1.getOpcode() != ISD::TRUNCATE || T2.getOpcode() != ISD::TRUNCATE)
     return SDValue();
 
+  // Only split if the truncates already have a legal result type. Otherwise
+  // legalization may rewrite the concat of truncates more efficiently than two
+  // split truncating stores.
+  if (!TLI.isTypeLegal(T1.getValueType()))
+    return SDValue();
+
   // Both concat operands have the same type, so both halves use the same
   // memory type.
   EVT HalfMemVT = T1.getValueType();
