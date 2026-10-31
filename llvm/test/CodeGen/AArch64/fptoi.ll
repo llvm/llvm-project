@@ -6404,17 +6404,15 @@ define <2 x i64> @fptos_v2f128_v2i64(<2 x fp128> %a) {
 ; CHECK-NOFP16-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NOFP16-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NOFP16-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-NOFP16-SD-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-NOFP16-SD-NEXT:    bl __fixtfdi
+; CHECK-NOFP16-SD-NEXT:    fmov d0, x0
 ; CHECK-NOFP16-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-NOFP16-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-NOFP16-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NOFP16-SD-NEXT:    bl __fixtfdi
-; CHECK-NOFP16-SD-NEXT:    fmov d0, x0
-; CHECK-NOFP16-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NOFP16-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-NOFP16-SD-NEXT:    bl __fixtfdi
-; CHECK-NOFP16-SD-NEXT:    fmov d0, x0
-; CHECK-NOFP16-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-NOFP16-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
-; CHECK-NOFP16-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NOFP16-SD-NEXT:    mov v0.d[1], x0
 ; CHECK-NOFP16-SD-NEXT:    add sp, sp, #48
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
@@ -6424,17 +6422,15 @@ define <2 x i64> @fptos_v2f128_v2i64(<2 x fp128> %a) {
 ; CHECK-FP16-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-FP16-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-FP16-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-FP16-SD-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-FP16-SD-NEXT:    bl __fixtfdi
+; CHECK-FP16-SD-NEXT:    fmov d0, x0
 ; CHECK-FP16-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-FP16-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-FP16-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-FP16-SD-NEXT:    bl __fixtfdi
-; CHECK-FP16-SD-NEXT:    fmov d0, x0
-; CHECK-FP16-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-FP16-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-FP16-SD-NEXT:    bl __fixtfdi
-; CHECK-FP16-SD-NEXT:    fmov d0, x0
-; CHECK-FP16-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
-; CHECK-FP16-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-FP16-SD-NEXT:    mov v0.d[1], x0
 ; CHECK-FP16-SD-NEXT:    add sp, sp, #48
 ; CHECK-FP16-SD-NEXT:    ret
 ;
@@ -6485,17 +6481,15 @@ define <2 x i64> @fptou_v2f128_v2i64(<2 x fp128> %a) {
 ; CHECK-NOFP16-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NOFP16-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NOFP16-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-NOFP16-SD-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-NOFP16-SD-NEXT:    bl __fixunstfdi
+; CHECK-NOFP16-SD-NEXT:    fmov d0, x0
 ; CHECK-NOFP16-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-NOFP16-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-NOFP16-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NOFP16-SD-NEXT:    bl __fixunstfdi
-; CHECK-NOFP16-SD-NEXT:    fmov d0, x0
-; CHECK-NOFP16-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NOFP16-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-NOFP16-SD-NEXT:    bl __fixunstfdi
-; CHECK-NOFP16-SD-NEXT:    fmov d0, x0
-; CHECK-NOFP16-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-NOFP16-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
-; CHECK-NOFP16-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NOFP16-SD-NEXT:    mov v0.d[1], x0
 ; CHECK-NOFP16-SD-NEXT:    add sp, sp, #48
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
@@ -6505,17 +6499,15 @@ define <2 x i64> @fptou_v2f128_v2i64(<2 x fp128> %a) {
 ; CHECK-FP16-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-FP16-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-FP16-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-FP16-SD-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-FP16-SD-NEXT:    bl __fixunstfdi
+; CHECK-FP16-SD-NEXT:    fmov d0, x0
 ; CHECK-FP16-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-FP16-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-FP16-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-FP16-SD-NEXT:    bl __fixunstfdi
-; CHECK-FP16-SD-NEXT:    fmov d0, x0
-; CHECK-FP16-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-FP16-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-FP16-SD-NEXT:    bl __fixunstfdi
-; CHECK-FP16-SD-NEXT:    fmov d0, x0
-; CHECK-FP16-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
-; CHECK-FP16-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-FP16-SD-NEXT:    mov v0.d[1], x0
 ; CHECK-FP16-SD-NEXT:    add sp, sp, #48
 ; CHECK-FP16-SD-NEXT:    ret
 ;

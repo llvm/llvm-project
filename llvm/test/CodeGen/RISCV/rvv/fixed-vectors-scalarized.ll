@@ -5,40 +5,38 @@
 define <8 x float> @fpext_v8bf16(<8 x bfloat> %x) {
 ; CHECK-LABEL: fpext_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.x.w a0, fa7
-; CHECK-NEXT:    fmv.x.w a1, fa6
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    fmv.x.w a0, fa5
+; CHECK-NEXT:    fmv.x.w a0, fa0
+; CHECK-NEXT:    fmv.x.w a1, fa1
+; CHECK-NEXT:    fmv.x.w a2, fa2
 ; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    vmv.s.x v11, a1
-; CHECK-NEXT:    fmv.x.w a1, fa4
 ; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    fmv.x.w a0, fa3
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    fmv.x.w a1, fa2
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    vmv.s.x v13, a0
-; CHECK-NEXT:    fmv.x.w a0, fa1
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    vmv.s.x v14, a1
-; CHECK-NEXT:    fmv.x.w a1, fa0
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    vmv.s.x v15, a0
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    vmv.s.x v8, a1
-; CHECK-NEXT:    vslideup.vi v14, v13, 1
-; CHECK-NEXT:    vslideup.vi v8, v15, 1
-; CHECK-NEXT:    vslideup.vi v11, v9, 1
-; CHECK-NEXT:    vslideup.vi v10, v12, 1
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v14, 2
-; CHECK-NEXT:    vslideup.vi v10, v11, 2
+; CHECK-NEXT:    fmv.w.x fa2, a1
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    fmv.x.w a0, fa3
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
+; CHECK-NEXT:    slli a2, a2, 16
+; CHECK-NEXT:    fmv.w.x fa3, a2
+; CHECK-NEXT:    fmv.x.w a1, fa4
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fmv.x.w a0, fa5
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fmv.x.w a1, fa6
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    fmv.x.w a0, fa7
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %y = fpext <8 x bfloat> %x to <8 x float>
   ret <8 x float> %y
@@ -47,40 +45,38 @@ define <8 x float> @fpext_v8bf16(<8 x bfloat> %x) {
 define <8 x float> @fpext_v8f16(<8 x bfloat> %x) {
 ; CHECK-LABEL: fpext_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.x.w a0, fa7
-; CHECK-NEXT:    fmv.x.w a1, fa6
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    fmv.x.w a0, fa5
+; CHECK-NEXT:    fmv.x.w a0, fa0
+; CHECK-NEXT:    fmv.x.w a1, fa1
+; CHECK-NEXT:    fmv.x.w a2, fa2
 ; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    vmv.s.x v11, a1
-; CHECK-NEXT:    fmv.x.w a1, fa4
 ; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    fmv.x.w a0, fa3
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    fmv.x.w a1, fa2
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    vmv.s.x v13, a0
-; CHECK-NEXT:    fmv.x.w a0, fa1
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    vmv.s.x v14, a1
-; CHECK-NEXT:    fmv.x.w a1, fa0
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    vmv.s.x v15, a0
-; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    vmv.s.x v8, a1
-; CHECK-NEXT:    vslideup.vi v14, v13, 1
-; CHECK-NEXT:    vslideup.vi v8, v15, 1
-; CHECK-NEXT:    vslideup.vi v11, v9, 1
-; CHECK-NEXT:    vslideup.vi v10, v12, 1
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v14, 2
-; CHECK-NEXT:    vslideup.vi v10, v11, 2
+; CHECK-NEXT:    fmv.w.x fa2, a1
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    fmv.x.w a0, fa3
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
+; CHECK-NEXT:    slli a2, a2, 16
+; CHECK-NEXT:    fmv.w.x fa3, a2
+; CHECK-NEXT:    fmv.x.w a1, fa4
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    fmv.w.x fa4, a0
+; CHECK-NEXT:    fmv.x.w a0, fa5
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa4
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    fmv.x.w a1, fa6
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    fmv.x.w a0, fa7
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
 ; CHECK-NEXT:    ret
   %y = fpext <8 x bfloat> %x to <8 x float>
   ret <8 x float> %y
