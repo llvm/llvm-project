@@ -237,7 +237,7 @@ class DynamicValueComplexTestCase(TestBase):
             # Anything that goes through the virtual base is unknown to us, so
             # it should not have a dynamic type.
             tb1_vb_addr = tb1_vb.GetValueAsAddress()
-            tb1_vb_b1_addr = tb1_vb.GetValueAsAddress()
+            tb1_vb_b1_addr = tb1_vb_b1.GetValueAsAddress()
             self.assertNotEqual(tb1_vb_addr, lldb.LLDB_INVALID_ADDRESS)
             self.assertNotEqual(tb1_vb_b1_addr, lldb.LLDB_INVALID_ADDRESS)
             self.assertNotEqual(tb1_addr, tb1_vb_addr)
@@ -245,7 +245,6 @@ class DynamicValueComplexTestCase(TestBase):
             self.assertNotEqual(tb1_name, tb1_vb.GetTypeName())
             self.assertNotEqual(tb1_name, tb1_vb_b1.GetTypeName())
         else:
-            #
             self.assertEqual(tb1_addr, tb1_vb.GetValueAsAddress())
             self.assertEqual(tb1_name, tb1_vb.GetTypeName())
             self.assertEqual(tb1_addr, tb1_vb_b1.GetValueAsAddress())
