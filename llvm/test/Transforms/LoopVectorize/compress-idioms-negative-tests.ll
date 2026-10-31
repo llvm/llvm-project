@@ -1,9 +1,9 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -enable-early-exit-vectorization-with-side-effects -force-target-supports-masked-memory-ops -force-vector-width=4 -passes=loop-vectorize -disable-output -pass-remarks-analysis=".*" -pass-remarks-missed=".*" 2>&1 | FileCheck %s
 
-; CHECK: loop not vectorized
+; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
-; Negative test: Conditional pointer (rather than index) increments are not supported yet (needs LAA support).
+; Negative test: Vectorization support is unimplemented.
 define void @test_compress_store_with_pointer(ptr writeonly noalias %init.dst, ptr readonly %src, i32 %c, i64 %n) {
 entry:
   br label %for.body
@@ -63,7 +63,7 @@ exit:
   ret void
 }
 
-; CHECK: loop not vectorized
+; CHECK: loop not vectorized: value that could not be identified as reduction is used outside the loop
 
 ; Pre-increment is currently not matched as we require one use of the step instruction.
 define void @test_pre_increment_compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
@@ -96,12 +96,7 @@ exit:
 
 ; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
-; Negative test: In this case the %idx is incremented when %cond.val != 0,
-; but the store occurs when %cond.val > 100. The store mask does not match the
-; PHI mask, so the loop is not vectorized.
-;
-; Note: This passes basic legality checks, but is rejected in early VPlan
-; transforms.
+; Negative test: Vectorization support is unimplemented.
 define void @compress_mismatched_mask(ptr noalias %dst, ptr noalias %src, ptr noalias %cond, i64 %n) {
 entry:
   br label %for.body
@@ -208,7 +203,7 @@ exit:
   ret i64 %idx
 }
 
-; CHECK: loop not vectorized: Unsupported user of conditional induction found
+; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
 ; Negative test: Matching an extended conditional induction index is not supported yet.
 ; Note: We should be able to support this case by using the no-wrap flags on %idx.next.
