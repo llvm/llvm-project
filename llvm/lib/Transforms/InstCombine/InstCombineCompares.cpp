@@ -8503,6 +8503,67 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   return Changed ? &I : nullptr;
 }
 
+/// Compare integers directly when both integer-to-FP conversions are exact.
+Instruction *InstCombinerImpl::foldFCmpIntToFP(FCmpInst &I) {
+  Value *A, *B;
+  bool IsSigned;
+  if (match(&I, m_FCmp(m_UIToFP(m_Value(A)), m_UIToFP(m_Value(B)))))
+    IsSigned = false;
+  else if (match(&I, m_FCmp(m_SIToFP(m_Value(A)), m_SIToFP(m_Value(B)))))
+    IsSigned = true;
+  else
+    return nullptr;
+
+  const unsigned IntWidth = std::max(A->getType()->getScalarSizeInBits(),
+                                     B->getType()->getScalarSizeInBits());
+  Type *FPTy = I.getOperand(0)->getType();
+  const int MantissaWidth = FPTy->getFPMantissaWidth();
+  if (MantissaWidth == -1)
+    return nullptr;
+
+  // Signed N-bit integers need N-1 significand bits: the minimum value is a
+  // power of two, and every other value has at most N-1 magnitude bits.
+  if (IntWidth > unsigned(MantissaWidth) + IsSigned &&
+      (!canBeCastedExactlyIntToFP(A, FPTy, IsSigned, &I) ||
+       !canBeCastedExactlyIntToFP(B, FPTy, IsSigned, &I)))
+    return nullptr;
+
+  ICmpInst::Predicate Pred;
+  switch (I.getPredicate()) {
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_UEQ:
+    Pred = ICmpInst::ICMP_EQ;
+    break;
+  case FCmpInst::FCMP_ONE:
+  case FCmpInst::FCMP_UNE:
+    Pred = ICmpInst::ICMP_NE;
+    break;
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_ULT:
+    Pred = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+    break;
+  case FCmpInst::FCMP_OLE:
+  case FCmpInst::FCMP_ULE:
+    Pred = IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+    break;
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_UGT:
+    Pred = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+    break;
+  case FCmpInst::FCMP_OGE:
+  case FCmpInst::FCMP_UGE:
+    Pred = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
+    break;
+  default:
+    return nullptr;
+  }
+
+  Type *IntTy = A->getType()->getWithNewBitWidth(IntWidth);
+  A = Builder.CreateIntCast(A, IntTy, IsSigned);
+  B = Builder.CreateIntCast(B, IntTy, IsSigned);
+  return new ICmpInst(Pred, A, B);
+}
+
 /// Fold fcmp ([us]itofp x, cst) if possible.
 Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
                                                     Instruction *LHSI,
@@ -9542,6 +9603,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       return new ICmpInst(IntPred, MaskX, ConstantInt::getNullValue(IntTy));
     }
   }
+
+  if (Instruction *R = foldFCmpIntToFP(I))
+    return R;
 
   // Handle fcmp with instruction LHS and constant RHS.
   Instruction *LHSI;
