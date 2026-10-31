@@ -15,19 +15,15 @@
 // This pass gives all such declarations one underlying object. It redirects
 // their uses to a single declaration that carries the strongest alignment and
 // the debug info of each source variable, and erases the others unless a used
-// list or assembly may still name them.
+// list names them.
 //
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
@@ -38,26 +34,6 @@ static bool isDynamicSharedDecl(const GlobalVariable &GV) {
   return GV.isDeclaration() && GV.hasExternalLinkage() && AT &&
          AT->getNumElements() == 0 &&
          GV.getAddressSpace() == NVPTX::AddressSpace::Shared;
-}
-
-/// Names that appear as identifiers in the module's inline assembly.
-static StringSet<> collectInlineAsmIdentifiers(Module &M) {
-  auto IsIdentChar = [](char C) { return isAlnum(C) || C == '_' || C == '$'; };
-  StringSet<> Names;
-  for (Function &F : M)
-    for (Instruction &I : instructions(F)) {
-      const auto *CB = dyn_cast<CallBase>(&I);
-      const auto *IA =
-          CB ? dyn_cast<InlineAsm>(CB->getCalledOperand()) : nullptr;
-      if (!IA)
-        continue;
-      StringRef Asm = IA->getAsmString().drop_until(IsIdentChar);
-      while (!Asm.empty()) {
-        Names.insert(Asm.take_while(IsIdentChar));
-        Asm = Asm.drop_while(IsIdentChar).drop_until(IsIdentChar);
-      }
-    }
-  return Names;
 }
 
 static void restoreUsedList(GlobalVariable *List,
@@ -93,11 +69,6 @@ static bool canonicalizeDynamicShared(Module &M) {
   SmallPtrSet<GlobalValue *, 8> InUsedList(llvm::from_range, Used);
   InUsedList.insert_range(CompilerUsed);
 
-  // Assembly can name a declaration directly; erasing it would leave that name
-  // undefined.
-  StringSet<> AsmNames = collectInlineAsmIdentifiers(M);
-  bool HasModuleAsm = !M.getModuleInlineAsm().empty();
-
   const DataLayout &DL = M.getDataLayout();
   GlobalVariable *Canonical = nullptr;
   Align MaxAlign;
@@ -125,8 +96,7 @@ static bool canonicalizeDynamicShared(Module &M) {
     GV->eraseMetadata(LLVMContext::MD_dbg);
 
     GV->replaceAllUsesWith(Canonical);
-    if (!InUsedList.contains(GV) && !HasModuleAsm &&
-        !AsmNames.contains(GV->getName()))
+    if (!InUsedList.contains(GV))
       GV->eraseFromParent();
     Changed = true;
   }
