@@ -628,10 +628,24 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     return {FuncTy, Attrs};
 
   Type *VecTy = FuncTy->getParamType(0);
+  Align PtrAlign = DL.getABITypeAlign(VecTy->getScalarType());
+  switch (LibcallImpl) {
+  case RTLIB::impl_amd_vrd2_sincos:
+  case RTLIB::impl_amd_vrd4_sincos:
+  case RTLIB::impl_amd_vrd8_sincos:
+  case RTLIB::impl_amd_vrs4_sincosf:
+  case RTLIB::impl_amd_vrs8_sincosf:
+  case RTLIB::impl_amd_vrs16_sincosf:
+    PtrAlign = DL.getABITypeAlign(VecTy);
+    break;
+  default:
+    break;
+  }
+
   AttrBuilder ArgAttrBuilder(Ctx);
   for (Attribute::AttrKind AK : CommonPtrArgAttrs)
     ArgAttrBuilder.addAttribute(AK);
-  ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy->getScalarType()));
+  ArgAttrBuilder.addAlignmentAttr(PtrAlign);
 
   bool HasPtrArg = false;
   for (auto [Idx, ParamTy] : enumerate(FuncTy->params())) {
