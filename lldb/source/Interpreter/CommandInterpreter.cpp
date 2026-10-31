@@ -3543,7 +3543,12 @@ bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
 
   if (process) {
     StateType state = process->GetState();
-    if (StateIsRunningState(state)) {
+    // While another thread is handling a stop, GetState() returns eStateRunning
+    // here only because the stop isn't public yet: the process is stopped, and
+    // Halt() would refuse. Fall through to ScriptInterpreter::Interrupt()
+    // below, which is what an interrupt does while the process is stopped, so
+    // Python running as one of the stop's actions is interrupted the same way.
+    if (StateIsRunningState(state) && !process->IsHandlingStopOnOtherThread()) {
       process->Halt();
       return true; // Don't do any updating when we are running
     }
