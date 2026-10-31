@@ -44,15 +44,20 @@ struct VL {
   bool enableSIMDIndex32;
 };
 
-/// Helper test for invariant value (defined outside given block).
-static bool isInvariantValue(Value val, Block *block) {
-  return val.getDefiningOp() && val.getDefiningOp()->getBlock() != block;
-}
-
 /// Helper test for invariant argument (defined outside given block).
 static bool isInvariantArg(BlockArgument arg, Block *block) {
   return arg.getOwner() != block;
 }
+
+/// Helper test for invariant value (defined outside given block).
+/// Handles both block arguments and operation results.
+static bool isInvariantValue(Value val, Block *block) {
+  if (auto arg = dyn_cast<BlockArgument>(val))
+    return isInvariantArg(arg, block);
+    
+  return val.getDefiningOp()->getBlock() != block;
+}
+
 
 /// Returns true when `mem`'s most minor dimension has a statically known
 /// non-unit stride.
