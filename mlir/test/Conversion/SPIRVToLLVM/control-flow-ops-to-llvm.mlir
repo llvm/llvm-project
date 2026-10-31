@@ -292,3 +292,70 @@ spirv.module Logical GLSL450 {
     spirv.Unreachable
   }
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.Switch
+//===----------------------------------------------------------------------===//
+
+spirv.module Logical GLSL450 {
+  // CHECK-LABEL: @switch_i32_with_operands
+  // CHECK-SAME: (%[[SEL:.*]]: i32, %[[A:.*]]: i32, %[[B:.*]]: i32, %[[C:.*]]: f32)
+  spirv.func @switch_i32_with_operands(%selector: i32, %a: i32, %b: i32, %c: f32) -> i32 "None" {
+    // CHECK: llvm.switch %[[SEL]] : i32, ^bb1(%[[A]] : i32) [
+    // CHECK-NEXT:   0: ^bb1(%[[B]] : i32),
+    // CHECK-NEXT:   1: ^bb2(%[[C]] : f32)
+    // CHECK-NEXT: ]
+    spirv.Switch %selector : i32, [
+      default: ^bb1(%a : i32),
+      0: ^bb1(%b : i32),
+      1: ^bb2(%c : f32)
+    ]
+  // CHECK: ^bb1(%[[RES:.*]]: i32):
+  ^bb1(%res: i32):
+    // CHECK: llvm.return %[[RES]] : i32
+    spirv.ReturnValue %res : i32
+  // CHECK: ^bb2(%{{.*}}: f32):
+  ^bb2(%f: f32):
+    %zero = spirv.Constant 0 : i32
+    spirv.ReturnValue %zero : i32
+  }
+
+  // CHECK-LABEL: @switch_i64
+  // CHECK-SAME: (%[[SEL64:.*]]: i64)
+  spirv.func @switch_i64(%selector: i64) -> () "None" {
+    // CHECK: llvm.switch %[[SEL64]] : i64, ^bb1 [
+    // CHECK-NEXT:   10: ^bb2,
+    // CHECK-NEXT:   20: ^bb3
+    // CHECK-NEXT: ]
+    spirv.Switch %selector : i64, [
+      default: ^default,
+      10: ^case10,
+      20: ^case20
+    ]
+  // CHECK: ^bb1:
+  ^default:
+    spirv.Return
+  // CHECK: ^bb2:
+  ^case10:
+    spirv.Return
+  // CHECK: ^bb3:
+  ^case20:
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @switch_default_only
+  // CHECK-SAME: (%[[SELDEF:.*]]: i32)
+  spirv.func @switch_default_only(%selector: i32) -> () "None" {
+    // CHECK: llvm.switch %[[SELDEF]] : i32, ^bb1 [
+    // CHECK-NEXT: ]
+    spirv.Switch %selector : i32, [
+      default: ^default
+    ]
+  // CHECK: ^bb1:
+  ^default:
+    spirv.Return
+  }
+}
+

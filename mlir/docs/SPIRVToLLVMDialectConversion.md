@@ -690,6 +690,20 @@ corresponding `branch_weights` attribute of `llvm.cond_br`. When translated to
 proper LLVM, `branch_weights` are converted into LLVM metadata associated with
 the conditional branch.
 
+### `spirv.Switch`
+
+`spirv.Switch` maps to `llvm.switch`, forwarding the converted selector, default
+destination (and its operands), case integer literals, and case destinations
+(with their operands).
+
+```mlir
+spirv.Switch %selector : i32, [          llvm.switch %selector : i32, ^bb1(%a : i32) [
+  default: ^bb1(%a : i32),        =>       0: ^bb1(%b : i32),
+  0: ^bb1(%b : i32),                       1: ^bb2(%c : f32)
+  1: ^bb2(%c : f32)                      ]
+]
+```
+
 ### `spirv.FunctionCall`
 
 `spirv.FunctionCall` maps to `llvm.call`. For example:
