@@ -184,6 +184,19 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-argument-comment
+  <clang-tidy/checks/bugprone/argument-comment>` check by adding the
+  {option}`IgnoreMacros` option. Set it to `false` to add missing comments to
+  calls in a macro argument, such as `ASSERT(f(0))`. {option}`CommentNullPtrs`
+  and {option}`CommentBoolLiterals` also match the `NULL`, `true` and `false`
+  macros, in C and C++. The {option}`NullPtrMacros` and
+  {option}`BoolLiteralMacros` options configure the macro names. The check also
+  compares comments before an argument that follows a multi-token macro, such
+  as `NULL`, with the parameter name. Added the
+  {option}`CommentZeroIntegerLiterals` option to only add missing comments to
+  integer literals with the value zero, and the {option}`IgnoredParameterNames`
+  option to skip parameters by name.
+
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
   assignments inside GNU statement expressions unless they form the value of

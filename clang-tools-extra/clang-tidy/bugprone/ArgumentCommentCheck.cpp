@@ -13,6 +13,7 @@
 #include "clang/Lex/Token.h"
 
 #include "../utils/LexerUtils.h"
+#include "../utils/OptionsUtils.h"
 
 using namespace clang::ast_matchers;
 
@@ -35,6 +36,7 @@ ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.get("StrictMode", false)),
+      IgnoreMacros(Options.get("IgnoreMacros", true)),
       IgnoreSingleArgument(Options.get("IgnoreSingleArgument", false)),
       CommentAnonymousInitLists(
           Options.get("CommentAnonymousInitLists", false)),
@@ -49,10 +51,30 @@ ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
       CommentTypedInitLists(Options.get("CommentTypedInitLists", false)),
       CommentUserDefinedLiterals(
           Options.get("CommentUserDefinedLiterals", false)),
-      IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {}
+      CommentZeroIntegerLiterals(
+          Options.get("CommentZeroIntegerLiterals", false)),
+      NullPtrMacros(utils::options::parseStringList(
+          Options.get("NullPtrMacros", "NULL"))),
+      BoolLiteralMacros(utils::options::parseStringList(
+          Options.get("BoolLiteralMacros", "true;false"))),
+      IgnoredParameterNames(utils::options::parseStringList(
+          Options.get("IgnoredParameterNames", ""))),
+      IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {
+  for (const StringRef Name : IgnoredParameterNames) {
+    llvm::Regex Regex(Name);
+    if (!Regex.isValid()) {
+      configurationDiag("Invalid regular expression '%0' in "
+                        "IgnoredParameterNames")
+          << Name;
+      continue;
+    }
+    IgnoredParameterNameRegexes.push_back(std::move(Regex));
+  }
+}
 
 void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "IgnoreSingleArgument", IgnoreSingleArgument);
   Options.store(Opts, "CommentAnonymousInitLists", CommentAnonymousInitLists);
   Options.store(Opts, "CommentBoolLiterals", CommentBoolLiterals);
@@ -65,6 +87,13 @@ void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CommentStringLiterals", CommentStringLiterals);
   Options.store(Opts, "CommentTypedInitLists", CommentTypedInitLists);
   Options.store(Opts, "CommentUserDefinedLiterals", CommentUserDefinedLiterals);
+  Options.store(Opts, "CommentZeroIntegerLiterals", CommentZeroIntegerLiterals);
+  Options.store(Opts, "NullPtrMacros",
+                utils::options::serializeStringList(NullPtrMacros));
+  Options.store(Opts, "BoolLiteralMacros",
+                utils::options::serializeStringList(BoolLiteralMacros));
+  Options.store(Opts, "IgnoredParameterNames",
+                utils::options::serializeStringList(IgnoredParameterNames));
 }
 
 void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
@@ -251,6 +280,24 @@ static InitListKind getInitListKind(const Expr *Arg) {
   return InitListKind::None;
 }
 
+// Returns the file location of Arg. Returns an invalid location when Arg and
+// the closing parenthesis of the call at CloseLoc don't map to one range of the
+// file that starts at Arg. That happens when a macro body contains Arg or the
+// closing parenthesis, or when Arg is in another macro argument than the
+// closing parenthesis, such as the `0` in `f(ID(0))`.
+static SourceLocation getWrittenArgLoc(const Expr *Arg, SourceLocation CloseLoc,
+                                       const SourceManager &SM,
+                                       const LangOptions &LangOpts) {
+  const CharSourceRange Range = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(Arg->getBeginLoc(), CloseLoc), SM,
+      LangOpts);
+  const SourceLocation ArgLoc =
+      SM.getExpansionLoc(SM.getTopMacroCallerLoc(Arg->getBeginLoc()));
+  if (Range.isInvalid() || Range.getBegin() != ArgLoc)
+    return {};
+  return ArgLoc;
+}
+
 static bool isParenthesizedTemporary(const Expr *Arg) {
   Arg = Arg->IgnoreUnlessSpelledInSource();
   if (const auto *TempObject = dyn_cast<CXXTemporaryObjectExpr>(Arg))
@@ -265,17 +312,40 @@ static bool isParenthesizedTemporary(const Expr *Arg) {
 // Given the argument type and the options determine if we should be adding an
 // argument comment and which diagnostic wording to use.
 ArgumentCommentCheck::CommentKind
-ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
+ArgumentCommentCheck::shouldAddComment(const Expr *Arg,
+                                       const ASTContext &Ctx) const {
+  const SourceManager &SM = Ctx.getSourceManager();
   const InitListKind Kind = getInitListKind(Arg);
   const bool IsParenthesizedTemporary = isParenthesizedTemporary(Arg);
 
   // Strip implicit wrappers so brace-init arguments bound to references still
   // look like list-initialization at this point.
   Arg = Arg->IgnoreImplicit();
+  // Check for zero before stripping the unary operator, because `~0` and `!0`
+  // are not zero.
+  const auto *ZeroLiteral = dyn_cast<IntegerLiteral>(Arg);
+  if (ZeroLiteral && !ZeroLiteral->getValue().isZero())
+    ZeroLiteral = nullptr;
   if (const auto *UO = dyn_cast<UnaryOperator>(Arg))
     Arg = UO->getSubExpr()->IgnoreImplicit();
-  if (Arg->getExprLoc().isMacroID())
+
+  // C spells the null pointer constant with the macro `NULL`, and the boolean
+  // constants before C23 with the macros `true` and `false`. The options
+  // NullPtrMacros and BoolLiteralMacros contain `NULL`, `true` and `false` by
+  // default. Other macros, such as `MAX_SIZE`, already name their value and
+  // need no comment.
+  if (SM.getTopMacroCallerLoc(Arg->getExprLoc()).isMacroID()) {
+    const StringRef MacroName =
+        Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                 SM.getTopMacroCallerLoc(Arg->getBeginLoc()),
+                                 SM.getTopMacroCallerLoc(Arg->getEndLoc())),
+                             SM, Ctx.getLangOpts());
+    if ((CommentNullPtrs && llvm::is_contained(NullPtrMacros, MacroName)) ||
+        (CommentBoolLiterals &&
+         llvm::is_contained(BoolLiteralMacros, MacroName)))
+      return CommentKind::Literal;
     return CommentKind::None;
+  }
 
   if ((CommentAnonymousInitLists && Kind == InitListKind::Anonymous) ||
       (CommentTypedInitLists && Kind == InitListKind::Typed) ||
@@ -285,6 +355,7 @@ ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
 
   if ((CommentBoolLiterals && isa<CXXBoolLiteralExpr>(Arg)) ||
       (CommentIntegerLiterals && isa<IntegerLiteral>(Arg)) ||
+      (CommentZeroIntegerLiterals && ZeroLiteral) ||
       (CommentFloatLiterals && isa<FloatingLiteral>(Arg)) ||
       (CommentUserDefinedLiterals && isa<UserDefinedLiteral>(Arg)) ||
       (CommentCharacterLiterals && isa<CharacterLiteral>(Arg)) ||
@@ -299,6 +370,7 @@ ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
 void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
                                          const FunctionDecl *OriginalCallee,
                                          SourceLocation ArgBeginLoc,
+                                         SourceLocation CloseLoc,
                                          llvm::ArrayRef<const Expr *> Args) {
   const FunctionDecl *Callee = resolveMocks(OriginalCallee);
   if (!Callee)
@@ -315,6 +387,12 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
     return;
 
+  const SourceManager &SM = Ctx->getSourceManager();
+  // A call whose closing parenthesis is a macro location is in a macro
+  // argument, such as `f(0)` in `ASSERT(f(0))`. getWrittenArgLoc() rejects
+  // calls in a macro body.
+  const bool AddMissingComments = !IgnoreMacros || CloseLoc.isFileID();
+
   const auto MakeFileCharRange = [Ctx](SourceLocation Begin,
                                        SourceLocation End) {
     return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
@@ -325,7 +403,10 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   for (unsigned I = 0; I < NumArgs; ++I) {
     const ParmVarDecl *PVD = Callee->getParamDecl(I);
     const IdentifierInfo *II = PVD->getIdentifier();
-    if (!II)
+    if (!II || llvm::any_of(IgnoredParameterNameRegexes,
+                            [II](const llvm::Regex &Regex) {
+                              return Regex.match(II->getName());
+                            }))
       continue;
     // Don't warn on arguments for parameters instantiated from template
     // parameter packs. If we find more arguments than the template
@@ -345,9 +426,11 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       Comments = utils::lexer::getTrailingCommentsInRange(
           BeforeArgument, Ctx->getSourceManager(), Ctx->getLangOpts());
     } else {
-      // Fall back to parsing back from the start of the argument.
+      // Fall back to parsing back from the start of the argument. The range
+      // is empty because a range that ends inside a macro expansion, such as
+      // the `)` of `NULL`, has no file range.
       const CharSourceRange ArgsRange =
-          MakeFileCharRange(Args[I]->getBeginLoc(), Args[I]->getEndLoc());
+          MakeFileCharRange(Args[I]->getBeginLoc(), Args[I]->getBeginLoc());
       Comments = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
     }
 
@@ -377,17 +460,22 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
 
     // If the argument comments are missing for configured argument kinds, add
     // them.
-    const CommentKind Kind = shouldAddComment(Args[I]);
-    if (Comments.empty() && Kind != CommentKind::None) {
+    if (!AddMissingComments || !Comments.empty())
+      continue;
+    const SourceLocation ArgLoc =
+        getWrittenArgLoc(Args[I], CloseLoc, SM, Ctx->getLangOpts());
+    if (ArgLoc.isInvalid())
+      continue;
+    const CommentKind Kind = shouldAddComment(Args[I], *Ctx);
+    if (Kind != CommentKind::None) {
       SmallString<32> ArgComment;
       llvm::Twine(llvm::Twine("/*") + II->getName() + "=*/")
           .toStringRef(ArgComment);
       const DiagnosticBuilder Diag =
-          diag(Args[I]->getBeginLoc(),
-               "argument comment missing for %select{literal argument|"
-               "argument}0 %1")
+          diag(ArgLoc, "argument comment missing for %select{literal argument|"
+                       "argument}0 %1")
           << (Kind == CommentKind::Literal ? 0 : 1) << II
-          << FixItHint::CreateInsertion(Args[I]->getBeginLoc(), ArgComment);
+          << FixItHint::CreateInsertion(ArgLoc, ArgComment);
     }
   }
 }
@@ -400,6 +488,7 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     checkCallArgs(Result.Context, Callee, Call->getCallee()->getEndLoc(),
+                  Call->getEndLoc(),
                   llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
   } else {
     const auto *Construct = cast<CXXConstructExpr>(E);
@@ -410,7 +499,7 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
     }
     checkCallArgs(
         Result.Context, Construct->getConstructor(),
-        Construct->getParenOrBraceRange().getBegin(),
+        Construct->getParenOrBraceRange().getBegin(), Construct->getEndLoc(),
         llvm::ArrayRef(Construct->getArgs(), Construct->getNumArgs()));
   }
 }
