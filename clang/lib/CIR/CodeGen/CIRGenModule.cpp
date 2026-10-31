@@ -3119,7 +3119,8 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
     // -fsemantic-interposition nor -fhalf-no-semantic-interposition. Set
     // dso_local on the function if using a local alias is preferable (can avoid
     // PLT indirection).
-    if (!(isa<cir::FuncOp>(gv) && gv.canBenefitFromLocalAlias()))
+    auto func = dyn_cast<cir::FuncOp>(gv.getOperation());
+    if (!func || func.getAliasee() || !gv.canBenefitFromLocalAlias())
       return false;
     return !(lOpts.SemanticInterposition || lOpts.HalfNoSemanticInterposition);
   }
