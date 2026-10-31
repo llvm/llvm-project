@@ -1497,10 +1497,40 @@ void EmulateF64::emulate(Function &F, StringRef Key) {
     Value *Ok = B.CreateAnd(
         B.CreateICmpNE(B.CreateAnd(Bits(Fast), 0x7f800000), B.getInt32(0)),
         B.CreateICmpUGE(Least, B.getInt32(0x7fffff)));
+    BasicBlock *Zero = BasicBlock::Create(Ctx, "ieee32.zero", &F);
     BasicBlock *Slow = BasicBlock::Create(Ctx, "ieee32.slow", &F);
     BasicBlock *Done = BasicBlock::Create(Ctx, "ieee32.done", &F);
     BasicBlock *FastEnd = B.GetInsertBlock();
-    B.CreateCondBr(Ok, Done, Slow);
+    B.CreateCondBr(Ok, Done, Zero);
+    // A zero result the hardware computed exactly (no denormal operand): a
+    // product with a zero factor, a quotient of zero, the root of zero, or a
+    // sum of operands whose nonzero results would all be normal (exponent
+    // fields of at least 24: their smallest nonzero difference is 2^-126).
+    // Without this test every zero result went to soft-f64, 24-30 times the
+    // hardware's time on the M2 Max (convolutions, padding, ReLU outputs).
+    B.SetInsertPoint(Zero);
+    auto IsZero = [&](Value *X) {
+      return B.CreateICmpEQ(B.CreateAnd(Bits(X), 0x7fffffff), B.getInt32(0));
+    };
+    Value *NoDenormal = B.CreateICmpUGE(Least, B.getInt32(0x7fffff));
+    StringRef Base = Name.split('.').first;
+    Value *Exact;
+    if (Base == "mul" || Base == "fma")
+      Exact = B.CreateOr(IsZero(A[0]), IsZero(A[1]));
+    else if (Base == "div")
+      Exact = B.CreateAnd(IsZero(A[0]), B.CreateNot(IsZero(A[1])));
+    else if (Base == "sqrt")
+      Exact = IsZero(A[0]);
+    else {
+      Exact = B.getTrue();
+      for (Value *X : A) {
+        Value *E = B.CreateLShr(B.CreateAnd(Bits(X), 0x7f800000), 23);
+        Exact = B.CreateAnd(Exact, B.CreateOr(IsZero(X), B.CreateICmpUGE(E, B.getInt32(24))));
+      }
+    }
+    Value *ExactZero =
+        B.CreateAnd(B.CreateAnd(IsZero(Fast), NoDenormal), Exact);
+    B.CreateCondBr(ExactZero, Done, Slow);
     B.SetInsertPoint(Slow);
     SmallVector<Value *, 4> D;
     for (Value *X : A)
@@ -1524,8 +1554,9 @@ void EmulateF64::emulate(Function &F, StringRef Key) {
     B.SetInsertPoint(FastEnd->getTerminator());
     Value *FastBits = Bits(Fast);
     B.SetInsertPoint(Done);
-    PHINode *P = B.CreatePHI(I32, 2);
+    PHINode *P = B.CreatePHI(I32, 3);
     P->addIncoming(FastBits, FastEnd);
+    P->addIncoming(FastBits, Zero);
     P->addIncoming(SlowR, SlowEnd);
     return Fin(B.CreateBitCast(P, F32));
   }
