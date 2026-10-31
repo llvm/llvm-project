@@ -2866,8 +2866,14 @@ static void printRecurrenceKind(raw_ostream &OS, const RecurKind &Kind) {
   case RecurKind::Or:
     OS << "or";
     break;
+  case RecurKind::OrWithSelect:
+    OS << "or-with-select";
+    break;
   case RecurKind::And:
     OS << "and";
+    break;
+  case RecurKind::AndWithSelect:
+    OS << "and-with-select";
     break;
   case RecurKind::Xor:
     OS << "xor";

@@ -35246,6 +35246,8 @@ private:
         case RecurKind::FSub:
         case RecurKind::FAddChainWithSubs:
         case RecurKind::AddChainWithSubs:
+        case RecurKind::AndWithSelect:
+        case RecurKind::OrWithSelect:
         case RecurKind::Mul:
         case RecurKind::FMul:
         case RecurKind::FMulAdd:
@@ -35462,6 +35464,8 @@ private:
     case RecurKind::FSub:
     case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
+    case RecurKind::AndWithSelect:
+    case RecurKind::OrWithSelect:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
@@ -35572,6 +35576,8 @@ private:
     case RecurKind::FSub:
     case RecurKind::FAddChainWithSubs:
     case RecurKind::AddChainWithSubs:
+    case RecurKind::AndWithSelect:
+    case RecurKind::OrWithSelect:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:

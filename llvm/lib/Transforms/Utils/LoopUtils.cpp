@@ -1118,8 +1118,10 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
     return Intrinsic::vector_reduce_add;
   case RecurKind::Mul:
     return Intrinsic::vector_reduce_mul;
+  case RecurKind::AndWithSelect:
   case RecurKind::And:
     return Intrinsic::vector_reduce_and;
+  case RecurKind::OrWithSelect:
   case RecurKind::Or:
     return Intrinsic::vector_reduce_or;
   case RecurKind::Xor:
@@ -1562,7 +1564,9 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::Add:
   case RecurKind::Mul:
   case RecurKind::And:
+  case RecurKind::AndWithSelect:
   case RecurKind::Or:
+  case RecurKind::OrWithSelect:
   case RecurKind::Xor:
   case RecurKind::SMax:
   case RecurKind::SMin:

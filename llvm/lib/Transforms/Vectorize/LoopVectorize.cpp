@@ -6653,6 +6653,23 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         }
       }
 
+      // A logical and/or can turn poison from an earlier step into a constant.
+      // In the vector loop that step can be in a different lane than the
+      // poison, and the bitwise reduction of the lanes keeps the poison.
+      // Freeze the value before its lanes are reduced. When it is also the
+      // value carried across iterations, carry the frozen value instead, so
+      // the reduction result stays a user of the backedge value.
+      if (RecurrenceKind == RecurKind::AndWithSelect ||
+          RecurrenceKind == RecurKind::OrWithSelect) {
+        VPBuilder::InsertPointGuard Guard(Builder);
+        VPRecipeBase *ExitingR = NewExitingVPV->getDefiningRecipe();
+        Builder.setInsertPoint(ExitingR->getParent(),
+                               std::next(ExitingR->getIterator()));
+        ReductionOp = Builder.createFreeze(NewExitingVPV);
+        if (PhiR->getOperand(1) == NewExitingVPV)
+          PhiR->setOperand(1, ReductionOp);
+      }
+
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlagsOrNone());
       FinalReductionResult = Builder.createNaryOp(
