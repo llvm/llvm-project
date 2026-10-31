@@ -344,11 +344,15 @@ static Value genSubscript(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
                           SmallVectorImpl<Value> &args) {
   const Location loc = env.op().getLoc();
   const TensorId tid = env.makeTensorId(t->getOperandNumber());
+  TensorId structureTid = tid;
   const auto map = env.op().getMatchingIndexingMap(t);
   const auto stt = getSparseTensorType(t->get());
   if (stt.hasEncoding()) {
+    if (t == env.op().getDpsInitOperand(0))
+      if (OpOperand *source = env.getStructureSource())
+        structureTid = env.makeTensorId(source->getOperandNumber());
     // For sparse tensors we only push the last-level's position onto `args`.
-    const auto pos = env.emitter().getValPosits(tid);
+    const auto pos = env.emitter().getValPosits(structureTid);
     assert(!pos.empty());
     args.append(pos);
     // Simply returns the tensor to extract value using iterators.
@@ -1394,6 +1398,57 @@ static void genResult(CodegenEnv &env, RewriterBase &rewriter) {
 
 namespace {
 
+static Value copyMemrefToTensor(OpBuilder &builder, Location loc,
+                                Value memref) {
+  auto tensorType = cast<RankedTensorType>(
+      memref::getTensorTypeFromMemRefType(memref.getType()));
+  Value tensor =
+      bufferization::ToTensorOp::create(builder, loc, tensorType, memref);
+  return bufferization::AllocTensorOp::create(builder, loc, tensorType,
+                                              ValueRange{}, tensor);
+}
+
+/// Materializes an empty rank-2 identity CSR tensor with a copy of `source`'s
+/// structure and a zero-initialized values buffer. Keeping values separate
+/// allows `source` to remain an ordinary numerical operand of the expression.
+/// Other sparse formats require copying a format-dependent set of level
+/// buffers and are intentionally not handled by this initial implementation.
+static Value materializeCSRWithStructure(OpBuilder &builder, Location loc,
+                                         Value source,
+                                         RankedTensorType resultType) {
+  Value sourcePos = ToPositionsOp::create(builder, loc, source, 1);
+  Value sourceCrd = ToCoordinatesOp::create(builder, loc, source, 1);
+  Value sourceVals = ToValuesOp::create(builder, loc, source);
+
+  Value resultPos = copyMemrefToTensor(builder, loc, sourcePos);
+  Value resultCrd = copyMemrefToTensor(builder, loc, sourceCrd);
+  Value valuesSize = memref::DimOp::create(builder, loc, sourceVals, 0);
+  auto valuesType = RankedTensorType::get({ShapedType::kDynamic},
+                                          resultType.getElementType());
+  Value resultVals = bufferization::AllocTensorOp::create(
+      builder, loc, valuesType, ValueRange{valuesSize});
+  Value zero = constantZero(builder, loc, resultType.getElementType());
+  resultVals =
+      linalg::FillOp::create(builder, loc, zero, resultVals).getResult(0);
+  return AssembleOp::create(builder, loc, resultType,
+                            ValueRange{resultPos, resultCrd}, resultVals);
+}
+
+/// Returns whether the initial rank-2 identity CSR structure-reuse lowering
+/// can materialize the output. The support analysis itself is format-agnostic.
+static bool supportsCSRStructureReuse(linalg::GenericOp op,
+                                      const SparsificationOptions &options) {
+  if (options.sparseEmitStrategy != SparseEmitStrategy::kFunctional)
+    return false;
+  auto outType = dyn_cast<RankedTensorType>(op.getResult(0).getType());
+  if (!outType || outType.getRank() != 2 || !outType.hasStaticShape())
+    return false;
+  const SparseTensorType outStt(outType);
+  return outStt.hasEncoding() && outStt.isIdentity() && outStt.isDenseLvl(0) &&
+         outStt.isCompressedLvl(1) && outStt.isOrderedLvl(1) &&
+         outStt.isUniqueLvl(1);
+}
+
 /// Sparse rewriting rule for generic Lingalg operation.
 struct GenericOpSparsifier : public OpRewritePattern<linalg::GenericOp> {
 public:
@@ -1439,7 +1494,8 @@ public:
 
     // Detects sparse annotations and translates the per-level sparsity
     // information for all tensors to loop indices in the kernel.
-    CodegenEnv env(op, options, numTensors, numLoops, maxLvlRank);
+    CodegenEnv env(op, options, numTensors, numLoops, maxLvlRank,
+                   supportsCSRStructureReuse(op, options));
     if (!findSparseAnnotations(env, needIdxRed))
       return failure();
 
@@ -1465,6 +1521,18 @@ public:
     // tree can not be built or the tensor expression is inadmissible.
     if (failed(env.initTensorExp()))
       return failure();
+
+    // When expression analysis proves that an input bounds the support of an
+    // uninitialized output, materialize the output with a copy of that input's
+    // structure. The regular sparsifier can then update the pre-existing
+    // values without dynamically constructing coordinates.
+    if (OpOperand *source = env.getStructureSource()) {
+      Value output = materializeCSRWithStructure(
+          rewriter, op.getLoc(), source->get(),
+          cast<RankedTensorType>(op.getResult(0).getType()));
+      rewriter.modifyOpInPlace(op,
+                               [&] { op.getDpsInitOperand(0)->set(output); });
+    }
 
     // Recursively generates code if admissible.
     env.startEmit(options.sparseEmitStrategy);
