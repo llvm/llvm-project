@@ -109,12 +109,12 @@ using wosyncstream = basic_osyncstream<wchar_t>;  // C++20
 #include <__cxx03/__fwd/fstream.h>
 #include <__cxx03/__fwd/ios.h>
 #include <__cxx03/__fwd/istream.h>
+#include <__cxx03/__fwd/mbstate_t.h>
 #include <__cxx03/__fwd/memory.h>
 #include <__cxx03/__fwd/ostream.h>
 #include <__cxx03/__fwd/sstream.h>
 #include <__cxx03/__fwd/streambuf.h>
 #include <__cxx03/__fwd/string.h>
-#include <__cxx03/__std_mbstate_t.h>
 #include <__cxx03/version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

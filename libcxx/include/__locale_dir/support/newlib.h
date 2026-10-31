@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <__std_mbstate_t.h>
 #include <clocale> // std::lconv
 #include <cstdio>
 #include <cstdlib>
