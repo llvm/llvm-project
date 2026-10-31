@@ -109,6 +109,9 @@ public:
   bool hasName(StringRef Name) const;
   bool nameStartsWith(StringRef Prefix) const;
 
+  /// Return true if this object is a vtable or a construction vtable.
+  bool isVTable() const;
+
   bool hasSymbol(const MCSymbol *Symbol) const {
     return llvm::is_contained(Symbols, Symbol);
   }

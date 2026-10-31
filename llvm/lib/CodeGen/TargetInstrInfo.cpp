@@ -1552,7 +1552,7 @@ void TargetInstrInfo::genAlternativeCodeSequence(
                   .addReg(Instr->getOperand(3).getReg());
       } else {
         // For the remaining cases, we need to use an output register of one of
-        // the newly inserted instuctions as operand 1
+        // the newly inserted instructions as operand 1
         AccReg = Instr->getOperand(0).getReg() == Root.getOperand(0).getReg()
                      ? MRI.createVirtualRegister(
                            MRI.getRegClass(Root.getOperand(0).getReg()))
@@ -2236,7 +2236,7 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
     return false;
 
   if (Last != First && Last->isReturn()) {
-    --Last;
+    Last = prev_nodbg(Last, First, /*SkipPseudoOp=*/false);
     if (Last->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_EXIT ||
         Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
       return false;

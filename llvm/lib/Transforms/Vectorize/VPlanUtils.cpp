@@ -80,7 +80,8 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
-VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
+VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
+                                                bool ExpandInIR) {
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     return Plan.getOrAddLiveIn(E->getValue());
   // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
@@ -90,7 +91,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   auto *U = dyn_cast<SCEVUnknown>(Expr);
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
-  auto *Expanded = new VPExpandSCEVRecipe(Expr);
+  auto *Expanded = new VPExpandSCEVRecipe(Expr, ExpandInIR);
   VPBasicBlock *EntryVPBB = Plan.getEntry();
   auto Iter = EntryVPBB->getFirstNonPhi();
   while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
@@ -433,13 +434,13 @@ unsigned vputils::getOpcode(const VPValue *V) {
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe, VPWidenPHIRecipe, VPWidenLoadRecipe,
             VPWidenLoadEVLRecipe>([](auto *I) { return I->getOpcode(); })
-      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
-          [](auto *I) {
-            // For recipes that do not directly map to LLVM IR instructions,
-            // assign opcodes after the last VPInstruction opcode (which is also
-            // after the last IR Instruction opcode), based on the VPRecipeID.
-            return VPInstruction::OpsEnd + 1 + I->getVPRecipeID();
-          })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe,
+            VPExpandSCEVRecipe>([](auto *I) {
+        // For recipes that do not directly map to LLVM IR instructions,
+        // assign opcodes after the last VPInstruction opcode (which is also
+        // after the last IR Instruction opcode), based on the VPRecipeID.
+        return VPInstruction::OpsEnd + 1 + I->getVPRecipeID();
+      })
       .Default([](auto *) { return 0; });
 }
 
@@ -696,9 +697,8 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
 VPValue *
 vputils::scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
                                           VPlan &Plan, VPBuilder &Builder) {
-  const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-  VPIRValue *StartV = Plan.getZero(ID.getStep()->getType());
-  VPValue *StepV = PtrIV->getOperand(1);
+  VPValue *StepV = PtrIV->getStepValue();
+  VPIRValue *StartV = Plan.getZero(StepV->getScalarType());
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
       StartV->getScalarType(), StartV, StepV, PtrIV->getDebugLoc(), Builder);
@@ -763,9 +763,9 @@ VPIRFlags vputils::getFlagsForInduction(const InductionDescriptor &ID,
   if (match(Inc, m_Sub(m_Specific(PhiR), m_VPValue()))) {
     // The step of a sub induction is negated, so NUW cannot be preserved. NSW
     // can, if the step is not the signed minimum.
-    ConstantInt *Step = ID.getConstIntStepValue();
+    std::optional<APInt> Step = ID.getConstStepValue();
     bool NSW = cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone().HasNSW &&
-               Step && !Step->isMinValue(/*IsSigned=*/true);
+               Step && !Step->isMinSignedValue();
     return VPIRFlags::WrapFlagsTy(/*NUW*/ false, NSW);
   }
 
@@ -849,16 +849,15 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
   VPValue *BackedgeVal = PhiR->getBackedgeValue();
   if (auto *Res =
-          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
+          findSingleUser<VPInstruction::ComputeReductionResult>(BackedgeVal))
     return Res;
 
   // Look through selects inserted for tail folding or predicated reductions.
-  VPRecipeBase *SelR =
-      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+  auto *SelR = findSingleUser<VPSingleDefRecipe>(
+      BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
   if (!SelR)
     return nullptr;
-  return findUserOf<VPInstruction::ComputeReductionResult>(
-      cast<VPSingleDefRecipe>(SelR));
+  return findSingleUser<VPInstruction::ComputeReductionResult>(SelR);
 }
 
 bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
@@ -959,9 +958,39 @@ VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
   return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
 }
 
+#ifndef NDEBUG
+/// Returns true if \p V dominates the insert point of \p Builder.
+static bool dominatesInsertPoint(const VPValue *V, const VPBuilder &Builder) {
+  const VPRecipeBase *R = V->getDefiningRecipe();
+  if (!R)
+    return true;
+  VPDominatorTree VPDT(Builder.getPlan());
+  if (VPRecipeBase *InsertPt = Builder.getRecipeAtInsertPoint())
+    return VPDT.properlyDominates(R, InsertPt);
+  return VPDT.dominates(R->getParent(), Builder.getInsertBlock());
+}
+#endif
+
 VPValue *VPSCEVExpander::expand(const SCEV *S) {
+  PointerIntPair<const SCEV *, 1, bool> Key(S, SafeUDivMode);
+  if (VPValue *V = InsertedExpressions.lookup(Key)) {
+    assert(dominatesInsertPoint(V, Builder) &&
+           "reused expansion must dominate the insert point");
+    return V;
+  }
+  VPValue *V = expandImpl(S);
+  InsertedExpressions[Key] = V;
+  return V;
+}
+
+VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
+
+  if (HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
+      SE.isGuaranteedNotToCauseUB(S))
+    return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S,
+                                                  /*ExpandInIR=*/true);
 
   switch (S->getSCEVType()) {
   case scConstant:

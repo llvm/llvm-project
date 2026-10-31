@@ -66,19 +66,32 @@ inline bool pureCall(mlir::Operation *op) {
 /// Get or create a FuncOp in a module.
 ///
 /// If `module` already contains FuncOp `name`, it is returned. Otherwise, a new
-/// FuncOp is created, and that new FuncOp is returned. A symbol table can
-/// be provided to speed-up the lookups.
+/// FuncOp is created, and that new FuncOp is returned.
+///
+/// If \p symbolTable is provided, it must be the symbol table of \p module and
+/// it must be complete: the lookup trusts it, and a miss is not re-checked by
+/// walking the module. A function created here is inserted into it so that it
+/// stays complete.
 mlir::func::FuncOp createFuncOp(mlir::Location loc, mlir::ModuleOp module,
                                 llvm::StringRef name, mlir::FunctionType type,
                                 llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
-                                const mlir::SymbolTable *symbolTable = nullptr);
+                                mlir::SymbolTable *symbolTable = nullptr);
 
-/// Get or create a GlobalOp in a module. A symbol table can be provided to
-/// speed-up the lookups.
+/// Get or create a GlobalOp in a module. \p symbolTable has the same contract
+/// as in createFuncOp.
 fir::GlobalOp createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
                              llvm::StringRef name, mlir::Type type,
                              llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
-                             const mlir::SymbolTable *symbolTable = nullptr);
+                             mlir::SymbolTable *symbolTable = nullptr);
+
+/// Register \p symbol in \p symbolTable if it is not null. \p symbol must
+/// already be in the body of the operation the table was built for. Call this
+/// for every symbol operation that is created without createFuncOp,
+/// createGlobalOp or the FirOpBuilder helpers, so that a symbol table handed
+/// to the lookup helpers stays complete. Unlike mlir::SymbolTable::insert, it
+/// never renames \p symbol: a name clash is a duplicate definition that the
+/// verifier reports, and renaming would hide it.
+void registerSymbol(mlir::SymbolTable *symbolTable, mlir::Operation *symbol);
 
 /// Attribute to mark Fortran entities with the CONTIGUOUS attribute.
 constexpr llvm::StringRef getContiguousAttrName() { return "fir.contiguous"; }

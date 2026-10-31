@@ -114,8 +114,8 @@ body:             |
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $edi, debug-location !13
     ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     %14:gr32 = MOVSX32rr16 %5, debug-location !13
-    %13:gr32 = ADD32ri8 killed %14, 12, implicit-def $eflags, debug-location !13
-    %11:gr16 = COPY killed %13.sub_16bit, debug-location !13
+    %13:gr32 = ADD32ri8 %14, 12, implicit-def $eflags, debug-location !13
+    %11:gr16 = COPY %13.sub_16bit, debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     %9:gr32 = MOVSX32rr16 %11, debug-location !13
     $edi = COPY %9, debug-location !13
@@ -132,8 +132,8 @@ body:             |
   ; CHECK-LABEL:        bb.1.if.then:
   bb.1.if.then:
     %20:gr32 = MOVSX32rr16 %11, debug-location !13
-    %19:gr32 = ADD32ri8 killed %20, 1, implicit-def $eflags, debug-location !13
-    %17:gr16 = COPY killed %19.sub_16bit, debug-location !13
+    %19:gr32 = ADD32ri8 %20, 1, implicit-def $eflags, debug-location !13
+    %17:gr16 = COPY %19.sub_16bit, debug-location !13
 
   ; Verify that vreg 17 is coalesced into a gr32, and not copied any further.
   ; DOESCOALESCE:       %{{[0-9]+}}:gr32 = ADD32ri8
@@ -148,9 +148,9 @@ body:             |
   ; CHECK:              DBG_PHI $bp, 1
     DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !13
     %31:gr32 = MOVSX32rr16 %6, debug-location !13
-    %30:gr32 = MOVSX32rr16 killed %2, debug-location !13
-    %29:gr32 = ADD32rr killed %30, killed %31, implicit-def $eflags, debug-location !13
-    %26:gr16 = COPY killed %29.sub_16bit, debug-location !13
+    %30:gr32 = MOVSX32rr16 %2, debug-location !13
+    %29:gr32 = ADD32rr %30, %31, implicit-def $eflags, debug-location !13
+    %26:gr16 = COPY %29.sub_16bit, debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     %24:gr32 = MOVSX32rr16 %26, debug-location !13
     $edi = COPY %24, debug-location !13

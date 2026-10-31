@@ -58,12 +58,8 @@ defm V_INTERP_P1_F32 : V_INTERP_P1_F32_m;
 } // End OtherPredicates = [has32BankLDS, isNotGFX90APlus]
 
 let OtherPredicates = [has16BankLDS, isNotGFX90APlus],
-    Constraints = "@earlyclobber $vdst", isAsmParserOnly=1 in {
-
+    Constraints = "@earlyclobber $vdst", isCodeGenOnly=1 in
 defm V_INTERP_P1_F32_16bank : V_INTERP_P1_F32_m;
-
-} // End OtherPredicates = [has32BankLDS, isNotGFX90APlus],
-  //     Constraints = "@earlyclobber $vdst", isAsmParserOnly=1
 
 let OtherPredicates = [isNotGFX90APlus] in {
 let Constraints = "$src0 = $vdst" in {
@@ -293,7 +289,7 @@ def FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 : VPseudoInstSI <(outs VOPDstOperand_t1
 }
 
 def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VReg_64:$src0, i32imm:$round)>;
+  (ins VReg_64_AlignTarget:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
 
 let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE] in

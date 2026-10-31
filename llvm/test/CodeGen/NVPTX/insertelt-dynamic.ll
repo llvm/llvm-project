@@ -503,7 +503,7 @@ define <8 x i3> @dynamic_i3(i32 %idx) {
 define <8 x i4> @dynamic_i4(i32 %idx) {
 ; CHECK-LABEL: dynamic_i4(
 ; CHECK:       {
-; CHECK-NEXT:    .local .align 8 .b8 __local_depot12[16];
+; CHECK-NEXT:    .local .align 8 .b8 __local_depot12[8];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
 ; CHECK-NEXT:    .reg .b16 %rs<28>;

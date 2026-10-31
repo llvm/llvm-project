@@ -111,14 +111,14 @@ void BitfieldAssignment() {
 }
 
 unsigned _BitInt(33) ManglingTestRetParam(unsigned _BitInt(33) Param) {
-// LIN64: define{{.*}} i64 @_Z20ManglingTestRetParamDU33_(i64 %
+// LIN64: define{{.*}} i33 @_Z20ManglingTestRetParamDU33_(i64 %
 // LIN32: define{{.*}} i33 @_Z20ManglingTestRetParamDU33_(i33 %
 // WIN: define dso_local i33 @"?ManglingTestRetParam@@YAU?$_UBitInt@$0CB@@__clang@@U12@@Z"(i33
   return 0;
 }
 
 _BitInt(33) ManglingTestRetParam(_BitInt(33) Param) {
-// LIN64: define{{.*}} i64 @_Z20ManglingTestRetParamDB33_(i64 %
+// LIN64: define{{.*}} i33 @_Z20ManglingTestRetParamDB33_(i64 %
 // LIN32: define{{.*}} i33 @_Z20ManglingTestRetParamDB33_(i33 %
 // WIN: define dso_local i33 @"?ManglingTestRetParam@@YAU?$_BitInt@$0CB@@__clang@@U12@@Z"(i33
   return 0;

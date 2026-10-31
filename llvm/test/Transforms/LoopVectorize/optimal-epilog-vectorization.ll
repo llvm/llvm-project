@@ -909,6 +909,139 @@ loop:
 exit:
   ret void
 }
+
+; Two FP inductions with the same start and step, but different binary
+; operators must resume from their own values in the epilogue vector loop.
+define void @fadd_and_fsub_inductions_same_start_and_step(ptr noalias %A, ptr noalias %B, i64 %N) {
+; CHECK-LABEL: define void @fadd_and_fsub_inductions_same_start_and_step(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 7
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp i64 [[N_VEC]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float 1.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast float 0.000000e+00, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast float 0.000000e+00, [[TMP2]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x float> [ <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 5.000000e+00, float 6.000000e+00, float 7.000000e+00>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <8 x float> [ <float 0.000000e+00, float -1.000000e+00, float -2.000000e+00, float -3.000000e+00, float -4.000000e+00, float -5.000000e+00, float -6.000000e+00, float -7.000000e+00>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    store <8 x float> [[VEC_IND]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    store <8 x float> [[VEC_IND2]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = fadd fast <8 x float> [[VEC_IND]], splat (float 8.000000e+00)
+; CHECK-NEXT:    [[VEC_IND_NEXT3]] = fsub fast <8 x float> [[VEC_IND2]], splat (float 8.000000e+00)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; CHECK:       [[VEC_EPILOG_PH]]:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi float [ [[TMP3]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi float [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[N]], 3
+; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sitofp i64 [[N_VEC5]] to float
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast float 1.000000e+00, [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast float 0.000000e+00, [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fsub fast float 0.000000e+00, [[TMP10]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[BC_RESUME_VAL]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = fadd fast <4 x float> [[BROADCAST_SPLAT]], <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x float> poison, float [[BC_RESUME_VAL4]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT6]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION8:%.*]] = fsub fast <4 x float> [[BROADCAST_SPLAT7]], <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND10:%.*]] = phi <4 x float> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT13:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND11:%.*]] = phi <4 x float> [ [[INDUCTION8]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX9]]
+; CHECK-NEXT:    store <4 x float> [[VEC_IND10]], ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX9]]
+; CHECK-NEXT:    store <4 x float> [[VEC_IND11]], ptr [[TMP14]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX9]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT13]] = fadd fast <4 x float> [[VEC_IND10]], splat (float 4.000000e+00)
+; CHECK-NEXT:    [[VEC_IND_NEXT14]] = fsub fast <4 x float> [[VEC_IND11]], splat (float 4.000000e+00)
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT12]], [[N_VEC5]]
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
+; CHECK-NEXT:    br i1 [[CMP_N15]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi float [ [[TMP11]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL18:%.*]] = phi float [ [[TMP12]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL16]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FADD_IV:%.*]] = phi float [ [[BC_RESUME_VAL17]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FADD_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FSUB_IV:%.*]] = phi float [ [[BC_RESUME_VAL18]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FSUB_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store float [[FADD_IV]], ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    store float [[FSUB_IV]], ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[FADD_IV_NEXT]] = fadd fast float [[FADD_IV]], 1.000000e+00
+; CHECK-NEXT:    [[FSUB_IV_NEXT]] = fsub fast float [[FSUB_IV]], 1.000000e+00
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP23:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+; CHECK-PROFITABLE-BY-DEFAULT-LABEL: define void @fadd_and_fsub_inductions_same_start_and_step(
+; CHECK-PROFITABLE-BY-DEFAULT-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) {
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:  [[ENTRY:.*]]:
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label %[[LOOP:.*]]
+; CHECK-PROFITABLE-BY-DEFAULT:       [[LOOP]]:
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[FADD_IV:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[FADD_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[FSUB_IV:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[FSUB_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store float [[FADD_IV]], ptr [[GEP_A]], align 4
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store float [[FSUB_IV]], ptr [[GEP_B]], align 4
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[FADD_IV_NEXT]] = fadd fast float [[FADD_IV]], 1.000000e+00
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[FSUB_IV_NEXT]] = fsub fast float [[FSUB_IV]], 1.000000e+00
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-PROFITABLE-BY-DEFAULT:       [[EXIT]]:
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fadd.iv = phi float [ 0.0, %entry ], [ %fadd.iv.next, %loop ]
+  %fsub.iv = phi float [ 0.0, %entry ], [ %fsub.iv.next, %loop ]
+  %gep.A = getelementptr inbounds float, ptr %A, i64 %iv
+  store float %fadd.iv, ptr %gep.A
+  %gep.B = getelementptr inbounds float, ptr %B, i64 %iv
+  store float %fsub.iv, ptr %gep.B
+  %fadd.iv.next = fadd fast float %fadd.iv, 1.0
+  %fsub.iv.next = fsub fast float %fsub.iv, 1.0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -931,6 +1064,9 @@ exit:
 ; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META2]], [[META1]]}
+; CHECK: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]], [[META2]]}
+; CHECK: [[LOOP22]] = distinct !{[[LOOP22]], [[META1]], [[META2]]}
+; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META2]], [[META1]]}
 ;.
 ; CHECK-PROFITABLE-BY-DEFAULT: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-PROFITABLE-BY-DEFAULT: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

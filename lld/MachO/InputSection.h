@@ -312,7 +312,7 @@ bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
-// This is used as a counter for specyfing input order for input sections
+// This is used as a counter for specifying input order for input sections.
 extern int inputSectionsOrder;
 
 namespace section_names {

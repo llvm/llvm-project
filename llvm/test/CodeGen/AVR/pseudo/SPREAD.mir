@@ -22,7 +22,7 @@ body: |
 
     ; NOSPH-LABEL: test
     ; NOSPH:       $r14 = INRdA 61
-    ; NOSPH:       $r15 = EORRdRr killed $r15, $r15, implicit-def dead $sreg
+    ; NOSPH:       $r15 = EORRdRr killed undef $r15, killed undef $r15, implicit-def dead $sreg
 
      $r15r14 = SPREAD $sp, implicit $sp
 ...

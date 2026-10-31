@@ -60,3 +60,13 @@ TEST_F(LLVMIRTest, StructElementOffsets) {
   EXPECT_EQ(packedAlloc.getElementOffset(dataLayout, 1), 16u);
   EXPECT_EQ(dataLayout.getTypeSize(packedAlloc), 17u);
 }
+
+TEST_F(LLVMIRTest, ScalableVectorArrayLayout) {
+  DataLayout layout;
+  auto vector = VectorType::get({3}, IntegerType::get(&context, 32), {true});
+  auto array = LLVMArrayType::get(LLVMArrayType::get(vector, 2), 3);
+  EXPECT_EQ(layout.getTypeSizeInBits(array).getKnownMinValue(), 768u);
+  EXPECT_TRUE(layout.getTypeSizeInBits(array).isScalable());
+  EXPECT_EQ(layout.getTypeSize(array).getKnownMinValue(), 96u);
+  EXPECT_TRUE(layout.getTypeSize(array).isScalable());
+}

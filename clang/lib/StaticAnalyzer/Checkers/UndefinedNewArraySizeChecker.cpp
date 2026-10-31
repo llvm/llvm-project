@@ -54,7 +54,7 @@ void UndefinedNewArraySizeChecker::checkPreCall(const CallEvent &Call,
 void UndefinedNewArraySizeChecker::HandleUndefinedArrayElementCount(
     CheckerContext &C, SVal ArgVal, const Expr *Init, SourceRange Range) const {
 
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         BT, "Element count in new[] is a garbage value", N);
     R->markInteresting(ArgVal);

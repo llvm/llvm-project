@@ -29,6 +29,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class AssumptionCache;
 class DominatorTree;
 class PHITransAddr;
@@ -288,6 +289,8 @@ public:
 /// must-alias'd pointers instead of all pointers interacts well with the
 /// internal caching mechanism.
 class MemoryDependenceResults {
+  const AnalysisOptions &Opts;
+
   // A map from instructions to their dependency.
   using LocalDepMapType = DenseMap<Instruction *, MemDepResult>;
   LocalDepMapType LocalDeps;
@@ -389,11 +392,10 @@ private:
   ClobberOffsetsMapType ClobberOffsets;
 
 public:
-  MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
-                          const TargetLibraryInfo &TLI, DominatorTree &DT,
-                          unsigned DefaultBlockScanLimit)
-      : AA(AA), AC(AC), TLI(TLI), DT(DT), EEA(DT),
-        DefaultBlockScanLimit(DefaultBlockScanLimit) {}
+  LLVM_ABI MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
+                                   const TargetLibraryInfo &TLI,
+                                   DominatorTree &DT,
+                                   unsigned DefaultBlockScanLimit);
 
   /// Handle invalidation in the new PM.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -539,7 +541,7 @@ class MemoryDependenceAnalysis
 
   static AnalysisKey Key;
 
-  unsigned DefaultBlockScanLimit;
+  std::optional<unsigned> DefaultBlockScanLimit;
 
 public:
   using Result = MemoryDependenceResults;

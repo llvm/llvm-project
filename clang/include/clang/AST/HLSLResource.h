@@ -26,7 +26,6 @@
 namespace clang {
 
 class HLSLResourceBindingAttr;
-class HLSLRVkBindingAttr;
 
 namespace hlsl {
 

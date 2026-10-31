@@ -1421,14 +1421,16 @@ template <class ELFT> void EhInputSection::split() {
     if (relI != rels.size() && rels[relI].offset < off + size)
       firstRel = relI;
     if (id == 0) {
-      cies.emplace_back(off, this, size, firstRel, -1);
+      cies.emplace_back(off, size, firstRel, -1);
     } else {
       auto cieOff = off + 4 - id;
       auto it = partition_point(
           cies, [=](const EhSectionPiece &p) { return p.inputOff < cieOff; });
-      uint32_t cie =
-          it != cies.end() && it->inputOff == cieOff ? it - cies.begin() : -1;
-      fdes.emplace_back(off, this, size, firstRel, cie);
+      if (it == cies.end() || it->inputOff != cieOff) {
+        msg = "invalid CIE reference";
+        break;
+      }
+      fdes.emplace_back(off, size, firstRel, it - cies.begin());
     }
     d = d.slice(size);
   }
@@ -1555,9 +1557,12 @@ SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
   // For non-string fixed-size records, piece index = offset / entsize.
   if (!(flags & SHF_STRINGS))
     return pieces[offset / entsize];
-  return partition_point(
-      pieces,
-      [=](const SectionPiece &p) { return p.inputOff <= offset; })[-1];
+  // Find the last piece whose inputOff <= offset. Prefer a conditional move
+  // to a mispredicated branch.
+  SectionPiece *p = pieces.data();
+  for (size_t n = pieces.size(); n > 1; n -= n / 2)
+    p = LLVM_UNPREDICTABLE(p[n / 2].inputOff <= offset) ? p + n / 2 : p;
+  return *p;
 }
 
 // Return the offset in an output section for a given input offset.

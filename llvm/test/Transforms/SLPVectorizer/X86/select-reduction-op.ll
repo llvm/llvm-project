@@ -9,9 +9,8 @@ define i1 @src(i1 %cmp4.118.i) {
 ; CHECK-NEXT:    [[DOTNOT7:%.*]] = xor i1 poison, true
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP2]], i1 true, i1 [[DOTNOT7]]
-; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[OP_RDX]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP3]], i1 true, i1 poison
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP2]], i1 true, i1 poison
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i1 true, i1 [[DOTNOT7]]
 ; CHECK-NEXT:    ret i1 [[OP_RDX1]]
 ;
   %cmp4.118.i.not = xor i1 %cmp4.118.i, true

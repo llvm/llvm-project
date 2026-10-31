@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c23 -fsyntax-only -verify=c %s
-// RUN: %clang_cc1 -fsyntax-only -verify=cpp -x c++ -Wno-c23-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -verify=cpp -x c++ -Wno-c++26-extensions %s
 
 
 struct S {

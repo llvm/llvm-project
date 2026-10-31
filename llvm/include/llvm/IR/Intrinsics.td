@@ -2105,12 +2105,14 @@ def int_allow_sanitize_hwaddress
                             [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
 
 // Support for dynamic deoptimization (or de-specialization)
-def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
-                                            [Throws]>;
+def int_experimental_deoptimize
+    : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
+                [Throws, IntrWrite<[InaccessibleMem]>]>;
 
 // Support for speculative runtime guards
-def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
-                                       [Throws]>;
+def int_experimental_guard
+    : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
+                [Throws, IntrWrite<[InaccessibleMem]>]>;
 
 // Supports widenable conditions for guards represented as explicit branches.
 def int_experimental_widenable_condition : DefaultAttrsIntrinsic<[llvm_i1_ty],

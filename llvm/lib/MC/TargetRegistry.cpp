@@ -162,7 +162,8 @@ const Target *TargetRegistry::lookupTarget(const Triple &TT,
                                            std::string &Error) {
   // Provide special warning when no targets are initialized.
   if (targets().begin() == targets().end()) {
-    Error = "Unable to find target for this triple (no targets are registered)";
+    Error = "Unable to find target for triple \"" + TT.str() +
+            "\" (no targets are registered)";
     return nullptr;
   }
   Triple::ArchType Arch = TT.getArch();

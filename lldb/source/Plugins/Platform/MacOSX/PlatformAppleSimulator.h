@@ -119,7 +119,7 @@ protected:
   llvm::SmallVector<llvm::StringRef, 4> m_supported_triples = {};
   std::string m_sdk_name_primary;
   std::string m_sdk_name_secondary;
-  bool m_have_searched_for_sdk = false;
+  std::once_flag m_sdk_once_flag;
   std::string m_sdk;
   XcodeSDK::Type m_sdk_type;
 

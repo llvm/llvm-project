@@ -3360,8 +3360,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   if (!IsFromCode && !IsWritable && (IsX86 || IsAArch64) &&
       RH.isPCRelative(RType)) {
     BinaryData *BD = BC->getBinaryDataContainingAddress(Rel.getOffset());
-    if (BD && (BD->nameStartsWith("_ZTV") ||   // vtable
-               BD->nameStartsWith("_ZTCN"))) { // construction vtable
+    if (BD && BD->isVTable()) {
       BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
           SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
       if (BF) {

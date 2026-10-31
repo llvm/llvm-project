@@ -31,6 +31,9 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #ifndef NDEBUG
 #include "llvm/ADT/PostOrderIterator.h"
 #endif
@@ -42,10 +45,10 @@ using namespace llvm;
 
 namespace {
 
-class RISCVVMV0Elimination : public MachineFunctionPass {
+class RISCVVMV0EliminationLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  RISCVVMV0Elimination() : MachineFunctionPass(ID) {}
+  RISCVVMV0EliminationLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -64,20 +67,20 @@ public:
 
 } // namespace
 
-char RISCVVMV0Elimination::ID = 0;
+char RISCVVMV0EliminationLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVVMV0Elimination, DEBUG_TYPE, "RISC-V VMV0 Elimination",
-                false, false)
+INITIALIZE_PASS(RISCVVMV0EliminationLegacy, DEBUG_TYPE,
+                "RISC-V VMV0 Elimination", false, false)
 
-FunctionPass *llvm::createRISCVVMV0EliminationPass() {
-  return new RISCVVMV0Elimination();
+FunctionPass *llvm::createRISCVVMV0EliminationLegacyPass() {
+  return new RISCVVMV0EliminationLegacy();
 }
 
 static bool isVMV0(const MCOperandInfo &MCOI) {
   return MCOI.RegClass == RISCV::VMV0RegClassID;
 }
 
-bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
+static bool runVMV0Elimination(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget *ST = &MF.getSubtarget<RISCVSubtarget>();
   if (!ST->hasVInstructions())
@@ -172,4 +175,17 @@ bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return true;
+}
+
+bool RISCVVMV0EliminationLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runVMV0Elimination(MF);
+}
+
+PreservedAnalyses
+RISCVVMV0EliminationPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  return runVMV0Elimination(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                      .preserveSet<CFGAnalyses>()
+                                : PreservedAnalyses::all();
 }

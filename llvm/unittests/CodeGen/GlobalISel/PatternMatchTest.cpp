@@ -38,6 +38,12 @@ TEST_F(AArch64GISelMITest, MatchIntConstant) {
   bool match = mi_match(MIBCst.getReg(0), *MRI, m_ICst(Cst));
   EXPECT_TRUE(match);
   EXPECT_EQ(Cst, 42);
+
+  APInt Value = APInt::getSignedMinValue(129) + 42;
+  auto WideConstant = B.buildConstant(LLT::scalar(129), Value);
+  APInt Result = APInt::getAllOnes(256);
+  EXPECT_TRUE(mi_match(WideConstant.getReg(0), *MRI, m_ICst(Result)));
+  EXPECT_EQ(Result, Value);
 }
 
 TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
@@ -74,6 +80,17 @@ TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
   auto SmallSplat = B.buildBuildVector(v2s64, {ICst, ICst}).getReg(0);
   auto LargeSplat = B.buildConcatVectors(v4s64, {SmallSplat, SmallSplat});
   EXPECT_TRUE(mi_match(LargeSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
+
+  LLT WideTy = LLT::scalar(129);
+  APInt Value = APInt::getSignedMinValue(129) + 42;
+  auto WideConstant = B.buildConstant(WideTy, Value);
+  auto WideSplat =
+      B.buildSplatBuildVector(LLT::fixed_vector(2, WideTy), WideConstant);
+  APInt Result = APInt::getAllOnes(256);
+  EXPECT_TRUE(mi_match(WideSplat.getReg(0), *MRI, m_ICstOrSplat(Result)));
+  EXPECT_EQ(Result, Value);
+  EXPECT_TRUE(mi_match(WideConstant.getReg(0), *MRI, m_ICstOrSplat(Result)));
+  EXPECT_EQ(Result, Value);
 }
 
 TEST_F(AArch64GISelMITest, MachineInstrPtrBind) {

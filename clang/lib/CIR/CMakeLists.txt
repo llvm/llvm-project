@@ -11,7 +11,7 @@ add_clang_library(CIRRegisterAllDialects
   RegisterAllDialects.cpp
 
   DEPENDS
-  MLIRArithOpsIncGen
+  mlir-headers
 
   LINK_LIBS PUBLIC
   MLIRCIR

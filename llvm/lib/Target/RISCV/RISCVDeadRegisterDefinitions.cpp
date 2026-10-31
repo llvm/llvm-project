@@ -16,7 +16,11 @@
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "riscv-dead-defs"
@@ -25,11 +29,11 @@ using namespace llvm;
 STATISTIC(NumDeadDefsReplaced, "Number of dead definitions replaced");
 
 namespace {
-class RISCVDeadRegisterDefinitions : public MachineFunctionPass {
+class RISCVDeadRegisterDefinitionsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVDeadRegisterDefinitions() : MachineFunctionPass(ID) {}
+  RISCVDeadRegisterDefinitionsLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -45,20 +49,18 @@ public:
 };
 } // end anonymous namespace
 
-char RISCVDeadRegisterDefinitions::ID = 0;
-INITIALIZE_PASS(RISCVDeadRegisterDefinitions, DEBUG_TYPE,
+char RISCVDeadRegisterDefinitionsLegacy::ID = 0;
+INITIALIZE_PASS(RISCVDeadRegisterDefinitionsLegacy, DEBUG_TYPE,
                 RISCV_DEAD_REG_DEF_NAME, false, false)
 
-FunctionPass *llvm::createRISCVDeadRegisterDefinitionsPass() {
-  return new RISCVDeadRegisterDefinitions();
+FunctionPass *llvm::createRISCVDeadRegisterDefinitionsLegacyPass() {
+  return new RISCVDeadRegisterDefinitionsLegacy();
 }
 
-bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+static bool runDeadRegisterDefinitions(MachineFunction &MF,
+                                       function_ref<LiveIntervals &()> GetLIS) {
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LiveIntervals &LIS = GetLIS();
   LLVM_DEBUG(dbgs() << "***** RISCVDeadRegisterDefinitions *****\n");
 
   bool MadeChange = false;
@@ -112,4 +114,29 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return MadeChange;
+}
+
+bool RISCVDeadRegisterDefinitionsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runDeadRegisterDefinitions(MF, [&]() -> LiveIntervals & {
+    return getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  });
+}
+
+PreservedAnalyses
+RISCVDeadRegisterDefinitionsPass::run(MachineFunction &MF,
+                                      MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runDeadRegisterDefinitions(MF, [&]() -> LiveIntervals & {
+    return MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  });
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<SlotIndexesAnalysis>()
+      .preserve<LiveDebugVariablesAnalysis>()
+      .preserve<LiveStacksAnalysis>();
 }

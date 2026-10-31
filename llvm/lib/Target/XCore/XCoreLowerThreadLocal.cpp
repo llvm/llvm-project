@@ -14,6 +14,7 @@
 
 #include "XCore.h"
 #include "XCoreSubtarget.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -34,24 +36,22 @@ namespace {
   /// Lowers thread local variables on the XCore. Each thread local variable is
   /// expanded to an array of n elements indexed by the thread ID where n is the
   /// fixed number hardware threads supported by the device.
-  struct XCoreLowerThreadLocal : public ModulePass {
-    static char ID;
+struct XCoreLowerThreadLocalLegacy : public ModulePass {
+  static char ID;
 
-    XCoreLowerThreadLocal() : ModulePass(ID) {}
+  XCoreLowerThreadLocalLegacy() : ModulePass(ID) {}
 
-    bool lowerGlobal(GlobalVariable *GV, unsigned MaxThreads);
-
-    bool runOnModule(Module &M) override;
-  };
+  bool runOnModule(Module &M) override;
+};
 }
 
-char XCoreLowerThreadLocal::ID = 0;
+char XCoreLowerThreadLocalLegacy::ID = 0;
 
-INITIALIZE_PASS(XCoreLowerThreadLocal, "xcore-lower-thread-local",
+INITIALIZE_PASS(XCoreLowerThreadLocalLegacy, "xcore-lower-thread-local",
                 "Lower thread local variables", false, false)
 
-ModulePass *llvm::createXCoreLowerThreadLocalPass() {
-  return new XCoreLowerThreadLocal();
+ModulePass *llvm::createXCoreLowerThreadLocalLegacyPass() {
+  return new XCoreLowerThreadLocalLegacy();
 }
 
 static ArrayType *createLoweredType(Type *OriginalType, unsigned MaxThreads) {
@@ -67,8 +67,7 @@ createLoweredInitializer(ArrayType *NewType, Constant *OriginalInitializer) {
   return ConstantArray::get(NewType, Elements);
 }
 
-
-static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
+static bool replaceConstantExprOp(ConstantExpr *CE) {
   do {
     SmallVector<WeakTrackingVH, 8> WUsers(CE->users());
     llvm::sort(WUsers);
@@ -93,7 +92,7 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
           Instr->replaceUsesOfWith(CE, NewInst);
         } else {
           ConstantExpr *CExpr = dyn_cast<ConstantExpr>(WU);
-          if (!CExpr || !replaceConstantExprOp(CExpr, P))
+          if (!CExpr || !replaceConstantExprOp(CExpr))
             return false;
         }
       }
@@ -103,7 +102,7 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   return true;
 }
 
-static bool rewriteNonInstructionUses(GlobalVariable *GV, Pass *P) {
+static bool rewriteNonInstructionUses(GlobalVariable *GV) {
   SmallVector<WeakTrackingVH, 8> WUsers;
   for (User *U : GV->users())
     if (!isa<Instruction>(U))
@@ -111,19 +110,18 @@ static bool rewriteNonInstructionUses(GlobalVariable *GV, Pass *P) {
   while (!WUsers.empty())
     if (WeakTrackingVH WU = WUsers.pop_back_val()) {
       ConstantExpr *CE = dyn_cast<ConstantExpr>(WU);
-      if (!CE || !replaceConstantExprOp(CE, P))
+      if (!CE || !replaceConstantExprOp(CE))
         return false;
     }
   return true;
 }
 
-bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV,
-                                        unsigned MaxThreads) {
+static bool lowerGlobal(GlobalVariable *GV, unsigned MaxThreads) {
   Module *M = GV->getParent();
   if (!GV->isThreadLocal())
     return false;
 
-  if (!rewriteNonInstructionUses(GV, this))
+  if (!rewriteNonInstructionUses(GV))
     return false;
 
   // The lowered representation needs an ArrayType of the value type, which
@@ -166,7 +164,7 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV,
   return true;
 }
 
-bool XCoreLowerThreadLocal::runOnModule(Module &M) {
+static bool lowerGlobalsInModule(Module &M) {
   unsigned MaxThreads =
       M.getContext().getLibraryOptions().get<XCoreOptions>().max_threads;
   // Find thread local globals.
@@ -178,4 +176,14 @@ bool XCoreLowerThreadLocal::runOnModule(Module &M) {
   for (GlobalVariable *GV : ThreadLocalGlobals)
     MadeChange |= lowerGlobal(GV, MaxThreads);
   return MadeChange;
+}
+
+bool XCoreLowerThreadLocalLegacy::runOnModule(Module &M) {
+  return lowerGlobalsInModule(M);
+}
+
+PreservedAnalyses XCoreLowerThreadLocalPass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
+  return lowerGlobalsInModule(M) ? PreservedAnalyses::none()
+                                 : PreservedAnalyses::all();
 }

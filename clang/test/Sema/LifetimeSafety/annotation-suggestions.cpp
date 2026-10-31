@@ -272,6 +272,22 @@ auto test_auto_return_implicit_this() {
   return b.make(); // expected-warning {{stack memory associated with local variable 'b' is returned}} expected-note {{returned here}}
 }
 
+struct AutoReturnSelfNonTemplate;
+
+struct SelfCapturingIterNonTemplate {
+  AutoReturnSelfNonTemplate *c; // expected-note {{escapes to this field}}
+  explicit SelfCapturingIterNonTemplate(AutoReturnSelfNonTemplate &x) : c(&x) {} // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+};
+
+struct AutoReturnSelfNonTemplate {
+  auto make() { return SelfCapturingIterNonTemplate(*this); } // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}}
+};
+
+auto test_auto_return_implicit_this_non_template() {
+  AutoReturnSelfNonTemplate b;
+  return b.make(); // expected-warning {{stack memory associated with local variable 'b' is returned}} expected-note {{returned here}}
+}
+
 struct ReturnThisAnnotated {
   const ReturnThisAnnotated& get() [[clang::lifetimebound]] { return *this; }
 };
@@ -542,7 +558,7 @@ struct CaptureRefToView {
 CaptureRefToView test_ref_to_view() {
   MyObj obj;
   CaptureRefToView x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}}
+  return x;                // expected-note {{returned here}}
 }
 
 struct CaptureRefToPtr {
@@ -553,7 +569,7 @@ struct CaptureRefToPtr {
 CaptureRefToPtr test_ref_to_ptr() {
   MyObj obj;
   CaptureRefToPtr x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}}
+  return x;               // expected-note {{returned here}}
 }
 
 struct CaptureViewToView {
@@ -563,7 +579,7 @@ struct CaptureViewToView {
 
 CaptureViewToView test_view_to_view() {
   MyObj obj;
-  View v(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
+  View v(obj);            // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   CaptureViewToView x(v); // expected-note {{local variable 'v' aliases the storage of local variable 'obj'}}
   return x; // expected-note {{returned here}}
 }
@@ -576,7 +592,7 @@ struct CapturePtrToPtr {
 CapturePtrToPtr test_ptr_to_ptr() {
   MyObj obj;
   CapturePtrToPtr x(&obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}}
+  return x;                // expected-note {{returned here}}
 }
 
 struct CaptureRefToRef {
@@ -587,7 +603,7 @@ struct CaptureRefToRef {
 CaptureRefToRef test_ref_to_ref() {
   MyObj obj;
   CaptureRefToRef x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}}
+  return x;               // expected-note {{returned here}}
 }
 
 struct BaseWithView {
@@ -602,7 +618,7 @@ struct CaptureRefToBaseView : BaseWithView {
 CaptureRefToBaseView test_ref_to_base_view() {
   MyObj obj;
   CaptureRefToBaseView x(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  return x; // expected-note {{returned here}}
+  return x;                    // expected-note {{returned here}}
 }
 } // namespace capturing_constructor
 
@@ -831,6 +847,52 @@ struct FieldTypes {
     return *str_ptr_;                         // expected-note {{returned here}}
   }
 };
+
+namespace FieldOriginEscapeThroughAnonStruct {
+struct FieldInAnonStruct {
+  struct {
+    int *ptr_; // expected-note {{if field 'ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  };
+
+  int *get_ptr() const { // expected-warning {{return value depends on the object referenced by field 'ptr_', not on '*this'}}
+    return ptr_;         // expected-note {{returned here}}
+  }
+};
+
+struct FieldInNestedAnonStruct {
+  struct {
+    struct {
+      int *ptr_; // expected-note {{if field 'ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+    };
+  };
+
+  int *get_ptr() const { // expected-warning {{return value depends on the object referenced by field 'ptr_', not on '*this'}}
+    return ptr_;         // expected-note {{returned here}}
+  }
+};
+
+struct MultiFieldAnonStructSuggestsOnlyForReturnedField {
+  struct {
+    int *a_;
+    int *b_; // expected-note {{if field 'b_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  };
+
+  int *get_b() const { // expected-warning {{return value depends on the object referenced by field 'b_', not on '*this'}}
+    return b_;         // expected-note {{returned here}}
+  }
+};
+
+struct MultiFieldAnonUnionSuggestsOnlyForReturnedField {
+  union {
+    int *a_;
+    int *b_; // expected-note {{if field 'b_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  };
+
+  int *get_b() const { // expected-warning {{return value depends on the object referenced by field 'b_', not on '*this'}}
+    return b_;         // expected-note {{returned here}}
+  }
+};
+} // namespace FieldOriginEscapeThroughAnonStruct
 
 struct Base {
   int *pub_ptr_; // expected-note {{if field 'pub_ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}

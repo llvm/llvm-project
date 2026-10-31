@@ -349,15 +349,14 @@ private:
           InlineTreeNodeMap.getInlineTreeNode(NodeId);
       if (!BinaryNode)
         return nullptr;
-      const MCDecodedPseudoProbe Dummy(0, ProbeId, PseudoProbeType::Block, 0, 0,
-                                       nullptr);
+      // The probes of an inline tree node are stored in address order, not in
+      // probe index order, so they cannot be binary searched by index.
       ArrayRef<MCDecodedPseudoProbe> BinaryProbes = BinaryNode->getProbes();
-      auto BinaryProbeIt = llvm::lower_bound(
-          BinaryProbes, Dummy, [](const auto &LHS, const auto &RHS) {
-            return LHS.getIndex() < RHS.getIndex();
+      auto BinaryProbeIt =
+          llvm::find_if(BinaryProbes, [ProbeId](const auto &Probe) {
+            return Probe.isBlock() && Probe.getIndex() == ProbeId;
           });
-      if (BinaryProbeIt == BinaryNode->getProbes().end() ||
-          BinaryProbeIt->getIndex() != ProbeId)
+      if (BinaryProbeIt == BinaryProbes.end())
         return nullptr;
       auto It = BBPseudoProbeToBlock.find(&*BinaryProbeIt);
       if (It == BBPseudoProbeToBlock.end())

@@ -25,9 +25,10 @@ struct MatMulTOperands {
 
 /// Broadcast the batch dimensions of the ranked operands and create a
 /// zero-filled result tensor for either MATMUL_T lowering pattern.
-MatMulTOperands prepareMatMulTOperands(PatternRewriter &rewriter, Location loc,
-                                       Value a, Value b,
-                                       RankedTensorType outputType);
+MatMulTOperands prepareMatMulOperands(PatternRewriter &rewriter, Location loc,
+                                      Value a, Value b,
+                                      RankedTensorType outputType,
+                                      bool transposeB);
 } // namespace tosa
 } // namespace mlir
 

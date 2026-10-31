@@ -1,6 +1,30 @@
 add_libc_testsuite(libc-netinet-ether-tests PARENT libc-netinet-tests)
 
 add_libc_test(
+  ether_aton_test
+  SUITE
+    libc-netinet-ether-tests
+  SRCS
+    ether_aton_test.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_ether_addr
+    libc.src.netinet.ether.ether_aton
+)
+
+add_libc_test(
+  ether_aton_r_test
+  SUITE
+    libc-netinet-ether-tests
+  SRCS
+    ether_aton_r_test.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_ether_addr
+    libc.src.netinet.ether.ether_aton_r
+)
+
+add_libc_test(
   ether_ntoa_test
   SUITE
     libc-netinet-ether-tests

@@ -14,6 +14,7 @@ let Component = "Lex", CategoryName = "Lexical or Preprocessor Issue" in {
 // C23 compatibility with C17 and earlier.
 defm c23_pp_directive : C23Compat<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive is", /*ext_warn*/true>;
+defm c23_pp_embed_directive : C23Compat<"#embed is", /*ext_warn*/true>;
 
 // C++11 compatibility with C++98.
 defm empty_fnmacro_arg : CXX11Compat<
@@ -30,6 +31,7 @@ defm cxx23_pp_directive : CXX23Compat<
 // C++26 compatibility with C++23 and earlier.
 defm raw_string_literal_character_set : CXX26Compat<
   "'%0' in a raw string literal delimiter is", /*ext_warn*/false>;
+defm cxx26_pp_embed_directive : CXX26Compat<"#embed is">;
 
 def null_in_char_or_string : Warning<
   "null character(s) preserved in %select{char|string}0 literal">,
@@ -484,12 +486,6 @@ def warn_cxx23_compat_warning_directive : Warning<
   InGroup<CXXPre23Compat>, DefaultIgnore;
 def warn_c23_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
-def ext_pp_embed_directive : ExtWarn<
-  "#embed is a %select{C23|Clang}0 extension">,
-  InGroup<C23>;
-def warn_compat_pp_embed_directive : Warning<
-  "#embed is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
 def err_pp_embed_dup_params : Error<
   "cannot specify parameter '%0' twice in the same '#embed' directive">;

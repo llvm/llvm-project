@@ -56,7 +56,7 @@ void DivZeroChecker::reportBug(StringRef Msg, ProgramStateRef StateZero,
                                CheckerContext &C) const {
   if (!DivideZeroChecker.isEnabled())
     return;
-  if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
+  if (ExplodedNode *N = C.addSink(StateZero)) {
     auto R =
         std::make_unique<PathSensitiveBugReport>(DivideZeroChecker, Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
@@ -69,7 +69,7 @@ void DivZeroChecker::reportTaintBug(
     llvm::ArrayRef<SymbolRef> TaintedSyms) const {
   if (!TaintedDivChecker.isEnabled())
     return;
-  if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
+  if (ExplodedNode *N = C.addSink(StateZero)) {
     auto R =
         std::make_unique<PathSensitiveBugReport>(TaintedDivChecker, Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);

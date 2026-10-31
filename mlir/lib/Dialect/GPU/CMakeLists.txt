@@ -58,7 +58,6 @@ add_mlir_dialect_library(MLIRGPUDialect
 add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp
   Transforms/AsyncRegionRewriter.cpp
-  Transforms/BufferDeallocationOpInterfaceImpl.cpp
   Transforms/DecomposeMemRefs.cpp
   Transforms/EliminateBarriers.cpp
   Transforms/GlobalIdRewriter.cpp
@@ -84,7 +83,6 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRAffineUtils
   MLIRArithDialect
   MLIRAsyncDialect
-  MLIRBufferizationDialect
   MLIRDataLayoutInterfaces
   MLIRDialectUtils
   MLIRGPUDialect
@@ -98,6 +96,18 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRSupport
   MLIRTransformUtils
   MLIRVectorDialect
+  )
+
+add_mlir_dialect_library(MLIRGPUBufferDeallocationOpInterfaceImpl
+  Transforms/BufferDeallocationOpInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
+
+  LINK_LIBS PUBLIC
+  MLIRBufferizationDialect
+  MLIRGPUDialect
+  MLIRIR
   )
 
 add_mlir_dialect_library(MLIRGPUNVVMTransforms

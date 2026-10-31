@@ -8132,16 +8132,6 @@ let Visibility = [CC1Option, CC1AsOption] in {
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
-def debug_info_macro_expansion_loc
-    : Flag<["-"], "debug-info-macro-expansion-loc">,
-      HelpText<"Use expansion location for debug info for multi line macros">,
-      MarshallingInfoFlag<CodeGenOpts<"DebugInfoMacroExpansionLoc">>;
-def debug_info_macro_max_depth_EQ
-    : Joined<["-"], "debug-info-macro-max-depth=">,
-      MetaVarName<"<N>">,
-      HelpText<"Use expansion location for debug info for macro arguments "
-               "nested deeper than <N> macro expansions (default 64)">,
-      MarshallingInfoInt<CodeGenOpts<"DebugInfoMacroMaxDepth">, "64">;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;
@@ -9296,6 +9286,13 @@ def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
   MarshallingInfoString<LangOpts<"OMPHostIRFile">>;
 
 } // let Visibility = [CC1Option, FC1Option]
+
+def fopenmp_metadirective_runtime_selection
+    : Flag<["-"], "fopenmp-metadirective-runtime-selection">,
+      Visibility<[CC1Option]>,
+      HelpText<"Enable runtime selection of metadirective variants with "
+               "non-constant user conditions.">,
+      MarshallingInfoFlag<LangOpts<"OpenMPMetadirectiveRuntimeSelection">>;
 
 //===----------------------------------------------------------------------===//
 // SYCL Options

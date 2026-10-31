@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalValue.h"
@@ -26,6 +27,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsMips.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -1416,7 +1418,12 @@ MipsSEDAGToDAGISelLegacy::MipsSEDAGToDAGISelLegacy(MipsTargetMachine &TM,
                                                    CodeGenOptLevel OL)
     : MipsDAGToDAGISelLegacy(std::make_unique<MipsSEDAGToDAGISel>(TM, OL)) {}
 
-FunctionPass *llvm::createMipsSEISelDag(MipsTargetMachine &TM,
-                                        CodeGenOptLevel OptLevel) {
+FunctionPass *llvm::createMipsSEISelDAGLegacyPass(MipsTargetMachine &TM,
+                                                  CodeGenOptLevel OptLevel) {
   return new MipsSEDAGToDAGISelLegacy(TM, OptLevel);
+}
+
+MipsSEISelDAGPass::MipsSEISelDAGPass(MipsTargetMachine &TM,
+                                     CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<MipsSEDAGToDAGISel>(TM, OptLevel)) {
 }

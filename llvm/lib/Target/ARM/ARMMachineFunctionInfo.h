@@ -15,6 +15,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -106,6 +108,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 
   /// VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex = 0;
+
+  /// ForwardedMustTailRegParms - A list of virtual and physical registers that
+  /// must be forwarded to every musttail call.
+  SmallVector<ForwardedRegister, 4> ForwardedMustTailRegParms;
 
   /// HasITBlocks - True if IT blocks have been inserted.
   bool HasITBlocks = false;
@@ -250,6 +256,10 @@ public:
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
+
+  SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
+    return ForwardedMustTailRegParms;
+  }
 
   bool hasITBlocks() const { return HasITBlocks; }
   void setHasITBlocks(bool h) { HasITBlocks = h; }

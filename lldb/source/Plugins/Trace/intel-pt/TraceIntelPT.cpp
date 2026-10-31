@@ -577,7 +577,7 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
     for (const TraceCpuState &cpu : *intelpt_state->cpus)
       cpus.push_back(cpu.id);
 
-    std::vector<tid_t> tids;
+    std::vector<lldb::tid_t> tids;
     for (const TraceThreadState &thread : intelpt_state->traced_threads)
       tids.push_back(thread.tid);
 

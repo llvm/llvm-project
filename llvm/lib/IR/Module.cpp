@@ -722,6 +722,24 @@ ExceptionHandling Module::getExceptionModel() const {
   return getTargetTriple().getDefaultExceptionHandling();
 }
 
+DebuggerKind Module::getDebuggerTuning() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("debugger-tuning"))) {
+    if (std::optional<DebuggerKind> Tuning =
+            parseDebuggerTuning(Val->getString()))
+      return *Tuning;
+  }
+
+  return DebuggerKind::Default;
+}
+
+void Module::setDebuggerTuning(DebuggerKind Tuning) {
+  assert(Tuning != DebuggerKind::Default &&
+         "removing existing flag not handled");
+
+  addModuleFlag(ModFlagBehavior::Warning, "debugger-tuning",
+                MDString::get(getContext(), getDebuggerTuningName(Tuning)));
+}
+
 std::optional<uint64_t> Module::getLargeDataThreshold() const {
   auto *Val =
       cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));

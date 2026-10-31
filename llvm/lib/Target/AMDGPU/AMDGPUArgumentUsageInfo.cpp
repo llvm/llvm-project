@@ -8,6 +8,7 @@
 
 #include "AMDGPUArgumentUsageInfo.h"
 #include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -109,6 +110,12 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
                       &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   }
   llvm_unreachable("unexpected preloaded value type");
+}
+
+MCRegister
+AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CallingConv::ID CC) {
+  return AMDGPU::isChainCC(CC) ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                               : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
 }
 
 AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {

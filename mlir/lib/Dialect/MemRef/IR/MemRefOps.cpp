@@ -2346,7 +2346,7 @@ public:
 
   LogicalResult matchAndRewrite(ReinterpretCastOp op,
                                 PatternRewriter &rewriter) const override {
-    unsigned srcStaticCount = llvm::count_if(
+    auto srcStaticCount = llvm::count_if(
         llvm::concat<OpFoldResult>(op.getMixedOffsets(), op.getMixedSizes(),
                                    op.getMixedStrides()),
         [](OpFoldResult ofr) { return isa<Attribute>(ofr); });

@@ -10,11 +10,11 @@
 #ifndef LLDB_DATAFORMATTERS_FORMATCACHE_H
 #define LLDB_DATAFORMATTERS_FORMATCACHE_H
 
-#include <map>
-#include <mutex>
-
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-public.h"
+
+#include "llvm/ADT/StringMap.h"
+
+#include <mutex>
 
 namespace lldb_private {
 class FormatCache {
@@ -45,7 +45,7 @@ private:
     void Set(lldb::TypeSummaryImplSP);
     void Set(lldb::SyntheticChildrenSP);
   };
-  std::map<ConstString, Entry> m_entries;
+  llvm::StringMap<Entry> m_entries;
   std::recursive_mutex m_mutex;
 
   uint64_t m_cache_hits = 0;
@@ -54,10 +54,11 @@ private:
 public:
   FormatCache() = default;
 
-  template <typename ImplSP> bool Get(ConstString type, ImplSP &format_impl_sp);
-  void Set(ConstString type, lldb::TypeFormatImplSP &format_sp);
-  void Set(ConstString type, lldb::TypeSummaryImplSP &summary_sp);
-  void Set(ConstString type, lldb::SyntheticChildrenSP &synthetic_sp);
+  template <typename ImplSP>
+  bool Get(llvm::StringRef type, ImplSP &format_impl_sp);
+  void Set(llvm::StringRef type, lldb::TypeFormatImplSP &format_sp);
+  void Set(llvm::StringRef type, lldb::TypeSummaryImplSP &summary_sp);
+  void Set(llvm::StringRef type, lldb::SyntheticChildrenSP &synthetic_sp);
 
   void Clear();
 

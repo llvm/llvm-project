@@ -20,6 +20,9 @@ namespace wasm {
 /// A global declared by the module itself. Imported globals occupy the low
 /// indices of the same index space and have no entry here.
 struct WasmGlobal {
+  uint8_t value_type = 0;
+  bool is_mutable = false;
+
   /// Size of the global's value type, which bounds what a read can produce.
   /// Absent for a value type whose values cannot be read.
   std::optional<uint32_t> size;

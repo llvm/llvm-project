@@ -60,7 +60,7 @@ body:             |
   ; WWM-REGALLOC-NEXT:   successors: %bb.1(0x80000000)
   ; WWM-REGALLOC-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; WWM-REGALLOC-NEXT: {{  $}}
-  ; WWM-REGALLOC-NEXT:   renamable $vgpr63 = IMPLICIT_DEF
+  ; WWM-REGALLOC-NEXT:   dead renamable $vgpr63 = IMPLICIT_DEF
   ; WWM-REGALLOC-NEXT:   S_BRANCH %bb.1
   ; WWM-REGALLOC-NEXT: {{  $}}
   ; WWM-REGALLOC-NEXT: bb.1:

@@ -1,0 +1,24 @@
+{% set current_url = content_root ~ pagename ~ link_suffix %}
+<nav class="bolt-sidebar" aria-label="BOLT documentation">
+  <a href="https://llvm.org/">LLVM Home</a>
+  <section>
+    <h2>BOLT</h2>
+    <a href="{{ (current_url if pagename == root_doc else pathto(root_doc))|e }}"{% if pagename == root_doc %} aria-current="page"{% endif %}>Home</a>
+    <a href="{{ (current_url if pagename == 'search' else pathto('search'))|e }}"{% if pagename == 'search' %} aria-current="page"{% endif %}>Search</a>
+  </section>
+  <div class="bolt-guide-links">
+    {{ toctree(maxdepth=1, collapse=False, includehidden=False, titles_only=True)
+        | replace('href="#"', 'href="' ~ current_url|e ~ '" aria-current="page"') }}
+  </div>
+  <section>
+    <h2>Communication</h2>
+    <a href="https://discourse.llvm.org/tag/bolt/102">BOLT Forum</a>
+    <a href="https://github.com/llvm/llvm-project/issues?q=is%3Aissue+state%3Aopen+label%3ABOLT">Bug Reports</a>
+    <a href="https://discord.com/invite/2kQU7PCuys">Discord</a>
+  </section>
+  <section>
+    <h2>The Code</h2>
+    <a href="https://github.com/llvm/llvm-project/tree/main/bolt">Browse Sources</a>
+    <a href="https://github.com/rafaelauler/bolt-tests">BOLT Tests</a>
+  </section>
+</nav>

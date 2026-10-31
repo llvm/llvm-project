@@ -96,6 +96,9 @@ class PendingResponse(Generic[AnyResponse]):
         self._command = command
         self._on_resolve = on_resolve
 
+    def done(self) -> bool:
+        return self._future.done()
+
     def result(self, msg: Optional[str] = None) -> AnyResponse:
         response = self.result_or_error()
 

@@ -4,6 +4,9 @@
 @func_array0 = constant [2 x ptr] [ptr @func0, ptr @declared_only_func1]
 
 define i32 @func0() {
+; CHECK-LABEL: define i32 @func0() {
+; CHECK-NEXT:    ret i32 1
+;
   ret i32 1
 }
 
@@ -52,6 +55,10 @@ exceptional:
 @func_array1 = constant [1 x ptr] [ptr @func2]
 
 define i32 @func2(i32 %arg) {
+; CHECK-LABEL: define i32 @func2(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:    ret i32 [[ARG]]
+;
   ret i32 %arg
 }
 

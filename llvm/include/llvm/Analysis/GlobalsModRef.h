@@ -21,6 +21,7 @@
 #include <list>
 
 namespace llvm {
+struct AnalysisOptions;
 class CallGraph;
 class Function;
 
@@ -31,6 +32,7 @@ class Function;
 class GlobalsAAResult : public AAResultBase {
   class FunctionInfo;
 
+  const AnalysisOptions &Opts;
   const DataLayout &DL;
   std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
 
@@ -74,7 +76,7 @@ class GlobalsAAResult : public AAResultBase {
   std::list<DeletionCallbackHandle> Handles;
 
   explicit GlobalsAAResult(
-      const DataLayout &DL,
+      const AnalysisOptions &Opts, const DataLayout &DL,
       std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
 
   friend struct RecomputeGlobalsAAPass;

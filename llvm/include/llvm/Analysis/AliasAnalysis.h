@@ -306,6 +306,9 @@ public:
   /// passes that lazily update the DT while performing AA queries.
   bool UseDominatorTree = true;
 
+  /// Whether ephemeral values should be allowed when checking assumes.
+  bool AllowEphemerals = true;
+
   AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
 };
 

@@ -298,6 +298,12 @@ extractStridedSliceSupportsMMAMatrixType(vector::ExtractStridedSliceOp op) {
 static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
   if (isa<scf::ForOp, scf::YieldOp>(op))
     return true;
+  // MMA ops cannot honor a mask. An op masked by an enclosing vector.mask has
+  // no mask operand, so the checks below would miss it; rewriting it in place
+  // would leave non-maskable ops inside the vector.mask region.
+  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(op);
+  if (maskableOp && maskableOp.isMasked())
+    return false;
   if (auto transferRead = dyn_cast<vector::TransferReadOp>(op))
     return useNvGpu ? nvgpu::canLowerToWarpMatrixOperation(transferRead)
                     : transferReadSupportsMMAMatrixType(transferRead);
@@ -433,6 +439,11 @@ struct PrepareContractToGPUMMA
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
+    // The mask is not updated: the rewrite may create ops inside the
+    // vector.mask region or swap the m and n iteration dimensions.
+    if (op.isMasked())
+      return rewriter.notifyMatchFailure(op, "masked contraction");
+
     Location loc = op.getLoc();
     Value lhs = op.getLhs(), rhs = op.getRhs(), res = op.getAcc();
 
@@ -1368,6 +1379,12 @@ struct ConvertVectorToGPUPass
 
   explicit ConvertVectorToGPUPass(bool useNvGpu_) {
     useNvGpu.setValue(useNvGpu_);
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ConvertVectorToGPUBase::getDependentDialects(registry);
+    if (useNvGpu)
+      registry.insert<nvgpu::NVGPUDialect>();
   }
 
   void runOnOperation() override {

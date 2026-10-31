@@ -127,7 +127,6 @@ struct MissingFeatures {
   static bool cgmRelease() { return false; }
   static bool checkAliases() { return false; }
   static bool emitModuleLinkOptions() { return false; }
-  static bool shouldSkipAliasEmission() { return false; }
 
   // CXXABI
   static bool cxxABI() { return false; }

@@ -373,3 +373,14 @@ let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
   def : MipsPat<(brcond (i32 (setule GPR64:$rs, GPR64:$rt)), bb:$offset),
                 (BGEUC64 GPR64:$rt, GPR64:$rs, bb:$offset)>, ISA_MIPS64R6;
 }
+
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(MipsJmpLink (i64 texternalsym:$dst)),
+                (JAL_R6 texternalsym:$dst)>, ISA_MIPS64R6;
+  def : MipsPat<(MipsJmpLink (i64 tglobaladdr:$dst)),
+                (JAL_R6 tglobaladdr:$dst)>, ISA_MIPS64R6;
+  def : MipsPat<(MipsTailCall (i64 tglobaladdr:$dst)),
+                (TAILCALL_R6 tglobaladdr:$dst)>, ISA_MIPS64R6;
+  def : MipsPat<(MipsTailCall (i64 texternalsym:$dst)),
+                (TAILCALL_R6 texternalsym:$dst)>, ISA_MIPS64R6;
+}
