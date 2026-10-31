@@ -7,8 +7,8 @@ configuration that asked for `LIBC_MATH_SMALL_TABLES` or
 `LIBC_MATH_SKIP_ACCURATE_PASS`.
 
 The checks never execute target code. They only inspect objects with
-`llvm-nm` and `llvm-size`, so they work the same way for host, cross and
-baremetal builds.
+`llvm-nm` and `llvm-size` (and link small programs, see below), so they work
+the same way for host, cross and baremetal builds.
 
 ## Running the checks
 
@@ -44,6 +44,42 @@ set `LIBC_SIZE_CHECK_NM` and `LIBC_SIZE_CHECK_SIZE` to override them.
 Some entrypoints are compiled with extra target options (for example `-mfma`
 on x86-64 when the host supports it), so the predefined macros used by
 `when_macros` are dumped once per distinct set of compile options.
+
+## Linked size probes
+
+In full builds, `check-libc-size` also links a minimal program for every
+function in `probes/math.txt` (plus a few combinations such as
+`logf+expf+powf`) against `libm.a` and `libc.a`, and reports how much code and
+data each one pulls in relative to an empty program:
+
+```
+probe                       flash     libc    other   tables    ram  libc objects
+logf                         5636     2548     3088     2048      0  logf.cpp.obj
+...
+```
+
+* `flash`: allocated sections with contents (code and read-only data).
+* `libc`: the part of `flash` that comes from the libc archives.
+* `other`: the rest, mostly compiler runtime builtins (e.g. soft-float helpers).
+* `tables`: the size of the named data objects, which does not depend on the
+  compiler.
+* `ram`: `.data` and `.bss`.
+
+The probes are linked with `-nostdlib -static -Wl,--gc-sections` and without
+startup code or a linker script, with the probe entry point as the ELF entry,
+so only the code reachable from the probed functions is measured. The report
+is written to `<build>/libc/utils/size_check/libc-size-probes-math.{json,md}`;
+the probe sources, objects, map files and ELF files are kept in
+`libc-size-probes-math/` next to it.
+
+The probes are report-only for now: they never fail the build unless the
+empty baseline program cannot be linked. They use the same compiler runtime
+builtins as the hermetic tests (`LIBC_TEST_BUILTINS_LIBRARY`,
+`LIBC_TEST_BUILTINS_TARGET`, or `-print-libgcc-file-name`). When no builtins
+library is available, the probes that need one are reported as skipped. To
+build the builtins in the same build, add `compiler-rt` to
+`LLVM_ENABLE_RUNTIMES` and set `LIBC_TEST_BUILTINS_TARGET` (see the hexagon
+cache for an example).
 
 ## Updating the rules
 
