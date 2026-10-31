@@ -13,6 +13,9 @@
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
 
+// OpenBSD only implements LC_CTYPE, so LC_TIME output in these locales is that of "C".
+// XFAIL: target={{.+}}-openbsd{{.*}}
+
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
 
