@@ -146,7 +146,8 @@ public:
 
   /// findDeadCallerSavedReg - Return a caller-saved register that isn't live
   /// when it reaches the "return" instruction. We can then pop a stack object
-  /// to this register without worry about clobbering it.
+  /// to this register without worry about clobbering it. On success, advance
+  /// MBBI past any intervening debug instructions to the return.
   unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator &MBBI) const;
 
