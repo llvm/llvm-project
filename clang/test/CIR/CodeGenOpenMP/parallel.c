@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -emit-cir -fclangir %s -o - | FileCheck %s
 
+// CHECK: cir.global "private" constant cir_private @__const.default_parallel.arr {{.*}} !cir.array<!s32i x 1> align(4)
+
 void before(int);
 void during(int);
 void after(int);
@@ -53,6 +55,83 @@ void parallel_with_operations() {
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 }
+
+void default_parallel() {
+  // CHECK: cir.func {{.*}} @default_parallel
+
+  int x = 0;
+  int y = 0;
+  int *p = &y;
+  int arr[1] = {0}; // Checked at the beginning of the file.
+
+  // CHECK-NEXT: %[[X_ADDR:.*]] = cir.alloca "x"
+  // CHECK-NEXT: %[[Y_ADDR:.*]] = cir.alloca "y"
+  // CHECK-NEXT: %[[P_ADDR:.*]] = cir.alloca "p"
+  // CHECK-NEXT: %[[ARR_ADDR:.*]] = cir.alloca "arr"
+
+#pragma omp parallel default(none)
+  {}
+  // CHECK: omp.parallel {
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+#pragma omp parallel default(none)
+  {
+    int inside = 10;
+  }
+  // CHECK-NEXT: omp.parallel {
+  // CHECK-NEXT: %[[INSIDE_ADDR:.*]] = cir.alloca "inside"
+  // CHECK-NEXT: %[[TEN_ADDR:.*]] = cir.const #cir.int<10>
+  // CHECK-NEXT: cir.store align(4) %[[TEN_ADDR]], %[[INSIDE_ADDR]]
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+#pragma omp parallel default(shared)
+  {}
+  // CHECK-NEXT: omp.parallel {
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+#pragma omp parallel default(shared)
+  {
+    x += 5;
+  }
+  // CHECK-NEXT: omp.parallel {
+  // CHECK-NEXT: %[[FIVE_ADDR:.*]] = cir.const #cir.int<5>
+  // CHECK-NEXT: %[[PTR_X_ADDR:.*]] = cir.load align(4) %[[X_ADDR]]
+  // CHECK-NEXT: %[[INCREMENT_X_ADDR:.*]] = cir.add nsw %[[PTR_X_ADDR]], %[[FIVE_ADDR]]
+  // CHECK-NEXT: cir.store align(4) %[[INCREMENT_X_ADDR]], %[[X_ADDR]]
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+#pragma omp parallel default(shared)
+  {
+    arr[0] += x;
+  }
+  // CHECK-NEXT: omp.parallel {
+  // CHECK-NEXT: %[[PTR_X_ADDR:.*]] = cir.load align(4) %[[X_ADDR]]
+  // CHECK-NEXT: %[[ZERO_IDX_ADDR:.*]] = cir.const #cir.int<0>
+  // CHECK-NEXT: %[[ARR_ELEMENT_ADDR:.*]] = cir.get_element %[[ARR_ADDR]][%[[ZERO_IDX_ADDR]] : !s64i]
+  // CHECK-NEXT: %[[PTR_ARR_ELEMENT_ADDR:.*]] = cir.load align(4) %[[ARR_ELEMENT_ADDR]]
+  // CHECK-NEXT: %[[INCREMENT_ELEMENT_ADDR:.*]] = cir.add nsw %[[PTR_ARR_ELEMENT_ADDR]], %[[PTR_X_ADDR]]
+  // CHECK-NEXT: cir.store align(4) %[[INCREMENT_ELEMENT_ADDR]], %[[ARR_ELEMENT_ADDR]]
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+#pragma omp parallel default(shared)
+  {
+    *p += x;
+  }
+  // CHECK-NEXT: omp.parallel {
+  // CHECK-NEXT: %[[PTR_X_ADDR:.*]] = cir.load align(4) %[[X_ADDR]]
+  // CHECK-NEXT: %[[DEREF_P_ADDR:.*]] = cir.load deref align(8) %[[P_ADDR]]
+  // CHECK-NEXT: %[[LOAD_DEREF_P_ADDR:.*]] = cir.load align(4) %[[DEREF_P_ADDR]]
+  // CHECK-NEXT: %[[INCREMENT_P_ADDR:.*]] = cir.add nsw %[[LOAD_DEREF_P_ADDR]], %[[PTR_X_ADDR]]
+  // CHECK-NEXT: cir.store align(4) %[[INCREMENT_P_ADDR]], %[[DEREF_P_ADDR]]
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+}
+
 void proc_bind_parallel() {
   // CHECK: cir.func{{.*}}@proc_bind_parallel
 #pragma omp parallel proc_bind(master)

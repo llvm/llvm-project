@@ -40,6 +40,8 @@ public:
                       llvm::ArrayRef<const OMPClause *> clauses)
       : cgf(cgf), cgm(cgm), builder(builder), loc(loc), clauses(clauses) {}
 
+  bool emitDefault() const;
+
   bool emitIf(mlir::omp::IfClauseOps &result,
               llvm::omp::Directive directiveName) const;
 
