@@ -185,8 +185,10 @@ KMP_THREAD_LOCAL int __kmp_gtid = KMP_GTID_DNE;
 #endif /* KMP_TDATA_GTID */
 int __kmp_tls_gtid_min = INT_MAX;
 int __kmp_foreign_tp = TRUE;
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_RISCV_FP_CONTROL
 int __kmp_inherit_fp_control = TRUE;
+#endif
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 kmp_int16 __kmp_init_x87_fpu_control_word = 0;
 kmp_uint32 __kmp_init_mxcsr = 0;
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
