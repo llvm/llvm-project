@@ -2727,7 +2727,9 @@ static bool canSpillOnFrameIndexAccess(const MachineFunction &MF,
 
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   for (const auto &MBB : MF)
-    for (const auto &MI : MBB)
+    for (const auto &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
       if (MI.getOpcode() == ARM::tSTRspi || MI.getOpcode() == ARM::tSTRi ||
           STI.genExecuteOnly())
         for (const auto &Op : MI.operands())
@@ -2737,6 +2739,7 @@ static bool canSpillOnFrameIndexAccess(const MachineFunction &MF,
             if (ARM::hGPRRegClass.contains(Reg) && Reg != ARM::SP)
               return true;
           }
+    }
   return false;
 }
 
