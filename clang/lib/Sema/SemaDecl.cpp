@@ -545,11 +545,18 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
           SS ? SS->getWithLocInContext(Context) : NestedNameSpecifierLoc(),
           NameLoc);
     } else {
-      T = Context.getTypeDeclType(TD);
+      // For invalid TTP mark them as integers to avoid incorrect error recovery
+      if(auto *TTP = dyn_cast<TemplateTypeParmDecl>(TD);
+          TTP && TTP->isInvalidDecl())
+        T = Context.IntTy;
+      else
+        T = Context.getTypeDeclType(TD);
       if (!WantNontrivialTypeSourceInfo)
         return ParsedType::make(T);
       if (isa<ObjCTypeParamType>(T))
         TLB.push<ObjCTypeParamTypeLoc>(T).setNameLoc(NameLoc);
+      else if (T->isBuiltinType())
+        TLB.pushTrivial(Context, T, NameLoc);
       else
         TLB.pushTypeSpec(T).setNameLoc(NameLoc);
     }
@@ -19322,6 +19329,16 @@ CreateNewDecl:
 void Sema::ActOnTagStartDefinition(Scope *S, Decl *TagD) {
   AdjustDeclIfTemplate(TagD);
   TagDecl *Tag = cast<TagDecl>(TagD);
+
+  // If class is defined within the alias template then mark the parameters of
+  // the template as invalid first to avoid incorrect error recovery.
+  if (Scope *Parent = S->getParent();
+      Parent && Parent->isTypeAliasScope() &&
+      Parent->isTemplateParamScope()){
+    for (Decl *D : Parent->decls()){
+      D->setInvalidDecl();
+    }
+  }
 
   // Enter the tag context.
   PushDeclContext(S, Tag);
