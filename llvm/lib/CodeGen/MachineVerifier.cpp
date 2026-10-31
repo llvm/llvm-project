@@ -167,6 +167,10 @@ struct MachineVerifier {
   SmallVector<MCRegister, 4> LivePhysDefs;
   SmallVector<unsigned, 4> DeadPhysDefOps;
 
+  // Live physical register defs, with their subregisters, of the instructions
+  // visited so far in the current bundle.
+  RegSet BundleLivePhysDefs;
+
   SlotIndex lastIndex;
 
   // Add Reg and any sub-registers to RV
@@ -926,6 +930,8 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
 // This function gets called for all bundle headers, including normal
 // stand-alone unbundled instructions.
 void MachineVerifier::visitMachineBundleBefore(const MachineInstr *MI) {
+  BundleLivePhysDefs.clear();
+
   if (Indexes && Indexes->hasIndex(*MI)) {
     SlotIndex idx = Indexes->getInstructionIndex(*MI);
     if (!(idx > lastIndex)) {
@@ -2345,6 +2351,10 @@ void MachineVerifier::visitMachineInstrAfter(const MachineInstr *MI) {
     }
   }
 
+  if (MI->isBundled() && !MI->isBundle())
+    for (MCRegister Reg : LivePhysDefs)
+      BundleLivePhysDefs.insert_range(TRI->subregs_inclusive(Reg));
+
   LivePhysDefs.clear();
   DeadPhysDefOps.clear();
 }
@@ -3137,15 +3147,17 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     }
 
     // Use of a dead register.
-    if (!regsLive.count(Reg)) {
+    if (!regsLive.count(Reg) && !BundleLivePhysDefs.count(Reg)) {
       if (Reg.isPhysical()) {
-        // Reserved registers may be used even when 'dead'.
-        bool Bad = !isReserved(Reg);
+        // Reserved registers may be used even when 'dead'. The uses of a
+        // BUNDLE header repeat those of the bundled instructions, which are
+        // checked on their own.
+        bool Bad = !isReserved(Reg) && !MI->isBundle();
         // We are fine if just any subregister has a defined value.
         if (Bad) {
 
           for (const MCPhysReg &SubReg : TRI->subregs(Reg)) {
-            if (regsLive.count(SubReg)) {
+            if (regsLive.count(SubReg) || BundleLivePhysDefs.count(SubReg)) {
               Bad = false;
               break;
             }
