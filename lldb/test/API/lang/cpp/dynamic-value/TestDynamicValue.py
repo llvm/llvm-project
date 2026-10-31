@@ -26,9 +26,6 @@ class DynamicValueTestCase(TestBase):
         self.main_second_call_line = line_number(
             "pass-to-base.cpp", "// Break here and get real address of reallyA."
         )
-        self.forward_a_line = line_number(
-            "forward-a.cpp", "// Break here for forward declared A"
-        )
 
     @add_test_categories(["pyapi"])
     def test_get_dynamic_vals(self):
@@ -286,9 +283,7 @@ class DynamicValueTestCase(TestBase):
         imperative that this is a separate test so that we don't end up parsing
         a definition of A from somewhere else."""
         self.build()
-        lldbutil.run_to_line_breakpoint(
-            self, lldb.SBFileSpec("forward-a.cpp"), self.forward_a_line
-        )
+        lldbutil.run_to_name_breakpoint(self, "take_A")
         self.expect(
             "frame var -d run-target --ptr-depth=1 --show-types a",
             substrs=["(B *) a", "m_b_value = 10"],
@@ -302,9 +297,7 @@ class DynamicValueTestCase(TestBase):
         that we can determine the dynamic type of the value if the core file
         does not contain the type vtable."""
         self.build()
-        lldbutil.run_to_line_breakpoint(
-            self, lldb.SBFileSpec("forward-a.cpp"), self.forward_a_line
-        )
+        lldbutil.run_to_name_breakpoint(self, "take_A")
 
         # Get the address of our object and its vtable
         a = self.frame().FindVariable("a")
