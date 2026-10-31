@@ -86,6 +86,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
+#include <set>
 
 #define DEBUG_TYPE "flang-lower-bridge"
 
@@ -6508,26 +6509,42 @@ private:
 
   void setOpenMPAssumptionAttributes(mlir::func::FuncOp func,
                                      const Fortran::semantics::Scope &scope) {
-    if (bridge.getSemanticsContext().langOptions().OpenMPSimd)
+    const auto &langOptions = bridge.getSemanticsContext().langOptions();
+    if (langOptions.OpenMPSimd)
       return;
     const auto *assumptionScopeEnd =
         &Fortran::semantics::omp::GetProgramUnit(scope).parent();
+    bool noOpenmp = false;
+    std::set<llvm::omp::Directive> absent;
     for (const auto *assumptionScope = &scope;
          !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
       if (const auto *symbol = assumptionScope->symbol();
-          !symbol ||
-          !symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
-        continue;
-      llvm::SmallVector<mlir::Attribute> llvmAttrs;
-      if (auto existing =
-              func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
-        llvm::append_range(llvmAttrs, existing);
-      llvmAttrs.push_back(
-          builder->getStrArrayAttr({llvm::AssumptionAttrKey, "omp_no_openmp"}));
-      func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
-      break;
+          symbol &&
+          symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
+        noOpenmp = true;
+      const auto &directives = assumptionScope->ompAssumesAbsent();
+      absent.insert(directives.begin(), directives.end());
     }
+    if (!noOpenmp && absent.empty())
+      return;
+    std::string assumptions = noOpenmp ? "omp_no_openmp" : "";
+    for (llvm::omp::Directive directive : absent) {
+      if (!assumptions.empty())
+        assumptions += ',';
+      assumptions += "absent(";
+      assumptions += llvm::omp::getOpenMPDirectiveName(
+                         directive, langOptions.getOpenMPVersion())
+                         .str();
+      assumptions += ')';
+    }
+    llvm::SmallVector<mlir::Attribute> llvmAttrs;
+    if (auto existing =
+            func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
+      llvm::append_range(llvmAttrs, existing);
+    llvmAttrs.push_back(
+        builder->getStrArrayAttr({llvm::AssumptionAttrKey, assumptions}));
+    func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
   }
 
   /// Start translation of a function.

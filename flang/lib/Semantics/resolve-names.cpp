@@ -1859,6 +1859,14 @@ public:
         symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
       }
     }
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      if (const auto *absent{
+              std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
+        for (llvm::omp::Directive directive : absent->v.v) {
+          currScope().add_ompAssumesAbsent(directive);
+        }
+      }
+    }
   }
 
   // Make sure that the following code is properly handled:

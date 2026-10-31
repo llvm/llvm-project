@@ -484,6 +484,15 @@ void ModFileWriter::PutSymbols(
   if (scope.symbol()->test(Symbol::Flag::OmpAssumesNoOpenmp)) {
     decls_ << "!$omp assumes no_openmp\n";
   }
+  if (!scope.ompAssumesAbsent().empty()) {
+    decls_ << "!$omp assumes absent(";
+    llvm::interleaveComma(
+        scope.ompAssumesAbsent(), decls_, [&](llvm::omp::Directive directive) {
+          decls_ << llvm::omp::getOpenMPDirectiveName(
+              directive, context_.langOptions().getOpenMPVersion());
+        });
+    decls_ << ")\n";
+  }
   PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
 
   for (const auto &set : scope.equivalenceSets()) {

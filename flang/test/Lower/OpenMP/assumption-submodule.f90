@@ -17,8 +17,18 @@ submodule (use_parent) use_child_reload
   implicit none
 contains
   ! CHECK-LABEL: func.func @_QMuse_parentPimported_work()
-  ! CHECK5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+  ! CHECK5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp,absent(barrier),absent(parallel)"]]
   ! CHECK60-NOT: "omp_no_openmp"
   module procedure imported_work
   end procedure imported_work
 end submodule use_child_reload
+
+submodule (use_parent) absent_use_child_reload
+  use absent_reexport, only:
+contains
+  ! CHECK-LABEL: func.func @_QMuse_parentPabsent_imported_work()
+  ! CHECK5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(barrier),absent(parallel),absent(target)"]]
+  ! CHECK60-NOT: llvm.passthrough
+  module procedure absent_imported_work
+  end procedure absent_imported_work
+end submodule absent_use_child_reload
