@@ -951,9 +951,9 @@ define i32 @load_load_partial_alias(ptr %P) nounwind ssp {
 ; LE-LABEL: define i32 @load_load_partial_alias(
 ; LE-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; LE-NEXT:  [[ENTRY:.*:]]
-; LE-NEXT:    [[TTMP2:%.*]] = load i32, ptr [[P]], align 4
-; LE-NEXT:    [[TMP0:%.*]] = lshr i32 [[TTMP2]], 8
-; LE-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+; LE-NEXT:    [[TTMP2_BYTES:%.*]] = load b32, ptr [[P]], align 4
+; LE-NEXT:    [[TTMP2:%.*]] = bitcast b32 [[TTMP2_BYTES]] to i32
+; LE-NEXT:    [[TMP1:%.*]] = bitextract i8, b32 [[TTMP2_BYTES]], i32 8
 ; LE-NEXT:    [[CONV:%.*]] = zext i8 [[TMP1]] to i32
 ; LE-NEXT:    [[ADD:%.*]] = add nsw i32 [[TTMP2]], [[CONV]]
 ; LE-NEXT:    ret i32 [[ADD]]
@@ -961,9 +961,9 @@ define i32 @load_load_partial_alias(ptr %P) nounwind ssp {
 ; BE-LABEL: define i32 @load_load_partial_alias(
 ; BE-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; BE-NEXT:  [[ENTRY:.*:]]
-; BE-NEXT:    [[TTMP2:%.*]] = load i32, ptr [[P]], align 4
-; BE-NEXT:    [[TMP0:%.*]] = lshr i32 [[TTMP2]], 16
-; BE-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+; BE-NEXT:    [[TTMP2_BYTES:%.*]] = load b32, ptr [[P]], align 4
+; BE-NEXT:    [[TTMP2:%.*]] = bitcast b32 [[TTMP2_BYTES]] to i32
+; BE-NEXT:    [[TMP1:%.*]] = bitextract i8, b32 [[TTMP2_BYTES]], i32 16
 ; BE-NEXT:    [[CONV:%.*]] = zext i8 [[TMP1]] to i32
 ; BE-NEXT:    [[ADD:%.*]] = add nsw i32 [[TTMP2]], [[CONV]]
 ; BE-NEXT:    ret i32 [[ADD]]
@@ -1139,21 +1139,22 @@ define void @load_load_partial_alias_loop(ptr %P) {
 ; LE-NEXT:    [[P_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
 ; LE-NEXT:    [[V_1:%.*]] = load i8, ptr [[P_1]], align 1
 ; LE-NEXT:    call void @use.i8(i8 [[V_1]])
-; LE-NEXT:    [[V_1_32:%.*]] = load i32, ptr [[P_1]], align 4
+; LE-NEXT:    [[V_1_32_BYTES:%.*]] = load b32, ptr [[P_1]], align 4
+; LE-NEXT:    [[V_1_32:%.*]] = bitcast b32 [[V_1_32_BYTES]] to i32
 ; LE-NEXT:    call void @use.i32(i32 [[V_1_32]])
-; LE-NEXT:    [[TMP0:%.*]] = trunc i32 [[V_1_32]] to i8
+; LE-NEXT:    [[TMP0:%.*]] = bitextract i8, b32 [[V_1_32_BYTES]], i32 0
 ; LE-NEXT:    br label %[[LOOP:.*]]
 ; LE:       [[LOOP]]:
-; LE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP0]], %[[ENTRY]] ], [ [[TMP2:%.*]], %[[LOOP_LOOP_CRIT_EDGE:.*]] ]
+; LE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP0]], %[[ENTRY]] ], [ [[TMP1:%.*]], %[[LOOP_LOOP_CRIT_EDGE:.*]] ]
 ; LE-NEXT:    [[I:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_LOOP_CRIT_EDGE]] ]
 ; LE-NEXT:    [[P_I:%.*]] = getelementptr i8, ptr [[P]], i64 [[I]]
 ; LE-NEXT:    call void @use.i8(i8 [[V_I]])
-; LE-NEXT:    [[V_I_32:%.*]] = load i32, ptr [[P_I]], align 4
+; LE-NEXT:    [[V_I_32_BYTES:%.*]] = load b32, ptr [[P_I]], align 4
+; LE-NEXT:    [[V_I_32:%.*]] = bitcast b32 [[V_I_32_BYTES]] to i32
 ; LE-NEXT:    call void @use.i32(i32 [[V_I_32]])
 ; LE-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; LE-NEXT:    [[CMP:%.*]] = icmp ne i64 [[I_INC]], 64
-; LE-NEXT:    [[TMP1:%.*]] = lshr i32 [[V_I_32]], 8
-; LE-NEXT:    [[TMP2]] = trunc i32 [[TMP1]] to i8
+; LE-NEXT:    [[TMP1]] = bitextract i8, b32 [[V_I_32_BYTES]], i32 8
 ; LE-NEXT:    br i1 [[CMP]], label %[[LOOP_LOOP_CRIT_EDGE]], label %[[EXIT:.*]]
 ; LE:       [[LOOP_LOOP_CRIT_EDGE]]:
 ; LE-NEXT:    br label %[[LOOP]]
@@ -1166,22 +1167,22 @@ define void @load_load_partial_alias_loop(ptr %P) {
 ; BE-NEXT:    [[P_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
 ; BE-NEXT:    [[V_1:%.*]] = load i8, ptr [[P_1]], align 1
 ; BE-NEXT:    call void @use.i8(i8 [[V_1]])
-; BE-NEXT:    [[V_1_32:%.*]] = load i32, ptr [[P_1]], align 4
+; BE-NEXT:    [[V_1_32_BYTES:%.*]] = load b32, ptr [[P_1]], align 4
+; BE-NEXT:    [[V_1_32:%.*]] = bitcast b32 [[V_1_32_BYTES]] to i32
 ; BE-NEXT:    call void @use.i32(i32 [[V_1_32]])
-; BE-NEXT:    [[TMP0:%.*]] = lshr i32 [[V_1_32]], 24
-; BE-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+; BE-NEXT:    [[TMP0:%.*]] = bitextract i8, b32 [[V_1_32_BYTES]], i32 24
 ; BE-NEXT:    br label %[[LOOP:.*]]
 ; BE:       [[LOOP]]:
-; BE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[LOOP_LOOP_CRIT_EDGE:.*]] ]
+; BE-NEXT:    [[V_I:%.*]] = phi i8 [ [[TMP0]], %[[ENTRY]] ], [ [[TMP1:%.*]], %[[LOOP_LOOP_CRIT_EDGE:.*]] ]
 ; BE-NEXT:    [[I:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_LOOP_CRIT_EDGE]] ]
 ; BE-NEXT:    [[P_I:%.*]] = getelementptr i8, ptr [[P]], i64 [[I]]
 ; BE-NEXT:    call void @use.i8(i8 [[V_I]])
-; BE-NEXT:    [[V_I_32:%.*]] = load i32, ptr [[P_I]], align 4
+; BE-NEXT:    [[V_I_32_BYTES:%.*]] = load b32, ptr [[P_I]], align 4
+; BE-NEXT:    [[V_I_32:%.*]] = bitcast b32 [[V_I_32_BYTES]] to i32
 ; BE-NEXT:    call void @use.i32(i32 [[V_I_32]])
 ; BE-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; BE-NEXT:    [[CMP:%.*]] = icmp ne i64 [[I_INC]], 64
-; BE-NEXT:    [[TMP2:%.*]] = lshr i32 [[V_I_32]], 16
-; BE-NEXT:    [[TMP3]] = trunc i32 [[TMP2]] to i8
+; BE-NEXT:    [[TMP1]] = bitextract i8, b32 [[V_I_32_BYTES]], i32 16
 ; BE-NEXT:    br i1 [[CMP]], label %[[LOOP_LOOP_CRIT_EDGE]], label %[[EXIT:.*]]
 ; BE:       [[LOOP_LOOP_CRIT_EDGE]]:
 ; BE-NEXT:    br label %[[LOOP]]
@@ -1221,13 +1222,12 @@ define void @load_load_partial_alias_atomic(ptr %arg) {
 ; LE-SAME: ptr [[ARG:%.*]]) {
 ; LE-NEXT:  [[BB:.*]]:
 ; LE-NEXT:    [[TMP2_1:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 1
-; LE-NEXT:    [[TMP2_3:%.*]] = load i64, ptr [[TMP2_1]], align 4
+; LE-NEXT:    [[TMP2_3_BYTES:%.*]] = load b64, ptr [[TMP2_1]], align 4
 ; LE-NEXT:    [[TMP3_1:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 2
-; LE-NEXT:    [[TMP0:%.*]] = lshr i64 [[TMP2_3]], 8
-; LE-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i8
+; LE-NEXT:    [[TMP0:%.*]] = bitextract i8, b64 [[TMP2_3_BYTES]], i32 8
 ; LE-NEXT:    br label %[[BB5:.*]]
 ; LE:       [[BB5]]:
-; LE-NEXT:    [[TMP4_1:%.*]] = phi i8 [ [[TMP4_1_PRE:%.*]], %[[BB5]] ], [ [[TMP1]], %[[BB]] ]
+; LE-NEXT:    [[TMP4_1:%.*]] = phi i8 [ [[TMP4_1_PRE:%.*]], %[[BB5]] ], [ [[TMP0]], %[[BB]] ]
 ; LE-NEXT:    [[TMP6_1:%.*]] = load atomic i8, ptr @global acquire, align 4
 ; LE-NEXT:    [[TMP7_1:%.*]] = add i8 [[TMP6_1]], [[TMP4_1]]
 ; LE-NEXT:    store i8 [[TMP7_1]], ptr [[ARG]], align 1
@@ -1238,13 +1238,12 @@ define void @load_load_partial_alias_atomic(ptr %arg) {
 ; BE-SAME: ptr [[ARG:%.*]]) {
 ; BE-NEXT:  [[BB:.*]]:
 ; BE-NEXT:    [[TMP2_1:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 1
-; BE-NEXT:    [[TMP2_3:%.*]] = load i64, ptr [[TMP2_1]], align 4
+; BE-NEXT:    [[TMP2_3_BYTES:%.*]] = load b64, ptr [[TMP2_1]], align 4
 ; BE-NEXT:    [[TMP3_1:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 2
-; BE-NEXT:    [[TMP0:%.*]] = lshr i64 [[TMP2_3]], 48
-; BE-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i8
+; BE-NEXT:    [[TMP0:%.*]] = bitextract i8, b64 [[TMP2_3_BYTES]], i32 48
 ; BE-NEXT:    br label %[[BB5:.*]]
 ; BE:       [[BB5]]:
-; BE-NEXT:    [[TMP4_1:%.*]] = phi i8 [ [[TMP4_1_PRE:%.*]], %[[BB5]] ], [ [[TMP1]], %[[BB]] ]
+; BE-NEXT:    [[TMP4_1:%.*]] = phi i8 [ [[TMP4_1_PRE:%.*]], %[[BB5]] ], [ [[TMP0]], %[[BB]] ]
 ; BE-NEXT:    [[TMP6_1:%.*]] = load atomic i8, ptr @global acquire, align 4
 ; BE-NEXT:    [[TMP7_1:%.*]] = add i8 [[TMP6_1]], [[TMP4_1]]
 ; BE-NEXT:    store i8 [[TMP7_1]], ptr [[ARG]], align 1

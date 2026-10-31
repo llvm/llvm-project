@@ -253,9 +253,10 @@ define void @load_ptr_dereferenceable_or_null_to_i64(ptr %p) {
 define void @load_ptr_nonnull_to_i32(ptr %p) {
 ; CHECK-LABEL: define void @load_ptr_nonnull_to_i32
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    [[VAL_BYTES:%.*]] = load b64, ptr [[P]], align 8
+; CHECK-NEXT:    [[VAL:%.*]] = bitcast b64 [[VAL_BYTES]] to ptr
 ; CHECK-NEXT:    [[VAL_INT:%.*]] = ptrtoint ptr [[VAL]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[VAL_INT]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i32, b64 [[VAL_BYTES]], i32 0
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL_INT]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret void
@@ -271,8 +272,9 @@ define void @load_ptr_nonnull_to_i32(ptr %p) {
 define void @load_i64_range_to_i32_range(ptr %p) {
 ; CHECK-LABEL: define void @load_i64_range_to_i32_range
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[VAL]] to i32
+; CHECK-NEXT:    [[VAL_BYTES:%.*]] = load b64, ptr [[P]], align 8
+; CHECK-NEXT:    [[VAL:%.*]] = bitcast b64 [[VAL_BYTES]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i32, b64 [[VAL_BYTES]], i32 0
 ; CHECK-NEXT:    call void @use.i64(i64 [[VAL]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret void
