@@ -416,6 +416,11 @@ public:
     return strchr(getAttributesString(ID), 'e') != nullptr;
   }
 
+  /// Same as the ID-based overload, but looks the function up by name. This
+  /// still classifies standard libm functions under -fno-builtin, where their
+  /// identifier builtin IDs are cleared.
+  bool isConstWithoutErrnoAndExceptions(llvm::StringRef Name) const;
+
   bool isConstWithoutExceptions(unsigned ID) const {
     return strchr(getAttributesString(ID), 'g') != nullptr;
   }

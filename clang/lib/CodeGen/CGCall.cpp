@@ -5689,6 +5689,45 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
   return MaxVectorWidth;
 }
 
+// Returns true if a call to \p TargetDecl is a standard libm math function that
+// carries a #pragma omp declare simd. Inside an OpenMP SIMD loop the iteration
+// order is unspecified, so its errno and FP-environment side effects need not
+// be preserved and the call can be modelled as memory(none). This lets the
+// loop vectorizer replace it with the function's VFABI vector variant.
+//
+// The classification is done by name so it still fires under -fno-builtin,
+// where FunctionDecl::getBuiltinID() returns 0. Functions that write through
+// pointer parameters (sincos, modf, frexp, ...) are excluded.
+static bool isDeclareSimdConstMathCall(const Decl *TargetDecl,
+                                       CodeGenModule &CGM) {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  if (!FD || !FD->getIdentifier())
+    return false;
+
+  bool HasDeclareSimd = false;
+  for (const FunctionDecl *Redecl : FD->redecls())
+    if (Redecl->hasAttr<OMPDeclareSimdDeclAttr>()) {
+      HasDeclareSimd = true;
+      break;
+    }
+  if (!HasDeclareSimd)
+    return false;
+
+  if (!CGM.getContext().BuiltinInfo.isConstWithoutErrnoAndExceptions(
+          FD->getName()))
+    return false;
+
+  // sincos-style functions take output pointers; their effects on user-visible
+  // memory must not be dropped.
+  if (!FD->getReturnType()->isFloatingType())
+    return false;
+  for (const ParmVarDecl *P : FD->parameters())
+    if (P->getType()->isAnyPointerType())
+      return false;
+
+  return true;
+}
+
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -6513,6 +6552,15 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Apply the attributes and calling convention.
   CI->setAttributes(Attrs);
   CI->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
+
+  // Model declare-simd libm calls in SIMD loops as memory(none) so the loop
+  // vectorizer can widen them to their VFABI vector variants, and mark them
+  // no-builtin so the middle-end does not fold them back into intrinsics.
+  if (LoopStack.getCurLoopParallel() &&
+      isDeclareSimdConstMathCall(TargetDecl, CGM)) {
+    CI->setMemoryEffects(llvm::MemoryEffects::none());
+    CI->addFnAttr(llvm::Attribute::NoBuiltin);
+  }
 
   // Apply various metadata.
 

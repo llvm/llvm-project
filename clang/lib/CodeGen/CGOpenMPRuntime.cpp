@@ -40,6 +40,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -12254,6 +12255,151 @@ evaluateCDTSize(const FunctionDecl *FD,
   return C.getTypeSize(CDT);
 }
 
+/// Returns true if the current target can execute vector functions of \p ISA.
+static bool isVFISASupported(llvm::VFISAKind ISA, const TargetInfo &TI) {
+  switch (ISA) {
+  case llvm::VFISAKind::SSE:
+    return TI.hasFeature("sse2");
+  case llvm::VFISAKind::AVX:
+    return TI.hasFeature("avx");
+  case llvm::VFISAKind::AVX2:
+    return TI.hasFeature("avx2");
+  case llvm::VFISAKind::AVX512:
+    return TI.hasFeature("avx512f");
+  case llvm::VFISAKind::AdvancedSIMD:
+    return TI.hasFeature("neon");
+  case llvm::VFISAKind::SVE:
+    return TI.hasFeature("sve");
+  case llvm::VFISAKind::RVV:
+    return TI.hasFeature("v");
+  case llvm::VFISAKind::LLVM:
+    // The LLVM ISA is target independent.
+    return true;
+  case llvm::VFISAKind::Unknown:
+    // Unrecognized ISA field; be conservative and drop the variant.
+    return false;
+  }
+  llvm_unreachable("Unhandled VFISAKind");
+}
+
+/// Returns the vector register width used by \p ISA, or 0 if the width is not
+/// fixed by the ISA.
+static unsigned getVFISARegisterWidth(llvm::VFISAKind ISA) {
+  switch (ISA) {
+  case llvm::VFISAKind::SSE:
+  case llvm::VFISAKind::AdvancedSIMD:
+    return 128;
+  case llvm::VFISAKind::AVX:
+  case llvm::VFISAKind::AVX2:
+    return 256;
+  case llvm::VFISAKind::AVX512:
+    return 512;
+  default:
+    return 0;
+  }
+}
+
+/// Returns how much \p ISA is preferred when several variants have the same VF.
+/// The vectorizer uses the first mapping it finds, so the most capable ISA has
+/// to come first.
+static unsigned getVFISAPreference(llvm::VFISAKind ISA) {
+  switch (ISA) {
+  case llvm::VFISAKind::SSE:
+    return 1;
+  case llvm::VFISAKind::AVX:
+    return 2;
+  case llvm::VFISAKind::AVX2:
+    return 3;
+  case llvm::VFISAKind::AVX512:
+    return 4;
+  default:
+    return 0;
+  }
+}
+
+static void emitDeclareSimdVariantMetadata(CodeGenModule &CGM,
+                                           llvm::Function *Fn) {
+  // Respect -mprefer-vector-width, otherwise the vectorizer can pick a variant
+  // wider than the preferred width, e.g. a 512-bit call with
+  // -mprefer-vector-width=256.
+  unsigned PreferWidth = 0;
+  StringRef PreferVectorWidth = CGM.getCodeGenOpts().PreferVectorWidth;
+  if (!PreferVectorWidth.empty() && PreferVectorWidth != "none")
+    (void)PreferVectorWidth.getAsInteger(10, PreferWidth);
+
+  llvm::SmallVector<std::pair<unsigned, std::string>, 8> VariantMappings;
+  for (llvm::Attribute Attr : Fn->getAttributes().getFnAttrs()) {
+    if (!Attr.isStringAttribute())
+      continue;
+
+    StringRef VariantName = Attr.getKindAsString();
+    if (!VariantName.starts_with("_ZGV"))
+      continue;
+
+    std::optional<llvm::VFInfo> Info =
+        llvm::VFABI::tryDemangleForVFABI(VariantName, Fn->getFunctionType());
+    if (!Info || !isVFISASupported(Info->ISA, CGM.getTarget()))
+      continue;
+
+    unsigned RegisterWidth = getVFISARegisterWidth(Info->ISA);
+    if (PreferWidth && RegisterWidth > PreferWidth)
+      continue;
+
+    llvm::FunctionType *VectorTy =
+        llvm::VFABI::createFunctionType(*Info, Fn->getFunctionType());
+    llvm::Function *VecFn = llvm::cast<llvm::Function>(
+        Fn->getParent()
+            ->getOrInsertFunction(Info->VectorName, VectorTy)
+            .getCallee());
+    // The mapping attribute is not a use, so keep the vector function in the
+    // module; otherwise GlobalOpt drops its declaration before vectorization.
+    CGM.addUsedOrCompilerUsedGlobal(VecFn);
+    VariantMappings.emplace_back(getVFISAPreference(Info->ISA),
+                                 std::string(VariantName));
+  }
+
+  if (VariantMappings.empty())
+    return;
+
+  llvm::stable_sort(VariantMappings, [](const auto &L, const auto &R) {
+    return L.first > R.first;
+  });
+
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  for (const auto &Mapping : VariantMappings)
+    Out << Mapping.second << ',';
+  Buffer.pop_back();
+
+  Fn->removeFnAttr(llvm::VFABI::MappingsAttrName);
+  Fn->addFnAttr(llvm::VFABI::MappingsAttrName, Buffer.str());
+}
+
+static bool shouldEmitDeclareSimdVariantMetadata(const FunctionDecl *FD,
+                                                 const SourceManager &SM) {
+  if (!FD)
+    return false;
+
+  for (const FunctionDecl *Redecl : FD->redecls()) {
+    if (!Redecl->hasAttr<OMPDeclareSimdDeclAttr>())
+      continue;
+
+    unsigned BuiltinID = Redecl->getBuiltinID();
+    if (BuiltinID &&
+        Redecl->getASTContext().BuiltinInfo.isLibFunction(BuiltinID))
+      return true;
+
+    SourceLocation Loc = SM.getExpansionLoc(Redecl->getLocation());
+    // Also handle library declarations from headers that are not on the system
+    // include path, e.g. a staged glibc build directory.
+    if (Loc.isValid() && !SM.isWrittenInMainFile(Loc) &&
+        Redecl->hasExternalFormalLinkage())
+      return true;
+  }
+
+  return false;
+}
+
 // This are the Functions that are needed to mangle the name of the
 // vector functions generated by the compiler, according to the rules
 // defined in the "Vector Function ABI specifications for AArch64",
@@ -12404,6 +12550,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
                                               llvm::Function *Fn) {
   ASTContext &C = CGM.getContext();
   FD = FD->getMostRecentDecl();
+  const FunctionDecl *MostRecentFD = FD;
   while (FD) {
     // Map params to their positions in function decl.
     llvm::DenseMap<const Decl *, unsigned> ParamPositions;
@@ -12567,6 +12714,10 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
     }
     FD = FD->getPreviousDecl();
   }
+
+  if (shouldEmitDeclareSimdVariantMetadata(MostRecentFD,
+                                           CGM.getContext().getSourceManager()))
+    emitDeclareSimdVariantMetadata(CGM, Fn);
 }
 
 namespace {
