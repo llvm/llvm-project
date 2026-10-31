@@ -777,20 +777,21 @@ func.func @fuse_scalar_constant(%arg0 : tensor<?x?xf32>) -> (tensor<?x?xf32>, te
 
 // -----
 
-// Fusing the broadcast into a reduction would require to insert extra knowledge
-// about the size of the reduction dimension. As long, as this is not
-// implemented, we check that two linalg operations remain.
-// TODO: Support this case in element-wise fusion.
+// The producer init is preserved for its shape, which supplies the reduction
+// bound after fusion.
 
 #map0 = affine_map<(d0, d1) -> ()>
 #map1 = affine_map<(d0, d1) -> (d0, d1)>
 #map2 = affine_map<(d0, d1) -> (d1, d0)>
 #map3 = affine_map<(d0, d1) -> (d0)>
 
-// CHECK-LABEL: @no_fusion_missing_reduction_shape
-// CHECK: linalg.generic
-// CHECK: linalg.generic
-func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -> tensor<?xf32> {
+// CHECK-LABEL: @fusion_missing_reduction_shape
+// CHECK: %[[FUSED:.*]]:2 = linalg.generic
+// CHECK-SAME: iterator_types = ["parallel", "reduction"]
+// CHECK-SAME: outs(%{{.*}}, %{{.*}} : tensor<?x?xf32>, tensor<?xf32>)
+// CHECK-NOT: linalg.generic
+// CHECK: return %[[FUSED]]#1
+func.func @fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -> tensor<?xf32> {
   %cst = arith.constant 0xFF800000 : f32
   %4 = tensor.empty(%arg1, %arg1) : tensor<?x?xf32>
   %5 = linalg.generic {
@@ -1055,3 +1056,124 @@ module {
 // CHECK:         tensor.expand_shape
 // CHECK:         linalg.generic {{.*}}, iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "reduction"]}
 // CHECK-SAME:     ins(%[[ARG0]], %[[FUSED]]#1 : tensor<1x1x2x1xf32>, tensor<4x1x1x1xf32>)
+
+// -----
+
+// The producer reads its init, so the init is preserved during fusion. Its shape
+// supplies the reduction bound.
+
+// CHECK-LABEL: func.func @fusion_preserved_producer_init(
+// CHECK-SAME: %[[INPUT:.*]]: tensor<4xf32>, %[[PRODUCER_INIT:.*]]: tensor<4x8xf32>, %[[CONSUMER_INIT:.*]]: tensor<4xf32>
+// CHECK: %[[FUSED:.*]]:2 = linalg.generic
+// CHECK-SAME: iterator_types = ["parallel", "reduction"]
+// CHECK-SAME: ins(%[[INPUT]] : tensor<4xf32>)
+// CHECK-SAME: outs(%[[PRODUCER_INIT]], %[[CONSUMER_INIT]] : tensor<4x8xf32>, tensor<4xf32>)
+// CHECK: linalg.yield
+// CHECK-NOT: linalg.generic
+// CHECK: return %[[FUSED]]#1
+func.func @fusion_preserved_producer_init(
+    %input: tensor<4xf32>, %producer_init: tensor<4x8xf32>,
+    %consumer_init: tensor<4xf32>) -> tensor<4xf32> {
+  %producer = linalg.generic {
+      indexing_maps = [affine_map<(i, j) -> (i)>,
+                       affine_map<(i, j) -> (i, j)>],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%input : tensor<4xf32>) outs(%producer_init : tensor<4x8xf32>) {
+  ^bb0(%x: f32, %init: f32):
+    %sum = arith.addf %x, %init : f32
+    linalg.yield %sum : f32
+  } -> tensor<4x8xf32>
+  %consumer = linalg.generic {
+      indexing_maps = [affine_map<(i, j) -> (i, j)>,
+                       affine_map<(i, j) -> (i)>],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%producer : tensor<4x8xf32>) outs(%consumer_init : tensor<4xf32>) {
+  ^bb0(%x: f32, %acc: f32):
+    %sum = arith.addf %x, %acc : f32
+    linalg.yield %sum : f32
+  } -> tensor<4xf32>
+  return %consumer : tensor<4xf32>
+}
+
+// -----
+
+// The consumer reuses each producer element across j iterations. Fusion would
+// increment the preserved producer output on every reuse, changing the result.
+
+// CHECK-LABEL: func.func @no_fusion_repeated_producer_init(
+// CHECK-SAME: %[[PRODUCER_INIT:.*]]: tensor<2xi32>, %[[CONSUMER_INIT:.*]]: tensor<3xi32>
+// CHECK: %[[PRODUCER:.*]] = linalg.generic
+// CHECK-SAME: outs(%[[PRODUCER_INIT]] : tensor<2xi32>)
+// CHECK: linalg.yield
+// CHECK: %[[CONSUMER:.*]] = linalg.generic
+// CHECK-SAME: iterator_types = ["reduction", "parallel"]
+// CHECK-SAME: ins(%[[PRODUCER]] : tensor<2xi32>)
+// CHECK-SAME: outs(%[[CONSUMER_INIT]] : tensor<3xi32>)
+// CHECK: linalg.yield
+// CHECK: return %[[CONSUMER]]
+func.func @no_fusion_repeated_producer_init(
+    %producer_init: tensor<2xi32>,
+    %consumer_init: tensor<3xi32>) -> tensor<3xi32> {
+  %one = arith.constant 1 : i32
+  %producer = linalg.generic {
+      indexing_maps = [affine_map<(i) -> (i)>],
+      iterator_types = ["parallel"]} outs(%producer_init : tensor<2xi32>) {
+  ^bb0(%x: i32):
+    %next = arith.addi %x, %one : i32
+    linalg.yield %next : i32
+  } -> tensor<2xi32>
+  %consumer = linalg.generic {
+      indexing_maps = [affine_map<(i, j) -> (i)>,
+                       affine_map<(i, j) -> (j)>],
+      iterator_types = ["reduction", "parallel"]}
+      ins(%producer : tensor<2xi32>) outs(%consumer_init : tensor<3xi32>) {
+  ^bb0(%x: i32, %acc: i32):
+    %sum = arith.addi %acc, %x : i32
+    linalg.yield %sum : i32
+  } -> tensor<3xi32>
+  return %consumer : tensor<3xi32>
+}
+
+// -----
+
+// Fusion would move the producer's load past the intervening store and read
+// the updated value of %state.
+
+// CHECK-LABEL: func.func @no_fusion_captured_read_before_write(
+// CHECK-SAME: %[[PRODUCER_INIT:.*]]: tensor<2xi32>, %[[CONSUMER_INIT:.*]]: tensor<i32>, %[[STATE:.*]]: memref<i32>
+// CHECK: %[[PRODUCER:.*]] = linalg.generic
+// CHECK-SAME: outs(%[[PRODUCER_INIT]] : tensor<2xi32>)
+// CHECK: memref.load %[[STATE]][]
+// CHECK: linalg.yield
+// CHECK-NEXT: } -> tensor<2xi32>
+// CHECK-NEXT: memref.store %{{.*}}, %[[STATE]][]
+// CHECK-NEXT: %[[CONSUMER:.*]] = linalg.generic
+// CHECK-SAME: iterator_types = ["reduction"]
+// CHECK-SAME: ins(%[[PRODUCER]] : tensor<2xi32>)
+// CHECK-SAME: outs(%[[CONSUMER_INIT]] : tensor<i32>)
+// CHECK-NOT: memref.load
+// CHECK: linalg.yield
+// CHECK: return %[[CONSUMER]]
+func.func @no_fusion_captured_read_before_write(
+    %producer_init: tensor<2xi32>, %consumer_init: tensor<i32>,
+    %state: memref<i32>) -> tensor<i32> {
+  %ten = arith.constant 10 : i32
+  %producer = linalg.generic {
+      indexing_maps = [affine_map<(i) -> (i)>],
+      iterator_types = ["parallel"]} outs(%producer_init : tensor<2xi32>) {
+  ^bb0(%x: i32):
+    %old = memref.load %state[] : memref<i32>
+    %sum = arith.addi %x, %old : i32
+    linalg.yield %sum : i32
+  } -> tensor<2xi32>
+  memref.store %ten, %state[] : memref<i32>
+  %consumer = linalg.generic {
+      indexing_maps = [affine_map<(i) -> (i)>, affine_map<(i) -> ()>],
+      iterator_types = ["reduction"]}
+      ins(%producer : tensor<2xi32>) outs(%consumer_init : tensor<i32>) {
+  ^bb0(%x: i32, %acc: i32):
+    %sum = arith.addi %acc, %x : i32
+    linalg.yield %sum : i32
+  } -> tensor<i32>
+  return %consumer : tensor<i32>
+}
