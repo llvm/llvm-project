@@ -17624,21 +17624,42 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
       }
   }
 
+  bool Frozen = N0.getOpcode() == ISD::FREEZE;
+
   // fold (sext_inreg (extload x)) -> (sextload x)
-  // If sextload is not supported by target, we can only do the combine when
-  // load has one use. Doing otherwise can block folding the extload with other
-  // extends that the target does support.
-  if (ISD::isEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode())) {
-    auto *LN0 = cast<LoadSDNode>(N0);
+  // fold (sext_inreg (freeze (extload x))) -> (assertsext (freeze (sextload
+  // x))) If sextload is not supported by target, we can only do the combine
+  // when load has one use. Doing otherwise can block folding the extload with
+  // other extends that the target does support.
+  SDValue LoadOp = Frozen ? N0.getOperand(0) : N0;
+  if (ISD::isEXTLoad(LoadOp.getNode()) &&
+      ISD::isUNINDEXEDLoad(LoadOp.getNode())) {
+    auto *LN0 = cast<LoadSDNode>(LoadOp);
     if (ExtVT == LN0->getMemoryVT() &&
-        ((!LegalOperations && LN0->isSimple() && N0.hasOneUse()) ||
+        ((!LegalOperations && LN0->isSimple() && LoadOp.hasOneUse()) ||
          TLI.isLoadLegal(VT, ExtVT, LN0->getAlign(), LN0->getAddressSpace(),
                          ISD::SEXTLOAD, false))) {
       SDValue ExtLoad =
           DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
                          LN0->getBasePtr(), ExtVT, LN0->getMemOperand());
-      CombineTo(N, ExtLoad);
-      CombineTo(N0.getNode(), ExtLoad, ExtLoad.getValue(1));
+      SDValue Res = ExtLoad;
+      SDValue FrozenLoad;
+      if (Frozen) {
+        FrozenLoad = DAG.getFreeze(ExtLoad);
+        // Allow value tracking to see the sign extension through the freeze.
+        Res = DAG.getNode(ISD::AssertSext, DL, VT, FrozenLoad,
+                          DAG.getValueType(ExtVT.getScalarType()));
+      }
+      CombineTo(N, Res);
+      if (Frozen && !N0.hasOneUse()) {
+        // If (freeze (extload x)) has other uses route them through
+        // (truncate (freeze (sextload x))).
+        SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
+                                    LoadOp.getValueType(), FrozenLoad);
+        CombineTo(LN0, Trunc, ExtLoad.getValue(1));
+      } else {
+        CombineTo(LN0, ExtLoad, ExtLoad.getValue(1));
+      }
       AddToWorklist(ExtLoad.getNode());
       return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
@@ -17663,8 +17684,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
 
   // fold (sext_inreg (masked_load x)) -> (sext_masked_load x)
   // ignore it if the masked load is already sign extended
-  bool Frozen = N0.getOpcode() == ISD::FREEZE && N0.hasOneUse();
-  if (auto *Ld = dyn_cast<MaskedLoadSDNode>(Frozen ? N0.getOperand(0) : N0)) {
+  if (auto *Ld = dyn_cast<MaskedLoadSDNode>(
+          Frozen && N0.hasOneUse() ? N0.getOperand(0) : N0)) {
     if (ExtVT == Ld->getMemoryVT() && Ld->hasNUsesOfValue(1, 0) &&
         Ld->getExtensionType() != ISD::LoadExtType::NON_EXTLOAD &&
         TLI.isLoadLegal(VT, ExtVT, Ld->getAlign(), Ld->getAddressSpace(),
@@ -17673,7 +17694,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
           VT, DL, Ld->getChain(), Ld->getBasePtr(), Ld->getOffset(),
           Ld->getMask(), Ld->getPassThru(), ExtVT, Ld->getMemOperand(),
           Ld->getAddressingMode(), ISD::SEXTLOAD, Ld->isExpandingLoad());
-      CombineTo(N, Frozen ? N0 : ExtMaskedLoad);
+      CombineTo(N, Frozen && N0.hasOneUse() ? N0 : ExtMaskedLoad);
       CombineTo(Ld, ExtMaskedLoad, ExtMaskedLoad.getValue(1));
       return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
