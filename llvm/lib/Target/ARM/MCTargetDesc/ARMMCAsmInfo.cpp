@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCAsmInfo.h"
+#include "ARMMCTargetDesc.h"
 #include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -101,6 +103,11 @@ void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=16694
     DwarfRegNumForCFI = true;
   }
+}
+
+bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+  // Thumb encoding uses compressed instruction byte-order
+  return STI.hasFeature(ARM::ModeThumb);
 }
 
 void ARMCOFFMCAsmInfoMicrosoft::anchor() { }
