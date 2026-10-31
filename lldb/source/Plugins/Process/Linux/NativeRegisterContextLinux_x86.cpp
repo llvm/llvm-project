@@ -1124,11 +1124,11 @@ bool NativeRegisterContextLinux_x86::CopyXSTATEtoMPX(uint32_t reg) {
 
   if (reg >= m_reg_info.first_mpxr && reg <= m_reg_info.last_mpxr) {
     ::memcpy(m_mpx_set.mpxr[reg - m_reg_info.first_mpxr].bytes,
-             m_xstate->xsave.mpxr[reg - m_reg_info.first_mpxr].bytes,
+             m_xstate->xsave.mpx.mpxr[reg - m_reg_info.first_mpxr].bytes,
              sizeof(MPXReg));
   } else {
     ::memcpy(m_mpx_set.mpxc[reg - m_reg_info.first_mpxc].bytes,
-             m_xstate->xsave.mpxc[reg - m_reg_info.first_mpxc].bytes,
+             m_xstate->xsave.mpx.mpxc[reg - m_reg_info.first_mpxc].bytes,
              sizeof(MPXCsr));
   }
   return true;
@@ -1139,10 +1139,10 @@ bool NativeRegisterContextLinux_x86::CopyMPXtoXSTATE(uint32_t reg) {
     return false;
 
   if (reg >= m_reg_info.first_mpxr && reg <= m_reg_info.last_mpxr) {
-    ::memcpy(m_xstate->xsave.mpxr[reg - m_reg_info.first_mpxr].bytes,
+    ::memcpy(m_xstate->xsave.mpx.mpxr[reg - m_reg_info.first_mpxr].bytes,
              m_mpx_set.mpxr[reg - m_reg_info.first_mpxr].bytes, sizeof(MPXReg));
   } else {
-    ::memcpy(m_xstate->xsave.mpxc[reg - m_reg_info.first_mpxc].bytes,
+    ::memcpy(m_xstate->xsave.mpx.mpxc[reg - m_reg_info.first_mpxc].bytes,
              m_mpx_set.mpxc[reg - m_reg_info.first_mpxc].bytes, sizeof(MPXCsr));
   }
   return true;

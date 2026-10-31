@@ -33,12 +33,12 @@
 #define BNDR_OFFSET(reg_index)                                                 \
   (LLVM_EXTENSION offsetof(UserArea, fpr) +                                    \
    LLVM_EXTENSION offsetof(FPR, xsave) +                                       \
-   LLVM_EXTENSION offsetof(XSAVE, mpxr[reg_index]) + GDB_REMOTE_OFFSET)
+   LLVM_EXTENSION offsetof(XSAVE, mpx.mpxr[reg_index]) + GDB_REMOTE_OFFSET)
 
 #define BNDC_OFFSET(reg_index)                                                 \
   (LLVM_EXTENSION offsetof(UserArea, fpr) +                                    \
    LLVM_EXTENSION offsetof(FPR, xsave) +                                       \
-   LLVM_EXTENSION offsetof(XSAVE, mpxc[reg_index]) + GDB_REMOTE_OFFSET)
+   LLVM_EXTENSION offsetof(XSAVE, mpx.mpxc[reg_index]) + GDB_REMOTE_OFFSET)
 
 #ifdef DECLARE_REGISTER_INFOS_X86_64_STRUCT
 

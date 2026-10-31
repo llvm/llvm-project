@@ -71,3 +71,13 @@ TEST(RegisterInfo_x86Test, FullToAbridgedTagWord) {
     EXPECT_EQ(FullToAbridgedTagWord(x.value().tw), x.value().tw_abridged);
   }
 }
+
+TEST(RegisterInfo_x86Test, XSaveLayout) {
+  EXPECT_EQ(sizeof(EGPR), 128u);
+  EXPECT_EQ(static_cast<uint64_t>(XSAVE_HDR::XFeature::APX), 1ULL << 19);
+  EXPECT_EQ(offsetof(XSAVE, egpr), 960u);
+  EXPECT_EQ(offsetof(XSAVE, mpx) + offsetof(MPX, mpxr), 960u);
+  EXPECT_EQ(offsetof(XSAVE, mpx) + offsetof(MPX, mpxc), 1024u);
+  EXPECT_EQ(sizeof(XSAVE), 1088u);
+  EXPECT_EQ(sizeof(FPR), sizeof(XSAVE));
+}
