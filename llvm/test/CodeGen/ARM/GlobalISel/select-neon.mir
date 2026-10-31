@@ -24,13 +24,13 @@ body:             |
     ; CHECK: [[VADDv1i64_:%[0-9]+]]:dpr = VADDv1i64 [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK: $d0 = COPY [[VADDv1i64_]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(s64) = COPY $d0
+    %0(i64) = COPY $d0
 
-    %1(s64) = COPY $d1
+    %1(i64) = COPY $d1
 
-    %2(s64) = G_ADD %0, %1
+    %2(i64) = G_ADD %0, %1
 
-    $d0 = COPY %2(s64)
+    $d0 = COPY %2(i64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
@@ -53,13 +53,13 @@ body:             |
     ; CHECK: [[VSUBv1i64_:%[0-9]+]]:dpr = VSUBv1i64 [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
     ; CHECK: $d0 = COPY [[VSUBv1i64_]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(s64) = COPY $d0
+    %0(i64) = COPY $d0
 
-    %1(s64) = COPY $d1
+    %1(i64) = COPY $d1
 
-    %2(s64) = G_SUB %0, %1
+    %2(i64) = G_SUB %0, %1
 
-    $d0 = COPY %2(s64)
+    $d0 = COPY %2(i64)
 
     BX_RET 14, $noreg, implicit $d0
 

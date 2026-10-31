@@ -19,7 +19,7 @@ body:             |
   bb.0:
     liveins: $r0
 
-    %0(s32) = COPY $r0
+    %0(i32) = COPY $r0
     %1(p0) = G_GLOBAL_VALUE @a_global
     ; G_GLOBAL_VALUE is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(p0) = G_GLOBAL_VALUE @a_global

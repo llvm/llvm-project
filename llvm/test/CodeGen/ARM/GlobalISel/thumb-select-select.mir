@@ -25,15 +25,15 @@ body:             |
     ; CHECK: [[t2MOVCCr:%[0-9]+]]:rgpr = t2MOVCCr [[COPY]], [[COPY1]], 0 /* CC::eq */, $cpsr
     ; CHECK: $r0 = COPY [[t2MOVCCr]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
+    %0(i32) = COPY $r0
 
-    %1(s32) = COPY $r1
+    %1(i32) = COPY $r1
 
-    %2(s1) = G_TRUNC %1(s32)
+    %2(i1) = G_TRUNC %1(i32)
 
-    %3(s32) = G_SELECT %2(s1),  %0, %1
+    %3(i32) = G_SELECT %2(i1),  %0, %1
 
-    $r0 = COPY %3(s32)
+    $r0 = COPY %3(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -65,11 +65,11 @@ body:             |
 
     %1(p0) = COPY $r1
 
-    %2(s32) = COPY $r2
+    %2(i32) = COPY $r2
 
-    %3(s1) = G_TRUNC %2(s32)
+    %3(i1) = G_TRUNC %2(i32)
 
-    %4(p0) = G_SELECT %3(s1),  %0, %1
+    %4(p0) = G_SELECT %3(i1),  %0, %1
 
     $r0 = COPY %4(p0)
 

@@ -1629,6 +1629,21 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_BITCAST: {
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    if (SrcTy.isVector() || DstTy.isVector())
+      return UnableToLegalize;
+
+    auto Unmerge = MIRBuilder.buildUnmerge(NarrowTy, MI.getOperand(1));
+    unsigned NumParts = Unmerge->getNumOperands() - 1;
+    SmallVector<Register> Parts(NumParts);
+    for (unsigned I = 0; I < NumParts; ++I)
+      Parts[I] = Unmerge.getReg(I);
+    MIRBuilder.buildMergeValues(MI.getOperand(0), Parts);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:
