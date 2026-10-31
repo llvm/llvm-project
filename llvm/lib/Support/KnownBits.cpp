@@ -1046,7 +1046,6 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   // Conservatively, M active bits * N active bits results in M + N bits in the
   // result. But if we know a value is a power-of-2 for example, then this
   // computes one more leading zero.
-  // TODO: Handle operands with different signs.
   APInt UMaxLHS = LHS.getMaxValue();
   APInt UMaxRHS = RHS.getMaxValue();
   // For two negative operands, bound the positive product using their maximum
@@ -1056,11 +1055,23 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
     UMaxRHS = -RHS.getSignedMinValue();
   }
 
+  bool NegativeResult = false;
+  if ((LHS.isNegative() && RHS.isStrictlyPositive()) ||
+      (RHS.isNegative() && LHS.isStrictlyPositive())) {
+    UMaxLHS = LHS.isNegative() ? -LHS.getSignedMinValue() : UMaxLHS;
+    UMaxRHS = RHS.isNegative() ? -RHS.getSignedMinValue() : UMaxRHS;
+    NegativeResult = true;
+  }
+
   // For leading zeros in the result to be valid, the unsigned max product must
   // fit in the bitwidth (it must not overflow).
   bool HasOverflow;
   APInt UMaxResult = UMaxLHS.umul_ov(UMaxRHS, HasOverflow);
-  unsigned LeadZ = HasOverflow ? 0 : UMaxResult.countl_zero();
+  unsigned LeadZ = HasOverflow || NegativeResult ? 0 : UMaxResult.countl_zero();
+  // A strictly negative product is bounded below by the negated maximum
+  // magnitude. If it wraps into the positive range, no leading ones are known.
+  unsigned LeadO =
+      !HasOverflow && NegativeResult ? (-UMaxResult).countl_one() : 0;
 
   // The result of the bottom bits of an integer multiply can be
   // inferred by looking at the bottom bits of both operands and
@@ -1125,6 +1136,7 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   Res.Zero.setHighBits(LeadZ);
   Res.Zero |= (~BottomKnown).getLoBits(ResultBitsKnown);
   Res.One = BottomKnown.getLoBits(ResultBitsKnown);
+  Res.One.setHighBits(LeadO);
 
   if (NoUndefSelfMultiply) {
     // If X has at least TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.

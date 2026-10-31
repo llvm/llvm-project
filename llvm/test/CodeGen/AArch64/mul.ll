@@ -614,3 +614,17 @@ define i32 @negative_mul_known_zero(i32 %a, i32 %b) {
   %shift = lshr i32 %mul, 9
   ret i32 %shift
 }
+
+; The product is in [-112, -1], so shifting right by seven yields -1.
+define i32 @mixed_sign_mul_known_ones(i32 %a, i32 %b) {
+; CHECK-LABEL: mixed_sign_mul_known_ones:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w0, #-1
+; CHECK-NEXT:    ret
+  %x = or i32 %a, -16
+  %t = and i32 %b, 7
+  %y = or i32 %t, 1
+  %mul = mul i32 %x, %y
+  %shift = ashr i32 %mul, 7
+  ret i32 %shift
+}

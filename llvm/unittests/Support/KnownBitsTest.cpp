@@ -1137,6 +1137,48 @@ TEST(KnownBitsTest, MulNegativeOperands) {
   }
 }
 
+TEST(KnownBitsTest, MulMixedSignOperands) {
+  for (unsigned Bits : {8, 32, 65, 128}) {
+    KnownBits Negative(Bits), Positive(Bits);
+    Negative.One.setHighBits(Bits - 4); // [-16, -1]
+    Positive.Zero.setHighBits(Bits - 3);
+    Positive.One.setBit(0); // [1, 7]
+    for (bool Swap : {false, true}) {
+      auto Mul = [&]() {
+        return Swap ? KnownBits::mul(Positive, Negative)
+                    : KnownBits::mul(Negative, Positive);
+      };
+      KnownBits Product = Mul();
+      EXPECT_EQ(Product.One, APInt::getHighBitsSet(Bits, Bits - 7));
+      EXPECT_TRUE(Product.Zero.isZero());
+
+      // Zero is possible, so the product need not be negative.
+      Positive.One.clearAllBits();
+      Product = Mul();
+      EXPECT_TRUE(Product.One.isZero());
+      EXPECT_TRUE(Product.Zero.isZero());
+
+      // For i8, the maximum magnitude is 16 * 15 = 240: the
+      // product may wrap into the positive range.
+      Positive.Zero = APInt::getHighBitsSet(Bits, Bits - 4);
+      Positive.One.setBit(0);
+      Product = Mul();
+      EXPECT_EQ(Product.One,
+                APInt::getHighBitsSet(Bits, Bits > 8 ? Bits - 8 : 0));
+      EXPECT_TRUE(Product.Zero.isZero());
+
+      // The i8 magnitude also overflows the unsigned range: 16 * 31.
+      Positive.Zero = APInt::getHighBitsSet(Bits, Bits - 5);
+      Product = Mul();
+      EXPECT_EQ(Product.One,
+                APInt::getHighBitsSet(Bits, Bits > 9 ? Bits - 9 : 0));
+      EXPECT_TRUE(Product.Zero.isZero());
+
+      Positive.Zero = APInt::getHighBitsSet(Bits, Bits - 3);
+    }
+  }
+}
+
 TEST(KnownBitsTest, MulExhaustive) {
   for (unsigned Bits : {1, 4}) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
