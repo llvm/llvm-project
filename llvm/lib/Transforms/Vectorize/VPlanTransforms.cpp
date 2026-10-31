@@ -6143,8 +6143,9 @@ static Function *findVectorVariant(CallInst *CI, ArrayRef<VPValue *> Args,
                                    ElementCount VF, bool MaskRequired,
                                    PredicatedScalarEvolution &PSE,
                                    const Loop *L) {
-  if (CI->isNoBuiltin())
-    return nullptr;
+  // A no-builtin call can still be replaced by a vector variant that the user
+  // provided explicitly; the substitution is driven by the mapping, not by
+  // builtin semantics.
   auto Mappings = VFDatabase::getMappings(*CI);
   const auto *It = find_if(Mappings, [&](const VFInfo &Info) {
     return Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()) &&
