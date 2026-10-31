@@ -715,14 +715,20 @@ private:
       // after '->', placing the attribute in an invalid position.
       // Instead use 'getLocalRangeEnd()' which gives the '->' location
       // for trailing returns, so find the last token before it.
-      const auto FTL = MDL.getAs<FunctionTypeLoc>();
-      assert(FTL);
-      InsertionPoint = Lexer::getLocForEndOfToken(
-          Lexer::findPreviousToken(FTL.getLocalRangeEnd(), S.getSourceManager(),
-                                   S.getLangOpts(),
-                                   /*IncludeComments=*/false)
-              ->getLocation(),
-          0, S.getSourceManager(), S.getLangOpts());
+      // A parenthesised declarator (e.g. 'auto (f)() & -> T') wraps the
+      // FunctionTypeLoc inside a ParenTypeLoc.  getAs<> does not look through
+      // ParenTypeLoc, so use getAsAdjusted<> which strips qualifying wrappers.
+      const auto FTL = MDL.getAsAdjusted<FunctionTypeLoc>();
+      if (!FTL)
+        // Cannot locate the function type loc; the InsertionPoint derived from
+        // getEndLoc() covers the trailing return type and is not a valid
+        // attribute site.  Emit the diagnostic without a fix-it.
+        return {InsertionPoint, {}};
+      if (auto PrevTok = Lexer::findPreviousToken(
+              FTL.getLocalRangeEnd(), S.getSourceManager(), S.getLangOpts(),
+              /*IncludeComments=*/false))
+        InsertionPoint = Lexer::getLocForEndOfToken(
+            PrevTok->getLocation(), 0, S.getSourceManager(), S.getLangOpts());
     }
     return {InsertionPoint,
             getLifetimeBoundFixItText(InsertionPoint, /*LeadingSpace=*/true,
