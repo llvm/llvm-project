@@ -2730,6 +2730,19 @@ let append Predicates = [IsRV32] in {
 
   def : PatGprGpr<riscv_ppaire, PACK, v2i16>;
 
+  // Match element-wise signed multiply high of halfwords that has been
+  // scalarized and repacked with ppaire.
+  def : Pat<(v2i16 (riscv_ppaire
+                     (v2i16 (bitconvert
+                       (i32 (srl (mul (sext_inreg GPR:$rs1, i16),
+                                      (sext_inreg GPR:$rs2, i16)),
+                                 (XLenVT 16))))),
+                     (v2i16 (bitconvert
+                       (i32 (srl (mul (sra GPR:$rs1, (XLenVT 16)),
+                                      (sra GPR:$rs2, (XLenVT 16))),
+                                 (XLenVT 16))))))),
+            (PMULH_H GPR:$rs1, GPR:$rs2)>;
+
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value. We can use pack with
   // ppaire.b for bits [31:16]. If bits [15:0] can also be a ppaire.b, it can be
