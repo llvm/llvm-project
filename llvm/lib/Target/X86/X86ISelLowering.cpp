@@ -36855,6 +36855,13 @@ bool X86TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   return NumBits1 > NumBits2;
 }
 
+bool X86TargetLowering::isTruncateFree(SDValue Val, EVT VT2) const {
+  if (ISD::isExtOpcode(Val.getOpcode()) &&
+      Val.getOperand(0).getValueType() == VT2)
+    return true;
+  return TargetLowering::isTruncateFree(Val, VT2);
+}
+
 bool X86TargetLowering::isZExtFree(Type *Ty1, Type *Ty2) const {
   // x86-64 implicitly zero-extends 32-bit results in 64-bit registers.
   return Ty1->isIntegerTy(32) && Ty2->isIntegerTy(64) && Subtarget.is64Bit();
@@ -59749,11 +59756,13 @@ static SDValue combineToFPTruncExtElt(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
+                               TargetLowering::DAGCombinerInfo &DCI,
                                const X86Subtarget &Subtarget) {
   bool IsStrict = N->isStrictFPOpcode();
   SDValue Op0 = N->getOperand(IsStrict ? 1 : 0);
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
+  unsigned ScalarSize = InVT.getScalarSizeInBits();
 
   // Using i16 as an intermediate type is a bad idea, unless we have HW support
   // for it. Therefore for type sizes equal or smaller than 32 just go with i32.
@@ -59764,7 +59773,6 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   //   UINT_TO_FP(vXi1~31) -> SINT_TO_FP(ZEXT(vXi1~31 to vXi32))
   // UINT_TO_FP(vXi33~63) -> SINT_TO_FP(ZEXT(vXi33~63 to vXi64))
   if (InVT.isVector() && VT.getVectorElementType() == MVT::f16) {
-    unsigned ScalarSize = InVT.getScalarSizeInBits();
     if ((ScalarSize == 16 && Subtarget.hasFP16()) || ScalarSize == 32 ||
         ScalarSize >= 64)
       return SDValue();
@@ -59785,8 +59793,7 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   // UINT_TO_FP(vXi1) -> SINT_TO_FP(ZEXT(vXi1 to vXi32))
   // UINT_TO_FP(vXi8) -> SINT_TO_FP(ZEXT(vXi8 to vXi32))
   // UINT_TO_FP(vXi16) -> SINT_TO_FP(ZEXT(vXi16 to vXi32))
-  if (InVT.isVector() && InVT.getScalarSizeInBits() < 32 &&
-      VT.getScalarType() != MVT::f16) {
+  if (InVT.isVector() && ScalarSize < 32 && VT.getScalarType() != MVT::f16) {
     SDLoc dl(N);
     EVT DstVT = InVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
     SDValue P = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Op0);
@@ -59796,6 +59803,22 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
                          {N->getOperand(0), P});
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, P);
+  }
+
+  if (InVT.isVector() && ScalarSize > 32) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    EVT TruncVT = InVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
+    if ((!Subtarget.hasDQI() || TLI.isTruncateFree(Op0, TruncVT)) &&
+        (DCI.isBeforeLegalize() || TLI.isTypeLegal(TruncVT)) &&
+        DAG.MaskedValueIsZero(
+            Op0, APInt::getHighBitsSet(ScalarSize, ScalarSize - 32))) {
+      SDLoc dl(N);
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Op0);
+      if (IsStrict)
+        return DAG.getNode(ISD::STRICT_UINT_TO_FP, dl, {VT, MVT::Other},
+                           {N->getOperand(0), Trunc});
+      return DAG.getNode(ISD::UINT_TO_FP, dl, VT, Trunc);
+    }
   }
 
   // Since UINT_TO_FP is legal (it's marked custom), dag combiner won't
@@ -64300,7 +64323,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
     return combineSIntToFP(N, DAG, DCI, Subtarget);
   case ISD::UINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
-    return combineUIntToFP(N, DAG, Subtarget);
+    return combineUIntToFP(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT:     return combineFPToSInt(N, DAG, Subtarget);
   case ISD::LRINT:
   case ISD::LLRINT:         return combineLRINT_LLRINT(N, DAG, Subtarget);
