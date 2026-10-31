@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_SPARC_SPARC_H
 
 #include "MCTargetDesc/SparcMCTargetDesc.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -26,8 +27,13 @@ class MachineInstr;
 class PassRegistry;
 class SparcTargetMachine;
 
-FunctionPass *createSparcISelDag(SparcTargetMachine &TM,
-                                 CodeGenOptLevel OptLevel);
+class SparcDAGToDAGISelPass : public SelectionDAGISelPass {
+public:
+  SparcDAGToDAGISelPass(SparcTargetMachine &TM, CodeGenOptLevel OptLevel);
+};
+
+FunctionPass *createSparcDAGToDAGISelLegacyPass(SparcTargetMachine &TM,
+                                                CodeGenOptLevel OptLevel);
 FunctionPass *createSparcDelaySlotFillerPass();
 
 void initializeSparcAsmPrinterPass(PassRegistry &);
