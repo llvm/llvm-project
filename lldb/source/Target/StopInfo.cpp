@@ -890,7 +890,7 @@ protected:
       if (!m_did_disable_wp)
         return;
       m_did_disable_wp = true;
-      GetThread().GetProcess()->EnableWatchpoint(m_watch_sp, true);
+      GetThread().GetProcess()->EnableWatchpoint(m_watch_sp, /*notify=*/false);
     }
 
   private:
