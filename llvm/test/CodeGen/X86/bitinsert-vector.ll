@@ -336,29 +336,29 @@ define <2 x b128> @test_bitinsert_v2ptr_addrspace3_const(<2 x b128> %base, <2 x 
 ; AVX2-NEXT:    vpinsrw $6, %r11d, %xmm1, %xmm1
 ; AVX2-NEXT:    vpinsrw $7, %r10d, %xmm1, %xmm1
 ; AVX2-NEXT:    shrl $16, %r8d
-; AVX2-NEXT:    vpextrq $1, %xmm1, %r10
-; AVX2-NEXT:    vmovq %xmm0, %r11
-; AVX2-NEXT:    movq %r11, %rdx
-; AVX2-NEXT:    shrq $48, %rdx
-; AVX2-NEXT:    orq %r10, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX2-NEXT:    vmovq %xmm0, %r10
+; AVX2-NEXT:    movq %r10, %r11
+; AVX2-NEXT:    shrq $48, %r11
+; AVX2-NEXT:    orq %rdx, %r11
 ; AVX2-NEXT:    movzwl %cx, %ecx
 ; AVX2-NEXT:    vmovd %ecx, %xmm1
 ; AVX2-NEXT:    vpinsrw $5, %r8d, %xmm1, %xmm1
 ; AVX2-NEXT:    vpinsrw $6, %r9d, %xmm1, %xmm1
 ; AVX2-NEXT:    vpinsrw $7, %edi, %xmm1, %xmm1
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rdi
-; AVX2-NEXT:    vpextrq $1, %xmm0, %r8
-; AVX2-NEXT:    movq %r8, %r9
-; AVX2-NEXT:    shrq $48, %r9
-; AVX2-NEXT:    orq %rdi, %r9
-; AVX2-NEXT:    shlq $16, %r11
-; AVX2-NEXT:    orq %r11, %rsi
-; AVX2-NEXT:    shlq $16, %r8
-; AVX2-NEXT:    orq %r8, %rcx
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rdi
+; AVX2-NEXT:    movq %rdi, %r8
+; AVX2-NEXT:    shrq $48, %r8
+; AVX2-NEXT:    orq %rdx, %r8
+; AVX2-NEXT:    shlq $16, %r10
+; AVX2-NEXT:    orq %r10, %rsi
+; AVX2-NEXT:    shlq $16, %rdi
+; AVX2-NEXT:    orq %rdi, %rcx
 ; AVX2-NEXT:    movq %rcx, 16(%rax)
 ; AVX2-NEXT:    movq %rsi, (%rax)
-; AVX2-NEXT:    movq %r9, 24(%rax)
-; AVX2-NEXT:    movq %rdx, 8(%rax)
+; AVX2-NEXT:    movq %r8, 24(%rax)
+; AVX2-NEXT:    movq %r11, 8(%rax)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_bitinsert_v2ptr_addrspace3_const:
@@ -379,29 +379,29 @@ define <2 x b128> @test_bitinsert_v2ptr_addrspace3_const(<2 x b128> %base, <2 x 
 ; AVX512-NEXT:    vpinsrw $6, %r11d, %xmm1, %xmm1
 ; AVX512-NEXT:    shrq $48, %r10
 ; AVX512-NEXT:    vpinsrw $7, %r10d, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrq $1, %xmm1, %r10
-; AVX512-NEXT:    vmovq %xmm0, %r11
-; AVX512-NEXT:    movq %r11, %rdx
-; AVX512-NEXT:    shrq $48, %rdx
-; AVX512-NEXT:    orq %r10, %rdx
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX512-NEXT:    vmovq %xmm0, %r10
+; AVX512-NEXT:    movq %r10, %r11
+; AVX512-NEXT:    shrq $48, %r11
+; AVX512-NEXT:    orq %rdx, %r11
 ; AVX512-NEXT:    movzwl %cx, %ecx
 ; AVX512-NEXT:    vmovd %ecx, %xmm1
 ; AVX512-NEXT:    vpinsrw $5, %r8d, %xmm1, %xmm1
 ; AVX512-NEXT:    vpinsrw $6, %r9d, %xmm1, %xmm1
 ; AVX512-NEXT:    vpinsrw $7, %edi, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rdi
-; AVX512-NEXT:    vpextrq $1, %xmm0, %r8
-; AVX512-NEXT:    movq %r8, %r9
-; AVX512-NEXT:    shrq $48, %r9
-; AVX512-NEXT:    orq %rdi, %r9
-; AVX512-NEXT:    shlq $16, %r11
-; AVX512-NEXT:    orq %r11, %rsi
-; AVX512-NEXT:    shlq $16, %r8
-; AVX512-NEXT:    orq %r8, %rcx
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rdi
+; AVX512-NEXT:    movq %rdi, %r8
+; AVX512-NEXT:    shrq $48, %r8
+; AVX512-NEXT:    orq %rdx, %r8
+; AVX512-NEXT:    shlq $16, %r10
+; AVX512-NEXT:    orq %r10, %rsi
+; AVX512-NEXT:    shlq $16, %rdi
+; AVX512-NEXT:    orq %rdi, %rcx
 ; AVX512-NEXT:    movq %rcx, 16(%rax)
 ; AVX512-NEXT:    movq %rsi, (%rax)
-; AVX512-NEXT:    movq %r9, 24(%rax)
-; AVX512-NEXT:    movq %rdx, 8(%rax)
+; AVX512-NEXT:    movq %r8, 24(%rax)
+; AVX512-NEXT:    movq %r11, 8(%rax)
 ; AVX512-NEXT:    retq
   %result = bitinsert <2 x b128> %base, <2 x ptr addrspace(3)> %val, <2 x i32> splat (i32 16)
   ret <2 x b128> %result
@@ -426,20 +426,20 @@ define <16 x b8> @test_bitinsert_v16i4_var(<16 x b8> %base, <16 x i4> %val, <16 
 ; SSE2-NEXT:    pand %xmm1, %xmm6
 ; SSE2-NEXT:    movdqa %xmm5, %xmm4
 ; SSE2-NEXT:    pandn %xmm6, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; SSE2-NEXT:    movdqa %xmm5, %xmm6
-; SSE2-NEXT:    pand %xmm8, %xmm6
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; SSE2-NEXT:    movdqa %xmm5, %xmm7
+; SSE2-NEXT:    pand %xmm6, %xmm7
 ; SSE2-NEXT:    psllw $4, %xmm1
-; SSE2-NEXT:    pand %xmm6, %xmm1
+; SSE2-NEXT:    pand %xmm7, %xmm1
 ; SSE2-NEXT:    por %xmm1, %xmm4
 ; SSE2-NEXT:    paddb %xmm2, %xmm2
-; SSE2-NEXT:    pxor %xmm7, %xmm7
-; SSE2-NEXT:    pcmpgtb %xmm2, %xmm7
-; SSE2-NEXT:    movdqa %xmm7, %xmm1
+; SSE2-NEXT:    pxor %xmm8, %xmm8
+; SSE2-NEXT:    pcmpgtb %xmm2, %xmm8
+; SSE2-NEXT:    movdqa %xmm8, %xmm1
 ; SSE2-NEXT:    pandn %xmm4, %xmm1
 ; SSE2-NEXT:    paddb %xmm4, %xmm4
 ; SSE2-NEXT:    paddb %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm7, %xmm4
+; SSE2-NEXT:    pand %xmm8, %xmm4
 ; SSE2-NEXT:    por %xmm1, %xmm4
 ; SSE2-NEXT:    paddb %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpgtb %xmm2, %xmm3
@@ -448,15 +448,15 @@ define <16 x b8> @test_bitinsert_v16i4_var(<16 x b8> %base, <16 x i4> %val, <16 
 ; SSE2-NEXT:    paddb %xmm4, %xmm4
 ; SSE2-NEXT:    pand %xmm3, %xmm4
 ; SSE2-NEXT:    por %xmm1, %xmm4
-; SSE2-NEXT:    por %xmm8, %xmm5
+; SSE2-NEXT:    por %xmm6, %xmm5
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm5, %xmm1
-; SSE2-NEXT:    por %xmm6, %xmm1
-; SSE2-NEXT:    movdqa %xmm7, %xmm2
+; SSE2-NEXT:    por %xmm7, %xmm1
+; SSE2-NEXT:    movdqa %xmm8, %xmm2
 ; SSE2-NEXT:    pandn %xmm1, %xmm2
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
-; SSE2-NEXT:    pand %xmm7, %xmm1
+; SSE2-NEXT:    pand %xmm8, %xmm1
 ; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm3, %xmm2
 ; SSE2-NEXT:    pandn %xmm1, %xmm2

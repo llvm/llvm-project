@@ -743,50 +743,50 @@ define <8 x i32> @PR63946(<8 x i32> %a0, <8 x i32> %b0) nounwind {
 ; SSE2-LABEL: PR63946:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    movdqa %xmm0, %xmm13
-; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm2[1,2,3,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[1,2,3,0]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm3[1,2,3,0]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[2,3,0,1]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm2[2,3,0,1]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[3,0,1,2]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[3,0,1,2]
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm2[3,0,1,2]
+; SSE2-NEXT:    movdqa %xmm0, %xmm10
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm10
+; SSE2-NEXT:    movdqa %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE2-NEXT:    movdqa %xmm9, %xmm11
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm11
-; SSE2-NEXT:    movdqa %xmm7, %xmm12
-; SSE2-NEXT:    movdqa %xmm8, %xmm10
-; SSE2-NEXT:    movdqa %xmm5, %xmm15
-; SSE2-NEXT:    pcmpeqd %xmm4, %xmm15
-; SSE2-NEXT:    movdqa %xmm1, %xmm14
+; SSE2-NEXT:    movdqa %xmm6, %xmm12
+; SSE2-NEXT:    movdqa %xmm8, %xmm13
+; SSE2-NEXT:    movdqa %xmm5, %xmm14
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm14
+; SSE2-NEXT:    movdqa %xmm1, %xmm15
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm15
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm4, %xmm7
-; SSE2-NEXT:    pcmpeqd %xmm4, %xmm8
-; SSE2-NEXT:    movdqa %xmm6, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm6
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm8
+; SSE2-NEXT:    movdqa %xmm7, %xmm10
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm7
 ; SSE2-NEXT:    pcmpeqd %xmm3, %xmm4
 ; SSE2-NEXT:    por %xmm4, %xmm11
-; SSE2-NEXT:    pcmpeqd %xmm13, %xmm12
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm12
 ; SSE2-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
-; SSE2-NEXT:    pcmpeqd %xmm13, %xmm10
-; SSE2-NEXT:    pcmpeqd %xmm13, %xmm0
-; SSE2-NEXT:    por %xmm15, %xmm2
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm13
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm10
+; SSE2-NEXT:    por %xmm14, %xmm2
 ; SSE2-NEXT:    por %xmm11, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm13, %xmm3
-; SSE2-NEXT:    por %xmm3, %xmm10
-; SSE2-NEXT:    por %xmm12, %xmm10
-; SSE2-NEXT:    por %xmm14, %xmm7
-; SSE2-NEXT:    pcmpeqd %xmm13, %xmm9
-; SSE2-NEXT:    por %xmm0, %xmm9
-; SSE2-NEXT:    pcmpeqd %xmm13, %xmm5
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm3
+; SSE2-NEXT:    por %xmm3, %xmm13
+; SSE2-NEXT:    por %xmm12, %xmm13
+; SSE2-NEXT:    por %xmm15, %xmm6
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm9
+; SSE2-NEXT:    por %xmm10, %xmm9
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE2-NEXT:    por %xmm9, %xmm5
-; SSE2-NEXT:    por %xmm10, %xmm5
-; SSE2-NEXT:    por %xmm7, %xmm8
+; SSE2-NEXT:    por %xmm13, %xmm5
+; SSE2-NEXT:    por %xmm6, %xmm8
 ; SSE2-NEXT:    por %xmm2, %xmm8
 ; SSE2-NEXT:    packssdw %xmm8, %xmm5
-; SSE2-NEXT:    pcmpeqd %xmm13, %xmm1
-; SSE2-NEXT:    packssdw %xmm6, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    packssdw %xmm7, %xmm1
 ; SSE2-NEXT:    por %xmm5, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
@@ -800,50 +800,50 @@ define <8 x i32> @PR63946(<8 x i32> %a0, <8 x i32> %b0) nounwind {
 ; SSE42-LABEL: PR63946:
 ; SSE42:       # %bb.0: # %entry
 ; SSE42-NEXT:    movdqa %xmm1, %xmm4
-; SSE42-NEXT:    movdqa %xmm0, %xmm13
-; SSE42-NEXT:    pshufd {{.*#+}} xmm7 = xmm2[1,2,3,0]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[1,2,3,0]
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm9 = xmm3[1,2,3,0]
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[2,3,0,1]
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm8 = xmm2[2,3,0,1]
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[3,0,1,2]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[3,0,1,2]
-; SSE42-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE42-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE42-NEXT:    pshufd {{.*#+}} xmm7 = xmm2[3,0,1,2]
+; SSE42-NEXT:    movdqa %xmm0, %xmm10
+; SSE42-NEXT:    pcmpeqd %xmm2, %xmm10
+; SSE42-NEXT:    movdqa %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE42-NEXT:    movdqa %xmm9, %xmm11
 ; SSE42-NEXT:    pcmpeqd %xmm4, %xmm11
-; SSE42-NEXT:    movdqa %xmm7, %xmm12
-; SSE42-NEXT:    movdqa %xmm8, %xmm10
-; SSE42-NEXT:    movdqa %xmm5, %xmm15
-; SSE42-NEXT:    pcmpeqd %xmm4, %xmm15
-; SSE42-NEXT:    movdqa %xmm1, %xmm14
+; SSE42-NEXT:    movdqa %xmm6, %xmm12
+; SSE42-NEXT:    movdqa %xmm8, %xmm13
+; SSE42-NEXT:    movdqa %xmm5, %xmm14
 ; SSE42-NEXT:    pcmpeqd %xmm4, %xmm14
+; SSE42-NEXT:    movdqa %xmm1, %xmm15
+; SSE42-NEXT:    pcmpeqd %xmm4, %xmm15
 ; SSE42-NEXT:    pcmpeqd %xmm4, %xmm2
-; SSE42-NEXT:    pcmpeqd %xmm4, %xmm7
-; SSE42-NEXT:    pcmpeqd %xmm4, %xmm8
-; SSE42-NEXT:    movdqa %xmm6, %xmm0
 ; SSE42-NEXT:    pcmpeqd %xmm4, %xmm6
+; SSE42-NEXT:    pcmpeqd %xmm4, %xmm8
+; SSE42-NEXT:    movdqa %xmm7, %xmm10
+; SSE42-NEXT:    pcmpeqd %xmm4, %xmm7
 ; SSE42-NEXT:    pcmpeqd %xmm3, %xmm4
 ; SSE42-NEXT:    por %xmm4, %xmm11
-; SSE42-NEXT:    pcmpeqd %xmm13, %xmm12
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm12
 ; SSE42-NEXT:    por {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Folded Reload
-; SSE42-NEXT:    pcmpeqd %xmm13, %xmm10
-; SSE42-NEXT:    pcmpeqd %xmm13, %xmm0
-; SSE42-NEXT:    por %xmm15, %xmm2
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm13
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm10
+; SSE42-NEXT:    por %xmm14, %xmm2
 ; SSE42-NEXT:    por %xmm11, %xmm2
-; SSE42-NEXT:    pcmpeqd %xmm13, %xmm3
-; SSE42-NEXT:    por %xmm3, %xmm10
-; SSE42-NEXT:    por %xmm12, %xmm10
-; SSE42-NEXT:    por %xmm14, %xmm7
-; SSE42-NEXT:    pcmpeqd %xmm13, %xmm9
-; SSE42-NEXT:    por %xmm0, %xmm9
-; SSE42-NEXT:    pcmpeqd %xmm13, %xmm5
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm3
+; SSE42-NEXT:    por %xmm3, %xmm13
+; SSE42-NEXT:    por %xmm12, %xmm13
+; SSE42-NEXT:    por %xmm15, %xmm6
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm9
+; SSE42-NEXT:    por %xmm10, %xmm9
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE42-NEXT:    por %xmm9, %xmm5
-; SSE42-NEXT:    por %xmm10, %xmm5
-; SSE42-NEXT:    por %xmm7, %xmm8
+; SSE42-NEXT:    por %xmm13, %xmm5
+; SSE42-NEXT:    por %xmm6, %xmm8
 ; SSE42-NEXT:    por %xmm2, %xmm8
 ; SSE42-NEXT:    packssdw %xmm8, %xmm5
-; SSE42-NEXT:    pcmpeqd %xmm13, %xmm1
-; SSE42-NEXT:    packssdw %xmm6, %xmm1
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE42-NEXT:    packssdw %xmm7, %xmm1
 ; SSE42-NEXT:    por %xmm5, %xmm1
 ; SSE42-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; SSE42-NEXT:    pslld $31, %xmm0
@@ -892,16 +892,16 @@ define <8 x i32> @PR63946(<8 x i32> %a0, <8 x i32> %b0) nounwind {
 ; AVX512-NEXT:    vpermq {{.*#+}} ymm8 = ymm4[2,3,0,1]
 ; AVX512-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    vpcmpeqd %zmm0, %zmm2, %k1
-; AVX512-NEXT:    vpcmpeqd %zmm0, %zmm3, %k3
-; AVX512-NEXT:    vpcmpeqd %zmm0, %zmm4, %k2
+; AVX512-NEXT:    vpcmpeqd %zmm0, %zmm3, %k2
+; AVX512-NEXT:    vpcmpeqd %zmm0, %zmm4, %k3
 ; AVX512-NEXT:    vpcmpeqd %zmm0, %zmm5, %k4
 ; AVX512-NEXT:    vpcmpeqd %zmm0, %zmm6, %k5
 ; AVX512-NEXT:    vpcmpeqd %zmm0, %zmm7, %k6
 ; AVX512-NEXT:    vpcmpeqd %zmm0, %zmm8, %k7
 ; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    korw %k3, %k0, %k0
-; AVX512-NEXT:    korw %k4, %k0, %k0
 ; AVX512-NEXT:    korw %k2, %k0, %k0
+; AVX512-NEXT:    korw %k4, %k0, %k0
+; AVX512-NEXT:    korw %k3, %k0, %k0
 ; AVX512-NEXT:    korw %k5, %k0, %k0
 ; AVX512-NEXT:    korw %k6, %k0, %k0
 ; AVX512-NEXT:    korw %k7, %k0, %k1

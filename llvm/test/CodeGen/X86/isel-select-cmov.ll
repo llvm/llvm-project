@@ -258,14 +258,14 @@ define zeroext i16 @select_cmp_cmov_i16(i16 zeroext %a, i16 zeroext %b) {
 ;
 ; SDAG-X86-LABEL: select_cmp_cmov_i16:
 ; SDAG-X86:       ## %bb.0:
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    cmpw %cx, %ax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    cmpw %ax, %cx
 ; SDAG-X86-NEXT:    jb LBB2_2
 ; SDAG-X86-NEXT:  ## %bb.1:
-; SDAG-X86-NEXT:    movl %ecx, %eax
+; SDAG-X86-NEXT:    movl %eax, %ecx
 ; SDAG-X86-NEXT:  LBB2_2:
-; SDAG-X86-NEXT:    movzwl %ax, %eax
+; SDAG-X86-NEXT:    movzwl %cx, %eax
 ; SDAG-X86-NEXT:    retl
 ;
 ; SDAG-X86-CMOV-LABEL: select_cmp_cmov_i16:
@@ -279,14 +279,14 @@ define zeroext i16 @select_cmp_cmov_i16(i16 zeroext %a, i16 zeroext %b) {
 ;
 ; FAST-X86-LABEL: select_cmp_cmov_i16:
 ; FAST-X86:       ## %bb.0:
-; FAST-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; FAST-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; FAST-X86-NEXT:    cmpw %cx, %ax
+; FAST-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; FAST-X86-NEXT:    cmpw %ax, %cx
 ; FAST-X86-NEXT:    jb LBB2_2
 ; FAST-X86-NEXT:  ## %bb.1:
-; FAST-X86-NEXT:    movl %ecx, %eax
+; FAST-X86-NEXT:    movl %eax, %ecx
 ; FAST-X86-NEXT:  LBB2_2:
-; FAST-X86-NEXT:    movzwl %ax, %eax
+; FAST-X86-NEXT:    movzwl %cx, %eax
 ; FAST-X86-NEXT:    retl
 ;
 ; FAST-X86-CMOV-LABEL: select_cmp_cmov_i16:
