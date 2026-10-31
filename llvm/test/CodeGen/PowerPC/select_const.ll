@@ -592,22 +592,12 @@ define i8 @shl_constant_sel_constants(i1 %cond) {
 }
 
 define i8 @sel_constants_lshr_constant(i1 %cond) {
-; ISEL-LABEL: sel_constants_lshr_constant:
-; ISEL:       # %bb.0:
-; ISEL-NEXT:    andi. 3, 3, 1
-; ISEL-NEXT:    li 3, 0
-; ISEL-NEXT:    li 4, 7
-; ISEL-NEXT:    iselgt 3, 4, 3
-; ISEL-NEXT:    blr
-;
-; NO_ISEL-LABEL: sel_constants_lshr_constant:
-; NO_ISEL:       # %bb.0:
-; NO_ISEL-NEXT:    andi. 3, 3, 1
-; NO_ISEL-NEXT:    li 3, 7
-; NO_ISEL-NEXT:    bclr 12, 1, 0
-; NO_ISEL-NEXT:  # %bb.1:
-; NO_ISEL-NEXT:    li 3, 0
-; NO_ISEL-NEXT:    blr
+; ALL-LABEL: sel_constants_lshr_constant:
+; ALL:       # %bb.0:
+; ALL-NEXT:    clrldi 3, 3, 63
+; ALL-NEXT:    neg 3, 3
+; ALL-NEXT:    clrldi 3, 3, 61
+; ALL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = lshr i8 %sel, 5
   ret i8 %bo
