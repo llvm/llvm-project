@@ -3,9 +3,9 @@
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-cir %s -o - \
 // RUN: | FileCheck %s --check-prefix=CIR-DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-llvm %s -o - \
-// RUN: | FileCheck %s --check-prefix=DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv
+// RUN: | FileCheck %s --check-prefixes=DEV,AMD-DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o - \
-// RUN: | FileCheck %s --check-prefix=DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv
+// RUN: | FileCheck %s --check-prefixes=DEV,AMD-DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda -fcuda-is-device -fclangir -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=DEV --implicit-check-not=@_ZNK6Square4nameEv --implicit-check-not=@_ZN1C9host_onlyEv
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda -fcuda-is-device -emit-llvm %s -o - \
@@ -42,9 +42,14 @@ __global__ void kernel(float *out) {
 
 const char *host_name() { return Square(3.0f).name(); }
 
-// CIR-DEV: cir.global {{.*}} @_ZTV6Square = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN6SquareD1Ev> : !cir.ptr<!u8i>, #cir.global_view<@_ZN6SquareD0Ev> : !cir.ptr<!u8i>, #cir.global_view<@_ZNK6Square4areaEv> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@__cxa_deleted_virtual> : !cir.ptr<!u8i>]>
-// CIR-DEV: cir.global {{.*}} @_ZTV5Shape = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN5ShapeD1Ev> : !cir.ptr<!u8i>, #cir.global_view<@_ZN5ShapeD0Ev> : !cir.ptr<!u8i>, #cir.global_view<@__cxa_pure_virtual> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@__cxa_deleted_virtual> : !cir.ptr<!u8i>]>
+// CIR-DEV: cir.global {{.*}} target_address_space(1) @_ZTV6Square = #cir.vtable
+// CIR-DEV-SAME: #cir.ptr<null> : !cir.ptr<!u8i, target_address_space(1)>
+// CIR-DEV-SAME: #cir.global_view<@_ZN6SquareD1Ev> : !cir.ptr<!u8i, target_address_space(1)>
+// CIR-DEV: cir.global {{.*}} target_address_space(1) @_ZTV5Shape = #cir.vtable
+// CIR-DEV-SAME: #cir.ptr<null> : !cir.ptr<!u8i, target_address_space(1)>
+// CIR-DEV-SAME: #cir.global_view<@_ZN5ShapeD1Ev> : !cir.ptr<!u8i, target_address_space(1)>
 
+// AMD-DEV-DAG: @_ZTV1A = {{.*}}addrspace(1) constant { [4 x ptr addrspace(1)] }
 // DEV-DAG: @_ZTV6Square = {{.*}}[ptr {{[^,]*}}null, ptr {{[^,]*}}null, ptr {{[^,]*}}@_ZN6SquareD1Ev{{[^,]*}}, ptr {{[^,]*}}@_ZN6SquareD0Ev{{[^,]*}}, ptr {{[^,]*}}@_ZNK6Square4areaEv{{[^,]*}}, ptr {{[^,]*}}null, ptr {{[^,]*}}@__cxa_deleted_virtual{{[^,]*}}]
 // DEV-DAG: @_ZTV5Shape = {{.*}}[ptr {{[^,]*}}null, ptr {{[^,]*}}null, ptr {{[^,]*}}@_ZN5ShapeD1Ev{{[^,]*}}, ptr {{[^,]*}}@_ZN5ShapeD0Ev{{[^,]*}}, ptr {{[^,]*}}@__cxa_pure_virtual{{[^,]*}}, ptr {{[^,]*}}null, ptr {{[^,]*}}@__cxa_deleted_virtual{{[^,]*}}]
 

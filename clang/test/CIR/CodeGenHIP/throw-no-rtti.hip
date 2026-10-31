@@ -7,6 +7,15 @@
 // RUN: %clang_cc1 -std=c++17 -triple amdgcn-amd-amdhsa -x hip \
 // RUN:   -fcuda-is-device --hipstdpar -fcxx-exceptions -fexceptions \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=OGCG
+// RUN: %clang_cc1 -std=c++17 -triple amdgcn-amd-amdhsa -x c++ \
+// RUN:   -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o - \
+// RUN:   | FileCheck %s --check-prefix=AMDGPU-RTTI
+// RUN: %clang_cc1 -std=c++17 -triple amdgcn-amd-amdhsa -x c++ \
+// RUN:   -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o - \
+// RUN:   | FileCheck %s --check-prefix=AMDGPU-RTTI-LLVM
+// RUN: %clang_cc1 -std=c++17 -triple amdgcn-amd-amdhsa -x c++ \
+// RUN:   -fcxx-exceptions -fexceptions -emit-llvm %s -o - \
+// RUN:   | FileCheck %s --check-prefix=AMDGPU-RTTI-LLVM
 
 struct X {
   ~X();
@@ -41,10 +50,8 @@ int main() {
   throw_object_with_cleanup();
 }
 
-// Device-side HIP compilation disables RTTI. The Itanium throw ABI still
-// requires a type-info argument, so use a null pointer in the target's global
-// address space instead of trying to create a reference to a missing RTTI
-// global.
+// HIP device code does not emit RTTI, so throws use a null type-info pointer
+// in the target's global address space.
 
 // CIR: module
 // CIR-NOT: cir.global {{.*}} @_ZTI
@@ -61,6 +68,15 @@ int main() {
 // CIR: %[[DTOR_ADDR:.*]] = cir.get_global @_ZN1XD1Ev
 // CIR: %[[DTOR:.*]] = cir.cast bitcast %[[DTOR_ADDR]] : {{.*}} -> !cir.ptr<!void>
 // CIR: cir.throw %[[EXCEPTION]], %[[TYPE_INFO]], %[[DTOR]] : !cir.ptr<!rec_X>, !cir.ptr<!u8i, target_address_space(1)>, !cir.ptr<!void>
+
+// Host-side AMDGPU still emits RTTI in the target's global address space.
+// AMDGPU-RTTI: cir.global {{.*}} target_address_space(1) @_ZTIi : !cir.ptr<!u8i, target_address_space(1)>
+// AMDGPU-RTTI: %[[TYPE_INFO:.*]] = cir.const #cir.global_view<@_ZTIi> : !cir.ptr<!u8i, target_address_space(1)>
+// AMDGPU-RTTI: cir.throw %{{.*}}, %[[TYPE_INFO]], %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i, target_address_space(1)>, !cir.ptr<!void>
+
+// AMDGPU-RTTI-LLVM: @_ZTIi = external addrspace(1) constant ptr addrspace(1)
+// AMDGPU-RTTI-LLVM: call void @__cxa_throw(ptr %{{.*}}, ptr addrspace(1) @_ZTIi, ptr null)
+// AMDGPU-RTTI-LLVM: declare void @__cxa_throw(ptr, ptr addrspace(1), ptr)
 
 // LLVM-LABEL: define{{.*}} void @_Z9throw_intv()
 // LLVM: call void @__cxa_throw(ptr %{{.*}}, ptr addrspace(1) null, ptr null)

@@ -5086,8 +5086,7 @@ static mlir::LogicalResult verifyThrowOpImpl(ThrowOpTy op) {
 
   cir::CIRDataLayout dataLayout(module);
   auto defaultAddrSpace = dataLayout.getDefaultAddrSpace(op.getContext());
-  auto globalAddrSpace =
-      dataLayout.getDefaultGlobalsAddrSpace(op.getContext());
+  auto globalAddrSpace = dataLayout.getDefaultGlobalsAddrSpace(op.getContext());
 
   auto getAddrSpace = [](mlir::Value operand) {
     return mlir::cast<cir::PointerType>(operand.getType()).getAddrSpace();

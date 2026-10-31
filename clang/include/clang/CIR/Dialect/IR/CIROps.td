@@ -9029,14 +9029,9 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
 // ThrowOpBase
 //===----------------------------------------------------------------------===//
 
-// Common base class shared by `cir.throw` and its EH counterpart
-// `cir.try_throw`. A normal throw carries an exception pointer, an RTTI pointer
-// and a destructor pointer as SSA operands. Null RTTI and destructor pointers
-// are represented by typed null values. The zero-operand form represents a
-// rethrow. Since every normal throw lowers to the same `__cxa_throw` symbol,
-// the exception and destructor pointers use the module's default address space
-// and the RTTI pointer uses its global address space. Subclasses contribute any
-// additional traits, successors and assembly format pieces.
+// Common base for `cir.throw` and `cir.try_throw`. A throw carries exception,
+// RTTI, and destructor pointers; a rethrow has no operands. The verifier checks
+// their required address spaces.
 class CIR_ThrowOpBase<string mnemonic, list<Trait> traits = []>
     : CIR_Op<mnemonic, !listconcat(traits, [AttrSizedOperandSegments])> {
   let arguments = (ins
