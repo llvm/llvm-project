@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "ScalarOptions.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -345,6 +346,30 @@ struct Decomposition {
         return true;
     return false;
   }
+
+  /// Merge entries that refer to the same variable, and remove any whose
+  /// coefficient is zero. \returns true if any operation overflows, i.e. the
+  /// decomposition is invalid.
+  [[nodiscard]] bool canonicalize() {
+    // Sum the coefficients of each variable.
+    SmallMapVector<Value *, int64_t, 4> Coefficients;
+    for (const DecompEntry &E : Vars) {
+      int64_t &Sum = Coefficients[E.Variable];
+      if (AddOverflow(Sum, E.Coefficient, Sum))
+        return true;
+    }
+    Vars.clear();
+    for (const auto &[Variable, Coefficient] : Coefficients)
+      if (Coefficient != 0)
+        Vars.emplace_back(Coefficient, Variable);
+    return false;
+  }
+
+  /// Returns a new decomposition with \p Variable replaced by \p Replacement.
+  /// Returns std::nullopt if a coefficient overflows, i.e. the decomposition is
+  /// invalid.
+  [[nodiscard]] std::optional<Decomposition>
+  substitute(Value *Variable, Value *Replacement, ConstraintInfo &Info) const;
 };
 
 /// Wrapper encapsulating separate constraint systems and corresponding value
@@ -392,6 +417,8 @@ public:
   const ConstraintSystem &getCS(bool Signed) const {
     return Signed ? SignedCS : UnsignedCS;
   }
+
+  const DataLayout &getDataLayout() const { return DL; }
 
   void popLastConstraint(bool Signed) {
     assert(DecomposeCache.empty() && "Cache must be cleared");
@@ -599,6 +626,128 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+std::optional<Decomposition>
+Decomposition::substitute(Value *Variable, Value *Replacement,
+                          ConstraintInfo &Info) const {
+  Decomposition Result(Offset);
+  int64_t Coefficient = 0;
+  for (const DecompEntry &E : Vars) {
+    if (E.Variable != Variable)
+      Result.Vars.push_back(E);
+    else if (AddOverflow(Coefficient, E.Coefficient, Coefficient))
+      return std::nullopt;
+  }
+  Decomposition ReplacementDec =
+      decompose(Replacement, Info, /*IsSigned=*/true, Info.getDataLayout());
+  if (ReplacementDec.mul(Coefficient) || Result.add(ReplacementDec))
+    return std::nullopt;
+  return Result;
+}
+
+enum class SignedBound { Upper, Lower };
+
+/// Returns true if \p Info implies that the value of \p D does not exceed the
+/// signed maximum of \p Ty (if \p Bound is Upper) or is not below the signed
+/// minimum of \p Ty (if \p Bound is Lower).
+///
+/// The constraint systems do not record that every variable is within the
+/// range of its type, so only decompositions that are trivially in range, or
+/// that reduce to a single variable plus an offset, are handled. A min/max
+/// intrinsic result in \p D is split across its respective operands, using the
+/// fact that the value of \p D is monotonic in it: for an upper bound on a
+/// maximum, both sides must be in range, while for a lower bound only one side
+/// must be.
+static bool isKnownWithinSignedRange(Decomposition D, SignedBound Bound,
+                                     Type *Ty, ConstraintInfo &Info,
+                                     unsigned Depth) {
+  if (D.canonicalize())
+    return false;
+
+  if (Depth != 0) {
+    for (const DecompEntry &E : D.Vars) {
+      auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
+      if (!MM || !MM->isSigned() || MM->getType() != Ty)
+        continue;
+      auto LHS = D.substitute(E.Variable, MM->getLHS(), Info);
+      auto RHS = D.substitute(E.Variable, MM->getRHS(), Info);
+      if (!LHS || !RHS)
+        return false;
+
+      // D is increasing in the min/max result iff its coefficient is positive.
+      // Then D is a max over the respective sides iff the intrinsic is a max.
+      bool IsMax =
+          (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0);
+      bool L = isKnownWithinSignedRange(*LHS, Bound, Ty, Info, Depth - 1);
+      if ((Bound == SignedBound::Upper) == IsMax)
+        return L && isKnownWithinSignedRange(*RHS, Bound, Ty, Info, Depth - 1);
+      return L || isKnownWithinSignedRange(*RHS, Bound, Ty, Info, Depth - 1);
+    }
+  }
+
+  // Compare in a type wide enough for both the bounds of Ty and the int64_t
+  // offset, so this does not depend on the width of Ty.
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+  unsigned WideBits = std::max(BitWidth, 64u);
+  APInt SMax = APInt::getSignedMaxValue(BitWidth).sext(WideBits);
+  APInt SMin = APInt::getSignedMinValue(BitWidth).sext(WideBits);
+  APInt Offset(WideBits, D.Offset, /*isSigned=*/true);
+  if (D.Vars.empty())
+    return Bound == SignedBound::Upper ? Offset.sle(SMax) : Offset.sge(SMin);
+
+  // V + C is at most the maximum if C <= 0 and at least the minimum if C >= 0,
+  // since V is itself in range.
+  if (D.Vars.size() != 1 || D.Vars[0].Coefficient != 1)
+    return false;
+
+  Value *V = D.Vars[0].Variable;
+  if (V->getType() != Ty)
+    return false;
+
+  if (Bound == SignedBound::Upper) {
+    if (D.Offset <= 0)
+      return true;
+
+    // V + C <= SMax iff V <= SMax - C, which is only satisfiable in range.
+    APInt Limit = SMax - Offset;
+    return Limit.sge(SMin) &&
+           Info.doesHold(CmpInst::ICMP_SLE, V,
+                         ConstantInt::get(Ty, Limit.trunc(BitWidth)));
+  }
+
+  if (D.Offset >= 0)
+    return true;
+
+  // V + C >= SMin iff V >= SMin - C, which is only satisfiable in range.
+  APInt Limit = SMin - Offset;
+  return Limit.sle(SMax) &&
+         Info.doesHold(CmpInst::ICMP_SGE, V,
+                       ConstantInt::get(Ty, Limit.trunc(BitWidth)));
+}
+
+/// Returns true if the signed \p Opcode (Add or Sub) of \p Op0 and \p Op1 is
+/// known to not overflow because the result is in the range of the type.
+/// For example, A + (B - A) is B and therefore cannot overflow.
+static bool isKnownNoSignedWrap(Instruction::BinaryOps Opcode, Value *Op0,
+                                Value *Op1, ConstraintInfo &Info) {
+  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
+    return false;
+
+  Type *Ty = Op0->getType();
+  if (!Ty->isIntegerTy())
+    return false;
+
+  const DataLayout &DL = Info.getDataLayout();
+  Decomposition LHS = decompose(Op0, Info, /*IsSigned=*/true, DL);
+  Decomposition RHS = decompose(Op1, Info, /*IsSigned=*/true, DL);
+  if (Opcode == Instruction::Add ? LHS.add(RHS) : LHS.sub(RHS))
+    return false;
+
+  constexpr unsigned MaxDepth = 2;
+  return isKnownWithinSignedRange(LHS, SignedBound::Upper, Ty, Info,
+                                  MaxDepth) &&
+         isKnownWithinSignedRange(LHS, SignedBound::Lower, Ty, Info, MaxDepth);
+}
+
 /// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
 /// is known to not wrap in signed or unsigned, depending on \p Signed.
 static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
@@ -644,9 +793,16 @@ static bool isKnownNoWrap(Value *V, ConstraintInfo &Info, bool Signed) {
   if (match(V, m_DisjointOr(m_Value(), m_Value())))
     return true;
 
-  if (auto *WO = dyn_cast<WithOverflowInst>(V))
-    return isKnownNoWrap(WO->getBinaryOp(), WO->getLHS(), WO->getRHS(),
-                         /*NoWrapFlags=*/0, Info, Signed);
+  if (auto *WO = dyn_cast<WithOverflowInst>(V)) {
+    if (isKnownNoWrap(WO->getBinaryOp(), WO->getLHS(), WO->getRHS(),
+                      /*NoWrapFlags=*/0, Info, Signed))
+      return true;
+    // Reasoning about the infinite precision sum is costlier than the checks
+    // above, so only do it for the overflow intrinsics themselves, not
+    // for the plain adds and subs that decompose() analyzes.
+    return Signed && isKnownNoSignedWrap(WO->getBinaryOp(), WO->getLHS(),
+                                         WO->getRHS(), Info);
+  }
 
   if (auto *Trunc = dyn_cast<TruncInst>(V)) {
     if (Signed)
