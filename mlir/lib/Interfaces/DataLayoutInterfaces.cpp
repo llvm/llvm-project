@@ -155,8 +155,7 @@ uint64_t mlir::detail::getDefaultABIAlignment(
     return getIntegerTypeABIAlignment(intType, params);
 
   if (auto ctype = dyn_cast<ComplexType>(type))
-    return getDefaultABIAlignment(ctype.getElementType(), dataLayout, params);
-
+    return dataLayout.getTypeABIAlignment(ctype.getElementType());
   if (auto typeInterface = dyn_cast<DataLayoutTypeInterface>(type))
     return typeInterface.getABIAlignment(dataLayout, params);
 
