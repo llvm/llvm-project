@@ -1771,7 +1771,29 @@ def udiv_by_pow2 : GICombineRule<
    [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
   (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2,
+// Fold (udiv x, (shl C, y)) -> (lshr x, (add y, log2(C))) for power-of-two C.
+def udiv_by_shifted_pow2 : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_UDIV $dst, $x, $y):$root,
+   [{ return Helper.matchUDivByShiftedPow2(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// Convert signed division or remainder of nonnegative operands to unsigned.
+class signed_divrem_to_unsigned<Instruction signedOpcode,
+                               Instruction unsignedOpcode> : GICombineRule<
+  (defs root:$root),
+  (match (signedOpcode $dst, $x, $y):$root,
+   [{ return Helper.matchSignedDivRemToUnsigned(*${root},
+                       TargetOpcode::}] # unsignedOpcode # [{); }]),
+  (apply (unsignedOpcode $dst, $x, $y, (MIFlags $root)))>;
+
+// Fold (sdiv x, y) -> (udiv x, y) when both operands are nonnegative.
+def sdiv_to_unsigned : signed_divrem_to_unsigned<G_SDIV, G_UDIV>;
+// Fold (srem x, y) -> (urem x, y) when both operands are nonnegative.
+def srem_to_unsigned : signed_divrem_to_unsigned<G_SREM, G_UREM>;
+
+def intdiv_combines : GICombineGroup<[udiv_by_pow2, udiv_by_shifted_pow2,
+                                      sdiv_by_pow2,
                                       udiv_by_const, sdiv_by_const,]>;
 
 def urem_by_const : GICombineRule<
@@ -3124,7 +3146,7 @@ def known_bits_simplifications : GICombineGroup<[
   redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg,
   redundant_zext_unmerge_sext_inreg, redundant_aext_unmerge_sext_inreg,
   redundant_and, redundant_or, urem_pow2_to_mask, zext_trunc_fold,
-  sext_inreg_to_zext_inreg]>;
+  sext_inreg_to_zext_inreg, sdiv_to_unsigned, srem_to_unsigned]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
                                                narrow_binop_feeding_and]>;
