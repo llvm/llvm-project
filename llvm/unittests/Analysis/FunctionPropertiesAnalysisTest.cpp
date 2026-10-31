@@ -30,10 +30,6 @@ using namespace testing;
 
 namespace llvm {
 LLVM_ABI extern cl::opt<bool> EnableDetailedFunctionProperties;
-LLVM_ABI extern cl::opt<bool> BigBasicBlockInstructionThreshold;
-LLVM_ABI extern cl::opt<float> ir2vec::OpcWeight;
-LLVM_ABI extern cl::opt<float> ir2vec::TypeWeight;
-LLVM_ABI extern cl::opt<float> ir2vec::ArgWeight;
 } // namespace llvm
 
 namespace {
@@ -52,16 +48,7 @@ public:
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
     FAM.registerPass([&] { return LoopAnalysis(); });
     FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-
-    ir2vec::OpcWeight = 1.0;
-    ir2vec::TypeWeight = 1.0;
-    ir2vec::ArgWeight = 1.0;
   }
-
-private:
-  float OriginalOpcWeight = ir2vec::OpcWeight;
-  float OriginalTypeWeight = ir2vec::TypeWeight;
-  float OriginalArgWeight = ir2vec::ArgWeight;
 
 protected:
   std::unique_ptr<DominatorTree> DT;
@@ -69,13 +56,6 @@ protected:
   FunctionAnalysisManager FAM;
   ModuleAnalysisManager MAM;
   std::unique_ptr<ir2vec::Vocabulary> IR2VecVocab;
-
-  void TearDown() override {
-    // Restore original IR2Vec weights
-    ir2vec::OpcWeight = OriginalOpcWeight;
-    ir2vec::TypeWeight = OriginalTypeWeight;
-    ir2vec::ArgWeight = OriginalArgWeight;
-  }
 
   FunctionPropertiesInfo buildFPI(Function &F) {
     // FunctionPropertiesInfo assumes IR2VecVocabAnalysis has been run to
