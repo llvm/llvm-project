@@ -136,7 +136,12 @@ protected:
   llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> m_xfer_buffer_map;
 
   struct SavedRegisters {
-    std::unordered_map<uint32_t, lldb::DataBufferSP> map;
+    struct State {
+      lldb::DataBufferSP registers;
+      /// The siginfo of the thread, if we were able to get it.
+      std::unique_ptr<llvm::MemoryBuffer> siginfo;
+    };
+    std::unordered_map<uint32_t, State> map;
     uint32_t next_id = 1;
   };
   Guarded<SavedRegisters, std::mutex> m_saved_registers;

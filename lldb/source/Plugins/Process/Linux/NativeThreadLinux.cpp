@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallString.h"
 
 #include <csignal>
+#include <cstring>
 #include <sstream>
 
 // System includes - They have to be included after framework includes because
@@ -548,4 +549,14 @@ NativeThreadLinux::GetSiginfo() const {
   if (!error.Success())
     return error.ToError();
   return std::move(siginfo_buf);
+}
+
+llvm::Error NativeThreadLinux::SetSiginfo(llvm::ArrayRef<uint8_t> siginfo) {
+  siginfo_t info;
+  if (siginfo.size() != sizeof(info))
+    return llvm::createStringError("unexpected siginfo size");
+  std::memcpy(&info, siginfo.data(), sizeof(info));
+  return NativeProcessLinux::PtraceWrapper(PTRACE_SETSIGINFO, GetID(), nullptr,
+                                           &info)
+      .ToError();
 }

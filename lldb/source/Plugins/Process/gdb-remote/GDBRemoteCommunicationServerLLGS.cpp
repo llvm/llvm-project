@@ -44,6 +44,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -3625,6 +3626,17 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
     return SendErrorResponse(0x75);
   }
 
+  // Running an expression changes the siginfo of the thread. Save it as well,
+  // as it's what the thread gets if it's resumed with the signal it stopped
+  // with.
+  std::unique_ptr<llvm::MemoryBuffer> siginfo;
+  if (auto siginfo_or_err = thread->GetSiginfo())
+    siginfo = std::move(*siginfo_or_err);
+  else
+    LLDB_LOG_ERROR(log, siginfo_or_err.takeError(),
+                   "pid {1} failed to save the siginfo: {0}",
+                   m_current_process->GetID());
+
   // Allocate a new save id.
   const uint32_t save_id = GetNextSavedRegistersID();
 
@@ -3633,7 +3645,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
     auto saved_registers = m_saved_registers.Lock();
     assert((saved_registers->map.find(save_id) == saved_registers->map.end()) &&
            "GetNextRegisterSaveID() returned an existing register save id");
-    saved_registers->map[save_id] = register_data_sp;
+    saved_registers->map[save_id] = {register_data_sp, std::move(siginfo)};
   }
 
   // Write the response.
@@ -3675,7 +3687,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
   NativeRegisterContext &reg_context = thread->GetRegisterContext();
 
   // Retrieve register state buffer, then remove from the list.
-  DataBufferSP register_data_sp;
+  SavedRegisters::State state;
   {
     auto saved_registers = m_saved_registers.Lock();
 
@@ -3687,17 +3699,25 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
                m_current_process->GetID(), save_id);
       return SendErrorResponse(0x77);
     }
-    register_data_sp = it->second;
+    state = std::move(it->second);
 
     // Remove it from the map.
     saved_registers->map.erase(it);
   }
 
-  Status error = reg_context.WriteAllRegisterValues(register_data_sp);
+  Status error = reg_context.WriteAllRegisterValues(state.registers);
   if (error.Fail()) {
     LLDB_LOG(log, "pid {0} failed to restore all register values: {1}",
              m_current_process->GetID(), error);
     return SendErrorResponse(0x77);
+  }
+
+  if (state.siginfo) {
+    if (llvm::Error err = thread->SetSiginfo(
+            llvm::arrayRefFromStringRef(state.siginfo->getBuffer())))
+      LLDB_LOG_ERROR(log, std::move(err),
+                     "pid {1} failed to restore the siginfo: {0}",
+                     m_current_process->GetID());
   }
 
   return SendOKResponse();
