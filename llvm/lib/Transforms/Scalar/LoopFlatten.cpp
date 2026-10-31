@@ -550,9 +550,9 @@ checkOuterLoopInsts(FlattenInfo &FI,
 
     for (auto &I : *B) {
       if (!isa<PHINode>(&I) && !I.isTerminator() &&
-          !isSafeToSpeculativelyExecute(&I)) {
+          (!isSafeToSpeculativelyExecute(&I) || I.mayReadFromMemory())) {
         LLVM_DEBUG(dbgs() << "Cannot flatten because instruction may have "
-                             "side effects: ";
+                             "side effects or reads from memory: ";
                    I.dump());
         return false;
       }
