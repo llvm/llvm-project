@@ -15,6 +15,7 @@
 #define LLVM_MC_MCINSTRANALYSIS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -200,45 +201,14 @@ public:
   virtual std::optional<uint64_t>
   getMemoryOperandRelocationOffset(const MCInst &Inst, uint64_t Size) const;
 
-  /// Return the value \p Inst assigns to \p Reg.
-  ///
-  /// The result is expressed in terms of the register and memory values
-  /// before inst executes. All values used to describe a future step
-  /// are read from the previous state, so the instructions are seen as
-  /// semantically order-independent. For example, on X86 `push %rax` is
-  /// described by
-  ///
-  ///  evaluateDefinedValue(Inst, RSP) == %rsp - 8
-  ///  evaluateStoreAddress(Inst)      == [%rsp - 8]
-  ///  getStoredValue(Inst)            == [%rax]
-  ///
-  /// Returns std::nullopt if Inst does not define Reg, or if the new
-  /// value cannot currently be represented by MCSemExpr. Callers must treat
-  /// std::nullopt as a conservative unknown result.
+  /// Returns the value \p Inst assigns to \p Reg, in terms of the state before
+  /// \p Inst executes, or std::nullopt if it is unknown.
   virtual std::optional<MCSemExpr> evaluateDefinedValue(const MCInst &Inst,
-                                                        MCRegister Reg) const {
-    return {};
-  }
+                                                        MCRegister Reg) const;
 
-  /// Return the memory locations Inst writes to, in terms of the pre-state.
-  ///
-  /// Returns an empty list if Inst stores nothing, or if the addresses
-  /// cannot be represented by MCSemAddrExpr. Similar to evaluateDefinedValue,
-  /// an empty list is a conservative unknown result.
-  virtual std::vector<MCSemAddrExpr>
-  evaluateStoreAddress(const MCInst &Inst) const {
-    return {};
-  }
-
-  /// Return the values Inst stores, in terms of the pre-state.
-  ///
-  /// The result corresponds positionally to evaluateStoreAddress(), i'th
-  /// element is the value written to the i'th location in the StoreAddress
-  /// list, both having the same size. Returns an empty list if \p Inst stores
-  /// nothing, or if the values cannot be represented by MCSemExpr.
-  virtual std::vector<MCSemExpr> getStoredValue(const MCInst &Inst) const {
-    return {};
-  }
+  /// Returns the stores \p Inst performs, in terms of the state before \p Inst
+  /// executes. Stores that are unknown are left out.
+  virtual SmallVector<MCSemStore> evaluateStores(const MCInst &Inst) const;
 
   /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
   virtual std::vector<std::pair<uint64_t, uint64_t>>

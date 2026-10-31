@@ -10,129 +10,96 @@
 #define LLVM_MC_MCSEMEXPR_H
 
 #include "llvm/MC/MCRegister.h"
-#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 
 namespace llvm {
-class MCRegisterInfo;
-class raw_ostream;
 
-/// Affine address expression: A * Reg + B
-/// Canonical form for unambiguous constant addresses:
-/// A == 0 <=> Reg == MCRegister()
+/// An address of the form Scale * Reg + Offset.
+/// A Scale of 0 gives the constant Offset.
 class MCSemAddrExpr {
-  int64_t A;
+  int64_t Scale;
   MCRegister Reg;
-  int64_t B;
-
-  MCSemAddrExpr(int64_t A, MCRegister Reg, int64_t B) : A(A), Reg(Reg), B(B) {}
+  int64_t Offset;
 
 public:
-  static MCSemAddrExpr createConst(int64_t B) { return {0, MCRegister(), B}; }
-  static MCSemAddrExpr createReg(int64_t A, MCRegister Reg, int64_t B) {
-    assert(Reg.isValid() && A != 0 && "non-canonical MCSemAddrExpr");
-    return {A, Reg, B};
-  }
+  MCSemAddrExpr(int64_t Scale, MCRegister Reg, int64_t Offset)
+      : Scale(Scale), Reg(Reg), Offset(Offset) {}
 
-  int64_t getScale() const { return A; }
-  /// Returns base register or MCRegister() if constant.
+  /// \name Accessors
+  /// @{
+
+  int64_t getScale() const { return Scale; }
   MCRegister getReg() const { return Reg; }
-  int64_t getOffset() const { return B; }
-  bool isConstant() const { return A == 0; }
+  int64_t getOffset() const { return Offset; }
 
-  bool operator==(const MCSemAddrExpr &RHS) const {
-    return A == RHS.A && Reg == RHS.Reg && B == RHS.B;
-  }
-  bool operator!=(const MCSemAddrExpr &RHS) const { return !(*this == RHS); }
-
-  LLVM_ABI void print(raw_ostream &OS,
-                      const MCRegisterInfo *MRI = nullptr) const;
-  LLVM_ABI void dump() const;
+  /// @}
 };
 
-/// Leaf of a semantic expression must be either a register value or a memory
-/// dereference.
+/// The value of a register, or the value in memory at an address.
 class MCSemLeaf {
-  enum MCSemLeafType : uint8_t { Register, Memory };
+public:
+  enum MCSemLeafType : uint8_t {
+    Register, ///< The value of a register.
+    Memory    ///< The value in memory at an address.
+  };
 
+private:
   MCSemLeafType Kind;
-  /// Register or memory dereference type
-  MCRegister Reg;
-  MCSemAddrExpr Addr;
-
-  MCSemLeaf(MCSemLeafType Kind, MCRegister Reg, MCSemAddrExpr Addr)
-      : Kind(Kind), Reg(Reg), Addr(Addr) {}
+  union {
+    MCRegister Reg;
+    MCSemAddrExpr Addr;
+  };
 
 public:
-  static MCSemLeaf createReg(MCRegister Reg) {
-    return {Register, Reg, MCSemAddrExpr::createConst(0)};
-  }
-  static MCSemLeaf createMem(MCSemAddrExpr Addr) {
-    return {Memory, MCRegister(), Addr};
-  }
+  explicit MCSemLeaf(MCRegister Reg) : Kind(Register), Reg(Reg) {}
+  explicit MCSemLeaf(MCSemAddrExpr Addr) : Kind(Memory), Addr(Addr) {}
 
-  bool isReg() const { return Kind == Register; }
-  bool isMem() const { return Kind == Memory; }
+  /// \name Accessors
+  /// @{
+
+  MCSemLeafType getKind() const { return Kind; }
 
   MCRegister getReg() const {
-    assert(isReg() && "not a register leaf");
+    assert(Kind == Register && "Not a register leaf");
     return Reg;
   }
+
   const MCSemAddrExpr &getAddr() const {
-    assert(isMem() && "not a memory leaf");
+    assert(Kind == Memory && "Not a memory leaf");
     return Addr;
   }
 
-  bool operator==(const MCSemLeaf &RHS) const {
-    if (Kind != RHS.Kind)
-      return false;
-    return isReg() ? Reg == RHS.Reg : Addr == RHS.Addr;
-  }
-  bool operator!=(const MCSemLeaf &RHS) const { return !(*this == RHS); }
-
-  LLVM_ABI void print(raw_ostream &OS,
-                      const MCRegisterInfo *MRI = nullptr) const;
-  LLVM_ABI void dump() const;
+  /// @}
 };
 
-/// Affine semantic value A * Leaf + B
-/// Canonical form: A == 0 <=> Leaf == MCSemLeaf::createReg(MCRegister())
-/// To prevent ambiguous expressions for the same constant.
+/// A value of the form Scale * Leaf + Offset.
+/// A Scale of 0 gives the constant Offset.
 class MCSemExpr {
-  int64_t A;
+  int64_t Scale;
   MCSemLeaf Leaf;
-  int64_t B;
-
-  MCSemExpr(int64_t A, MCSemLeaf Leaf, int64_t B) : A(A), Leaf(Leaf), B(B) {}
+  int64_t Offset;
 
 public:
-  static MCSemExpr createConst(int64_t B) {
-    return {0, MCSemLeaf::createReg(MCRegister()), B};
-  }
-  static MCSemExpr createReg(int64_t A, MCRegister Reg, int64_t B) {
-    assert(Reg.isValid() && A != 0 && "non-canonical MCSemExpr");
-    return {A, MCSemLeaf::createReg(Reg), B};
-  }
-  static MCSemExpr createMem(int64_t A, MCSemAddrExpr Addr, int64_t B) {
-    assert(A != 0 && "non-canonical MCSemExpr");
-    return {A, MCSemLeaf::createMem(Addr), B};
-  }
+  MCSemExpr(int64_t Scale, MCSemLeaf Leaf, int64_t Offset)
+      : Scale(Scale), Leaf(Leaf), Offset(Offset) {}
 
-  int64_t getScale() const { return A; }
+  /// \name Accessors
+  /// @{
+
+  int64_t getScale() const { return Scale; }
   const MCSemLeaf &getLeaf() const { return Leaf; }
-  int64_t getOffset() const { return B; }
-  bool isConstant() const { return A == 0; }
+  int64_t getOffset() const { return Offset; }
 
-  bool operator==(const MCSemExpr &RHS) const {
-    return A == RHS.A && B == RHS.B && Leaf == RHS.Leaf;
-  }
-  bool operator!=(const MCSemExpr &RHS) const { return !(*this == RHS); }
-
-  LLVM_ABI void print(raw_ostream &OS,
-                      const MCRegisterInfo *MRI = nullptr) const;
-  LLVM_ABI void dump() const;
+  /// @}
 };
 
-} // namespace llvm
-#endif
+/// A store of Value to the memory at Addr.
+struct MCSemStore {
+  MCSemAddrExpr Addr;
+  MCSemExpr Value;
+};
+
+} // end namespace llvm
+
+#endif // LLVM_MC_MCSEMEXPR_H

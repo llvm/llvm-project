@@ -41,3 +41,14 @@ MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
                                                   uint64_t Size) const {
   return std::nullopt;
 }
+
+std::optional<MCSemExpr>
+MCInstrAnalysis::evaluateDefinedValue(const MCInst &Inst,
+                                      MCRegister Reg) const {
+  return std::nullopt;
+}
+
+SmallVector<MCSemStore>
+MCInstrAnalysis::evaluateStores(const MCInst &Inst) const {
+  return {};
+}
