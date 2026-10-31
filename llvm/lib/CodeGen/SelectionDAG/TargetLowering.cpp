@@ -2861,10 +2861,25 @@ bool TargetLowering::SimplifyDemandedBits(
     bool IsVecInReg = Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG;
 
     // If we only need the bottom element then we can just bitcast.
-    // TODO: Handle ANY_EXTEND?
     if (IsLE && IsVecInReg && DemandedElts == 1 &&
         VT.getSizeInBits() == SrcVT.getSizeInBits())
       return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
+
+    // The other source elements can fill the undefined extension bits when
+    // only the first result element is demanded. Pad the vector before casting.
+    // Wait until after operation legalization to preserve widening patterns.
+    if (TLO.LegalOperations() && IsLE && !IsVecInReg &&
+        VT.isFixedLengthVector() && DemandedElts == 1 &&
+        BitWidth % InBits == 0) {
+      EVT PadVT = EVT::getVectorVT(*TLO.DAG.getContext(), SrcVT.getScalarType(),
+                                   VT.getSizeInBits().getFixedValue() / InBits);
+      if (isTypeLegal(PadVT) &&
+          isOperationLegal(ISD::INSERT_SUBVECTOR, PadVT)) {
+        SDValue Padded =
+            TLO.DAG.getInsertSubvector(dl, TLO.DAG.getUNDEF(PadVT), Src, 0);
+        return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Padded));
+      }
+    }
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     APInt InDemandedElts = DemandedElts.zext(InElts);
