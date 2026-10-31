@@ -4384,6 +4384,32 @@ A NOESCAPE callee runs the lambda before returning, so a `Borrow` in the enclosi
 > }
 > ```
 
+#### alpha.webkit.BorrowPlacementChecker
+
+A `Borrow<T>` restores the borrowed flag it saved when it was constructed, so the Borrows of one object must be destroyed in the reverse order of their construction.
+The language guarantees that order only for local variables, parameters, and temporaries, so this checker reports a `Borrow` anywhere else:
+a variable, parameter, return value, or temporary whose type stores a `Borrow` (for example `std::optional`, `std::unique_ptr`, or a struct),
+a member, a by-value lambda capture, a static, thread-local, or coroutine-local `Borrow`,
+a `new` expression creating a `Borrow`, an explicit call to `~Borrow`, and `std::construct_at` / `std::destroy_at` / `std::destroy` / `std::destroy_n` on a `Borrow`.
+
+> ```cpp
+> void foo(Vector<int>& v) {
+>   std::optional<Borrow<Vector<int>>> o; // warn
+>   o.emplace(v);
+>   for (auto& x : borrow(v).get()) {
+>     o.reset(); // clears the borrowed flag while borrow(v) is still alive
+>     v.reserveCapacity(128); // does not crash
+>     x = 0; // use after free
+>   }
+> }
+>
+> struct S {
+>   Borrow<Vector<int>> b; // warn
+> };
+>
+> static Borrow<Vector<int>> global(globalVector); // warn
+> ```
+
 #### webkit.RetainPtrCtorAdoptChecker
 
 The goal of this rule is to make sure the constructors of RetainPtr and OSObjectPtr as well as adoptNS, adoptCF, and adoptOSObject are used correctly.
