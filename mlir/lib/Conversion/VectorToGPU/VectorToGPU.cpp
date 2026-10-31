@@ -71,6 +71,10 @@ static void getXferIndices(RewriterBase &rewriter, TransferOpType xferOp,
 // Return true if the contract op can be convert to MMA matmul.
 static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
                                           bool useNvGpu) {
+  // The MMA ops compute C += A * B, so only the `add` kind matches.
+  if (contract.getKind() != vector::CombiningKind::ADD)
+    return false;
+
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
   auto infer = [&](MapList m) {
     return AffineMap::inferFromExprList(m, contract.getContext());
