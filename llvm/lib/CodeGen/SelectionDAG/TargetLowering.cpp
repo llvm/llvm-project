@@ -10433,9 +10433,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
 
-  // A custom signed conversion may scalarize. Prefer the packed unsigned
-  // expansion unless the operand has enough sign bits for a narrower signed
-  // conversion.
+  // Only expand vector types if we have the appropriate vector bit operations.
   bool HasVectorUIntExpansion =
       SrcVT.isVector() && SrcVT.getScalarType() == MVT::i64 &&
       DstVT.getScalarType() == MVT::f64 &&
@@ -10444,21 +10442,23 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
       isOperationLegalOrCustom(ISD::FSUB, DstVT) &&
       isOperationLegalOrCustomOrPromote(ISD::OR, SrcVT) &&
       isOperationLegalOrCustomOrPromote(ISD::AND, SrcVT);
-  bool PreferUnsignedExpansion =
-      HasVectorUIntExpansion && isOperationCustom(ISD::SINT_TO_FP, SrcVT) &&
-      DAG.ComputeNumSignBits(Src) < SrcVT.getScalarSizeInBits() - 31;
 
-  if (Node->getFlags().hasNonNeg() && !PreferUnsignedExpansion &&
+  if (Node->getFlags().hasNonNeg() &&
       isOperationLegalOrCustom(ISD::SINT_TO_FP, SrcVT)) {
-    Result = DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), DstVT, Src);
-    return true;
+    // A custom signed conversion may scalarize. Prefer the packed unsigned
+    // expansion unless the operand can narrow to a signed i32 conversion.
+    bool PreferUnsignedExpansion = HasVectorUIntExpansion &&
+                                   isOperationCustom(ISD::SINT_TO_FP, SrcVT) &&
+                                   DAG.ComputeMaxSignificantBits(Src) > 32;
+    if (!PreferUnsignedExpansion) {
+      Result = DAG.getNode(ISD::SINT_TO_FP, SDLoc(Node), DstVT, Src);
+      return true;
+    }
   }
 
   if (SrcVT.getScalarType() != MVT::i64 || DstVT.getScalarType() != MVT::f64)
     return false;
 
-  // Only expand vector types if we have the appropriate vector bit
-  // operations.
   if (SrcVT.isVector() && !HasVectorUIntExpansion)
     return false;
 
