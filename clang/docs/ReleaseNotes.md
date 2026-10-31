@@ -1220,6 +1220,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   parameter substituted through an alias template is used as the base of an
   unresolved name, such as `TT<T>::value` in a non-type template parameter's
   type. (#GH88592)
+- Fixed an assertion when emitting base destructor as alias on targets (such
+  as AVR) which have different address spaces for code and data. (#GH236285)
 
 ### OpenACC Specific Changes
 
