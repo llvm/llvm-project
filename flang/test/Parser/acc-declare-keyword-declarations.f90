@@ -70,8 +70,7 @@ c$acc declare create(x)
 
 !--- array.f90
 !$acc declare create(x)
-real functionx(n)
-integer, parameter :: n = 2
+real functionx(2)
 real x
 functionx = 1.0
 x = functionx(1)
