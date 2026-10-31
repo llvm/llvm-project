@@ -390,6 +390,9 @@ Makes programs 10x faster by doing Special New Thing.
   an unknown call in the loop), that may have extremely high overhead, but
   typical block-copy loops will not be impacted.
 
+* Lower scalar and vector `llvm.modf` to inline instructions on SSE4.1, AVX,
+  AVX-512, and AVX10 targets where hardware truncation is supported.
+
 ### Changes to the OCaml bindings
 
 * Removed the `size_of` and `align_of` functions. Create a constant based on
