@@ -6780,10 +6780,12 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
       continue;
 
     std::optional<llvm::APSInt> Result = Arg->getIntegerConstantExpr(Context);
-    if (!Result)
-      return ExprError(Diag(TheCall->getBeginLoc(),
-                            diag::err_shufflevector_nonconstant_argument)
-                       << Arg->getSourceRange());
+    if (!Result) {
+      Diag(TheCall->getBeginLoc(), diag::err_shufflevector_nonconstant_argument)
+          << Arg->getSourceRange();
+      BPF().notePreserveAIEnumerator(Arg);
+      return ExprError();
+    }
 
     // Allow -1 which will be translated to undef in the IR.
     if (Result->isSigned() && Result->isAllOnes())
@@ -7064,8 +7066,10 @@ bool Sema::BuiltinConstantArg(CallExpr *TheCall, unsigned ArgNum,
   if (!R) {
     auto *DRE = cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
     auto *FDecl = cast<FunctionDecl>(DRE->getDecl());
-    return Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
-           << FDecl->getDeclName() << Arg->getSourceRange();
+    Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
+        << FDecl->getDeclName() << Arg->getSourceRange();
+    BPF().notePreserveAIEnumerator(Arg);
+    return true;
   }
   Result = *R;
 

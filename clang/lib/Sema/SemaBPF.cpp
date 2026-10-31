@@ -11,10 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaBPF.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/APSInt.h"
@@ -102,6 +106,32 @@ static bool isValidPreserveEnumValueArg(Expr *Arg) {
   return llvm::is_contained(ED->enumerators(), Enumerator);
 }
 
+// The kind of a C-style cast of the enumerator E to a pointer, as computed by
+// Sema::PrepareScalarCast().
+static CastKind getEnumeratorToPointerCastKind(ASTContext &Context,
+                                               const Expr *E) {
+  return E->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull)
+             ? CK_NullToPointer
+             : CK_IntegralToPointer;
+}
+
+// In __builtin_preserve_enum_value(*(<enum_type> *)<enum_value>, flag), the
+// enumerator refers to the enumerator itself rather than its value. If it is
+// wrapped by BuildPreserveAIEnumeratorRef(), use the original DeclRefExpr, so
+// that the argument is the same as without the preserve_access_index attribute.
+static void unwrapPreserveEnumValueArg(ASTContext &Context, Expr *Arg) {
+  auto *UO = dyn_cast<UnaryOperator>(Arg->IgnoreParens());
+  if (!UO || UO->getOpcode() != UO_Deref)
+    return;
+  auto *CE = dyn_cast<CStyleCastExpr>(UO->getSubExpr());
+  if (!CE || !SemaBPF::isPreserveAIEnumeratorRef(CE->getSubExpr()))
+    return;
+  auto *DRE = cast<DeclRefExpr>(
+      cast<PseudoObjectExpr>(CE->getSubExpr())->getSyntacticForm());
+  CE->setSubExpr(DRE);
+  CE->setCastKind(getEnumeratorToPointerCastKind(Context, DRE));
+}
+
 bool SemaBPF::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
   assert((BuiltinID == BPF::BI__builtin_preserve_field_info ||
@@ -145,6 +175,7 @@ bool SemaBPF::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
       kind = diag::err_preserve_type_info_invalid;
     }
   } else if (BuiltinID == BPF::BI__builtin_preserve_enum_value) {
+    unwrapPreserveEnumValueArg(Context, Arg);
     if (!isValidPreserveEnumValueArg(Arg)) {
       InvalidArg = true;
       kind = diag::err_preserve_enum_value_invalid;
@@ -179,10 +210,148 @@ void SemaBPF::handlePreserveAIRecord(RecordDecl *RD) {
 }
 
 void SemaBPF::handlePreserveAccessIndexAttr(Decl *D, const ParsedAttr &AL) {
-  auto *Rec = cast<RecordDecl>(D);
-  handlePreserveAIRecord(Rec);
-  Rec->addAttr(::new (getASTContext())
-                   BPFPreserveAccessIndexAttr(getASTContext(), AL));
+  if (auto *Rec = dyn_cast<RecordDecl>(D))
+    handlePreserveAIRecord(Rec);
+  auto *A =
+      ::new (getASTContext()) BPFPreserveAccessIndexAttr(getASTContext(), AL);
+  if (auto *ED = dyn_cast<EnumDecl>(D);
+      ED && !ED->getDeclName() && !AL.isPragmaClangAttribute())
+    AnonPreserveAIEnums.insert({ED, A});
+  D->addAttr(A);
+}
+
+void SemaBPF::DiagnoseAnonymousPreserveAIEnums() {
+  for (auto [ED, A] : AnonPreserveAIEnums)
+    if (!ED->getTypedefNameForAnonDecl())
+      Diag(A->getLocation(), diag::warn_preserve_access_index_anon_enum) << A;
+  AnonPreserveAIEnums.clear();
+}
+
+static QualType getPreserveAIEnumType(ASTContext &Context,
+                                      const DeclRefExpr *E) {
+  const auto *Enumerator = dyn_cast<EnumConstantDecl>(E->getDecl());
+  if (!Enumerator)
+    return QualType();
+
+  // In C, an enumerator usually has type int rather than the enum type, so
+  // find its enum through the declaration context. Within the definition of
+  // the enum, e.g., A in B = A + 1, the enum is not complete yet and A must
+  // stay a constant, so it is not relocated.
+  const auto *ED = dyn_cast<EnumDecl>(Enumerator->getDeclContext());
+  if (!ED || !ED->isCompleteDefinition() ||
+      !ED->hasAttr<BPFPreserveAccessIndexAttr>())
+    return QualType();
+
+  // The relocation is matched by type name, so an anonymous enum is only
+  // supported through its typedef name.
+  if (ED->getDeclName())
+    return Context.getCanonicalTagType(ED);
+  if (const TypedefNameDecl *TD = ED->getTypedefNameForAnonDecl())
+    return Context.getTypeDeclType(TD);
+  return QualType();
+}
+
+Expr *SemaBPF::BuildPreserveAIEnumeratorRef(DeclRefExpr *E) {
+  if (SemaRef.isUnevaluatedContext())
+    return E;
+
+  ASTContext &Context = getASTContext();
+  QualType EnumTy = getPreserveAIEnumType(Context, E);
+  if (EnumTy.isNull())
+    return E;
+
+  // Build *(enum_type *)E in the form required by
+  // __builtin_preserve_enum_value().
+  SourceLocation Loc = E->getExprLoc();
+  auto *Ref = DeclRefExpr::Create(Context, E->getQualifierLoc(),
+                                  SourceLocation(), E->getDecl(),
+                                  /*RefersToEnclosingVariableOrCapture=*/false,
+                                  E->getNameInfo(), E->getType(), VK_PRValue);
+  QualType PtrTy = Context.getPointerType(EnumTy);
+  Expr *Cast = CStyleCastExpr::Create(
+      Context, PtrTy, VK_PRValue, getEnumeratorToPointerCastKind(Context, Ref),
+      Ref,
+      /*BasePath=*/nullptr, FPOptionsOverride(),
+      Context.getTrivialTypeSourceInfo(PtrTy, Loc), Loc, Loc);
+  Expr *Deref = UnaryOperator::Create(
+      Context, Cast, UO_Deref, EnumTy, VK_LValue, OK_Ordinary, Loc,
+      /*CanOverflow=*/false, FPOptionsOverride());
+
+  // Flag 1 is BPF_ENUMVAL_VALUE.
+  Expr *Flag =
+      IntegerLiteral::Create(Context, llvm::APInt(32, 1), Context.IntTy, Loc);
+  Expr *Args[] = {Deref, Flag};
+
+  // Build the call the same way as the parser builds an explicit
+  // __builtin_preserve_enum_value() call, so that the two have the same AST and
+  // are handled the same, e.g., with the same diagnostics where a constant
+  // expression is required.
+  LookupResult R(SemaRef,
+                 &Context.Idents.get(Context.BuiltinInfo.getName(
+                     BPF::BI__builtin_preserve_enum_value)),
+                 Loc, Sema::LookupOrdinaryName);
+  SemaRef.LookupName(R, SemaRef.TUScope, /*AllowBuiltinCreation=*/true);
+  auto *BuiltinDecl = R.getAsSingle<FunctionDecl>();
+  assert(BuiltinDecl && "failed to find builtin declaration");
+  ExprResult Callee = SemaRef.BuildDeclarationNameExpr(
+      CXXScopeSpec(), R.getLookupNameInfo(), BuiltinDecl);
+  assert(Callee.isUsable() && "Builtin reference cannot fail");
+  ExprResult Call =
+      SemaRef.BuildCallExpr(/*Scope=*/nullptr, Callee.get(), Loc, Args, Loc);
+  assert(Call.isUsable() && "Call to builtin cannot fail");
+
+  // Cast the unsigned long result to the type of the enumerator, so that the
+  // enumerator has the same type as without the attribute.
+  Expr *Conv = Call.get();
+  if (!Context.hasSameType(Conv->getType(), E->getType()))
+    Conv = CStyleCastExpr::Create(
+        Context, E->getType(), VK_PRValue, CK_IntegralCast, Conv,
+        /*BasePath=*/nullptr, FPOptionsOverride(),
+        Context.getTrivialTypeSourceInfo(E->getType(), Loc), Loc, Loc);
+
+  // E is the syntactic form, so the AST is printed as written. The result of
+  // the cast call is not a constant expression.
+  return PseudoObjectExpr::Create(Context, E, {Conv}, /*resultIndex=*/0);
+}
+
+// Return whether E is an enumerator reference built by
+// BuildPreserveAIEnumeratorRef().
+bool SemaBPF::isPreserveAIEnumeratorRef(const Expr *E) {
+  const auto *POE = dyn_cast<PseudoObjectExpr>(E);
+  if (!POE)
+    return false;
+  const auto *DRE = dyn_cast<DeclRefExpr>(POE->getSyntacticForm());
+  return DRE && isa<EnumConstantDecl>(DRE->getDecl());
+}
+
+// After an error that E is not a constant, explain if it is because E uses an
+// enumerator of an enum with the preserve_access_index attribute. Evaluate E to
+// get the constant evaluator's note explaining this, and emit only that note.
+void SemaBPF::notePreserveAIEnumerator(const Expr *E) {
+  ASTContext &Context = getASTContext();
+  if (!Context.getTargetInfo().getTriple().isBPF() || E->isValueDependent())
+    return;
+  SmallVector<PartialDiagnosticAt, 8> Notes;
+  Expr::EvalResult EvalResult;
+  EvalResult.Diag = &Notes;
+  E->EvaluateAsRValue(EvalResult, Context, /*InConstantContext=*/true);
+  for (const PartialDiagnosticAt &Note : Notes)
+    if (Note.second.getDiagID() ==
+        diag::note_constexpr_bpf_preserve_ai_enumerator)
+      Diag(Note.first, Note.second);
+}
+
+// After an error that T is a variable length array type where it is not
+// allowed, call notePreserveAIEnumerator() for each variable size of T, e.g.,
+// for both A and B in int a[A][B].
+void SemaBPF::notePreserveAIEnumeratorInArraySizes(QualType T) {
+  ASTContext &Context = getASTContext();
+  while (const ArrayType *AT = Context.getAsArrayType(T)) {
+    if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
+      if (const Expr *Size = VAT->getSizeExpr())
+        notePreserveAIEnumerator(Size);
+    T = AT->getElementType();
+  }
 }
 
 } // namespace clang

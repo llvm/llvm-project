@@ -7454,6 +7454,18 @@ static LValueOrRValue emitPseudoObjectExpr(CodeGenFunction &CGF,
   const Expr *resultExpr = E->getResultExpr();
   LValueOrRValue result;
 
+  // On BPF, a reference to an enumerator of an enum with the
+  // preserve_access_index attribute is a pseudo-object whose semantic form is a
+  // __builtin_preserve_enum_value() call. Without debug info, the value cannot
+  // be relocated, so use the value of the enumerator, i.e., the syntactic form.
+  if (!forLValue && CGF.getTarget().getTriple().isBPF() &&
+      !CGF.CGM.getCodeGenOpts().hasReducedDebugInfo())
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm());
+        DRE && isa<EnumConstantDecl>(DRE->getDecl())) {
+      result.RV = CGF.EmitAnyExpr(DRE, slot);
+      return result;
+    }
+
   for (PseudoObjectExpr::const_semantics_iterator
          i = E->semantics_begin(), e = E->semantics_end(); i != e; ++i) {
     const Expr *semantic = *i;

@@ -3073,6 +3073,19 @@ attribute for the BPF target. This attribute may be attached to a
 struct or union declaration, where if -g is specified, it enables
 preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang `__builtin_preserve_access_index()`.
+
+The attribute may also be attached to a named or typedef'd enum
+declaration. A reference to its enumerator is then treated like
+`__builtin_preserve_enum_value(*(enum_type *)enumerator, 1)`. The second
+argument selects which property of the enumerator is relocated. `1` is
+`BPF_ENUMVAL_VALUE` as defined in libbpf, which selects the value of the
+enumerator. (`0`, `BPF_ENUMVAL_EXISTS`, would select whether the enumerator
+exists.) So the enumerator is not a constant expression, except in the
+definition of the enum itself, and, if -g is specified, its value is
+relocated.
+
+The macro `__BPF_FEATURE_ENUM_PRESERVE_ACCESS_INDEX` is defined if the
+attribute is supported on enum declarations.
   }];
 }
 
