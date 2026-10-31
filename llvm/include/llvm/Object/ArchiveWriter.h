@@ -73,6 +73,7 @@ LLVM_ABI Expected<std::unique_ptr<MemoryBuffer>>
 writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers,
                      SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
                      bool Deterministic, bool Thin,
+                     std::optional<StringRef> Identifier = std::nullopt,
                      function_ref<void(Error)> Warn = warnToStderr);
 }
 
