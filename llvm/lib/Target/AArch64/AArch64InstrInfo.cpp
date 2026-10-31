@@ -7366,12 +7366,28 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   case AArch64::LD1Rv8b:
   case AArch64::LD1Rv8h:
   case AArch64::LD1Rv16b:
+  case AArch64::LD1Onev16b:
+  case AArch64::LD1Onev1d:
+  case AArch64::LD1Onev2d:
+  case AArch64::LD1Onev2s:
+  case AArch64::LD1Onev4h:
+  case AArch64::LD1Onev4s:
+  case AArch64::LD1Onev8b:
+  case AArch64::LD1Onev8h:
   case AArch64::LD1Twov2d:
   case AArch64::LD1Threev2d:
   case AArch64::LD1Fourv2d:
   case AArch64::LD1Twov1d:
   case AArch64::LD1Threev1d:
   case AArch64::LD1Fourv1d:
+  case AArch64::ST1Onev16b:
+  case AArch64::ST1Onev1d:
+  case AArch64::ST1Onev2d:
+  case AArch64::ST1Onev2s:
+  case AArch64::ST1Onev4h:
+  case AArch64::ST1Onev4s:
+  case AArch64::ST1Onev8b:
+  case AArch64::ST1Onev8h:
   case AArch64::ST1Twov2d:
   case AArch64::ST1Threev2d:
   case AArch64::ST1Fourv2d:
