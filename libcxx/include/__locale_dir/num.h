@@ -26,6 +26,7 @@
 #include <__memory/unique_ptr.h>
 #include <__system_error/errc.h>
 #include <__type_traits/is_signed.h>
+#include <__utility/checked_int.h>
 #include <cerrno>
 #include <ios>
 #include <streambuf>
@@ -465,7 +466,7 @@ protected:
     using _Unsigned = __make_unsigned_t<_MaybeSigned>;
 
     // Stage 1
-    int __base = this->__get_base(__iob);
+    unsigned char __base = this->__get_base(__iob);
 
     // Stages 2 & 3
     // These are combined into a single step where we parse the characters and calculate the value in one go instead of
@@ -555,8 +556,7 @@ protected:
     }
 
     // Calculate the actual number
-    _Unsigned __val   = 0;
-    bool __overflowed = false;
+    __checked_int<_Unsigned> __val(0);
     for (; __first != __last; ++__first) {
       auto __c = *__first;
       if (!__grouping.empty() && __c == __thousands_sep) {
@@ -574,9 +574,7 @@ protected:
         __offset -= 6;
       if (__offset >= __base)
         break;
-      // __val = (__val * __base) + __offset
-      __overflowed |= __builtin_mul_overflow(__val, __base, std::addressof(__val)) ||
-                      __builtin_add_overflow(__val, __offset, std::addressof(__val));
+      __val = (__val * __base) + static_cast<unsigned short>(__offset);
       __parsed_num = true;
       ++__dc;
     }
@@ -584,29 +582,29 @@ protected:
     if (!__parsed_num) {
       __err |= ios_base::failbit;
       __v = 0;
-    } else if (__overflowed) {
+    } else if (__val.__overflowed()) {
       __err |= ios_base::failbit;
       __v = is_signed<_MaybeSigned>::value && __negate
               ? numeric_limits<_MaybeSigned>::min()
               : numeric_limits<_MaybeSigned>::max();
-    } else if (!__negate) {
-      if (__val > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max())) {
+    } else if (auto __value = __val.__value(); !__negate) {
+      if (__value > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max())) {
         __err |= ios_base::failbit;
         __v = numeric_limits<_MaybeSigned>::max();
       } else {
-        __v = __val;
+        __v = __value;
       }
     } else if (is_signed<_MaybeSigned>::value) {
-      if (__val > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
+      if (__value > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
         __err |= ios_base::failbit;
         __v = numeric_limits<_MaybeSigned>::min();
-      } else if (__val == static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
+      } else if (__value == static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
         __v = numeric_limits<_MaybeSigned>::min();
       } else {
-        __v = -__val;
+        __v = -__value;
       }
     } else {
-      __v = -__val;
+      __v = -__value;
     }
 
     if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)

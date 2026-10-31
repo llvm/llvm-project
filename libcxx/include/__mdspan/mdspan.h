@@ -39,6 +39,7 @@
 #include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_reference.h>
 #include <__utility/as_const.h>
+#include <__utility/checked_int.h>
 #include <__utility/integer_sequence.h>
 #include <array>
 #include <span>
@@ -254,10 +255,9 @@ public:
     // Could leave this as only checked in debug mode: semantically size() is never
     // guaranteed to be related to any accessible range
     _LIBCPP_ASSERT_UNCATEGORIZED(
-        false == ([&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
-          size_type __prod = 1;
-          return (__builtin_mul_overflow(__prod, extent(_Idxs), std::addressof(__prod)) || ... || false);
-        }(make_index_sequence<rank()>())),
+        [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
+          return !(__checked_int(extent(_Idxs)) * ... * __checked_int<index_type>(1)).__overflowed();
+        }(make_index_sequence<rank()>()),
         "mdspan: size() is not representable as size_type");
     return [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
       return ((static_cast<size_type>(__map_.extents().extent(_Idxs))) * ... * size_type(1));

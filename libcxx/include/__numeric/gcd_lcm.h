@@ -20,6 +20,7 @@
 #include <__type_traits/is_signed.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cv.h>
+#include <__utility/checked_int.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -105,10 +106,9 @@ template <class _Tp, class _Up>
   using _Rp  = common_type_t<_Tp, _Up>;
   _Rp __val1 = std::__abs_in_type<_Rp>(__m) / std::gcd(__m, __n);
   _Rp __val2 = std::__abs_in_type<_Rp>(__n);
-  _Rp __res;
-  [[maybe_unused]] bool __overflow = __builtin_mul_overflow(__val1, __val2, std::addressof(__res));
-  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__overflow, "Overflow in lcm");
-  return __res;
+  auto __res = __checked_int(__val1) * __val2;
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__res.__overflowed(), "Overflow in lcm");
+  return __res.__value();
 }
 
 #endif // _LIBCPP_STD_VER >= 17
