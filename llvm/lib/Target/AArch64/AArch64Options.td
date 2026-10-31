@@ -352,3 +352,6 @@ defm : ValueField<"sve-tail-folding-insn-threshold", "unsigned", "15",
 // GISel/AArch64PostLegalizerCombiner.cpp
 defm : BoolField<"aarch64-postlegalizer-consecutive-memops", "true",
   "Enable consecutive memop optimization in AArch64PostLegalizerCombiner">;
+
+defm : BoolField<"aarch64-enable-async-unwind-for-minsize", "false",
+  "Enable asynchronous unwind info generation for minsize functions">;
