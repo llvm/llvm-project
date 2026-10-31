@@ -2942,6 +2942,28 @@ func.func @mulsiExtendedOneRhsSplatI1(%arg0: vector<3xi1>) -> (vector<3xi1>, vec
   return %low, %high : vector<3xi1>, vector<3xi1>
 }
 
+// CHECK-LABEL: @mulsiExtendedOneRhsIndex
+//  CHECK-SAME:   (%[[ARG:.+]]: index) -> (index, index)
+//  CHECK-NEXT:   %[[ONE:.+]] = arith.constant 1 : index
+//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[ARG]], %[[ONE]] : index
+//  CHECK-NEXT:   return %[[LOW]], %[[HIGH]] : index, index
+func.func @mulsiExtendedOneRhsIndex(%arg0: index) -> (index, index) {
+  %one = arith.constant 1 : index
+  %low, %high = arith.mulsi_extended %arg0, %one: index
+  return %low, %high : index, index
+}
+
+// CHECK-LABEL: @mulsiExtendedOneRhsSplatIndex
+//  CHECK-SAME:   (%[[ARG:.+]]: vector<3xindex>) -> (vector<3xindex>, vector<3xindex>)
+//  CHECK-NEXT:   %[[ONE:.+]] = arith.constant dense<1> : vector<3xindex>
+//  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[ARG]], %[[ONE]] : vector<3xindex>
+//  CHECK-NEXT:   return %[[LOW]], %[[HIGH]] : vector<3xindex>, vector<3xindex>
+func.func @mulsiExtendedOneRhsSplatIndex(%arg0: vector<3xindex>) -> (vector<3xindex>, vector<3xindex>) {
+  %one = arith.constant dense<1> : vector<3xindex>
+  %low, %high = arith.mulsi_extended %arg0, %one: vector<3xindex>
+  return %low, %high : vector<3xindex>, vector<3xindex>
+}
+
 // CHECK-LABEL: @mulsiExtendedUnusedHigh
 //  CHECK-SAME:   (%[[ARG:.+]]: i32) -> i32
 //  CHECK-NEXT:   %[[RES:.+]] = arith.muli %[[ARG]], %[[ARG]] : i32

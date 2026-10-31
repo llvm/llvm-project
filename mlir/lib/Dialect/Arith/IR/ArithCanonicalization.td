@@ -245,7 +245,8 @@ def IsScalarOrSplatOne :
 
 // mulsi_extended(x, 1) -> [x, extsi(cmpi slt, x, 0)]
 def MulSIExtendedRHSOne :
-    Pattern<(Arith_MulSIExtendedOp $x, (ConstantLikeMatcher AnyAttr:$c1)),
+    Pattern<(Arith_MulSIExtendedOp SignlessFixedWidthIntegerLike:$x,
+                                   (ConstantLikeMatcher AnyAttr:$c1)),
             [(replaceWithValue $x),
              (Arith_ExtSIOp(Arith_CmpIOp
                 ConstantEnumCase<Arith_CmpIPredicateAttr, "slt">,
