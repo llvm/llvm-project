@@ -1188,7 +1188,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     // The OpenCL atomic library functions only accept pointer arguments to
     // generic address space.
     auto CastToGenericAddrSpace = [&](llvm::Value *V, QualType PT) {
-      if (!E->isOpenCL())
+      if (!E->isOpenCL() || !PT->isPointerType())
         return V;
       auto AS = PT->castAs<PointerType>()->getPointeeType().getAddressSpace();
       if (AS == LangAS::opencl_generic)
