@@ -457,6 +457,22 @@ private:
         &Map.OtherParents);
   }
 
+  // Traverse the body of a lambda whose call operator is a declaration rather
+  // than a definition because the closure type was merged across modules, so
+  // that it is not missing from the parent map.
+  // See https://github.com/llvm/llvm-project/issues/236863.
+  bool TraverseCXXMethodDecl(CXXMethodDecl *MethodNode) {
+    if (!VisitorBase::TraverseCXXMethodDecl(MethodNode))
+      return false;
+    if (!shouldVisitLambdaBody() || MethodNode->isThisDeclarationADefinition())
+      return true;
+    const CXXRecordDecl *RD = MethodNode->getParent();
+    if (!RD->isLambda() ||
+        !declaresSameEntity(RD->getLambdaCallOperator(), MethodNode))
+      return true;
+    return TraverseStmt(MethodNode->getBody());
+  }
+
   // Using generic TraverseNode for Stmt would prevent data-recursion.
   bool dataTraverseStmtPre(Stmt *StmtNode) {
     addParent(StmtNode, &Map.PointerParents);
