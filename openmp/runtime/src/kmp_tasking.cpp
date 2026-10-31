@@ -4522,10 +4522,13 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
       chunk_minus_1 = grainsize;
       --extras; // first extras iterations get bigger chunk (grainsize+1)
     }
-    upper = lower + st * chunk_minus_1;
-    if (upper > *ub) {
-      upper = *ub;
+    // last_chunk is a non-positive iteration-count deficit for a strict tail.
+    // Account for it before converting iteration counts to loop coordinates;
+    // ordering uint64_t bounds is not valid for descending or signed loops.
+    if (i == num_tasks - 1 && last_chunk < 0) {
+      chunk_minus_1 += last_chunk;
     }
+    upper = lower + st * chunk_minus_1;
     if (i == num_tasks - 1) {
       // schedule the last task, set lastprivate flag if needed
       if (st == 1) { // most common case
@@ -4537,7 +4540,7 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
         if ((kmp_uint64)st > ub_glob - upper)
           lastpriv = 1;
       } else { // negative loop stride
-        KMP_DEBUG_ASSERT(upper + st < *ub);
+        KMP_DEBUG_ASSERT(upper - *ub < (kmp_uint64)(-st));
         if (upper - ub_glob < (kmp_uint64)(-st))
           lastpriv = 1;
       }
