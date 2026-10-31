@@ -229,9 +229,7 @@ bb14:                                             ; preds = %bb6
 ; PR7157
 define arm_aapcs_vfpcc float @t9(ptr nocapture, ptr nocapture) nounwind {
 ; CHECK-LABEL:        t9:
-; CHECK: vmov.i32 d16, #0x0
-; CHECK-NEXT:   vst1.64 {d16, d17}, [r0:128]
-; CHECK-NEXT:   vorr d17, d16, d16
+; CHECK: vmov.i32 q8, #0x0
 ; CHECK-NEXT:   vst1.64 {d16, d17}, [r0:128]
   %3 = bitcast double 0.000000e+00 to <2 x float> ; <<2 x float>> [#uses=2]
   %4 = shufflevector <2 x float> %3, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3> ; <<4 x float>> [#uses=1]

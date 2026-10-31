@@ -1,7 +1,7 @@
 ; Test the vector constraint "v" and explicit vector register names.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -no-integrated-as | FileCheck %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 -no-integrated-as | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z14
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 -no-integrated-as | FileCheck %s
 
 define half @f0() {
 ; CHECK-LABEL: f0:
@@ -32,7 +32,7 @@ define double @f2() {
 
 define fp128 @f3() {
 ; CHECK-LABEL: f3:
-; CHECK-Z14: vzero %v0
+; CHECK: vgbm %v0, 0
 ; CHECK: blah %v1 %v0
 ; CHECK: vst %v1, 0(%r2)
 ; CHECK: br %r14
@@ -127,7 +127,7 @@ define double @f11() {
 
 define fp128 @f12() {
 ; CHECK-LABEL: f12:
-; CHECK-Z14: vzero %v4
+; CHECK: vgbm %v4, 0
 ; CHECK: blah %v4
 ; CHECK: vst %v4, 0(%r2)
 ; CHECK: br %r14
