@@ -64,8 +64,8 @@ static float expf_float_eval_cr_rn(float x) {
 
 using LlvmLibcExpfFloatCrRnExhaustiveTest =
     LlvmLibcUnaryOpAgainstBaselineExhaustiveMathTest<
-        float, LIBC_NAMESPACE::math::double_eval::expf,
-        expf_float_eval_cr_rn, 0>;
+        float, LIBC_NAMESPACE::math::double_eval::expf, expf_float_eval_cr_rn,
+        0>;
 
 TEST_F(LlvmLibcExpfFloatCrRnExhaustiveTest, PositiveRange) {
   test_full_range(mpfr::RoundingMode::Nearest, POS_START, POS_STOP);
