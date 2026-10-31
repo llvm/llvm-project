@@ -2796,6 +2796,15 @@ def : Pat<(f32(vector_extract v8f32:$xj, uimm3:$imm)),
           (EXTRACT_SUBREG(XVPICKVE_W v8f32:$xj, uimm3:$imm), sub_32)>;
 def : Pat<(f64(vector_extract v4f64:$xj, uimm2:$imm)),
           (EXTRACT_SUBREG(XVPICKVE_D v4f64:$xj, uimm2:$imm), sub_64)>;
+// Element 0 of a floating-point vector already lives in the aliased FPR.
+let AddedComplexity = 10 in {
+def : Pat<(f32 (vector_extract v8f32:$xj, 0)),
+          (f32 (EXTRACT_SUBREG (v4f32 (EXTRACT_SUBREG v8f32:$xj, sub_128)),
+                               sub_32))>;
+def : Pat<(f64 (vector_extract v4f64:$xj, 0)),
+          (f64 (EXTRACT_SUBREG (v2f64 (EXTRACT_SUBREG v4f64:$xj, sub_128)),
+                               sub_64))>;
+} // AddedComplexity = 10
 
 // vselect
 def : Pat<(v32i8 (vselect LASX256:$xd, (v32i8 (SplatPat_uimm8 uimm8:$imm)),
