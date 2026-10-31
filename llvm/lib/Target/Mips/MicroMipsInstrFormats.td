@@ -870,8 +870,9 @@ class CMov_I_F_FM_MM<bits<8> funct, bits<2> fmt> : MMArch {
 
 class MFC0_FM_MM<bits<11> funct> : MMArch {
   bits<5> rt;
-  bits<5> rd;
-  bits<3> sel;
+  bits<10> cop0;
+  bits<5> rd = cop0{9-5};
+  bits<3> sel = cop0{2-0};
 
   bits<32> Inst;
 
@@ -1101,8 +1102,9 @@ class POOL32A_TLBINV_FM_MM<bits<10> funct> : MMArch {
 
 class POOL32A_MFTC0_FM_MM<bits<5> funct, bits<6> opcode> : MMArch {
   bits<5> rt;
-  bits<5> rs;
-  bits<3> sel;
+  bits<10> cop0;
+  bits<5> rs = cop0{9-5};
+  bits<3> sel = cop0{2-0};
 
   bits<32> Inst;
 
