@@ -1,17 +1,22 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O0 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O0 -gkey-instructions -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=KEY
 
 void use(void *);
 
 // CHECK-LABEL: define {{.*}}void @test_memset_zero_init()
+// KEY-LABEL: define {{.*}}void @test_memset_zero_init()
 void test_memset_zero_init(void) {
   // CHECK: call void @llvm.memset.{{.*}} !dbg ![[LOC_MEMSET:[0-9]+]]
+  // KEY: call void @llvm.memset.{{.*}} !dbg ![[LOC_MEMSET:[0-9]+]]
   char array[24] = { 0 };
   use(array);
 }
 
 // CHECK-LABEL: define {{.*}}void @test_memcpy_init()
+// KEY-LABEL: define {{.*}}void @test_memcpy_init()
 void test_memcpy_init(void) {
   // CHECK: call void @llvm.memcpy.{{.*}} !dbg ![[LOC_MEMCPY:[0-9]+]]
+  // KEY: call void @llvm.memcpy.{{.*}} !dbg ![[LOC_MEMCPY:[0-9]+]]
   char array[24] = { 1, 2, 3 };
   use(array);
 }
@@ -21,8 +26,10 @@ struct Big {
 };
 
 // CHECK-LABEL: define {{.*}}void @test_agg_memset()
+// KEY-LABEL: define {{.*}}void @test_agg_memset()
 void test_agg_memset(void) {
   // CHECK: call void @llvm.memset.{{.*}} !dbg ![[LOC_AGG:[0-9]+]]
+  // KEY: call void @llvm.memset.{{.*}} !dbg ![[LOC_AGG:[0-9]+]]
   struct Big b = { 0 };
   use(&b);
 }
@@ -36,4 +43,14 @@ void test_agg_memset(void) {
 // CHECK-DAG: ![[INLINED_MEMCPY]] = !DILocation(line: [[#]], column: [[#]], scope: ![[SP_FUNC_CPY:[0-9]+]])
 
 // CHECK-DAG: ![[LOC_AGG]] = !DILocation(line: 0, scope: ![[SP_MEMSET]], inlinedAt: ![[INLINED_AGG:[0-9]+]])
+
+// KEY-DAG: ![[LOC_MEMSET]] = !DILocation(line: 0, scope: ![[SP_MEMSET:[0-9]+]], inlinedAt: ![[INLINED_MEMSET:[0-9]+]], atomGroup: [[#]], atomRank: [[#]])
+// KEY-DAG: ![[SP_MEMSET]] = distinct !DISubprogram(name: "memset", scope: ![[FILE:[0-9]+]], file: ![[FILE]], type: ![[SUBROUTINE_TYPE:[0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: ![[CU:[0-9]+]], keyInstructions: true)
+// KEY-DAG: ![[INLINED_MEMSET]] = !DILocation(line: [[#]], column: [[#]], scope: ![[SP_FUNC_ZERO:[0-9]+]])
+
+// KEY-DAG: ![[LOC_MEMCPY]] = !DILocation(line: 0, scope: ![[SP_MEMCPY:[0-9]+]], inlinedAt: ![[INLINED_MEMCPY:[0-9]+]], atomGroup: [[#]], atomRank: [[#]])
+// KEY-DAG: ![[SP_MEMCPY]] = distinct !DISubprogram(name: "memcpy", scope: ![[FILE]], file: ![[FILE]], type: ![[SUBROUTINE_TYPE]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: ![[CU]], keyInstructions: true)
+// KEY-DAG: ![[INLINED_MEMCPY]] = !DILocation(line: [[#]], column: [[#]], scope: ![[SP_FUNC_CPY:[0-9]+]])
+
+// KEY-DAG: ![[LOC_AGG]] = !DILocation(line: 0, scope: ![[SP_MEMSET]], inlinedAt: ![[INLINED_AGG:[0-9]+]], atomGroup: [[#]], atomRank: [[#]])
 

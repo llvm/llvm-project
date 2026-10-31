@@ -12,7 +12,7 @@ void a() {
 // CHECK: call void @llvm.memcpy{{.*}}%A{{.*}}, !dbg [[G1R1:!.*]]
     int A[] = { 1, 2, 3 };
 
-// CHECK:      call void @llvm.memcpy{{.*}}%B{{.*}}, !dbg [[G2R1:!.*]]
+// CHECK:      call void @llvm.memcpy{{.*}}%B{{.*}}, !dbg [[G2R1_MEMCPY:!.*]]
 // CHECK-NEXT: store i32 1, ptr %B{{.*}}, !dbg [[G2R1:!.*]]
 // CHECK-NEXT: %arrayinit.element = getelementptr {{.*}}, ptr %B, {{.*}} 1, !dbg [[B_LINE:!.*]]
 // CHECK-NEXT: store i32 2, ptr %arrayinit.element{{.*}}, !dbg [[G2R1]]
@@ -21,9 +21,9 @@ void a() {
 // CHECK-NEXT: store i32 %0, ptr %arrayinit.element1{{.*}}, !dbg [[G2R1]]
     int B[] = { 1, 2, g };
 
-// CHECK:      call void @llvm.memset{{.*}}%big{{.*}} !dbg [[G3R1:!.*]]
+// CHECK:      call void @llvm.memset{{.*}}%big{{.*}} !dbg [[G3R1_MEMSET:!.*]]
 // CHECK-NEXT: %1 = getelementptr {{.*}}, ptr %big, {{.*}} 0, {{.*}} 0, !dbg [[big_LINE:!.*]]
-// CHECK-NEXT: store i8 97, ptr %1{{.*}}, !dbg [[G3R1]]
+// CHECK-NEXT: store i8 97, ptr %1{{.*}}, !dbg [[G3R1:!.*]]
 // CHECK-NEXT: %2 = getelementptr {{.*}}, ptr %big, {{.*}} 0, {{.*}} 1, !dbg [[big_LINE]]
 // CHECK-NEXT: store i8 98, ptr %2{{.*}}, !dbg [[G3R1]]
 // CHECK-NEXT: %3 = getelementptr {{.*}}, ptr %big, {{.*}} 0, {{.*}} 2, !dbg [[big_LINE]]
@@ -42,11 +42,13 @@ void a() {
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
-// CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
+// CHECK: [[G2R1_MEMCPY]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[B_LINE]] = !DILocation(line: 22, scope: ![[#]])
+// CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[G2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
-// CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
+// CHECK: [[G3R1_MEMSET]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 // CHECK: [[big_LINE]] = !DILocation(line: 33, scope: ![[#]])
+// CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
 // CHECK: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
 // CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 6, atomRank: 1)

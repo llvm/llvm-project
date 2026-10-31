@@ -47,10 +47,13 @@ struct g {
 // CHECK-NEXT: ret void, !dbg
 
 // CHECK: [[S1:!.*]] = distinct !DISubprogram(name: "operator=",
-// CHECK: [[S1_G1R1]] = !DILocation(line: 11, scope: [[S1]], atomGroup: 1, atomRank: 1)
+// CHECK: [[S1_G1R1]] = !DILocation(line: 0, scope: [[MEMCPY:!.*]], inlinedAt: [[S1_LOC:!.*]], atomGroup: 1, atomRank: 1)
+// CHECK: [[MEMCPY]] = distinct !DISubprogram(name: "memcpy",
+// CHECK: [[S1_LOC]] = !DILocation(line: 11, scope: [[S1]])
 
 // CHECK: [[S2:!.*]] = distinct !DISubprogram(name: "g",
-// CHECK: [[S2_G1R1]] = !DILocation(line: 11, scope: [[S2]], atomGroup: 1, atomRank: 1)
+// CHECK: [[S2_G1R1]] = !DILocation(line: 0, scope: [[MEMCPY]], inlinedAt: [[S2_LOC:!.*]], atomGroup: 1, atomRank: 1)
+// CHECK: [[S2_LOC]] = !DILocation(line: 11, scope: [[S2]])
 
 [[gnu::nodebug]]
 void fun(g *x) {

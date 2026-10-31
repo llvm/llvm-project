@@ -158,13 +158,15 @@ CGDebugInfo::~CGDebugInfo() {
 
 void CGDebugInfo::addInstSourceAtomMetadata(llvm::Instruction *I,
                                             uint64_t Group, uint8_t Rank) {
-  if (!I->getDebugLoc() || Group == 0 || !I->getDebugLoc()->getLine())
+  const llvm::DebugLoc &DL = I->getDebugLoc();
+  if (!DL || Group == 0)
+    return;
+  if (!DL->getLine() &&
+      (!DL->getInlinedAt() || !DL->getInlinedAt()->getLine()))
     return;
 
   // Saturate the 3-bit rank.
   Rank = std::min<uint8_t>(Rank, 7);
-
-  const llvm::DebugLoc &DL = I->getDebugLoc();
 
   // Each instruction can only be attributed to one source atom (a limitation of
   // the implementation). If this instruction is already part of a source atom,
