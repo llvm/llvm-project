@@ -3630,6 +3630,31 @@ TEST_F(AlignmentTest, ContinuedAligned) {
                Style);
 }
 
+TEST_F(AlignmentTest, ContinuedAlignedForIndentation) {
+  FormatStyle Style = getLLVMStyleWithColumns(30);
+  Style.UseTab = FormatStyle::UT_ForIndentation;
+  Style.TabWidth = Style.IndentWidth = 4;
+
+  verifyFormat("void f() {\n"
+               "\tabcdef =\n"
+               "\t    foo(111111, 222222,\n"
+               "\t        333333);\n"
+               "}",
+               Style);
+}
+
+TEST_F(AlignmentTest, InlineBracedListForIndentation) {
+  FormatStyle Style = getLLVMStyleWithColumns(30);
+  Style.UseTab = FormatStyle::UT_ForIndentation;
+  Style.TabWidth = Style.IndentWidth = 4;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+  verifyFormat("void f() {\n"
+               "\tint a[] = { 1, 2, 3, 4, 5,\n"
+               "\t            6, 7, 8, 9 };\n"
+               "}",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

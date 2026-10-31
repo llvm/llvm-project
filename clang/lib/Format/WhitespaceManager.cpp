@@ -28,12 +28,15 @@ static const FormatToken &getLineStart(const FormatToken &Tok) {
   return *Result;
 }
 
-static unsigned indentLevelFor(const WhitespaceManager::Change &C) {
+static unsigned indentLevelFor(const WhitespaceManager::Change &C,
+                               FormatStyle::UseTabStyle UseTab) {
   if (!C.AlignedTo)
     return C.Tok->IndentLevel;
 
   const FormatToken &LineStart = getLineStart(*C.AlignedTo);
-  return std::max(LineStart.IndentLevel, LineStart.AppliedIndentLevel);
+  return UseTab == FormatStyle::UT_ForIndentation
+             ? LineStart.IndentLevel
+             : std::max(LineStart.IndentLevel, LineStart.AppliedIndentLevel);
 }
 
 bool WhitespaceManager::Change::IsBeforeInFile::operator()(
@@ -1633,7 +1636,7 @@ void WhitespaceManager::generateChanges() {
       }
       // FIXME: This assert should hold if we computed the column correctly.
       // assert((int)C.StartOfTokenColumn >= C.Spaces);
-      unsigned IndentLevel = indentLevelFor(C);
+      unsigned IndentLevel = indentLevelFor(C, Style.UseTab);
       appendIndentText(ReplacementText, IndentLevel, std::max(0, C.Spaces),
                        std::max((int)C.StartOfTokenColumn, C.Spaces) -
                            std::max(0, C.Spaces),
