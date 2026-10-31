@@ -46,7 +46,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter>
 concept __can_use_postfix_proxy =
-    constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>> && move_constructible<iter_value_t<_Iter>>;
+    indirectly_readable<_Iter> && constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>> &&
+    move_constructible<iter_value_t<_Iter>>;
 
 template <input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
   requires(!same_as<_Iter, _Sent> && copyable<_Iter>)

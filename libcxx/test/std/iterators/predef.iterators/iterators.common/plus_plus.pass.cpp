@@ -95,6 +95,23 @@ void test() {
     assert(commonIter1 == commonSent1);
   }
 
+  // Case 2: not indirectly_readable (LWG3601)
+  {
+    int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    using Iter    = non_const_deref_iterator<int*>;
+    using Common  = std::common_iterator<Iter, sentinel_type<int*>>;
+    auto iter     = Common(Iter(buffer));
+    auto sent     = Common(sentinel_type<int*>{buffer + 8});
+
+    static_assert(!std::indirectly_readable<Iter>);
+    ASSERT_SAME_TYPE(decltype(iter++), void);
+
+    for (int i = 1; iter != sent; ++i) {
+      assert(*iter == i);
+      iter++;
+    }
+  }
+
   // Case 2: can-reference
   {
     int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
