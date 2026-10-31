@@ -127,3 +127,28 @@ define void @alias_scope(ptr %arg1) {
 !7 = !{!2, !3}
 !8 = !{!1, !3}
 !9 = !{!1, !2}
+
+; // -----
+
+; CHECK: #[[DOMAIN:.*]] = #llvm.alias_scope_domain<id = {{.*}}, disjointScopes = true, description = "The disjoint domain">
+; CHECK: #[[$SCOPE0:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]>
+; CHECK: #[[$SCOPE1:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]>
+
+; CHECK-LABEL: llvm.func @disjoint_domain
+define void @disjoint_domain(ptr %arg1) {
+  ; CHECK: llvm.load
+  ; CHECK-SAME:  alias_scopes = [#[[$SCOPE0]]]
+  ; CHECK-NOT:   noalias_scopes
+  %1 = load i32, ptr %arg1, !alias.scope !3
+  ; CHECK: llvm.load
+  ; CHECK-SAME:  alias_scopes = [#[[$SCOPE1]]]
+  ; CHECK-NOT:   noalias_scopes
+  %2 = load i32, ptr %arg1, !alias.scope !4
+  ret void
+}
+
+!0 = distinct !{!0, i1 true, !"The disjoint domain"}
+!1 = distinct !{!1, !0}
+!2 = distinct !{!2, !0}
+!3 = !{!1}
+!4 = !{!2}
