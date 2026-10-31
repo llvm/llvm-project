@@ -135,7 +135,8 @@ class Arith_FloatBinaryOpWithRoundingMode<string mnemonic,
 def SameInputOutputTensorDims : PredOpTrait<
     "input and output have the same tensor dimensions",
     AllMatchSameOperatorPred<["in", "out"],
-      "(::llvm::isa<::mlir::TensorType>($_self.getType()) ?"
+      "(::llvm::isa<::mlir::TensorType>($_self.getType()) &&"
+      " ::llvm::cast<::mlir::TensorType>($_self.getType()).hasRank() ?"
       " ::llvm::cast<::mlir::TensorType>($_self.getType()).getShape() :"
       " ::llvm::ArrayRef<int64_t>{})">>;
 
