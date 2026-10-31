@@ -162,6 +162,7 @@
 #include "math/fdimf.h"
 #include "math/fdimf128.h"
 #include "math/fdimf16.h"
+#include "math/fdimf80.h"
 #include "math/fdiml.h"
 #include "math/fdiv.h"
 #include "math/fdivf128.h"

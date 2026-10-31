@@ -2692,6 +2692,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fdimf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdimf80_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdimf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fdimbf16_test
   SUITE
     libc-math-smoke-tests

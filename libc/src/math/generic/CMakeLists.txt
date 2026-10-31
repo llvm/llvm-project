@@ -3066,6 +3066,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fdimf80
+  SRCS
+    fdimf80.cpp
+  HDRS
+    ../fdimf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.fdimf80
+)
+
+add_entrypoint_object(
   fdimbf16
   SRCS
     fdimbf16.cpp

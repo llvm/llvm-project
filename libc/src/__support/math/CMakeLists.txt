@@ -3689,6 +3689,16 @@ add_header_library(
 )
 
 add_header_library(
+  fdimf80
+  HDRS
+    fdimf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   fdiml
   HDRS
     fdiml.h
