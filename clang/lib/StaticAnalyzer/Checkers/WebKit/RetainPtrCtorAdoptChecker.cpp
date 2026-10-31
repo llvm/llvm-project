@@ -579,10 +579,9 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     Os << "Incorrect use of " << Name
-       << ". The argument is +0 and results in an use-after-free";
+       << "; the argument is +0 and results in an use-after-free";
     if (condition)
       Os << " " << condition;
-    Os << ".";
 
     assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
@@ -600,10 +599,9 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     Os << "Incorrect use of " << Name
-       << ". The argument is +1 and results in a memory leak";
+       << "; the argument is +1 and results in a memory leak";
     if (condition)
       Os << " " << condition;
-    Os << ".";
 
     assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),

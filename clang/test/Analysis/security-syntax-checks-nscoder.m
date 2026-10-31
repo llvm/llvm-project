@@ -31,6 +31,6 @@ void test(NSCoder *decoder) {
   // This would be a vulnerability on 64-bit platforms
   // but not on 32-bit platforms.
   NSUInteger x;
-  [decoder decodeValueOfObjCType:"I" at:&x]; // available-warning{{Deprecated method '-decodeValueOfObjCType:at:' is insecure as it can lead to potential buffer overflows. Use the safer '-decodeValueOfObjCType:at:size:' method}}
+  [decoder decodeValueOfObjCType:"I" at:&x]; // available-warning{{Deprecated method '-decodeValueOfObjCType:at:' is insecure as it can lead to potential buffer overflows; use the safer '-decodeValueOfObjCType:at:size:' method}}
   [decoder decodeValueOfObjCType:"I" at:&x size:sizeof(x)]; // no-warning
 }
