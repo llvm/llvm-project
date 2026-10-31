@@ -4312,13 +4312,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_and: {
-    // Canonicalize logical or/and reductions:
-    // Or reduction for i1 is represented as:
-    // %val = bitcast <ReduxWidth x i1> to iReduxWidth
-    // %res = cmp ne iReduxWidth %val, 0
-    // And reduction for i1 is represented as:
-    // %val = bitcast <ReduxWidth x i1> to iReduxWidth
-    // %res = cmp eq iReduxWidth %val, 11111
+    // vector_reduce_{and,or}(?ext(<n x i1>)) -->
+    //   ?ext(vector_reduce_{and,or}(<n x i1>))
+    // The bitcast + icmp form of the i1 reduction is a cost-driven fold in
+    // VectorCombine.
     Value *Arg = II->getArgOperand(0);
     Value *Vect;
 
@@ -4328,25 +4325,43 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return II;
     }
 
-    if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-      if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-        if (FTy->getElementType() == Builder.getInt1Ty()) {
-          Value *Res = Builder.CreateBitCast(
-              Vect, Builder.getIntNTy(FTy->getNumElements()));
-          if (IID == Intrinsic::vector_reduce_and) {
-            Res = Builder.CreateICmpEQ(
-                Res, ConstantInt::getAllOnesValue(Res->getType()));
-          } else {
-            assert(IID == Intrinsic::vector_reduce_or &&
-                   "Expected or reduction.");
-            Res = Builder.CreateIsNotNull(Res);
-          }
-          if (Arg != Vect)
-            Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
-                                     II->getType());
-          return replaceInstUsesWith(CI, Res);
-        }
+    if (match(Arg, m_ZExtOrSExt(m_Value(Vect))) &&
+        Vect->getType()->isIntOrIntVectorTy(1)) {
+      Value *Res = IID == Intrinsic::vector_reduce_and
+                       ? Builder.CreateAndReduce(Vect)
+                       : Builder.CreateOrReduce(Vect);
+      Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
+                               II->getType());
+      return replaceInstUsesWith(CI, Res);
     }
+
+    // all_of(icmp eq X, Y) --> icmp eq (bitcast X to iM), (bitcast Y to iM)
+    // any_of(icmp ne X, Y) --> icmp ne (bitcast X to iM), (bitcast Y to iM)
+    CmpPredicate Pred;
+    Value *X, *Y;
+    if (match(Arg, m_OneUse(m_ICmp(Pred, m_Value(X), m_Value(Y)))) &&
+        Pred == (IID == Intrinsic::vector_reduce_and ? ICmpInst::ICMP_EQ
+                                                     : ICmpInst::ICMP_NE)) {
+      auto *XTy = dyn_cast<FixedVectorType>(X->getType());
+      if (XTy && XTy->getElementType()->isIntegerTy()) {
+        unsigned NumBits = XTy->getPrimitiveSizeInBits().getFixedValue();
+        if (DL.isLegalInteger(NumBits)) {
+          Type *ScalarTy = Builder.getIntNTy(NumBits);
+          Value *XS =
+              Builder.CreateBitCast(X, ScalarTy, X->getName() + ".scalar");
+          Value *YS =
+              Builder.CreateBitCast(Y, ScalarTy, Y->getName() + ".scalar");
+          return new ICmpInst(Pred, XS, YS);
+        }
+      }
+    }
+
+    // any_of(get_active_lane_mask(base, n)) --> icmp ult base, n
+    Value *Lower, *Upper;
+    if (IID == Intrinsic::vector_reduce_or &&
+        match(Arg, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                       m_Value(Lower), m_Value(Upper))))
+      return new ICmpInst(ICmpInst::ICMP_ULT, Lower, Upper);
     [[fallthrough]];
   }
   case Intrinsic::vector_reduce_add: {
@@ -4356,7 +4371,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // Convert vector_reduce_add(SExt(<n x i1>)) to
       // -ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
       // Convert vector_reduce_add(<n x i1>) to
-      // Trunc(ctpop(bitcast <n x i1> to in)).
+      // vector_reduce_xor(<n x i1>).
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
@@ -4379,15 +4394,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         }
       }
 
-      if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
+      if (Arg->getType()->isIntOrIntVectorTy(1))
+        return replaceInstUsesWith(CI, Builder.CreateXorReduce(Arg));
+
+      if (match(Arg, m_ZExtOrSExt(m_Value(Vect)))) {
         if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
           if (FTy->getElementType() == Builder.getInt1Ty()) {
             Value *V = Builder.CreateBitCast(
                 Vect, Builder.getIntNTy(FTy->getNumElements()));
             Value *Res = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, V);
             Res = Builder.CreateZExtOrTrunc(Res, II->getType());
-            if (Arg != Vect &&
-                cast<Instruction>(Arg)->getOpcode() == Instruction::SExt)
+            if (cast<Instruction>(Arg)->getOpcode() == Instruction::SExt)
               Res = Builder.CreateNeg(Res);
             return replaceInstUsesWith(CI, Res);
           }
@@ -4397,13 +4414,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::vector_reduce_xor: {
     if (IID == Intrinsic::vector_reduce_xor) {
-      // Exclusive disjunction reduction over the vector with
-      // (potentially-extended) i1 element type is actually a
-      // (potentially-extended) arithmetic `add` reduction over the original
-      // non-extended value:
-      //   vector_reduce_xor(?ext(<n x i1>))
-      //     -->
-      //   ?ext(vector_reduce_add(<n x i1>))
+      // vector_reduce_xor(?ext(<n x i1>)) --> ?ext(vector_reduce_xor(<n x i1>))
       Value *Arg = II->getArgOperand(0);
       Value *Vect;
 
@@ -4413,15 +4424,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return II;
       }
 
-      if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-        if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
-          if (VTy->getElementType() == Builder.getInt1Ty()) {
-            Value *Res = Builder.CreateAddReduce(Vect);
-            if (Arg != Vect)
-              Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
-                                       II->getType());
-            return replaceInstUsesWith(CI, Res);
-          }
+      if (match(Arg, m_ZExtOrSExt(m_Value(Vect))) &&
+          Vect->getType()->isIntOrIntVectorTy(1)) {
+        Value *Res = Builder.CreateXorReduce(Vect);
+        Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
+                                 II->getType());
+        return replaceInstUsesWith(CI, Res);
       }
     }
     [[fallthrough]];

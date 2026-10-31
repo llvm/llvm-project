@@ -6766,6 +6766,26 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
       return Op0;
     break;
   }
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+    // reduce_op(splat(x)) -> x for the idempotent reductions.
+    if (Value *Splat = getSplatValue(Op0))
+      return Splat;
+    break;
+  case Intrinsic::vector_reduce_xor:
+    // reduce_xor(splat(x)) -> 0 for an even lane count, x for an odd one.
+    if (Value *Splat = getSplatValue(Op0)) {
+      ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
+      if (EC.isKnownEven())
+        return Constant::getNullValue(Splat->getType());
+      if (EC.isFixed())
+        return Splat;
+    }
+    break;
   case Intrinsic::exp:
     // exp(log(x)) -> x
     if (FMF.allowReassoc() &&

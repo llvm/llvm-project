@@ -58,6 +58,8 @@ STATISTIC(NumShufOfBitcast, "Number of shuffles moved after bitcast");
 STATISTIC(NumScalarOps, "Number of scalar unary + binary ops formed");
 STATISTIC(NumScalarCmp, "Number of scalar compares formed");
 STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
+STATISTIC(NumBoolReduceBitmask,
+          "Number of bool vector reductions turned into bitmask tests");
 
 static const unsigned InvalidIndex = std::numeric_limits<unsigned>::max();
 
@@ -151,6 +153,7 @@ private:
   bool foldICmpEqZeroVectorReduce(Instruction &I);
   bool foldEquivalentReductionCmp(Instruction &I);
   bool foldReduceAddCmpZero(Instruction &I);
+  bool foldBoolReductionToBitmask(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
@@ -5421,6 +5424,79 @@ bool VectorCombine::foldReduceAddCmpZero(Instruction &I) {
   return true;
 }
 
+/// Replace a logical reduction of a bool vector with a test of the bitcast mask
+/// integer when the target cost model says that is strictly cheaper:
+///   reduce.and(<N x i1> X) --> icmp eq (bitcast X to iN), -1
+///   reduce.or (<N x i1> X) --> icmp ne (bitcast X to iN), 0
+///   reduce.xor(<N x i1> X) --> trunc (ctpop (bitcast X to iN)) to i1
+bool VectorCombine::foldBoolReductionToBitmask(Instruction &I) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+
+  Intrinsic::ID IID = II->getIntrinsicID();
+  if (IID != Intrinsic::vector_reduce_and &&
+      IID != Intrinsic::vector_reduce_or && IID != Intrinsic::vector_reduce_xor)
+    return false;
+
+  Value *Vec = II->getArgOperand(0);
+  auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+  if (!VecTy || !VecTy->getElementType()->isIntegerTy(1))
+    return false;
+
+  // Don't create integers wider than the target's legal integer types.
+  unsigned NumElts = VecTy->getNumElements();
+  if (NumElts < 2 || !DL->fitsInLegalInteger(NumElts))
+    return false;
+
+  Type *IntTy = IntegerType::get(I.getContext(), NumElts);
+  unsigned ReductionOpc = getArithmeticReductionInstruction(IID);
+  InstructionCost OldCost = TTI.getArithmeticReductionCost(
+      ReductionOpc, VecTy, std::nullopt, CostKind);
+
+  InstructionCost NewCost = TTI.getCastInstrCost(
+      Instruction::BitCast, IntTy, VecTy, TTI::CastContextHint::None, CostKind);
+  if (IID == Intrinsic::vector_reduce_xor) {
+    IntrinsicCostAttributes CtpopAttrs(Intrinsic::ctpop, IntTy, {IntTy});
+    NewCost += TTI.getIntrinsicInstrCost(CtpopAttrs, CostKind) +
+               TTI.getCastInstrCost(Instruction::Trunc, I.getType(), IntTy,
+                                    TTI::CastContextHint::None, CostKind);
+  } else {
+    CmpInst::Predicate Pred = IID == Intrinsic::vector_reduce_and
+                                  ? CmpInst::ICMP_EQ
+                                  : CmpInst::ICMP_NE;
+    NewCost += TTI.getCmpSelInstrCost(
+        Instruction::ICmp, IntTy, CmpInst::makeCmpResultType(IntTy), Pred,
+        CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_UniformConstantValue, TTI::OP_None});
+  }
+
+  LLVM_DEBUG(dbgs() << "Found a bool vector reduction: " << I << "\n  OldCost: "
+                    << OldCost << " vs NewCost: " << NewCost << "\n");
+
+  if (!OldCost.isValid() || !NewCost.isValid() || NewCost >= OldCost)
+    return false;
+
+  Builder.SetInsertPoint(&I);
+  Value *Mask = Builder.CreateBitCast(Vec, IntTy);
+  Value *Res;
+  switch (IID) {
+  case Intrinsic::vector_reduce_and:
+    Res = Builder.CreateICmpEQ(Mask, ConstantInt::getAllOnesValue(IntTy));
+    break;
+  case Intrinsic::vector_reduce_or:
+    Res = Builder.CreateIsNotNull(Mask);
+    break;
+  default:
+    Res = Builder.CreateTrunc(
+        Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, Mask), I.getType());
+    break;
+  }
+  replaceValue(I, *Res);
+  ++NumBoolReduceBitmask;
+  return true;
+}
+
 /// Returns true if this ShuffleVectorInst eventually feeds into a
 /// vector reduction intrinsic (e.g., vector_reduce_add) by only following
 /// chains of shuffles and binary operators (in any combination/order).
@@ -7144,6 +7220,8 @@ bool VectorCombine::run() {
         if (foldShuffleFromReductions(I))
           return true;
         if (foldCastFromReductions(I))
+          return true;
+        if (foldBoolReductionToBitmask(I))
           return true;
         break;
       case Instruction::ExtractElement:

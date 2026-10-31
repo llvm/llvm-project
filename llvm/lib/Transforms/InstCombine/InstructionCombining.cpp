@@ -5482,6 +5482,17 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   if (Value *NI = pushFreezeToPreventPoisonFromPropagating(I))
     return replaceInstUsesWith(I, NI);
 
+  // freeze (splat X) --> splat (freeze X)
+  Value *X;
+  if (match(Op0, m_OneUse(m_Shuffle(
+                     m_OneUse(m_InsertElt(m_Value(), m_Value(X), m_ZeroInt())),
+                     m_Value(), m_ZeroMask())))) {
+    Value *FrozenX = Builder.CreateFreeze(X, X->getName() + ".fr");
+    return replaceInstUsesWith(
+        I, Builder.CreateVectorSplat(
+               cast<VectorType>(I.getType())->getElementCount(), FrozenX));
+  }
+
   // If I is freeze(undef), check its uses and fold it to a fixed constant.
   // - or: pick -1
   // - select's condition: if the true value is constant, choose it by making
