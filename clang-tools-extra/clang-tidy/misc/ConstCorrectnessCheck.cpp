@@ -34,6 +34,9 @@ AST_MATCHER_P(DeclStmt, containsAnyDeclaration,
              InnerMatcher, Node.decl_begin(), Node.decl_end(), Finder,
              Builder) != Node.decl_end();
 }
+AST_MATCHER_P(Decl, isAtLocation, SourceLocation, Loc) {
+  return Node.getLocation() == Loc;
+}
 AST_MATCHER(ReferenceType, isSpelledAsLValue) {
   return Node.isSpelledAsLValue();
 }
@@ -197,6 +200,21 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   }
 }
 
+static bool isPartOfFoldExprInTemplate(const VarDecl *Variable,
+                                       const FunctionDecl *Function,
+                                       ASTContext &Context) {
+  const FunctionDecl *Pattern = Function->getTemplateInstantiationPattern();
+  if (!Pattern)
+    return false;
+
+  const Stmt *Body = Pattern->getBody();
+  if (!Body)
+    return false;
+  const auto FoldMatcher = stmt(hasDescendant(cxxFoldExpr(hasDescendant(
+      declRefExpr(to(varDecl(isAtLocation(Variable->getLocation()))))))));
+  return !match(FoldMatcher, *Body, Context).empty();
+}
+
 static bool isStdMoveOperandInTemplate(const VarDecl *Variable,
                                        const FunctionDecl *Func,
                                        ASTContext &Context) {
@@ -285,6 +303,10 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (IsNormalVariableInTemplate && VC != VariableCategory::Pointer &&
       isStdMoveOperandInTemplate(Variable, Function, *Result.Context))
+    return;
+
+  if (IsNormalVariableInTemplate &&
+      isPartOfFoldExprInTemplate(Variable, Function, *Result.Context))
     return;
 
   if (IsNormalVariableInTemplate &&

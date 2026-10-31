@@ -99,3 +99,21 @@ void f() {
 }
 
 } // namespace gh60895
+
+namespace gh235629 {
+
+struct A {
+  void add(int);
+};
+
+template <int... Args>
+void fun() {
+  A a;
+  (a.add(Args), ...);
+}
+
+void f() {
+  fun();
+}
+
+} // namespace gh235629
