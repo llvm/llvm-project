@@ -32550,22 +32550,20 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // Attempt to fold as unpack(x,x) << zext(splat(y)):
   // rotl(x,y) -> (unpack(x,x) << (y & (bw-1))) >> bw.
   // rotr(x,y) -> (unpack(x,x) >> (y & (bw-1))).
-  if (EltSizeInBits == 8 || EltSizeInBits == 16 || EltSizeInBits == 32) {
-    int BaseRotAmtIdx = -1;
-    if (SDValue BaseRotAmt = DAG.getSplatSourceVector(AmtMod, BaseRotAmtIdx)) {
-      if (EltSizeInBits == 16 && Subtarget.hasSSE41()) {
-        unsigned FunnelOpc = IsROTL ? ISD::FSHL : ISD::FSHR;
-        return DAG.getNode(FunnelOpc, DL, VT, R, R, Amt);
-      }
-      unsigned ShiftX86Opc = IsROTL ? X86ISD::VSHLI : X86ISD::VSRLI;
-      SDValue Lo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
-      SDValue Hi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
-      Lo = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Lo, BaseRotAmt,
-                               BaseRotAmtIdx, Subtarget, DAG);
-      Hi = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Hi, BaseRotAmt,
-                               BaseRotAmtIdx, Subtarget, DAG);
-      return getPack(DAG, Subtarget, DL, VT, Lo, Hi, IsROTL);
+  int BaseRotAmtIdx = -1;
+  if (SDValue BaseRotAmt = DAG.getSplatSourceVector(AmtMod, BaseRotAmtIdx)) {
+    if (EltSizeInBits == 16 && Subtarget.hasSSE41()) {
+      unsigned FunnelOpc = IsROTL ? ISD::FSHL : ISD::FSHR;
+      return DAG.getNode(FunnelOpc, DL, VT, R, R, Amt);
     }
+    unsigned ShiftX86Opc = IsROTL ? X86ISD::VSHLI : X86ISD::VSRLI;
+    SDValue Lo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
+    SDValue Hi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
+    Lo = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Lo, BaseRotAmt,
+                             BaseRotAmtIdx, Subtarget, DAG);
+    Hi = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Hi, BaseRotAmt,
+                             BaseRotAmtIdx, Subtarget, DAG);
+    return getPack(DAG, Subtarget, DL, VT, Lo, Hi, IsROTL);
   }
 
   bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
