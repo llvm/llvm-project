@@ -103,8 +103,8 @@ public:
   virtual unsigned adjustInliningThreshold(const CallBase *CB) const {
     return 0;
   }
-  virtual unsigned getCallerAllocaCost(const CallBase *CB,
-                                       const AllocaInst *AI) const {
+  virtual unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI,
+                                       const Function &Callee) const {
     return 0;
   };
 

@@ -1992,7 +1992,8 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
 }
 
 unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
-                                         const AllocaInst *AI) const {
+                                         const AllocaInst *AI,
+                                         const Function &Callee) const {
 
   // Below the cutoff, assume that the private memory objects would be
   // optimized
@@ -2017,10 +2018,7 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
   static_assert(InlinerVectorBonusPercent == 0, "vector bonus assumed to be 0");
   unsigned Threshold = ArgAllocaCost * getInliningThresholdMultiplier();
 
-  // Indirect calls have a null callee. Treat it as a single-block function,
-  // thereby erring towards overestimating the cost.
-  const Function *Callee = CB->getCalledFunction();
-  bool SingleBB = !Callee || none_of(*Callee, [](const BasicBlock &BB) {
+  bool SingleBB = none_of(Callee, [](const BasicBlock &BB) {
     return BB.getTerminator()->getNumSuccessors() > 1;
   });
   if (SingleBB) {
