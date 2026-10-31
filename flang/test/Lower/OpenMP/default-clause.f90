@@ -1,11 +1,12 @@
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fno-openmp-main-program-globals %s -o - | FileCheck %s --check-prefixes=CHECK,OFF --implicit-check-not='fir.global internal @_QFEz{{[[:space:]]}}'
 ! This test checks lowering of OpenMP parallel directive
 ! with `DEFAULT` clause present.
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - \
-! RUN: | FileCheck %s
+! RUN: | FileCheck %s --check-prefixes=CHECK,ON
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - \
-! RUN: | FileCheck %s
+! RUN: | FileCheck %s --check-prefixes=CHECK,ON
 
 
 !CHECK: func @_QQmain() attributes {fir.bindc_name = "DEFAULT_CLAUSE_LOWERING"} {
@@ -15,7 +16,8 @@
 !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] uniq_name("_QFEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[Y:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFEy"}>
 !CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] uniq_name("_QFEy") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[Z:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFEz"}>
+!ON: %[[Z:.*]] = fir.address_of(@_QFEz) : !fir.ref<i32>
+!OFF: %[[Z:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFEz"}>
 !CHECK: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z]] uniq_name("_QFEz") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_W:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] uniq_name("_QFEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

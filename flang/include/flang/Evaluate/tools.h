@@ -1786,6 +1786,9 @@ bool IsObjectPointer(const Symbol *);
 bool IsAllocatableOrObjectPointer(const Symbol *);
 bool IsAutomatic(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
+// Test the size boundary used by main-program storage policies. The argument
+// must already be an association root; this does not test SAVE or object kind.
+bool IsSmallMainProgramVariable(const Symbol &);
 bool IsDummy(const Symbol &);
 
 bool IsAssumedRank(const Symbol &);

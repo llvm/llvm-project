@@ -6614,10 +6614,17 @@ private:
            Fortran::lower::pft::getHostModuleVariableList(funit))
         instantiateVar(var, storeMap);
 
+    // New global host associations already borrow a stable scope-variable plan.
+    // Reuse those records rather than recomputing them for the host itself.
+    auto variables = funit.hostAssociations.getVariables();
+    std::optional<Fortran::lower::pft::VariableList> localVariables;
+    if (!variables) {
+      variables = localVariables.emplace(
+          Fortran::lower::pft::getScopeVariableList(scope));
+    }
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;
-    for (const Fortran::lower::pft::Variable &var :
-         Fortran::lower::pft::getScopeVariableList(scope)) {
+    for (const Fortran::lower::pft::Variable &var : *variables) {
       // Always instantiate aggregate storage blocks.
       if (var.isAggregateStore()) {
         instantiateVar(var, storeMap);
@@ -6644,6 +6651,8 @@ private:
       }
     }
 
+    // Preserve the legacy temporary's lifetime when no cached plan exists.
+    localVariables.reset();
     // TODO: should use same mechanism as equivalence?
     // One blocking point is character entry returns that need special handling
     // since they are not locally allocated but come as argument. CHARACTER(*)

@@ -667,6 +667,10 @@ VariableList getScopeVariableList(const Fortran::semantics::Scope &scope);
 /// depends on. \p symbol itself will be the last variable in the list.
 VariableList getDependentVariableList(const Fortran::semantics::Symbol &);
 
+/// Return the enclosing Program's stable variable-list cache.
+template <typename A>
+ScopeVariableListMap &getScopeVariableListMap(A &node);
+
 struct FunctionLikeUnit;
 /// Create an ordered list of equivalence sets and variables from host
 /// [sub]module scopes of \p funit that are referenced in \p funit. This is
@@ -750,7 +754,11 @@ struct FunctionLikeUnit : public ProgramUnit {
 
   void setHostAssociatedSymbols(
       const llvm::SetVector<const semantics::Symbol *> &symbols) {
-    hostAssociations.addSymbolsToBind(symbols, getScope());
+    hostAssociations.addSymbolsToBind(
+        symbols, getScope(), [&]() -> const VariableList & {
+          return getScopeVariableList(getScope(),
+                                      getScopeVariableListMap(*this));
+        });
   }
 
   /// Return the host associations, if any, from the parent (host) procedure.
@@ -900,7 +908,8 @@ struct Program {
 private:
   std::list<Units> units;
   semantics::CommonBlockList commonBlocks;
-  ScopeVariableListMap scopeVariableListMap; // module and submodule scopes
+  /// Module/submodule scopes and MAIN hosts with newly promoted globals.
+  ScopeVariableListMap scopeVariableListMap;
 };
 
 /// Helper to get location from FunctionLikeUnit/ModuleLikeUnit begin/end

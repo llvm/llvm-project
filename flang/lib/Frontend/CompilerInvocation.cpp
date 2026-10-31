@@ -1891,6 +1891,12 @@ bool CompilerInvocation::createFromArgs(
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
   success &= parseDoConcurrentMapping(invoc.getCodeGenOpts(), args, diags);
+  // Device DO CONCURRENT targets are generated after PFT construction. Keep
+  // host and device capture layouts identical when these targets are enabled.
+  invoc.loweringOpts.setOpenMPMainProgramGlobals(
+      !args.hasArg(clang::options::OPT_fno_openmp_main_program_globals) &&
+      invoc.getCodeGenOpts().getDoConcurrentMapping() !=
+          CodeGenOptions::DoConcurrentMappingKind::DCMK_Device);
   success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
 
   // Enable USE statement preservation for debug info if debug level is above
@@ -2161,6 +2167,12 @@ CompilerInvocation::getSemanticsCtx(
 /// on the \p optimizationLevel.
 void CompilerInvocation::setLoweringOptions() {
   const CodeGenOptions &codegenOpts = getCodeGenOpts();
+
+  // API clients may change the mapping after argument parsing. Reapply the
+  // device capture-layout restriction before constructing the PFT.
+  if (codegenOpts.getDoConcurrentMapping() ==
+      CodeGenOptions::DoConcurrentMappingKind::DCMK_Device)
+    loweringOpts.setOpenMPMainProgramGlobals(false);
 
   // Lower TRANSPOSE as a runtime call under -O0.
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);

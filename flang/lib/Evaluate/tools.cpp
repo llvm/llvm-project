@@ -2886,6 +2886,11 @@ bool IsAutomatic(const Symbol &original) {
   return false;
 }
 
+bool IsSmallMainProgramVariable(const Symbol &symbol) {
+  return symbol.owner().kind() == Scope::Kind::MainProgram &&
+      symbol.size() <= 32;
+}
+
 bool IsSaved(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
   const Scope &scope{symbol.owner()};
@@ -2916,7 +2921,7 @@ bool IsSaved(const Symbol &original) {
       (features.IsEnabled(common::LanguageFeature::SaveMainProgram) ||
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
-              symbol.size() > 32))) {
+              !IsSmallMainProgramVariable(symbol)))) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and
