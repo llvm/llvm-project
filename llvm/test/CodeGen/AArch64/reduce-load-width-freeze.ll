@@ -341,3 +341,40 @@ define i16 @srl_freeze_load_i64_to_i16(ptr %p) {
   %trunc = trunc i64 %srl to i16
   ret i16 %trunc
 }
+
+; The narrowed load already exists. Replacing the load under the multi-use
+; freeze makes CSE merge the freeze, and then the AND being combined, into
+; existing nodes. zeroext on %a and the reload through %s are needed to reach
+; the crash.
+define i1 @and_freeze_multi_use_load_cse(ptr %p, ptr %q, i8 zeroext %a) {
+; CHECK-LABEL: and_freeze_multi_use_load_cse:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    strb w8, [sp, #15]
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    strb w8, [x1]
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    and w9, w8, #0x1
+; CHECK-NEXT:    ccmp w9, w2, #4, eq
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ret
+  %s = alloca i8, align 1
+  %l1 = load i8, ptr %p, align 1
+  store i8 %l1, ptr %s, align 1
+  %l2 = load i8, ptr %p, align 1
+  %f1 = freeze i8 %l1
+  %f2 = freeze i8 %l2
+  store i8 %f2, ptr %q, align 1
+  %c1 = icmp ne i8 %f1, 0
+  %z1 = zext i1 %c1 to i8
+  %c2 = icmp eq i8 %f2, %z1
+  %l3 = load i8, ptr %s, align 1
+  %m = and i8 %l3, 1
+  %c3 = icmp ne i8 %m, %a
+  %r = and i1 %c2, %c3
+  ret i1 %r
+}
