@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx98-14,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,cxx98-14,since-cxx11
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-14,cxx98-14,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-14,since-cxx14,cxx98-14,since-cxx11
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,since-cxx17,since-cxx11
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,since-cxx20,since-cxx17,since-cxx11
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx23,since-cxx14,since-cxx20,since-cxx17,since-cxx11
@@ -174,6 +174,36 @@ namespace cwg1653 { // cwg1653: 4 c++17
     b -= 1; // ok
   }
 } // namespace cwg1653
+
+namespace cwg1657 { // cwg1657: 3.6
+#if __cplusplus >= 201103L
+enum {
+  one [[]]
+  // cxx11-14-error@-1 {{attributes on an enumerator declaration are a C++17 extension}}
+};
+enum E {
+  two [[]]
+  // cxx11-14-error@-1 {{attributes on an enumerator declaration are a C++17 extension}}
+};
+enum struct E2 {
+  three [[]]
+  // cxx11-14-error@-1 {{attributes on an enumerator declaration are a C++17 extension}}
+};
+
+inline namespace [[]] {} // #cwg1657-unnamed
+// cxx11-14-error@-1 {{attributes on a namespace declaration are a C++17 extension}}
+namespace [[]] {}
+// cxx11-14-error@-1 {{attributes on a namespace declaration are a C++17 extension}}
+// since-cxx11-warning@-2 {{inline namespace reopened as a non-inline namespace}}
+//   since-cxx11-note@#cwg1657-unnamed {{previous definition is here}}
+
+inline namespace [[]] N {}
+// cxx11-14-error@-1 {{attributes on a namespace declaration are a C++17 extension}}
+
+namespace [[]] M {}
+// cxx11-14-error@-1 {{attributes on a namespace declaration are a C++17 extension}}
+#endif
+} // namespace cwg1657
 
 namespace cwg1658 { // cwg1658: 5
   namespace DefCtor {
