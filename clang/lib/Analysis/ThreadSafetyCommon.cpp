@@ -400,19 +400,6 @@ static const ParmVarDecl *getCanonicalParamDecl(const Decl *D, unsigned I) {
     return FD->getCanonicalDecl()->getParamDecl(I);
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
     return MD->getCanonicalDecl()->getParamDecl(I);
-  if (const auto *DD = dyn_cast<DeclaratorDecl>(D)) {
-    if (auto *TSI = DD->getTypeSourceInfo()) {
-      TypeLoc TL = TSI->getTypeLoc();
-      if (auto RTL = TL.getAsAdjusted<ReferenceTypeLoc>())
-        TL = RTL.getPointeeLoc();
-      // A function pointer can be multiple levels deep.
-      while (auto PTL = TL.getAsAdjusted<PointerTypeLoc>())
-        TL = PTL.getPointeeLoc();
-      if (auto FPTL = TL.getAsAdjusted<FunctionProtoTypeLoc>())
-        if (I < FPTL.getNumParams())
-          return FPTL.getParam(I);
-    }
-  }
   return nullptr;
 }
 
@@ -479,7 +466,13 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
         Match = (FD->getCanonicalDecl() == Canonical);
       else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
         Match = (MD->getCanonicalDecl() == Canonical);
-      else if (getCanonicalParamDecl(Canonical, I) == PV->getCanonicalDecl())
+      else if (D->isTranslationUnit())
+        // Sema temporarily creates every parameter in the translation unit
+        // itself and moves it to its function once there is one. Thus, the
+        // parameters of a prototype nested in a declarator's type, such as a
+        // function pointer's, have no function and stay there. An attribute on
+        // the declarator can only name one of those, from its own type or a
+        // redeclaration's, so we know this must be a correct match.
         Match = true;
       else
         llvm_unreachable("ParmVarDecl does not belong to current declaration");
