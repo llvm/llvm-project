@@ -10582,6 +10582,38 @@ struct SPAddSubImmEncoding {
   int64_t Imm;
   int64_t Shift;
 };
+
+static bool isReturnAddressAuth(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AArch64::PAUTH_EPILOGUE:
+  case AArch64::PAUTH_EPILOGUE_ENTRY_SP:
+  case AArch64::AUTIASP:
+  case AArch64::AUTIBSP:
+  case AArch64::AUTIAZ:
+  case AArch64::AUTIBZ:
+  case AArch64::AUTIASPPCi:
+  case AArch64::AUTIASPPCr:
+  case AArch64::AUTIBSPPCi:
+  case AArch64::AUTIBSPPCr:
+  case AArch64::AUTIA1716:
+  case AArch64::AUTIB1716:
+  case AArch64::AUTIA171615:
+  case AArch64::AUTIB171615:
+  case AArch64::RETAA:
+  case AArch64::RETAB:
+  case AArch64::RETAASPPCi:
+  case AArch64::RETAASPPCr:
+  case AArch64::RETABSPPCi:
+  case AArch64::RETABSPPCr:
+  case AArch64::XPACLRI:
+    return true;
+  case AArch64::AUTIA:
+  case AArch64::AUTIB:
+    return MI.definesRegister(AArch64::LR, /*TRI=*/nullptr);
+  default:
+    return false;
+  }
+}
 } // namespace
 
 /// Returns true if \p MI is an ADD/SUBXri with an immediate offset that reads
@@ -11221,6 +11253,13 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       return;
     Ranges.emplace_back(RangeBegin, RangeEnd);
   };
+  // Instructions at or after a return address authentication instruction
+  // (e.g. AUTIASP or PAUTH_EPILOGUE) must not be outlined. Outlining them
+  // would require saving the authenticated return address, which could spill
+  // authenticated LR to memory or corrupt registers across the call.
+  auto FirstAuth = llvm::find_if(MBB.instrs(), isReturnAddressAuth);
+  bool PassedFirstAuth = (FirstAuth == MBB.instr_end());
+
   // Find the first point where all unsafe registers are dead.
   // FIND: <safe instr> <-- end of first potential range
   // SKIP: <unsafe def>
@@ -11233,6 +11272,13 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
     // Update flags that impact how we outline across the entire block,
     // regardless of safety.
     UpdateWholeMBBFlags(*FirstPossibleEndPt);
+
+    if (!PassedFirstAuth) {
+      if (FirstPossibleEndPt->getIterator() == FirstAuth)
+        PassedFirstAuth = true;
+      continue;
+    }
+
     if (AreAllUnsafeRegsDead())
       break;
   }
@@ -11289,21 +11335,37 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   case AArch64::PACM:
   case AArch64::PACIASP:
   case AArch64::PACIBSP:
+  case AArch64::PACIAZ:
+  case AArch64::PACIBZ:
   case AArch64::PACIASPPC:
   case AArch64::PACIBSPPC:
+  case AArch64::PACNBIASPPC:
+  case AArch64::PACNBIBSPPC:
+  case AArch64::PACIA1716:
+  case AArch64::PACIB1716:
+  case AArch64::PACIA171615:
+  case AArch64::PACIB171615:
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
+  case AArch64::AUTIAZ:
+  case AArch64::AUTIBZ:
   case AArch64::AUTIASPPCi:
   case AArch64::AUTIASPPCr:
   case AArch64::AUTIBSPPCi:
   case AArch64::AUTIBSPPCr:
+  case AArch64::AUTIA1716:
+  case AArch64::AUTIB1716:
+  case AArch64::AUTIA171615:
+  case AArch64::AUTIB171615:
   case AArch64::RETAA:
   case AArch64::RETAB:
   case AArch64::RETAASPPCi:
   case AArch64::RETAASPPCr:
   case AArch64::RETABSPPCi:
   case AArch64::RETABSPPCr:
+  case AArch64::XPACLRI:
   case AArch64::EMITBKEY:
+  case AArch64::EMITNONHINTED:
   case AArch64::PAUTH_PROLOGUE:
   case AArch64::PAUTH_EPILOGUE:
   case AArch64::PAUTH_EPILOGUE_ENTRY_SP:
