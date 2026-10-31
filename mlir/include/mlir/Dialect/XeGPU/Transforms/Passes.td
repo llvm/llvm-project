@@ -84,7 +84,8 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
     This pass linearizes n-D vectors to 1-D vectors for lowering to XeVM.
   }];
   let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect",
-                           "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
+                           "scf::SCFDialect", "tensor::TensorDialect",
+                           "ub::UBDialect", "vector::VectorDialect"];
 }
 
 def XeGPUPeepHoleOptimizer : Pass<"xegpu-optimize-peephole"> {
