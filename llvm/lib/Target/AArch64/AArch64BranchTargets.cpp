@@ -172,12 +172,14 @@ void AArch64BranchTargetsImpl::addBTI(MachineBasicBlock &MBB, bool CouldCall,
        ++MBBI)
     ;
 
-  // PACI[AB]SP are implicitly BTI c so insertion of a BTI can be skipped in
+  // PACI[AB]SP[PC] are implicitly BTI c so insertion of a BTI can be skipped in
   // this case. Depending on the runtime value of SCTLR_EL1.BT[01], they are not
   // equivalent to a BTI jc, which still requires an additional BTI.
   if (MBBI != MBB.end() && ((HintNum & BTIMask) == BTIC) &&
       (MBBI->getOpcode() == AArch64::PACIASP ||
-       MBBI->getOpcode() == AArch64::PACIBSP))
+       MBBI->getOpcode() == AArch64::PACIBSP ||
+       MBBI->getOpcode() == AArch64::PACIASPPC ||
+       MBBI->getOpcode() == AArch64::PACIBSPPC))
     return;
 
   const AArch64InstrInfo *TII = Subtarget->getInstrInfo();
