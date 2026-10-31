@@ -108,8 +108,15 @@ bool fromJSON(const Value &value, AcceleratorActions &data, Path path) {
   return o && o.map("plugin_name", data.plugin_name) &&
          o.map("session_name", data.session_name) &&
          o.map("identifier", data.identifier) &&
+         o.mapOptional("stop_id", data.stop_id) &&
          o.map("breakpoints", data.breakpoints) &&
-         o.mapOptional("connect_info", data.connect_info);
+         o.mapOptional("connect_info", data.connect_info) &&
+         o.mapOptional("wait_for_accelerator_process_to_stop",
+                       data.wait_for_accelerator_process_to_stop) &&
+         o.mapOptional("resume_accelerator_process",
+                       data.resume_accelerator_process) &&
+         o.mapOptional("wait_for_accelerator_process_to_resume",
+                       data.wait_for_accelerator_process_to_resume);
 }
 
 json::Value toJSON(const AcceleratorActions &data) {
@@ -121,6 +128,14 @@ json::Value toJSON(const AcceleratorActions &data) {
   };
   if (data.connect_info)
     obj["connect_info"] = *data.connect_info;
+  if (data.stop_id)
+    obj["stop_id"] = *data.stop_id;
+  if (data.wait_for_accelerator_process_to_stop)
+    obj["wait_for_accelerator_process_to_stop"] = true;
+  if (data.resume_accelerator_process)
+    obj["resume_accelerator_process"] = true;
+  if (data.wait_for_accelerator_process_to_resume)
+    obj["wait_for_accelerator_process_to_resume"] = true;
   return obj;
 }
 

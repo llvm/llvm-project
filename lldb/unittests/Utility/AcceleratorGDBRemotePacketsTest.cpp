@@ -124,6 +124,10 @@ TEST(AcceleratorGDBRemotePacketsTest, AcceleratorBreakpointHitArgsGetSymbol) {
 TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActions) {
   AcceleratorActions actions("mock", 1);
   actions.session_name = "Mock Session";
+  actions.stop_id = 42;
+  actions.wait_for_accelerator_process_to_stop = true;
+  actions.resume_accelerator_process = true;
+  actions.wait_for_accelerator_process_to_resume = true;
   AcceleratorBreakpointInfo bp;
   bp.identifier = 1;
   bp.by_name = AcceleratorBreakpointByName{std::nullopt, "main"};
@@ -134,6 +138,10 @@ TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActions) {
   EXPECT_EQ("mock", deserialized->plugin_name);
   EXPECT_EQ("Mock Session", deserialized->session_name);
   EXPECT_EQ(1, deserialized->identifier);
+  EXPECT_EQ(42u, deserialized->stop_id);
+  EXPECT_TRUE(deserialized->wait_for_accelerator_process_to_stop);
+  EXPECT_TRUE(deserialized->resume_accelerator_process);
+  EXPECT_TRUE(deserialized->wait_for_accelerator_process_to_resume);
   ASSERT_EQ(1u, deserialized->breakpoints.size());
   EXPECT_EQ(1, deserialized->breakpoints[0].identifier);
   EXPECT_EQ("main", deserialized->breakpoints[0].by_name->function_name);
@@ -142,10 +150,22 @@ TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActions) {
 TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActionsEmpty) {
   AcceleratorActions actions("test", 0);
 
+  json::Value serialized_value = toJSON(actions);
+  const json::Object *serialized = serialized_value.getAsObject();
+  ASSERT_NE(nullptr, serialized);
+  EXPECT_EQ(nullptr, serialized->get("stop_id"));
+  EXPECT_EQ(nullptr, serialized->get("wait_for_accelerator_process_to_stop"));
+  EXPECT_EQ(nullptr, serialized->get("resume_accelerator_process"));
+  EXPECT_EQ(nullptr, serialized->get("wait_for_accelerator_process_to_resume"));
+
   Expected<AcceleratorActions> deserialized = roundtripJSON(actions);
   ASSERT_THAT_EXPECTED(deserialized, Succeeded());
   EXPECT_EQ("test", deserialized->plugin_name);
   EXPECT_TRUE(deserialized->breakpoints.empty());
+  EXPECT_FALSE(deserialized->stop_id);
+  EXPECT_FALSE(deserialized->wait_for_accelerator_process_to_stop);
+  EXPECT_FALSE(deserialized->resume_accelerator_process);
+  EXPECT_FALSE(deserialized->wait_for_accelerator_process_to_resume);
 }
 
 TEST(AcceleratorGDBRemotePacketsTest, LLDBSettings) {

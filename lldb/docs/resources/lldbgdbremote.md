@@ -2917,8 +2917,8 @@ FPGAs) alongside the native host process via accelerator plugins installed
 in lldb-server.
 
 An accelerator plugin drives the client by returning a list of
-`AcceleratorActions` (currently just breakpoints to set in the native
-process). The client can receive `AcceleratorActions` at two points:
+`AcceleratorActions`. The client can receive `AcceleratorActions` at two
+points:
 
 1. Once, in response to the `jAcceleratorPluginInitialize` packet sent when
    the native process is launched or attached.
@@ -2996,6 +2996,19 @@ following fields:
 | `triple`        | string | Target triple for the accelerator target, used to ensure the architecture is compatible with `platform_name`. |
 | `exe_path`      | string | Optional path to the executable to use when creating the accelerator target. If omitted, an empty target is created. |
 | `synchronous`   | bool   | If true, connect synchronously: the client blocks until the accelerator process is connected and stopped before continuing. If false, the connection is made asynchronously. |
+
+An `accelerator_action` may also include the following optional fields for
+synchronizing its associated accelerator process:
+
+| Key                                      | Type    | Description |
+|------------------------------------------|---------|-------------|
+| `stop_id`                                | integer | Accelerator GDB server stop identifier associated with the wait actions. |
+| `wait_for_accelerator_process_to_stop`   | bool    | Request that the client wait for the accelerator process to reach `stop_id`. Requires `stop_id`. |
+| `resume_accelerator_process`             | bool    | Request that the client resume the accelerator process. |
+| `wait_for_accelerator_process_to_resume` | bool    | Request that the client wait for the accelerator process to resume from `stop_id`. Requires `stop_id`. |
+
+These fields define the protocol schema. A subsequent client change will act
+on them; adding the fields does not yet synchronize process execution.
 
 **Priority To Implement:** Required for hardware accelerator debugging
 support. Not needed for non-hardware-accelerator debugging.
