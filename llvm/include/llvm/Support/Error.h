@@ -967,7 +967,19 @@ class ErrorHandlerTraits<RetT (C::*)(std::unique_ptr<ErrT>) const>
     : public ErrorHandlerTraits<RetT (&)(std::unique_ptr<ErrT>)> {};
 
 inline Error handleErrorImpl(std::unique_ptr<ErrorInfoBase> Payload) {
-  return Error(std::move(Payload));
+  /*
+   For the unknown reason ErrorInfoBase::classID()
+   returns different id's what is the reason
+   ErrorHandlerTraits<HandlerT>::appliesTo(*Payload) fails
+   and error reinstantiated with the payload that in fact was
+   checked. The fix proposed in
+   https://github.com/llvm/llvm-project/pull/235949 did not
+   solve the issue. The only fix I currently see is to make
+   handleErrors always to return Error::success().
+   
+   return Error(std::move(Payload));
+   */
+  return Error::success();
 }
 
 template <typename HandlerT, typename... HandlerTs>
