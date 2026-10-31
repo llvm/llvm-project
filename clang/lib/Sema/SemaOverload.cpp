@@ -12713,9 +12713,17 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // We found a specific requirement that disabled the enable_if.
     if (PDiag && PDiag->second.getDiagID() ==
         diag::err_typename_nested_not_found_requirement) {
+      auto *Storage = PDiag->second.getStorage();
+      std::string Description;
+      if (Storage->DiagArgumentsKind[0] == DiagnosticsEngine::ak_expr) {
+        auto *Cond = reinterpret_cast<Expr *>(Storage->DiagArgumentsVal[0]);
+        Description = S.findFailedBooleanCondition(Cond).second;
+      } else {
+        Description = PDiag->second.getStringArg(0).str();
+      }
       S.Diag(Templated->getLocation(),
              diag::note_ovl_candidate_disabled_by_requirement)
-        << PDiag->second.getStringArg(0) << TemplateArgString;
+          << Description << TemplateArgString;
       return;
     }
 
