@@ -1,0 +1,26 @@
+Check that /pdbsourcepath reaches the linker's own path in the linker module's
+env block, so a build that spawns lld-link by absolute path from inside the
+directory it is normalizing away does not record where it ran.
+
+RUN: rm -rf %t
+RUN: mkdir %t
+RUN: cp lld-link %t/lld-link
+RUN: yaml2obj %p/Inputs/pdb1.yaml -o %t/pdb1.obj
+RUN: yaml2obj %p/Inputs/pdb2.yaml -o %t/pdb2.obj
+RUN: cd %t
+
+The linker is named by an absolute path, the way a build system spawns it.
+
+RUN: %t/lld-link /debug /pdbsourcepath:. /entry:main /nodefaultlib \
+RUN:   /out:out.exe /pdb:out.pdb pdb1.obj pdb2.obj
+RUN: llvm-pdbutil dump -symbols out.pdb | FileCheck %s
+
+RUN: rm -f %t/lld-link
+
+CHECK:      S_ENVBLOCK
+CHECK-NEXT: - cwd
+CHECK-NEXT: - .
+CHECK-NEXT: - exe
+CHECK-NEXT: - lld-link
+CHECK-NEXT: - pdb
+CHECK-NEXT: - out.pdb
