@@ -84,6 +84,11 @@ struct RVCRefQual {
   constexpr int operator()(int) const&& { return 1; }
 };
 
+struct ADLDeref {
+  friend void operator*(std::expected<ADLDeref, int>&)       = delete;
+  friend void operator*(const std::expected<ADLDeref, int>&) = delete;
+};
+
 struct NonCopy {
   int value;
   constexpr explicit NonCopy(int val) : value(val) {}
@@ -104,6 +109,12 @@ concept has_transform_error =
 // [LWG 3877] https://cplusplus.github.io/LWG/issue3877, check constraint failing but not compile error inside the function body.
 static_assert(!has_transform_error<const std::expected<std::unique_ptr<int>, int>&, int()>);
 static_assert(!has_transform_error<const std::expected<std::unique_ptr<int>, int>&&, int()>);
+
+// [LWG 3973] https://cplusplus.github.io/LWG/issue3973, check that std::expected monadic ops are ADL-proof.
+static_assert(has_transform_error<std::expected<ADLDeref, int>&, int(int&)>);
+static_assert(has_transform_error<const std::expected<ADLDeref, int>&, int(const int&)>);
+static_assert(has_transform_error<std::expected<ADLDeref, int>&&, int(int&&)>);
+static_assert(has_transform_error<const std::expected<ADLDeref, int>&&, int(const int&&)>);
 
 // [LWG 3983] https://cplusplus.github.io/LWG/issue3938, check std::expected monadic ops well-formed with move-only error_type.
 static_assert(has_transform_error<std::expected<int, MoveOnlyErrorType>&, int(MoveOnlyErrorType &)>);
