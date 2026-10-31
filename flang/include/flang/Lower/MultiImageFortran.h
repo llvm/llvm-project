@@ -12,6 +12,7 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 
 namespace Fortran {
 
@@ -88,6 +89,12 @@ void genAllocateNonAllocatableSaveCoarray(AbstractConverter &converter,
                                           mlir::Location loc,
                                           const semantics::Symbol &sym,
                                           mlir::Value addr);
+
+void initializeCoarrayAfterDeclare(AbstractConverter &converter,
+                                   mlir::Location loc,
+                                   const semantics::Symbol &sym,
+                                   fir::FortranVariableOpInterface var,
+                                   bool initInGlobalAllocFunc = false);
 
 //===----------------------------------------------------------------------===//
 // EVENT and NOTIFY statements
