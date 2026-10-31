@@ -134,6 +134,33 @@ constexpr Parser<EndSubroutineStmt> endSubroutineStmt; // R1537
 constexpr Parser<EntryStmt> entryStmt; // R1541
 constexpr Parser<ContainsStmt> containsStmt; // R1543
 constexpr Parser<CompilerDirective> compilerDirective;
+// OpenACC recovery parsers return Success; their context creates the recovery
+// node.
+struct MisplacedOpenACCDeclare {
+  using resultType = Success;
+  std::optional<Success> Parse(ParseState &) const;
+};
+
+struct MisplacedOpenACCAsProgramUnit {
+  using resultType = Success;
+  std::optional<Success> Parse(ParseState &) const;
+};
+
+struct MisplacedOpenACCAsInternalSubprogram {
+  using resultType = Success;
+  std::optional<Success> Parse(ParseState &) const;
+};
+
+struct MisplacedOpenACCAsModuleSubprogram {
+  using resultType = Success;
+  std::optional<Success> Parse(ParseState &) const;
+};
+
+struct MisplacedOpenACCAsInterfaceSpecification {
+  using resultType = Success;
+  std::optional<Success> Parse(ParseState &) const;
+};
+
 constexpr Parser<OpenACCConstruct> openaccConstruct;
 constexpr Parser<OpenACCDeclarativeConstruct> openaccDeclarativeConstruct;
 constexpr Parser<OpenMPConstruct> openmpConstruct;

@@ -91,11 +91,12 @@ static ProgramTree BuildSubprogramTree(
     for (const auto &subp :
         std::get<std::list<parser::InternalSubprogram>>(subps->t)) {
       common::visit(
-          [&](const auto &y) {
-            if (auto child{ProgramTree::Build(y.value(), context)}) {
-              node.AddChild(std::move(*child));
-            }
-          },
+          common::visitors{[](const parser::ErrorRecovery &) {},
+              [&](const auto &y) {
+                if (auto child{ProgramTree::Build(y.value(), context)}) {
+                  node.AddChild(std::move(*child));
+                }
+              }},
           subp.u);
     }
   }
@@ -119,11 +120,12 @@ static ProgramTree BuildModuleTree(
     for (const auto &subp :
         std::get<std::list<parser::ModuleSubprogram>>(subps->t)) {
       common::visit(
-          [&](const auto &y) {
-            if (auto child{ProgramTree::Build(y.value(), context)}) {
-              node.AddChild(std::move(*child));
-            }
-          },
+          common::visitors{[](const parser::ErrorRecovery &) {},
+              [&](const auto &y) {
+                if (auto child{ProgramTree::Build(y.value(), context)}) {
+                  node.AddChild(std::move(*child));
+                }
+              }},
           subp.u);
     }
   }
@@ -132,13 +134,15 @@ static ProgramTree BuildModuleTree(
 
 ProgramTree &ProgramTree::Build(
     const parser::ProgramUnit &x, SemanticsContext &context) {
-  return common::visit(
-      [&](const auto &y) -> ProgramTree & {
-        auto node{Build(y.value(), context)};
-        CHECK(node.has_value());
-        return context.SaveProgramTree(std::move(*node));
-      },
-      x.u);
+  auto node{common::visit(
+      common::visitors{
+          [](const parser::ErrorRecovery &) -> std::optional<ProgramTree> {
+            return std::nullopt;
+          },
+          [&](const auto &y) { return Build(y.value(), context); }},
+      x.u)};
+  CHECK(node.has_value());
+  return context.SaveProgramTree(std::move(*node));
 }
 
 std::optional<ProgramTree> ProgramTree::Build(
