@@ -5,7 +5,8 @@
 ; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -O0 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -O0 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -O0 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU %s
-; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -O0 < %s | FileCheck --check-prefixes=GFX1250 %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -O0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250_NOSTRICT %s
+; RUN: llc -mtriple=amdgpu12.50s-amd-amdhsa -O0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250_STRICT %s
 
 define amdgpu_kernel void @test_s_barrier() {
 ; GFX10-WGP-LABEL: test_s_barrier:
@@ -169,17 +170,32 @@ define amdgpu_kernel void @test_s_barrier_agent_fence() {
 ; GFX12-CU-NEXT:    s_barrier_wait -1
 ; GFX12-CU-NEXT:    s_endpgm
 ;
-; GFX1250-LABEL: test_s_barrier_agent_fence:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-NEXT:    v_nop
-; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_barrier_signal -1
-; GFX1250-NEXT:    s_barrier_wait -1
-; GFX1250-NEXT:    s_endpgm
+; GFX1250_NOSTRICT-LABEL: test_s_barrier_agent_fence:
+; GFX1250_NOSTRICT:       ; %bb.0: ; %entry
+; GFX1250_NOSTRICT-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250_NOSTRICT-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250_NOSTRICT-NEXT:    v_nop
+; GFX1250_NOSTRICT-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250_NOSTRICT-NEXT:    s_wait_storecnt 0x0
+; GFX1250_NOSTRICT-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250_NOSTRICT-NEXT:    s_barrier_signal -1
+; GFX1250_NOSTRICT-NEXT:    s_barrier_wait -1
+; GFX1250_NOSTRICT-NEXT:    s_endpgm
+;
+; GFX1250_STRICT-LABEL: test_s_barrier_agent_fence:
+; GFX1250_STRICT:       ; %bb.0: ; %entry
+; GFX1250_STRICT-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250_STRICT-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250_STRICT-NEXT:    v_nop
+; GFX1250_STRICT-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250_STRICT-NEXT:    s_wait_loadcnt 0x0
+; GFX1250_STRICT-NEXT:    s_wait_storecnt 0x0
+; GFX1250_STRICT-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250_STRICT-NEXT:    s_wait_storecnt 0x0
+; GFX1250_STRICT-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250_STRICT-NEXT:    s_barrier_signal -1
+; GFX1250_STRICT-NEXT:    s_barrier_wait -1
+; GFX1250_STRICT-NEXT:    s_endpgm
 entry:
   fence syncscope("agent") release
   call void @llvm.amdgcn.s.barrier()
