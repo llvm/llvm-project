@@ -732,20 +732,20 @@ define b128 @test_bitinsert_b128_var(b128 %base, i32 %val, i32 %off) {
 ; ARM-NEXT:    ldr lr, [sp, #124]
 ; ARM-NEXT:    mov r5, #0
 ; ARM-NEXT:    ldr r4, [sp, #120]
-; ARM-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-; ARM-NEXT:    mov r2, r1
-; ARM-NEXT:    str r3, [sp, #12] @ 4-byte Spill
-; ARM-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; ARM-NEXT:    str r4, [sp, #32]
 ; ARM-NEXT:    mov r4, #12
 ; ARM-NEXT:    and r6, r4, lr, lsr #3
 ; ARM-NEXT:    add r4, sp, #16
 ; ARM-NEXT:    add r7, r4, #16
-; ARM-NEXT:    str r5, [sp, #44]
-; ARM-NEXT:    str r5, [sp, #40]
+; ARM-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; ARM-NEXT:    str r3, [sp, #12] @ 4-byte Spill
 ; ARM-NEXT:    mvn r4, #0
-; ARM-NEXT:    str r5, [sp, #36]
+; ARM-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; ARM-NEXT:    and lr, lr, #31
+; ARM-NEXT:    str r5, [sp, #44]
+; ARM-NEXT:    mov r2, r1
+; ARM-NEXT:    str r5, [sp, #40]
+; ARM-NEXT:    str r5, [sp, #36]
 ; ARM-NEXT:    str r5, [sp, #28]
 ; ARM-NEXT:    str r5, [sp, #24]
 ; ARM-NEXT:    str r5, [sp, #20]
@@ -810,15 +810,12 @@ define b128 @test_bitinsert_b128_var(b128 %base, i32 %val, i32 %off) {
 ; THUMB-M-NEXT:    sub sp, #84
 ; THUMB-M-NEXT:    ldr r6, [sp, #120]
 ; THUMB-M-NEXT:    movs r7, #0
-; THUMB-M-NEXT:    strd r2, r3, [sp, #4] @ 8-byte Folded Spill
-; THUMB-M-NEXT:    add r5, sp, #16
-; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; THUMB-M-NEXT:    adds r5, #16
 ; THUMB-M-NEXT:    str r6, [sp, #32]
 ; THUMB-M-NEXT:    mov.w r6, #-1
 ; THUMB-M-NEXT:    str r7, [sp, #44]
-; THUMB-M-NEXT:    mov r2, r1
+; THUMB-M-NEXT:    add r5, sp, #16
 ; THUMB-M-NEXT:    strd r7, r7, [sp, #36]
+; THUMB-M-NEXT:    adds r5, #16
 ; THUMB-M-NEXT:    strd r7, r7, [sp, #24]
 ; THUMB-M-NEXT:    strd r7, r7, [sp, #16]
 ; THUMB-M-NEXT:    str r6, [sp, #64]
@@ -830,8 +827,11 @@ define b128 @test_bitinsert_b128_var(b128 %base, i32 %val, i32 %off) {
 ; THUMB-M-NEXT:    strd r7, r7, [sp, #48]
 ; THUMB-M-NEXT:    movs r7, #12
 ; THUMB-M-NEXT:    and.w r7, r7, r6, lsr #3
+; THUMB-M-NEXT:    strd r2, r3, [sp, #4] @ 8-byte Folded Spill
+; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; THUMB-M-NEXT:    subs r5, r5, r7
 ; THUMB-M-NEXT:    ldrd r12, r10, [r5]
+; THUMB-M-NEXT:    mov r2, r1
 ; THUMB-M-NEXT:    ldrd r9, r8, [r5, #8]
 ; THUMB-M-NEXT:    eor r5, lr, #31
 ; THUMB-M-NEXT:    lsl.w r6, r10, lr
@@ -886,14 +886,14 @@ define b128 @test_bitinsert_b128_var(b128 %base, i32 %val, i32 %off) {
 ; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-A-NEXT:    .pad #84
 ; THUMB-A-NEXT:    sub sp, #84
-; THUMB-A-NEXT:    ldrd r7, lr, [sp, #120]
 ; THUMB-A-NEXT:    movs r6, #0
-; THUMB-A-NEXT:    strd r3, r0, [sp, #8] @ 8-byte Folded Spill
+; THUMB-A-NEXT:    ldrd r7, lr, [sp, #120]
 ; THUMB-A-NEXT:    add r5, sp, #16
 ; THUMB-A-NEXT:    strd r7, r6, [sp, #32]
 ; THUMB-A-NEXT:    movs r7, #12
-; THUMB-A-NEXT:    and.w r7, r7, lr, lsr #3
 ; THUMB-A-NEXT:    adds r5, #16
+; THUMB-A-NEXT:    and.w r7, r7, lr, lsr #3
+; THUMB-A-NEXT:    strd r3, r0, [sp, #8] @ 8-byte Folded Spill
 ; THUMB-A-NEXT:    subs r4, r5, r7
 ; THUMB-A-NEXT:    strd r6, r6, [sp, #40]
 ; THUMB-A-NEXT:    strd r6, r6, [sp, #24]
@@ -906,17 +906,17 @@ define b128 @test_bitinsert_b128_var(b128 %base, i32 %val, i32 %off) {
 ; THUMB-A-NEXT:    ldrd r10, r9, [r4, #4]
 ; THUMB-A-NEXT:    ldr r3, [r4, #12]
 ; THUMB-A-NEXT:    mov.w r4, #-1
-; THUMB-A-NEXT:    str r3, [sp] @ 4-byte Spill
 ; THUMB-A-NEXT:    strd r6, r6, [sp, #56]
-; THUMB-A-NEXT:    lsl.w r5, r10, lr
 ; THUMB-A-NEXT:    strd r6, r6, [sp, #48]
 ; THUMB-A-NEXT:    eor r6, lr, #31
 ; THUMB-A-NEXT:    str r4, [sp, #64]
 ; THUMB-A-NEXT:    lsrs r4, r0, #1
+; THUMB-A-NEXT:    lsl.w r5, r10, lr
 ; THUMB-A-NEXT:    lsrs r4, r6
 ; THUMB-A-NEXT:    orr.w r11, r5, r4
 ; THUMB-A-NEXT:    add r5, sp, #48
 ; THUMB-A-NEXT:    adds r5, #16
+; THUMB-A-NEXT:    str r3, [sp] @ 4-byte Spill
 ; THUMB-A-NEXT:    subs r5, r5, r7
 ; THUMB-A-NEXT:    ldrd r7, r4, [r5]
 ; THUMB-A-NEXT:    ldrd r0, r12, [r5, #8]
@@ -1124,8 +1124,8 @@ define b231 @test_bitinsert_b231_var(b231 %base, i32 %val, i32 %off) {
 ; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-M-NEXT:    .pad #164
 ; THUMB-M-NEXT:    sub sp, #164
-; THUMB-M-NEXT:    str r3, [sp, #28] @ 4-byte Spill
 ; THUMB-M-NEXT:    movs r1, #0
+; THUMB-M-NEXT:    str r3, [sp, #28] @ 4-byte Spill
 ; THUMB-M-NEXT:    ldr r3, [sp, #224]
 ; THUMB-M-NEXT:    add r7, sp, #32
 ; THUMB-M-NEXT:    str r3, [sp, #64]
@@ -1320,14 +1320,14 @@ define b231 @test_bitinsert_b231_var(b231 %base, i32 %val, i32 %off) {
 ; THUMB-A-NEXT:    ldr.w r4, [r12, #8]
 ; THUMB-A-NEXT:    str r4, [sp, #12] @ 4-byte Spill
 ; THUMB-A-NEXT:    ldr.w r4, [r12, #12]
-; THUMB-A-NEXT:    str r4, [sp, #4] @ 4-byte Spill
 ; THUMB-A-NEXT:    str r3, [sp, #40]
 ; THUMB-A-NEXT:    lsl.w r3, r0, r1
 ; THUMB-A-NEXT:    bic.w r9, r2, r3
 ; THUMB-A-NEXT:    add r2, sp, #40
 ; THUMB-A-NEXT:    adds r2, #32
-; THUMB-A-NEXT:    ldr r6, [sp, #224]
+; THUMB-A-NEXT:    str r4, [sp, #4] @ 4-byte Spill
 ; THUMB-A-NEXT:    subs r2, r2, r5
+; THUMB-A-NEXT:    ldr r6, [sp, #224]
 ; THUMB-A-NEXT:    ldr r0, [r2]
 ; THUMB-A-NEXT:    str r0, [sp, #16] @ 4-byte Spill
 ; THUMB-A-NEXT:    ldr r3, [r2, #4]
@@ -1606,20 +1606,20 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 ; ARM-NEXT:    ldr lr, [sp, #124]
 ; ARM-NEXT:    mov r5, #0
 ; ARM-NEXT:    ldr r4, [sp, #120]
-; ARM-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-; ARM-NEXT:    mov r2, r1
-; ARM-NEXT:    str r3, [sp, #12] @ 4-byte Spill
-; ARM-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; ARM-NEXT:    str r4, [sp, #32]
 ; ARM-NEXT:    mov r4, #12
 ; ARM-NEXT:    and r6, r4, lr, lsr #3
 ; ARM-NEXT:    add r4, sp, #16
 ; ARM-NEXT:    add r7, r4, #16
-; ARM-NEXT:    str r5, [sp, #44]
-; ARM-NEXT:    str r5, [sp, #40]
+; ARM-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; ARM-NEXT:    str r3, [sp, #12] @ 4-byte Spill
 ; ARM-NEXT:    mvn r4, #0
-; ARM-NEXT:    str r5, [sp, #36]
+; ARM-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; ARM-NEXT:    and lr, lr, #31
+; ARM-NEXT:    str r5, [sp, #44]
+; ARM-NEXT:    mov r2, r1
+; ARM-NEXT:    str r5, [sp, #40]
+; ARM-NEXT:    str r5, [sp, #36]
 ; ARM-NEXT:    str r5, [sp, #28]
 ; ARM-NEXT:    str r5, [sp, #24]
 ; ARM-NEXT:    str r5, [sp, #20]
@@ -1686,9 +1686,6 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 ; THUMB-M-NEXT:    sub sp, #84
 ; THUMB-M-NEXT:    ldr r6, [sp, #120]
 ; THUMB-M-NEXT:    movs r7, #0
-; THUMB-M-NEXT:    strd r2, r3, [sp, #4] @ 8-byte Folded Spill
-; THUMB-M-NEXT:    mov r2, r1
-; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; THUMB-M-NEXT:    str r6, [sp, #32]
 ; THUMB-M-NEXT:    mov.w r6, #-1
 ; THUMB-M-NEXT:    str r7, [sp, #44]
@@ -1706,11 +1703,14 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 ; THUMB-M-NEXT:    and.w r4, r7, r6, lsr #3
 ; THUMB-M-NEXT:    add r7, sp, #16
 ; THUMB-M-NEXT:    adds r7, #16
-; THUMB-M-NEXT:    eor r6, lr, #31
+; THUMB-M-NEXT:    strd r2, r3, [sp, #4] @ 8-byte Folded Spill
+; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; THUMB-M-NEXT:    subs r7, r7, r4
 ; THUMB-M-NEXT:    ldrd r12, r10, [r7]
+; THUMB-M-NEXT:    eor r6, lr, #31
 ; THUMB-M-NEXT:    ldrd r8, r9, [r7, #8]
 ; THUMB-M-NEXT:    lsl.w r7, r10, lr
+; THUMB-M-NEXT:    mov r2, r1
 ; THUMB-M-NEXT:    lsr.w r5, r12, #1
 ; THUMB-M-NEXT:    lsrs r5, r6
 ; THUMB-M-NEXT:    orrs r5, r7
@@ -1764,19 +1764,19 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 ; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-A-NEXT:    .pad #84
 ; THUMB-A-NEXT:    sub sp, #84
-; THUMB-A-NEXT:    ldrd r6, lr, [sp, #120]
 ; THUMB-A-NEXT:    movs r7, #0
-; THUMB-A-NEXT:    strd r3, r0, [sp, #8] @ 8-byte Folded Spill
+; THUMB-A-NEXT:    ldrd r6, lr, [sp, #120]
 ; THUMB-A-NEXT:    strd r6, r7, [sp, #32]
 ; THUMB-A-NEXT:    movs r6, #12
 ; THUMB-A-NEXT:    and.w r4, r6, lr, lsr #3
 ; THUMB-A-NEXT:    add r6, sp, #16
 ; THUMB-A-NEXT:    adds r6, #16
-; THUMB-A-NEXT:    strd r7, r7, [sp, #40]
+; THUMB-A-NEXT:    strd r3, r0, [sp, #8] @ 8-byte Folded Spill
 ; THUMB-A-NEXT:    subs r6, r6, r4
+; THUMB-A-NEXT:    strd r7, r7, [sp, #40]
 ; THUMB-A-NEXT:    strd r7, r7, [sp, #24]
-; THUMB-A-NEXT:    strd r7, r7, [sp, #16]
 ; THUMB-A-NEXT:    and lr, lr, #31
+; THUMB-A-NEXT:    strd r7, r7, [sp, #16]
 ; THUMB-A-NEXT:    str r7, [sp, #76]
 ; THUMB-A-NEXT:    strd r7, r7, [sp, #68]
 ; THUMB-A-NEXT:    ldr r0, [r6]
@@ -1784,7 +1784,6 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 ; THUMB-A-NEXT:    ldrd r10, r9, [r6, #4]
 ; THUMB-A-NEXT:    ldr r3, [r6, #12]
 ; THUMB-A-NEXT:    mov.w r6, #-1
-; THUMB-A-NEXT:    str r3, [sp] @ 4-byte Spill
 ; THUMB-A-NEXT:    str r6, [sp, #64]
 ; THUMB-A-NEXT:    eor r6, lr, #31
 ; THUMB-A-NEXT:    strd r7, r7, [sp, #56]
@@ -1794,6 +1793,7 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 ; THUMB-A-NEXT:    lsrs r7, r6
 ; THUMB-A-NEXT:    orr.w r11, r5, r7
 ; THUMB-A-NEXT:    add r7, sp, #48
+; THUMB-A-NEXT:    str r3, [sp] @ 4-byte Spill
 ; THUMB-A-NEXT:    adds r7, #16
 ; THUMB-A-NEXT:    subs r4, r7, r4
 ; THUMB-A-NEXT:    ldrd r7, r5, [r4]
@@ -2214,13 +2214,9 @@ define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %o
 ; ARM-NEXT:    sub sp, sp, #84
 ; ARM-NEXT:    add lr, sp, #128
 ; ARM-NEXT:    ldr r5, [sp, #120]
-; ARM-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-; ARM-NEXT:    mov r2, r1
+; ARM-NEXT:    ldr r12, [sp, #124]
 ; ARM-NEXT:    ldm lr, {r4, r6, lr}
 ; ARM-NEXT:    bic r6, r6, #-134217728
-; ARM-NEXT:    str r3, [sp, #12] @ 4-byte Spill
-; ARM-NEXT:    str r0, [sp, #8] @ 4-byte Spill
-; ARM-NEXT:    ldr r12, [sp, #124]
 ; ARM-NEXT:    str r4, [sp, #40]
 ; ARM-NEXT:    mvn r4, #-134217728
 ; ARM-NEXT:    str r5, [sp, #32]
@@ -2236,10 +2232,14 @@ define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %o
 ; ARM-NEXT:    mov r6, #12
 ; ARM-NEXT:    and r10, r6, lr, lsr #3
 ; ARM-NEXT:    add r7, r4, #16
+; ARM-NEXT:    str r2, [sp, #4] @ 4-byte Spill
 ; ARM-NEXT:    mvn r4, #0
+; ARM-NEXT:    str r3, [sp, #12] @ 4-byte Spill
 ; ARM-NEXT:    and lr, lr, #31
-; ARM-NEXT:    ldr r12, [r7, -r10]!
+; ARM-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; ARM-NEXT:    eor r6, lr, #31
+; ARM-NEXT:    ldr r12, [r7, -r10]!
+; ARM-NEXT:    mov r2, r1
 ; ARM-NEXT:    str r4, [sp, #72]
 ; ARM-NEXT:    str r4, [sp, #68]
 ; ARM-NEXT:    str r4, [sp, #64]
@@ -2297,11 +2297,8 @@ define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %o
 ; THUMB-M-NEXT:    add r5, sp, #16
 ; THUMB-M-NEXT:    ldr r7, [sp, #128]
 ; THUMB-M-NEXT:    adds r5, #16
-; THUMB-M-NEXT:    strd r2, r3, [sp, #4] @ 8-byte Folded Spill
-; THUMB-M-NEXT:    bic r6, r6, #-134217728
-; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; THUMB-M-NEXT:    mov r2, r1
 ; THUMB-M-NEXT:    str r7, [sp, #40]
+; THUMB-M-NEXT:    bic r6, r6, #-134217728
 ; THUMB-M-NEXT:    ldr r7, [sp, #124]
 ; THUMB-M-NEXT:    str r7, [sp, #36]
 ; THUMB-M-NEXT:    ldr r7, [sp, #120]
@@ -2320,12 +2317,15 @@ define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %o
 ; THUMB-M-NEXT:    strd r7, r7, [sp, #48]
 ; THUMB-M-NEXT:    movs r7, #12
 ; THUMB-M-NEXT:    and.w r7, r7, r6, lsr #3
-; THUMB-M-NEXT:    and lr, r6, #31
+; THUMB-M-NEXT:    strd r2, r3, [sp, #4] @ 8-byte Folded Spill
+; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; THUMB-M-NEXT:    subs r5, r5, r7
 ; THUMB-M-NEXT:    ldrd r12, r10, [r5]
+; THUMB-M-NEXT:    and lr, r6, #31
 ; THUMB-M-NEXT:    ldrd r9, r8, [r5, #8]
 ; THUMB-M-NEXT:    eor r5, lr, #31
 ; THUMB-M-NEXT:    lsl.w r6, r10, lr
+; THUMB-M-NEXT:    mov r2, r1
 ; THUMB-M-NEXT:    lsr.w r4, r12, #1
 ; THUMB-M-NEXT:    lsrs r4, r5
 ; THUMB-M-NEXT:    orr.w r11, r6, r4
@@ -2400,7 +2400,6 @@ define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %o
 ; THUMB-A-NEXT:    ldrd r10, lr, [r4, #4]
 ; THUMB-A-NEXT:    ldr r3, [r4, #12]
 ; THUMB-A-NEXT:    mov.w r4, #-1
-; THUMB-A-NEXT:    str r3, [sp] @ 4-byte Spill
 ; THUMB-A-NEXT:    str r4, [sp, #72]
 ; THUMB-A-NEXT:    strd r4, r4, [sp, #64]
 ; THUMB-A-NEXT:    and r4, r9, #31
@@ -2413,6 +2412,7 @@ define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %o
 ; THUMB-A-NEXT:    orr.w r9, r7, r5
 ; THUMB-A-NEXT:    add r5, sp, #48
 ; THUMB-A-NEXT:    adds r5, #16
+; THUMB-A-NEXT:    str r3, [sp] @ 4-byte Spill
 ; THUMB-A-NEXT:    sub.w r7, r5, r11
 ; THUMB-A-NEXT:    ldrd r11, r5, [r7]
 ; THUMB-A-NEXT:    ldrd r0, r12, [r7, #8]
@@ -2519,8 +2519,8 @@ define b231 @test_bitinsert_val_b123_into_b231_var(b231 %base, b123 %val, i32 %o
 ; ARM-NEXT:    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; ARM-NEXT:    .pad #164
 ; ARM-NEXT:    sub sp, sp, #164
-; ARM-NEXT:    ldr r12, [sp, #236]
 ; ARM-NEXT:    mvn r7, #-134217728
+; ARM-NEXT:    ldr r12, [sp, #236]
 ; ARM-NEXT:    str r3, [sp, #28] @ 4-byte Spill
 ; ARM-NEXT:    mov r3, #0
 ; ARM-NEXT:    str r7, [sp, #140]
@@ -2890,14 +2890,14 @@ define b231 @test_bitinsert_val_b123_into_b231_var(b231 %base, b123 %val, i32 %o
 ; THUMB-A-NEXT:    ldr.w r4, [r12, #8]
 ; THUMB-A-NEXT:    str r4, [sp, #12] @ 4-byte Spill
 ; THUMB-A-NEXT:    ldr.w r4, [r12, #12]
-; THUMB-A-NEXT:    str r4, [sp, #4] @ 4-byte Spill
 ; THUMB-A-NEXT:    str r5, [sp, #84]
 ; THUMB-A-NEXT:    lsl.w r5, r0, r1
 ; THUMB-A-NEXT:    bic.w r5, r2, r5
 ; THUMB-A-NEXT:    add r2, sp, #40
 ; THUMB-A-NEXT:    adds r2, #32
-; THUMB-A-NEXT:    ldr r4, [sp, #224]
+; THUMB-A-NEXT:    str r4, [sp, #4] @ 4-byte Spill
 ; THUMB-A-NEXT:    subs r2, r2, r3
+; THUMB-A-NEXT:    ldr r4, [sp, #224]
 ; THUMB-A-NEXT:    ldr r0, [r2]
 ; THUMB-A-NEXT:    str r0, [sp, #16] @ 4-byte Spill
 ; THUMB-A-NEXT:    ldr r3, [r2, #4]

@@ -4845,32 +4845,32 @@ define <16 x i16> @clmul_v16i16_zext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT:    .pad #128
 ; CHECK-NEXT:    sub sp, #128
 ; CHECK-NEXT:    add r0, sp, #112
-; CHECK-NEXT:    movw r2, #37449
-; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    add r1, sp, #96
-; CHECK-NEXT:    vdup.16 q1, r2
+; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
-; CHECK-NEXT:    vstrw.32 q1, [sp, #80] @ 16-byte Spill
-; CHECK-NEXT:    movw r2, #9362
+; CHECK-NEXT:    movw r2, #37449
 ; CHECK-NEXT:    vldrb.u16 q7, [r0]
-; CHECK-NEXT:    vdup.16 q3, r2
-; CHECK-NEXT:    movw r2, #18724
-; CHECK-NEXT:    vand q2, q7, q1
-; CHECK-NEXT:    vstrw.32 q2, [sp, #64] @ 16-byte Spill
+; CHECK-NEXT:    vdup.16 q1, r2
+; CHECK-NEXT:    movw r2, #9362
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
+; CHECK-NEXT:    vdup.16 q3, r2
+; CHECK-NEXT:    vand q2, q7, q1
+; CHECK-NEXT:    vstrw.32 q1, [sp, #80] @ 16-byte Spill
 ; CHECK-NEXT:    vand q4, q0, q3
-; CHECK-NEXT:    vand q6, q0, q1
+; CHECK-NEXT:    vstrw.32 q2, [sp, #64] @ 16-byte Spill
 ; CHECK-NEXT:    vmul.i16 q2, q4, q2
-; CHECK-NEXT:    vstrw.32 q4, [sp, #32] @ 16-byte Spill
+; CHECK-NEXT:    vand q6, q0, q1
 ; CHECK-NEXT:    vstrw.32 q2, [sp, #16] @ 16-byte Spill
 ; CHECK-NEXT:    vand q2, q7, q3
 ; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
 ; CHECK-NEXT:    vstrw.32 q2, [sp, #48] @ 16-byte Spill
 ; CHECK-NEXT:    vmul.i16 q2, q6, q2
+; CHECK-NEXT:    movw r2, #18724
 ; CHECK-NEXT:    veor q1, q2, q1
 ; CHECK-NEXT:    vdup.16 q2, r2
 ; CHECK-NEXT:    vand q7, q7, q2
 ; CHECK-NEXT:    vand q0, q0, q2
+; CHECK-NEXT:    vstrw.32 q4, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vmul.i16 q4, q0, q7
 ; CHECK-NEXT:    veor q4, q1, q4
 ; CHECK-NEXT:    vand q1, q4, q3
@@ -4884,6 +4884,7 @@ define <16 x i16> @clmul_v16i16_zext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT:    vmul.i16 q6, q6, q7
 ; CHECK-NEXT:    veor q5, q4, q5
 ; CHECK-NEXT:    vldrw.u32 q4, [sp, #48] @ 16-byte Reload
+; CHECK-NEXT:    vldrb.u16 q7, [r1, #8]
 ; CHECK-NEXT:    vmul.i16 q4, q0, q4
 ; CHECK-NEXT:    veor q4, q5, q4
 ; CHECK-NEXT:    vldrw.u32 q5, [sp, #80] @ 16-byte Reload
@@ -4896,21 +4897,20 @@ define <16 x i16> @clmul_v16i16_zext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT:    veor q5, q6, q5
 ; CHECK-NEXT:    vldrw.u32 q6, [sp, #64] @ 16-byte Reload
 ; CHECK-NEXT:    vmul.i16 q0, q0, q6
+; CHECK-NEXT:    vldrb.u16 q6, [r0, #8]
 ; CHECK-NEXT:    veor q0, q5, q0
 ; CHECK-NEXT:    vand q0, q0, q2
 ; CHECK-NEXT:    vorr q0, q4, q0
+; CHECK-NEXT:    vand q4, q7, q3
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #48] @ 16-byte Spill
-; CHECK-NEXT:    vldrb.u16 q6, [r0, #8]
 ; CHECK-NEXT:    vand q0, q6, q1
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #64] @ 16-byte Spill
-; CHECK-NEXT:    vldrb.u16 q7, [r1, #8]
-; CHECK-NEXT:    vand q4, q7, q3
-; CHECK-NEXT:    vand q1, q7, q1
 ; CHECK-NEXT:    vmul.i16 q0, q4, q0
-; CHECK-NEXT:    vstrw.32 q4, [sp, #16] @ 16-byte Spill
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vand q0, q6, q3
+; CHECK-NEXT:    vand q1, q7, q1
 ; CHECK-NEXT:    vldrw.u32 q5, [sp, #32] @ 16-byte Reload
+; CHECK-NEXT:    vstrw.32 q4, [sp, #16] @ 16-byte Spill
 ; CHECK-NEXT:    vmul.i16 q4, q1, q0
 ; CHECK-NEXT:    vand q6, q6, q2
 ; CHECK-NEXT:    vand q7, q7, q2
@@ -5051,17 +5051,17 @@ define <8 x i32> @clmul_v8i32_zext(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vldrh.u32 q0, [r0]
-; CHECK-NEXT:    vmov.i8 q5, #0x11
-; CHECK-NEXT:    vmov.i8 q6, #0x22
-; CHECK-NEXT:    vand q2, q0, q5
-; CHECK-NEXT:    vand q4, q0, q6
-; CHECK-NEXT:    vstrw.32 q2, [sp, #80] @ 16-byte Spill
 ; CHECK-NEXT:    vldrh.u32 q1, [r1]
-; CHECK-NEXT:    vstrw.32 q4, [sp, #96] @ 16-byte Spill
+; CHECK-NEXT:    vmov.i8 q6, #0x22
+; CHECK-NEXT:    vmov.i8 q5, #0x11
+; CHECK-NEXT:    vand q2, q0, q5
 ; CHECK-NEXT:    vand q3, q1, q6
+; CHECK-NEXT:    vstrw.32 q2, [sp, #80] @ 16-byte Spill
+; CHECK-NEXT:    vand q4, q0, q6
 ; CHECK-NEXT:    vstrw.32 q3, [sp, #64] @ 16-byte Spill
 ; CHECK-NEXT:    vmul.i32 q2, q3, q2
 ; CHECK-NEXT:    vand q3, q1, q5
+; CHECK-NEXT:    vstrw.32 q4, [sp, #96] @ 16-byte Spill
 ; CHECK-NEXT:    vstrw.32 q3, [sp, #112] @ 16-byte Spill
 ; CHECK-NEXT:    vmul.i32 q3, q3, q4
 ; CHECK-NEXT:    veor q5, q3, q2
@@ -5105,6 +5105,7 @@ define <8 x i32> @clmul_v8i32_zext(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT:    vstrw.32 q4, [sp, #48] @ 16-byte Spill
 ; CHECK-NEXT:    vmul.i32 q1, q1, q3
 ; CHECK-NEXT:    vmul.i32 q4, q0, q3
+; CHECK-NEXT:    vldrh.u32 q3, [r0, #8]
 ; CHECK-NEXT:    veor q4, q4, q6
 ; CHECK-NEXT:    vldrw.u32 q6, [sp, #32] @ 16-byte Reload
 ; CHECK-NEXT:    vstrw.32 q4, [sp, #16] @ 16-byte Spill
@@ -5127,15 +5128,14 @@ define <8 x i32> @clmul_v8i32_zext(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT:    vmul.i32 q1, q5, q1
 ; CHECK-NEXT:    vmov.i8 q2, #0x11
 ; CHECK-NEXT:    veor q0, q0, q1
+; CHECK-NEXT:    vand q1, q3, q2
 ; CHECK-NEXT:    vand q0, q0, q6
+; CHECK-NEXT:    vstrw.32 q1, [sp, #96] @ 16-byte Spill
 ; CHECK-NEXT:    vorr q0, q4, q0
 ; CHECK-NEXT:    vmov.i8 q4, #0x22
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #80] @ 16-byte Spill
-; CHECK-NEXT:    vldrh.u32 q3, [r0, #8]
-; CHECK-NEXT:    vand q1, q3, q2
-; CHECK-NEXT:    vand q6, q3, q6
-; CHECK-NEXT:    vstrw.32 q1, [sp, #96] @ 16-byte Spill
 ; CHECK-NEXT:    vldrh.u32 q0, [r1, #8]
+; CHECK-NEXT:    vand q6, q3, q6
 ; CHECK-NEXT:    vand q5, q0, q4
 ; CHECK-NEXT:    vmul.i32 q7, q5, q1
 ; CHECK-NEXT:    vand q1, q3, q4

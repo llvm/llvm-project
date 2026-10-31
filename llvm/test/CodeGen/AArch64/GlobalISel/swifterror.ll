@@ -307,7 +307,6 @@ entry:
 
 ; CHECK-LABEL: params_in_reg
 ; Save callee saved registers and swifterror since it will be clobbered by the first call to params_in_reg2.
-; CHECK:  str     x28, [sp
 ; CHECK:  stp     x27, x26, [sp
 ; CHECK:  stp     x25, x24, [sp
 ; CHECK:  stp     x23, x22, [sp
@@ -321,6 +320,7 @@ entry:
 ; CHECK:  mov      x25, x5
 ; CHECK:  mov      x26, x6
 ; CHECK:  mov      x27, x7
+; CHECK:  stp     x28, x8, [sp
 ; CHECK:  mov      x28, x21
 ; Setup call.
 ; CHECK:  mov     w0, #1

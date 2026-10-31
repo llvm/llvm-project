@@ -792,9 +792,8 @@ define <4 x i32> @test_unsigned_v4f128_v4i32(<4 x fp128> %f) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI17_0
 ; CHECK-SD-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
-; CHECK-SD-NEXT:    str q3, [sp, #80] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v2.16b
-; CHECK-SD-NEXT:    str q1, [sp, #64] // 16-byte Spill
+; CHECK-SD-NEXT:    stp q1, q3, [sp, #64] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __getf2
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov w19, w0
