@@ -2346,29 +2346,6 @@ static APFloat FlushWithDenormKind(const APFloat &V,
   }
 }
 
-Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V, Type *Ty,
-                         DenormalMode DenormMode = DenormalMode::getIEEE()) {
-  if (!DenormMode.isValid() ||
-      DenormMode.Input == DenormalMode::DenormalModeKind::Dynamic ||
-      DenormMode.Output == DenormalMode::DenormalModeKind::Dynamic)
-    return nullptr;
-
-  llvm_fenv_clearexcept();
-  auto Input = FlushWithDenormKind(V, DenormMode.Input);
-  double Result = NativeFP(Input.convertToDouble());
-  if (llvm_fenv_testexcept()) {
-    llvm_fenv_clearexcept();
-    return nullptr;
-  }
-
-  Constant *Output = GetConstantFoldFPValue(Result, Ty);
-  if (DenormMode.Output == DenormalMode::DenormalModeKind::IEEE)
-    return Output;
-  const auto *CFP = static_cast<ConstantFP *>(Output);
-  const auto Res = FlushWithDenormKind(CFP->getValueAPF(), DenormMode.Output);
-  return ConstantFP::get(Ty->getContext(), Res);
-}
-
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
 Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
                             Type *Ty) {
@@ -4893,6 +4870,29 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 }
 
 } // end anonymous namespace
+
+Constant *llvm::ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
+                               Type *Ty, DenormalMode DenormMode) {
+  assert(DenormMode.isValid() && "invalid denormal mode");
+  if (DenormMode.Input == DenormalMode::DenormalModeKind::Dynamic ||
+      DenormMode.Output == DenormalMode::DenormalModeKind::Dynamic)
+    return nullptr;
+
+  llvm_fenv_clearexcept();
+  APFloat Input = FlushWithDenormKind(V, DenormMode.Input);
+  double Result = NativeFP(Input.convertToDouble());
+  if (llvm_fenv_testexcept()) {
+    llvm_fenv_clearexcept();
+    return nullptr;
+  }
+
+  Constant *Output = GetConstantFoldFPValue(Result, Ty);
+  if (DenormMode.Output == DenormalMode::DenormalModeKind::IEEE)
+    return Output;
+  auto *CFP = cast<ConstantFP>(Output);
+  APFloat Res = FlushWithDenormKind(CFP->getValueAPF(), DenormMode.Output);
+  return ConstantFP::get(Ty->getContext(), Res);
+}
 
 Constant *llvm::ConstantFoldIntrinsic(Intrinsic::ID ID,
                                       ArrayRef<Constant *> Ops, Type *Ty,

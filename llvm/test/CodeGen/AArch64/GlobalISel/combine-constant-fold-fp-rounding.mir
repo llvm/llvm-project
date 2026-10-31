@@ -165,3 +165,63 @@ body:             |
     RET_ReallyLR implicit $d0
 
 ...
+---
+name:            fsqrt
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fsqrt
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(f64) = G_FCONSTANT double 4.0
+    %res:_(f64) = G_FSQRT %a
+    $d0 = COPY %res(f64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            flog2
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: flog2
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 3.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(f64) = G_FCONSTANT double 8.0
+    %res:_(f64) = G_FLOG2 %a
+    $d0 = COPY %res(f64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            fsqrt_fp128
+body:             |
+  bb.0:
+    ; ConstantFoldFP does not support fp128 fold.
+    ; CHECK-LABEL: name: fsqrt_fp128
+    ; CHECK: %a:_(f128) = G_FCONSTANT fp128 4.000000e+00
+    ; CHECK-NEXT: %res:_(f128) = G_FSQRT %a
+    ; CHECK-NEXT: $q0 = COPY %res(f128)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a:_(f128) = G_FCONSTANT fp128 4.000000e+00
+    %res:_(f128) = G_FSQRT %a
+    $q0 = COPY %res(f128)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            flog2_fp128
+body:             |
+  bb.0:
+    ; ConstantFoldFP does not support fp128 fold.
+    ; CHECK-LABEL: name: flog2_fp128
+    ; CHECK: %a:_(f128) = G_FCONSTANT fp128 4.000000e+00
+    ; CHECK-NEXT: %res:_(f128) = G_FLOG2 %a
+    ; CHECK-NEXT: $q0 = COPY %res(f128)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a:_(f128) = G_FCONSTANT fp128 4.000000e+00
+    %res:_(f128) = G_FLOG2 %a
+    $q0 = COPY %res(f128)
+    RET_ReallyLR implicit $q0
+
+...
