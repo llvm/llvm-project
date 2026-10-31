@@ -87,7 +87,7 @@ void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // Any new pass should go before this pass.
   addMachineFunctionPass(MipsBranchExpansionPass(), PMW);
 
-  // TODO(boomanaiden154): Add MipsConstantIslandPass
+  addMachineFunctionPass(MipsConstantIslandPass(), PMW);
 }
 
 void MipsCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {

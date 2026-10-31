@@ -273,7 +273,7 @@ void MipsPassConfig::addPreEmitPass() {
   // Any new pass should go before this pass.
   addPass(createMipsBranchExpansionLegacyPass());
 
-  addPass(createMipsConstantIslandPass());
+  addPass(createMipsConstantIslandLegacyPass());
 }
 
 bool MipsPassConfig::addIRTranslator() {

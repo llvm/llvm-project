@@ -125,7 +125,19 @@ public:
 };
 
 FunctionPass *createMipsBranchExpansionLegacyPass();
-FunctionPass *createMipsConstantIslandPass();
+
+class MipsConstantIslandPass
+    : public RequiredPassInfoMixin<MipsConstantIslandPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
+FunctionPass *createMipsConstantIslandLegacyPass();
 
 class MipsMicroSizeReducePass
     : public RequiredPassInfoMixin<MipsMicroSizeReducePass> {
