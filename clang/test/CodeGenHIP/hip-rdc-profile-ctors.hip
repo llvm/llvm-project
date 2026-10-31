@@ -10,5 +10,5 @@ int init();
 int g = init();
 #endif
 
-// INIT: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] {{.*}}ptr @_GLOBAL__sub_I_{{[^,]+}}, ptr null{{.*}}ptr @__llvm_profile_register_shadow.{{[^,]+}}, ptr null
+// INIT: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] {{.*}}ptr @__llvm_profile_register_shadow.{{[^,]+}}, ptr null{{.*}}ptr @_GLOBAL__sub_I_{{[^,]+}}, ptr null
 // NO-INIT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] {{.*}}ptr @__llvm_profile_register_shadow.{{[^,]+}}, ptr null
