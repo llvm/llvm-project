@@ -29,6 +29,14 @@ foo // bar
 	indented!
 tab	separated	values
 
+/* CHECK: {{^}}a b{{$}}
+ * CHECK: {{^}}a  b{{$}}
+ * CHECK: {{^}}  indented_with_spaces{{$}}
+ */
+a b
+a  b
+  indented_with_spaces
+
 #define bracket(x) >>>x<<<
 bracket(|  spaces  |)
 /* CHECK: {{^}}>>>|  spaces  |<<<{{$}}

@@ -792,6 +792,17 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
        !Tok.is(tok::annot_embed) && !Tok.is(tok::annot_module_name)))
     return;
 
+  bool HasLeadingSpace = Tok.hasLeadingSpace();
+  if (HasLeadingSpace && PP.getLangOpts().TraditionalCPP &&
+      PrevTok.is(tok::unknown) && PrevTok.getLength()) {
+    // Traditional preprocessing emits whitespace as tokens. Do not add another
+    // space if the previous token already supplied it.
+    SmallString<128> SpellingBuffer;
+    StringRef Spelling = PP.getSpelling(PrevTok, SpellingBuffer);
+    if (!Spelling.empty() && isWhitespace(Spelling.back()))
+      HasLeadingSpace = false;
+  }
+
   // EmittedDirectiveOnThisLine takes priority over RequireSameLine.
   if ((!RequireSameLine || EmittedDirectiveOnThisLine) &&
       MoveToLine(Tok, /*RequireStartOfLine=*/EmittedDirectiveOnThisLine)) {
@@ -808,7 +819,7 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
       // expect leading white space, if a macro expansion in column 1 starts
       // with an empty macro argument, or an empty nested macro expansion. In
       // this case, move the token to column 2.
-      if (ColNo == 1 && Tok.hasLeadingSpace())
+      if (ColNo == 1 && HasLeadingSpace)
         ColNo = 2;
 
       // This hack prevents stuff like:
@@ -831,7 +842,7 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
     //   whitespace-minimization mode
     // - The whitespace is necessary to keep the tokens apart and there is not
     //   already a newline between them
-    if (RequireSpace || (!MinimizeWhitespace && Tok.hasLeadingSpace()) ||
+    if (RequireSpace || (!MinimizeWhitespace && HasLeadingSpace) ||
         ((EmittedTokensOnThisLine || EmittedDirectiveOnThisLine) &&
          AvoidConcat(PrevPrevTok, PrevTok, Tok)))
       *OS << ' ';

@@ -719,6 +719,52 @@ TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
             1U);
 }
 
+TEST_F(LexerTest, LeadingSpaceWithWhitespaceRetention) {
+  const struct {
+    const char *Whitespace;
+    bool LeadingSpace;
+    bool StartOfLine;
+  } Cases[] = {
+      {"", false, false},      {" ", true, false},
+      {"\t", true, false},     {" \t\f\v", true, false},
+      {"\n", false, true},     {"\r", false, true},
+      {"\r\n", false, true},   {"\n ", true, true},
+      {"\r\n\t", true, true},  {" \n", false, true},
+      {" \n \n", false, true}, {" \n \n\t", true, true},
+  };
+
+  for (const auto &Case : Cases) {
+    for (bool KeepWhitespace : {false, true}) {
+      SCOPED_TRACE(Case.Whitespace);
+      SCOPED_TRACE(KeepWhitespace);
+      auto Buffer = llvm::MemoryBuffer::getMemBufferCopy(
+          std::string("a+") + Case.Whitespace + "b+c");
+      Lexer L(SourceLocation(), LangOpts, Buffer->getBufferStart(),
+              Buffer->getBufferStart(), Buffer->getBufferEnd());
+      L.SetKeepWhitespaceMode(KeepWhitespace);
+
+      for (unsigned I = 0; I != 5; ++I) {
+        Token T;
+        do {
+          L.LexFromRawLexer(T);
+          if (T.is(tok::unknown)) {
+            ASSERT_TRUE(KeepWhitespace);
+            ASSERT_GT(T.getLength(), 0u);
+          }
+        } while (T.is(tok::unknown));
+
+        ASSERT_EQ(T.getKind(),
+                  I == 1 || I == 3 ? tok::plus : tok::raw_identifier);
+        EXPECT_EQ(T.hasLeadingSpace(), I == 2 && Case.LeadingSpace);
+        EXPECT_EQ(T.isAtStartOfLine(), I == 0 || (I == 2 && Case.StartOfLine));
+      }
+      Token T;
+      L.LexFromRawLexer(T);
+      EXPECT_TRUE(T.is(tok::eof));
+    }
+  }
+}
+
 TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
   const llvm::StringLiteral Source = R"cpp(
   // First line comment.
