@@ -74,6 +74,14 @@ namespace llvm {
     /// Implement operator<<.
     LLVM_ABI void print(raw_ostream &OS) const;
 
+    /// Return the value type as a string, e.g. `i32`.
+    std::string getString() const {
+      std::string S;
+      llvm::raw_string_ostream Stream(S);
+      print(Stream);
+      return S;
+    }
+
     /// Return true if this is a valid simple valuetype.
     bool isValid() const {
       return (SimpleTy >= MVT::FIRST_VALUETYPE &&
