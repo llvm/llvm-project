@@ -76,7 +76,6 @@ define void @regression2() {
 ; CHECK:       [[LOOP1_LATCH1_LOOP1_LATCH3_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[PHI_LCSSA:%.*]] = phi i32 [ [[PHI]], %[[LOOP1_LATCH1]] ]
 ; CHECK-NEXT:    [[SPLIT:%.*]] = phi i32 [ 0, %[[LOOP1_LATCH1]] ]
-; CHECK-NEXT:    [[SPLIT1:%.*]] = phi i32 [ [[PHI]], %[[LOOP1_LATCH1]] ]
 ; CHECK-NEXT:    br label %[[LOOP1_LATCH3]]
 ; CHECK:       [[LOOP1_LATCH3]]:
 ; CHECK-NEXT:    [[PHI6:%.*]] = phi i32 [ [[SPLIT]], %[[LOOP1_LATCH1_LOOP1_LATCH3_CRIT_EDGE]] ], [ [[PHI6_PH]], %[[LOOP1_LATCH3SPLIT]] ]
@@ -134,7 +133,6 @@ define i64 @regression3() {
 ; CHECK:       [[LOOP1_LATCH]]:
 ; CHECK-NEXT:    br i1 false, label %[[LOOP1_LATCH_FUNCEXIT_CRIT_EDGE]], label %[[LOOP1_HEADER]]
 ; CHECK:       [[LOOP1_LATCH_FUNCEXIT_CRIT_EDGE]]:
-; CHECK-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[ASHR]], %[[LOOP1_LATCH]] ]
 ; CHECK-NEXT:    br label %[[FUNCEXIT]]
 ;
 entry:
@@ -228,7 +226,6 @@ define i32 @regression5() personality ptr @__gxx_personality_v0 {
 ; CHECK:       [[LPAD1]]:
 ; CHECK-NEXT:    [[IV_LCSSA7:%.*]] = phi i32 [ [[IV]], %[[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[OTHER_LCSSA_PH:%.*]] = phi i32 [ 0, %[[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[IV_LCSSA_PH:%.*]] = phi i32 [ [[IV]], %[[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[LPAD5:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    br label %[[LPAD]]

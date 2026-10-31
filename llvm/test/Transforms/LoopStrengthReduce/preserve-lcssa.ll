@@ -61,7 +61,6 @@ define void @function_0(i32 %val_i32_8, i32 %val_i32_9) {
 ; NEWPM-NEXT:    br label [[LOOP_EXIT_7:%.*]]
 ; NEWPM:       be_6.loop_exit_7_crit_edge:
 ; NEWPM-NEXT:    [[LSR_IV_LCSSA1:%.*]] = phi i32 [ [[LSR_IV]], [[BE_6]] ]
-; NEWPM-NEXT:    [[SPLIT:%.*]] = phi i32 [ [[VAL_I32_24]], [[BE_6]] ]
 ; NEWPM-NEXT:    br label [[LOOP_EXIT_7]]
 ; NEWPM:       loop_exit_7:
 ; NEWPM-NEXT:    [[VAL_I32_24_LCSSA]] = phi i32 [ [[LSR_IV_LCSSA1]], [[BE_6_LOOP_EXIT_7_CRIT_EDGE]] ], [ [[VAL_I32_24_LCSSA_PH]], [[LOOP_EXIT_7SPLIT]] ]
