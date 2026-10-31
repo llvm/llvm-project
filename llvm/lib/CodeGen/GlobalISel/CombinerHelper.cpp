@@ -2184,7 +2184,7 @@ bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
 
     if ((N001C + OpSizeInBits) == InnerShiftSize)
       return true;
-    if (MRI.hasOneUse(N0) && MRI.hasOneUse(InnerShift)) {
+    if (MRI.hasOneNonDBGUse(N0) && MRI.hasOneNonDBGUse(InnerShift)) {
       MatchInfo.Mask = true;
       MatchInfo.MaskVal = APInt(N1C.getBitWidth(), OpSizeInBits) - N1C;
       return true;
@@ -3025,8 +3025,9 @@ bool CombinerHelper::matchCombineInsertVecElts(
   unsigned NumElts = DstTy.getNumElements();
   // If this MI is part of a sequence of insert_vec_elts, then
   // don't do the combine in the middle of the sequence.
-  if (MRI.hasOneUse(DstReg) && MRI.use_instr_begin(DstReg)->getOpcode() ==
-                                   TargetOpcode::G_INSERT_VECTOR_ELT)
+  if (MRI.hasOneNonDBGUse(DstReg) &&
+      MRI.use_nodbg_instructions(DstReg).begin()->getOpcode() ==
+          TargetOpcode::G_INSERT_VECTOR_ELT)
     return false;
   MachineInstr *CurrInst = &MI;
   MachineInstr *TmpInst;
