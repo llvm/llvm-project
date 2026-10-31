@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
 
 // XFAIL: availability-fp_to_chars-missing
 
@@ -29,26 +30,39 @@
 auto test = []<class CharT, class... Args>(
                 std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt, Args&&... args) constexpr {
   std::basic_string<CharT> out = std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
-  TEST_REQUIRE(out == expected,
-               TEST_WRITE_CONCATENATED(
-                   "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
+  if (TEST_IS_CONSTANT_EVALUATED)
+    assert(out == expected);
+  else
+    TEST_REQUIRE(out == expected,
+                 TEST_WRITE_CONCATENATED(
+                     "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 };
 
-auto test_exception =
-    []<class CharT, class... Args>(
-        [[maybe_unused]] std::string_view what,
-        [[maybe_unused]] std::basic_string_view<CharT> fmt,
-        [[maybe_unused]] Args&&... args) {
-      TEST_VALIDATE_EXCEPTION(
-          std::format_error,
-          [&]([[maybe_unused]] const std::format_error& e) {
-            TEST_LIBCPP_REQUIRE(
-                e.what() == what,
-                TEST_WRITE_CONCATENATED(
-                    "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
-          },
-          TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...)));
-    };
+auto test_exception = []<class CharT, class... Args>([[maybe_unused]] std::string_view what,
+                                                     [[maybe_unused]] std::basic_string_view<CharT> fmt,
+                                                     [[maybe_unused]] Args&&... args) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    TEST_VALIDATE_EXCEPTION(
+        std::format_error,
+        [&]([[maybe_unused]] const std::format_error& e) {
+          TEST_LIBCPP_REQUIRE(
+              e.what() == what,
+              TEST_WRITE_CONCATENATED(
+                  "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
+        },
+        TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...)));
+  }
+};
+
+#if TEST_STD_VER >= 26
+constexpr bool test_constexpr() {
+  format_tests_constexpr<char>(test, test_exception);
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  format_tests_constexpr<wchar_t>(test, test_exception);
+#  endif
+  return true;
+}
+#endif
 
 int main(int, char**) {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
@@ -67,6 +81,10 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   format_tests_char_to_wchar_t(test);
   format_tests<wchar_t, execution_modus::full>(test, test_exception);
+#endif
+
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
 #endif
 
   return 0;
