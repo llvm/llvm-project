@@ -2091,6 +2091,9 @@ The following type trait primitives are supported by Clang. Those traits marked
   implementation-defined total ordering of all types, `std::strong_ordering::greater` if `U` precedes `T`,
   and `std::strong_ordering::equal` if they are the same type.
   The order is stable across translation units for a given platform/ABI.
+- `__builtin_mangled_name(T)` (C++): Returns a `const char*` pointing to a null-terminated,
+  implementation-defined mangled name for `T`. The returned string has static storage duration
+  and can be used in constant expressions.
 
 In addition, the following expression traits are supported:
 

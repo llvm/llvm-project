@@ -642,3 +642,7 @@ def VectorElements : UnaryExprOrTypeTrait {
   let Spelling = "__builtin_vectorelements";
   let KeyFlags = [KEYALL];
 }
+
+def MangledName : UnaryTrait {
+  let Spelling = "__builtin_mangled_name";
+}

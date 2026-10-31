@@ -2253,13 +2253,18 @@ void ASTStmtReader::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
   E->TypeTraitExprBits.IsBooleanTypeTrait = Record.readInt();
   E->TypeTraitExprBits.IsComparisonResult = Record.readInt();
+  E->TypeTraitExprBits.IsStringLiteral = Record.readInt();
   E->TypeTraitExprBits.NumArgs = Record.readInt();
   E->TypeTraitExprBits.Kind = Record.readInt();
 
   if (E->TypeTraitExprBits.IsBooleanTypeTrait)
     E->TypeTraitExprBits.Value = Record.readInt();
-  else
-    *E->getTrailingObjects<APValue>() = Record.readAPValue();
+  else {
+    auto *Value = E->getTrailingObjects<APValue>();
+    *Value = Record.readAPValue();
+    if (Value->needsCleanup())
+      Record.getContext().addDestruction(Value);
+  }
 
   SourceRange Range = readSourceRange();
   E->Loc = Range.getBegin();
@@ -4496,7 +4501,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_TYPE_TRAIT:
       S = TypeTraitExpr::CreateDeserialized(
           Context, Record[ASTStmtReader::NumExprFields],
-          Record[ASTStmtReader::NumExprFields + 2]);
+          Record[ASTStmtReader::NumExprFields + 3]);
       break;
 
     case EXPR_ARRAY_TYPE_TRAIT:

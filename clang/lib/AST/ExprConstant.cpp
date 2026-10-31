@@ -10328,6 +10328,13 @@ public:
     return true;
   }
 
+  bool VisitTypeTraitExpr(const TypeTraitExpr *E) {
+    StringLiteral *SL = E->createStringLiteral(Info.Ctx);
+    evaluateLValue(SL, Result);
+    Result.addArray(Info, E, cast<ConstantArrayType>(SL->getType()));
+    return true;
+  }
+
   bool VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E) {
     std::string ResultStr = E->ComputeName(Info.Ctx);
 
