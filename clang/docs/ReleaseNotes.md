@@ -1144,6 +1144,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   whose parameter type uses pack indexing, and makes such valid matches
   succeed instead of being rejected. (#GH232220)
 
+- Clang no longer crashes when taking the address of, or binding a reference
+  to, a global register variable. Taking the address is now diagnosed as in C,
+  binding a `const` reference uses a temporary holding the register's value,
+  and binding a non-const reference is diagnosed. (#GH233283)
 - Fixed missing destructor cleanups and incorrect initialization for lambda
   init-captures in default member initializers used during aggregate
   initialization. (#GH196469)

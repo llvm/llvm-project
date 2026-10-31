@@ -15441,7 +15441,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
       // in C++ it is not error to take address of a register
       // variable (c++03 7.1.1P3)
       if (vd->getStorageClass() == SC_Register &&
-          !getLangOpts().CPlusPlus) {
+          (!getLangOpts().CPlusPlus || vd->hasGlobalStorage())) {
         AddressOfError = AO_Register_Variable;
       }
     } else if (isa<MSPropertyDecl>(dcl)) {
