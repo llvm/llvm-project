@@ -414,6 +414,16 @@ private:
                                AvailValInBlkVect &ValuesPerBlock,
                                UnavailBlkVect &UnavailableBlocks);
 
+  /// Return true if \p DepLoad can be forwarded to \p Load at byte \p Offset
+  /// exactly, possibly after turning \p DepLoad into a byte load.
+  bool canForwardLoad(LoadInst *DepLoad, unsigned Offset, LoadInst *Load);
+
+  /// If forwarding \p AV to \p Load loses bits of memory, replace the load it
+  /// forwards from with a byte load. If \p ValuesPerBlock is given, update its
+  /// entries that refer to the old load.
+  void convertToByteLoad(LoadInst *Load, AvailableValue &AV,
+                         AvailValInBlkVect *ValuesPerBlock = nullptr);
+
   /// Given a critical edge from Pred to LoadBB, find a load instruction
   /// which is identical to Load from another successor of Pred.
   LoadInst *findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
@@ -1641,6 +1651,86 @@ GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, SelectInst *Sel,
   return AvailableValue::getSelect(Sel, V1, V2);
 }
 
+/// Return true if forwarding \p DepLoad to \p Load at byte \p Offset can lose
+/// bits that \p Load reads from memory, so \p DepLoad must become a byte load.
+static bool needsByteLoad(LoadInst *DepLoad, unsigned Offset, LoadInst *Load,
+                          AssumptionCache *AC, DominatorTree *DT) {
+  Type *DepTy = DepLoad->getType();
+  Type *LoadTy = Load->getType();
+  if (DepTy->isByteOrByteVectorTy())
+    return false;
+  // Only a byte keeps every bit of memory, including pointer bits.
+  if (LoadTy->isByteOrByteVectorTy())
+    return true;
+  // Only a pointer of the same type keeps the provenance of a pointer.
+  if (LoadTy->isPtrOrPtrVectorTy() &&
+      DepTy->getScalarType() != LoadTy->getScalarType())
+    return true;
+  if (isGuaranteedNotToBePoison(DepLoad, AC, Load, DT))
+    return false;
+  // Memory is poison per bit, while vectors are poison per lane and other types
+  // are poison per value. Each lane of Load must cover whole lanes of DepLoad.
+  const DataLayout &DL = DepLoad->getDataLayout();
+  uint64_t DepBits =
+      DL.getTypeSizeInBits(DepTy->getScalarType()).getFixedValue();
+  uint64_t LoadBits =
+      DL.getTypeSizeInBits(LoadTy->getScalarType()).getFixedValue();
+  return (Offset * 8) % DepBits != 0 || LoadBits % DepBits != 0;
+}
+
+bool GVNPassImpl::canForwardLoad(LoadInst *DepLoad, unsigned Offset,
+                                 LoadInst *Load) {
+  if (!needsByteLoad(DepLoad, Offset, Load, AC, DT))
+    return true;
+  // DepLoad must become a byte load. Bytes lower to integers, and a volatile
+  // load can't change from floating-point to integer.
+  if (DepLoad->isVolatile() && DepLoad->getType()->isFPOrFPVectorTy())
+    return false;
+  // processBlock may already point to a DepLoad that comes after Load.
+  return DepLoad->getParent() != Load->getParent() ||
+         DepLoad->comesBefore(Load);
+}
+
+void GVNPassImpl::convertToByteLoad(LoadInst *Load, AvailableValue &AV,
+                                    AvailValInBlkVect *ValuesPerBlock) {
+  if (!AV.isCoercedLoadValue())
+    return;
+  LoadInst *DepLoad = AV.getCoercedLoadValue();
+  if (!needsByteLoad(DepLoad, AV.Offset, Load, AC, DT))
+    return;
+  LLVM_DEBUG(dbgs() << "GVN CONVERTED TO BYTE LOAD: " << *DepLoad << '\n');
+
+  Type *Ty = DepLoad->getType();
+  Type *ByteTy = Ty->isPtrOrPtrVectorTy()
+                     ? DepLoad->getDataLayout().getBytePtrType(Ty)
+                     : Type::getByteFromIntType(Ty);
+  auto *ByteLoad = new LoadInst(
+      ByteTy, DepLoad->getPointerOperand(), DepLoad->getName() + ".bytes",
+      DepLoad->getProperties(), DepLoad->getIterator());
+  copyMetadataForLoad(*ByteLoad, *DepLoad);
+  if (MSSAU) {
+    auto *NewAccess = MSSAU->createMemoryAccessBefore(
+        ByteLoad, nullptr, MSSAU->getMemorySSA()->getMemoryAccess(DepLoad));
+    if (auto *NewDef = dyn_cast<MemoryDef>(NewAccess))
+      MSSAU->insertDef(NewDef, /*RenameUses=*/true);
+    else
+      MSSAU->insertUse(cast<MemoryUse>(NewAccess), /*RenameUses=*/true);
+  }
+
+  auto *Cast = new BitCastInst(ByteLoad, Ty, "", DepLoad->getIterator());
+  Cast->setDebugLoc(DepLoad->getDebugLoc());
+  Cast->takeName(DepLoad);
+
+  ICF->removeUsersOf(DepLoad);
+  DepLoad->replaceAllUsesWith(Cast);
+  if (ValuesPerBlock)
+    replaceValuesPerBlockEntry(*ValuesPerBlock, DepLoad, Cast);
+  if (uint32_t ValNo = VN.lookup(DepLoad, false))
+    LeaderTable.erase(ValNo, DepLoad, DepLoad->getParent());
+  removeInstruction(DepLoad);
+  AV.Val = ByteLoad;
+}
+
 std::optional<AvailableValue>
 GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
                                      Value *Address) {
@@ -1697,7 +1787,7 @@ GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
         if (Offset == -1)
           Offset =
               analyzeLoadFromClobberingLoad(LoadType, Address, DepLoad, DL);
-        if (Offset != -1)
+        if (Offset != -1 && canForwardLoad(DepLoad, Offset, Load))
           return AvailableValue::getLoad(DepLoad, Offset);
       }
     }
@@ -1759,6 +1849,9 @@ GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
 
     // Can't forward from non-atomic to atomic without violating memory model.
     if (LD->isAtomic() < Load->isAtomic())
+      return std::nullopt;
+
+    if (!canForwardLoad(LD, 0, Load))
       return std::nullopt;
 
     return AvailableValue::getLoad(LD);
@@ -1980,6 +2073,9 @@ void GVNPassImpl::eliminatePartiallyRedundantLoad(
       }
     }
   }
+
+  for (AvailableValueInBlock &AV : ValuesPerBlock)
+    convertToByteLoad(Load, AV.AV, &ValuesPerBlock);
 
   // Perform PHI construction.
   Value *V = constructSSAForLoadSet(Load, ValuesPerBlock, getDominatorTree());
@@ -2435,6 +2531,9 @@ bool GVNPassImpl::processNonLocalLoad(LoadInst *Load,
   // its value.  Insert PHIs and remove the fully redundant value now.
   if (UnavailableBlocks.empty()) {
     LLVM_DEBUG(dbgs() << "GVN REMOVING NONLOCAL LOAD: " << *Load << '\n');
+
+    for (AvailableValueInBlock &AV : ValuesPerBlock)
+      convertToByteLoad(Load, AV.AV, &ValuesPerBlock);
 
     // Perform PHI construction.
     Value *V = constructSSAForLoadSet(Load, ValuesPerBlock, getDominatorTree());
@@ -3146,6 +3245,8 @@ bool GVNPassImpl::processLoad(LoadInst *L) {
   auto AV = analyzeLoadAvailability(L, MemVal, L->getPointerOperand());
   if (!AV)
     return false;
+
+  convertToByteLoad(L, *AV);
 
   Value *AvailableValue = AV->MaterializeAdjustedValue(L, L);
 

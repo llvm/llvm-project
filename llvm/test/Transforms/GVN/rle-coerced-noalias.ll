@@ -9,15 +9,15 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; The i8 load at P+1 partially aliases the i32 load at P and is coerced from
-; it. The surviving i32 load should keep its !noalias.
+; it. The i32 load becomes a byte load, which should keep its !noalias.
 define i32 @noalias_dropped_local(ptr %p) {
 ; CHECK-LABEL: define i32 @noalias_dropped_local(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[WIDE:%.*]] = load i32, ptr [[P]], align 4, !noalias [[META0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_BYTES:%.*]] = load b32, ptr [[P]], align 4, !noalias [[META0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE:%.*]] = bitcast b32 [[WIDE_BYTES]] to i32
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i32 [[WIDE]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i8, b32 [[WIDE_BYTES]], i32 8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[WIDE]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
@@ -36,10 +36,10 @@ define i32 @alias_scope_dropped_local(ptr %p) {
 ; CHECK-LABEL: define i32 @alias_scope_dropped_local(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[WIDE:%.*]] = load i32, ptr [[P]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    [[WIDE_BYTES:%.*]] = load b32, ptr [[P]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    [[WIDE:%.*]] = bitcast b32 [[WIDE_BYTES]] to i32
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i32 [[WIDE]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitextract i8, b32 [[WIDE_BYTES]], i32 8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[WIDE]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
