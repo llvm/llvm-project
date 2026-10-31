@@ -292,9 +292,7 @@ void EhFrameSection::finalizeContents() {
       if (inserted) {
         cie.outputOff = off;
         off += cie.size;
-        uint8_t enc = getFdeEncoding(*sec, cie);
-        fdeEncodings[cie.outputOff] = enc;
-        enc &= 0x70;
+        uint8_t enc = getFdeEncoding(*sec, cie) & 0x70;
         if (enc != DW_EH_PE_absptr && enc != DW_EH_PE_pcrel)
           Err(ctx) << "unknown FDE size encoding";
       }
@@ -426,17 +424,9 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // Collect FDE entries. For each FDE, compute pcRel and fdeVARel relative to
   // .eh_frame_hdr's VA.
   fdes.clear();
-  SmallVector<uint8_t, 0> encs;
   for (EhInputSection *sec : ehFrame->sections) {
-    encs.clear();
-    for (uint32_t off : sec->cieOutputOffs)
-      encs.push_back(ehFrame->fdeEncodings.lookup(off));
     for (const EhSectionPiece &fde : sec->fdes) {
       if (fde.outputOff == -1)
-        continue;
-      // Discard zero-range FDE, otherwise it would displace the FDE of the
-      // next function, which shares its address.
-      if (hasZeroPcRange(*sec, fde, encs[fde.cie]))
         continue;
       // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
       // live Defined.

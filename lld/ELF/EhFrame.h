@@ -17,8 +17,6 @@ struct EhSectionPiece;
 
 uint8_t getFdeEncoding(const EhInputSection &sec, const EhSectionPiece &p);
 bool hasLSDA(const EhInputSection &sec, const EhSectionPiece &p);
-bool hasZeroPcRange(const EhInputSection &sec, const EhSectionPiece &p,
-                    uint8_t enc);
 }
 
 #endif

@@ -56,8 +56,6 @@ public:
 
   SmallVector<EhInputSection *, 0> sections;
   size_t numFdes = 0;
-  // FDE pointer encoding of each output CIE, keyed by its output offset.
-  llvm::DenseMap<uint32_t, uint8_t> fdeEncodings;
 
   struct FdeData {
     int64_t pcRel;

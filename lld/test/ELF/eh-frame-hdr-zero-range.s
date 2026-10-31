@@ -1,6 +1,6 @@
 # REQUIRES: x86
-## f1 is empty and shares its address with _start. Its zero-range FDE is
-## omitted from .eh_frame_hdr so as not to displace _start's FDE.
+## f1 is empty and shares its address with _start. Its zero-range FDE displaces
+## _start's FDE in .eh_frame_hdr.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: ld.lld --eh-frame-hdr %t.o -o %t
@@ -12,7 +12,7 @@
 # CHECK-NEXT:   address: 0x[[#%x,FDE:]]
 # CHECK:      [0x[[#FDE]]] FDE length=
 # CHECK-NEXT:   initial_location: 0x[[#START]]
-# CHECK-NEXT:   address_range: 0x1
+# CHECK-NEXT:   address_range: 0x0
 
 f1:
   .cfi_startproc

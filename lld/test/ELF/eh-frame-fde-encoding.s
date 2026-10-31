@@ -55,10 +55,10 @@
 # ULEB128:      0x00002004 011b033b 10000000 01000000 30f2ffff
 # ULEB128-NEXT: 0x00002014 26000000
 
-## absptr with an 8-byte zero PC range: the FDE is omitted from the table.
+## absptr with an 8-byte zero PC range.
 # RUN: llvm-readelf -x .eh_frame_hdr absptr-zero-range | FileCheck %s --check-prefix=ZERO
-# ZERO:      0x00002004 011b033b 10000000 00000000 00000000
-# ZERO-NEXT: 0x00002014 00000000
+# ZERO:      0x00002004 011b033b 10000000 01000000 30f2ffff
+# ZERO-NEXT: 0x00002014 24000000
 
 #--- absptr.s
 ## DW_EH_PE_absptr (0x00) with FDE for verification

@@ -1,7 +1,7 @@
 # REQUIRES: loongarch
 ## With linker relaxation, GNU as computes pc_range with an ADD/SUB relocation
 ## pair, even for an empty function. f1 is empty and shares its address with
-## _start. Its zero-range FDE is omitted from .eh_frame_hdr.
+## _start. Its zero-range FDE displaces _start's FDE in .eh_frame_hdr.
 
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 %s -o %t.o
 # RUN: ld.lld --eh-frame-hdr %t.o -o %t
@@ -13,7 +13,7 @@
 # CHECK-NEXT:   address: 0x[[#%x,FDE:]]
 # CHECK:      [0x[[#FDE]]] FDE length=
 # CHECK-NEXT:   initial_location: 0x[[#START]]
-# CHECK-NEXT:   address_range: 0x4
+# CHECK-NEXT:   address_range: 0x0
 
 .globl _start
 f1:
