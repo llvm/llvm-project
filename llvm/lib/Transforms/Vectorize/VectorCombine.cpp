@@ -127,6 +127,7 @@ private:
   bool scalarizeOpOrCmp(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
   bool foldSelectsFromBitcast(Instruction &I);
+  bool foldSelectExt(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
   bool foldInsertElementsToStores(Instruction &I);
   bool scalarizeLoad(Instruction &I);
@@ -1616,6 +1617,60 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
   }
 
   return MadeChange;
+}
+
+bool VectorCombine::foldSelectExt(Instruction &I) {
+  Value *V;
+  Value *TrueArm;
+  Value *FalseArm;
+  ConstantInt *C1;
+  // select (extractelement V, C1), ?, ?
+  if (!match(&I, m_Select(m_ExtractElt(m_Value(V), m_ConstantInt(C1)),
+                          m_Value(TrueArm), m_Value(FalseArm))))
+    return false;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(V->getType());
+  if (!VecTy)
+    return false;
+
+  // The fold only holds for vectors with 2 elements due to the reduce.and/or
+  // combining all lanes
+  unsigned NumElts = VecTy->getNumElements();
+  if (NumElts != 2)
+    return false;
+
+  bool IsAnd;
+  ConstantInt *C2;
+  // Check both arms of the select for each case since the fold only holds in
+  // the cases below: select c0, c1, false  ==  c0 && c1
+  if (match(FalseArm, m_Zero()) &&
+      match(TrueArm, m_ExtractElt(m_Specific(V), m_ConstantInt(C2))))
+    IsAnd = true;
+  // select c0, true, c1   ==  c0 || c1
+  else if (match(TrueArm, m_One()) &&
+           match(FalseArm, m_ExtractElt(m_Specific(V), m_ConstantInt(C2))))
+    IsAnd = false;
+  else
+    return false;
+
+  // If C1 or C2 are greater then the number of elements then the extract is
+  // invalid If C1 == C2 then the fold will miscompile:
+  /*
+  %b0 = extractelement <2 x i1> %v, i64 0
+  %b1 = extractelement <2 x i1> %v, i64 0
+  %b  = select i1 %b0, i1 %b1, i1 0   ; == V[0], but reduce.and(freeze V) will
+  AND in V[1]
+  */
+  if (C1->uge(NumElts) || C2->uge(NumElts) ||
+      C1->getZExtValue() == C2->getZExtValue())
+    return false;
+
+  Value *Frozen = Builder.CreateFreeze(V);
+  Value *Res =
+      IsAnd ? Builder.CreateAndReduce(Frozen) : Builder.CreateOrReduce(Frozen);
+
+  replaceValue(I, *Res);
+  return true;
 }
 
 static void analyzeCostOfVecReduction(const IntrinsicInst &II,
@@ -7148,6 +7203,10 @@ bool VectorCombine::run() {
         break;
       case Instruction::ExtractElement:
         if (foldShuffleChainsToReduce(I))
+          return true;
+        break;
+      case Instruction::Select:
+        if (foldSelectExt(I))
           return true;
         break;
       case Instruction::ICmp:
