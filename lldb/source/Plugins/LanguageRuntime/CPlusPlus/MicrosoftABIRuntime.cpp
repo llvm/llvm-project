@@ -124,13 +124,6 @@ std::optional<int64_t> MicrosoftABIRuntime::GetOffsetToTop(
     return std::nullopt;
   }
 
-  {
-    std::scoped_lock<std::mutex> g(m_mutex);
-    auto offset_to_top_it = m_offset_to_top_map.find(vtable_info.addr);
-    if (offset_to_top_it != m_offset_to_top_map.end())
-      return offset_to_top_it->second;
-  }
-
   CompilerType type = class_type_or_name.GetCompilerType();
   if (!type) {
     LLDB_LOG(log, "{0:x16}: failed to get type info (no compiler type)",
@@ -163,6 +156,13 @@ std::optional<int64_t> MicrosoftABIRuntime::GetOffsetToTop(
     std::scoped_lock<std::mutex> g(m_mutex);
     m_offset_to_top_map[vtable_info.addr] = 0;
     return std::nullopt;
+  }
+
+  {
+    std::scoped_lock<std::mutex> g(m_mutex);
+    auto offset_to_top_it = m_offset_to_top_map.find(vtable_info.addr);
+    if (offset_to_top_it != m_offset_to_top_map.end())
+      return offset_to_top_it->second;
   }
 
   // Unlike in the Itanium ABI, the VTable itself doesn't have a field telling
