@@ -12,9 +12,11 @@
 
 #include "BPFInstrInfo.h"
 #include "BPF.h"
+#include "BPFMachineFunctionInfo.h"
 #include "BPFSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -27,7 +29,59 @@
 using namespace llvm;
 
 BPFInstrInfo::BPFInstrInfo(const BPFSubtarget &STI)
-    : BPFGenInstrInfo(STI, RI, BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
+    : BPFGenInstrInfo(STI, RI, BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP),
+      STI(STI) {}
+
+// Return the inverse of a conditional branch, or 0 if there is none.
+static unsigned getInverseBranchOpcode(unsigned Opcode) {
+  switch (Opcode) {
+#define BPF_INVERT(A, B)                                                       \
+  case BPF::A##_rr:                                                            \
+    return BPF::B##_rr;                                                        \
+  case BPF::A##_ri:                                                            \
+    return BPF::B##_ri;                                                        \
+  case BPF::A##_rr_32:                                                         \
+    return BPF::B##_rr_32;                                                     \
+  case BPF::A##_ri_32:                                                         \
+    return BPF::B##_ri_32;
+#define BPF_INVERT_PAIR(A, B) BPF_INVERT(A, B) BPF_INVERT(B, A)
+    BPF_INVERT_PAIR(JEQ, JNE)
+    BPF_INVERT_PAIR(JUGT, JULE)
+    BPF_INVERT_PAIR(JUGE, JULT)
+    BPF_INVERT_PAIR(JSGT, JSLE)
+    BPF_INVERT_PAIR(JSGE, JSLT)
+#undef BPF_INVERT_PAIR
+#undef BPF_INVERT
+  default:
+    return 0;
+  }
+}
+
+static bool isCondBranch(unsigned Opcode) {
+  return getInverseBranchOpcode(Opcode) || Opcode == BPF::JSET_rr ||
+         Opcode == BPF::JSET_ri || Opcode == BPF::JSET_rr_32 ||
+         Opcode == BPF::JSET_ri_32;
+}
+
+bool BPFInstrInfo::canAnalyzeConditionalBranches(MachineFunction &MF) const {
+  // Before RA, splitting critical edges can spill past the stack limit.
+  if (!MF.getProperties().hasNoVRegs() || !STI.getHasJmp32())
+    return false;
+  if (STI.hasGotol())
+    return true;
+  // Before v4, a new layout can put a branch out of 16-bit range, so only
+  // functions that fit in it with room to spare are analyzed.
+  auto *FI = MF.getInfo<BPFMachineFunctionInfo>();
+  if (!FI->ShortBranches.has_value()) {
+    // Debug instructions must not change code generation.
+    unsigned Count = 0;
+    for (const MachineBasicBlock &MBB : MF)
+      for (const MachineInstr &MI : MBB)
+        Count += !MI.isMetaInstruction();
+    FI->ShortBranches = Count <= INT16_MAX / 2;
+  }
+  return FI->ShortBranches.value();
+}
 
 void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
@@ -170,6 +224,9 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                  MachineBasicBlock *&FBB,
                                  SmallVectorImpl<MachineOperand> &Cond,
                                  bool AllowModify) const {
+  TBB = FBB = nullptr;
+  Cond.clear();
+
   // Start from the bottom of the block and work up, examining the
   // terminator instructions.
   MachineBasicBlock::iterator I = MBB.end();
@@ -195,6 +252,9 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
     // Handle unconditional branches.
     if (I->getOpcode() == BPF::JMP) {
+      // Anything after a J is dead.
+      Cond.clear();
+      FBB = nullptr;
       if (!AllowModify) {
         TBB = I->getOperand(0).getMBB();
         continue;
@@ -202,8 +262,6 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
       // If the block has any instructions after a J, delete them.
       MBB.erase(std::next(I), MBB.end());
-      Cond.clear();
-      FBB = nullptr;
 
       // Delete the J if it's equivalent to a fall-through.
       if (MBB.isLayoutSuccessor(I->getOperand(0).getMBB())) {
@@ -217,8 +275,16 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       TBB = I->getOperand(0).getMBB();
       continue;
     }
-    // Cannot handle conditional branches
-    return true;
+
+    if (!isCondBranch(I->getOpcode()) || !Cond.empty() ||
+        !canAnalyzeConditionalBranches(*MBB.getParent()))
+      return true;
+
+    FBB = TBB;
+    TBB = I->getOperand(2).getMBB();
+    Cond.push_back(MachineOperand::CreateImm(I->getOpcode()));
+    Cond.push_back(I->getOperand(0));
+    Cond.push_back(I->getOperand(1));
   }
 
   return false;
@@ -242,7 +308,14 @@ unsigned BPFInstrInfo::insertBranch(MachineBasicBlock &MBB,
     return 1;
   }
 
-  llvm_unreachable("Unexpected conditional branch");
+  BuildMI(&MBB, DL, get(Cond[0].getImm()))
+      .add(Cond[1])
+      .add(Cond[2])
+      .addMBB(TBB);
+  if (!FBB)
+    return 1;
+  BuildMI(&MBB, DL, get(BPF::JMP)).addMBB(FBB);
+  return 2;
 }
 
 unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
@@ -256,7 +329,7 @@ unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
     --I;
     if (I->isDebugInstr())
       continue;
-    if (I->getOpcode() != BPF::JMP)
+    if (I->getOpcode() != BPF::JMP && !isCondBranch(I->getOpcode()))
       break;
     // Remove the branch.
     I->eraseFromParent();
@@ -265,6 +338,15 @@ unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
   }
 
   return Count;
+}
+
+bool BPFInstrInfo::reverseBranchCondition(
+    SmallVectorImpl<MachineOperand> &Cond) const {
+  unsigned Opcode = getInverseBranchOpcode(Cond[0].getImm());
+  if (!Opcode)
+    return true;
+  Cond[0].setImm(Opcode);
+  return false;
 }
 
 int BPFInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
