@@ -199,6 +199,11 @@ public:
   /// This is the counterpart to getRegBank.
   LLVM_ABI void setRegBank(Register Reg, const RegisterBank *RegBank) const;
 
+  /// Fold (x op x) -> 0 for the def \p MO, giving any register it creates
+  /// \p MO's bank so the fold stays valid after RegBankSelect.
+  LLVM_ABI bool matchSameValZero(const MachineOperand &MO,
+                                 BuildFnTy &MatchInfo) const;
+
   LLVM_ABI bool matchCombineCopy(MachineInstr &MI) const;
   LLVM_ABI void applyCombineCopy(MachineInstr &MI) const;
 

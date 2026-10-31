@@ -7974,6 +7974,55 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchSameValZero(const MachineOperand &MO,
+                                      BuildFnTy &MatchInfo) const {
+  Register Dst = MO.getReg();
+  LLT Ty = MRI.getType(Dst);
+
+  // The 0 goes straight into Dst, which keeps the bank it already had.
+  if (Ty.isScalar()) {
+    MatchInfo = [Dst](MachineIRBuilder &B) { B.buildConstant(Dst, 0); };
+    return true;
+  }
+
+  if (!Ty.isFixedVector())
+    return false;
+
+  // Bank anything we create on creation, not afterwards: CSE profiles the
+  // bank, so a later setRegBank could rewrite a shared value.
+  const RegisterBank *RB = getRegBank(Dst);
+  auto MakeReg = [RB](MachineIRBuilder &B, LLT RegTy) {
+    return RB ? B.getMRI()->createVirtualRegister({RB, RegTy})
+              : B.getMRI()->createGenericVirtualRegister(RegTy);
+  };
+
+  // A full-width zero bitcast into shape takes a single constant. Must be
+  // isLegal.
+  LLT IntTy = LLT::integer(Ty.getSizeInBits());
+  if (isLegal({TargetOpcode::G_CONSTANT, {IntTy}}) &&
+      isLegal({TargetOpcode::G_BITCAST, {Ty, IntTy}})) {
+    MatchInfo = [Dst, IntTy, MakeReg](MachineIRBuilder &B) {
+      Register Zero = MakeReg(B, IntTy);
+      B.buildConstant(Zero, 0);
+      B.buildBitcast(Dst, Zero);
+    };
+    return true;
+  }
+
+  // Otherwise splat a zero element, which is also not legal for every vector
+  // type past the legalizer.
+  LLT EltTy = Ty.getElementType();
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_BUILD_VECTOR, {Ty, EltTy}}))
+    return false;
+
+  MatchInfo = [Dst, EltTy, MakeReg](MachineIRBuilder &B) {
+    Register Elt = MakeReg(B, EltTy);
+    B.buildConstant(Elt, 0);
+    B.buildSplatBuildVector(Dst, Elt);
+  };
+  return true;
+}
+
 void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
                                     BuildFnTy &MatchInfo) const {
   MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
