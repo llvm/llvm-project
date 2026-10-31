@@ -806,6 +806,17 @@ define i64 @mulsu_w00_sexti32_and(i32 signext %a, i64 %b) nounwind {
   ret i64 %mul
 }
 
+define i64 @mulsu_w11(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: mulsu_w11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w11 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_hi = ashr i64 %a, 32
+  %b_hi = lshr i64 %b, 32
+  %mul = mul i64 %a_hi, %b_hi
+  ret i64 %mul
+}
+
 define i64 @mulsu_w00_sexti32_and_commute(i32 signext %a, i64 %b) nounwind {
 ; CHECK-LABEL: mulsu_w00_sexti32_and_commute:
 ; CHECK:       # %bb.0:
@@ -814,6 +825,17 @@ define i64 @mulsu_w00_sexti32_and_commute(i32 signext %a, i64 %b) nounwind {
   %a_sext = sext i32 %a to i64
   %b_and = and i64 %b, 4294967295
   %mul = mul i64 %b_and, %a_sext
+  ret i64 %mul
+}
+
+define i64 @mulsu_w11_commute(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: mulsu_w11_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w11 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_hi = ashr i64 %a, 32
+  %b_hi = lshr i64 %b, 32
+  %mul = mul i64 %b_hi, %a_hi
   ret i64 %mul
 }
 
@@ -1056,6 +1078,30 @@ define i64 @macc_w00(i64 %rd, i32 %a, i32 %b) nounwind {
   ret i64 %result
 }
 
+define i64 @macc_w01(i64 %rd, i32 %a, i64 %b) nounwind {
+; CHECK-LABEL: macc_w01:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    macc.w01 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bhi = ashr i64 %b, 32
+  %mul = mul i64 %aext, %bhi
+  %result = add i64 %rd, %mul
+  ret i64 %result
+}
+
+define i64 @macc_w11(i64 %rd, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: macc_w11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    macc.w11 a0, a1, a2
+; CHECK-NEXT:    ret
+  %ahi = ashr i64 %a, 32
+  %bhi = ashr i64 %b, 32
+  %mul = mul i64 %ahi, %bhi
+  %result = add i64 %rd, %mul
+  ret i64 %result
+}
+
 define i64 @macc_w00_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: macc_w00_commute:
 ; CHECK:       # %bb.0:
@@ -1064,6 +1110,30 @@ define i64 @macc_w00_commute(i64 %rd, i32 %a, i32 %b) nounwind {
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
   %mul = mul i64 %aext, %bext
+  %result = add i64 %mul, %rd
+  ret i64 %result
+}
+
+define i64 @macc_w01_commute(i64 %rd, i32 %a, i64 %b) nounwind {
+; CHECK-LABEL: macc_w01_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    macc.w01 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bhi = ashr i64 %b, 32
+  %mul = mul i64 %aext, %bhi
+  %result = add i64 %mul, %rd
+  ret i64 %result
+}
+
+define i64 @macc_w11_commute(i64 %rd, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: macc_w11_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    macc.w11 a0, a1, a2
+; CHECK-NEXT:    ret
+  %ahi = ashr i64 %a, 32
+  %bhi = ashr i64 %b, 32
+  %mul = mul i64 %ahi, %bhi
   %result = add i64 %mul, %rd
   ret i64 %result
 }
@@ -1104,6 +1174,18 @@ define i64 @maccsu_w00(i64 %rd, i32 %a, i32 %b) nounwind {
   ret i64 %result
 }
 
+define i64 @maccsu_w11(i64 %rd, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: maccsu_w11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccsu.w11 a0, a1, a2
+; CHECK-NEXT:    ret
+  %ahi = ashr i64 %a, 32
+  %bhi = lshr i64 %b, 32
+  %mul = mul i64 %ahi, %bhi
+  %result = add i64 %rd, %mul
+  ret i64 %result
+}
+
 define i64 @maccsu_w00_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: maccsu_w00_commute:
 ; CHECK:       # %bb.0:
@@ -1112,6 +1194,18 @@ define i64 @maccsu_w00_commute(i64 %rd, i32 %a, i32 %b) nounwind {
   %aext = sext i32 %a to i64
   %bext = zext i32 %b to i64
   %mul = mul i64 %aext, %bext
+  %result = add i64 %mul, %rd
+  ret i64 %result
+}
+
+define i64 @maccsu_w11_commute(i64 %rd, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: maccsu_w11_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccsu.w11 a0, a1, a2
+; CHECK-NEXT:    ret
+  %ahi = ashr i64 %a, 32
+  %bhi = lshr i64 %b, 32
+  %mul = mul i64 %ahi, %bhi
   %result = add i64 %mul, %rd
   ret i64 %result
 }
@@ -1128,6 +1222,18 @@ define i64 @maccsu_w00_swap_operands(i64 %rd, i32 %a, i32 %b) nounwind {
   ret i64 %result
 }
 
+define i64 @maccsu_w11_swap_operands(i64 %rd, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: maccsu_w11_swap_operands:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccsu.w11 a0, a2, a1
+; CHECK-NEXT:    ret
+  %ahi = lshr i64 %a, 32
+  %bhi = ashr i64 %b, 32
+  %mul = mul i64 %ahi, %bhi
+  %result = add i64 %rd, %mul
+  ret i64 %result
+}
+
 define i64 @maccsu_w00_swap_operands_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: maccsu_w00_swap_operands_commute:
 ; CHECK:       # %bb.0:
@@ -1136,6 +1242,18 @@ define i64 @maccsu_w00_swap_operands_commute(i64 %rd, i32 %a, i32 %b) nounwind {
   %aext = zext i32 %a to i64
   %bext = sext i32 %b to i64
   %mul = mul i64 %aext, %bext
+  %result = add i64 %mul, %rd
+  ret i64 %result
+}
+
+define i64 @maccsu_w11_swap_operands_commute(i64 %rd, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: maccsu_w11_swap_operands_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccsu.w11 a0, a2, a1
+; CHECK-NEXT:    ret
+  %ahi = lshr i64 %a, 32
+  %bhi = ashr i64 %b, 32
+  %mul = mul i64 %ahi, %bhi
   %result = add i64 %mul, %rd
   ret i64 %result
 }
@@ -1151,6 +1269,38 @@ define i64 @macc_w00_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out) nounwind {
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
   %mul = mul i64 %aext, %bext
+  %result = add i64 %c, %mul
+  store i64 %mul, ptr %out
+  ret i64 %result
+}
+
+; Negative test: multiply result has multiple uses, should not combine to macc
+define i64 @macc_w01_multiple_uses(i32 %a, i64 %b, i64 %c, ptr %out) nounwind {
+; CHECK-LABEL: macc_w01_multiple_uses:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul.w01 a1, a0, a1
+; CHECK-NEXT:    add a0, a2, a1
+; CHECK-NEXT:    sd a1, 0(a3)
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bhi = ashr i64 %b, 32
+  %mul = mul i64 %aext, %bhi
+  %result = add i64 %c, %mul
+  store i64 %mul, ptr %out
+  ret i64 %result
+}
+
+; Negative test: multiply result has multiple uses, should not combine to macc
+define i64 @macc_w11_multiple_uses(i64 %a, i64 %b, i64 %c, ptr %out) nounwind {
+; CHECK-LABEL: macc_w11_multiple_uses:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul.w11 a1, a0, a1
+; CHECK-NEXT:    add a0, a2, a1
+; CHECK-NEXT:    sd a1, 0(a3)
+; CHECK-NEXT:    ret
+  %ahi = ashr i64 %a, 32
+  %bhi = ashr i64 %b, 32
+  %mul = mul i64 %ahi, %bhi
   %result = add i64 %c, %mul
   store i64 %mul, ptr %out
   ret i64 %result
@@ -1388,8 +1538,8 @@ define i64 @test_plui_w_remat(ptr %p) nounwind {
 define i64 @and_mul_32bitsplat(i64 %x) {
 ; CHECK-LABEL: and_mul_32bitsplat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI103_0)
-; CHECK-NEXT:    ld a1, %lo(.LCPI103_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI115_0)
+; CHECK-NEXT:    ld a1, %lo(.LCPI115_0)(a1)
 ; CHECK-NEXT:    lui a2, 65664
 ; CHECK-NEXT:    addi a2, a2, 1024
 ; CHECK-NEXT:    slli a3, a2, 27

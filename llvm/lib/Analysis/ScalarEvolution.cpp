@@ -12303,9 +12303,8 @@ bool ScalarEvolution::isImpliedCondViaSignFlippedPred(
   CmpPredicate FoundPred = ICmpInst::getFlippedSignednessPredicate(Pred);
   // Unsigned comparison is the same as signed comparison when both the
   // operands are non-negative or negative.
-  if (haveSameSign(FoundLHS, FoundRHS) &&
-      isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
-    return true;
+  if (haveSameSign(FoundLHS, FoundRHS))
+    return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
   // Canonicalize both conditions to "le/lt".
   if (ICmpInst::isGT(Pred) || ICmpInst::isGE(Pred)) {
     Pred = ICmpInst::getSwappedCmpPredicate(Pred);
@@ -12341,15 +12340,13 @@ bool ScalarEvolution::isImpliedCondViaSignFlippedPred(
     // Use implication:
     // x <u y && y >=s 0 --> x <s y.
     // If we can prove the left part, the right part is also proven.
-    if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS))
-      return true;
+    return isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS);
   }
   if (ICmpInst::isUnsigned(Pred) && isKnownNegative(RHS)) {
     // Use implication:
     // x <s y && y <s 0 --> x <u y.
     // If we can prove the left part, the right part is also proven.
-    if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS))
-      return true;
+    return isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS);
   }
   return false;
 }

@@ -1968,21 +1968,21 @@ TEST_F(PatternMatchTest, FloatingPointFNeg) {
   Value *Match;
 
   // Test FNeg(1.0)
-  EXPECT_TRUE(match(V, m_FNeg(m_Value(Match))));
+  EXPECT_TRUE(match(V, m_FNegOrFSubNegZero(m_Value(Match))));
   EXPECT_EQ(One, Match);
 
   // Test FSub(-0.0, 1.0)
-  EXPECT_TRUE(match(V1, m_FNeg(m_Value(Match))));
+  EXPECT_TRUE(match(V1, m_FNegOrFSubNegZero(m_Value(Match))));
   EXPECT_EQ(One, Match);
 
   // Test FSub(0.0, 1.0)
-  EXPECT_FALSE(match(V2, m_FNeg(m_Value(Match))));
+  EXPECT_FALSE(match(V2, m_FNegOrFSubNegZero(m_Value(Match))));
   cast<Instruction>(V2)->setHasNoSignedZeros(true);
-  EXPECT_TRUE(match(V2, m_FNeg(m_Value(Match))));
+  EXPECT_TRUE(match(V2, m_FNegOrFSubNegZero(m_Value(Match))));
   EXPECT_EQ(One, Match);
 
   // Test FAdd(-0.0, 1.0)
-  EXPECT_FALSE(match(V3, m_FNeg(m_Value(Match))));
+  EXPECT_FALSE(match(V3, m_FNegOrFSubNegZero(m_Value(Match))));
 }
 
 TEST_F(PatternMatchTest, CondBranchTest) {

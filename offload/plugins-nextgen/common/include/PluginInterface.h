@@ -128,6 +128,10 @@ struct AsyncInfoWrapperTy {
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
 
+  /// Indicate whether the operation is synchronous, i.e., the caller did not
+  /// provide a __tgt_async_info.
+  bool isSynchronous() const { return AsyncInfoPtr == &LocalAsyncInfo; }
+
   /// Get the queue.
   template <typename Ty> Ty getQueueAs() {
     static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
@@ -1553,9 +1557,6 @@ public:
   /// Deallocates memory on the given device.
   int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind,
                       GenericProfilerTy *ProfilerPtr = nullptr);
-
-  /// Returns if the plugin can support automatic copy.
-  int32_t use_auto_zero_copy(int32_t DeviceId);
 
   /// Return the interop specification that the plugin supports
   /// It might not be one of the user specified ones.

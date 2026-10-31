@@ -950,7 +950,7 @@ defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 let isCommutable = 0 in
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
 } // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
-let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble],
+let SubtargetPredicate = HasVMulU64Inst, SchedRW = [WriteDouble],
     GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isReMaterializable = 1

@@ -827,7 +827,8 @@ private:
   // profile instrumentation/matching (to enable better context sensitivity),
   // and for memprof to enable better matching with missing debug frames.
   void addPreInlinerPasses(ModulePassManager &MPM, OptimizationLevel Level,
-                           ThinOrFullLTOPhase LTOPhase);
+                           ThinOrFullLTOPhase LTOPhase,
+                           bool IgnoreProfile = false);
 
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS,
