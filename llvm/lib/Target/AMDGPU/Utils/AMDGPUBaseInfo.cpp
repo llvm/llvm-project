@@ -3005,14 +3005,15 @@ bool isInlinableLiteralFP16(int16_t Literal, bool HasInv2Pi) {
 std::optional<unsigned> getInlineEncodingV216(bool IsFloat, uint32_t Literal) {
   // Unfortunately, the Instruction Set Architecture Reference Guide is
   // misleading about how the inline operands work for (packed) 16-bit
-  // instructions. In a nutshell, the actual HW behavior is:
+  // instructions. For ordinary packed operands, the actual HW behavior is:
   //
-  //  - integer encodings (-16 .. 64) are always produced as sign-extended
-  //    32-bit values
+  //  - integer encodings (-16 .. 64) produce sign-extended 32-bit values
   //  - float encodings are produced as:
   //    - for F16 instructions: corresponding half-precision float values in
   //      the LSBs, 0 in the MSBs
   //    - for UI16 instructions: corresponding single-precision float value
+  // V_PK_FMAC_F16 on GFX11+ duplicates both integer and FP16 inline values;
+  // getPKFMACF16InlineEncoding handles its distinct value mapping.
   int32_t Signed = static_cast<int32_t>(Literal);
   if (Signed >= 0 && Signed <= 64)
     return 128 + Signed;
@@ -3096,30 +3097,23 @@ std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal) {
 }
 
 // Encoding of the literal as an inline constant for V_PK_FMAC_F16 instruction
-// or nullopt. This accounts for different inline constant behavior:
-// - Pre-GFX11: fp16 inline constants have the value in low 16 bits, 0 in high
-// - GFX11+: fp16 inline constants are duplicated into both halves
+// or nullopt. Pre-GFX11 inline FP16 values occupy the low half; on GFX11+,
+// both integer and FP16 inline values are duplicated into the two halves.
 std::optional<unsigned> getPKFMACF16InlineEncoding(uint32_t Literal,
                                                    bool IsGFX11Plus) {
-  // Pre-GFX11 behavior: f16 in low bits, 0 in high bits
   if (!IsGFX11Plus)
     return getInlineEncodingV216(/*IsFloat=*/true, Literal);
 
-  // GFX11+ behavior: f16 duplicated in both halves
-  // First, check for sign-extended integer inline constants (-16 to 64)
-  // These work the same across all generations
-  int32_t Signed = static_cast<int32_t>(Literal);
-  if (Signed >= 0 && Signed <= 64)
-    return 128 + Signed;
-
-  if (Signed >= -16 && Signed <= -1)
-    return 192 + std::abs(Signed);
-
-  // For float inline constants on GFX11+, both halves must be equal
   uint16_t Lo = static_cast<uint16_t>(Literal);
   uint16_t Hi = static_cast<uint16_t>(Literal >> 16);
   if (Lo != Hi)
     return std::nullopt;
+
+  // The shared encoder expects negative integer inline values sign-extended
+  // to 32 bits. Keep FP16 values as unsigned half bit patterns.
+  if (Lo >= 0xFFF0)
+    return getInlineEncodingV216(/*IsFloat=*/true,
+                                 static_cast<int32_t>(Lo) - 0x10000);
   return getInlineEncodingV216(/*IsFloat=*/true, Lo);
 }
 

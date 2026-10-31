@@ -661,6 +661,11 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
     if (AMDGPU::EncValues::INLINE_INTEGER_C_MIN <= Imm &&
         Imm <= AMDGPU::EncValues::INLINE_INTEGER_C_MAX) {
       Op = decodeIntImmed(Imm);
+      if (isGFX11Plus() &&
+          OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT) {
+        uint32_t Half = static_cast<uint16_t>(Op.getImm());
+        Op.setImm((Half << 16) | Half);
+      }
       continue;
     }
 
