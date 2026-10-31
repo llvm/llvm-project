@@ -854,6 +854,404 @@ define <4 x i32> @abdu_const_poison(<4 x i8> %x) {
   ret <4 x i32> %abs
 }
 
+define <4 x i32> @abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_sext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_sext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmgt v2.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    ssubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ssubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = sext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp sgt <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_sext_sge(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_sext_sge:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_sext_sge:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmge v2.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    ssubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ssubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = sext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp sge <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_sext_slt(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_sext_slt:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_sext_slt:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmgt v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ssubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ssubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = sext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp slt <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_sext_sle(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_sext_sle:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_sext_sle:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmge v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ssubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ssubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = sext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp sle <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_zext_ugt(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_zext_ugt:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_zext_ugt:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmhi v2.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    usubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    usubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = zext <4 x i16> %a to <4 x i32>
+  %conv1 = zext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nuw <4 x i32> %conv, %conv1
+  %cmp.i = icmp ugt <4 x i16> %b, %a
+  %sub1.i = sub nuw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_zext_uge(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_zext_uge:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_zext_uge:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmhs v2.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    usubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    usubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = zext <4 x i16> %a to <4 x i32>
+  %conv1 = zext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nuw <4 x i32> %conv, %conv1
+  %cmp.i = icmp uge <4 x i16> %b, %a
+  %sub1.i = sub nuw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_zext_ult(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_zext_ult:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_zext_ult:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmhi v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    usubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    usubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = zext <4 x i16> %a to <4 x i32>
+  %conv1 = zext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp ult <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_zext_ule(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_zext_ule:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uabdl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_zext_ule:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmhs v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    usubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    usubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = zext <4 x i16> %a to <4 x i32>
+  %conv1 = zext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nuw <4 x i32> %conv, %conv1
+  %cmp.i = icmp ule <4 x i16> %b, %a
+  %sub1.i = sub nuw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_zext_diff_sizes(<4 x i16> %a16, <4 x i8> %b8) {
+; CHECK-SD-LABEL: abd_select_zext_diff_sizes:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-SD-NEXT:    cmhs v2.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    usubl v3.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    usubl v0.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    sshll v2.4s, v2.4h, #0
+; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_zext_diff_sizes:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    movi v3.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    ushll v4.4s, v0.4h, #0
+; CHECK-GI-NEXT:    and v2.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    cmhs v2.4h, v0.4h, v2.4h
+; CHECK-GI-NEXT:    sub v3.4s, v4.4s, v1.4s
+; CHECK-GI-NEXT:    usubw v0.4s, v1.4s, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %b16 = zext <4 x i8> %b8 to <4 x i16>
+  %a32 = zext <4 x i16> %a16 to <4 x i32>
+  %b32 = zext <4 x i8> %b8 to <4 x i32>
+  %sub.i = sub nuw <4 x i32> %a32, %b32
+  %cmp.i = icmp ule <4 x i16> %b16, %a16
+  %sub1.i = sub nuw <4 x i32> %b32, %a32
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_sext_diff_sizes(<4 x i16> %a16, <4 x i8> %b8) {
+; CHECK-SD-LABEL: abd_select_sext_diff_sizes:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll v2.4s, v1.4h, #0
+; CHECK-SD-NEXT:    shl v1.4h, v1.4h, #8
+; CHECK-SD-NEXT:    sshll v3.4s, v0.4h, #0
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #8
+; CHECK-SD-NEXT:    shl v2.4s, v2.4s, #24
+; CHECK-SD-NEXT:    sshr v2.4s, v2.4s, #24
+; CHECK-SD-NEXT:    cmhs v1.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    sub v3.4s, v3.4s, v2.4s
+; CHECK-SD-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-SD-NEXT:    ssubw v0.4s, v2.4s, v0.4h
+; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_sext_diff_sizes:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    shl v2.4h, v1.4h, #8
+; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    sshll v3.4s, v0.4h, #0
+; CHECK-GI-NEXT:    sshr v2.4h, v2.4h, #8
+; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #24
+; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #24
+; CHECK-GI-NEXT:    cmhs v2.4h, v0.4h, v2.4h
+; CHECK-GI-NEXT:    sub v3.4s, v3.4s, v1.4s
+; CHECK-GI-NEXT:    ssubw v0.4s, v1.4s, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %b16 = sext <4 x i8> %b8 to <4 x i16>
+  %a32 = sext <4 x i16> %a16 to <4 x i32>
+  %b32 = sext <4 x i8> %b8 to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %a32, %b32
+  %cmp.i = icmp ule <4 x i16> %b16, %a16
+  %sub1.i = sub nuw <4 x i32> %b32, %a32
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_sext_zext(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_sext_zext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll v2.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v3.4s, v1.4h, #0
+; CHECK-SD-NEXT:    cmgt v4.4h, v1.4h, v0.4h
+; CHECK-SD-NEXT:    usubw v1.4s, v2.4s, v1.4h
+; CHECK-SD-NEXT:    sshll v2.4s, v4.4h, #0
+; CHECK-SD-NEXT:    ssubw v0.4s, v3.4s, v0.4h
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_sext_zext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v2.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ushll v3.4s, v1.4h, #0
+; CHECK-GI-NEXT:    cmgt v4.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    usubw v1.4s, v2.4s, v1.4h
+; CHECK-GI-NEXT:    ssubw v0.4s, v3.4s, v0.4h
+; CHECK-GI-NEXT:    sshll v2.4s, v4.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = zext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp sgt <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  ret <4 x i32> %spec.select.i
+}
+
+define <4 x i32> @abd_select_sext_add(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_sext_add:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.4s, #19
+; CHECK-SD-NEXT:    sabal v2.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_sext_add:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmgt v3.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    ssubl v4.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ssubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    movi v2.4s, #19
+; CHECK-GI-NEXT:    sshll v1.4s, v3.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v4.16b, v1.16b
+; CHECK-GI-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    ret
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = sext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp sgt <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  %add = add nsw <4 x i32> %spec.select.i, splat (i32 19)
+  ret <4 x i32> %add
+}
+
+define <4 x i32> @abd_select_zext_add(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: abd_select_zext_add:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.4s, #19
+; CHECK-SD-NEXT:    uabal v2.4s, v1.4h, v0.4h
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abd_select_zext_add:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmhi v3.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    usubl v4.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    usubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    movi v2.4s, #19
+; CHECK-GI-NEXT:    sshll v1.4s, v3.4h, #0
+; CHECK-GI-NEXT:    bif v0.16b, v4.16b, v1.16b
+; CHECK-GI-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    ret
+  %conv = zext <4 x i16> %a to <4 x i32>
+  %conv1 = zext <4 x i16> %b to <4 x i32>
+  %sub.i = sub nsw <4 x i32> %conv, %conv1
+  %cmp.i = icmp ugt <4 x i16> %b, %a
+  %sub1.i = sub nsw <4 x i32> %conv1, %conv
+  %spec.select.i = select <4 x i1> %cmp.i, <4 x i32> %sub1.i, <4 x i32> %sub.i
+  %add = add nsw <4 x i32> %spec.select.i, splat (i32 19)
+  ret <4 x i32> %add
+}
+
+define <4 x i32> @neg_abd_select_sext(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: neg_abd_select_sext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sabdl v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_abd_select_sext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmgt v2.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    ssubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ssubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bit v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %conv1 = sext <4 x i16> %b to <4 x i32>
+  %cmp = icmp slt <4 x i16> %a, %b
+  %sub = sub nsw <4 x i32> %conv, %conv1
+  %sub7 = sub nsw <4 x i32> %conv1, %conv
+  %cond = select <4 x i1> %cmp, <4 x i32> %sub, <4 x i32> %sub7
+  ret <4 x i32> %cond
+}
+
+define <4 x i32> @neg_abd_select_zext(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: neg_abd_select_zext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uabdl v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    neg v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: neg_abd_select_zext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmhi v2.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    usubl v3.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    usubl v0.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    bit v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+  %conv = zext <4 x i16> %a to <4 x i32>
+  %conv1 = zext <4 x i16> %b to <4 x i32>
+  %cmp = icmp ult <4 x i16> %a, %b
+  %sub = sub nsw <4 x i32> %conv, %conv1
+  %sub7 = sub nsw <4 x i32> %conv1, %conv
+  %cond = select <4 x i1> %cmp, <4 x i32> %sub, <4 x i32> %sub7
+  ret <4 x i32> %cond
+}
+
 declare <8 x i8> @llvm.aarch64.neon.umax.v8i8(<8 x i8>, <8 x i8>)
 declare <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32>)
 declare <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8>, <8 x i8>)

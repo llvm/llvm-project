@@ -1008,11 +1008,7 @@ define <8 x i16> @usubl_abs_diff_multi_user(<8 x i8> %a, <8 x i8> %b) {
 ;
 ; CODE-LABEL: usubl_abs_diff_multi_user:
 ; CODE:       // %bb.0:
-; CODE-NEXT:    cmhi v2.8b, v0.8b, v1.8b
-; CODE-NEXT:    usubl v3.8h, v0.8b, v1.8b
-; CODE-NEXT:    usubl v0.8h, v1.8b, v0.8b
-; CODE-NEXT:    sshll v2.8h, v2.8b, #0
-; CODE-NEXT:    bit v0.16b, v3.16b, v2.16b
+; CODE-NEXT:    uabdl v0.8h, v0.8b, v1.8b
 ; CODE-NEXT:    ret
   %tmp0 = zext <8 x i8> %a to <8 x i16>
   %tmp1 = zext <8 x i8> %b to <8 x i16>
