@@ -17,26 +17,6 @@
 namespace llvm {
 class SparcSubtarget;
 
-class LLVM_LIBRARY_VISIBILITY LEONMachineFunctionPass
-    : public MachineFunctionPass {
-protected:
-  const SparcSubtarget *Subtarget = nullptr;
-  const int LAST_OPERAND = -1;
-
-  // this vector holds free registers that we allocate in groups for some of the
-  // LEON passes
-  std::vector<int> UsedRegisters;
-
-protected:
-  LEONMachineFunctionPass(char &ID);
-
-  void clearUsedRegisterList() { UsedRegisters.clear(); }
-
-  void markRegisterUsed(int registerIndex) {
-    UsedRegisters.push_back(registerIndex);
-  }
-};
-
 class LLVM_LIBRARY_VISIBILITY ErrataWorkaround : public MachineFunctionPass {
 protected:
   const SparcSubtarget *ST;
@@ -65,7 +45,7 @@ public:
   StringRef getPassName() const override { return "Errata workaround pass"; };
 };
 
-class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {
+class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -79,8 +59,7 @@ public:
   }
 };
 
-class LLVM_LIBRARY_VISIBILITY DetectRoundChange
-    : public LEONMachineFunctionPass {
+class LLVM_LIBRARY_VISIBILITY DetectRoundChange : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -93,7 +72,7 @@ public:
   }
 };
 
-class LLVM_LIBRARY_VISIBILITY FixAllFDIVSQRT : public LEONMachineFunctionPass {
+class LLVM_LIBRARY_VISIBILITY FixAllFDIVSQRT : public MachineFunctionPass {
 public:
   static char ID;
 
