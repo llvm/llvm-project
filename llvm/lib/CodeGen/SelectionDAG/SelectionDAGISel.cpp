@@ -3108,7 +3108,7 @@ CheckOrImm(const uint8_t *MatcherTable, size_t &MatcherIndex, SDValue N,
 static size_t IsPredicateKnownToFail(
     const uint8_t *Table, size_t Index, SDValue N, bool &Result,
     const SelectionDAGISel &SDISel,
-    SmallVectorImpl<std::pair<SDValue, SDNode *>> &RecordedNodes) {
+    const SmallVectorImpl<std::pair<SDValue, SDNode *>> &RecordedNodes) {
   unsigned Opcode = Table[Index++];
   switch (Opcode) {
   default:
