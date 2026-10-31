@@ -13379,6 +13379,8 @@ def err_multiversion_doesnt_support
             "function|lambdas}1">;
 def err_multiversion_not_allowed_on_main : Error<
   "'main' cannot be a multiversioned function">;
+def err_target_attr_not_used_for_multiversion : Error<
+  "'target' attribute cannot be used for multiversioning on current target">;
 def err_multiversion_not_supported : Error<
  "function multiversioning is not supported on the current target">;
 def err_multiversion_types_mixed : Error<
