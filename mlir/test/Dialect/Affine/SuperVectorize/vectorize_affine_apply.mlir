@@ -8,12 +8,11 @@
 func.func @vec_affine_apply(%arg0: memref<8x12x16xf32>, %arg1: memref<8x24x48xf32>) {
 // CHECK:       affine.for %[[ARG2:.*]] = 0 to 8 {
 // CHECK-NEXT:    affine.for %[[ARG3:.*]] = 0 to 24 {
-// CHECK-NEXT:      affine.for %[[ARG4:.*]] = 0 to 48 step 8 {
+// CHECK-NEXT:      affine.for %[[ARG4:.*]] = 0 to 48 {
 // CHECK-NEXT:        %[[S0:.*]] = affine.apply #[[$MAP_ID0]](%[[ARG3]])
 // CHECK-NEXT:        %[[S1:.*]] = affine.apply #[[$MAP_ID1]](%[[ARG4]])
-// CHECK-NEXT:        %[[CST:.*]] = ub.poison : f32
-// CHECK-NEXT:        %[[S2:.*]] = vector.transfer_read %[[ARG0]][%[[ARG2]], %[[S0]], %[[S1]]], %[[CST]] {in_bounds = [true]} : memref<8x12x16xf32>, vector<8xf32>
-// CHECK-NEXT:        vector.transfer_write %[[S2]], %[[ARG1]][%[[ARG2]], %[[ARG3]], %[[ARG4]]] {in_bounds = [true]} : vector<8xf32>, memref<8x24x48xf32>
+// CHECK-NEXT:        %[[S2:.*]] = affine.load %[[ARG0]][%[[ARG2]], %[[S0]], %[[S1]]] : memref<8x12x16xf32>
+// CHECK-NEXT:        affine.store %[[S2]], %[[ARG1]][%[[ARG2]], %[[ARG3]], %[[ARG4]]] : memref<8x24x48xf32>
 // CHECK-NEXT:      }
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
@@ -40,11 +39,10 @@ func.func @vec_affine_apply(%arg0: memref<8x12x16xf32>, %arg1: memref<8x24x48xf3
 func.func @vec_affine_apply_2(%arg0: memref<8x12x16xf32>, %arg1: memref<8x24x48xf32>) {
 // CHECK:      affine.for %[[ARG2:.*]] = 0 to 8 {
 // CHECK-NEXT:   affine.for %[[ARG3:.*]] = 0 to 12 {
-// CHECK-NEXT:     affine.for %[[ARG4:.*]] = 0 to 48 step 8 {
+// CHECK-NEXT:     affine.for %[[ARG4:.*]] = 0 to 48 {
 // CHECK-NEXT:       %[[S0:.*]] = affine.apply #[[$MAP_ID2]](%[[ARG4]])
-// CHECK-NEXT:       %[[CST:.*]] = ub.poison : f32
-// CHECK-NEXT:       %[[S1:.*]] = vector.transfer_read %[[ARG0]][%[[ARG2]], %[[ARG3]], %[[S0]]], %[[CST]] {in_bounds = [true]} : memref<8x12x16xf32>, vector<8xf32>
-// CHECK-NEXT:       vector.transfer_write %[[S1]], %[[ARG1]][%[[ARG2]], %[[ARG3]], %[[ARG4]]] {in_bounds = [true]} : vector<8xf32>, memref<8x24x48xf32>
+// CHECK-NEXT:       %[[S1:.*]] = affine.load %[[ARG0]][%[[ARG2]], %[[ARG3]], %[[S0]]] : memref<8x12x16xf32>
+// CHECK-NEXT:       affine.store %[[S1]], %[[ARG1]][%[[ARG2]], %[[ARG3]], %[[ARG4]]] : memref<8x24x48xf32>
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
