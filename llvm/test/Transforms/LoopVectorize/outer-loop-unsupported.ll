@@ -61,5 +61,67 @@ exit:
   ret void
 }
 
+; bitextract has no vector form, so it cannot be widened.
+define void @outer_loop_bitextract(ptr noalias %dst, ptr noalias %src, i64 %n) {
+; CHECK-LABEL: LV: Checking a loop in 'outer_loop_bitextract'
+; CHECK: LV: Vectorization is not possible. Failed to create any vector VPlans.
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %gep.src = getelementptr inbounds b16, ptr %src, i64 %outer.iv
+  %b = load b16, ptr %gep.src, align 2
+  %x = bitextract i8, b16 %b, i32 8
+  %gep.dst = getelementptr inbounds i8, ptr %dst, i64 %outer.iv
+  br label %inner
+
+inner:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
+  store i8 %x, ptr %gep.dst, align 1
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.ec = icmp eq i64 %inner.iv.next, 8
+  br i1 %inner.ec, label %outer.latch, label %inner
+
+outer.latch:
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.ec = icmp eq i64 %outer.iv.next, %n
+  br i1 %outer.ec, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+; bitinsert has no vector form, so it cannot be widened.
+define void @outer_loop_bitinsert(ptr noalias %dst, ptr noalias %src, i8 %v, i64 %n) {
+; CHECK-LABEL: LV: Checking a loop in 'outer_loop_bitinsert'
+; CHECK: LV: Vectorization is not possible. Failed to create any vector VPlans.
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %gep.src = getelementptr inbounds b16, ptr %src, i64 %outer.iv
+  %b = load b16, ptr %gep.src, align 2
+  %x = bitinsert b16 %b, i8 %v, i32 8
+  %gep.dst = getelementptr inbounds b16, ptr %dst, i64 %outer.iv
+  br label %inner
+
+inner:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
+  store b16 %x, ptr %gep.dst, align 2
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.ec = icmp eq i64 %inner.iv.next, 8
+  br i1 %inner.ec, label %outer.latch, label %inner
+
+outer.latch:
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.ec = icmp eq i64 %outer.iv.next, %n
+  br i1 %outer.ec, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable"}

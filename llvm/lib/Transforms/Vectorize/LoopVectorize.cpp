@@ -4924,6 +4924,14 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     return getVectorCallCost(cast<CallInst>(I), VF);
   case Instruction::ExtractValue:
     return TTI.getInstructionCost(I, Config.CostKind);
+  case Instruction::BitExtract:
+  case Instruction::BitInsert: {
+    // There is no vector form, so these are always scalarized.
+    InstructionCost ScalarCost = TTI.getInstructionCost(I, Config.CostKind);
+    if (VF.isScalar())
+      return ScalarCost;
+    return ScalarCost * VF.getKnownMinValue() + getScalarizationOverhead(I, VF);
+  }
   case Instruction::Alloca:
     // We cannot easily widen alloca to a scalable alloca, as
     // the result would need to be a vector of pointers.

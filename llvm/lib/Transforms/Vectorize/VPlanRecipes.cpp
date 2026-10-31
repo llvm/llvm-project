@@ -596,6 +596,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   case VPInstruction::IncomingAliasMask:
   case Instruction::Load:
   case Instruction::Alloca:
+  case Instruction::BitExtract:
     llvm_unreachable("type must be passed explicitly");
   case Instruction::Call:
     return getCalledFunction(Operands)->getReturnType();
@@ -628,7 +629,8 @@ Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
                                            ArrayRef<VPValue *> Operands) {
   unsigned Opcode = I->getOpcode();
   if (Instruction::isCast(Opcode) ||
-      is_contained(ArrayRef<unsigned>({Instruction::Load, Instruction::Alloca}),
+      is_contained(ArrayRef<unsigned>({Instruction::Load, Instruction::Alloca,
+                                       Instruction::BitExtract}),
                    Opcode))
     return I->getType();
   return computeScalarTypeForInstruction(Opcode, Operands);
@@ -686,6 +688,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::FCmp:
   case Instruction::ExtractElement:
   case Instruction::Store:
+  case Instruction::BitExtract:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
@@ -700,6 +703,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
     return 2;
   case Instruction::InsertElement:
   case Instruction::Select:
+  case Instruction::BitInsert:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::WideVectorLoad:
@@ -4219,6 +4223,15 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
+  case Instruction::BitExtract:
+  case Instruction::BitInsert: {
+    InstructionCost ScalarCost = Ctx.TTI.getInstructionCost(UI, Ctx.CostKind);
+    if (isSingleScalar())
+      return ScalarCost;
+    return ScalarCost * VF.getFixedValue() +
+           Ctx.getScalarizationOverhead(getScalarType(), to_vector(operands()),
+                                        VF);
+  }
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:

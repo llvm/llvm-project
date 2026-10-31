@@ -183,6 +183,9 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           NewRecipe = new VPWidenCastRecipe(
               CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), CI,
               VPIRFlags(*CI), VPIRMetadata(*CI));
+        } else if (isa<BitExtractInst, BitInsertInst>(Inst)) {
+          // These have no vector form, so they cannot be widened.
+          return false;
         } else {
           NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands(), *VPI,
                                         *VPI, Ingredient.getDebugLoc());
