@@ -15,6 +15,9 @@ tablegen(LLVM CSKYGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM CSKYGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM CSKYGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/CSKYMCOptions.td)
+tablegen(LLVM CSKYMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(CSKYCommonTableGen)
 
 add_llvm_target(CSKYCodeGen

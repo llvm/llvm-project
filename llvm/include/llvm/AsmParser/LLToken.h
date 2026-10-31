@@ -432,6 +432,7 @@ enum Kind {
   kw_unknown,
   kw_critical,
   kw_relbf,
+  kw_indirect,
   kw_variable,
   kw_vTableFuncs,
   kw_virtFunc,

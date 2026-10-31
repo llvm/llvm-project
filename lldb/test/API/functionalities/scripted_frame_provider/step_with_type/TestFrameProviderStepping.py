@@ -110,6 +110,14 @@ class TestFrameProviderStepping(TestBase):
         self.assertSuccess(self.g_counter.error, "Got g_counter value")
         self.assertEqual(self.g_counter.signed, 0, "Starts at 0")
 
+    def assert_unwinder_frames_are_real(self):
+        """The base unwinder must only list frames it unwound itself, never
+        frames a provider produced at an earlier stop."""
+        self.runCmd(f"bt --provider {self.UNWINDER_FRAME_LIST_ID}")
+        output = self.res.GetOutput()
+        self.assertIn("Base Unwinder", output)
+        self.assertNotIn("[synthetic]", output, "Unwinder frames are real")
+
     def do_test_with_errors(self, use_command):
         self.common_startup("frame_provider.BadStepProvider")
         expected_error = "'frame_provider.Oops' that does not exist"
@@ -137,6 +145,7 @@ class TestFrameProviderStepping(TestBase):
             step_error = lldb.SBError()
             self.thread.StepOver(lldb.eOnlyDuringStepping, step_error)
             self.assertSuccess(step_error)
+        self.assert_unwinder_frames_are_real()
 
         # We stepped over twice, so counter should be 2:
         self.assertEqual(self.g_counter.signed, 2, "We stepped twice")
@@ -146,6 +155,7 @@ class TestFrameProviderStepping(TestBase):
             self.runCmd("thread step-in")
         else:
             self.thread.StepInto()
+        self.assert_unwinder_frames_are_real()
 
         frame_0 = self.thread.frames[0]
         self.assertEqual(frame_0.name, "bar", "Stepped in twice")
@@ -157,6 +167,7 @@ class TestFrameProviderStepping(TestBase):
             self.runCmd("thread step-out")
         else:
             self.thread.StepOut()
+        self.assert_unwinder_frames_are_real()
 
         frame_0 = self.thread.frames[0]
         self.assertEqual(frame_0.name, "main", "Stepped out twice")

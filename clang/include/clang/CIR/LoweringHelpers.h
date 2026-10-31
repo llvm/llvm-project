@@ -55,7 +55,8 @@ mlir::Attribute spellOutSplitTrailingZeros(mlir::Attribute attr);
 /// \p llvmType unchanged when no adjustment is needed. This is the single
 /// source of truth for the shape of a lowered record constant; the
 /// value-producing paths (the insertvalue visitor and lowerConstRecordAttr)
-/// conform to it.
+/// conform to it. Returns null if the input type or an initializer type cannot
+/// be lowered.
 mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                                    const mlir::TypeConverter &converter,
                                    const mlir::DataLayout &dataLayout);
@@ -85,7 +86,7 @@ mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
 
 mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
                                 mlir::DataLayout const &dataLayout,
-                                mlir::Type type);
+                                mlir::Type type, bool isForHLSL = false);
 
 /// The type of a load/store's *value*, as opposed to convertTypeForMemory's
 /// type of the memory it lives in. The two are effectively identical except

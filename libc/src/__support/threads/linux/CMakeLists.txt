@@ -66,15 +66,13 @@ add_object_library(
     libc.hdr.fcntl_macros
     libc.hdr.errno_macros
     libc.hdr.sched_macros
-    libc.hdr.signal_macros
     libc.hdr.sys_mman_macros
-    libc.hdr.types.sigset_t
-    libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.stringstream
     libc.src.__support.CPP.string_view
     libc.src.__support.common
     libc.src.__support.error_or
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.__support.OSUtil.linux.syscall_wrappers.clone
     libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.exit
@@ -84,7 +82,6 @@ add_object_library(
     libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.OSUtil.linux.syscall_wrappers.read
-    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
     libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getparam
     libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getscheduler
     libc.src.__support.OSUtil.linux.syscall_wrappers.sched_setscheduler
@@ -92,7 +89,6 @@ add_object_library(
     libc.src.__support.OSUtil.linux.syscall_wrappers.write
     libc.src.__support.threads.thread_common
     libc.src.__support.threads.thread_attributes
-    libc.src.string.memory_utils.inline_memset
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
 )

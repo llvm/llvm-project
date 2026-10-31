@@ -1373,8 +1373,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
   case Expr::CoawaitExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoawaitExpr");
-    return LValue();
+    return emitCoawaitLValue(cast<CoawaitExpr>(e));
   case Expr::CoyieldExprClass:
     return emitCoyieldLValue(cast<CoyieldExpr>(e));
   case Expr::PackIndexingExprClass:

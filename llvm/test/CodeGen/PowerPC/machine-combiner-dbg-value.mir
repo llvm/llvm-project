@@ -43,11 +43,11 @@ body:             |
   ; CHECK-NEXT:   [[XSADDSP:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSADDSP [[XSMULSP]], [[COPY]]
   ; CHECK-NEXT:   [[XSMULSP1:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSMULSP [[XSADDSP]], [[COPY]]
   ; CHECK-NEXT:   [[ADDIStocHA8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
-  ; CHECK-NEXT:   [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
+  ; CHECK-NEXT:   [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
   ; CHECK-NEXT:   [[ADDIStocHA8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.1
-  ; CHECK-NEXT:   [[DFLOADf32_1:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.1, killed [[ADDIStocHA8_1]] :: (load (s32) from constant-pool)
-  ; CHECK-NEXT:   [[XSMADDASP:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSMADDASP killed [[XSMULSP1]], [[COPY]], [[DFLOADf32_1]]
-  ; CHECK-NEXT:   [[XSMADDASP1:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSMADDASP killed [[XSMADDASP]], [[COPY]], killed [[DFLOADf32_]]
+  ; CHECK-NEXT:   [[DFLOADf32_1:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.1, [[ADDIStocHA8_1]] :: (load (s32) from constant-pool)
+  ; CHECK-NEXT:   [[XSMADDASP:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSMADDASP [[XSMULSP1]], [[COPY]], [[DFLOADf32_1]]
+  ; CHECK-NEXT:   [[XSMADDASP1:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSMADDASP [[XSMADDASP]], [[COPY]], [[DFLOADf32_]]
   ; CHECK-NEXT:   [[XSADDSP1:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSADDSP [[COPY]], [[COPY]]
   ; CHECK-NEXT:   [[XSADDSP2:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSADDSP [[XSADDSP1]], [[XSADDSP]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vssrc = COPY [[XSMADDASP1]]
@@ -68,8 +68,8 @@ body:             |
     %3:vssrc = nsz reassoc nofpexcept XSMULSP %2, %0
     %4:vssrc = nsz reassoc nofpexcept XSSUBSP %0, %0
     %5:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
-    %6:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed %5 :: (load (s32) from constant-pool)
-    %7:vssrc = nsz reassoc nofpexcept XSMADDASP %3, killed %4, killed %6
+    %6:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, %5 :: (load (s32) from constant-pool)
+    %7:vssrc = nsz reassoc nofpexcept XSMADDASP %3, %4, %6
     %8:vssrc = nsz reassoc nofpexcept XSADDSP %0, %0
     %9:vssrc = nsz reassoc nofpexcept XSADDSP %8, %2
     %10:vssrc = COPY %7

@@ -1353,6 +1353,21 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
                                        VIC);
     }
 
+    // Packed f32 pair formation for v_pk_*_f32. A constant-index insert writes
+    // one subregister, so a lane holding a computed value costs at most one
+    // v_mov_b32 at any width. A loaded lane lands in place, and arguments and
+    // constants are already in a register, so both are free. SLP prices a
+    // buildvector root with the insertelements themselves as Op1, and those
+    // lanes need no packing either. Only throughput sees the move; size-based
+    // users such as the inliner and the unroller keep inserts free.
+    auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
+    const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
+    if (Opcode == Instruction::InsertElement && EltSize == 32 &&
+        CostKind == TTI::TCK_RecipThroughput && ST->hasAnyPackedFP32Ops() &&
+        InsertedInst && VecTy && VecTy->getElementType()->isFloatTy() &&
+        !isa<LoadInst, InsertElementInst>(InsertedInst))
+      return getFullRateInstrCost();
+
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
     // operations, and we don't have to copy into a different register class.
@@ -1649,6 +1664,39 @@ InstructionCost GCNTTIImpl::getShuffleCost(
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
   TypeSize ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
+
+  // A v_pk_*_f32 operand is an aligned register pair. A lane already in its
+  // half of a source pair is read in place, and a splat of the low half is an
+  // op_sel_hi. Every other lane costs a v_mov_b32 to move it into place.
+  if (ScalarSize == 32 && CostKind == TTI::TCK_RecipThroughput &&
+      ST->hasAnyPackedFP32Ops() && SrcTy->getElementType()->isFloatTy() &&
+      !Mask.empty()) {
+    const int NumSrcElts = cast<FixedVectorType>(SrcTy)->getNumElements();
+    // Source pairs of the second operand are numbered after the first.
+    auto GetPair = [&](int Idx) {
+      return Idx < NumSrcElts ? Idx / 2 : NumSrcElts + (Idx - NumSrcElts) / 2;
+    };
+    auto GetHalf = [&](int Idx) {
+      return Idx < NumSrcElts ? Idx % 2 : (Idx - NumSrcElts) % 2;
+    };
+    unsigned Cost = 0;
+    for (unsigned DstIdx = 0; DstIdx < Mask.size(); DstIdx += 2) {
+      const int Lo = Mask[DstIdx];
+      const int Hi =
+          DstIdx + 1 < Mask.size() ? Mask[DstIdx + 1] : PoisonMaskElem;
+      const bool LoInPlace = Lo != PoisonMaskElem && GetHalf(Lo) == 0;
+      const bool HiInPlace = Hi != PoisonMaskElem && GetHalf(Hi) == 1;
+      if (Lo != PoisonMaskElem && Lo == Hi && LoInPlace)
+        continue;
+      if (LoInPlace && HiInPlace)
+        Cost += GetPair(Lo) != GetPair(Hi);
+      else
+        Cost += (Lo != PoisonMaskElem && !LoInPlace) +
+                (Hi != PoisonMaskElem && !HiInPlace);
+    }
+    return Cost;
+  }
+
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       (ScalarSize == 16 || ScalarSize == 8)) {
     // Larger vector widths may require additional instructions, but are
@@ -1799,7 +1847,9 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
     if (any_of(Ops, [&](Use *U) { return U->get() == Op.get(); }))
       continue;
 
-    if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value()))) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(&Op, m_FAbs(m_Value())) ||
+        match(&Op, m_FNegOrFSubNegZero(m_Value()))) {
       Ops.push_back(&Op);
       continue;
     }

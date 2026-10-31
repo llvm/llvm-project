@@ -218,7 +218,8 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK32-NEXT:    .reg .b64 %rd<3>;
 ; CHECK32-EMPTY:
 ; CHECK32-NEXT:  $L__prototype_0:
-; CHECK32-NEXT:  .callprototype (.param .b32 _) _ (.param .b32 _, .param .b32 _);
+; CHECK32-NEXT:  .callprototype (.param .b32 _) _ (.param .b32 _, .param .b32 _)
+; CHECK32-NEXT:  ;
 ; CHECK32-NEXT:  // %bb.0: // %entry
 ; CHECK32-NEXT:    mov.b32 %SPL, __local_depot1;
 ; CHECK32-NEXT:    ld.param.b32 %r1, [test_foo_param_0];
@@ -255,7 +256,8 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK64-NEXT:    .reg .b64 %rd<9>;
 ; CHECK64-EMPTY:
 ; CHECK64-NEXT:  $L__prototype_0:
-; CHECK64-NEXT:  .callprototype (.param .b32 _) _ (.param .b32 _, .param .b64 _);
+; CHECK64-NEXT:  .callprototype (.param .b32 _) _ (.param .b32 _, .param .b64 _)
+; CHECK64-NEXT:  ;
 ; CHECK64-NEXT:  // %bb.0: // %entry
 ; CHECK64-NEXT:    mov.b64 %SPL, __local_depot1;
 ; CHECK64-NEXT:    ld.param.b32 %r1, [test_foo_param_0];

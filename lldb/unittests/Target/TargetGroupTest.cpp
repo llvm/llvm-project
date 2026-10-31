@@ -18,6 +18,7 @@
 #include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -54,6 +55,7 @@ public:
     return target_sp;
   }
 };
+
 } // namespace
 
 TEST_F(TargetGroupTest, StoresTargetRoles) {
@@ -101,6 +103,81 @@ TEST_F(TargetGroupTest, StoresTargetRoles) {
   ASSERT_EQ(1U, cpu_target_sp->GetTargetGroups().size());
   EXPECT_EQ(group_sp, cpu_target_sp->GetTargetGroups().front());
   EXPECT_EQ(std::vector<TargetGroupSP>{group_sp}, groups.GetGroups());
+}
+
+TEST_F(TargetGroupTest, CPUAndAcceleratorsValidatesTargetMembership) {
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP cpu_target_sp = CreateTarget(*debugger_sp);
+  TargetSP second_cpu_target_sp = CreateTarget(*debugger_sp);
+  TargetSP first_accelerator_target_sp = CreateTarget(*debugger_sp);
+  TargetSP second_accelerator_target_sp = CreateTarget(*debugger_sp);
+  ASSERT_TRUE(cpu_target_sp);
+  ASSERT_TRUE(second_cpu_target_sp);
+  ASSERT_TRUE(first_accelerator_target_sp);
+  ASSERT_TRUE(second_accelerator_target_sp);
+
+  TargetGroupList &groups = debugger_sp->GetTargetGroupList();
+  TargetGroupSP unrelated_group_sp =
+      groups.CreateTargetGroup("unrelated CPU group");
+  ASSERT_TRUE(unrelated_group_sp);
+  EXPECT_FALSE(
+      llvm::isa<TargetGroupCPUAndAccelerators>(unrelated_group_sp.get()));
+  EXPECT_THAT_ERROR(
+      unrelated_group_sp->AddTarget(cpu_target_sp, TargetGroup::Role::CPU),
+      llvm::Succeeded());
+  EXPECT_THAT_ERROR(unrelated_group_sp->AddTarget(second_cpu_target_sp,
+                                                  TargetGroup::Role::CPU),
+                    llvm::Succeeded());
+
+  EXPECT_FALSE(
+      cpu_target_sp
+          ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>());
+
+  auto group_sp = groups.CreateTargetGroup<TargetGroupCPUAndAccelerators>(
+      "CPU and accelerator targets");
+  ASSERT_TRUE(group_sp);
+  EXPECT_TRUE(llvm::isa<TargetGroupCPUAndAccelerators>(group_sp.get()));
+  EXPECT_FALSE(group_sp->GetCPUTarget());
+
+  EXPECT_THAT_ERROR(
+      group_sp->AddTarget(first_accelerator_target_sp,
+                          TargetGroup::Role::Accelerator),
+      llvm::FailedWithMessage(
+          "the group must contain one CPU target before adding accelerators"));
+  EXPECT_TRUE(group_sp->GetTargets().empty());
+  EXPECT_TRUE(first_accelerator_target_sp->GetTargetGroups().empty());
+
+  EXPECT_THAT_ERROR(group_sp->AddTarget(cpu_target_sp, TargetGroup::Role::CPU),
+                    llvm::Succeeded());
+  EXPECT_EQ(cpu_target_sp, group_sp->GetCPUTarget());
+  EXPECT_EQ(group_sp,
+            cpu_target_sp
+                ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>());
+  EXPECT_EQ((std::vector<TargetGroupSP>{unrelated_group_sp, group_sp}),
+            cpu_target_sp->GetTargetGroups());
+  EXPECT_THAT_ERROR(
+      group_sp->AddTarget(second_cpu_target_sp, TargetGroup::Role::CPU),
+      llvm::FailedWithMessage(
+          "the CPU target must be the first target in the group"));
+  EXPECT_EQ(std::vector<TargetGroupSP>{unrelated_group_sp},
+            second_cpu_target_sp->GetTargetGroups());
+
+  EXPECT_THAT_ERROR(group_sp->AddTarget(first_accelerator_target_sp,
+                                        TargetGroup::Role::Accelerator),
+                    llvm::Succeeded());
+  EXPECT_THAT_ERROR(group_sp->AddTarget(second_accelerator_target_sp,
+                                        TargetGroup::Role::Accelerator),
+                    llvm::Succeeded());
+  EXPECT_THAT_ERROR(group_sp->AddTarget(cpu_target_sp, TargetGroup::Role::CPU),
+                    llvm::Succeeded());
+
+  EXPECT_EQ(std::vector<TargetSP>{cpu_target_sp},
+            group_sp->GetTargets(TargetGroup::Role::CPU));
+  EXPECT_EQ((std::vector<TargetSP>{first_accelerator_target_sp,
+                                   second_accelerator_target_sp}),
+            group_sp->GetTargets(TargetGroup::Role::Accelerator));
 }
 
 TEST_F(TargetGroupTest, DeleteGroupReleasesDebuggerOwnership) {

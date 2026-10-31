@@ -200,6 +200,11 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   if (pc.LoopVersioning)
     pm.addPass(fir::createLoopVersioning());
 
+  if (pc.LoopTripCountVersioning)
+    pm.addPass(fir::createLoopTripCountVersioning(
+        {/*maxSectionExtent=*/loopTripCountVersioningMaxSectionExtent,
+         /*maxUnrolledOps=*/loopTripCountVersioningMaxUnrolledOps}));
+
   pm.addPass(mlir::createCSEPass());
 
   // Unconditional and ahead of the array allocation placement below: under

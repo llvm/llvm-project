@@ -449,6 +449,13 @@ public:
   LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
                                       const AttrBuilder &B) const;
 
+  /// Add attributes to the attribute set, replacing attributes of the same
+  /// kind. \p Attrs must be sorted like an attribute set, with at most one
+  /// attribute of each kind. Returns a new set because attribute sets are
+  /// immutable.
+  [[nodiscard]] LLVM_ABI AttributeSet
+  addSortedAttributes(LLVMContext &C, ArrayRef<Attribute> Attrs) const;
+
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
   [[nodiscard]] LLVM_ABI AttributeSet
@@ -638,6 +645,12 @@ public:
   /// Returns a new list because attribute lists are immutable.
   [[nodiscard]] LLVM_ABI AttributeList addAttributesAtIndex(
       LLVMContext &C, unsigned Index, const AttrBuilder &B) const;
+
+  /// Add attributes to the attribute set at the given index, as
+  /// AttributeSet::addAttributes does. Returns a new list because attribute
+  /// lists are immutable.
+  [[nodiscard]] LLVM_ABI AttributeList addSortedAttributesAtIndex(
+      LLVMContext &C, unsigned Index, ArrayRef<Attribute> Attrs) const;
 
   /// Add a function attribute to the list. Returns a new list because
   /// attribute lists are immutable.

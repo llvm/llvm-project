@@ -2098,8 +2098,7 @@ PreservedAnalyses ControlHeightReductionPass::run(
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = FAM.getResult<RegionInfoAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  const InstrumentationOptions &Opts =
-      F.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(F);
   if (&Opts != ParsedOpts &&
       (!Opts.chr_module_list.empty() || !Opts.chr_function_list.empty())) {
     CHRModules.clear();

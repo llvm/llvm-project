@@ -857,7 +857,18 @@ void DAP::Received(const protocol::Event &event) {
   // no-op, no supported events from the client to the server as of DAP v1.68.
 }
 
+void DAP::InterruptActiveAttach() {
+  std::lock_guard<std::mutex> guard(m_active_request_mutex);
+  if (m_active_request && m_active_request->command == "attach")
+    target.GetProcess().SendAsyncInterrupt();
+}
+
 void DAP::Received(const protocol::Request &request) {
+  // A disconnect must not wait behind a request that can block indefinitely,
+  // such as a waitFor attach.
+  if (request.command == "disconnect")
+    InterruptActiveAttach();
+
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");
   if (cancel_args) {
@@ -874,6 +885,8 @@ void DAP::Received(const protocol::Request &request) {
       DAP_LOG(log, "interrupting inflight request (command={0} seq={1})",
               m_active_request->command, m_active_request->seq);
       debugger.RequestInterrupt();
+      if (m_active_request->command == "attach")
+        target.GetProcess().SendAsyncInterrupt();
     }
   }
 
@@ -893,11 +906,13 @@ void DAP::Received(const protocol::Response &response) {
 
 void DAP::OnError(llvm::Error error) {
   DAP_LOG_ERROR(log, std::move(error), "transport error: {0}");
+  InterruptActiveAttach();
   TerminateLoop(/*failed=*/true);
 }
 
 void DAP::OnClosed() {
   DAP_LOG(log, "transport closed");
+  InterruptActiveAttach();
   TerminateLoop();
 }
 

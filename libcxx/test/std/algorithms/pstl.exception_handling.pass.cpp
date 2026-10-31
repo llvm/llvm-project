@@ -595,6 +595,109 @@ int main(int, char**) {
           (void)std::swap_ranges(policy, std::move(first1), std::move(last1), std::move(first2));
         });
       }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // includes(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::includes(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // includes(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::includes(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), compare);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // set_difference(first1, last1, first2, last2, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_difference(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), std::move(dest));
+        });
+
+        // set_difference(first1, last1, first2, last2, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_difference(
+              policy,
+              std::move(first1),
+              std::move(last1),
+              std::move(first2),
+              std::move(last2),
+              std::move(dest),
+              compare);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // set_symmetric_difference(first1, last1, first2, last2, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_symmetric_difference(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), std::move(dest));
+        });
+
+        // set_symmetric_difference(first1, last1, first2, last2, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_symmetric_difference(
+              policy,
+              std::move(first1),
+              std::move(last1),
+              std::move(first2),
+              std::move(last2),
+              std::move(dest),
+              compare);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // set_intersection(first1, last1, first2, last2, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_intersection(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), std::move(dest));
+        });
+
+        // set_intersection(first1, last1, first2, last2, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_intersection(
+              policy,
+              std::move(first1),
+              std::move(last1),
+              std::move(first2),
+              std::move(last2),
+              std::move(dest),
+              compare);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // set_union(first1, last1, first2, last2, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_union(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), std::move(dest));
+        });
+
+        // set_union(first1, last1, first2, last2, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::set_union(
+              policy,
+              std::move(first1),
+              std::move(last1),
+              std::move(first2),
+              std::move(last2),
+              std::move(dest),
+              compare);
+        });
+      }
     }
   });
 

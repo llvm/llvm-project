@@ -18,8 +18,8 @@
 #include "clang/AST/Mangle.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/OrcIncrementalExecutorBuilder.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
@@ -115,7 +115,7 @@ createInterpreterWithRemoteExecution(std::shared_ptr<IOContext> io_ctx,
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
   llvm::append_range(ClangArgs, ExtraArgs);
 
-  auto Config = std::make_unique<IncrementalExecutorBuilder>();
+  auto Config = std::make_unique<OrcIncrementalExecutorBuilder>();
 
   Config->IsOutOfProcess = true;
   Config->OOPExecutor = getExecutorPath();

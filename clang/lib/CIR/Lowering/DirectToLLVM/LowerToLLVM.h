@@ -84,7 +84,7 @@ private:
   // name) pair so it can be patched later.
   llvm::DenseMap<mlir::LLVM::BlockAddressOp, cir::BlockAddrInfoAttr>
       unresolvedBlockAddressOp;
-  int32_t blockTagOpIndex;
+  int32_t blockTagOpIndex = 0;
 };
 
 mlir::LogicalResult lowerToConstrainedFPIntrinsic(
