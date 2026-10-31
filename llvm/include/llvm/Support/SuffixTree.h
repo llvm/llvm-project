@@ -56,6 +56,16 @@ public:
   };
 
 private:
+  /// The minimum length of a repeated substring to find.
+  /// Since we're outlining, we want at least two instructions in the range.
+  /// FIXME: This may not be true for targets like X86 which support many
+  /// instruction lengths.
+  static constexpr unsigned MinLength = 2;
+
+  const unsigned BoundaryStart;
+
+  bool isBoundary(unsigned Value) const { return Value >= BoundaryStart; }
+
   /// Maintains internal nodes in the tree.
   SpecificBumpPtrAllocator<SuffixTreeInternalNode> InternalNodeAllocator;
   /// Maintains leaf nodes in the tree.
@@ -114,10 +124,6 @@ private:
   /// \returns A pointer to the root.
   SuffixTreeInternalNode *insertRoot();
 
-  /// Set the suffix indices of the leaves to the start indices of their
-  /// respective suffixes.
-  void setSuffixIndices();
-
   /// Construct the suffix tree for the prefix of the input ending at
   /// \p EndIdx.
   ///
@@ -153,8 +159,11 @@ public:
   /// \param Str The string to construct the suffix tree for.
   /// \param OutlinerLeafDescendants Whether to consider leaf descendants or
   /// only leaf children (used by Machine Outliner).
+  /// \param BoundaryStart Values at or above this lower bound must be unique
+  /// terminators.
   LLVM_ABI SuffixTree(const ArrayRef<unsigned> &Str,
-                      bool OutlinerLeafDescendants = false);
+                      bool OutlinerLeafDescendants = false,
+                      unsigned BoundaryStart = SuffixTreeNode::EmptyIdx);
 
   /// Iterator for finding all repeated substrings in the suffix tree.
   struct RepeatedSubstringIterator {
@@ -167,12 +176,6 @@ public:
 
     /// The nodes left to visit.
     SmallVector<SuffixTreeInternalNode *> InternalNodesToVisit;
-
-    /// The minimum length of a repeated substring to find.
-    /// Since we're outlining, we want at least two instructions in the range.
-    /// FIXME: This may not be true for targets like X86 which support many
-    /// instruction lengths.
-    const unsigned MinLength = 2;
 
     /// Vector of leaf nodes of the suffix tree.
     const std::vector<SuffixTreeLeafNode *> &LeafNodes;
