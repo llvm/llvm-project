@@ -656,37 +656,37 @@ define <2 x i128> @smulh_v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; SSE-NEXT:    movq %rax, %r9
 ; SSE-NEXT:    addq %r11, %r9
 ; SSE-NEXT:    adcq %rbx, %rsi
-; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; SSE-NEXT:    movq %r8, %r14
 ; SSE-NEXT:    sarq $63, %r14
-; SSE-NEXT:    imulq %r10, %r14
+; SSE-NEXT:    imulq %r11, %r14
 ; SSE-NEXT:    movq %rcx, %rax
-; SSE-NEXT:    mulq %r10
-; SSE-NEXT:    movq %rdx, %r11
-; SSE-NEXT:    movq %r8, %rax
-; SSE-NEXT:    mulq %r10
+; SSE-NEXT:    mulq %r11
 ; SSE-NEXT:    movq %rdx, %r10
+; SSE-NEXT:    movq %r8, %rax
+; SSE-NEXT:    mulq %r11
+; SSE-NEXT:    movq %rdx, %r11
 ; SSE-NEXT:    movq %rax, %rbx
-; SSE-NEXT:    addq %r11, %rbx
-; SSE-NEXT:    adcq %r14, %r10
+; SSE-NEXT:    addq %r10, %rbx
+; SSE-NEXT:    adcq %r14, %r11
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %r14
-; SSE-NEXT:    movq %r10, %r15
+; SSE-NEXT:    movq %r11, %r15
 ; SSE-NEXT:    sarq $63, %r15
 ; SSE-NEXT:    movq %r14, %r12
 ; SSE-NEXT:    sarq $63, %r12
 ; SSE-NEXT:    movq %rcx, %rax
 ; SSE-NEXT:    mulq %r14
-; SSE-NEXT:    movq %rdx, %r11
+; SSE-NEXT:    movq %rdx, %r10
 ; SSE-NEXT:    imulq %rcx, %r12
 ; SSE-NEXT:    addq %rbx, %rax
-; SSE-NEXT:    adcq %r12, %r11
-; SSE-NEXT:    movq %r11, %rcx
+; SSE-NEXT:    adcq %r12, %r10
+; SSE-NEXT:    movq %r10, %rcx
 ; SSE-NEXT:    sarq $63, %rcx
-; SSE-NEXT:    addq %r10, %r11
+; SSE-NEXT:    addq %r11, %r10
 ; SSE-NEXT:    adcq %r15, %rcx
 ; SSE-NEXT:    movq %r8, %rax
 ; SSE-NEXT:    imulq %r14
-; SSE-NEXT:    addq %r11, %rax
+; SSE-NEXT:    addq %r10, %rax
 ; SSE-NEXT:    adcq %rcx, %rdx
 ; SSE-NEXT:    movq %rax, 16(%rdi)
 ; SSE-NEXT:    movq %r9, (%rdi)

@@ -2440,22 +2440,22 @@ define i32 @bitreverse_maybe_zero(i32 %x) {
 define i32 @ctpop_known_nonzero(i32 %xx) {
 ; X86-LABEL: ctpop_known_nonzero:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    orl $64, %ecx
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    orl $64, %eax
-; X86-NEXT:    shrl %ecx
-; X86-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $858993459, %ecx # imm = 0x33333333
-; X86-NEXT:    shrl $2, %eax
 ; X86-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    shrl $2, %ecx
+; X86-NEXT:    andl $858993459, %ecx # imm = 0x33333333
 ; X86-NEXT:    addl %eax, %ecx
-; X86-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
-; X86-NEXT:    imull $16843009, %ecx, %eax # imm = 0x1010101
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrl $4, %eax
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X86-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
 ; X86-NEXT:    shrl $24, %eax
 ; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl

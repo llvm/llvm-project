@@ -1103,32 +1103,32 @@ define <64 x i8> @mul_v64i8_const20(<64 x i8> %a) nounwind {
 define <64 x i8> @mul_v64i8_const24(<64 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v64i8_const24:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    psllw $3, %xmm5
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248]
-; SSE2-NEXT:    pand %xmm4, %xmm5
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    psllw $3, %xmm4
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248]
+; SSE2-NEXT:    pand %xmm5, %xmm4
 ; SSE2-NEXT:    psllw $4, %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; SSE2-NEXT:    pand %xmm6, %xmm0
-; SSE2-NEXT:    paddb %xmm5, %xmm0
-; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    psllw $3, %xmm5
-; SSE2-NEXT:    pand %xmm4, %xmm5
+; SSE2-NEXT:    paddb %xmm4, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    psllw $3, %xmm4
+; SSE2-NEXT:    pand %xmm5, %xmm4
 ; SSE2-NEXT:    psllw $4, %xmm1
 ; SSE2-NEXT:    pand %xmm6, %xmm1
-; SSE2-NEXT:    paddb %xmm5, %xmm1
-; SSE2-NEXT:    movdqa %xmm2, %xmm5
-; SSE2-NEXT:    psllw $3, %xmm5
-; SSE2-NEXT:    pand %xmm4, %xmm5
+; SSE2-NEXT:    paddb %xmm4, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    psllw $3, %xmm4
+; SSE2-NEXT:    pand %xmm5, %xmm4
 ; SSE2-NEXT:    psllw $4, %xmm2
 ; SSE2-NEXT:    pand %xmm6, %xmm2
-; SSE2-NEXT:    paddb %xmm5, %xmm2
-; SSE2-NEXT:    movdqa %xmm3, %xmm5
-; SSE2-NEXT:    psllw $3, %xmm5
-; SSE2-NEXT:    pand %xmm4, %xmm5
+; SSE2-NEXT:    paddb %xmm4, %xmm2
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psllw $3, %xmm4
+; SSE2-NEXT:    pand %xmm5, %xmm4
 ; SSE2-NEXT:    psllw $4, %xmm3
 ; SSE2-NEXT:    pand %xmm6, %xmm3
-; SSE2-NEXT:    paddb %xmm5, %xmm3
+; SSE2-NEXT:    paddb %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: mul_v64i8_const24:

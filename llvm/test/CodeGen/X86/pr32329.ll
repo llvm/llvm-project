@@ -30,7 +30,7 @@ define void @foo() local_unnamed_addr {
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movsbl var_27, %eax
-; X86-NEXT:    movzwl var_2, %ebx
+; X86-NEXT:    movzwl var_2, %edi
 ; X86-NEXT:    movl var_310, %ecx
 ; X86-NEXT:    imull %eax, %ecx
 ; X86-NEXT:    addl var_24, %ecx
@@ -38,21 +38,21 @@ define void @foo() local_unnamed_addr {
 ; X86-NEXT:    andl obj, %esi
 ; X86-NEXT:    leal (%esi,%esi), %edx
 ; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    subl %ebx, %edi
-; X86-NEXT:    imull %edi, %ecx
+; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    subl %edi, %ebx
+; X86-NEXT:    imull %ebx, %ecx
 ; X86-NEXT:    addb $113, %cl
-; X86-NEXT:    movl $9, %ebx
+; X86-NEXT:    movl $9, %edi
 ; X86-NEXT:    xorl %ebp, %ebp
-; X86-NEXT:    shldl %cl, %ebx, %ebp
-; X86-NEXT:    shll %cl, %ebx
+; X86-NEXT:    shldl %cl, %edi, %ebp
+; X86-NEXT:    shll %cl, %edi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    cmovnel %ebx, %ebp
+; X86-NEXT:    cmovnel %edi, %ebp
 ; X86-NEXT:    movl $0, %ecx
-; X86-NEXT:    cmovnel %ecx, %ebx
-; X86-NEXT:    cmpl %esi, %edi
+; X86-NEXT:    cmovnel %ecx, %edi
+; X86-NEXT:    cmpl %esi, %ebx
 ; X86-NEXT:    movl %ebp, var_50+4
-; X86-NEXT:    movl %ebx, var_50
+; X86-NEXT:    movl %edi, var_50
 ; X86-NEXT:    setge var_205
 ; X86-NEXT:    imull %eax, %edx
 ; X86-NEXT:    movb %dl, var_218

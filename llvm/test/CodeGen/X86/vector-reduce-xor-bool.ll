@@ -466,29 +466,29 @@ define zeroext i1 @trunc_v32i8_v32i1(<32 x i8>) nounwind {
 ; SSE-LABEL: trunc_v32i8_v32i1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psllw $7, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    psllw $7, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %edx
-; SSE-NEXT:    movl %edx, %eax
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    orl %ecx, %eax
-; SSE-NEXT:    xorl %edx, %eax
-; SSE-NEXT:    xorb %ah, %al
+; SSE-NEXT:    pmovmskb %xmm1, %ecx
+; SSE-NEXT:    movl %ecx, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %eax, %edx
+; SSE-NEXT:    xorl %ecx, %edx
+; SSE-NEXT:    xorb %dh, %dl
 ; SSE-NEXT:    setnp %al
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: trunc_v32i8_v32i1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm1
-; AVX1-NEXT:    vpmovmskb %xmm1, %ecx
+; AVX1-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; AVX1-NEXT:    movl %edx, %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    orl %ecx, %eax
-; AVX1-NEXT:    xorl %edx, %eax
-; AVX1-NEXT:    xorb %ah, %al
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    movl %ecx, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    xorl %ecx, %edx
+; AVX1-NEXT:    xorb %dh, %dl
 ; AVX1-NEXT:    setnp %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    ret{{[l|q]}}
@@ -831,14 +831,14 @@ define zeroext i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; X86-SSE2-NEXT:    pand 8(%ebp), %xmm3
 ; X86-SSE2-NEXT:    packuswb %xmm3, %xmm2
 ; X86-SSE2-NEXT:    psllw $7, %xmm0
-; X86-SSE2-NEXT:    pmovmskb %xmm0, %ecx
+; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    psllw $7, %xmm2
-; X86-SSE2-NEXT:    pmovmskb %xmm2, %edx
-; X86-SSE2-NEXT:    movl %edx, %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    orl %ecx, %eax
-; X86-SSE2-NEXT:    xorl %edx, %eax
-; X86-SSE2-NEXT:    xorb %ah, %al
+; X86-SSE2-NEXT:    pmovmskb %xmm2, %ecx
+; X86-SSE2-NEXT:    movl %ecx, %edx
+; X86-SSE2-NEXT:    shll $16, %edx
+; X86-SSE2-NEXT:    orl %eax, %edx
+; X86-SSE2-NEXT:    xorl %ecx, %edx
+; X86-SSE2-NEXT:    xorb %dh, %dl
 ; X86-SSE2-NEXT:    setnp %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
@@ -854,14 +854,14 @@ define zeroext i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; X64-SSE2-NEXT:    pand %xmm4, %xmm0
 ; X64-SSE2-NEXT:    packuswb %xmm1, %xmm0
 ; X64-SSE2-NEXT:    psllw $7, %xmm0
-; X64-SSE2-NEXT:    pmovmskb %xmm0, %ecx
+; X64-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X64-SSE2-NEXT:    psllw $7, %xmm2
-; X64-SSE2-NEXT:    pmovmskb %xmm2, %edx
-; X64-SSE2-NEXT:    movl %edx, %eax
-; X64-SSE2-NEXT:    shll $16, %eax
-; X64-SSE2-NEXT:    orl %ecx, %eax
-; X64-SSE2-NEXT:    xorl %edx, %eax
-; X64-SSE2-NEXT:    xorb %ah, %al
+; X64-SSE2-NEXT:    pmovmskb %xmm2, %ecx
+; X64-SSE2-NEXT:    movl %ecx, %edx
+; X64-SSE2-NEXT:    shll $16, %edx
+; X64-SSE2-NEXT:    orl %eax, %edx
+; X64-SSE2-NEXT:    xorl %ecx, %edx
+; X64-SSE2-NEXT:    xorb %dh, %dl
 ; X64-SSE2-NEXT:    setnp %al
 ; X64-SSE2-NEXT:    retq
 ;
@@ -879,14 +879,14 @@ define zeroext i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; X86-SSE4-NEXT:    pand 8(%ebp), %xmm3
 ; X86-SSE4-NEXT:    packuswb %xmm3, %xmm2
 ; X86-SSE4-NEXT:    psllw $7, %xmm0
-; X86-SSE4-NEXT:    pmovmskb %xmm0, %ecx
+; X86-SSE4-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE4-NEXT:    psllw $7, %xmm2
-; X86-SSE4-NEXT:    pmovmskb %xmm2, %edx
-; X86-SSE4-NEXT:    movl %edx, %eax
-; X86-SSE4-NEXT:    shll $16, %eax
-; X86-SSE4-NEXT:    orl %ecx, %eax
-; X86-SSE4-NEXT:    xorl %edx, %eax
-; X86-SSE4-NEXT:    xorb %ah, %al
+; X86-SSE4-NEXT:    pmovmskb %xmm2, %ecx
+; X86-SSE4-NEXT:    movl %ecx, %edx
+; X86-SSE4-NEXT:    shll $16, %edx
+; X86-SSE4-NEXT:    orl %eax, %edx
+; X86-SSE4-NEXT:    xorl %ecx, %edx
+; X86-SSE4-NEXT:    xorb %dh, %dl
 ; X86-SSE4-NEXT:    setnp %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
@@ -902,14 +902,14 @@ define zeroext i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; X64-SSE4-NEXT:    pand %xmm4, %xmm0
 ; X64-SSE4-NEXT:    packuswb %xmm1, %xmm0
 ; X64-SSE4-NEXT:    psllw $7, %xmm0
-; X64-SSE4-NEXT:    pmovmskb %xmm0, %ecx
+; X64-SSE4-NEXT:    pmovmskb %xmm0, %eax
 ; X64-SSE4-NEXT:    psllw $7, %xmm2
-; X64-SSE4-NEXT:    pmovmskb %xmm2, %edx
-; X64-SSE4-NEXT:    movl %edx, %eax
-; X64-SSE4-NEXT:    shll $16, %eax
-; X64-SSE4-NEXT:    orl %ecx, %eax
-; X64-SSE4-NEXT:    xorl %edx, %eax
-; X64-SSE4-NEXT:    xorb %ah, %al
+; X64-SSE4-NEXT:    pmovmskb %xmm2, %ecx
+; X64-SSE4-NEXT:    movl %ecx, %edx
+; X64-SSE4-NEXT:    shll $16, %edx
+; X64-SSE4-NEXT:    orl %eax, %edx
+; X64-SSE4-NEXT:    xorl %ecx, %edx
+; X64-SSE4-NEXT:    xorb %dh, %dl
 ; X64-SSE4-NEXT:    setnp %al
 ; X64-SSE4-NEXT:    retq
 ;
@@ -923,14 +923,14 @@ define zeroext i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    vpsllw $7, %xmm1, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; AVX1-NEXT:    movl %edx, %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    orl %ecx, %eax
-; AVX1-NEXT:    xorl %edx, %eax
-; AVX1-NEXT:    xorb %ah, %al
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    movl %ecx, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    xorl %ecx, %edx
+; AVX1-NEXT:    xorb %dh, %dl
 ; AVX1-NEXT:    setnp %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    ret{{[l|q]}}
@@ -957,17 +957,17 @@ define zeroext i1 @trunc_v32i16_v32i1(<32 x i16>) nounwind {
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm1
 ; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %edx
 ; AVX512F-NEXT:    shll $16, %edx
-; AVX512F-NEXT:    orl %ecx, %edx
-; AVX512F-NEXT:    xorl %edx, %eax
-; AVX512F-NEXT:    xorb %ah, %al
+; AVX512F-NEXT:    orl %eax, %edx
+; AVX512F-NEXT:    xorl %edx, %ecx
+; AVX512F-NEXT:    xorb %ch, %cl
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -1013,18 +1013,18 @@ define zeroext i1 @trunc_v64i8_v64i1(<64 x i8>) nounwind {
 ; X86-SSE-NEXT:    subl $16, %esp
 ; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    psllw $7, %xmm2
-; X86-SSE-NEXT:    pmovmskb %xmm2, %ecx
+; X86-SSE-NEXT:    pmovmskb %xmm2, %eax
 ; X86-SSE-NEXT:    psllw $7, %xmm3
-; X86-SSE-NEXT:    pmovmskb %xmm3, %eax
-; X86-SSE-NEXT:    shll $16, %eax
-; X86-SSE-NEXT:    orl %ecx, %eax
+; X86-SSE-NEXT:    pmovmskb %xmm3, %ecx
+; X86-SSE-NEXT:    shll $16, %ecx
+; X86-SSE-NEXT:    orl %eax, %ecx
 ; X86-SSE-NEXT:    psllw $7, %xmm0
-; X86-SSE-NEXT:    pmovmskb %xmm0, %ecx
+; X86-SSE-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE-NEXT:    psllw $7, %xmm1
 ; X86-SSE-NEXT:    pmovmskb %xmm1, %edx
 ; X86-SSE-NEXT:    shll $16, %edx
-; X86-SSE-NEXT:    orl %ecx, %edx
-; X86-SSE-NEXT:    xorl %eax, %edx
+; X86-SSE-NEXT:    orl %eax, %edx
+; X86-SSE-NEXT:    xorl %ecx, %edx
 ; X86-SSE-NEXT:    movl %edx, %eax
 ; X86-SSE-NEXT:    shrl $16, %eax
 ; X86-SSE-NEXT:    xorl %edx, %eax
@@ -1056,55 +1056,30 @@ define zeroext i1 @trunc_v64i8_v64i1(<64 x i8>) nounwind {
 ; X64-SSE-NEXT:    setnp %al
 ; X64-SSE-NEXT:    retq
 ;
-; X86-AVX1-LABEL: trunc_v64i8_v64i1:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpsllw $7, %xmm1, %xmm2
-; X86-AVX1-NEXT:    vpmovmskb %xmm2, %ecx
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; X86-AVX1-NEXT:    vpsllw $7, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpmovmskb %xmm1, %eax
-; X86-AVX1-NEXT:    shll $16, %eax
-; X86-AVX1-NEXT:    orl %ecx, %eax
-; X86-AVX1-NEXT:    vpsllw $7, %xmm0, %xmm1
-; X86-AVX1-NEXT:    vpmovmskb %xmm1, %ecx
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X86-AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; X86-AVX1-NEXT:    shll $16, %edx
-; X86-AVX1-NEXT:    orl %ecx, %edx
-; X86-AVX1-NEXT:    xorl %eax, %edx
-; X86-AVX1-NEXT:    movl %edx, %eax
-; X86-AVX1-NEXT:    shrl $16, %eax
-; X86-AVX1-NEXT:    xorl %edx, %eax
-; X86-AVX1-NEXT:    xorb %ah, %al
-; X86-AVX1-NEXT:    setnp %al
-; X86-AVX1-NEXT:    vzeroupper
-; X86-AVX1-NEXT:    retl
-;
-; X64-AVX1-LABEL: trunc_v64i8_v64i1:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpsllw $7, %xmm1, %xmm2
-; X64-AVX1-NEXT:    vpmovmskb %xmm2, %eax
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; X64-AVX1-NEXT:    vpsllw $7, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpmovmskb %xmm1, %ecx
-; X64-AVX1-NEXT:    shll $16, %ecx
-; X64-AVX1-NEXT:    orl %eax, %ecx
-; X64-AVX1-NEXT:    vpsllw $7, %xmm0, %xmm1
-; X64-AVX1-NEXT:    vpmovmskb %xmm1, %eax
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X64-AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; X64-AVX1-NEXT:    shll $16, %edx
-; X64-AVX1-NEXT:    orl %eax, %edx
-; X64-AVX1-NEXT:    xorl %ecx, %edx
-; X64-AVX1-NEXT:    movl %edx, %eax
-; X64-AVX1-NEXT:    shrl $16, %eax
-; X64-AVX1-NEXT:    xorl %edx, %eax
-; X64-AVX1-NEXT:    xorb %ah, %al
-; X64-AVX1-NEXT:    setnp %al
-; X64-AVX1-NEXT:    vzeroupper
-; X64-AVX1-NEXT:    retq
+; AVX1-LABEL: trunc_v64i8_v64i1:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsllw $7, %xmm1, %xmm2
+; AVX1-NEXT:    vpmovmskb %xmm2, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpsllw $7, %xmm1, %xmm1
+; AVX1-NEXT:    vpmovmskb %xmm1, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %eax, %ecx
+; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm1
+; AVX1-NEXT:    vpmovmskb %xmm1, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    xorl %ecx, %edx
+; AVX1-NEXT:    movl %edx, %eax
+; AVX1-NEXT:    shrl $16, %eax
+; AVX1-NEXT:    xorl %edx, %eax
+; AVX1-NEXT:    xorb %ah, %al
+; AVX1-NEXT:    setnp %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    ret{{[l|q]}}
 ;
 ; AVX2-LABEL: trunc_v64i8_v64i1:
 ; AVX2:       # %bb.0:
@@ -1641,14 +1616,14 @@ define zeroext i1 @icmp0_v32i8_v32i1(<32 x i8>) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    pcmpeqb %xmm2, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    pmovmskb %xmm0, %eax
 ; SSE-NEXT:    pcmpeqb %xmm2, %xmm1
-; SSE-NEXT:    pmovmskb %xmm1, %edx
-; SSE-NEXT:    movl %edx, %eax
-; SSE-NEXT:    shll $16, %eax
-; SSE-NEXT:    orl %ecx, %eax
-; SSE-NEXT:    xorl %edx, %eax
-; SSE-NEXT:    xorb %ah, %al
+; SSE-NEXT:    pmovmskb %xmm1, %ecx
+; SSE-NEXT:    movl %ecx, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %eax, %edx
+; SSE-NEXT:    xorl %ecx, %edx
+; SSE-NEXT:    xorb %dh, %dl
 ; SSE-NEXT:    setnp %al
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
@@ -1656,15 +1631,15 @@ define zeroext i1 @icmp0_v32i8_v32i1(<32 x i8>) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpmovmskb %xmm2, %ecx
+; AVX1-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; AVX1-NEXT:    movl %edx, %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    orl %ecx, %eax
-; AVX1-NEXT:    xorl %edx, %eax
-; AVX1-NEXT:    xorb %ah, %al
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    movl %ecx, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    xorl %ecx, %edx
+; AVX1-NEXT:    xorb %dh, %dl
 ; AVX1-NEXT:    setnp %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    ret{{[l|q]}}
@@ -2003,16 +1978,16 @@ define zeroext i1 @icmp0_v32i16_v32i1(<32 x i16>) nounwind {
 ; X86-SSE-NEXT:    pcmpeqw %xmm3, %xmm1
 ; X86-SSE-NEXT:    pcmpeqw %xmm3, %xmm0
 ; X86-SSE-NEXT:    packsswb %xmm1, %xmm0
-; X86-SSE-NEXT:    pmovmskb %xmm0, %ecx
+; X86-SSE-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE-NEXT:    pcmpeqw %xmm3, %xmm2
 ; X86-SSE-NEXT:    pcmpeqw 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    packsswb %xmm3, %xmm2
-; X86-SSE-NEXT:    pmovmskb %xmm2, %edx
-; X86-SSE-NEXT:    movl %edx, %eax
-; X86-SSE-NEXT:    shll $16, %eax
-; X86-SSE-NEXT:    orl %ecx, %eax
-; X86-SSE-NEXT:    xorl %edx, %eax
-; X86-SSE-NEXT:    xorb %ah, %al
+; X86-SSE-NEXT:    pmovmskb %xmm2, %ecx
+; X86-SSE-NEXT:    movl %ecx, %edx
+; X86-SSE-NEXT:    shll $16, %edx
+; X86-SSE-NEXT:    orl %eax, %edx
+; X86-SSE-NEXT:    xorl %ecx, %edx
+; X86-SSE-NEXT:    xorb %dh, %dl
 ; X86-SSE-NEXT:    setnp %al
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp
@@ -2024,16 +1999,16 @@ define zeroext i1 @icmp0_v32i16_v32i1(<32 x i16>) nounwind {
 ; X64-SSE-NEXT:    pcmpeqw %xmm4, %xmm1
 ; X64-SSE-NEXT:    pcmpeqw %xmm4, %xmm0
 ; X64-SSE-NEXT:    packsswb %xmm1, %xmm0
-; X64-SSE-NEXT:    pmovmskb %xmm0, %ecx
+; X64-SSE-NEXT:    pmovmskb %xmm0, %eax
 ; X64-SSE-NEXT:    pcmpeqw %xmm4, %xmm3
 ; X64-SSE-NEXT:    pcmpeqw %xmm4, %xmm2
 ; X64-SSE-NEXT:    packsswb %xmm3, %xmm2
-; X64-SSE-NEXT:    pmovmskb %xmm2, %edx
-; X64-SSE-NEXT:    movl %edx, %eax
-; X64-SSE-NEXT:    shll $16, %eax
-; X64-SSE-NEXT:    orl %ecx, %eax
-; X64-SSE-NEXT:    xorl %edx, %eax
-; X64-SSE-NEXT:    xorb %ah, %al
+; X64-SSE-NEXT:    pmovmskb %xmm2, %ecx
+; X64-SSE-NEXT:    movl %ecx, %edx
+; X64-SSE-NEXT:    shll $16, %edx
+; X64-SSE-NEXT:    orl %eax, %edx
+; X64-SSE-NEXT:    xorl %ecx, %edx
+; X64-SSE-NEXT:    xorb %dh, %dl
 ; X64-SSE-NEXT:    setnp %al
 ; X64-SSE-NEXT:    retq
 ;
@@ -2044,17 +2019,17 @@ define zeroext i1 @icmp0_v32i16_v32i1(<32 x i16>) nounwind {
 ; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpacksswb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; AVX1-NEXT:    movl %edx, %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    orl %ecx, %eax
-; AVX1-NEXT:    xorl %edx, %eax
-; AVX1-NEXT:    xorb %ah, %al
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    movl %ecx, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    xorl %ecx, %edx
+; AVX1-NEXT:    xorb %dh, %dl
 ; AVX1-NEXT:    setnp %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    ret{{[l|q]}}
@@ -2081,17 +2056,17 @@ define zeroext i1 @icmp0_v32i16_v32i1(<32 x i16>) nounwind {
 ; AVX512F-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k0
-; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512F-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %edx
 ; AVX512F-NEXT:    shll $16, %edx
-; AVX512F-NEXT:    orl %ecx, %edx
-; AVX512F-NEXT:    xorl %edx, %eax
-; AVX512F-NEXT:    xorb %ah, %al
+; AVX512F-NEXT:    orl %eax, %edx
+; AVX512F-NEXT:    xorl %edx, %ecx
+; AVX512F-NEXT:    xorb %ch, %cl
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -2135,18 +2110,18 @@ define zeroext i1 @icmp0_v64i8_v64i1(<64 x i8>) nounwind {
 ; X86-SSE-NEXT:    subl $16, %esp
 ; X86-SSE-NEXT:    pxor %xmm3, %xmm3
 ; X86-SSE-NEXT:    pcmpeqb %xmm3, %xmm0
-; X86-SSE-NEXT:    pmovmskb %xmm0, %ecx
+; X86-SSE-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE-NEXT:    pcmpeqb %xmm3, %xmm1
-; X86-SSE-NEXT:    pmovmskb %xmm1, %eax
-; X86-SSE-NEXT:    shll $16, %eax
-; X86-SSE-NEXT:    orl %ecx, %eax
+; X86-SSE-NEXT:    pmovmskb %xmm1, %ecx
+; X86-SSE-NEXT:    shll $16, %ecx
+; X86-SSE-NEXT:    orl %eax, %ecx
 ; X86-SSE-NEXT:    pcmpeqb %xmm3, %xmm2
-; X86-SSE-NEXT:    pmovmskb %xmm2, %ecx
+; X86-SSE-NEXT:    pmovmskb %xmm2, %eax
 ; X86-SSE-NEXT:    pcmpeqb 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    pmovmskb %xmm3, %edx
 ; X86-SSE-NEXT:    shll $16, %edx
-; X86-SSE-NEXT:    orl %ecx, %edx
-; X86-SSE-NEXT:    xorl %eax, %edx
+; X86-SSE-NEXT:    orl %eax, %edx
+; X86-SSE-NEXT:    xorl %ecx, %edx
 ; X86-SSE-NEXT:    movl %edx, %eax
 ; X86-SSE-NEXT:    shrl $16, %eax
 ; X86-SSE-NEXT:    xorl %edx, %eax
@@ -2179,57 +2154,31 @@ define zeroext i1 @icmp0_v64i8_v64i1(<64 x i8>) nounwind {
 ; X64-SSE-NEXT:    setnp %al
 ; X64-SSE-NEXT:    retq
 ;
-; X86-AVX1-LABEL: icmp0_v64i8_v64i1:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X86-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm3
-; X86-AVX1-NEXT:    vpmovmskb %xmm3, %ecx
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; X86-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpmovmskb %xmm1, %eax
-; X86-AVX1-NEXT:    shll $16, %eax
-; X86-AVX1-NEXT:    orl %ecx, %eax
-; X86-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm1
-; X86-AVX1-NEXT:    vpmovmskb %xmm1, %ecx
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X86-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; X86-AVX1-NEXT:    shll $16, %edx
-; X86-AVX1-NEXT:    orl %ecx, %edx
-; X86-AVX1-NEXT:    xorl %eax, %edx
-; X86-AVX1-NEXT:    movl %edx, %eax
-; X86-AVX1-NEXT:    shrl $16, %eax
-; X86-AVX1-NEXT:    xorl %edx, %eax
-; X86-AVX1-NEXT:    xorb %ah, %al
-; X86-AVX1-NEXT:    setnp %al
-; X86-AVX1-NEXT:    vzeroupper
-; X86-AVX1-NEXT:    retl
-;
-; X64-AVX1-LABEL: icmp0_v64i8_v64i1:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm3
-; X64-AVX1-NEXT:    vpmovmskb %xmm3, %eax
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; X64-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpmovmskb %xmm1, %ecx
-; X64-AVX1-NEXT:    shll $16, %ecx
-; X64-AVX1-NEXT:    orl %eax, %ecx
-; X64-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm1
-; X64-AVX1-NEXT:    vpmovmskb %xmm1, %eax
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X64-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; X64-AVX1-NEXT:    shll $16, %edx
-; X64-AVX1-NEXT:    orl %eax, %edx
-; X64-AVX1-NEXT:    xorl %ecx, %edx
-; X64-AVX1-NEXT:    movl %edx, %eax
-; X64-AVX1-NEXT:    shrl $16, %eax
-; X64-AVX1-NEXT:    xorl %edx, %eax
-; X64-AVX1-NEXT:    xorb %ah, %al
-; X64-AVX1-NEXT:    setnp %al
-; X64-AVX1-NEXT:    vzeroupper
-; X64-AVX1-NEXT:    retq
+; AVX1-LABEL: icmp0_v64i8_v64i1:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpmovmskb %xmm3, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmovmskb %xmm1, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %eax, %ecx
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm1
+; AVX1-NEXT:    vpmovmskb %xmm1, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    xorl %ecx, %edx
+; AVX1-NEXT:    movl %edx, %eax
+; AVX1-NEXT:    shrl $16, %eax
+; AVX1-NEXT:    xorl %edx, %eax
+; AVX1-NEXT:    xorb %ah, %al
+; AVX1-NEXT:    setnp %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    ret{{[l|q]}}
 ;
 ; AVX2-LABEL: icmp0_v64i8_v64i1:
 ; AVX2:       # %bb.0:
@@ -2831,14 +2780,14 @@ define zeroext i1 @icmp_v32i8_v32i1(<32 x i8> %0, <32 x i8> %01) nounwind {
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
 ; X86-SSE-NEXT:    pcmpeqb %xmm2, %xmm0
-; X86-SSE-NEXT:    pmovmskb %xmm0, %ecx
+; X86-SSE-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE-NEXT:    pcmpeqb 8(%ebp), %xmm1
-; X86-SSE-NEXT:    pmovmskb %xmm1, %edx
-; X86-SSE-NEXT:    movl %edx, %eax
-; X86-SSE-NEXT:    shll $16, %eax
-; X86-SSE-NEXT:    orl %ecx, %eax
-; X86-SSE-NEXT:    xorl %edx, %eax
-; X86-SSE-NEXT:    xorb %ah, %al
+; X86-SSE-NEXT:    pmovmskb %xmm1, %ecx
+; X86-SSE-NEXT:    movl %ecx, %edx
+; X86-SSE-NEXT:    shll $16, %edx
+; X86-SSE-NEXT:    orl %eax, %edx
+; X86-SSE-NEXT:    xorl %ecx, %edx
+; X86-SSE-NEXT:    xorb %dh, %dl
 ; X86-SSE-NEXT:    setnp %al
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp
@@ -2847,30 +2796,30 @@ define zeroext i1 @icmp_v32i8_v32i1(<32 x i8> %0, <32 x i8> %01) nounwind {
 ; X64-SSE-LABEL: icmp_v32i8_v32i1:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    pcmpeqb %xmm2, %xmm0
-; X64-SSE-NEXT:    pmovmskb %xmm0, %ecx
+; X64-SSE-NEXT:    pmovmskb %xmm0, %eax
 ; X64-SSE-NEXT:    pcmpeqb %xmm3, %xmm1
-; X64-SSE-NEXT:    pmovmskb %xmm1, %edx
-; X64-SSE-NEXT:    movl %edx, %eax
-; X64-SSE-NEXT:    shll $16, %eax
-; X64-SSE-NEXT:    orl %ecx, %eax
-; X64-SSE-NEXT:    xorl %edx, %eax
-; X64-SSE-NEXT:    xorb %ah, %al
+; X64-SSE-NEXT:    pmovmskb %xmm1, %ecx
+; X64-SSE-NEXT:    movl %ecx, %edx
+; X64-SSE-NEXT:    shll $16, %edx
+; X64-SSE-NEXT:    orl %eax, %edx
+; X64-SSE-NEXT:    xorl %ecx, %edx
+; X64-SSE-NEXT:    xorb %dh, %dl
 ; X64-SSE-NEXT:    setnp %al
 ; X64-SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: icmp_v32i8_v32i1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpmovmskb %xmm2, %ecx
+; AVX1-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; AVX1-NEXT:    movl %edx, %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    orl %ecx, %eax
-; AVX1-NEXT:    xorl %edx, %eax
-; AVX1-NEXT:    xorb %ah, %al
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    movl %ecx, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    xorl %ecx, %edx
+; AVX1-NEXT:    xorb %dh, %dl
 ; AVX1-NEXT:    setnp %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    ret{{[l|q]}}
@@ -3291,16 +3240,16 @@ define zeroext i1 @icmp_v32i16_v32i1(<32 x i16> %0, <32 x i16> %01) nounwind {
 ; X86-SSE-NEXT:    pcmpeqw 40(%ebp), %xmm1
 ; X86-SSE-NEXT:    pcmpeqw 24(%ebp), %xmm0
 ; X86-SSE-NEXT:    packsswb %xmm1, %xmm0
-; X86-SSE-NEXT:    pmovmskb %xmm0, %ecx
+; X86-SSE-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE-NEXT:    pcmpeqw 72(%ebp), %xmm3
 ; X86-SSE-NEXT:    pcmpeqw 56(%ebp), %xmm2
 ; X86-SSE-NEXT:    packsswb %xmm3, %xmm2
-; X86-SSE-NEXT:    pmovmskb %xmm2, %edx
-; X86-SSE-NEXT:    movl %edx, %eax
-; X86-SSE-NEXT:    shll $16, %eax
-; X86-SSE-NEXT:    orl %ecx, %eax
-; X86-SSE-NEXT:    xorl %edx, %eax
-; X86-SSE-NEXT:    xorb %ah, %al
+; X86-SSE-NEXT:    pmovmskb %xmm2, %ecx
+; X86-SSE-NEXT:    movl %ecx, %edx
+; X86-SSE-NEXT:    shll $16, %edx
+; X86-SSE-NEXT:    orl %eax, %edx
+; X86-SSE-NEXT:    xorl %ecx, %edx
+; X86-SSE-NEXT:    xorb %dh, %dl
 ; X86-SSE-NEXT:    setnp %al
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp
@@ -3311,16 +3260,16 @@ define zeroext i1 @icmp_v32i16_v32i1(<32 x i16> %0, <32 x i16> %01) nounwind {
 ; X64-SSE-NEXT:    pcmpeqw %xmm5, %xmm1
 ; X64-SSE-NEXT:    pcmpeqw %xmm4, %xmm0
 ; X64-SSE-NEXT:    packsswb %xmm1, %xmm0
-; X64-SSE-NEXT:    pmovmskb %xmm0, %ecx
+; X64-SSE-NEXT:    pmovmskb %xmm0, %eax
 ; X64-SSE-NEXT:    pcmpeqw %xmm7, %xmm3
 ; X64-SSE-NEXT:    pcmpeqw %xmm6, %xmm2
 ; X64-SSE-NEXT:    packsswb %xmm3, %xmm2
-; X64-SSE-NEXT:    pmovmskb %xmm2, %edx
-; X64-SSE-NEXT:    movl %edx, %eax
-; X64-SSE-NEXT:    shll $16, %eax
-; X64-SSE-NEXT:    orl %ecx, %eax
-; X64-SSE-NEXT:    xorl %edx, %eax
-; X64-SSE-NEXT:    xorb %ah, %al
+; X64-SSE-NEXT:    pmovmskb %xmm2, %ecx
+; X64-SSE-NEXT:    movl %ecx, %edx
+; X64-SSE-NEXT:    shll $16, %edx
+; X64-SSE-NEXT:    orl %eax, %edx
+; X64-SSE-NEXT:    xorl %ecx, %edx
+; X64-SSE-NEXT:    xorb %dh, %dl
 ; X64-SSE-NEXT:    setnp %al
 ; X64-SSE-NEXT:    retq
 ;
@@ -3335,17 +3284,17 @@ define zeroext i1 @icmp_v32i16_v32i1(<32 x i16> %0, <32 x i16> %01) nounwind {
 ; X86-AVX1-NEXT:    vpcmpeqw %xmm3, %xmm4, %xmm3
 ; X86-AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpacksswb %xmm3, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; X86-AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; X86-AVX1-NEXT:    vpcmpeqw 24(%ebp), %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpcmpeqw 8(%ebp), %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpacksswb %xmm0, %xmm1, %xmm0
-; X86-AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; X86-AVX1-NEXT:    movl %edx, %eax
-; X86-AVX1-NEXT:    shll $16, %eax
-; X86-AVX1-NEXT:    orl %ecx, %eax
-; X86-AVX1-NEXT:    xorl %edx, %eax
-; X86-AVX1-NEXT:    xorb %ah, %al
+; X86-AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; X86-AVX1-NEXT:    movl %ecx, %edx
+; X86-AVX1-NEXT:    shll $16, %edx
+; X86-AVX1-NEXT:    orl %eax, %edx
+; X86-AVX1-NEXT:    xorl %ecx, %edx
+; X86-AVX1-NEXT:    xorb %dh, %dl
 ; X86-AVX1-NEXT:    setnp %al
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
@@ -3359,18 +3308,18 @@ define zeroext i1 @icmp_v32i16_v32i1(<32 x i16> %0, <32 x i16> %01) nounwind {
 ; X64-AVX1-NEXT:    vpcmpeqw %xmm4, %xmm5, %xmm4
 ; X64-AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpacksswb %xmm4, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; X64-AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm0
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; X64-AVX1-NEXT:    vpcmpeqw %xmm0, %xmm2, %xmm0
 ; X64-AVX1-NEXT:    vpcmpeqw %xmm3, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpacksswb %xmm0, %xmm1, %xmm0
-; X64-AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; X64-AVX1-NEXT:    movl %edx, %eax
-; X64-AVX1-NEXT:    shll $16, %eax
-; X64-AVX1-NEXT:    orl %ecx, %eax
-; X64-AVX1-NEXT:    xorl %edx, %eax
-; X64-AVX1-NEXT:    xorb %ah, %al
+; X64-AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; X64-AVX1-NEXT:    movl %ecx, %edx
+; X64-AVX1-NEXT:    shll $16, %edx
+; X64-AVX1-NEXT:    orl %eax, %edx
+; X64-AVX1-NEXT:    xorl %ecx, %edx
+; X64-AVX1-NEXT:    xorb %dh, %dl
 ; X64-AVX1-NEXT:    setnp %al
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
@@ -3416,18 +3365,18 @@ define zeroext i1 @icmp_v32i16_v32i1(<32 x i16> %0, <32 x i16> %01) nounwind {
 ; AVX512F-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k0
-; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512F-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %edx
 ; AVX512F-NEXT:    shll $16, %edx
-; AVX512F-NEXT:    orl %ecx, %edx
-; AVX512F-NEXT:    xorl %edx, %eax
-; AVX512F-NEXT:    xorb %ah, %al
+; AVX512F-NEXT:    orl %eax, %edx
+; AVX512F-NEXT:    xorl %edx, %ecx
+; AVX512F-NEXT:    xorb %ch, %cl
 ; AVX512F-NEXT:    setnp %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -3471,18 +3420,18 @@ define zeroext i1 @icmp_v64i8_v64i1(<64 x i8> %0, <64 x i8> %01) nounwind {
 ; X86-SSE-NEXT:    subl $16, %esp
 ; X86-SSE-NEXT:    movdqa 8(%ebp), %xmm3
 ; X86-SSE-NEXT:    pcmpeqb 56(%ebp), %xmm2
-; X86-SSE-NEXT:    pmovmskb %xmm2, %ecx
+; X86-SSE-NEXT:    pmovmskb %xmm2, %eax
 ; X86-SSE-NEXT:    pcmpeqb 72(%ebp), %xmm3
-; X86-SSE-NEXT:    pmovmskb %xmm3, %eax
-; X86-SSE-NEXT:    shll $16, %eax
-; X86-SSE-NEXT:    orl %ecx, %eax
+; X86-SSE-NEXT:    pmovmskb %xmm3, %ecx
+; X86-SSE-NEXT:    shll $16, %ecx
+; X86-SSE-NEXT:    orl %eax, %ecx
 ; X86-SSE-NEXT:    pcmpeqb 24(%ebp), %xmm0
-; X86-SSE-NEXT:    pmovmskb %xmm0, %ecx
+; X86-SSE-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE-NEXT:    pcmpeqb 40(%ebp), %xmm1
 ; X86-SSE-NEXT:    pmovmskb %xmm1, %edx
 ; X86-SSE-NEXT:    shll $16, %edx
-; X86-SSE-NEXT:    orl %ecx, %edx
-; X86-SSE-NEXT:    xorl %eax, %edx
+; X86-SSE-NEXT:    orl %eax, %edx
+; X86-SSE-NEXT:    xorl %ecx, %edx
 ; X86-SSE-NEXT:    movl %edx, %eax
 ; X86-SSE-NEXT:    shrl $16, %eax
 ; X86-SSE-NEXT:    xorl %edx, %eax
@@ -3521,21 +3470,21 @@ define zeroext i1 @icmp_v64i8_v64i1(<64 x i8> %0, <64 x i8> %01) nounwind {
 ; X86-AVX1-NEXT:    andl $-32, %esp
 ; X86-AVX1-NEXT:    subl $32, %esp
 ; X86-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm3
-; X86-AVX1-NEXT:    vpmovmskb %xmm3, %ecx
+; X86-AVX1-NEXT:    vpmovmskb %xmm3, %eax
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; X86-AVX1-NEXT:    shll $16, %eax
-; X86-AVX1-NEXT:    orl %ecx, %eax
-; X86-AVX1-NEXT:    vpcmpeqb 8(%ebp), %xmm1, %xmm0
 ; X86-AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; X86-AVX1-NEXT:    shll $16, %ecx
+; X86-AVX1-NEXT:    orl %eax, %ecx
+; X86-AVX1-NEXT:    vpcmpeqb 8(%ebp), %xmm1, %xmm0
+; X86-AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; X86-AVX1-NEXT:    vpcmpeqb 24(%ebp), %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpmovmskb %xmm0, %edx
 ; X86-AVX1-NEXT:    shll $16, %edx
-; X86-AVX1-NEXT:    orl %ecx, %edx
-; X86-AVX1-NEXT:    xorl %eax, %edx
+; X86-AVX1-NEXT:    orl %eax, %edx
+; X86-AVX1-NEXT:    xorl %ecx, %edx
 ; X86-AVX1-NEXT:    movl %edx, %eax
 ; X86-AVX1-NEXT:    shrl $16, %eax
 ; X86-AVX1-NEXT:    xorl %edx, %eax

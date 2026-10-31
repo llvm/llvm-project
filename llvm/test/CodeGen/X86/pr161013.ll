@@ -479,41 +479,41 @@ define <128 x i4> @avir_v4i4_to_v128i4(<4 x i4> %arg) {
 ; AVX1-NEXT:    orl %esi, %edi
 ; AVX1-NEXT:    shll $16, %edx
 ; AVX1-NEXT:    orl %edi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm0, %edi
-; AVX1-NEXT:    andl $15, %edi
-; AVX1-NEXT:    movl %edi, %r8d
-; AVX1-NEXT:    shll $20, %r8d
-; AVX1-NEXT:    orl %edx, %r8d
-; AVX1-NEXT:    vpextrb $12, %xmm0, %esi
+; AVX1-NEXT:    vpextrb $9, %xmm0, %esi
 ; AVX1-NEXT:    andl $15, %esi
-; AVX1-NEXT:    movl %esi, %r9d
-; AVX1-NEXT:    shll $24, %r9d
-; AVX1-NEXT:    vpextrb $13, %xmm0, %edx
-; AVX1-NEXT:    movl %edx, %r10d
-; AVX1-NEXT:    shll $28, %r10d
-; AVX1-NEXT:    orl %r9d, %r10d
-; AVX1-NEXT:    orl %r8d, %r10d
-; AVX1-NEXT:    orq %rcx, %r10
-; AVX1-NEXT:    shlq $36, %rdi
-; AVX1-NEXT:    orq %r10, %rdi
-; AVX1-NEXT:    movq %rsi, %rcx
-; AVX1-NEXT:    shlq $40, %rcx
-; AVX1-NEXT:    orq %rdi, %rcx
+; AVX1-NEXT:    movl %esi, %edi
+; AVX1-NEXT:    shll $20, %edi
+; AVX1-NEXT:    orl %edx, %edi
+; AVX1-NEXT:    vpextrb $12, %xmm0, %edx
 ; AVX1-NEXT:    andl $15, %edx
-; AVX1-NEXT:    movq %rdx, %rdi
-; AVX1-NEXT:    shlq $44, %rdi
-; AVX1-NEXT:    orq %rcx, %rdi
-; AVX1-NEXT:    shlq $48, %rsi
-; AVX1-NEXT:    shlq $52, %rdx
-; AVX1-NEXT:    orq %rsi, %rdx
+; AVX1-NEXT:    movl %edx, %r8d
+; AVX1-NEXT:    shll $24, %r8d
+; AVX1-NEXT:    vpextrb $13, %xmm0, %r9d
+; AVX1-NEXT:    movl %r9d, %r10d
+; AVX1-NEXT:    shll $28, %r10d
+; AVX1-NEXT:    orl %r8d, %r10d
+; AVX1-NEXT:    orl %edi, %r10d
+; AVX1-NEXT:    orq %rcx, %r10
+; AVX1-NEXT:    shlq $36, %rsi
+; AVX1-NEXT:    orq %r10, %rsi
+; AVX1-NEXT:    movq %rdx, %rcx
+; AVX1-NEXT:    shlq $40, %rcx
+; AVX1-NEXT:    orq %rsi, %rcx
+; AVX1-NEXT:    andl $15, %r9d
+; AVX1-NEXT:    movq %r9, %rsi
+; AVX1-NEXT:    shlq $44, %rsi
+; AVX1-NEXT:    orq %rcx, %rsi
+; AVX1-NEXT:    shlq $48, %rdx
+; AVX1-NEXT:    shlq $52, %r9
+; AVX1-NEXT:    orq %rdx, %r9
 ; AVX1-NEXT:    vpextrb $14, %xmm0, %ecx
 ; AVX1-NEXT:    andl $15, %ecx
 ; AVX1-NEXT:    shlq $56, %rcx
-; AVX1-NEXT:    orq %rdx, %rcx
+; AVX1-NEXT:    orq %r9, %rcx
 ; AVX1-NEXT:    vpextrb $15, %xmm0, %edx
 ; AVX1-NEXT:    shlq $60, %rdx
 ; AVX1-NEXT:    orq %rcx, %rdx
-; AVX1-NEXT:    orq %rdi, %rdx
+; AVX1-NEXT:    orq %rsi, %rdx
 ; AVX1-NEXT:    movq %rdx, (%rax)
 ; AVX1-NEXT:    movq $0, 8(%rax)
 ; AVX1-NEXT:    retq

@@ -1252,21 +1252,21 @@ define <9 x i16> @PR172010(<4 x i64> %a0) {
 define <8 x float> @PR173030(i8 %a0, i16 %a1, i32 %a2) {
 ; X86-LABEL: PR173030:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovd %ecx, %xmm0
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx def $ecx
-; X86-NEXT:    incb %cl
-; X86-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
-; X86-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm1
-; X86-NEXT:    incl %ecx
-; X86-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
-; X86-NEXT:    vpmovsxwd %xmm1, %xmm1
-; X86-NEXT:    vmovd %eax, %xmm2
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    # kill: def $al killed $al killed $eax def $eax
+; X86-NEXT:    incb %al
+; X86-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; X86-NEXT:    vpmovsxbd %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    incl %eax
-; X86-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X86-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
+; X86-NEXT:    vpmovsxwd %xmm1, %xmm1
+; X86-NEXT:    vmovd %ecx, %xmm2
+; X86-NEXT:    incl %ecx
+; X86-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
 ; X86-NEXT:    vcvtdq2ps %xmm2, %xmm2
 ; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0

@@ -278,25 +278,25 @@ define i128 @test_i128_smax(i128 %a) nounwind {
 ; X86-NOBMI-NEXT:    pushl %esi
 ; X86-NOBMI-NEXT:    pushl %eax
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOBMI-NEXT:    testl %ecx, %ecx
-; X86-NOBMI-NEXT:    movl $0, %edx
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOBMI-NEXT:    testl %edx, %edx
+; X86-NOBMI-NEXT:    movl $0, %ecx
 ; X86-NOBMI-NEXT:    movl $0, %esi
 ; X86-NOBMI-NEXT:    movl $0, %edi
 ; X86-NOBMI-NEXT:    js .LBB8_2
 ; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOBMI-NEXT:  .LBB8_2:
 ; X86-NOBMI-NEXT:    jg .LBB8_4
 ; X86-NOBMI-NEXT:  # %bb.3:
-; X86-NOBMI-NEXT:    xorl %ecx, %ecx
+; X86-NOBMI-NEXT:    xorl %edx, %edx
 ; X86-NOBMI-NEXT:  .LBB8_4:
-; X86-NOBMI-NEXT:    movl %ecx, 12(%eax)
+; X86-NOBMI-NEXT:    movl %edx, 12(%eax)
 ; X86-NOBMI-NEXT:    movl %edi, 8(%eax)
 ; X86-NOBMI-NEXT:    movl %esi, 4(%eax)
-; X86-NOBMI-NEXT:    movl %edx, (%eax)
+; X86-NOBMI-NEXT:    movl %ecx, (%eax)
 ; X86-NOBMI-NEXT:    addl $4, %esp
 ; X86-NOBMI-NEXT:    popl %esi
 ; X86-NOBMI-NEXT:    popl %edi

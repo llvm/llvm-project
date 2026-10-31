@@ -93,7 +93,7 @@
     %add24 = or i64 %xb.0148, %i.0141
     %conv25 = zext i32 %i3 to i64
     %add26 = or i64 %yb.0149, %conv25
-    %add28 = or i64 %x2b.0150, 1
+    %add28 = or i64 %x2b.0150, %i.0141
     %add31 = or i64 %y2b.0151, %i.0141
     br label %for.body
   }
@@ -331,7 +331,7 @@ body:             |
     %17:gr64 = COPY %3
     %17:gr64 = OR64rr %17, %40, implicit-def dead $eflags
     %18:gr64 = COPY %2
-    %18:gr64 = OR64ri32 %18, 1, implicit-def dead $eflags
+    %18:gr64 = OR64rr %18, %27, implicit-def dead $eflags
     %19:gr64 = COPY %1
     %19:gr64 = OR64rr %19, %27, implicit-def dead $eflags
     %38:gr64 = SUBREG_TO_REG %29, %subreg.sub_32bit

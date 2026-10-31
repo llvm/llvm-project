@@ -88,10 +88,10 @@ define i128 @clmul_i128(i128 %x, i128 %y) nounwind {
 ; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %eax
-; CHECK-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
 ; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    pclmulqdq $0, %xmm2, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; CHECK-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    pclmulqdq $0, %xmm1, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm0, %ecx
 ; CHECK-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -99,11 +99,11 @@ define i128 @clmul_i128(i128 %x, i128 %y) nounwind {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm4, %edx
 ; CHECK-NEXT:    xorl %ecx, %edx
-; CHECK-NEXT:    pclmulqdq $0, %xmm2, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; CHECK-NEXT:    movd %xmm2, %ecx
+; CHECK-NEXT:    pclmulqdq $0, %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; CHECK-NEXT:    movd %xmm1, %ecx
 ; CHECK-NEXT:    xorl %edx, %ecx
-; CHECK-NEXT:    movd %xmm1, %edx
+; CHECK-NEXT:    movd %xmm2, %edx
 ; CHECK-NEXT:    movd %xmm3, %esi
 ; CHECK-NEXT:    xorl %edx, %esi
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
