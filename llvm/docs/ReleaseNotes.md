@@ -372,6 +372,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added assembler and code generation support for the `AVX10_V2_AUX`
   instruction set.
+* AMD Bulldozer CPUs (bdver1/2/3/4) now only vectorize to 128-bit vector widths
+  by default to improve multi-threaded performance.
 * The AMX intrinsics that name tile registers (`llvm.x86.tileloadd64`,
   `llvm.x86.tdpbssd` and the others outside the `_internal` forms) now declare
   their memory effects: they read or write the tile state as `target_mem0`,
