@@ -29579,15 +29579,21 @@ uint64_t getGFNICtrlImm(unsigned Opcode, unsigned Amt = 0) {
   case ISD::CTTZ:
     // Special case - only works for zero/single bit input.
     return 0xAACCF0FF00000000ULL;
-  case ISD::SHL:
+  case ISD::SHL: {
+    assert(Amt != 0 && "Shift-by-zero is unsupported");
     return ((0x0102040810204080ULL >> (Amt)) &
             (0x0101010101010101ULL * (0xFF >> (Amt))));
-  case ISD::SRL:
+  }
+  case ISD::SRL: {
+    assert(Amt != 0 && "Shift-by-zero is unsupported");
     return ((0x0102040810204080ULL << (Amt)) &
             (0x0101010101010101ULL * ((0xFF << (Amt)) & 0xFF)));
-  case ISD::SRA:
+  }
+  case ISD::SRA: {
+    assert(Amt != 0 && "Shift-by-zero is unsupported");
     return (getGFNICtrlImm(ISD::SRL, Amt) |
             (0x8080808080808080ULL >> (64 - (8 * Amt))));
+  }
   case ISD::ROTL:
     return getGFNICtrlImm(ISD::SRL, 8 - Amt) | getGFNICtrlImm(ISD::SHL, Amt);
   case ISD::ROTR:
@@ -31227,6 +31233,10 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
     return DAG.getUNDEF(VT);
 
   uint64_t ShiftAmt = APIntShiftAmt.getZExtValue();
+
+  // During legalization we can sometimes end up with shift-by-zero.
+  if (ShiftAmt == 0)
+    return R;
 
   if (supportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode()))
     return getTargetVShiftByConstNode(X86Opc, dl, VT, R, ShiftAmt, DAG);
