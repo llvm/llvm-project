@@ -16,6 +16,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -170,6 +171,12 @@ bool CIRGenOpenMPRuntime::markAsGlobalTarget(GlobalDecl gd) {
   }
 
   return !alreadyEmittedTargetDecls.insert(d).second;
+}
+
+bool CIRGenOpenMPRuntime::hasRequiresUnifiedSharedMemory() const {
+  // OGCG also sets this from '#pragma omp requires unified_shared_memory'.
+  assert(!cir::MissingFeatures::openMPRequiresUnifiedSharedMemory());
+  return cgm.getLangOpts().OpenMPForceUSM;
 }
 
 void CIRGenOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *fd,
