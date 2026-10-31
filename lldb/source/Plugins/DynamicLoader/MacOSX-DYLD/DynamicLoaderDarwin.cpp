@@ -179,11 +179,8 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   // We'll call Target::ModulesDidLoad after all the modules have been
   // added to the target, don't let it be called for every one.
   if (!module_sp || module_sp->GetObjectFile() == nullptr) {
-    // Don't use the index cache for symbol tables of binaries read out of a
-    // corefile.
-    const bool disable_memory_symtab_caching = (bool)m_process->GetCoreFile();
     llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
-        image_info.file_spec, image_info.address, disable_memory_symtab_caching,
+        image_info.file_spec, image_info.address,
         image_info.mh_and_load_cmd_size);
     if (auto err = module_sp_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
@@ -788,12 +785,9 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
                                                                true /* notify */);
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == nullptr) {
-                const bool disable_memory_symtab_caching =
-                    (bool)m_process->GetCoreFile();
                 llvm::Expected<ModuleSP> module_sp_or_err =
-                    m_process->ReadModuleFromMemory(
-                        image_info.file_spec, image_info.address,
-                        disable_memory_symtab_caching);
+                    m_process->ReadModuleFromMemory(image_info.file_spec,
+                                                    image_info.address);
                 if (auto err = module_sp_or_err.takeError()) {
                   LLDB_LOG_ERROR(log, std::move(err),
                                  "Failed to read module from memory: {0}");

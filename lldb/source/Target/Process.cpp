@@ -2807,9 +2807,9 @@ bool Process::GetWatchpointReportedAfter() {
   return reported_after;
 }
 
-llvm::Expected<ModuleSP> Process::ReadModuleFromMemory(
-    const FileSpec &file_spec, lldb::addr_t header_addr,
-    bool disable_memory_symtab_caching, size_t size_to_read) {
+llvm::Expected<ModuleSP>
+Process::ReadModuleFromMemory(const FileSpec &file_spec,
+                              lldb::addr_t header_addr, size_t size_to_read) {
   LLDB_LOGF(GetLog(LLDBLog::Host),
             "Process::ReadModuleFromMemory reading %s binary from memory",
             file_spec.GetPath().c_str());
@@ -2825,6 +2825,10 @@ llvm::Expected<ModuleSP> Process::ReadModuleFromMemory(
   if (IsLiveDebugSession())
     progress_up = std::make_unique<Progress>("Reading binary from memory",
                                              file_spec.GetFilename().str());
+
+  // Don't use the index cache for symbol tables of binaries read out of a
+  // corefile.
+  const bool disable_memory_symtab_caching = (bool)GetCoreFile();
 
   if (module_sp->GetMemoryObjectFile(shared_from_this(), header_addr, error,
                                      disable_memory_symtab_caching,

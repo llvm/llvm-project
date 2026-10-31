@@ -468,12 +468,8 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
   if (header.filetype == llvm::MachO::MH_EXECUTE &&
       (header.flags & llvm::MachO::MH_DYLDLINK) == 0) {
     // Create a full module to get the UUID
-    // Don't use the index cache for symbol tables of binaries read out of a
-    // corefile.
-    const bool disable_memory_symtab_caching = (bool)process->GetCoreFile();
     llvm::Expected<ModuleSP> memory_module_sp_or_err =
-        process->ReadModuleFromMemory(FileSpec("temp_mach_kernel"), addr,
-                                      disable_memory_symtab_caching);
+        process->ReadModuleFromMemory(FileSpec("temp_mach_kernel"), addr);
     if (auto err = memory_module_sp_or_err.takeError()) {
       LLDB_LOG_ERROR(log, std::move(err),
                      "DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress: "
@@ -677,12 +673,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
       size_to_read = sizeof(llvm::MachO::mach_header_64) + mh.sizeofcmds;
   }
 
-  // Don't use the index cache for symbol tables of binaries read out of a
-  // corefile.
-  const bool disable_memory_symtab_caching = (bool)process->GetCoreFile();
   llvm::Expected<ModuleSP> memory_module_sp_or_err =
       process->ReadModuleFromMemory(file_spec, m_load_address,
-                                    disable_memory_symtab_caching,
                                     size_to_read);
   if (auto err = memory_module_sp_or_err.takeError()) {
     LLDB_LOG_ERROR(log, std::move(err),

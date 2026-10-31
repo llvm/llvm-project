@@ -609,12 +609,8 @@ void DynamicLoaderPOSIXDYLD::LoadVDSO() {
     return;
   }
 
-  // Don't use the index cache for symbol tables of binaries read out of a
-  // corefile.
-  const bool disable_memory_symtab_caching = (bool)m_process->GetCoreFile();
   llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
-      file, m_vdso_base, disable_memory_symtab_caching,
-      info.GetRange().GetByteSize());
+      file, m_vdso_base, info.GetRange().GetByteSize());
   if (auto err = module_sp_or_err.takeError()) {
     LLDB_LOG_ERROR(log, std::move(err),
                    "Failed to read module from memory: {0}");

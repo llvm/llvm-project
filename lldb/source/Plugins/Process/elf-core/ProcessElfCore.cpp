@@ -277,13 +277,9 @@ Status ProcessElfCore::DoLoadCore() {
         std::optional<NT_FILE_Entry> exe_header =
             GetNTFileEntryForExecutableELFHeader();
         if (exe_header) {
-          // Don't use the index cache for symbol tables of binaries read out of
-          // a corefile.
-          const bool disable_memory_symtab_caching = (bool)GetCoreFile();
           if (llvm::Expected<lldb::ModuleSP> module_sp_or_err =
                   ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
                                        exe_header->start,
-                                       disable_memory_symtab_caching,
                                        exe_header->end - exe_header->start))
             exe_module_sp = *module_sp_or_err;
           else

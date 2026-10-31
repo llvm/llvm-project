@@ -183,12 +183,8 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
   // We have a core file, try to load the image from memory if we didn't find
   // the module.
   if (!module_sp && !m_process->IsLiveDebugSession()) {
-    // Don't use the index cache for symbol tables of binaries read out of a
-    // corefile.
-    const bool disable_memory_symtab_caching = (bool)m_process->GetCoreFile();
     llvm::Expected<ModuleSP> memory_module_sp_or_err =
-        m_process->ReadModuleFromMemory(file, base_addr,
-                                        disable_memory_symtab_caching);
+        m_process->ReadModuleFromMemory(file, base_addr);
     if (auto err = memory_module_sp_or_err.takeError())
       LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
                      "Failed to read module from memory: {0}");
@@ -210,11 +206,8 @@ static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,
     snprintf(namebuf, sizeof(namebuf), "memory-image-0x%" PRIx64, addr);
     name = namebuf;
   }
-  // Don't use the index cache for symbol tables of binaries read out of a
-  // corefile.
-  const bool disable_memory_symtab_caching = (bool)process->GetCoreFile();
-  llvm::Expected<ModuleSP> module_sp_or_err = process->ReadModuleFromMemory(
-      FileSpec(name), addr, disable_memory_symtab_caching);
+  llvm::Expected<ModuleSP> module_sp_or_err =
+      process->ReadModuleFromMemory(FileSpec(name), addr);
   if (auto err = module_sp_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
                    "Failed to read module from memory: {0}");
