@@ -42,3 +42,10 @@ class ShTest(FileBasedTest):
             self.extra_substitutions,
             self.preamble_commands,
         )
+
+    def getTestRequirements(self, test):
+        """Include preexisting and parsed REQUIRES without changing the test."""
+        parsed = lit.TestRunner._parseKeywords(
+            test.getSourcePath(), require_script=False
+        )
+        return list(test.requires) + (parsed["REQUIRES:"] or [])

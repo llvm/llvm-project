@@ -153,6 +153,77 @@ class BooleanExpression:
         self.expect(BooleanExpression.END)
         return self.value
 
+    @staticmethod
+    def normalize(string):
+        """Parse an expression into a normalized tree with string feature leaves."""
+        try:
+            return _ExpressionTree(string, set()).parseAll()
+        except ValueError as e:
+            raise ValueError(str(e) + ("\nin expression: %r" % string))
+
+    @staticmethod
+    def combine(op, operands):
+        """Flatten, deduplicate, and sort operands without expanding expressions."""
+        identity = op == "and"
+        flattened = []
+        for operand in operands:
+            if isinstance(operand, bool):
+                if operand != identity:
+                    return operand
+                continue
+            if isinstance(operand, dict) and operand["op"] == op:
+                flattened.extend(operand["operands"])
+            else:
+                flattened.append(operand)
+        if not flattened:
+            return identity
+        unique = {_tree_key(operand): operand for operand in flattened}
+        ordered = [unique[key] for key in sorted(unique)]
+        if len(ordered) == 1:
+            return ordered[0]
+        return {"op": op, "operands": ordered}
+
+
+def _tree_key(tree):
+    if isinstance(tree, bool):
+        return (0, tree)
+    if isinstance(tree, str):
+        return (1, tree)
+    op = tree["op"]
+    if op == "not":
+        return (2, op, _tree_key(tree["operand"]))
+    return (2, op, tuple(_tree_key(child) for child in tree["operands"]))
+
+
+class _ExpressionTree(BooleanExpression):
+    def parseMATCH(self):
+        token = self.token
+        super().parseMATCH()
+        self.value = token
+
+    def parseNOT(self):
+        if self.accept("!"):
+            self.parseNOT()
+            self.value = {"op": "not", "operand": self.value}
+        else:
+            super().parseNOT()
+
+    def parseAND(self):
+        self.parseNOT()
+        operands = [self.value]
+        while self.accept("&&"):
+            self.parseNOT()
+            operands.append(self.value)
+        self.value = self.combine("and", operands)
+
+    def parseOR(self):
+        self.parseAND()
+        operands = [self.value]
+        while self.accept("||"):
+            self.parseAND()
+            operands.append(self.value)
+        self.value = self.combine("or", operands)
+
 
 #######
 # Tests
