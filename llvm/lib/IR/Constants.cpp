@@ -751,8 +751,11 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
   }
 
   PossibleRelocationsTy Result = NoRelocation;
-  for (const Value *Op : operands())
+  for (const Value *Op : operands()) {
     Result = std::max(cast<Constant>(Op)->getRelocationInfo(), Result);
+    if (Result == GlobalRelocation)
+      return GlobalRelocation;
+  }
 
   return Result;
 }
