@@ -28,9 +28,6 @@
 #include <vector>
 
 namespace clang {
-namespace tidy {
-class ClangTidyContext;
-} // namespace tidy
 namespace clangd {
 
 struct ClangdDiagnosticOptions {
@@ -137,8 +134,7 @@ std::optional<std::string> getDiagnosticDocURI(Diag::DiagSource, unsigned ID,
 /// the diag itself nor its notes are in the main file).
 class StoreDiags : public DiagnosticConsumer {
 public:
-  // The ClangTidyContext populates Source and Name for clang-tidy diagnostics.
-  std::vector<Diag> take(const clang::tidy::ClangTidyContext *Tidy = nullptr);
+  std::vector<Diag> take();
 
   void BeginSourceFile(const LangOptions &Opts,
                        const Preprocessor *PP) override;

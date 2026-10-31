@@ -17,7 +17,6 @@
 
 #include "FeatureModule.h"
 #include "ModulesBuilder.h"
-#include "TidyProvider.h"
 #include "index/Index.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -60,7 +59,6 @@ struct ParseInputs {
   // Used to recover from diagnostics (e.g. find missing includes for symbol).
   const SymbolIndex *Index = nullptr;
   ParseOptions Opts = ParseOptions();
-  TidyProviderRef ClangTidyProvider = {};
   // Used to acquire ASTListeners when parsing files.
   FeatureModuleSet *FeatureModules = nullptr;
   // Used to build and manage (C++) modules.

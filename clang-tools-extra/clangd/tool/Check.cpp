@@ -27,6 +27,7 @@
 #include "../clang-tidy/ClangTidyModule.h"
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "../clang-tidy/GlobList.h"
+#include "ClangTidyFeatureModule.h"
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
 #include "CodeComplete.h"
@@ -63,6 +64,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
@@ -205,7 +207,7 @@ public:
     std::vector<std::string> CC1Args;
     Inputs.CompileCommand = Cmd;
     Inputs.TFS = &TFS;
-    Inputs.ClangTidyProvider = Opts.ClangTidyProvider;
+    Inputs.FeatureModules = Opts.FeatureModules;
     Inputs.Opts.PreambleParseForwardingFunctions =
         Opts.PreambleParseForwardingFunctions;
     if (Contents) {
@@ -284,7 +286,8 @@ public:
       #ifndef NDEBUG
       elog("Timing clang-tidy checks in asserts-mode is not representative!");
       #endif
-      checkTidyTimes();
+      if (!checkTidyTimes())
+        return false;
     }
 
     return true;
@@ -297,7 +300,16 @@ public:
   // step-function slowdowns due to CPU scaling.
   // We take the median of 5 measurements, and after every check discard the
   // measurement if the baseline changed by >3%.
-  void checkTidyTimes() {
+  bool checkTidyTimes() {
+    // Keep all other modules active while varying only tidy's configuration.
+    auto *TidyModule =
+        Inputs.FeatureModules
+            ? Inputs.FeatureModules->get<ClangTidyFeatureModule>()
+            : nullptr;
+    if (!TidyModule) {
+      elog("Cannot time clang-tidy checks without a clang-tidy feature module");
+      return false;
+    }
     double Stability = 0.03;
     log("Timing AST build with individual clang-tidy checks (target accuracy "
         "{0:P0})",
@@ -322,7 +334,12 @@ public:
                                     llvm::StringRef) {
         Opts.Checks = Checks.str();
       };
-      Inputs.ClangTidyProvider = CTProvider;
+      auto Provider =
+          std::make_shared<const TidyProvider>(std::move(CTProvider));
+      TidyModule->swapProvider(Provider);
+      // Provider now holds the original configuration; restore it on exit.
+      llvm::scope_exit RestoreProvider(
+          [&] { TidyModule->swapProvider(Provider); });
       // Sigh, can't reuse the CompilerInvocation.
       IgnoringDiagConsumer IgnoreDiags;
       auto Invocation = buildCompilerInvocation(Inputs, IgnoreDiags);
@@ -367,9 +384,7 @@ public:
       log("  {0} = {1:P0}", Check, Fraction);
     }
     log("Finished individual clang-tidy checks");
-
-    // Restore old options.
-    Inputs.ClangTidyProvider = Opts.ClangTidyProvider;
+    return true;
   }
 
   // Build Inlay Hints for the entire AST or the specified range

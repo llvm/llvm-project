@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "ClangTidyFeatureModule.h"
 #include "Feature.h"
 #include "FeatureModule.h"
 #include "Selection.h"
@@ -306,6 +307,26 @@ TEST(FeatureModulesTest, FinalizeDiagnostic) {
   EXPECT_EQ(Fixes, 1u);
 }
 
+TEST(FeatureModulesTest, ClangTidyTemporaryProvider) {
+  if (!CLANGD_TIDY_CHECKS)
+    GTEST_SKIP() << "Requires clang-tidy checks";
+  FeatureModuleSet Modules;
+  Modules.add(std::make_unique<ClangTidyFeatureModule>(
+      addTidyChecks("modernize-use-nullptr")));
+  auto TU = TestTU::withCode("int *p = 0;");
+  TU.FeatureModules = &Modules;
+  auto *Tidy = Modules.get<ClangTidyFeatureModule>();
+  auto Provider = std::make_shared<const TidyProvider>(addTidyChecks("-*"));
+  // Check-mode timing temporarily overrides tidy's configuration, then
+  // restores the original provider for subsequent builds.
+  Tidy->swapProvider(Provider);
+  EXPECT_THAT(TU.build().getDiagnostics(), testing::IsEmpty());
+  Tidy->swapProvider(Provider);
+  auto AST = TU.build();
+  ASSERT_THAT(AST.getDiagnostics(), testing::SizeIs(1));
+  EXPECT_EQ(AST.getDiagnostics().front().Name, "modernize-use-nullptr");
+}
+
 TEST(FeatureModulesTest, ClangTidyDoesNotReinitializeConsumer) {
   if (!CLANGD_TIDY_CHECKS)
     GTEST_SKIP() << "Requires clang-tidy checks";
@@ -331,7 +352,8 @@ TEST(FeatureModulesTest, ClangTidyDoesNotReinitializeConsumer) {
   Modules.add(std::move(Module));
   auto TU = TestTU::withCode("int *p = 0;");
   TU.FeatureModules = &Modules;
-  TU.ClangTidyProvider = addTidyChecks("modernize-use-nullptr");
+  Modules.add(std::make_unique<ClangTidyFeatureModule>(
+      addTidyChecks("modernize-use-nullptr")));
   // Running tidy must not reinitialize the existing AST consumer.
   EXPECT_THAT(TU.build().getDiagnostics(), testing::SizeIs(1));
 }
