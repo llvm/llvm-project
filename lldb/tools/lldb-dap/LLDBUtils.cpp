@@ -136,6 +136,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonVForkDone:
   case lldb::eStopReasonInterrupt:
   case lldb::eStopReasonHistoryBoundary:
+  case lldb::eStopReasonTargetSync:
     return true;
   case lldb::eStopReasonBreakpoint: {
     // Stop reason data for breakpoints consists of breakpoint ID and location

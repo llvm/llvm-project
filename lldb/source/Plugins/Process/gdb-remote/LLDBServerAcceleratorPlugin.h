@@ -35,6 +35,20 @@ public:
 
   virtual llvm::StringRef GetPluginName() = 0;
 
+  /// Stop the native process if it is running.
+  ///
+  /// An accelerator plugin can use this when its accelerator stops. This can
+  /// be called from any thread and returns without waiting: the native
+  /// process's GDB server interrupts it on its own main loop. The client's stop
+  /// reply reports lldb::eStopReasonTargetSync and names this plugin so the
+  /// client can identify the corresponding accelerator target.
+  ///
+  /// \param[in] pid
+  ///     The native process to stop. Capture this while handling the event
+  ///     associated with that process so a later multiprocess selection change
+  ///     cannot redirect the interrupt.
+  void HaltNativeProcessIfNeeded(lldb::pid_t pid);
+
   virtual std::optional<AcceleratorActions> GetInitializeActions() = 0;
 
   virtual llvm::Expected<AcceleratorBreakpointHitResponse>
