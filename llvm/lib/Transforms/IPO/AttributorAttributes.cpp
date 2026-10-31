@@ -10476,27 +10476,93 @@ struct AANoUndefFloating : public AANoUndefImpl {
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
 };
 
+/// Return true if the poison-generating attributes in \p Attrs are assumed to
+/// hold for the value at \p Pos.
+static bool checkPoisonGeneratingAttrsHold(Attributor &A,
+                                           const AbstractAttribute &QueryingAA,
+                                           AttributeSet Attrs,
+                                           const IRPosition &Pos,
+                                           const Instruction *CtxI) {
+  AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
+  for (Attribute Attr : Attrs) {
+    if (!AM.contains(Attr))
+      continue;
+
+    switch (Attr.getKindAsEnum()) {
+    case Attribute::NonNull: {
+      bool IsKnown;
+      if (!AA::hasAssumedIRAttr<Attribute::NonNull>(
+              A, &QueryingAA, Pos, DepClassTy::REQUIRED, IsKnown))
+        return false;
+      break;
+    }
+    case Attribute::Alignment: {
+      const auto *AlignAA =
+          A.getAAFor<AAAlign>(QueryingAA, Pos, DepClassTy::REQUIRED);
+      if (!AlignAA || AlignAA->getAssumedAlign() < *Attr.getAlignment())
+        return false;
+      break;
+    }
+    case Attribute::Range: {
+      const auto *RangeAA = A.getAAFor<AAValueConstantRange>(
+          QueryingAA, Pos, DepClassTy::REQUIRED);
+      if (!RangeAA ||
+          !Attr.getRange().contains(RangeAA->getAssumedConstantRange(A, CtxI)))
+        return false;
+      break;
+    }
+    case Attribute::NoFPClass: {
+      FPClassTest NoFPClass = Attr.getNoFPClass();
+      const auto *NoFPClassAA =
+          A.getAAFor<AANoFPClass>(QueryingAA, Pos, DepClassTy::REQUIRED);
+      if (!NoFPClassAA ||
+          (NoFPClassAA->getAssumedNoFPClass() & NoFPClass) != NoFPClass)
+        return false;
+      break;
+    }
+    default:
+      // Conservatively assume unhandled attributes do not hold.
+      return false;
+    }
+  }
+
+  return true;
+}
+
 struct AANoUndefReturned final
     : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl> {
-  AANoUndefReturned(const IRPosition &IRP, Attributor &A)
-      : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>(IRP, A) {}
+  using Base = AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>;
+  AANoUndefReturned(const IRPosition &IRP, Attributor &A) : Base(IRP, A) {}
 
   void initialize(Attributor &A) override {
-    AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>::initialize(A);
-    if (isAtFixpoint())
-      return;
+    Base::initialize(A);
+    RetAttrs = getAssociatedFunction()->getAttributes().getRetAttrs();
+  }
 
-    // Returning a value that violates a return attribute, e.g., nonnull, is
-    // poison.
-    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
-    AttributeSet RetAttrs =
-        getAssociatedFunction()->getAttributes().getRetAttrs();
-    if (any_of(RetAttrs, [&](Attribute Attr) { return AM.contains(Attr); }))
-      indicatePessimisticFixpoint();
+  ChangeStatus updateImpl(Attributor &A) override {
+    // A returned value that violates a poison-generating return attribute
+    // becomes poison, so the attributes must hold for every returned value.
+    if (RetAttrs.hasAttributes()) {
+      auto AttrsHold = [&](Instruction &I) {
+        Value &V = *cast<ReturnInst>(I).getReturnValue();
+        return checkPoisonGeneratingAttrsHold(A, *this, RetAttrs,
+                                              IRPosition::value(V), &I);
+      };
+      bool UsedAssumedInformation = false;
+      if (!A.checkForAllInstructions(AttrsHold, *this, {Instruction::Ret},
+                                     UsedAssumedInformation))
+        return indicatePessimisticFixpoint();
+    }
+
+    return Base::updateImpl(A);
   }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
+
+private:
+  /// The function return attributes.
+  AttributeSet RetAttrs;
 };
 
 struct AANoUndefArgument final
@@ -10518,11 +10584,40 @@ struct AANoUndefCallSiteArgument final : AANoUndefFloating {
 
 struct AANoUndefCallSiteReturned final
     : AACalleeToCallSite<AANoUndef, AANoUndefImpl> {
+  using Base = AACalleeToCallSite<AANoUndef, AANoUndefImpl>;
   AANoUndefCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACalleeToCallSite<AANoUndef, AANoUndefImpl>(IRP, A) {}
+      : Base(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    Base::initialize(A);
+    RetAttrs = cast<CallBase>(getAnchorValue()).getRetAttributes();
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    // The call returns poison if the callee return value violates a
+    // poison-generating call site return attribute, so the attributes must
+    // hold for every callee.
+    if (RetAttrs.hasAttributes()) {
+      auto AttrsHold = [&](ArrayRef<const Function *> Callees) {
+        return all_of(Callees, [&](const Function *Callee) {
+          return checkPoisonGeneratingAttrsHold(
+              A, *this, RetAttrs, IRPosition::returned(*Callee), nullptr);
+        });
+      };
+      if (!A.checkForAllCallees(AttrsHold, *this,
+                                cast<CallBase>(getAnchorValue())))
+        return indicatePessimisticFixpoint();
+    }
+
+    return Base::updateImpl(A);
+  }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
+
+private:
+  /// The call site return attributes.
+  AttributeSet RetAttrs;
 };
 
 /// ------------------------ NoFPClass Attribute -------------------------------
