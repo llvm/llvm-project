@@ -159,11 +159,27 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
     }
   }
 
+  static void clearTileOperands(acc::LoopOp loop, PatternRewriter &rewriter) {
+    rewriter.modifyOpInPlace(loop, [&]() {
+      loop.getTileOperandsMutable().clear();
+      loop.removeTileOperandsSegmentsAttr();
+      loop.removeTileOperandsDeviceTypeAttr();
+    });
+  }
+
   LogicalResult matchAndRewrite(acc::LoopOp origLoop,
                                 PatternRewriter &rewriter) const override {
 
     if (origLoop.getTileValues().empty())
       return failure();
+
+    // The iterations of an unstructured loop are implemented by the control
+    // flow in its body, and it has no induction variables to tile. The tile
+    // clause does not require tiling, so drop it and keep the loop as is.
+    if (origLoop.getUnstructured()) {
+      clearTileOperands(origLoop, rewriter);
+      return success();
+    }
 
     SmallVector<Value> tileSizes(origLoop.getTileValues().begin(),
                                  origLoop.getTileValues().end());
@@ -188,12 +204,7 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
 
     LLVM_DEBUG(llvm::dbgs() << "\nBefore tiling:\n" << *origLoop << "\n");
 
-    // Clear tile operands from origLoop
-    rewriter.startOpModification(origLoop);
-    origLoop.getTileOperandsMutable().clear();
-    origLoop.removeTileOperandsSegmentsAttr();
-    origLoop.removeTileOperandsDeviceTypeAttr();
-    rewriter.finalizeOpModification(origLoop);
+    clearTileOperands(origLoop, rewriter);
 
     // Tile the single fused loop in place: the tile iterations become one
     // multi-IV "tile group" loop wrapping one multi-IV "element group" loop.
