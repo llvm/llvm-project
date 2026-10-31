@@ -96,6 +96,7 @@ namespace __tsan {
 static void InitializeLongjmpSpMangling();
 // libc stores rotl(sp ^ longjmp_xor_key, longjmp_rot) in jmp_buf.
 // Both values are zero when the stack pointer is stored unchanged.
+static atomic_uint8_t longjmp_sp_inited;
 static atomic_uintptr_t longjmp_xor_key;
 static atomic_uintptr_t longjmp_rot;
 #  endif
@@ -428,12 +429,6 @@ void InitializePlatform() {
   // Unlimited stack is not a problem as well, because the executable
   // is not compiled with -pie.
 #if !SANITIZER_GO
-  {
-#    if CALIBRATE_LONGJMP_SP && !SANITIZER_ANDROID
-    InitializeLongjmpSpMangling();
-#    endif
-  }
-
   // We called ReExecIfNeeded() in InitializePlatformEarly(), but there are
   // intervening allocations that result in an edge case:
   // 1) InitializePlatformEarly(): memory layout is compatible
@@ -500,19 +495,13 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
 // Reverse operation of libc stack pointer mangling
 static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #    if CALIBRATE_LONGJMP_SP
-  uptr xor_key = atomic_load(&longjmp_xor_key, memory_order_acquire);
-#      if SANITIZER_ANDROID
-  if (xor_key == 0) {
-    // bionic libc initialization process: __libc_init_globals ->
-    // __libc_init_vdso (calls strcmp) -> __libc_init_setjmp_cookie. strcmp is
-    // intercepted by TSan, so during TSan initialization the setjmp_cookie
-    // remains uninitialized. On Android, longjmp_xor_key must be set on first
-    // use.
+  // Calibrate on first longjmp/siglongjmp: most programs never call longjmp,
+  // and bionic initializes setjmp_cookie after TSan initialization
+  // (__libc_init_globals -> __libc_init_vdso -> strcmp -> __tsan_init ->
+  // __libc_init_setjmp_cookie).
+  if (UNLIKELY(!atomic_load(&longjmp_sp_inited, memory_order_acquire)))
     InitializeLongjmpSpMangling();
-    xor_key = atomic_load(&longjmp_xor_key, memory_order_relaxed);
-    CHECK_NE(xor_key, 0);
-  }
-#      endif
+  uptr xor_key = atomic_load(&longjmp_xor_key, memory_order_relaxed);
   uptr rot = atomic_load(&longjmp_rot, memory_order_relaxed);
   uptr sp = mangled_sp;
   if (rot)
@@ -604,7 +593,8 @@ NOINLINE static void ProbeLongJmpSpDeep(uptr* sp, uptr* mangled_sp) {
 }
 
 // Probe two stack depths to identify identity, XOR, or XOR-and-rotate without
-// depending on private guard locations.
+// depending on private guard locations. Lock-free and reentrant so concurrent
+// threads or signal handlers calling siglongjmp do not block or deadlock.
 static void InitializeLongjmpSpMangling() {
   uptr sp1, m1, sp2, m2;
   ProbeLongJmpSp(&sp1, &m1);
@@ -618,19 +608,26 @@ static void InitializeLongjmpSpMangling() {
   constexpr uptr kBits = sizeof(uptr) * 8;
   const uptr r1 = (m1 >> kRot) | (m1 << (kBits - kRot));
   const uptr r2 = (m2 >> kRot) | (m2 << (kBits - kRot));
+  uptr rot;
+  uptr xor_key;
   if ((m1 ^ sp1) == (m2 ^ sp2)) {
     // This includes the identity scheme when the key is zero.
-    atomic_store(&longjmp_rot, 0, memory_order_relaxed);
-    atomic_store(&longjmp_xor_key, m1 ^ sp1, memory_order_release);
+    rot = 0;
+    xor_key = m1 ^ sp1;
   } else if ((r1 ^ sp1) == (r2 ^ sp2)) {
-    atomic_store(&longjmp_rot, kRot, memory_order_relaxed);
-    atomic_store(&longjmp_xor_key, r1 ^ sp1, memory_order_release);
+    rot = kRot;
+    xor_key = r1 ^ sp1;
   } else {
     Printf(
         "FATAL: ThreadSanitizer: unrecognized jmp_buf pointer mangling "
         "scheme\n");
     Die();
   }
+  if (SANITIZER_ANDROID)
+    CHECK_NE(xor_key, 0);
+  atomic_store(&longjmp_rot, rot, memory_order_relaxed);
+  atomic_store(&longjmp_xor_key, xor_key, memory_order_relaxed);
+  atomic_store(&longjmp_sp_inited, 1, memory_order_release);
 }
 #    endif
 
