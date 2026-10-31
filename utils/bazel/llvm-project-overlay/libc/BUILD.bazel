@@ -2876,6 +2876,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_readv",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/readv.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+        ":types_struct_iovec",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_recvfrom",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/recvfrom.h"],
     target_compatible_with = select({
@@ -19985,6 +20002,27 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_socketpair",
         ":__support_osutil_syscall",
         ":errno",
+    ],
+)
+
+############################### sys/uio targets ################################
+
+libc_function(
+    name = "readv",
+    srcs = ["src/sys/uio/linux/readv.cpp"],
+    hdrs = ["src/sys/uio/readv.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_readv",
+        ":errno",
+        ":types_ssize_t",
+        ":types_struct_iovec",
     ],
 )
 
