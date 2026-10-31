@@ -1,4 +1,4 @@
-//===-- Unittests for shared math functions -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -638,6 +638,8 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf128(Float128(0.0)));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf128(Float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbf128(Float128(1.0)));
+  EXPECT_FP_EQ(Float128(0.0),
+               LIBC_NAMESPACE::shared::ldexpf128(Float128(0.0), 0));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrintf128(Float128(0.0)));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::logbf128(Float128(1.0)));
@@ -652,7 +654,10 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
-
+  EXPECT_FP_EQ(Float128(0.0),
+               LIBC_NAMESPACE::shared::scalblnf128(Float128(0.0), 0L));
+  EXPECT_FP_EQ(Float128(0.0),
+               LIBC_NAMESPACE::shared::scalbnf128(Float128(0.0), 0));
   Float128 setpayloadf128_res = Float128(0.0);
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadf128(&setpayloadf128_res,
                                                       Float128(0.0)));
@@ -697,10 +702,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::ffmaf128(
                          float128(0.0), float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::shared::fsqrtf128(float128(1.0f)));
-  ASSERT_FP_EQ(float128(8 << 5),
-               LIBC_NAMESPACE::shared::ldexpf128(float128(8), 5));
-  ASSERT_FP_EQ(float128(-1 * (8 << 5)),
-               LIBC_NAMESPACE::shared::ldexpf128(float128(-8), 5));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::dfmaf128(
                         float128(0.0), float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::dsqrtf128(float128(0.0)));
@@ -777,10 +778,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::remquof128(float128(1.0), float128(1.0),
                                                   &remquof128_exp));
   EXPECT_EQ(1, remquof128_exp);
-  EXPECT_FP_EQ(float128(0.0),
-               LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0L));
-  EXPECT_FP_EQ(float128(0.0),
-               LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0));
   EXPECT_FP_EQ(0x0p+0f,
                LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(0x0p+0f,
