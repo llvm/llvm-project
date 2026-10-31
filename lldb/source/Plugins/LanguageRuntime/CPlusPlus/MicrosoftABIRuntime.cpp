@@ -51,7 +51,7 @@ bool MicrosoftABIRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     const LanguageRuntime::VTableInfo &vtable_info,
     TypeAndOrName &class_type_or_name, Address &dynamic_address) {
-  std::optional<size_t> offset_to_top =
+  std::optional<int64_t> offset_to_top =
       GetOffsetToTop(in_value, class_type_or_name, vtable_info);
   if (!offset_to_top)
     return false;
