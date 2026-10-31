@@ -117,13 +117,12 @@ define void @narrow_to_single_scalar_store_address_not_uniform_across_all_parts(
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 2
-; VF2IC2-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 3
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i32 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP0]], 1
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP2]]
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP3]]
 ; VF2IC2-NEXT:    store i32 [[TMP8]], ptr [[TMP4]], align 4
-; VF2IC2-NEXT:    store i32 [[TMP1]], ptr [[TMP5]], align 4
+; VF2IC2-NEXT:    store i32 [[TMP8]], ptr [[TMP5]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
 ; VF2IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -363,7 +362,7 @@ define void @narrow_scatter_with_uniform_addr_to_scalar_unroll(ptr noalias %src,
 ; VF2IC2-NEXT:    store i8 [[TMP7]], ptr [[DST2]], align 4
 ; VF2IC2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP11]], i64 1
 ; VF2IC2-NEXT:    store i8 [[TMP12]], ptr [[TMP3]], align 4
-; VF2IC2-NEXT:    store i8 [[TMP7]], ptr [[TMP4]], align 4
+; VF2IC2-NEXT:    store i8 [[TMP12]], ptr [[TMP4]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; VF2IC2-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]

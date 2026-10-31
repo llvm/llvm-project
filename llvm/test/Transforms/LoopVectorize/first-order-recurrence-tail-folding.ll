@@ -312,7 +312,7 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5]]
 ; VF1IC2:       [[PRED_STORE_IF4]]:
 ; VF1IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[VEC_IV1]]
-; VF1IC2-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP5]], [[TMP8]]
+; VF1IC2-NEXT:    [[TMP12:%.*]] = add nsw i32 [[VECTOR_RECUR]], [[TMP8]]
 ; VF1IC2-NEXT:    store i32 [[TMP12]], ptr [[TMP11]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
 ; VF1IC2:       [[PRED_STORE_CONTINUE5]]:

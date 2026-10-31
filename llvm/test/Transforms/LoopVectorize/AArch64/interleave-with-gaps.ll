@@ -1102,12 +1102,12 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[CMP_N36:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC25]]
 ; CHECK-NOTF-NEXT:    br i1 [[CMP_N36]], label %[[EXIT_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-NOTF:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NOTF-NEXT:    [[BC_RESUME_VAL36:%.*]] = phi i64 [ [[TMP46]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N]], %[[LOOP_PREHEADER]] ]
-; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX37:%.*]] = phi i32 [ [[TMP55]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP45]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NOTF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP46]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP5]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[N]], %[[LOOP_PREHEADER]] ]
+; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX36:%.*]] = phi i32 [ [[TMP55]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP45]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NOTF-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK-NOTF:       [[LOOP1]]:
-; CHECK-NOTF-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_RESUME_VAL36]], %[[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NOTF-NEXT:    [[RDX:%.*]] = phi i32 [ [[RDX_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_MERGE_RDX37]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NOTF-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NOTF-NEXT:    [[RDX:%.*]] = phi i32 [ [[RDX_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_MERGE_RDX36]], %[[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NOTF-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[A]], i64 [[IV1]]
 ; CHECK-NOTF-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NOTF-NEXT:    [[ADD:%.*]] = add nsw i32 [[LD1]], [[RDX]]
@@ -1213,33 +1213,30 @@ define void @store_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], -2
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], -3
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP3]] to i32
-; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP4]] to i32
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP5]] to i32
 ; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP2]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP3]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP4]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP5]], i32 0
 ; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP10]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP7]], ptr [[TMP11]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP8]], ptr [[TMP12]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP9]], ptr [[TMP13]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP11]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP12]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP13]], align 4
 ; CHECK-NOTF-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP2]], i32 1
 ; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP3]], i32 1
 ; CHECK-NOTF-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP4]], i32 1
 ; CHECK-NOTF-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP5]], i32 1
 ; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP14]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP7]], ptr [[TMP15]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP8]], ptr [[TMP16]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP9]], ptr [[TMP17]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP15]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP16]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP17]], align 4
 ; CHECK-NOTF-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP2]], i32 3
 ; CHECK-NOTF-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP3]], i32 3
 ; CHECK-NOTF-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP4]], i32 3
 ; CHECK-NOTF-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP5]], i32 3
 ; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP18]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP7]], ptr [[TMP19]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP8]], ptr [[TMP20]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP9]], ptr [[TMP21]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP19]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP20]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP21]], align 4
 ; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NOTF-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
@@ -1505,33 +1502,30 @@ define void @store_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], -2
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], -3
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP3]] to i32
-; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP4]] to i32
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP5]] to i32
 ; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP2]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP3]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP4]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP5]], i32 0
 ; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP10]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP7]], ptr [[TMP11]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP8]], ptr [[TMP12]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP9]], ptr [[TMP13]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP11]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP12]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP13]], align 4
 ; CHECK-NOTF-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP2]], i32 1
 ; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP3]], i32 1
 ; CHECK-NOTF-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP4]], i32 1
 ; CHECK-NOTF-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP5]], i32 1
 ; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP14]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP7]], ptr [[TMP15]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP8]], ptr [[TMP16]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP9]], ptr [[TMP17]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP15]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP16]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP17]], align 4
 ; CHECK-NOTF-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP2]], i32 2
 ; CHECK-NOTF-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP3]], i32 2
 ; CHECK-NOTF-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP4]], i32 2
 ; CHECK-NOTF-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP5]], i32 2
 ; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP18]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP7]], ptr [[TMP19]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP8]], ptr [[TMP20]], align 4
-; CHECK-NOTF-NEXT:    store i32 [[TMP9]], ptr [[TMP21]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP19]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP20]], align 4
+; CHECK-NOTF-NEXT:    store i32 [[TMP6]], ptr [[TMP21]], align 4
 ; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NOTF-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
