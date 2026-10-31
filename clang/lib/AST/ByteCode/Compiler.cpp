@@ -1310,7 +1310,9 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
     return false;
   if (!this->emitInitElem(SubExprT, 0, SubExpr))
     return false;
-  return this->visitArrayElemInit(1, SubExpr, SubExprT);
+  if (!this->visitArrayElemInit(1, SubExpr, SubExprT))
+    return false;
+  return this->emitFinishInit(E);
 }
 
 template <class Emitter>
@@ -1884,7 +1886,7 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
         return this->emitPopPtr(E);
     }
   }
-  return true;
+  return this->emitFinishInit(E);
 }
 
 template <class Emitter>
@@ -5994,8 +5996,15 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
     APValue::LValueBase Base = Val.getLValueBase();
     QualType EntryType;
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>()) {
-      if (!this->visit(BaseExpr))
-        return false;
+      // Try to avoid evaluating the BaseExpr multiple times.
+      if (UnsignedOrNone GlobalIndex = P.getGlobal(BaseExpr);
+          GlobalIndex && P.isGlobalInitialized(*GlobalIndex)) {
+        if (!this->emitGetPtrGlobal(*GlobalIndex, Info))
+          return false;
+      } else {
+        if (!this->visit(BaseExpr))
+          return false;
+      }
       EntryType = BaseExpr->getType();
     } else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
       if (!this->visitDeclRef(VD, Info.asExpr()))

@@ -4090,12 +4090,18 @@ protected:
 class VPExpandSCEVRecipe : public VPSingleDefRecipe {
   const SCEV *Expr;
 
+  /// Whether \p Expr must be expanded in IR, which hoists it out of the loops
+  /// it is invariant in, instead of as VPInstructions.
+  bool ExpandInIR;
+
 public:
-  VPExpandSCEVRecipe(const SCEV *Expr);
+  VPExpandSCEVRecipe(const SCEV *Expr, bool ExpandInIR = false);
 
   ~VPExpandSCEVRecipe() override = default;
 
-  VPExpandSCEVRecipe *clone() override { return new VPExpandSCEVRecipe(Expr); }
+  VPExpandSCEVRecipe *clone() override {
+    return new VPExpandSCEVRecipe(Expr, ExpandInIR);
+  }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPExpandSCEVSC)
 
@@ -4111,6 +4117,8 @@ public:
   }
 
   const SCEV *getSCEV() const { return Expr; }
+
+  bool expandInIR() const { return ExpandInIR; }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

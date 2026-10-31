@@ -90,7 +90,7 @@ public:
 
   /// True iff this matches the given type.
   bool Matches(FormattersMatchCandidate candidate_type) const {
-    llvm::StringRef type_name = candidate_type.GetTypeName().GetStringRef();
+    llvm::StringRef type_name = candidate_type.GetTypeName();
     switch (m_match_type) {
     case lldb::eFormatterMatchExact:
       return m_name == type_name ||

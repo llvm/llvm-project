@@ -124,6 +124,21 @@ public:
   /// \param numBytes is the number of bytes to copy.
   void memcpy(void *dest, const void *src, std::size_t numBytes);
 
+  /// Defines a copy of elements from one USM or host pointer to another for
+  /// this command group.
+  ///
+  /// The dest and src parameters must each either be a host pointer or a
+  /// pointer within a USM allocation that is accessible on the handler's
+  /// device. If a pointer is to a USM allocation, that allocation must have
+  /// been created from the same context as the handler's queue.
+  ///
+  /// \param src is the source memory address.
+  /// \param dest is the destination memory address.
+  /// \param count is the number of elements of type T to copy.
+  template <typename T> void copy(const T *src, T *dest, std::size_t count) {
+    memcpy(dest, src, count * sizeof(T));
+  }
+
   /// Defines a memory set operation for this command group.
   ///
   /// \param ptr is the pointer to the memory to be set.
