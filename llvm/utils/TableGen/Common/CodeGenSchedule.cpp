@@ -52,6 +52,10 @@ struct InstrsOp : public SetTheory::Operator {
 // (instregex "OpcPat",...) Find all instructions matching an opcode pattern.
 struct InstRegexOp : public SetTheory::Operator {
   const CodeGenTarget &Target;
+  // The instructions matching each pattern. Scheduling models repeat many
+  // patterns, so only match each one once.
+  StringMap<std::vector<const Record *>> Matches;
+
   InstRegexOp(const CodeGenTarget &t) : Target(t) {}
 
   /// Remove any text inside of parentheses from S.
@@ -90,6 +94,13 @@ struct InstRegexOp : public SetTheory::Operator {
         PrintFatalError(Loc, "instregex requires pattern string: " +
                                  Expr->getAsString());
       StringRef Original = SI->getValue();
+      auto [It, Inserted] = Matches.try_emplace(Original);
+      std::vector<const Record *> &Matched = It->second;
+      if (!Inserted) {
+        Elts.insert(Matched.begin(), Matched.end());
+        continue;
+      }
+
       // Drop an explicit ^ anchor to not interfere with prefix search.
       bool HadAnchor = Original.consume_front("^");
 
@@ -130,16 +141,12 @@ struct InstRegexOp : public SetTheory::Operator {
         Regexpr = Regex(pat);
       }
 
-      int NumMatches = 0;
-
       // The generic opcodes are unsorted, handle them manually.
       for (auto *Inst : Generics) {
         StringRef InstName = Inst->getName();
         if (InstName.starts_with(Prefix) &&
-            (!Regexpr || Regexpr->match(InstName.substr(Prefix.size())))) {
-          Elts.insert(Inst->TheDef);
-          NumMatches++;
-        }
+            (!Regexpr || Regexpr->match(InstName.substr(Prefix.size()))))
+          Matched.push_back(Inst->TheDef);
       }
 
       // Target instructions are split into two ranges: pseudo instructions
@@ -162,16 +169,15 @@ struct InstRegexOp : public SetTheory::Operator {
       // Check if there's a regex that needs to be checked.
       const auto HandleNonGeneric = [&](const CodeGenInstruction *Inst) {
         StringRef InstName = Inst->getName();
-        if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size()))) {
-          Elts.insert(Inst->TheDef);
-          NumMatches++;
-        }
+        if (!Regexpr || Regexpr->match(InstName.substr(Prefix.size())))
+          Matched.push_back(Inst->TheDef);
       };
       std::for_each(Range1.first, Range1.second, HandleNonGeneric);
       std::for_each(Range2.first, Range2.second, HandleNonGeneric);
 
-      if (0 == NumMatches)
+      if (Matched.empty())
         PrintFatalError(Loc, "instregex has no matches: " + Original);
+      Elts.insert(Matched.begin(), Matched.end());
     }
   }
 };
