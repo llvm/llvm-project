@@ -924,6 +924,10 @@ llvm:vectorizers:
     - any-glob-to-any-file:
       - llvm/lib/Transforms/Vectorize/**/*
       - llvm/include/llvm/Transforms/Vectorize/**/*
+      - llvm/test/Transforms/LoopVectorize/**
+      - llvm/test/Transforms/SLPVectorizer/**
+      - llvm/test/Transforms/VectorCombine/**
+      - llvm/test/Transforms/SandboxVectorizer/**
 
 llvm:loopvectorize:
   - changed-files:
