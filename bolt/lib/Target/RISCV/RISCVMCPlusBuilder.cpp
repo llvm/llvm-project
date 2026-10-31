@@ -50,6 +50,30 @@ public:
 
   MCPhysReg getFlagsReg() const override { return RISCV::NoRegister; }
 
+  bool isRISCVLRSC(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case RISCV::LR_W:
+    case RISCV::LR_W_AQ:
+    case RISCV::LR_W_RL:
+    case RISCV::LR_W_AQRL:
+    case RISCV::LR_D:
+    case RISCV::LR_D_AQ:
+    case RISCV::LR_D_RL:
+    case RISCV::LR_D_AQRL:
+    case RISCV::SC_W:
+    case RISCV::SC_W_AQ:
+    case RISCV::SC_W_RL:
+    case RISCV::SC_W_AQRL:
+    case RISCV::SC_D:
+    case RISCV::SC_D_AQ:
+    case RISCV::SC_D_RL:
+    case RISCV::SC_D_AQRL:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isCleanReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case RISCV::ADDI:

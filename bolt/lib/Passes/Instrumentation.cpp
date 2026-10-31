@@ -382,6 +382,32 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (BC.isAArch64() && hasAArch64ExclusiveMemop(Function, BBToSkip))
     return;
 
+  // Identify leaf functions and invoke blocks. Check LR/SC in the same scan,
+  // before creating profile descriptions or modifying the function.
+  // Leaf functions need special instructions to protect the red zone.
+  bool IsLeafFunction = true;
+  DenseSet<const BinaryBasicBlock *> InvokeBlocks;
+  for (const BinaryBasicBlock &BB : Function) {
+    for (const MCInst &Inst : BB) {
+      // Counter spills and updates can break the eventual-success guarantee of
+      // constrained LR/SC loops. Reservations can span basic blocks, so skip
+      // the whole function even if only one of LR/SC is present.
+      if (BC.isRISCV() && BC.MIB->isRISCVLRSC(Inst)) {
+        if (opts::Verbosity >= 2)
+          BC.outs() << "BOLT-INSTRUMENTER: skipping function "
+                    << Function.getPrintName()
+                    << " containing a RISC-V LR/SC instruction\n";
+        return;
+      }
+      if (BC.MIB->isCall(Inst)) {
+        if (BC.MIB->isInvoke(Inst))
+          InvokeBlocks.insert(&BB);
+        if (!BC.MIB->isTailCall(Inst))
+          IsLeafFunction = false;
+      }
+    }
+  }
+
   SplitWorklistTy SplitWorklist;
   SplitInstrsTy SplitInstrs;
 
@@ -440,21 +466,6 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 
       for (BinaryBasicBlock *SuccBB : BB->successors())
         Stack.push(std::make_pair(BB, SuccBB));
-    }
-  }
-
-  // Determine whether this is a leaf function, which needs special
-  // instructions to protect the red zone
-  bool IsLeafFunction = true;
-  DenseSet<const BinaryBasicBlock *> InvokeBlocks;
-  for (const BinaryBasicBlock &BB : Function) {
-    for (const MCInst &Inst : BB) {
-      if (BC.MIB->isCall(Inst)) {
-        if (BC.MIB->isInvoke(Inst))
-          InvokeBlocks.insert(&BB);
-        if (!BC.MIB->isTailCall(Inst))
-          IsLeafFunction = false;
-      }
     }
   }
 
