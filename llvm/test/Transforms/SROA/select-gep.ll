@@ -201,10 +201,16 @@ define i32 @test_select_idx_mem2reg(i1 %c) {
 ; Test gep with a select-like zext index unfolding on an alloca that is
 ; splittable and promotable.
 define i64 @test_select_like_zext_idx_mem2reg(i1 %c) !prof !0 {
-; CHECK-LABEL: @test_select_like_zext_idx_mem2reg(
-; CHECK-NEXT:    [[IDX:%.*]] = zext i1 [[C:%.*]] to i64
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C]], i64 2, i64 1, !prof [[PROF1:![0-9]+]]
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-PRESERVE-CFG-LABEL: @test_select_like_zext_idx_mem2reg(
+; CHECK-PRESERVE-CFG-NEXT:    [[IDX:%.*]] = zext i1 [[C:%.*]] to i64
+; CHECK-PRESERVE-CFG-NEXT:    [[RES_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 2, i64 1, !prof [[PROF1:![0-9]+]]
+; CHECK-PRESERVE-CFG-NEXT:    ret i64 [[RES_SROA_SPECULATED]]
+;
+; CHECK-MODIFY-CFG-LABEL: @test_select_like_zext_idx_mem2reg(
+; CHECK-MODIFY-CFG-NEXT:    [[IDX:%.*]] = zext i1 [[C:%.*]] to i64
+; CHECK-MODIFY-CFG-NEXT:    [[GEP2_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[RES_SROA_SPECULATED:%.*]] = select i1 [[GEP2_SROA_IDX]], i64 2, i64 1, !prof [[PROF1:![0-9]+]]
+; CHECK-MODIFY-CFG-NEXT:    ret i64 [[RES_SROA_SPECULATED]]
 ;
   %alloca = alloca [2 x i64], align 8
   store i64 1, ptr %alloca
@@ -219,15 +225,21 @@ define i64 @test_select_like_zext_idx_mem2reg(i1 %c) !prof !0 {
 ; Test gep with a zext index that is not equivalent to a select. No unfolding
 ; or promotion should take place.
 define i64 @test_zext_unlike_select_idx_mem2reg(i8 %c) {
-; CHECK-LABEL: @test_zext_unlike_select_idx_mem2reg(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i64], align 8
-; CHECK-NEXT:    store i64 1, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 1
-; CHECK-NEXT:    store i64 2, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[IDX:%.*]] = zext i8 [[C:%.*]] to i64
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 [[IDX]]
-; CHECK-NEXT:    [[RES:%.*]] = load i64, ptr [[GEP2]], align 4
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-PRESERVE-CFG-LABEL: @test_zext_unlike_select_idx_mem2reg(
+; CHECK-PRESERVE-CFG-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i64], align 8
+; CHECK-PRESERVE-CFG-NEXT:    store i64 1, ptr [[ALLOCA]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 1
+; CHECK-PRESERVE-CFG-NEXT:    store i64 2, ptr [[GEP1]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[IDX:%.*]] = zext i8 [[C:%.*]] to i64
+; CHECK-PRESERVE-CFG-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 [[IDX]]
+; CHECK-PRESERVE-CFG-NEXT:    [[RES:%.*]] = load i64, ptr [[GEP2]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    ret i64 [[RES]]
+;
+; CHECK-MODIFY-CFG-LABEL: @test_zext_unlike_select_idx_mem2reg(
+; CHECK-MODIFY-CFG-NEXT:    [[IDX:%.*]] = zext i8 [[C:%.*]] to i64
+; CHECK-MODIFY-CFG-NEXT:    [[GEP2_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[RES_SROA_SPECULATED:%.*]] = select i1 [[GEP2_SROA_IDX]], i64 2, i64 1
+; CHECK-MODIFY-CFG-NEXT:    ret i64 [[RES_SROA_SPECULATED]]
 ;
   %alloca = alloca [2 x i64], align 8
   store i64 1, ptr %alloca

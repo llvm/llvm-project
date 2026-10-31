@@ -531,17 +531,30 @@ bb.4:                                                ; preds = %bb.1, %bb.1, %bb
 }
 
 define i64 @test_phi_idx_mem2reg_const(i1 %arg) {
-; CHECK-LABEL: @test_phi_idx_mem2reg_const(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i64 [ 2, [[BB1]] ], [ 3, [[BB2]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ 1, [[BB2]] ]
-; CHECK-NEXT:    ret i64 [[PHI_SROA_PHI_SROA_SPECULATED]]
+; CHECK-PRESERVE-CFG-LABEL: @test_phi_idx_mem2reg_const(
+; CHECK-PRESERVE-CFG-NEXT:  bb:
+; CHECK-PRESERVE-CFG-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-PRESERVE-CFG:       bb1:
+; CHECK-PRESERVE-CFG-NEXT:    br label [[END:%.*]]
+; CHECK-PRESERVE-CFG:       bb2:
+; CHECK-PRESERVE-CFG-NEXT:    br label [[END]]
+; CHECK-PRESERVE-CFG:       end:
+; CHECK-PRESERVE-CFG-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i64 [ 2, [[BB1]] ], [ 3, [[BB2]] ]
+; CHECK-PRESERVE-CFG-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ 1, [[BB2]] ]
+; CHECK-PRESERVE-CFG-NEXT:    ret i64 [[PHI_SROA_PHI_SROA_SPECULATED]]
+;
+; CHECK-MODIFY-CFG-LABEL: @test_phi_idx_mem2reg_const(
+; CHECK-MODIFY-CFG-NEXT:  bb:
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-MODIFY-CFG:       bb1:
+; CHECK-MODIFY-CFG-NEXT:    br label [[END:%.*]]
+; CHECK-MODIFY-CFG:       bb2:
+; CHECK-MODIFY-CFG-NEXT:    br label [[END]]
+; CHECK-MODIFY-CFG:       end:
+; CHECK-MODIFY-CFG-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ 1, [[BB2]] ]
+; CHECK-MODIFY-CFG-NEXT:    [[GETELEMENTPTR_SROA_IDX:%.*]] = icmp eq i64 [[PHI]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[LOAD_SROA_SPECULATED:%.*]] = select i1 [[GETELEMENTPTR_SROA_IDX]], i64 3, i64 2
+; CHECK-MODIFY-CFG-NEXT:    ret i64 [[LOAD_SROA_SPECULATED]]
 ;
 bb:
   %alloca = alloca [2 x i64], align 8
@@ -564,22 +577,35 @@ end:
 }
 
 define i64 @test_phi_idx_mem2reg_not_const(i1 %arg, i64 %idx) {
-; CHECK-LABEL: @test_phi_idx_mem2reg_not_const(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i64], align 8
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 1
-; CHECK-NEXT:    store i64 2, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    store i64 3, ptr [[GEP1]], align 4
-; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[IDX:%.*]], [[BB2]] ]
-; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 [[PHI]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GETELEMENTPTR]], align 4
-; CHECK-NEXT:    ret i64 [[LOAD]]
+; CHECK-PRESERVE-CFG-LABEL: @test_phi_idx_mem2reg_not_const(
+; CHECK-PRESERVE-CFG-NEXT:  bb:
+; CHECK-PRESERVE-CFG-NEXT:    [[ALLOCA:%.*]] = alloca [2 x i64], align 8
+; CHECK-PRESERVE-CFG-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 1
+; CHECK-PRESERVE-CFG-NEXT:    store i64 2, ptr [[ALLOCA]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    store i64 3, ptr [[GEP1]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-PRESERVE-CFG:       bb1:
+; CHECK-PRESERVE-CFG-NEXT:    br label [[END:%.*]]
+; CHECK-PRESERVE-CFG:       bb2:
+; CHECK-PRESERVE-CFG-NEXT:    br label [[END]]
+; CHECK-PRESERVE-CFG:       end:
+; CHECK-PRESERVE-CFG-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[IDX:%.*]], [[BB2]] ]
+; CHECK-PRESERVE-CFG-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr inbounds i64, ptr [[ALLOCA]], i64 [[PHI]]
+; CHECK-PRESERVE-CFG-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GETELEMENTPTR]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    ret i64 [[LOAD]]
+;
+; CHECK-MODIFY-CFG-LABEL: @test_phi_idx_mem2reg_not_const(
+; CHECK-MODIFY-CFG-NEXT:  bb:
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-MODIFY-CFG:       bb1:
+; CHECK-MODIFY-CFG-NEXT:    br label [[END:%.*]]
+; CHECK-MODIFY-CFG:       bb2:
+; CHECK-MODIFY-CFG-NEXT:    br label [[END]]
+; CHECK-MODIFY-CFG:       end:
+; CHECK-MODIFY-CFG-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[IDX:%.*]], [[BB2]] ]
+; CHECK-MODIFY-CFG-NEXT:    [[GETELEMENTPTR_SROA_IDX:%.*]] = icmp eq i64 [[PHI]], 1
+; CHECK-MODIFY-CFG-NEXT:    [[LOAD_SROA_SPECULATED:%.*]] = select i1 [[GETELEMENTPTR_SROA_IDX]], i64 3, i64 2
+; CHECK-MODIFY-CFG-NEXT:    ret i64 [[LOAD_SROA_SPECULATED]]
 ;
 bb:
   %alloca = alloca [2 x i64], align 8
@@ -756,12 +782,15 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 !2 = !{!"branch_weights", i32 7, i32 11}
 
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK-PRESERVE-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 5}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 7, i32 11}
+; CHECK-MODIFY-CFG: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-MODIFY-CFG: {{.*}}
-; CHECK-PRESERVE-CFG: {{.*}}
+; CHECK-PRESERVE-CFG: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
+; CHECK-PRESERVE-CFG: [[PROF1]] = !{!"branch_weights", i32 3, i32 5}
+; CHECK-PRESERVE-CFG: [[PROF2]] = !{!"branch_weights", i32 7, i32 11}
+;.
+; CHECK-MODIFY-CFG: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
+; CHECK-MODIFY-CFG: [[PROF1]] = !{!"branch_weights", i32 3, i32 5}
+; CHECK-MODIFY-CFG: [[PROF2]] = !{!"branch_weights", i32 7, i32 11}
+;.
