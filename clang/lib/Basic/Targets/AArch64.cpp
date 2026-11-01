@@ -454,11 +454,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (T.isLFI())
     Builder.defineMacro("__LFI__");
 
-  if (HasFloat128) {
-    Builder.defineMacro("__FLOAT128__");
-    Builder.defineMacro("__SIZEOF_FLOAT128__", "16");
-  }
-
   // Inline assembly supports AArch64 flag outputs.
   Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
 
