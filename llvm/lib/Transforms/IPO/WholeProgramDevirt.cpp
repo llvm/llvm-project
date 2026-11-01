@@ -1221,21 +1221,24 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       if (Opts.wholeprogramdevirt_check == WPDCheckMode::Fallback ||
           DevirtSpeculatively) {
         MDBuilder MDB(M.getContext());
-        // Stays likely when the call has no value profile.
-        MDNode *Weights = MDB.createLikelyBranchWeights();
         uint64_t TotalCount = 0;
         SmallVector<InstrProfValueData> ValueData = getValueProfDataFromInst(
             CB, InstrProfValueKind::IPVK_IndirectCallTarget,
             std::numeric_limits<uint32_t>::max(), TotalCount);
-        if (!ValueData.empty()) {
+        MDNode *Weights;
+        if (ValueData.empty()) {
+          // Stays likely when the call has no value profile.
+          Weights = MDB.createLikelyBranchWeights();
+        } else {
           uint64_t TargetCount = 0;
           uint64_t TargetGUID =
               GlobalValue::getGUIDAssumingExternalLinkage(TheFn->getName());
-          for (const InstrProfValueData &VD : ValueData)
+          for (const InstrProfValueData &VD : ValueData) {
             if (VD.Value == TargetGUID) {
               TargetCount = VD.Count;
               break;
             }
+          }
 
           // Calls that still go indirect. Stays at 0 even if a sampled
           // profile reports more hits on the target than on the whole call.
