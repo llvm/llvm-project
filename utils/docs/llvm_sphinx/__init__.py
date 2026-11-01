@@ -30,7 +30,11 @@ def common_conf(tags: Tags) -> Dict[str, Any]:
     # needs_sphinx = '1.0'
     # The encoding of source files.
     # source_encoding = 'utf-8-sig'
-    extensions = ["llvm_sphinx.ext.mlir_pygments", "myst_parser"]
+    extensions = [
+        "llvm_sphinx.ext.llvm_pygments",
+        "llvm_sphinx.ext.mlir_pygments",
+        "myst_parser",
+    ]
     source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
     myst_enable_extensions = ["substitution", "colon_fence"]
     myst_heading_anchors = 6

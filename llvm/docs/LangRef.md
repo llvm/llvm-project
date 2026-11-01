@@ -1206,7 +1206,7 @@ must be discarded. The following selection kinds are supported:
 Here is an example of a COFF COMDAT where a function will only be selected if
 the COMDAT key's section is the largest:
 
-```text
+```llvm
 $foo = comdat largest
 @foo = global i32 2, comdat($foo)
 
@@ -2037,7 +2037,7 @@ makes the format of the prologue data highly target dependent.
 A trivial example of valid prologue data for the x86 architecture is `i8 144`,
 which encodes the `nop` instruction:
 
-```text
+```llvm
 define void @f() prologue i8 144 { ... }
 ```
 
@@ -2045,7 +2045,7 @@ Generally prologue data can be formed by encoding a relative branch instruction
 which skips the metadata, as in this example of valid prologue data for the
 x86_64 architecture, where the first two bytes encode `jmp .+10`:
 
-```text
+```llvm
 %0 = type <{ i8, i8, ptr }>
 
 define void @f() prologue %0 <{ i8 235, i8 8, ptr @md}> { ... }
@@ -6668,7 +6668,7 @@ their operand. For example:
 
 Metadata nodes that aren't uniqued use the `distinct` keyword. For example:
 
-```text
+```llvm
 !0 = distinct !{!"test\00", i32 10}
 ```
 
@@ -6754,7 +6754,7 @@ them from instructions). The `debugInfoForProfiling:` field is a boolean
 indicating whether or not line-table discriminators are updated to provide
 more-accurate debug info for profiling results.
 
-```text
+```llvm
 !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
                     isOptimized: true, flags: "-O2", runtimeVersion: 2,
                     splitDebugFilename: "abc.debug", emissionKind: FullDebug,
@@ -6773,7 +6773,7 @@ values.
 Omitting the `dialect:` field is the only way to express "no dialect" in
 textual IR.
 
-```text
+```llvm
 !0 = !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang",
                     isOptimized: false, runtimeVersion: 0,
                     emissionKind: FullDebug,
@@ -6812,7 +6812,7 @@ values for `checksumkind:` field are: {CSK_MD5, CSK_SHA1, CSK_SHA256}
 `DIBasicType` nodes represent primitive types, such as `int`, `bool` and
 `float`. `tag:` defaults to `DW_TAG_base_type`.
 
-```text
+```llvm
 !0 = !DIBasicType(name: "unsigned char", size: 8, align: 8,
                   encoding: DW_ATE_unsigned_char)
 !1 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "decltype(nullptr)")
@@ -6850,7 +6850,7 @@ factor is a power of 2; decimal, where the scale factor is a power of
 10; and rational, where the scale factor is an arbitrary rational
 number.
 
-```text
+```llvm
 !0 = !DIFixedPointType(name: "decimal", size: 8, encoding: DW_ATE_signed_fixed,
                        kind: Decimal, factor: -4)
 !1 = !DIFixedPointType(name: "binary", size: 8, encoding: DW_ATE_unsigned_fixed,
@@ -6868,7 +6868,7 @@ refers to a tuple; the first operand is the return type, while the rest are the
 types of the formal arguments in order. If the first operand is `null`, that
 represents a function with no return value (such as `void foo() {}` in C++).
 
-```text
+```llvm
 !0 = !BasicType(name: "int", size: 32, align: 32, DW_ATE_signed)
 !1 = !BasicType(name: "char", size: 8, align: 8, DW_ATE_signed_char)
 !2 = !DISubroutineType(types: !{null, !0, !1}) ; void (int, char)
@@ -6881,7 +6881,7 @@ represents a function with no return value (such as `void foo() {}` in C++).
 `DIDerivedType` nodes represent types derived from other types, such as
 qualified types.
 
-```text
+```llvm
 !0 = !DIBasicType(name: "unsigned char", size: 8, align: 8,
                   encoding: DW_ATE_unsigned_char)
 !1 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !0, size: 32,
@@ -6943,7 +6943,7 @@ does not have  `flags: DIFlagFwdDecl` set.  LLVM tools that link modules
 together will unique such definitions at parse time via the `identifier:`
 field, even if the nodes are `distinct`.
 
-```text
+```llvm
 !0 = !DIEnumerator(name: "SixKind", value: 7)
 !1 = !DIEnumerator(name: "SevenKind", value: 7)
 !2 = !DIEnumerator(name: "NegEightKind", value: -8)
@@ -7019,7 +7019,7 @@ current one.
 - `count: !10` describes the count with a {ref}`DILocalVariable`.
 - `count: !12` describes the count with a {ref}`DIGlobalVariable`.
 
-```text
+```llvm
 !0 = !DISubrange(count: 5, lowerBound: 0) ; array counting from 0
 !1 = !DISubrange(count: 5, lowerBound: 1) ; array counting from 1
 !2 = !DISubrange(count: -1) ; empty array.
@@ -7062,7 +7062,7 @@ required.  In this situation, the stored value is biased by the lower
 bound -- e.g., a range `-7 .. 0` may take 3 bits in memory, and the
 value -5 would be stored as 2 (a bias of -7).
 
-```text
+```llvm
 ; Scopes used in rest of example
 !0 = !DIFile(filename: "vla.c", directory: "/path/to/file")
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !0)
@@ -7089,7 +7089,7 @@ value -5 would be stored as 2 (a bias of -7).
 `DIEnumerator` nodes are the elements for `DW_TAG_enumeration_type`
 variants of {ref}`DICompositeType`.
 
-```text
+```llvm
 !0 = !DIEnumerator(name: "SixKind", value: 7)
 !1 = !DIEnumerator(name: "SevenKind", value: 7)
 !2 = !DIEnumerator(name: "NegEightKind", value: -8)
@@ -7101,7 +7101,7 @@ variants of {ref}`DICompositeType`.
 language constructs. They are used (optionally) in {ref}`DICompositeType` and
 {ref}`DISubprogram` `templateParams:` fields.
 
-```text
+```llvm
 !0 = !DITemplateTypeParameter(name: "Ty", type: !1)
 ```
 
@@ -7113,7 +7113,7 @@ but if specified can also be set to `DW_TAG_GNU_template_template_param` or
 `DW_TAG_GNU_template_param_pack`. They are used (optionally) in
 {ref}`DICompositeType` and {ref}`DISubprogram` `templateParams:` fields.
 
-```text
+```llvm
 !0 = !DITemplateValueParameter(name: "Ty", type: !1, value: i32 7)
 ```
 
@@ -7121,7 +7121,7 @@ but if specified can also be set to `DW_TAG_GNU_template_template_param` or
 
 `DINamespace` nodes represent namespaces in the source language.
 
-```text
+```llvm
 !0 = !DINamespace(name: "myawesomeproject", scope: !1, file: !2, line: 7)
 ```
 
@@ -7131,7 +7131,7 @@ but if specified can also be set to `DW_TAG_GNU_template_template_param` or
 
 `DIGlobalVariable` nodes represent global variables in the source language.
 
-```text
+```llvm
 @foo = global i32, !dbg !0
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !2,
@@ -7144,7 +7144,7 @@ but if specified can also be set to `DW_TAG_GNU_template_template_param` or
 `DIGlobalVariableExpression` nodes tie a {ref}`DIGlobalVariable` together
 with a {ref}`DIExpression`.
 
-```text
+```llvm
 @lower = global i32, !dbg !0
 @upper = global i32, !dbg !1
 !0 = !DIGlobalVariableExpression(
@@ -7183,7 +7183,7 @@ with an ODR `identifier:` and that does not set `flags: DIFwdDecl`, then
 the subprogram declaration is uniqued based only on its `linkageName:` and
 `scope:`.
 
-```text
+```llvm
 define void @_Z3foov() !dbg !0 {
   ...
 }
@@ -7208,7 +7208,7 @@ define void @_Z3foov() !dbg !0 {
 two lexical blocks at same depth. They are valid targets for `scope:`
 fields.
 
-```text
+```llvm
 !0 = distinct !DILexicalBlock(scope: !1, file: !2, line: 7, column: 35)
 ```
 
@@ -7224,7 +7224,7 @@ operands.
 indicate textual inclusion, or the `discriminator:` field can be used to
 discriminate between control flow within a single block in the source language.
 
-```text
+```llvm
 !0 = !DILexicalBlock(scope: !3, file: !4, line: 7, column: 35)
 !1 = !DILexicalBlockFile(scope: !0, file: !4, discriminator: 0)
 !2 = !DILexicalBlockFile(scope: !0, file: !4, discriminator: 1)
@@ -7238,7 +7238,7 @@ discriminate between control flow within a single block in the source language.
 mandatory, and points at an {ref}`DILexicalBlockFile`, an
 {ref}`DILexicalBlock`, or an {ref}`DISubprogram`.
 
-```text
+```llvm
 !0 = !DILocation(line: 2900, column: 42, scope: !1, inlinedAt: !2)
 ```
 
@@ -7250,7 +7250,7 @@ position omits the field entirely. The field belongs to the location that
 carries it: locations in an `inlinedAt:` chain may each have their own, and LLVM
 defines no relationship between them.
 
-```text
+```llvm
 !0 = !DILocation(line: 2900, column: 42, scope: !1, irlayers: !3)
 ```
 
@@ -7267,7 +7267,7 @@ field points at a {ref}`DIFile` for it; both are mandatory. `line:` and
 Unlike a {ref}`DILocation`, a `DILayerLoc` has no scope and no inlined-at
 context: it is a bare coordinate in a file, not a location in a scope tree.
 
-```text
+```llvm
 !0 = !DILayerLoc(line: 100, column: 1, file: !1, kind: "HighLevelIR")
 ```
 
@@ -7287,7 +7287,7 @@ Both node types are normally uniqued, so instructions sharing a position at some
 level share the corresponding node. `distinct` forms are legal; nothing in LLVM
 requires a layer node to be shared.
 
-```text
+```llvm
 !0 = !DILayerLocList(!1, !2)
 !1 = !DILayerLoc(line: 100, column: 1, file: !3, kind: "HighLevelIR")
 !2 = !DILayerLoc(line: 7, column: 3, file: !4, kind: "LowLevelIR")
@@ -7302,7 +7302,7 @@ the `arg:` field is set to non-zero, then this variable is a subprogram
 parameter, and it will be included in the `retainedNodes:` field of its
 {ref}`DISubprogram`.
 
-```text
+```llvm
 !0 = !DILocalVariable(name: "this", arg: 1, scope: !3, file: !2, line: 7,
                       type: !3, flags: DIFlagArtificial)
 !1 = !DILocalVariable(name: "x", arg: 2, scope: !4, file: !2, line: 7,
@@ -7379,7 +7379,7 @@ be used for the structure type.
 
 `DIObjCProperty` nodes represent Objective-C property nodes.
 
-```text
+```llvm
 !3 = !DIObjCProperty(name: "foo", file: !1, line: 7, setter: "setFoo",
                      getter: "getFoo", attributes: 7, type: !2)
 ```
@@ -7391,7 +7391,7 @@ data member but whose access is implemented by an accessor. The node models
 the property's backing variable (for example, an Objective-C `@property`'s
 backing ivar).
 
-```text
+```llvm
 !3 = !DIDerivedType(tag: DW_TAG_member, name: "_x", scope: !1, file: !2,
                     line: 8, baseType: !4, size: 32)
 !5 = !DIProperty(name: "x", file: !2, line: 8, type: !4, backing_storage: !3)
@@ -7403,7 +7403,7 @@ backing ivar).
 compile unit. The `elements` field is a list of renamed entities (such as
 variables and subprograms) in the imported entity (such as module).
 
-```text
+```llvm
 !2 = !DIImportedEntity(tag: DW_TAG_imported_module, name: "foo", scope: !0,
                        entity: !1, line: 7, elements: !3)
 !3 = !{!4}
@@ -7418,7 +7418,7 @@ The `name:` field is the macro identifier, followed by macro parameters when
 defining a function-like macro, and the `value` field is the token-string
 used to expand the macro identifier.
 
-```text
+```llvm
 !2 = !DIMacro(macinfo: DW_MACINFO_define, line: 7, name: "foo(x)",
               value: "((x) + 1)")
 !3 = !DIMacro(macinfo: DW_MACINFO_undef, line: 30, name: "foo")
@@ -7430,7 +7430,7 @@ used to expand the macro identifier.
 The `nodes:` field is a list of `DIMacro` and `DIMacroFile` nodes that
 appear in the included source file.
 
-```text
+```llvm
 !2 = !DIMacroFile(macinfo: DW_MACINFO_start_file, line: 7, file: !2,
                   nodes: !3)
 ```
@@ -7454,7 +7454,7 @@ the `CoroSplit` pass. In addition, the `CoroSplit` pass also uses the
 `scope:`, `name:`, `file:` and `line:` are mandatory. The remaining
 fields are optional.
 
-```text
+```llvm
 !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7, column: 4)
 !3 = !DILabel(scope: !0, name: "__coro_resume_3", file: !1, line: 9, column: 3, isArtificial: true, coroSuspendIdx: 3)
 ```
@@ -7966,7 +7966,7 @@ identifies the callback function as the second argument of the broker (`i64
 broker function (`i64 3`).
 
 % FIXME why does the llvm-sphinx-docs builder give a highlighting error if the below is set to highlight as 'llvm', despite that we have misc.highlighting_failure set?
-```text
+```llvm
 declare !callback !1 dso_local i32 @pthread_create(ptr, ptr, ptr, ptr)
 
 ...
@@ -7981,7 +7981,7 @@ variadic arguments that are passed to the `__kmpc_fork_call` call (due to the
 final `i1 true`).
 
 % FIXME why does the llvm-sphinx-docs builder give a highlighting error if the below is set to highlight as 'llvm', despite that we have misc.highlighting_failure set?
-```text
+```llvm
 declare !callback !0 dso_local void @__kmpc_fork_call(ptr, i32, ptr, ...)
 
 ...
@@ -8000,7 +8000,7 @@ targets. Additionally, this metadata is only used as a flag, so the associated
 node must be empty. The explicit section should not conflict with any other
 sections that the user does not want removed after linking.
 
-```text
+```llvm
 @object = private constant [1 x i8] c"\00", section ".foo" !exclude !0
 
 ...
@@ -8021,7 +8021,7 @@ By default this uses `SHT_PROGBITS` with no flags for ELF, and for COFF the
 section is not marked as readable or writable and it uses the section flag
 `IMAGE_SCN_MEM_DISCARDABLE`.
 
-```text
+```llvm
 @object = private constant [1 x i8] c"\00", section ".foo" !metadata_section_kind !0
 
 ...
@@ -9025,7 +9025,7 @@ It does not have any effect on non-ELF targets.
 
 Example:
 
-```text
+```llvm
 $a = comdat any
 @a = global i32 1, comdat $a
 @b = internal global i32 2, comdat $a, section "abc", !associated !0
@@ -9107,15 +9107,15 @@ insight about the program and transformations to users.
 
 Example:
 
-```text
+```llvm
 %a.addr = alloca ptr, align 8, !annotation !0
 !0 = !{!"auto-init"}
 ```
 
 Embedding tuple of strings example:
 
-```text
-%a.ptr = getelementptr ptr, ptr %base, i64 0. !annotation !0
+```llvm
+%a.ptr = getelementptr ptr, ptr %base, i64 0, !annotation !0
 !0 = !{!1}
 !1 = !{!"gep offset", !"0"}
 ```
@@ -9131,10 +9131,10 @@ are used at the same time, {ref}`prologue <prologuedata>` is emitted before
 
 Example:
 
-```text
+```llvm
 @__llvm_rtti_proxy = private unnamed_addr constant ptr @_ZTIFvvE
 define void @_Z3funv() !func_sanitize !0 {
-  return void
+  ret void
 }
 !0 = !{i32 846595819, ptr @__llvm_rtti_proxy}
 ```
@@ -9150,7 +9150,7 @@ metadata.
 
 Example:
 
-```text
+```llvm
 define dso_local i32 @f() !kcfi_type !0 {
   ret i32 0
 }
@@ -9176,7 +9176,7 @@ with a single `memprof` metadata attachment.
 
 Example:
 
-```text
+```llvm
 %call = call ptr @_Znam(i64 10), !memprof !0, !callsite !5
 !0 = !{!1, !3}
 !1 = !{!2, !"cold"}
@@ -9217,7 +9217,7 @@ in profiled contexts described in heap allocation `memprof` metadata.
 
 Example:
 
-```text
+```llvm
 %call = call ptr @_Z1Bb(void), !callsite !0
 !0 = !{i64 -6528110295079665978, i64 5462047985461644151}
 ```
@@ -9355,7 +9355,7 @@ to the same function or global variable.
 
 Example:
 
-```text
+```llvm
 @a = global i32 1
 @b = global i32 2
 @c = global i32 3, section "abc", !implicit.ref !0, !implicit.ref !1
@@ -9376,7 +9376,7 @@ The metadata operands must all be function pointers or `null`. `null` can
 appear when the referenced function is erased from the module, e.g. an internal
 function that has had all calls to it inlined.
 
-```text
+```llvm
 call void @foo(), !inline_history !0
 
 !0 = !{ptr @bar, null, ptr @baz}
@@ -10195,7 +10195,7 @@ Example:
 
 If we have the following function:
 
-```text
+```llvm
 define i64 @foo(ptr %0, ptr %1, ptr %2, i8 %3) {
   store ptr %1, ptr @x
   %5 = getelementptr inbounds i8, ptr %2, i64 5
@@ -10963,7 +10963,7 @@ block. Therefore, it must be the only non-phi instruction in the block.
 
 ##### Example:
 
-```text
+```llvm
 dispatch1:
   %cs1 = catchswitch within none [label %handler0, label %handler1] unwind to caller
 dispatch2:
@@ -11950,7 +11950,7 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 
 ##### Example:
 
-```text
+```llvm
 %result = bitextract i8, b32 %src, i32 24 ; Extract the 8 most-significant bits (bits [24..31]) of %src and return an 8-bit integer
 
 %result = bitextract i1, b32 %src, i32 5  ; Extract a single bit (bit 5) of %src and return it as an i1
@@ -11999,7 +11999,7 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 
 ##### Example:
 
-```text
+```llvm
 %result = bitinsert b32 %x, i8 %y, i32 3 ; Inserts the %y bits into %x with an offset of 3
 
 %result = bitinsert b32 %x, i1 %flag, i32 7 ; Inserts a single bit (%flag) into bit 7 of %x, leaving all other bits unchanged
@@ -13676,7 +13676,7 @@ If `value` is of the {ref}`byte type <t_byte>`:
 
 ##### Example:
 
-```text
+```llvm
 %X = bitcast i8 255 to i8         ; yields i8 :-1
 %Y = bitcast i32* %x to i16*      ; yields i16*:%x
 %Z = bitcast <2 x i32> %V to i64; ; yields i64: %V (depends on endianness)
@@ -14098,7 +14098,7 @@ without storing it into memory and loading it with a different type.
 
 ##### Example:
 
-```text
+```llvm
 %w = i32 undef
 %x = freeze i32 %w
 %y = add i32 %w, %w         ; undef
@@ -14526,7 +14526,7 @@ that does not carry an appropriate {ref}`"funclet" bundle <ob_funclet>`.
 
 ##### Example:
 
-```text
+```llvm
 dispatch:
   %cs = catchswitch within none [label %handler0] unwind to caller
   ;; A catch block which can catch an integer.
@@ -14590,7 +14590,7 @@ that does not carry an appropriate {ref}`"funclet" bundle <ob_funclet>`.
 
 ##### Example:
 
-```text
+```llvm
 %tok = cleanuppad within %cs []
 ```
 
@@ -18888,7 +18888,7 @@ have the same type.
 
 ##### Example:
 
-```text
+```llvm
 %r = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %z)  ; %r = i8: msb_extract((concat(x, y) << (z % 8)), 8)
 %r = call i8 @llvm.fshl.i8(i8 255, i8 0, i8 15)  ; %r = i8: 128 (0b10000000)
 %r = call i8 @llvm.fshl.i8(i8 15, i8 15, i8 11)  ; %r = i8: 120 (0b01111000)
@@ -18931,7 +18931,7 @@ have the same type.
 
 ##### Example:
 
-```text
+```llvm
 %r = call i8 @llvm.fshr.i8(i8 %x, i8 %y, i8 %z)  ; %r = i8: lsb_extract((concat(x, y) >> (z % 8)), 8)
 %r = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 15)  ; %r = i8: 254 (0b11111110)
 %r = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)  ; %r = i8: 225 (0b11100001)
@@ -22084,7 +22084,7 @@ The conversion to integer is performed subject to the following rules:
 
 ##### Example:
 
-```text
+```llvm
 %a = call i8 @llvm.fptoui.sat.i8.f32(float 123.875)            ; yields i8: 123
 %b = call i8 @llvm.fptoui.sat.i8.f32(float -5.75)              ; yields i8:   0
 %c = call i8 @llvm.fptoui.sat.i8.f32(float 377.0)              ; yields i8: 255
@@ -22131,7 +22131,7 @@ The conversion to integer is performed subject to the following rules:
 
 ##### Example:
 
-```text
+```llvm
 %a = call i8 @llvm.fptosi.sat.i8.f32(float 23.875)             ; yields i8:   23
 %b = call i8 @llvm.fptosi.sat.i8.f32(float -130.75)            ; yields i8: -128
 %c = call i8 @llvm.fptosi.sat.i8.f32(float 999.0)              ; yields i8:  127
@@ -23645,7 +23645,7 @@ type as specified by the {ref}`datalayout string<langref_datalayout>`.
 
 ##### Examples:
 
-```text
+```llvm
 %r = call <8 x i8> @llvm.vp.load.v8i8.p0(ptr align 2 %ptr, <8 x i1> %mask, i32 %evl)
 ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
@@ -23728,7 +23728,7 @@ type as specified by the {ref}`datalayout string<langref_datalayout>`.
 
 ##### Examples:
 
-```text
+```llvm
 %r = call {<8 x i8>, i32} @llvm.vp.load.ff.v8i8.p0(ptr align 2 %ptr, <8 x i1> %mask, i32 %evl)
 ```
 
@@ -23774,7 +23774,7 @@ above). If it is not provided then the ABI alignment of the type of the
 
 ##### Examples:
 
-```text
+```llvm
 call void @llvm.vp.store.v8i8.p0(<8 x i8> %val, ptr align 4 %ptr, <8 x i1> %mask, i32 %evl)
 ;; For all lanes below %evl, the call above is lane-wise equivalent to the call below.
 
@@ -23822,7 +23822,7 @@ integer and all arithmetic occurring in the pointer type.
 
 ##### Examples:
 
-```text
+```llvm
 %r = call <8 x i64> @llvm.experimental.vp.strided.load.v8i64.i64(i64* %ptr, i64 %stride, <8 x i64> %mask, i32 %evl)
 ;; The operation can also be expressed like this:
 
@@ -23877,7 +23877,7 @@ integer and all arithmetic occurring in the pointer type.
 
 ##### Examples:
 
-```text
+```llvm
 call void @llvm.experimental.vp.strided.store.v8i64.i64(<8 x i64> %val, i64* %ptr, i64 %stride, <8 x i1> %mask, i32 %evl)
 ;; The operation can also be expressed like this:
 
@@ -23932,7 +23932,7 @@ addresses as specified by the {ref}`datalayout string<langref_datalayout>`.
 
 ##### Examples:
 
-```text
+```llvm
 %r = call <8 x i8> @llvm.vp.gather.v8i8.v8p0(<8 x ptr>  align 8 %ptrs, <8 x i1> %mask, i32 %evl)
 ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
@@ -23982,7 +23982,7 @@ destination addresses as specified by the {ref}`datalayout string<langref_datala
 
 ##### Examples:
 
-```text
+```llvm
 call void @llvm.vp.scatter.v8i8.v8p0(<8 x i8> %val, <8 x ptr> align 1 %ptrs, <8 x i1> %mask, i32 %evl)
 ;; For all lanes below %evl, the call above is lane-wise equivalent to the call below.
 
@@ -27504,7 +27504,7 @@ When used in a branch condition, it allows us to choose between
 two alternative correct solutions for the same problem, like
 in example below:
 
-```text
+```llvm
   %cond = call i1 @llvm.experimental.widenable.condition()
   br i1 %cond, label %fast_path, label %slow_path
 
@@ -27563,7 +27563,7 @@ conditions.
 
 Guard widening looks like replacement of
 
-```text
+```llvm
 %widenable_cond = call i1 @llvm.experimental.widenable.condition()
 %guard_cond = and i1 %cond, %widenable_cond
 br i1 %guard_cond, label %guarded, label %deopt
@@ -27571,7 +27571,7 @@ br i1 %guard_cond, label %guarded, label %deopt
 
 with
 
-```text
+```llvm
 %widenable_cond = call i1 @llvm.experimental.widenable.condition()
 %new_cond = and i1 %any_other_cond, %widenable_cond
 %new_guard_cond = and i1 %cond, %new_cond
@@ -27629,7 +27629,7 @@ When used in a branch condition, it selects one of the two paths:
 
 Example:
 
-```text
+```llvm
   %allow = call i1 @llvm.allow.ubsan.check(i8 5)
   %not.allow = xor i1 %allow, true
   %cond = or i1 %ubcheck, %not.allow
@@ -27683,7 +27683,7 @@ unnecessary checks.
 
 Example:
 
-```text
+```llvm
   %allow = call i1 @llvm.allow.runtime.check(metadata !"my_check")
   br i1 %allow, label %fast_path, label %slow_path
 
