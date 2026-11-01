@@ -6,7 +6,7 @@
 
 REQUIRES: zlib
 RUN: llvm-profdata merge %S/Inputs/main-view-fileid-regression.proftext -o %t.profdata
-RUN: llvm-cov report %S/Inputs/main-view-fileid-regression.covmapping \
+RUN: llvm-cov report --respect-coverage-exclusion-markers=false %S/Inputs/main-view-fileid-regression.covmapping \
 RUN:   -instr-profile=%t.profdata \
 RUN:   2>/dev/null | FileCheck %s
 

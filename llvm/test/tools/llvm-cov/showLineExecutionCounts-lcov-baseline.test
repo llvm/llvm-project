@@ -26,9 +26,9 @@ int main() {                              // FULL: DA:[[@LINE]],0
 // FULL: LF:20
 // FULL: LH:0
 // FULL: end_of_record
-// RUN: llvm-cov export -format=lcov %S/Inputs/lineExecutionCounts.covmapping -empty-profile %s | FileCheck -check-prefixes=FULL %s
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false -format=lcov %S/Inputs/lineExecutionCounts.covmapping -empty-profile %s | FileCheck -check-prefixes=FULL %s
 
-// RUN: llvm-cov export -format=lcov -summary-only %S/Inputs/lineExecutionCounts.covmapping -empty-profile %s | FileCheck -check-prefixes=SUMMARYONLY %s
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false -format=lcov -summary-only %S/Inputs/lineExecutionCounts.covmapping -empty-profile %s | FileCheck -check-prefixes=SUMMARYONLY %s
 // SUMMARYONLY: SF:{{.*}}showLineExecutionCounts.cpp
 // SUMMARYONLY: FNF:1
 // SUMMARYONLY: FNH:0

@@ -27,9 +27,9 @@ int main() {                              // FULL: DA:[[@LINE]],161
 // FULL: LH:18
 // FULL: end_of_record
 // RUN: llvm-profdata merge %S/Inputs/lineExecutionCounts.proftext -o %t.profdata
-// RUN: llvm-cov export -format=lcov %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata %s | FileCheck -check-prefixes=FULL %s
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false -format=lcov %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata %s | FileCheck -check-prefixes=FULL %s
 
-// RUN: llvm-cov export -format=lcov -summary-only %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata %s | FileCheck -check-prefixes=SUMMARYONLY %s
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false -format=lcov -summary-only %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata %s | FileCheck -check-prefixes=SUMMARYONLY %s
 // SUMMARYONLY: SF:{{.*}}showLineExecutionCounts.cpp
 // SUMMARYONLY: FNF:1
 // SUMMARYONLY: FNH:1

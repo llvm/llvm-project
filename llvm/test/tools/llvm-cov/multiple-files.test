@@ -1,7 +1,7 @@
 // RUN: llvm-profdata merge %S/Inputs/multiple-files.proftext -o %t.profdata
-// RUN: llvm-cov report %S/Inputs/multiple-files.covmapping -instr-profile %t.profdata | FileCheck %s -check-prefix=MANY_COMPONENTS
-// RUN: llvm-cov report %S/Inputs/multiple-files2.covmapping -instr-profile %t.profdata | FileCheck %s -check-prefix=ONE_COMPONENT
-// RUN: llvm-cov export %S/Inputs/multiple-files.covmapping -instr-profile %t.profdata -format=lcov | FileCheck %s -check-prefix=LCOV
+// RUN: llvm-cov report --respect-coverage-exclusion-markers=false %S/Inputs/multiple-files.covmapping -instr-profile %t.profdata | FileCheck %s -check-prefix=MANY_COMPONENTS
+// RUN: llvm-cov report --respect-coverage-exclusion-markers=false %S/Inputs/multiple-files2.covmapping -instr-profile %t.profdata | FileCheck %s -check-prefix=ONE_COMPONENT
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false %S/Inputs/multiple-files.covmapping -instr-profile %t.profdata -format=lcov | FileCheck %s -check-prefix=LCOV
 
 // MANY_COMPONENTS: Filename
 // MANY_COMPONENTS-NEXT: ---

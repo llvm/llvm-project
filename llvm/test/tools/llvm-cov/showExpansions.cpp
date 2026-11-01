@@ -1,4 +1,4 @@
-// RUN: llvm-cov show %S/Inputs/showExpansions.covmapping -instr-profile %S/Inputs/showExpansions.profdata -dump -show-expansions -path-equivalence="/Users/bogner/code/llvm/test/tools,%S/.." %s 2>&1 | FileCheck %s
+// RUN: llvm-cov show --respect-coverage-exclusion-markers=false %S/Inputs/showExpansions.covmapping -instr-profile %S/Inputs/showExpansions.profdata -dump -show-expansions -path-equivalence="/Users/bogner/code/llvm/test/tools,%S/.." %s 2>&1 | FileCheck %s
 
 #define DO_SOMETHING_ELSE() \
   do {                      \
@@ -24,7 +24,7 @@ int main(int argc, const char *argv[]) {
     DO_SOMETHING(i); // CHECK-DAG: Expansion at line [[@LINE]], 5 -> 17
   return 0;
 }
-// RUN: llvm-cov export %S/Inputs/showExpansions.covmapping -instr-profile %S/Inputs/showExpansions.profdata 2>&1 | FileCheck %S/Inputs/showExpansions.json
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false %S/Inputs/showExpansions.covmapping -instr-profile %S/Inputs/showExpansions.profdata 2>&1 | FileCheck %S/Inputs/showExpansions.json
 
-// RUN: llvm-cov export %S/Inputs/showExpansions.covmapping -instr-profile %S/Inputs/showExpansions.profdata -skip-expansions 2>&1 | FileCheck %s -check-prefix=SKIP-EXPANSIONS
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false %S/Inputs/showExpansions.covmapping -instr-profile %S/Inputs/showExpansions.profdata -skip-expansions 2>&1 | FileCheck %s -check-prefix=SKIP-EXPANSIONS
 // SKIP-EXPANSIONS-NOT: "expansions"

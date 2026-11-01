@@ -582,6 +582,13 @@ Makes programs 10x faster by doing Special New Thing.
   which is mostly useful on Windows where configuring the system to use UTF-8 is
   more involved than setting an environment variable.
 
+* llvm-cov now excludes coverage associated with `LCOV_EXCL_LINE` and
+  `LCOV_EXCL_START`/`LCOV_EXCL_STOP` source markers. The markers apply to all
+  llvm-cov report formats, including text and HTML views, summaries, and JSON
+  and LCOV exports. Use `--respect-coverage-exclusion-markers=false` to ignore
+  markers and report all instrumented coverage, including when source files
+  are unavailable.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm

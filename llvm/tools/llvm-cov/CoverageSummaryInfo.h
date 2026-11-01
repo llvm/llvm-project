@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+class CoverageExclusions;
+
 /// Provides information about region coverage for a function/file.
 class RegionCoverageInfo {
   /// The number of regions that were executed at least once.
@@ -252,8 +254,10 @@ struct FunctionCoverageSummary : CoverageDataSummary {
 
   /// Compute the code coverage summary for the given function coverage
   /// mapping record.
-  static FunctionCoverageSummary get(const coverage::CoverageMapping &CM,
-                                     const coverage::FunctionRecord &Function);
+  static FunctionCoverageSummary
+  get(const coverage::CoverageMapping &CM,
+      const coverage::FunctionRecord &Function,
+      const CoverageExclusions *Exclusions = nullptr);
 
   /// Compute the code coverage summary for an instantiation group \p Group,
   /// given a list of summaries for each instantiation in \p Summaries.

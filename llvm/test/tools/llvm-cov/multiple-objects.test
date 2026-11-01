@@ -1,4 +1,4 @@
-RUN: llvm-cov report -instr-profile %S/Inputs/multiple_objects/merged.profdata \
+RUN: llvm-cov report --respect-coverage-exclusion-markers=false -instr-profile %S/Inputs/multiple_objects/merged.profdata \
 RUN:   %S/Inputs/multiple_objects/use_2.covmapping \
 RUN:   -object %S/Inputs/multiple_objects/use_1.covmapping | FileCheck -check-prefix=REPORT %s
 
