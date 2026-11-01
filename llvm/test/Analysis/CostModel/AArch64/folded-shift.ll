@@ -4,7 +4,7 @@
 ; A constant scalar shift with a single, same-block logical user folds into
 ; that user's shifted-register operand.
 
-define i64 @folded(i64 %x, i64 %y) {
+define void @folded(i64 %x, i64 %y) {
 ; CHECK-LABEL: 'folded'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %shl = shl i64 %x, 7
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %and = and i64 %shl, %y
@@ -12,7 +12,7 @@ define i64 @folded(i64 %x, i64 %y) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %or = or i64 %lshr, %x
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %ashr = ashr i64 %or, 11
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %xor = xor i64 %ashr, %y
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %xor
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %shl = shl i64 %x, 7
   %and = and i64 %shl, %y
@@ -20,36 +20,36 @@ define i64 @folded(i64 %x, i64 %y) {
   %or = or i64 %lshr, %x
   %ashr = ashr i64 %or, 11
   %xor = xor i64 %ashr, %y
-  ret i64 %xor
+  ret void
 }
 
 ; Do not arbitrarily assign the single shifted-register operand when both
 ; operands are shifts.
-define i64 @two_shifts(i64 %x, i64 %y) {
+define void @two_shifts(i64 %x, i64 %y) {
 ; CHECK-LABEL: 'two_shifts'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %lhs = shl i64 %x, 7
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %rhs = lshr i64 %y, 9
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %or = or i64 %lhs, %rhs
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %or
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %lhs = shl i64 %x, 7
   %rhs = lshr i64 %y, 9
   %or = or i64 %lhs, %rhs
-  ret i64 %or
+  ret void
 }
 
-define i32 @folded_i32(i32 %x, i32 %y) {
+define void @folded_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'folded_i32'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %shift = shl i32 %x, 7
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %and = and i32 %shift, %y
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %and
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %shift = shl i32 %x, 7
   %and = and i32 %shift, %y
-  ret i32 %and
+  ret void
 }
 
-define i64 @not_folded(i64 %x, i64 %y, i64 %amount, i1 %cond) {
+define void @not_folded(i64 %x, i64 %y, i64 %amount, i1 %cond) {
 ; CHECK-LABEL: 'not_folded'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %multiuse = shl i64 %x, 7
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %and = and i64 %multiuse, %y
@@ -66,7 +66,7 @@ define i64 @not_folded(i64 %x, i64 %y, i64 %amount, i1 %cond) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %fold.user = and i64 %crossblock, %with.constant
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: br label %exit
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %result = phi i64 [ %with.constant, %entry ], [ %fold.user, %then ]
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %result
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
   %multiuse = shl i64 %x, 7
@@ -88,10 +88,10 @@ then:
 
 exit:
   %result = phi i64 [ %with.constant, %entry ], [ %fold.user, %then ]
-  ret i64 %result
+  ret void
 }
 
-define i16 @folded_i16(i16 %x, i16 %y) {
+define void @folded_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: 'folded_i16'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %shl = shl i16 %x, 7
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %and = and i16 %shl, %y
@@ -99,7 +99,7 @@ define i16 @folded_i16(i16 %x, i16 %y) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %or = or i16 %lshr, %x
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %ashr = ashr i16 %or, 11
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %xor = xor i16 %ashr, %y
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %xor
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %shl = shl i16 %x, 7
   %and = and i16 %shl, %y
@@ -107,10 +107,10 @@ define i16 @folded_i16(i16 %x, i16 %y) {
   %or = or i16 %lshr, %x
   %ashr = ashr i16 %or, 11
   %xor = xor i16 %ashr, %y
-  ret i16 %xor
+  ret void
 }
 
-define i8 @folded_i8(i8 %x, i8 %y) {
+define void @folded_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: 'folded_i8'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %shl = shl i8 %x, 3
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %and = and i8 %shl, %y
@@ -118,7 +118,7 @@ define i8 @folded_i8(i8 %x, i8 %y) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %or = or i8 %lshr, %x
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %ashr = ashr i8 %or, 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %xor = xor i8 %ashr, %y
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i8 %xor
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %shl = shl i8 %x, 3
   %and = and i8 %shl, %y
@@ -126,16 +126,16 @@ define i8 @folded_i8(i8 %x, i8 %y) {
   %or = or i8 %lshr, %x
   %ashr = ashr i8 %or, 1
   %xor = xor i8 %ashr, %y
-  ret i8 %xor
+  ret void
 }
 
-define <2 x i64> @vector_not_folded(<2 x i64> %x, <2 x i64> %y) {
+define void @vector_not_folded(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: 'vector_not_folded'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %shift = shl <2 x i64> %x, splat (i64 7)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %and = and <2 x i64> %shift, %y
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %and
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %shift = shl <2 x i64> %x, splat (i64 7)
   %and = and <2 x i64> %shift, %y
-  ret <2 x i64> %and
+  ret void
 }
