@@ -1432,6 +1432,15 @@ CallInst *IRBuilderBase::CreateNonnullAssumption(Value *PtrValue) {
   return CreateAssumption(OperandBundleDef("nonnull", PtrValue));
 }
 
+CallInst *IRBuilderBase::CreateRangeAssumption(Value *Val,
+                                               ConstantRange Range) {
+  assert(isa<IntegerType>(Val->getType()) &&
+         "trying to create a range assumption on a non-integer?");
+  return CreateAssumption(
+      OperandBundleDef("range", ArrayRef<Value *>{Val, getInt(Range.getLower()),
+                                                  getInt(Range.getUpper())}));
+}
+
 void IRBuilderFolder::anchor() {}
 void ConstantFolder::anchor() {}
 void NoFolder::anchor() {}
