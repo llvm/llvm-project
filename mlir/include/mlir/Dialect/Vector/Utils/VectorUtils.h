@@ -20,7 +20,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Alignment.h"
 
 namespace mlir {
 
