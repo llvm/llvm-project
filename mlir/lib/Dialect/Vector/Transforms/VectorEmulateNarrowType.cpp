@@ -1989,10 +1989,8 @@ static Value rewriteI8ToI2Trunc(PatternRewriter &rewriter, Location loc,
   // the destination byte.
   // in      = [0,1,2,3,4,5,6,7],...
   // evenOdd = [0,2,4,6],... [1,3,5,7],...
-  // vec0    = [0,4],...
-  // vec1    = [1,5],...
-  // vec2    = [2,6],...
-  // vec3    = [3,7],...
+  // vec02   = [0,4],... [2,6],...
+  // vec13   = [1,5],... [3,7],...
   auto evenOdd = vector::DeinterleaveOp::create(rewriter, loc, srcValue);
   auto vec02 = vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getRes1());
   auto vec13 = vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getRes2());
@@ -2240,6 +2238,29 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 ///   %3 = arith.shli %1, %cst_0 : vector<4xi8>
 ///   %4 = arith.ori %2, %3 : vector<4xi8>
 ///   %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
+///
+/// and, with four elements per byte,
+///    arith.trunci %in : vector<8xi32> to vector<8xi2>
+///
+/// is rewritten as:
+///
+///   %cst = arith.constant dense<3> : vector<2xi8>
+///   %cst_0 = arith.constant dense<2> : vector<2xi8>
+///   %cst_1 = arith.constant dense<4> : vector<2xi8>
+///   %cst_2 = arith.constant dense<6> : vector<2xi8>
+///   %0, %1 = vector.deinterleave %in : vector<8xi8> -> vector<4xi8>
+///   %2, %3 = vector.deinterleave %0 : vector<4xi8> -> vector<2xi8>
+///   %4, %5 = vector.deinterleave %1 : vector<4xi8> -> vector<2xi8>
+///   %6 = arith.andi %2, %cst : vector<2xi8>
+///   %7 = arith.andi %4, %cst : vector<2xi8>
+///   %8 = arith.shli %7, %cst_0 : vector<2xi8>
+///   %9 = arith.andi %3, %cst : vector<2xi8>
+///   %10 = arith.shli %9, %cst_1 : vector<2xi8>
+///   %11 = arith.shli %5, %cst_2 : vector<2xi8>
+///   %12 = arith.ori %6, %8 : vector<2xi8>
+///   %13 = arith.ori %12, %10 : vector<2xi8>
+///   %14 = arith.ori %13, %11 : vector<2xi8>
+///   %15 = vector.bitcast %14 : vector<2xi8> to vector<8xi2>
 ///
 struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
   using Base::Base;
