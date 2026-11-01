@@ -5560,7 +5560,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::SHL: {
 
     if (canFoldShiftIntoUser(Opcode, Ty, CtxI))
-      return TTI::TCC_Free;
+      return 0;
 
     // Immediate vector shifts require uniform shift amounts. Non-uniform
     // constants therefore use variable shifts and require materializing the
