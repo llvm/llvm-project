@@ -381,6 +381,10 @@ defm : OptionalValueField<"unroll-and-jam-count", "unsigned",
   "Use this unroll count for all loops including those with unroll_and_jam_count pragma values, for testing purposes">;
 defm : OptionalValueField<"unroll-and-jam-threshold", "unsigned",
   "Threshold to use for inner loop when doing unroll and jam">;
+defm : ValueField<"unroll-and-jam-max-reuse-count", "unsigned", "4",
+  "Maximum unroll count to pick from the dependence distances of memory accesses">;
+defm : ValueField<"unroll-and-jam-min-reuse-percent", "unsigned", "1",
+  "Minimum percentage of memory accesses in the inner loop that must become redundant for unroll and jam to be profitable">;
 
 // LoopUnrollPass.cpp
 defm : ValueField<"flat-loop-tripcount-threshold", "unsigned", "5",
