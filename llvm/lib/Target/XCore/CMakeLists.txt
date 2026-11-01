@@ -11,10 +11,14 @@ tablegen(LLVM XCoreGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM XCoreGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM XCoreGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS XCoreOptions.td)
+tablegen(LLVM XCoreOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(XCoreCommonTableGen)
 
 add_llvm_target(XCoreCodeGen
   XCoreAsmPrinter.cpp
+  XCoreCodeGenPassBuilder.cpp
   XCoreFrameLowering.cpp
   XCoreInstrInfo.cpp
   XCoreISelDAGToDAG.cpp
@@ -36,6 +40,8 @@ add_llvm_target(XCoreCodeGen
   CodeGenTypes
   Core
   MC
+  Option
+  Passes
   SelectionDAG
   Support
   Target

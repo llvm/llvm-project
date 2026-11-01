@@ -3,7 +3,7 @@
 
 // CIRGen attaches the VarDecl facts LoweringPrepare needs (isLocalVarDecl,
 // TLSKind, isInline, TemplateSpecializationKind) to static-local guarded
-// globals as a #cir.static_local_info attribute, so the facts survive without
+// globals as a #cir.dynamic_init_info attribute, so the facts survive without
 // a live ASTContext. This is orthogonal to the #cir.var.decl AST handle, which
 // is still attached for consumers that need arbitrary AST properties.
 
@@ -26,8 +26,8 @@ int tls() {
 // the retained AST handle.
 // CHECK: @_ZZ3tlsvE1s
 // CHECK-SAME: ast(#cir.var.decl.ast)
-// CHECK-SAME: static_local_info<local = true, tls = dynamic, is_inline = false, tsk = undeclared>
+// CHECK-SAME: dynamic_init_info<local = true, tls = dynamic, is_inline = false, tsk = undeclared>
 
 // CHECK: @_ZZ7regularvE1s
 // CHECK-SAME: ast(#cir.var.decl.ast)
-// CHECK-SAME: static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>
+// CHECK-SAME: dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>

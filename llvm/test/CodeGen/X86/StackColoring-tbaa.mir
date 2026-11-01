@@ -53,7 +53,7 @@ body:             |
     ; CHECK: [[LEA64r:%[0-9]+]]:gr64 = nuw LEA64r %stack.1.agg, 1, $noreg, 24, $noreg
     ; CHECK-NEXT: CMP8mi %stack.1.agg, 1, $noreg, 47, $noreg, 0, implicit-def $eflags :: (dereferenceable load (s8) from %ir.a22, !tbaa !2)
     ; CHECK-NEXT: [[CMOV64rm:%[0-9]+]]:gr64 = CMOV64rm [[LEA64r]], %stack.1.agg, 1, $noreg, 24, $noreg, 8, implicit $eflags :: (dereferenceable load (s64) from %ir.a2)
-    ; CHECK-NEXT: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm killed [[CMOV64rm]], 1, $noreg, 16, $noreg :: (load (s8) from %ir.add.ptr.i, !tbaa !2)
+    ; CHECK-NEXT: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm [[CMOV64rm]], 1, $noreg, 16, $noreg :: (load (s8) from %ir.add.ptr.i, !tbaa !2)
     ; CHECK-NEXT: $al = COPY [[MOV8rm]]
     ; CHECK-NEXT: RET 0, $al
     LIFETIME_START %stack.0.padding
@@ -61,7 +61,7 @@ body:             |
     %8:gr64 = nuw LEA64r %stack.1.agg, 1, $noreg, 24, $noreg
     CMP8mi %stack.1.agg, 1, $noreg, 47, $noreg, 0, implicit-def $eflags :: (dereferenceable load (s8) from %ir.a22, !tbaa !2)
     %13:gr64 = CMOV64rm %8, %stack.1.agg, 1, $noreg, 24, $noreg, 8, implicit $eflags :: (dereferenceable load (s64) from %ir.a2)
-    %14:gr8 = MOV8rm killed %13, 1, $noreg, 16, $noreg :: (load (s8) from %ir.add.ptr.i, !tbaa !2)
+    %14:gr8 = MOV8rm %13, 1, $noreg, 16, $noreg :: (load (s8) from %ir.add.ptr.i, !tbaa !2)
     $al = COPY %14
     RET 0, $al
 

@@ -2416,6 +2416,46 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
   Old->replaceUsesWithIf(New, isDirectCall);
 }
 
+// Sound wherever the caller has already dropped the type tests: the check
+// folds to true, the trap branch becomes dead, and later passes fold it
+// away. Required because the backend cannot select these intrinsics
+// ("must be lowered by the LowerTypeTests pass before code generation").
+bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
+                                            bool IsRelative) {
+  bool Changed = false;
+  for (User *User : llvm::make_early_inc_range(CheckedLoadFn.users())) {
+    Instruction *I = dyn_cast<Instruction>(User);
+    if (!I)
+      continue;
+    IRBuilder<> IRB(I);
+    Value *Ptr = I->getOperand(0);
+    Value *Offset = I->getOperand(1);
+    Type *PtrTy = I->getType()->getStructElementType(0);
+    ConstantInt *True = ConstantInt::getTrue(M.getContext());
+    Instruction *Load;
+    if (IsRelative) {
+      Load = IRB.CreateIntrinsicWithoutFolding(
+          Intrinsic::load_relative, {Offset->getType()}, {Ptr, Offset},
+          /*FMFSource=*/nullptr, "rel_load");
+    } else {
+      Value *PtrAdd = IRB.CreatePtrAdd(Ptr, Offset);
+      Load = IRB.CreateLoad(PtrTy, PtrAdd, "vfunc");
+    }
+
+    Value *Replacement = PoisonValue::get(I->getType());
+    Replacement = IRB.CreateInsertValue(Replacement, True, {1});
+    Replacement = IRB.CreateInsertValue(Replacement, Load, {0});
+    I->replaceAllUsesWith(Replacement);
+
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": erase " << *I << "\n");
+    I->eraseFromParent();
+    Changed = true;
+  }
+  if (Changed)
+    CheckedLoadFn.eraseFromParent();
+  return Changed;
+}
+
 static void dropTypeTests(Module &M, Function &TypeTestFunc,
                           bool ShouldDropAll) {
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
@@ -2445,6 +2485,20 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   if (TypeTestFunc)
     dropTypeTests(M, *TypeTestFunc, ShouldDropAll);
+  // Only drop checked loads when dropping everything: in Assume mode a
+  // checked load may feed a CFI trap check, which must keep diagnosing
+  // loudly instead of being turned to true.
+  bool DroppedCheckedLoads = false;
+  if (ShouldDropAll) {
+    if (Function *F =
+            Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load))
+      DroppedCheckedLoads |=
+          lowertypetests::cleanUpTypeCheckedLoad(M, *F, false);
+    if (Function *F = Intrinsic::getDeclarationIfExists(
+            &M, Intrinsic::type_checked_load_relative))
+      DroppedCheckedLoads |=
+          lowertypetests::cleanUpTypeCheckedLoad(M, *F, true);
+  }
   // Normally we'd have already removed all @llvm.public.type.test calls,
   // except for in the case where we originally were performing ThinLTO but
   // decided not to in the backend.
@@ -2452,7 +2506,7 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (PublicTypeTestFunc)
     dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
-  if (TypeTestFunc || PublicTypeTestFunc) {
+  if (TypeTestFunc || PublicTypeTestFunc || DroppedCheckedLoads) {
     // We have deleted the type intrinsics, so we no longer have enough
     // information to reason about the liveness of virtual function pointers
     // in GlobalDCE.

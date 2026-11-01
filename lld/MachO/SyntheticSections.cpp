@@ -1731,7 +1731,7 @@ void CStringSection::writeTo(uint8_t *buf) const {
 // `16 % A`.
 static Align getStringPieceAlignment(const CStringInputSection &isec,
                                      const StringPiece &piece) {
-  return llvm::Align(1ULL << llvm::countr_zero(isec.align | piece.inSecOff));
+  return llvm::Align::fromLog2(llvm::countr_zero(isec.align | piece.inSecOff));
 }
 
 void CStringSection::finalizeContents() {
@@ -1768,7 +1768,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       },
       /*forceInputOrder=*/true);
 
-  // Like lexigraphical sort, except we read strings in reverse and take the
+  // Like lexicographical sort, except we read strings in reverse and take the
   // longest string first
   // TODO: We could improve performance by implementing our own sort that avoids
   // comparing characters we know to be the same. See
@@ -2048,14 +2048,14 @@ void InitOffsetsSection::setUp() {
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
               ": unsupported relocation type: " + attrs.name);
-      if (rel.addend != 0)
+      if (rel.getAddend() != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
       if (isa<InputSection *>(rel.referent))
         error(isec->getLocation(rel.offset) +
               ": unexpected section relocation");
 
-      Symbol *sym = rel.referent.dyn_cast<Symbol *>();
+      Symbol *sym = dyn_cast<Symbol *>(rel.referent);
       if (auto *undefined = dyn_cast<Undefined>(sym))
         treatUndefinedSymbol(*undefined, isec, rel.offset);
       if (needsBinding(sym))
@@ -2203,7 +2203,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = def->getVA();
   } else {
     auto *isec = cast<InputSection *>(reloc->referent);
-    symVA = isec->getVA(reloc->addend);
+    symVA = isec->getVA(reloc->getAddend());
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;
@@ -2547,9 +2547,21 @@ void ChainedFixupsSection::finalizeContents() {
   else
     importFormat = DYLD_CHAINED_IMPORT;
 
-  for (Location &loc : locations)
-    loc.offset =
+  const uint64_t pageSize = target->getPageSize();
+  for (Location &loc : locations) {
+    uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
+    if (offset % pageSize + target->wordSize > pageSize) {
+      std::string msg = loc.isec->getLocation(loc.offset) +
+                        ": fixup straddles page boundary; stop packing structs "
+                        "containing pointers or link with -no_fixup_chains";
+      std::string src = loc.isec->getSourceLocation(loc.offset);
+      if (!src.empty())
+        msg += "\n>>> defined at " + src;
+      error(msg);
+    }
+    loc.offset = offset;
+  }
 
   llvm::sort(locations, [](const Location &a, const Location &b) {
     const OutputSegment *segA = a.isec->parent->parent;
@@ -2563,12 +2575,16 @@ void ChainedFixupsSection::finalizeContents() {
     return a.isec->parent->parent == b.isec->parent->parent;
   };
 
-  const uint64_t pageSize = target->getPageSize();
   for (size_t i = 0, count = locations.size(); i < count;) {
     const Location &firstLoc = locations[i];
     fixupSegments.emplace_back(firstLoc.isec->parent->parent);
     while (i < count && sameSegment(locations[i], firstLoc)) {
-      uint32_t pageIdx = locations[i].offset / pageSize;
+      uint64_t pageIdx = locations[i].offset / pageSize;
+      if (pageIdx >= UINT16_MAX) {
+        fatal("page index in " + locations[i].isec->getSegName() + "," +
+              locations[i].isec->getName() + " too large for chained fixups; " +
+              "use -no_fixup_chains");
+      }
       fixupSegments.back().pageStarts.emplace_back(
           pageIdx, locations[i].offset % pageSize);
       ++i;

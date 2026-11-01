@@ -32,7 +32,7 @@ struct UnittestsHelper {
   // Platforms cached by earlier tests would hide the device enumeration mocked
   // by the fixture, so the global state is reset on both ends.
   UnittestsHelper() {
-    detail::PlatformImpl::rediscoverIfEmpty = true;
+    detail::PlatformImpl::MRediscoverIfEmpty = true;
     resetGlobalState();
   }
 

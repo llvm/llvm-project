@@ -1375,7 +1375,7 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
     // if the immediate fits in the instructions.  Otherwise, we need to
     // create a new virtual register.
     int64_t CountImm = TripCount->getImm();
-    if (!TII->isValidOffset(LOOP_i, CountImm, TRI)) {
+    if (!TII->isValidOffset(LOOP_i, CountImm)) {
       Register CountReg = MRI->createVirtualRegister(&Hexagon::IntRegsRegClass);
       BuildMI(*Preheader, InsertPos, DL, TII->get(Hexagon::A2_tfrsi), CountReg)
         .addImm(CountImm);
@@ -1931,7 +1931,7 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
       // the immediate to be constant-extended. There are some exceptions
       // though. Make sure the new combination will work.
       if (CmpImmOp->isImm() && !TII->isExtendable(*PredDef) &&
-          !TII->isValidOffset(PredDef->getOpcode(), CmpImm, TRI, false))
+          !TII->isValidOffset(PredDef->getOpcode(), CmpImm, false))
         return false;
 
       // Make sure that the compare happens after the bump.  Otherwise,

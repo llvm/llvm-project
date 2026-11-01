@@ -54,9 +54,10 @@ bool isReleaseModelValid(StringRef InteractiveChannelBaseName,
 
 /// Helper to construct the appropriate MLModelRunner in release mode:
 /// 1. InteractiveModelRunner if an interactive channel is specified.
-/// 2. EmitCModelRunner if MLIR lowering is enabled.
-/// 3. ReleaseModeModelRunner<CompiledModelType> otherwise.
-template <class CompiledModelType, bool HaveMLIRLowering, class CreateEmitCFunc>
+/// 2. EmitCModelRunner if an EmitC model is selected.
+/// 3. ReleaseModeModelRunner<CompiledModelType> if an embedded AOT model is
+///    available.
+template <class CompiledModelType, class CreateEmitCFunc>
 std::unique_ptr<MLModelRunner> createReleaseModeModelRunner(
     LLVMContext &Ctx, const std::vector<TensorSpec> &InputFeatures,
     StringRef DecisionName, const std::string &InteractiveChannelBaseName,
@@ -69,12 +70,18 @@ std::unique_ptr<MLModelRunner> createReleaseModeModelRunner(
         InteractiveChannelBaseName + ".out",
         InteractiveChannelBaseName + ".in");
   }
-  if constexpr (HaveMLIRLowering) {
-    return CreateEmitCModelRunner(Ctx, InputFeatures);
-  } else {
-    return std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
+  if (auto EmitCRunner = CreateEmitCModelRunner(Ctx, InputFeatures))
+    return EmitCRunner;
+  if (isEmbeddedModelEvaluatorValid<CompiledModelType>()) {
+    auto Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
         Ctx, InputFeatures, DecisionName, Options);
+    // Shapes the model was compiled for do not match the requested ones. The
+    // error is already reported, so let the caller fall back.
+    if (!Runner->isValid())
+      return nullptr;
+    return Runner;
   }
+  return nullptr;
 }
 
 } // namespace llvm

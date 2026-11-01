@@ -1,4 +1,7 @@
-# UNSUPPORTED: system-windows
+# On Windows on Arm, the in-process plugin has no hardware watchpoints and
+# lldb-server has one. This test sets two.
+# UNSUPPORTED: system-windows && target-aarch64
+
 # RUN: %clangxx_host %p/Inputs/languages.cpp -g -o %t.out
 # RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -s %s %t.out 2>&1 | FileCheck %s
 

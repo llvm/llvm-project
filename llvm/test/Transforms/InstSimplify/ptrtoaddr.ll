@@ -10,6 +10,17 @@ target datalayout = "pe1:64:64:64:32"
 @g.as1 = external addrspace(1) global i8
 @g2.as1 = external addrspace(1) global i8
 
+; Sized objects with no alignment to exploit, so that the folds below can only
+; come from the object's size.
+@g5 = global [5 x i32] zeroinitializer, align 1
+@g5.as1 = addrspace(1) global [5 x i32] zeroinitializer, align 1
+@g5.decl = external global [5 x i32], align 1
+@g5.weak = extern_weak global [5 x i32], align 1
+
+; An alias may resolve to a weak undefined symbol, and thus to the null address.
+@aliasee = global [5 x i32] zeroinitializer, align 1
+@alias = weak alias [5 x i32], ptr @aliasee
+
 define i64 @ptrtoaddr_inttoptr_arg(i64 %a) {
 ; CHECK-LABEL: define i64 @ptrtoaddr_inttoptr_arg(
 ; CHECK-SAME: i64 [[A:%.*]]) {
@@ -584,4 +595,261 @@ define i1 @ptrtoaddr_diff_non_equal_addrsize_commuted(ptr addrspace(1) %p0, ptr 
   call void @llvm.assume(i1 %cond)
   %cmp = icmp eq ptr addrspace(1) %p1, %p0
   ret i1 %cmp
+}
+
+; An offset that stays within the object cannot produce a null address, because
+; no allocated object crosses the unsigned address space boundary.
+define i1 @addr_plus_offset_inrange() {
+; CHECK-LABEL: define i1 @addr_plus_offset_inrange() {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq i64 add (i64 ptrtoaddr (ptr @g5 to i64), i64 15), 0
+  ret i1 %cmp
+}
+
+; The address one past the end of an object is covered by the same guarantee.
+define i1 @addr_plus_offset_one_past_end() {
+; CHECK-LABEL: define i1 @addr_plus_offset_one_past_end() {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq i64 add (i64 ptrtoaddr (ptr @g5 to i64), i64 20), 0
+  ret i1 %cmp
+}
+
+define i1 @addr_plus_offset_inrange_ne() {
+; CHECK-LABEL: define i1 @addr_plus_offset_inrange_ne() {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ne i64 add (i64 ptrtoaddr (ptr @g5 to i64), i64 15), 0
+  ret i1 %cmp
+}
+
+; A declaration's type still gives its size.
+define i1 @addr_plus_offset_declaration() {
+; CHECK-LABEL: define i1 @addr_plus_offset_declaration() {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq i64 add (i64 ptrtoaddr (ptr @g5.decl to i64), i64 15), 0
+  ret i1 %cmp
+}
+
+; Negative: nothing is known beyond the end of the object.
+define i1 @addr_plus_offset_past_end() {
+; CHECK-LABEL: define i1 @addr_plus_offset_past_end() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 add (i64 ptrtoaddr (ptr @g5 to i64), i64 21), 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq i64 add (i64 ptrtoaddr (ptr @g5 to i64), i64 21), 0
+  ret i1 %cmp
+}
+
+; Negative: an extern_weak symbol may be null.
+define i1 @addr_plus_offset_extern_weak() {
+; CHECK-LABEL: define i1 @addr_plus_offset_extern_weak() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 add (i64 ptrtoaddr (ptr @g5.weak to i64), i64 15), 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq i64 add (i64 ptrtoaddr (ptr @g5.weak to i64), i64 15), 0
+  ret i1 %cmp
+}
+
+; No allocated object crosses the address space boundary in any address space,
+; so the fold does not need null to be an invalid address.
+define i1 @addr_plus_offset_non_zero_as() {
+; CHECK-LABEL: define i1 @addr_plus_offset_non_zero_as() {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq i32 add (i32 ptrtoaddr (ptr addrspace(1) @g5.as1 to i32), i32 15), 0
+  ret i1 %cmp
+}
+
+; Likewise, an object that starts at the zero address is all that
+; null_pointer_is_valid permits, and a non-zero offset into it is still
+; non-zero.
+define i1 @addr_plus_offset_null_pointer_is_valid() null_pointer_is_valid {
+; CHECK-LABEL: define i1 @addr_plus_offset_null_pointer_is_valid(
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq i64 add (i64 ptrtoaddr (ptr @g5 to i64), i64 15), 0
+  ret i1 %cmp
+}
+
+; The same holds for objects that are not constants.
+define i1 @addr_plus_offset_alloca() {
+; CHECK-LABEL: define i1 @addr_plus_offset_alloca() {
+; CHECK-NEXT:    ret i1 false
+;
+  %a = alloca [5 x i32], align 1
+  %addr = ptrtoaddr ptr %a to i64
+  %sum = add i64 %addr, 16
+  %cmp = icmp eq i64 %sum, 0
+  ret i1 %cmp
+}
+
+define i1 @addr_plus_offset_dereferenceable(ptr dereferenceable(20) %p) {
+; CHECK-LABEL: define i1 @addr_plus_offset_dereferenceable(
+; CHECK-SAME: ptr dereferenceable(20) [[P:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %addr = ptrtoaddr ptr %p to i64
+  %sum = add i64 %addr, 16
+  %cmp = icmp eq i64 %sum, 0
+  ret i1 %cmp
+}
+
+define i1 @addr_plus_offset_dereferenceable_past_end(ptr dereferenceable(20) %p) {
+; CHECK-LABEL: define i1 @addr_plus_offset_dereferenceable_past_end(
+; CHECK-SAME: ptr dereferenceable(20) [[P:%.*]]) {
+; CHECK-NEXT:    [[ADDR:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[SUM:%.*]] = add i64 [[ADDR]], 21
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SUM]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %addr = ptrtoaddr ptr %p to i64
+  %sum = add i64 %addr, 21
+  %cmp = icmp eq i64 %sum, 0
+  ret i1 %cmp
+}
+
+; The same reasoning applies to ptrtoint when its result is the address.
+define i1 @int_plus_offset_inrange() {
+; CHECK-LABEL: define i1 @int_plus_offset_inrange() {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq i64 add (i64 ptrtoint (ptr @g5 to i64), i64 15), 0
+  ret i1 %cmp
+}
+
+; Negative: a truncated ptrtoint is not an address, so it may wrap to zero.
+define i1 @trunc_int_plus_offset_inrange() {
+; CHECK-LABEL: define i1 @trunc_int_plus_offset_inrange() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 add (i32 ptrtoint (ptr @g5 to i32), i32 15), 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq i32 add (i32 ptrtoint (ptr @g5 to i32), i32 15), 0
+  ret i1 %cmp
+}
+
+; Negative: the pointer may be null, so there may be no object at all.
+define i1 @addr_plus_offset_maybe_null(ptr dereferenceable_or_null(20) %p) {
+; CHECK-LABEL: define i1 @addr_plus_offset_maybe_null(
+; CHECK-SAME: ptr dereferenceable_or_null(20) [[P:%.*]]) {
+; CHECK-NEXT:    [[ADDR:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[SUM:%.*]] = add i64 [[ADDR]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SUM]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %addr = ptrtoaddr ptr %p to i64
+  %sum = add i64 %addr, 16
+  %cmp = icmp eq i64 %sum, 0
+  ret i1 %cmp
+}
+
+; Negative: nothing is known about the size of the object.
+define i1 @addr_plus_offset_unknown_size(ptr %p) {
+; CHECK-LABEL: define i1 @addr_plus_offset_unknown_size(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[ADDR:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[SUM:%.*]] = add i64 [[ADDR]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SUM]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %addr = ptrtoaddr ptr %p to i64
+  %sum = add i64 %addr, 16
+  %cmp = icmp eq i64 %sum, 0
+  ret i1 %cmp
+}
+
+; ptrtoint of a non-constant pointer works the same way.
+define i1 @int_plus_offset_dereferenceable(ptr dereferenceable(20) %p) {
+; CHECK-LABEL: define i1 @int_plus_offset_dereferenceable(
+; CHECK-SAME: ptr dereferenceable(20) [[P:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %addr = ptrtoint ptr %p to i64
+  %sum = add i64 %addr, 16
+  %cmp = icmp eq i64 %sum, 0
+  ret i1 %cmp
+}
+
+; Negative: a truncated ptrtoint is not an address and may wrap to zero.
+define i1 @trunc_int_plus_offset(ptr dereferenceable(20) %p) {
+; CHECK-LABEL: define i1 @trunc_int_plus_offset(
+; CHECK-SAME: ptr dereferenceable(20) [[P:%.*]]) {
+; CHECK-NEXT:    [[ADDR:%.*]] = ptrtoint ptr [[P]] to i32
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[ADDR]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUM]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %addr = ptrtoint ptr %p to i32
+  %sum = add i32 %addr, 16
+  %cmp = icmp eq i32 %sum, 0
+  ret i1 %cmp
+}
+
+; A ptrtoint wider than the address keeps the address in its low bits, and any
+; bits above it can only make the result more non-zero. Here the address size
+; is 32 and the pointer representation is 64 bits wide.
+define i1 @wide_int_plus_offset_non_zero_as() {
+; CHECK-LABEL: define i1 @wide_int_plus_offset_non_zero_as() {
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq i64 add (i64 ptrtoint (ptr addrspace(1) @g5.as1 to i64), i64 15), 0
+  ret i1 %cmp
+}
+
+define i1 @wide_int_plus_offset_dereferenceable(ptr addrspace(1) dereferenceable(20) %p) {
+; CHECK-LABEL: define i1 @wide_int_plus_offset_dereferenceable(
+; CHECK-SAME: ptr addrspace(1) dereferenceable(20) [[P:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %addr = ptrtoint ptr addrspace(1) %p to i64
+  %sum = add i64 %addr, 16
+  %cmp = icmp eq i64 %sum, 0
+  ret i1 %cmp
+}
+
+; Negative: an alias may resolve to a weak undefined symbol, and thus to the
+; null address, so nothing is known about the object it designates.
+define i1 @addr_of_alias_eq_zero() {
+; CHECK-LABEL: define i1 @addr_of_alias_eq_zero() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 ptrtoaddr (ptr @alias to i64), 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq i64 ptrtoaddr (ptr @alias to i64), 0
+  ret i1 %cmp
+}
+
+define i1 @int_of_alias_ne_zero() {
+; CHECK-LABEL: define i1 @int_of_alias_ne_zero() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 ptrtoint (ptr @alias to i64), 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne i64 ptrtoint (ptr @alias to i64), 0
+  ret i1 %cmp
+}
+
+define i1 @alias_plus_offset() {
+; CHECK-LABEL: define i1 @alias_plus_offset() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 add (i64 ptrtoaddr (ptr @alias to i64), i64 15), 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq i64 add (i64 ptrtoaddr (ptr @alias to i64), i64 15), 0
+  ret i1 %cmp
+}
+
+; Negative: a vector of pointers has no single object to take the size of.
+define <2 x i1> @vec_addr_plus_offset(<2 x ptr> %p) {
+; CHECK-LABEL: define <2 x i1> @vec_addr_plus_offset(
+; CHECK-SAME: <2 x ptr> [[P:%.*]]) {
+; CHECK-NEXT:    [[ADDR:%.*]] = ptrtoaddr <2 x ptr> [[P]] to <2 x i64>
+; CHECK-NEXT:    [[SUM:%.*]] = add <2 x i64> [[ADDR]], splat (i64 16)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i64> [[SUM]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %addr = ptrtoaddr <2 x ptr> %p to <2 x i64>
+  %sum = add <2 x i64> %addr, splat (i64 16)
+  %cmp = icmp eq <2 x i64> %sum, zeroinitializer
+  ret <2 x i1> %cmp
 }

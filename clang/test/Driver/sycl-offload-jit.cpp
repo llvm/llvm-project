@@ -47,6 +47,19 @@
 // CHK-FSYCL-IS-DEVICE: "-cc1"{{.*}} "-fsycl-is-device" {{.*}} "-emit-llvm-bc"
 // CHK-FSYCL-IS-HOST: "-cc1"{{.*}} "-fsycl-is-host"
 
+/// Check that -S with a device-only compilation produces textual SPIR-V, while
+/// -S -emit-llvm continues to produce textual LLVM IR.
+// RUN: %clang -### -fsycl -fsycl-device-only -S %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-DEVICE-ONLY-ASM %s
+// RUN: %clang -### -fsycl -fsycl-device-only -S -emit-llvm %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-DEVICE-ONLY-LL %s
+// CHK-DEVICE-ONLY-ASM: "-cc1"{{.*}} "-fsycl-is-device"
+// CHK-DEVICE-ONLY-ASM-NOT: "-emit-llvm"
+// CHK-DEVICE-ONLY-ASM-SAME: "-S"
+// CHK-DEVICE-ONLY-ASM-SAME: "-o" "{{[^"]*}}.s"
+// CHK-DEVICE-ONLY-LL: "-cc1"{{.*}} "-fsycl-is-device" {{.*}} "-emit-llvm"
+// CHK-DEVICE-ONLY-LL-SAME: "-o" "{{[^"]*}}.ll"
+
 /// Check that SYCL compilation defaults to relocatable device code (-fgpu-rdc
 /// is passed to both the device and the host -cc1 invocation) and that
 /// -fno-gpu-rdc disables it.
@@ -75,10 +88,10 @@
 /// With multiple architectures the packaged binary holds an entry per
 /// architecture, and a single fat binary is expected to reach the host.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl -fno-gpu-rdc \
-// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=generic --offload-arch=bmg_g21 \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=generic --offload-arch=xe-bmg-g21 \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-PHASES-NORDC-ARCHS %s
-// CHK-PHASES-NORDC-ARCHS: 7: offload, "device-sycl (spirv64-unknown-unknown:bmg_g21)" {6}, ir
-// CHK-PHASES-NORDC-ARCHS: 12: offload, "device-sycl (spirv64-unknown-unknown:generic)" {11}, ir
+// CHK-PHASES-NORDC-ARCHS: 7: offload, "device-sycl (spirv64-unknown-unknown:generic)" {6}, ir
+// CHK-PHASES-NORDC-ARCHS: 12: offload, "device-sycl (spirv64-unknown-unknown:xe-bmg-g21)" {11}, ir
 // CHK-PHASES-NORDC-ARCHS-NEXT: 13: llvm-offload-binary, {7, 12}, image, (device-sycl)
 // CHK-PHASES-NORDC-ARCHS-NEXT: 14: clang-linker-wrapper, {13}, sycl-fatbin, (device-sycl)
 

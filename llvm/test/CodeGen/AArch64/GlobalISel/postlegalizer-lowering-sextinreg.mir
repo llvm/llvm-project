@@ -12,7 +12,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v1:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_DUP [[C]](i32)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_SPLAT_VECTOR [[C]](i32)
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<4 x i32>) = G_SHL %v1, [[DUP]](<4 x i32>)
     ; CHECK-NEXT: %sext:_(<4 x i32>) = G_VASHR [[SHL]], 16
     ; CHECK-NEXT: $q0 = COPY %sext(<4 x i32>)

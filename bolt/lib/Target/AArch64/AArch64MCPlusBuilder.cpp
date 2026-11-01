@@ -774,13 +774,14 @@ public:
 
     const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
     assert(Target && "missing target symbol in LDR instruction");
+    const int64_t Addend = getTargetAddend(LDRInst, 1);
 
     InstructionListType Insts(2);
     Insts[0].setOpcode(AArch64::ADRP);
     Insts[0].clear();
     Insts[0].addOperand(MCOperand::createReg(AddrReg));
     Insts[0].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, 0, Ctx,
+    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, Addend, Ctx,
                           ELF::R_AARCH64_NONE);
     Insts[1].setOpcode(OpCode);
     Insts[1].clear();
@@ -788,7 +789,8 @@ public:
     Insts[1].addOperand(MCOperand::createReg(AddrReg));
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx, RelType);
+    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, Addend, Ctx,
+                          RelType);
     return Insts;
   }
 
@@ -3695,17 +3697,28 @@ public:
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
-    MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
+    MCFixupKind FKind = Fixup.getKind();
+    MCFixupKindInfo FKI = MAB.getFixupKindInfo(FKind);
 
-    assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
-    const uint64_t RelOffset = Fixup.getOffset();
+    switch (FKind) {
+    case MCFixupKind(AArch64::fixup_aarch64_pcrel_branch19):
+    case MCFixupKind(AArch64::fixup_aarch64_pcrel_branch14):
+      assert(FKI.TargetOffset == 5 && "5-bit relocation offset expected");
+      break;
+    default:
+      assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
+      break;
+    }
 
     uint32_t RelType;
-    if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
+    if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
       RelType = ELF::R_AARCH64_CALL26;
-    else if (Fixup.getKind() ==
-             MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
+    else if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
       RelType = ELF::R_AARCH64_JUMP26;
+    else if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch19))
+      RelType = ELF::R_AARCH64_CONDBR19;
+    else if (FKind == MCFixupKind(AArch64::fixup_aarch64_pcrel_branch14))
+      RelType = ELF::R_AARCH64_TSTBR14;
     else if (Fixup.isPCRel()) {
       switch (FKI.TargetSize) {
       default:
@@ -3735,7 +3748,7 @@ public:
         break;
       }
     }
-
+    const uint64_t RelOffset = Fixup.getOffset();
     auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
     return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});

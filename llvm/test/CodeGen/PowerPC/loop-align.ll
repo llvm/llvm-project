@@ -5,12 +5,12 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -mtriple powerpc64-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR
 
-; Test the loop alignment and the option -disable-ppc-innermost-loop-align32.
-; RUN: llc -verify-machineinstrs -mcpu=a2 -disable-ppc-innermost-loop-align32 -mtriple powerpc64le-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,GENERIC-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -disable-ppc-innermost-loop-align32 -mtriple powerpc64le-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
-; RUN: llc -verify-machineinstrs -mcpu=pwr9 -disable-ppc-innermost-loop-align32 -mtriple powerpc64le-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -disable-ppc-innermost-loop-align32 -mtriple powerpc64-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
-; RUN: llc -verify-machineinstrs -mcpu=pwr9 -disable-ppc-innermost-loop-align32 -mtriple powerpc64-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
+; Test the loop alignment and the option -ppc-innermost-loop-align32=false.
+; RUN: llc -verify-machineinstrs -mcpu=a2 -ppc-innermost-loop-align32=false -mtriple powerpc64le-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,GENERIC-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -ppc-innermost-loop-align32=false -mtriple powerpc64le-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -ppc-innermost-loop-align32=false -mtriple powerpc64le-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -ppc-innermost-loop-align32=false -mtriple powerpc64-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -ppc-innermost-loop-align32=false -mtriple powerpc64-unknown-linux-gnu < %s | FileCheck %s -check-prefixes=CHECK,PWR-DISABLE-PPC-INNERMOST-LOOP-ALIGN32
 
 
 %struct.parm = type { ptr, i32, i32 }

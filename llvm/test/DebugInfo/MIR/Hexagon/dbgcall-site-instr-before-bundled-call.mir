@@ -94,7 +94,7 @@ stack:
   - { id: 1, type: spill-slot, offset: -56, size: 4, alignment: 4 }
   - { id: 2, type: spill-slot, offset: -60, size: 4, alignment: 4 }
 callSites:
-  - { bb: 0, offset: 40, fwdArgRegs:
+  - { bb: '%bb.0', offset: 40, fwdArgRegs:
       - { arg: 0, reg: '$r0' }
       - { arg: 1, reg: '$r1' }
       - { arg: 2, reg: '$r2' } }
@@ -163,7 +163,7 @@ body:             |
       $d12 = L2_loadrd_io $r29, 24, debug-location !21 :: (load (s64) from %fixed-stack.1)
       $d13 = L2_loadrd_io killed $r29, 16, debug-location !21 :: (load (s64) from %fixed-stack.0)
     }
-    $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def dead $pc, implicit $d8, implicit $d9, implicit $d10, implicit $d11, implicit $d12, implicit $d13, debug-location !21
+    $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit $d8, implicit $d9, implicit $d10, implicit $d11, implicit $d12, implicit $d13, debug-location !21
 
 ...
 

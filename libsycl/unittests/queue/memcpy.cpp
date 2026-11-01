@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <common/unittests_helper.hpp>
 #include <mock/helpers.hpp>
 
@@ -6,7 +14,6 @@
 #include <sycl/__impl/queue.hpp>
 
 #include <detail/device_impl.hpp>
-#include <detail/queue_impl.hpp>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -74,6 +81,35 @@ TEST(Queue, Memcpy) {
 
   IsSrcHostPtr = true;
   Q.memcpy(DstPtr, SrcPtr, NumBytes);
+}
+
+TEST(Queue, Copy) {
+  struct Elem {
+    char Data[3];
+  };
+  constexpr std::size_t Count = 32;
+
+  mock::MockWrapper Mock;
+  queue Q;
+
+  const Elem *SrcPtr = reinterpret_cast<const Elem *>(1);
+  Elem *DstPtr = reinterpret_cast<Elem *>(2);
+
+  EXPECT_CALL(Mock.get(),
+              olMemcpy(_, DstPtr, _, SrcPtr, _, Count * sizeof(Elem)))
+      .Times(3);
+  EXPECT_CALL(Mock.get(), olWaitEvents(_, _, 1)).Times(2);
+
+  event Event = Q.copy(SrcPtr, DstPtr, Count);
+  Q.copy(SrcPtr, DstPtr, Count, Event);
+  Q.copy(SrcPtr, DstPtr, Count, std::vector<event>{Event});
+}
+
+TEST(Queue, CopyZeroCount) {
+  mock::MockWrapper Mock;
+  queue Q;
+  EXPECT_CALL(Mock.get(), olMemcpy(_, _, _, _, _, _)).Times(0);
+  Q.copy<int>(nullptr, nullptr, 0);
 }
 
 TEST(Queue, MemcpyZeroBytes) {

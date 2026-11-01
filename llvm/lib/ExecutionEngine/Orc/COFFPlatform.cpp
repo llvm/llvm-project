@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
 #include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
@@ -653,20 +654,20 @@ void COFFPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
 }
 
 Error COFFPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
   using LookupSymbolSPSSig =
       SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
-  WFs[ES.intern("__orc_rt_coff_symbol_lookup_tag")] =
-      ES.wrapAsyncWithSPS<LookupSymbolSPSSig>(this,
-                                              &COFFPlatform::rt_lookupSymbol);
+
   using PushInitializersSPSSig =
       SPSExpected<SPSCOFFJITDylibDepInfoMap>(SPSExecutorAddr);
-  WFs[ES.intern("__orc_rt_coff_push_initializers_tag")] =
-      ES.wrapAsyncWithSPS<PushInitializersSPSSig>(
-          this, &COFFPlatform::rt_pushInitializers);
 
-  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  return ES.registerCallControllerHandlers(
+      PlatformJD,
+      bindCallControllerHandlerSPS<LookupSymbolSPSSig>(
+          SymbolNameSpec::c("__orc_rt_coff_symbol_lookup_tag"), this,
+          &COFFPlatform::rt_lookupSymbol),
+      bindCallControllerHandlerSPS<PushInitializersSPSSig>(
+          SymbolNameSpec::c("__orc_rt_coff_push_initializers_tag"), this,
+          &COFFPlatform::rt_pushInitializers));
 }
 
 Error COFFPlatform::runBootstrapInitializers(JDBootstrapState &BState) {

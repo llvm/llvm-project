@@ -1,4 +1,4 @@
-//===- FIROpenACCSupportAnalysis.cpp - FIR OpenACCSupport Analysis -------===//
+//===- FIROpenACCSupportAnalysis.cpp - FIR OpenACCSupport Analysis --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,8 +53,9 @@ bool FIROpenACCSupportAnalysis::isValidSymbolUse(Operation *user,
   return fir::acc::isValidSymbolUse(user, symbol, definingOpPtr);
 }
 
-bool FIROpenACCSupportAnalysis::isValidValueUse(Value v, Region &region) {
-  return fir::acc::isValidValueUse(v, region);
+bool FIROpenACCSupportAnalysis::isValidValueUse(
+    Value v, Region &region, SymbolTableCollection *symbolTables) {
+  return fir::acc::isValidValueUse(v, region, symbolTables);
 }
 
 std::optional<mlir::acc::TypeSizeAndAlignment>

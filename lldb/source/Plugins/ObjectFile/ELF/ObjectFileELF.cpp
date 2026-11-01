@@ -1845,9 +1845,11 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
           if (section_size && (data.SetData(object_data, sheader.sh_offset,
                                             section_size) == section_size)) {
             lldb::offset_t gnu_debuglink_offset = 0;
-            gnu_debuglink_file = data.GetCStr(&gnu_debuglink_offset);
-            gnu_debuglink_offset = llvm::alignTo(gnu_debuglink_offset, 4);
-            data.GetU32(&gnu_debuglink_offset, &gnu_debuglink_crc, 1);
+            if (const char *file = data.GetCStr(&gnu_debuglink_offset)) {
+              gnu_debuglink_file = file;
+              gnu_debuglink_offset = llvm::alignTo(gnu_debuglink_offset, 4);
+              data.GetU32(&gnu_debuglink_offset, &gnu_debuglink_crc, 1);
+            }
           }
         }
 

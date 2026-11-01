@@ -111,7 +111,9 @@ public:
 
   /// Test whether the quantity is a power of two.
   /// Zero is not a power of two.
-  bool isPowerOfTwo() const { return (Quantity & -Quantity) == Quantity; }
+  bool isPowerOfTwo() const {
+    return Quantity > 0 && llvm::isPowerOf2_64(Quantity);
+  }
 
   /// Test whether this is a multiple of the other value.
   ///

@@ -514,13 +514,14 @@ handleLoopAnnotations(Operation *call,
     if (!newStartLoc && !newEndLoc)
       return {loopAnnotation, WalkResult::advance()};
     auto newLoopAnnotation = LLVM::LoopAnnotationAttr::get(
-        loopAnnotation.getContext(), loopAnnotation.getDisableNonforced(),
-        loopAnnotation.getVectorize(), loopAnnotation.getInterleave(),
-        loopAnnotation.getUnroll(), loopAnnotation.getUnrollAndJam(),
-        loopAnnotation.getLicm(), loopAnnotation.getDistribute(),
-        loopAnnotation.getPipeline(), loopAnnotation.getPeeled(),
-        loopAnnotation.getUnswitch(), loopAnnotation.getMustProgress(),
-        loopAnnotation.getIsVectorized(), newStartLoc, newEndLoc,
+        loopAnnotation.getContext(), loopAnnotation.getId(),
+        loopAnnotation.getDisableNonforced(), loopAnnotation.getVectorize(),
+        loopAnnotation.getInterleave(), loopAnnotation.getUnroll(),
+        loopAnnotation.getUnrollAndJam(), loopAnnotation.getLicm(),
+        loopAnnotation.getDistribute(), loopAnnotation.getPipeline(),
+        loopAnnotation.getPeeled(), loopAnnotation.getUnswitch(),
+        loopAnnotation.getMustProgress(), loopAnnotation.getIsVectorized(),
+        loopAnnotation.getAlign(), newStartLoc, newEndLoc,
         loopAnnotation.getParallelAccesses());
     // Needs to advance, as loop annotations can be nested.
     return {newLoopAnnotation, WalkResult::advance()};

@@ -368,6 +368,32 @@ module attributes {omp.is_target_device = true} {
     llvm.return
   }
 
+  // The dyn_groupprivate modifiers must be removed along with the size, as the
+  // verifier rejects modifiers without a size operand.
+  // CHECK-LABEL: llvm.func @dyn_groupprivate
+  // CHECK-NOT: dyn_groupprivate
+  llvm.func @dyn_groupprivate(%arg0: i32, %arg1: i64) {
+    // CHECK: omp.target kernel_type(generic) {
+    omp.target kernel_type(generic) dyn_groupprivate(%arg0 : i32) {
+      omp.terminator
+    }
+    // CHECK: omp.target kernel_type(generic) {
+    omp.target kernel_type(generic) dyn_groupprivate(cgroup, %arg1 : i64) {
+      omp.terminator
+    }
+    // CHECK: omp.target kernel_type(generic) {
+    omp.target kernel_type(generic) dyn_groupprivate(fallback(abort), %arg0 : i32) {
+      omp.terminator
+    }
+    // CHECK: omp.target kernel_type(generic) {
+    omp.target kernel_type(generic) dyn_groupprivate(cgroup, fallback(null), %arg0 : i32) {
+      omp.terminator
+    }
+    // CHECK-NOT: dyn_groupprivate
+    // CHECK: llvm.return
+    llvm.return
+  }
+
   // CHECK-LABEL: llvm.func @private_with_map_idx
   // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: i64)
   llvm.func @private_with_map_idx(%arg0: !llvm.ptr, %arg1: i64) {

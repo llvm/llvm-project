@@ -314,6 +314,8 @@ static const char *primTypeToString(PrimType T) {
     return "MemberPtr";
   case PT_FixedPoint:
     return "FixedPoint";
+  case PT_Reflect:
+    return "Reflect";
   }
   llvm_unreachable("Unhandled PrimType");
 }
@@ -539,7 +541,7 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     if (getCallee())
       describe(OS);
     else
-      OS << "Frame (Depth: " << getDepth() << ")";
+      OS << "Frame";
     OS << "\n";
   }
   OS.indent(Spaces) << "Function: " << getFunction();
@@ -555,7 +557,6 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
   else
     OS.indent(Spaces) << "RVO: -\n";
-  OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
 #ifndef NDEBUG

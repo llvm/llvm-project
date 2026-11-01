@@ -3,7 +3,7 @@
 ! Check that we generate proper body of the do-construct.
 
 !CHECK: omp.loop_nest (%[[ARG1:arg[0-9]+]]) : i32 = (%c1_i32) to (%c10_i32) inclusive step (%c1_i32_1) {
-!CHECK:   %[[V0:[0-9]+]]:2 = hlfir.declare %arg0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[V0:[0-9]+]]:2 = hlfir.declare %arg0 uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   hlfir.assign %[[ARG1]] to %[[V0]]#0 : i32, !fir.ref<i32>
 !CHECK:   %[[V1:[0-9]+]] = fir.load %[[V0]]#0 : !fir.ref<i32>
 !CHECK:   %[[V2:[0-9]+]] = fir.convert %[[V1]] : (i32) -> f32

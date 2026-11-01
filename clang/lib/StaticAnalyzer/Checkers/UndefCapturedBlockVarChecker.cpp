@@ -67,7 +67,7 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
     // Get the VarRegion associated with VD in the local stack frame.
     if (std::optional<UndefinedVal> V =
             state->getSVal(Var.getOriginalRegion()).getAs<UndefinedVal>()) {
-      if (ExplodedNode *N = C.generateErrorNode()) {
+      if (ExplodedNode *N = C.addSink()) {
         auto R = std::make_unique<PathSensitiveBugReport>(
             BT,
             "Variable '" + Twine(VD->getName()) +

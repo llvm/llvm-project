@@ -47,10 +47,12 @@ cc_library(
         "//mlir:ArithDialect",
         "//mlir:FuncDialect",
         "//mlir:IR",
+        "//mlir:MemRefDialect",
         "//mlir:OpenACCAnalysis",
         "//mlir:OpenACCDialect",
         "//mlir:OpenACCUtils",
         "//mlir:Pass",
         "//mlir:TransformUtils",
+        "//mlir:ViewLikeInterface",
     ],
 )

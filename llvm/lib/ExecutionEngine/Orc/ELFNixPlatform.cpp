@@ -15,6 +15,7 @@
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
@@ -477,21 +478,19 @@ ELFNixPlatform::ELFNixPlatform(
 }
 
 Error ELFNixPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
   using RecordInitializersSPSSig =
       SPSExpected<SPSELFNixJITDylibDepInfoMap>(SPSExecutorAddr);
-  WFs[ES.intern("__orc_rt_elfnix_push_initializers_tag")] =
-      ES.wrapAsyncWithSPS<RecordInitializersSPSSig>(
-          this, &ELFNixPlatform::rt_recordInitializers);
-
   using LookupSymbolSPSSig =
       SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
-  WFs[ES.intern("__orc_rt_elfnix_symbol_lookup_tag")] =
-      ES.wrapAsyncWithSPS<LookupSymbolSPSSig>(this,
-                                              &ELFNixPlatform::rt_lookupSymbol);
 
-  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  return ES.registerCallControllerHandlers(
+      PlatformJD,
+      bindCallControllerHandlerSPS<RecordInitializersSPSSig>(
+          SymbolNameSpec::c("__orc_rt_elfnix_push_initializers_tag"), this,
+          &ELFNixPlatform::rt_recordInitializers),
+      bindCallControllerHandlerSPS<LookupSymbolSPSSig>(
+          SymbolNameSpec::c("__orc_rt_elfnix_symbol_lookup_tag"), this,
+          &ELFNixPlatform::rt_lookupSymbol));
 }
 
 void ELFNixPlatform::pushInitializersLoop(

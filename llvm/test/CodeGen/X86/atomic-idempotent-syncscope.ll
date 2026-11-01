@@ -143,7 +143,7 @@ define i128 @or128(ptr %p) #0 {
 ; X86-GENERIC-NEXT:    pushl %edi
 ; X86-GENERIC-NEXT:    pushl %esi
 ; X86-GENERIC-NEXT:    andl $-16, %esp
-; X86-GENERIC-NEXT:    subl $48, %esp
+; X86-GENERIC-NEXT:    subl $32, %esp
 ; X86-GENERIC-NEXT:    movl 12(%ebp), %edi
 ; X86-GENERIC-NEXT:    movl 12(%edi), %ecx
 ; X86-GENERIC-NEXT:    movl 8(%edi), %edx
@@ -460,7 +460,7 @@ define void @or128_nouse_seq_cst(ptr %p) #0 {
 ; X86-GENERIC-NEXT:    pushl %edi
 ; X86-GENERIC-NEXT:    pushl %esi
 ; X86-GENERIC-NEXT:    andl $-16, %esp
-; X86-GENERIC-NEXT:    subl $48, %esp
+; X86-GENERIC-NEXT:    subl $32, %esp
 ; X86-GENERIC-NEXT:    movl 8(%ebp), %esi
 ; X86-GENERIC-NEXT:    movl 12(%esi), %ecx
 ; X86-GENERIC-NEXT:    movl 8(%esi), %edi

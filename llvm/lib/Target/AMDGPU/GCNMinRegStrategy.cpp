@@ -241,9 +241,8 @@ GCNMinRegScheduler::schedule(ArrayRef<const SUnit*> TopRoots,
     LLVM_DEBUG(dbgs() << "\n=== Picking candidate, Step = " << StepNo
                       << "\n"
                          "Ready queue:";
-               for (auto &C
-                    : RQ) dbgs()
-               << ' ' << C.SU->NodeNum << "(P" << C.Priority << ')';
+               for (auto &C : RQ) dbgs()
+               << ' ' << *C.SU << "(P" << C.Priority << ')';
                dbgs() << '\n';);
 
     auto *C = pickCandidate();

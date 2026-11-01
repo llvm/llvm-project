@@ -11,6 +11,45 @@ cir.global external @vec_b = #cir.zero : !cir.vector<4 x !cir.array<!s32i x 10>>
 
 // -----
 
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @scalable_vector_constant() {
+    // expected-error @below {{scalable vector constants are not supported}}
+    %0 = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.vector<[2] x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @scalable_vector_create() {
+    %0 = cir.const #cir.int<1> : !s32i
+    %1 = cir.const #cir.int<2> : !s32i
+    // expected-error @below {{scalable vectors are not supported}}
+    %2 = cir.vec.create(%0, %1 : !s32i, !s32i) : !cir.vector<[2] x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @scalable_vector_shuffle(%arg0: !cir.vector<[2] x !s32i>,
+                                    %arg1: !cir.vector<[2] x !s32i>) {
+    // expected-error @below {{scalable vectors are not supported}}
+    %0 = cir.vec.shuffle(%arg0, %arg1 : !cir.vector<[2] x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<[2] x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
 cir.func @invalid_scalable_vec_syntax() {
   // expected-error@+2 {{missing closing `]` for scalable dim size}}
   // expected-error @below {{expected ']'}}

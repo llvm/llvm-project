@@ -78,10 +78,12 @@ typedef enum { HSA_AMD_SEGMENT_GLOBAL = 0 } hsa_amd_segment_t;
 typedef enum {
   HSA_AMD_MEMORY_POOL_INFO_SEGMENT = 0,
   HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS = 1,
+  HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED = 5,
 } hsa_amd_memory_pool_info_t;
 
 typedef enum {
   HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED = 2,
+  HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED = 4,
 } hsa_amd_memory_pool_global_flag_t;
 
 typedef enum {
