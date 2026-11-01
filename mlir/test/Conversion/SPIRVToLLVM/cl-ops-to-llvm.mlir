@@ -123,3 +123,26 @@ spirv.func @mix_vector(%x: vector<4xf32>, %y: vector<4xf32>, %a: vector<4xf32>) 
   %0 = spirv.CL.mix %x, %y, %a : vector<4xf32>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.sincos
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sincos_scalar
+spirv.func @sincos_scalar(%x: f32, %p: !spirv.ptr<f32, Function>) "None" {
+  // CHECK: %[[SINCOS:.*]] = llvm.intr.sincos(%{{.*}}) : (f32) -> !llvm.struct<(f32, f32)>
+  // CHECK: %[[SIN:.*]] = llvm.extractvalue %[[SINCOS]][0] : !llvm.struct<(f32, f32)>
+  // CHECK: %[[COS:.*]] = llvm.extractvalue %[[SINCOS]][1] : !llvm.struct<(f32, f32)>
+  // CHECK: llvm.store %[[COS]], %{{.*}} : f32, !llvm.ptr
+  %0 = spirv.CL.sincos %x, %p : f32, !spirv.ptr<f32, Function> -> f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @sincos_vector
+spirv.func @sincos_vector(%x: vector<3xf16>, %p: !spirv.ptr<vector<3xf16>, CrossWorkgroup>) "None" {
+  // CHECK: %[[SINCOS:.*]] = llvm.intr.sincos(%{{.*}}) : (vector<3xf16>) -> !llvm.struct<(vector<3xf16>, vector<3xf16>)>
+  // CHECK: %[[COS:.*]] = llvm.extractvalue %[[SINCOS]][1] : !llvm.struct<(vector<3xf16>, vector<3xf16>)>
+  // CHECK: llvm.store %[[COS]], %{{.*}} : vector<3xf16>, !llvm.ptr
+  %0 = spirv.CL.sincos %x, %p : vector<3xf16>, !spirv.ptr<vector<3xf16>, CrossWorkgroup> -> vector<3xf16>
+  spirv.Return
+}
