@@ -306,6 +306,7 @@ getSdmaEngineId(hsa_agent_t DstAgent, hsa_agent_t SrcAgent) {
       !AvailMask)
     return std::nullopt;
 
+  constexpr uint32_t ShiftWidthMask = 32 - 1;
   // The first engine ID we want to check is at NextIdx in the engine mask.
   uint32_t Start = NextIdx.load(std::memory_order_relaxed);
   // Inspect the bits starting from this ID.
@@ -314,9 +315,9 @@ getSdmaEngineId(hsa_agent_t DstAgent, hsa_agent_t SrcAgent) {
   // might be in the wrapped-around part of the mask, so we need to do a "modulo
   // bitwidth", aka & 0b11111. The addition of Start is necessary since we
   // rotated by that amount.
-  uint32_t Idx = (Start + llvm::countr_zero(FromStart)) & 0b11111;
+  uint32_t Idx = (Start + llvm::countr_zero(FromStart)) & ShiftWidthMask;
   // The next engine we want to check is at + 1, again wrapped by bitwidth.
-  NextIdx.store((Idx + 1u) & 0b11111, std::memory_order_relaxed);
+  NextIdx.store((Idx + 1u) & ShiftWidthMask, std::memory_order_relaxed);
 
   // We now have the *index* of the engine. The ID is the bit set at that index.
   return static_cast<hsa_amd_sdma_engine_id_t>(1u << Idx);
