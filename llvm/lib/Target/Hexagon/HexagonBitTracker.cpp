@@ -80,20 +80,13 @@ BT::BitMask HexagonEvaluator::mask(Register Reg, unsigned Sub) const {
   if (Sub == 0)
     return MachineEvaluator::mask(Reg, 0);
   const TargetRegisterClass &RC = *MRI.getRegClass(Reg);
-  unsigned ID = RC.getID();
   uint16_t RW = getRegBitWidth(RegisterRef(Reg, Sub));
   const auto &HRI = static_cast<const HexagonRegisterInfo&>(TRI);
   bool IsSubLo = (Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo));
-  switch (ID) {
-    case Hexagon::DoubleRegsRegClassID:
-    case Hexagon::DoubleRegs_with_isub_hi_in_IntRegsLow8RegClassID:
-    case Hexagon::HvxWRRegClassID:
-    case Hexagon::HvxVQRRegClassID:
-      return IsSubLo ? BT::BitMask(0, RW-1)
-                     : BT::BitMask(RW, 2*RW-1);
-    default:
-      break;
-  }
+  if (Hexagon::DoubleRegsRegClass.hasSubClassEq(&RC) ||
+      Hexagon::HvxWRRegClass.hasSubClassEq(&RC) ||
+      Hexagon::HvxVQRRegClass.hasSubClassEq(&RC))
+    return IsSubLo ? BT::BitMask(0, RW - 1) : BT::BitMask(RW, 2 * RW - 1);
 #ifndef NDEBUG
   dbgs() << printReg(Reg, &TRI, Sub) << " in reg class "
          << TRI.getRegClassName(&RC) << '\n';
@@ -130,17 +123,12 @@ const TargetRegisterClass &HexagonEvaluator::composeWithSubRegIndex(
   assert(IsSubLo != IsSubHi && "Must refer to either low or high subreg");
 #endif
 
-  switch (RC.getID()) {
-    case Hexagon::DoubleRegsRegClassID:
-    case Hexagon::DoubleRegs_with_isub_hi_in_IntRegsLow8RegClassID:
-      return Hexagon::IntRegsRegClass;
-    case Hexagon::HvxWRRegClassID:
-      return Hexagon::HvxVRRegClass;
-    case Hexagon::HvxVQRRegClassID:
-      return Hexagon::HvxWRRegClass;
-    default:
-      break;
-  }
+  if (Hexagon::DoubleRegsRegClass.hasSubClassEq(&RC))
+    return Hexagon::IntRegsRegClass;
+  if (Hexagon::HvxWRRegClass.hasSubClassEq(&RC))
+    return Hexagon::HvxVRRegClass;
+  if (Hexagon::HvxVQRRegClass.hasSubClassEq(&RC))
+    return Hexagon::HvxWRRegClass;
 #ifndef NDEBUG
   dbgs() << "Reg class id: " << RC.getID() << " idx: " << Idx << '\n';
 #endif

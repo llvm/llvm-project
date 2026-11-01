@@ -14,6 +14,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -294,10 +295,6 @@ bool BPIConstruction::calcMetadataWeights(const BasicBlock *BB) {
   // Check that the number of successors is manageable.
   assert(TI->getNumSuccessors() < UINT32_MAX && "Too many successors");
 
-  // Build up the final weights that will be used in a temporary buffer.
-  // Compute the sum of all weights to later decide whether they need to
-  // be scaled to fit in 32 bits.
-  uint64_t WeightSum = 0;
   SmallVector<uint32_t, 2> Weights;
   SmallVector<unsigned, 2> UnreachableIdxs;
   SmallVector<unsigned, 2> ReachableIdxs;
@@ -305,7 +302,6 @@ bool BPIConstruction::calcMetadataWeights(const BasicBlock *BB) {
   extractBranchWeights(WeightsNode, Weights);
   auto Succs = succ_begin(TI);
   for (unsigned I = 0, E = Weights.size(); I != E; ++I) {
-    WeightSum += Weights[I];
     auto EstimatedWeight = getEstimatedEdgeWeight({BB, *Succs++});
     if (EstimatedWeight &&
         *EstimatedWeight <= static_cast<uint32_t>(BlockExecWeight::UNREACHABLE))
@@ -315,31 +311,13 @@ bool BPIConstruction::calcMetadataWeights(const BasicBlock *BB) {
   }
   assert(Weights.size() == TI->getNumSuccessors() && "Checked above");
 
-  // If the sum of weights does not fit in 32 bits, scale every weight down
-  // accordingly.
-  uint64_t ScalingFactor =
-      (WeightSum > UINT32_MAX) ? WeightSum / UINT32_MAX + 1 : 1;
-
-  if (ScalingFactor > 1) {
-    WeightSum = 0;
-    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
-      Weights[I] /= ScalingFactor;
-      WeightSum += Weights[I];
-    }
-  }
-  assert(WeightSum <= UINT32_MAX &&
-         "Expected weights to scale down to 32 bits");
-
-  if (WeightSum == 0 || ReachableIdxs.size() == 0) {
-    for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I)
-      Weights[I] = 1;
-    WeightSum = TI->getNumSuccessors();
-  }
+  // If all successors are unreachable, all edges are equally likely.
+  if (ReachableIdxs.empty())
+    fill(Weights, 1);
 
   // Set the probability.
-  SmallVector<BranchProbability, 2> BP;
-  for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I)
-    BP.push_back({ Weights[I], static_cast<uint32_t>(WeightSum) });
+  SmallVector<BranchProbability> BP =
+      BranchProbabilityInfo::getEdgeProbabilitiesFromWeights(Weights);
 
   // Examine the metadata against unreachable heuristic.
   // If the unreachable heuristic is more strong then we use it for this edge.
@@ -1109,6 +1087,33 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
       Prob += P[It.index()];
 
   return Prob;
+}
+
+SmallVector<BranchProbability>
+BranchProbabilityInfo::getEdgeProbabilitiesFromWeights(
+    ArrayRef<uint32_t> Weights) {
+  // If the sum of weights does not fit in 32 bits, scale every weight down
+  // accordingly.
+  SmallVector<uint32_t> ScaledWeights(Weights);
+  uint64_t WeightSum = sum_of(ScaledWeights, uint64_t(0));
+  if (WeightSum > UINT32_MAX) {
+    uint64_t ScalingFactor = WeightSum / UINT32_MAX + 1;
+    for (uint32_t &Weight : ScaledWeights)
+      Weight /= ScalingFactor;
+    WeightSum = sum_of(ScaledWeights, uint64_t(0));
+  }
+
+  assert(WeightSum <= UINT32_MAX &&
+         "Expected weights to scale down to 32 bits");
+
+  if (WeightSum == 0) {
+    fill(ScaledWeights, 1);
+    WeightSum = ScaledWeights.size();
+  }
+
+  return map_to_vector(ScaledWeights, [WeightSum](uint32_t Weight) {
+    return BranchProbability(Weight, static_cast<uint32_t>(WeightSum));
+  });
 }
 
 /// Set the edge probability for all edges at once.

@@ -51,6 +51,342 @@ for.end:
   ret void
 }
 
+declare float @exp2f(float) nounwind readnone
+define void @exp2f_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @exp2f_v4f32(
+; CHECK: call <4 x float> @_simd_exp2_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @exp2f(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @exp2(double) nounwind readnone
+define void @exp2_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @exp2_v2f64(
+; CHECK: call <2 x double> @_simd_exp2_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @exp2(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @__exp10f(float) nounwind readnone
+define void @__exp10f_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @__exp10f_v4f32(
+; CHECK: call <4 x float> @_simd_exp10_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @__exp10f(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @__exp10(double) nounwind readnone
+define void @__exp10_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @__exp10_v2f64(
+; CHECK: call <2 x double> @_simd_exp10_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @__exp10(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @expm1f(float) nounwind readnone
+define void @expm1f_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @expm1f_v4f32(
+; CHECK: call <4 x float> @_simd_expm1_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @expm1f(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @expm1(double) nounwind readnone
+define void @expm1_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @expm1_v2f64(
+; CHECK: call <2 x double> @_simd_expm1_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @expm1(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @logf(float) nounwind readnone
+define void @logf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @logf_v4f32(
+; CHECK: call <4 x float> @_simd_log_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @logf(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @log(double) nounwind readnone
+define void @log_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @log_v2f64(
+; CHECK: call <2 x double> @_simd_log_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @log(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @log10f(float) nounwind readnone
+define void @log10f_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @log10f_v4f32(
+; CHECK: call <4 x float> @_simd_log10_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @log10f(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @log10(double) nounwind readnone
+define void @log10_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @log10_v2f64(
+; CHECK: call <2 x double> @_simd_log10_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @log10(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @log1pf(float) nounwind readnone
+define void @log1pf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @log1pf_v4f32(
+; CHECK: call <4 x float> @_simd_log1p_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @log1pf(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @log1p(double) nounwind readnone
+define void @log1p_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @log1p_v2f64(
+; CHECK: call <2 x double> @_simd_log1p_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @log1p(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @log2f(float) nounwind readnone
+define void @log2f_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @log2f_v4f32(
+; CHECK: call <4 x float> @_simd_log2_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @log2f(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @log2(double) nounwind readnone
+define void @log2_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @log2_v2f64(
+; CHECK: call <2 x double> @_simd_log2_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @log2(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 declare float @acosf(float) nounwind readnone
 define void @acos_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @acos_v4f32(
@@ -1178,6 +1514,438 @@ for.body:
   %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
   %lv = load double, ptr %gep.y, align 4
   %call = tail call double @atanh(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @__cospif(float) nounwind readnone
+define void @__cospif_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @__cospif_v4f32(
+; CHECK: call <4 x float> @_simd_cospi_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @__cospif(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @__cospi(double) nounwind readnone
+define void @__cospi_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @__cospi_v2f64(
+; CHECK: call <2 x double> @_simd_cospi_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @__cospi(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @__sinpif(float) nounwind readnone
+define void @__sinpif_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @__sinpif_v4f32(
+; CHECK: call <4 x float> @_simd_sinpi_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @__sinpif(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @__sinpi(double) nounwind readnone
+define void @__sinpi_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @__sinpi_v2f64(
+; CHECK: call <2 x double> @_simd_sinpi_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @__sinpi(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @__tanpif(float) nounwind readnone
+define void @__tanpif_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @__tanpif_v4f32(
+; CHECK: call <4 x float> @_simd_tanpi_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @__tanpif(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @__tanpi(double) nounwind readnone
+define void @__tanpi_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @__tanpi_v2f64(
+; CHECK: call <2 x double> @_simd_tanpi_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @__tanpi(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @hypotf(float, float) nounwind readnone
+define void @hypotf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @hypotf_v4f32(
+; CHECK: call <4 x float> @_simd_hypot_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @hypotf(float %lv, float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @hypot(double, double) nounwind readnone
+define void @hypot_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @hypot_v2f64(
+; CHECK: call <2 x double> @_simd_hypot_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @hypot(double %lv, double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @erfcf(float) nounwind readnone
+define void @erfcf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @erfcf_v4f32(
+; CHECK: call <4 x float> @_simd_erfc_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @erfcf(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @erfc(double) nounwind readnone
+define void @erfc_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @erfc_v2f64(
+; CHECK: call <2 x double> @_simd_erfc_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @erfc(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @lgammaf(float) nounwind readnone
+define void @lgammaf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @lgammaf_v4f32(
+; CHECK: call <4 x float> @_simd_lgamma_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @lgammaf(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @lgamma(double) nounwind readnone
+define void @lgamma_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @lgamma_v2f64(
+; CHECK: call <2 x double> @_simd_lgamma_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @lgamma(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @tgammaf(float) nounwind readnone
+define void @tgammaf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @tgammaf_v4f32(
+; CHECK: call <4 x float> @_simd_tgamma_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @tgammaf(float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @tgamma(double) nounwind readnone
+define void @tgamma_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @tgamma_v2f64(
+; CHECK: call <2 x double> @_simd_tgamma_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @tgamma(double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @nextafterf(float, float) nounwind readnone
+define void @nextafterf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @nextafterf_v4f32(
+; CHECK: call <4 x float> @_simd_nextafter_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @nextafterf(float %lv, float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @nextafter(double, double) nounwind readnone
+define void @nextafter_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @nextafter_v2f64(
+; CHECK: call <2 x double> @_simd_nextafter_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @nextafter(double %lv, double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @remainderf(float, float) nounwind readnone
+define void @remainderf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @remainderf_v4f32(
+; CHECK: call <4 x float> @_simd_remainder_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @remainderf(float %lv, float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @remainder(double, double) nounwind readnone
+define void @remainder_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @remainder_v2f64(
+; CHECK: call <2 x double> @_simd_remainder_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @remainder(double %lv, double %lv)
   %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
   store double %call, ptr %gep.x, align 4
   %iv.next = add i64 %iv, 1

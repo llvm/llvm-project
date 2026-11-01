@@ -8,7 +8,11 @@
 
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Support/TypeID.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
+
+#include <memory>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -58,6 +62,64 @@ TEST(DiagnosticLifetime, TestLazyCopyStringLiteral) {
   llvm::raw_string_ostream stringStream(resultMessage);
   diagnostic.print(stringStream);
   ASSERT_STREQ("^rror 1, mutate this", resultMessage.c_str());
+}
+
+// Register counting handlers first so they receive diagnostics only after
+// the verifier's registration is erased.
+
+TEST(SourceMgrDiagnosticVerifierHandler, ScopedRegistration) {
+  MLIRContext own, other;
+  unsigned seen = 0;
+  ScopedDiagnosticHandler counter(&other, [&](Diagnostic &) { ++seen; });
+  llvm::SourceMgr sourceMgr;
+  llvm::raw_null_ostream out;
+  SourceMgrDiagnosticVerifierHandler verifier(
+      sourceMgr, &own, out,
+      SourceMgrDiagnosticVerifierHandler::Level::OnlyExpected);
+  {
+    std::unique_ptr<ScopedDiagnosticHandler> registration =
+        verifier.registerInContext(&other);
+    emitRemark(UnknownLoc::get(&other), "while registered");
+    EXPECT_EQ(seen, 0u);
+  }
+  emitRemark(UnknownLoc::get(&other), "after the handle");
+  EXPECT_EQ(seen, 1u);
+  EXPECT_TRUE(succeeded(verifier.verify()));
+}
+
+TEST(SourceMgrDiagnosticVerifierHandler, ErasesOwnRegistration) {
+  MLIRContext own;
+  unsigned seen = 0;
+  ScopedDiagnosticHandler counter(&own, [&](Diagnostic &) { ++seen; });
+  {
+    llvm::SourceMgr sourceMgr;
+    llvm::raw_null_ostream out;
+    SourceMgrDiagnosticVerifierHandler verifier(
+        sourceMgr, &own, out,
+        SourceMgrDiagnosticVerifierHandler::Level::OnlyExpected);
+    emitRemark(UnknownLoc::get(&own), "while alive");
+    EXPECT_EQ(seen, 0u);
+  }
+  emitRemark(UnknownLoc::get(&own), "after the verifier");
+  EXPECT_EQ(seen, 1u);
+}
+
+TEST(SourceMgrDiagnosticVerifierHandler, OutlivesRegisteredContext) {
+  // Match mlir-opt's per-buffer context lifetime.
+  MLIRContext context;
+  llvm::SourceMgr sourceMgr;
+  llvm::raw_null_ostream out;
+  SourceMgrDiagnosticVerifierHandler verifier(
+      sourceMgr, &context, out,
+      SourceMgrDiagnosticVerifierHandler::Level::OnlyExpected);
+  {
+    MLIRContext perBuffer;
+    std::unique_ptr<ScopedDiagnosticHandler> registration =
+        verifier.registerInContext(&perBuffer);
+    emitRemark(UnknownLoc::get(&perBuffer), "in the temporary context");
+  }
+  emitRemark(UnknownLoc::get(&context), "verifier still usable");
+  EXPECT_TRUE(succeeded(verifier.verify()));
 }
 
 } // namespace

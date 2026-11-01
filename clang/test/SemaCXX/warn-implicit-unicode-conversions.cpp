@@ -149,3 +149,22 @@ void check_arithmetic(char8_t u8, char16_t u16, char32_t u32) {
     (void)(u16 | u32);  // expected-warning {{bitwise operation between different Unicode character types 'char16_t' and 'char32_t'}}
     (void)(1 ? u32 : u16);  // expected-warning {{conditional expression between different Unicode character types 'char32_t' and 'char16_t'}}
 }
+
+namespace GH202317 {
+typedef __attribute__((__ext_vector_type__(4))) char32_t vf4;
+typedef __attribute__((__ext_vector_type__(4))) int vi4;
+
+vi4 foo(vf4 &V) { return V.xyzw < V.x; }
+
+void same_element_type(vf4 &V, char32_t u32) {
+    vf4 v = u32;
+    v = V.x;
+    (void)(V.xyzw == u32);
+    (void)(u32 < V.xyzw);
+}
+
+void different_element_type(vf4 &V, char8_t u8) {
+    (void)(V.xyzw < u8); // expected-warning {{implicit conversion from 'char8_t' to 'vf4'}}
+    vf4 v = u8;          // expected-warning {{implicit conversion from 'char8_t' to 'vf4'}}
+}
+}

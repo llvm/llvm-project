@@ -10,4 +10,4 @@
 
 #include "src/math/logbf128.h"
 
-LIST_LOGB_TESTS(float128, LIBC_NAMESPACE::logbf128)
+LIST_LOGB_TESTS(Logbf128, float128, LIBC_NAMESPACE::logbf128)

@@ -1,0 +1,22 @@
+# RUN: not --crash llc -mtriple=x86_64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# REQUIRES: x86-registered-target
+
+# Rewriting a tie moves the tied operand to the register of its def, leaving
+# behind any other read that had to agree with it.
+
+---
+name: tied_undef_use
+body: |
+  bb.0:
+    ; CHECK: Bad machine code: Tied undef use shares a virtual register with another read
+    %0:gr64 = XOR64rr undef %1:gr64, undef %1:gr64, implicit-def dead $eflags
+
+    ; A tie the def already satisfies is rewritten to nothing.
+    ; CHECK-NOT: Bad machine code
+    %2:gr64 = XOR64rr undef %2:gr64, undef %2:gr64, implicit-def dead $eflags
+
+    ; An untied pair is still the way to spell this once registers are fixed.
+    %3:gr64 = LEA64r undef %4:gr64_nosp, 1, undef %4:gr64_nosp, 0, $noreg
+
+    RET64 implicit %0, implicit %2, implicit %3
+...

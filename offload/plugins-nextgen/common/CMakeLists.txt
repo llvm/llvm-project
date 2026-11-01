@@ -11,6 +11,7 @@ add_public_tablegen_target(PluginErrcodes)
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
 add_library(PluginCommon OBJECT
   src/PluginInterface.cpp
+  src/GenericProfiler.cpp
   src/GlobalHandler.cpp
   src/JIT.cpp
   src/RecordReplay.cpp

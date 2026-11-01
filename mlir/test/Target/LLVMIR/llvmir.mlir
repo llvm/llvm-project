@@ -122,6 +122,25 @@ llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   llvm.return %gepinit : !llvm.ptr
 }
 
+// CHECK: @i32_array = internal constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
+llvm.mlir.global internal constant @i32_array(dense<[1, 2, 3, 4]> : tensor<4xi32>) : !llvm.array<4 x i32>
+// The offset is within the global, so the folder infers inbounds and nuw.
+// CHECK: @int_gep_inferred_flags = internal constant ptr getelementptr inbounds nuw (i8, ptr @i32_array, i64 8)
+llvm.mlir.global internal constant @int_gep_inferred_flags() : !llvm.ptr {
+  %addr = llvm.mlir.addressof @i32_array : !llvm.ptr
+  %gepinit = llvm.getelementptr %addr[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
+  llvm.return %gepinit : !llvm.ptr
+}
+
+// CHECK: @vt = external constant { [3 x ptr] }
+llvm.mlir.global external constant @vt() : !llvm.struct<(array<3 x ptr>)>
+// CHECK: @int_gep_inrange = internal constant ptr getelementptr inbounds nuw inrange(-16, 8) (i8, ptr @vt, i64 16)
+llvm.mlir.global internal constant @int_gep_inrange() : !llvm.ptr {
+  %addr = llvm.mlir.addressof @vt : !llvm.ptr
+  %gepinit = llvm.getelementptr inbounds inrange <i64, -16, 8> %addr[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
+  llvm.return %gepinit : !llvm.ptr
+}
+
 // CHECK{LITERAL}: @dense_float_vector = internal global <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
 llvm.mlir.global internal @dense_float_vector(dense<[1.0, 2.0, 3.0]> : vector<3xf32>) : vector<3xf32>
 
@@ -1251,6 +1270,12 @@ llvm.func @nocaptureattr_decl(!llvm.ptr {llvm.nocapture})
 // CHECK-LABEL: declare void @nofreeattr_decl(ptr nofree)
 llvm.func @nofreeattr_decl(!llvm.ptr {llvm.nofree})
 
+// CHECK-LABEL: declare void @nofreeobjattr_decl(ptr nofreeobj)
+llvm.func @nofreeobjattr_decl(!llvm.ptr {llvm.nofreeobj})
+
+// CHECK-LABEL: declare nofreeobj ptr @nofreeobjattr_ret_decl()
+llvm.func @nofreeobjattr_ret_decl() -> (!llvm.ptr {llvm.nofreeobj})
+
 // CHECK-LABEL: declare void @nonnullattr_decl(ptr nonnull)
 llvm.func @nonnullattr_decl(!llvm.ptr {llvm.nonnull})
 
@@ -1662,7 +1687,7 @@ llvm.func @atomicrmw(
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic <alignment = 8> : !llvm.ptr, i32
   llvm.return
 }
 
@@ -1678,7 +1703,7 @@ llvm.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %val: i32) {
   // CHECK:  cmpxchg weak volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %3 = llvm.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %3 = llvm.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic <alignment = 8> : !llvm.ptr, i32
   llvm.return
 }
 
@@ -2089,9 +2114,9 @@ llvm.func @nontemporal_store_and_load() {
   %size = llvm.mlir.constant(1 : i64) : i64
   %0 = llvm.alloca %size x i32 : (i64) -> (!llvm.ptr)
   // CHECK: !nontemporal ![[NODE:[0-9]+]]
-  llvm.store %val, %0 {nontemporal} : i32, !llvm.ptr
+  llvm.store %val, %0 <nontemporal> : i32, !llvm.ptr
   // CHECK: !nontemporal ![[NODE]]
-  %1 = llvm.load %0 {nontemporal} : !llvm.ptr -> i32
+  %1 = llvm.load %0 <nontemporal> : !llvm.ptr -> i32
   llvm.return
 }
 
@@ -2127,17 +2152,17 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
   // CHECK-SAME:  acquire, align 4
-  %1 = llvm.load %ptr atomic acquire {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load %ptr atomic acquire <alignment = 4> : !llvm.ptr -> f32
   // CHECK: load atomic
   // CHECK-SAME:  syncscope("singlethread") acquire, align 4
-  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire {alignment = 4 : i64} : !llvm.ptr -> f32
+  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire <alignment = 4> : !llvm.ptr -> f32
 
   // CHECK: store atomic
   // CHECK-SAME:  release, align 4
-  llvm.store %1, %ptr atomic release {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %1, %ptr atomic release <alignment = 4> : f32, !llvm.ptr
   // CHECK: store atomic
   // CHECK-SAME:  syncscope("singlethread") release, align 4
-  llvm.store %2, %ptr atomic syncscope("singlethread") release {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %2, %ptr atomic syncscope("singlethread") release <alignment = 4> : f32, !llvm.ptr
   llvm.return
 }
 
@@ -2209,8 +2234,13 @@ llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
   // CHECK-NEXT:  notail call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %8 = llvm.inline_asm tail_call_kind = <notail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
+  // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}}) #[[$CONVERGENT:.*]]
+  %9 = llvm.inline_asm convergent "foo", "=r,r" %arg0 : (i32) -> i8
+
   llvm.return
 }
+
+// CHECK: attributes #[[$CONVERGENT]] = { convergent }
 
 // -----
 
@@ -2242,17 +2272,17 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
 // CHECK: {{.*}} = fmul nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = fdiv nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = frem nnan ninf float {{.*}}, {{.*}}
-  %0 = llvm.fadd %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %1 = llvm.fsub %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %2 = llvm.fmul %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %3 = llvm.fdiv %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
-  %4 = llvm.frem %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %0 = llvm.fadd %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %1 = llvm.fsub %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %2 = llvm.fmul %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %3 = llvm.fdiv %arg0, %arg0 fastmath<nnan, ninf> : f32
+  %4 = llvm.frem %arg0, %arg0 fastmath<nnan, ninf> : f32
 
 // CHECK: {{.*}} = fcmp nnan ninf oeq {{.*}}, {{.*}}
-  %5 = llvm.fcmp "oeq" %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %5 = llvm.fcmp "oeq" %arg0, %arg0 fastmath<nnan, ninf> : f32
 
 // CHECK: {{.*}} = fneg nnan ninf float {{.*}}
-  %6 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %6 = llvm.fneg %arg0 fastmath<nnan, ninf> : f32
 
 // CHECK: {{.*}} = call float @fastmathFlagsFunc({{.*}})
 // CHECK: {{.*}} = call nnan float @fastmathFlagsFunc({{.*}})
@@ -2274,29 +2304,29 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
   %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> (f32)
 
 // CHECK: call fast float @llvm.copysign.f32(float {{.*}}, float {{.*}})
-  %17 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  %17 = "llvm.intr.copysign"(%arg0, %arg0) <{fastmathFlags = #llvm.fastmath<fast>}> : (f32, f32) -> f32
 // CHECK: call afn float @llvm.copysign.f32(float {{.*}}, float {{.*}})
-  %18 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+  %18 = "llvm.intr.copysign"(%arg0, %arg0) <{fastmathFlags = #llvm.fastmath<afn>}> : (f32, f32) -> f32
 
 // CHECK: call fast float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
   %exp = llvm.mlir.constant(1 : i32) : i32
-  %19 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<fast>} : (f32, i32) -> f32
+  %19 = "llvm.intr.powi"(%arg0, %exp) <{fastmathFlags = #llvm.fastmath<fast>}> : (f32, i32) -> f32
 // CHECK: call afn float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
-  %20 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<afn>} : (f32, i32) -> f32
+  %20 = "llvm.intr.powi"(%arg0, %exp) <{fastmathFlags = #llvm.fastmath<afn>}> : (f32, i32) -> f32
 
 // CHECK: call nnan float @llvm.vector.reduce.fmax.v2f32(<2 x float> {{.*}})
 // CHECK: call nnan float @llvm.vector.reduce.fmin.v2f32(<2 x float> {{.*}})
-  %21 = llvm.intr.vector.reduce.fmax(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
-  %22 = llvm.intr.vector.reduce.fmin(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %21 = llvm.intr.vector.reduce.fmax(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
+  %22 = llvm.intr.vector.reduce.fmin(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
 
 // CHECK: call nnan float @llvm.vector.reduce.fmaximum.v2f32(<2 x float> {{.*}})
 // CHECK: call nnan float @llvm.vector.reduce.fminimum.v2f32(<2 x float> {{.*}})
-  %23 = llvm.intr.vector.reduce.fmaximum(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
-  %24 = llvm.intr.vector.reduce.fminimum(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %23 = llvm.intr.vector.reduce.fmaximum(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
+  %24 = llvm.intr.vector.reduce.fminimum(%arg1) fastmath<nnan> : (vector<2xf32>) -> f32
 
   %25 = llvm.mlir.constant(true) : i1
 // CHECK: select contract i1
-  %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
+  %26 = llvm.select %25, %arg0, %20 fastmath<contract> : i1, f32
 
 // CHECK: {{.*}} = fpext nnan float {{.*}} to double
 // CHECK: {{.*}} = fptrunc fast float {{.*}} to half
@@ -2364,7 +2394,7 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
   llvm.switch %arg0 : i32, ^bb1(%0 : i32) [
     9: ^bb2(%1, %2 : i32, i32),
     99: ^bb3
-  ] {branch_weights = array<i32 : 13, 17, 19>}
+  ] weights([13, 17, 19])
 
 ^bb1(%3: i32):  // pred: ^bb0
   llvm.return %3 : i32

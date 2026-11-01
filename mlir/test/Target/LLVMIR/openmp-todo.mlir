@@ -77,17 +77,6 @@ llvm.func @sections_allocate(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @scope_allocate(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.scope operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.scope}}
-  omp.scope allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 omp.private {type = private} @x.privatizer : i32 init {
 ^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
   %c0 = llvm.mlir.constant(0 : i32) : i32
@@ -627,13 +616,17 @@ llvm.func @taskloop_reduction_two_arg_init(%lb : i32, %ub : i32, %step : i32, %x
 
 // -----
 
-llvm.func @taskwait_nowait() {
-  // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.taskwait operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskwait}}
-  omp.taskwait nowait {
-    omp.terminator
+// `nowait` on dispatch is unimplemented for OpenMP <= 5.1; from 5.2 it has no
+// effect and is accepted (see openmp-dispatch.mlir).
+module attributes {omp.version = #omp.version<version = 51>} {
+  llvm.func @dispatch_nowait() {
+    // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.dispatch operation}}
+    // expected-error@below {{LLVM Translation failed for operation: omp.dispatch}}
+    omp.dispatch nowait {
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // -----

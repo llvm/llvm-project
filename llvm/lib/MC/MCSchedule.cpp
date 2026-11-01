@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSchedule.h"
+#include "MCCLOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/MC/MCInst.h"
@@ -26,15 +27,6 @@ using namespace llvm;
 cl::OptionCategory llvm::MCScheduleOptions("Machine scheduling model options");
 
 static constexpr float DefaultReservationStationScaleFactor = 1.0f;
-
-static cl::opt<float> ReservationStationScaleFactor(
-    "sched-model-reservation-station-scale-factor", cl::Hidden,
-    cl::init(DefaultReservationStationScaleFactor), cl::cat(MCScheduleOptions),
-    cl::desc("Scale the buffer size of all reservation stations by a positive "
-             "factor. Buffer sizes of -1/0/1 (unlimited/unbuffered/in-order) "
-             "are preserved. Likewise, if the scaled result is <= 1, the "
-             "original size is kept. Computed sizes "
-             "are truncated towards zero."));
 
 static_assert(std::is_trivial_v<MCSchedModel>,
               "MCSchedModel is required to be a trivial type");
@@ -235,6 +227,8 @@ unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
 int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
   int BufferSize = getProcResource(ProcResourceIdx)->BufferSize;
 
+  float ReservationStationScaleFactor =
+      MCCLOptions::Global.sched_model_reservation_station_scale_factor;
   // Skip scaling when factor is 1 (the default).
   // Use native float comparison to avoid overhead on the hot fast
   // path, as 1.0f is exactly representable

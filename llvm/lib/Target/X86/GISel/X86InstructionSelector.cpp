@@ -1858,8 +1858,8 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
               TII.get(OpEntry.OpSignExtend));
     else {
       Register Zero32 = MRI.createVirtualRegister(&X86::GR32RegClass);
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV32r0),
-              Zero32);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV32r0), Zero32)
+          .setOperandDead(1);
 
       // Copy the zero into the appropriate sub/super/identical physical
       // register. Unfortunately the operations needed are not uniform enough

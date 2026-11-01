@@ -18,8 +18,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
   // CHECK-LABEL: spirv.func @load_store_memory_operands
   spirv.func @load_store_memory_operands(%arg0 : !spirv.ptr<f32, Input>, %arg1 : !spirv.ptr<f32, Output>) "None" {
-    // CHECK: spirv.Load "Input" %{{.+}} ["Volatile|Aligned", 4] : f32
-    %1 = spirv.Load "Input" %arg0 ["Volatile|Aligned", 4]: f32
+    // CHECK: spirv.Load "Input" %{{.+}} ["Volatile|Aligned", 4] {relaxed_precision} : f32
+    %1 = spirv.Load "Input" %arg0 ["Volatile|Aligned", 4] {relaxed_precision} : f32
     // CHECK: spirv.Store "Output" %{{.+}}, %{{.+}} ["Volatile|Aligned", 4] : f32
     spirv.Store "Output" %arg1, %1 ["Volatile|Aligned", 4]: f32
     spirv.Return

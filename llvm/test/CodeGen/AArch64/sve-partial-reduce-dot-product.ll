@@ -816,7 +816,6 @@ define <vscale x 2 x i64> @sdot_different_types(<vscale x 2 x i64> %acc, <vscale
 ; CHECK-SVE2-NEXT:    sunpklo z3.s, z1.h
 ; CHECK-SVE2-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-SVE2-NEXT:    sxtb z2.h, p0/m, z2.h
-; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    sunpklo z5.d, z3.s
 ; CHECK-SVE2-NEXT:    sunpkhi z3.d, z3.s
 ; CHECK-SVE2-NEXT:    sunpklo z4.s, z2.h
@@ -839,7 +838,6 @@ define <vscale x 2 x i64> @sdot_different_types(<vscale x 2 x i64> %acc, <vscale
 ; CHECK-SVE2-I8MM-NEXT:    sunpklo z3.s, z1.h
 ; CHECK-SVE2-I8MM-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-SVE2-I8MM-NEXT:    sxtb z2.h, p0/m, z2.h
-; CHECK-SVE2-I8MM-NEXT:    ptrue p0.d
 ; CHECK-SVE2-I8MM-NEXT:    sunpklo z5.d, z3.s
 ; CHECK-SVE2-I8MM-NEXT:    sunpkhi z3.d, z3.s
 ; CHECK-SVE2-I8MM-NEXT:    sunpklo z4.s, z2.h
@@ -862,7 +860,6 @@ define <vscale x 2 x i64> @sdot_different_types(<vscale x 2 x i64> %acc, <vscale
 ; CHECK-SME-NEXT:    sunpklo z3.s, z1.h
 ; CHECK-SME-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-SME-NEXT:    sxtb z2.h, p0/m, z2.h
-; CHECK-SME-NEXT:    ptrue p0.d
 ; CHECK-SME-NEXT:    sunpklo z5.d, z3.s
 ; CHECK-SME-NEXT:    sunpkhi z3.d, z3.s
 ; CHECK-SME-NEXT:    sunpklo z4.s, z2.h
@@ -893,7 +890,6 @@ define <vscale x 2 x i64> @usdot_different_types(<vscale x 2 x i64> %acc, <vscal
 ; CHECK-SVE2-NEXT:    uunpklo z3.s, z1.h
 ; CHECK-SVE2-NEXT:    uunpkhi z1.s, z1.h
 ; CHECK-SVE2-NEXT:    sxtb z2.h, p0/m, z2.h
-; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    uunpklo z5.d, z3.s
 ; CHECK-SVE2-NEXT:    uunpkhi z3.d, z3.s
 ; CHECK-SVE2-NEXT:    sunpklo z4.s, z2.h
@@ -916,7 +912,6 @@ define <vscale x 2 x i64> @usdot_different_types(<vscale x 2 x i64> %acc, <vscal
 ; CHECK-SVE2-I8MM-NEXT:    uunpklo z3.s, z1.h
 ; CHECK-SVE2-I8MM-NEXT:    uunpkhi z1.s, z1.h
 ; CHECK-SVE2-I8MM-NEXT:    sxtb z2.h, p0/m, z2.h
-; CHECK-SVE2-I8MM-NEXT:    ptrue p0.d
 ; CHECK-SVE2-I8MM-NEXT:    uunpklo z5.d, z3.s
 ; CHECK-SVE2-I8MM-NEXT:    uunpkhi z3.d, z3.s
 ; CHECK-SVE2-I8MM-NEXT:    sunpklo z4.s, z2.h
@@ -939,7 +934,6 @@ define <vscale x 2 x i64> @usdot_different_types(<vscale x 2 x i64> %acc, <vscal
 ; CHECK-SME-NEXT:    uunpklo z3.s, z1.h
 ; CHECK-SME-NEXT:    uunpkhi z1.s, z1.h
 ; CHECK-SME-NEXT:    sxtb z2.h, p0/m, z2.h
-; CHECK-SME-NEXT:    ptrue p0.d
 ; CHECK-SME-NEXT:    uunpklo z5.d, z3.s
 ; CHECK-SME-NEXT:    uunpkhi z3.d, z3.s
 ; CHECK-SME-NEXT:    sunpklo z4.s, z2.h

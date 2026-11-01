@@ -45,7 +45,7 @@
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
 # CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $x0, implicit $sp, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:   }
@@ -67,8 +67,8 @@ body:             |
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $sp, implicit $x0, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $x0, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit $x0, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
@@ -87,8 +87,8 @@ body:             |
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def $x0, implicit-def $fp, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def $x0, implicit-def $fp, implicit $x0, implicit $x1, implicit $x2, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit $x0, implicit $x1, implicit $x2, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
@@ -107,8 +107,8 @@ body:             |
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $sp, implicit $w0, implicit $w1, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $w0, implicit $w1, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
@@ -128,8 +128,8 @@ body:             |
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $x8, implicit $sp, implicit $w0, implicit $w1, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BLR $x8, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $x8, implicit $w0, implicit $w1, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BLR $x8, csr_aarch64_aapcs, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
@@ -150,8 +150,8 @@ body:             |
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $sp, implicit undef $x0, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BL @foo, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit undef $x0, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit undef $x0, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BL @foo, csr_darwin_aarch64_aapcs, implicit undef $x0, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @objc_retainAutoreleasedReturnValue, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
@@ -172,7 +172,7 @@ body:             |
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
 # CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit $x0, implicit $sp {
-# CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:   }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0

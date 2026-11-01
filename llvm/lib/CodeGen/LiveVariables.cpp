@@ -729,14 +729,6 @@ void LiveVariables::recomputeForSingleDefVirtReg(Register Reg) {
   }
 }
 
-/// replaceKillInstruction - Update register kill info by replacing a kill
-/// instruction with a new one.
-void LiveVariables::replaceKillInstruction(Register Reg, MachineInstr &OldMI,
-                                           MachineInstr &NewMI) {
-  VarInfo &VI = getVarInfo(Reg);
-  llvm::replace(VI.Kills, &OldMI, &NewMI);
-}
-
 /// removeVirtualRegistersKilled - Remove all killed info for the specified
 /// instruction.
 void LiveVariables::removeVirtualRegistersKilled(MachineInstr &MI) {

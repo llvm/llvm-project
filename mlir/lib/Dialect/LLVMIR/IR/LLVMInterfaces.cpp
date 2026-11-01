@@ -116,6 +116,22 @@ SmallVector<Value> mlir::LLVM::MemsetInlineOp::getAccessedOperands() {
   return {getDst()};
 }
 
+SmallVector<Value> mlir::LLVM::MaskedLoadOp::getAccessedOperands() {
+  return {getData()};
+}
+
+SmallVector<Value> mlir::LLVM::MaskedStoreOp::getAccessedOperands() {
+  return {getData()};
+}
+
+SmallVector<Value> mlir::LLVM::masked_gather::getAccessedOperands() {
+  return {getPtrs()};
+}
+
+SmallVector<Value> mlir::LLVM::masked_scatter::getAccessedOperands() {
+  return {getPtrs()};
+}
+
 SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {
   // Note: This must not use `getArgOperands`, which excludes the variadic
   // arguments of a call to a variadic callee. Those are passed to the callee

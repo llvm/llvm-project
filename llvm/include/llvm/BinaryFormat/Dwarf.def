@@ -26,6 +26,7 @@
       defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
       defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                       \
       defined HANDLE_DW_APPLE_ENUM_KIND ||                                     \
+      defined HANDLE_DW_MSPACE ||                                              \
       defined HANDLE_DW_LLVM_LANG_DIALECT ||                                   \
       ( defined HANDLE_DW_ASPACE && defined HANDLE_DW_ASPACE_PRED) )
 #error "Missing macro definition of HANDLE_DW*"
@@ -151,6 +152,10 @@
 
 #ifndef HANDLE_DW_APPLE_ENUM_KIND
 #define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_MSPACE
+#define HANDLE_DW_MSPACE(ID, NAME)
 #endif
 
 #ifndef HANDLE_DW_LLVM_LANG_DIALECT
@@ -661,6 +666,13 @@ HANDLE_DW_AT(0x3e13, LLVM_vector_size, 0, LLVM)
 HANDLE_DW_AT(0x3e14, LLVM_virtual_call_origin, 0, LLVM)
 HANDLE_DW_AT(0x3e15, LLVM_language_dialect, 0, LLVM)
 
+// https://www.llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#a-7-15-memory-space-encodings
+HANDLE_DW_MSPACE(0x0, none)
+HANDLE_DW_MSPACE(0x1, global)
+HANDLE_DW_MSPACE(0x2, constant)
+HANDLE_DW_MSPACE(0x3, group)
+HANDLE_DW_MSPACE(0x4, private)
+
 // https://llvm.org/docs/AMDGPUUsage.html#address-space-identifier
 HANDLE_DW_ASPACE(0x0, none)
 HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::GENERIC, AMDGPU_generic, SELECT_AMDGPU)
@@ -1056,6 +1068,7 @@ HANDLE_DW_LANG(0x0045, Nim, 0, 0, DWARF)
 HANDLE_DW_LANG(0x0046, Erlang, 1, 0, DWARF)
 HANDLE_DW_LANG(0x0047, Elixir, 1, 0, DWARF)
 HANDLE_DW_LANG(0x0048, Gleam, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0049, Roc, 0, 0, DWARF)
 
 // Vendor extensions:
 HANDLE_DW_LANG(0x8001, Mips_Assembler, std::nullopt, 0, MIPS)
@@ -1128,6 +1141,7 @@ HANDLE_DW_LNAME(0x002f, Nim, "Nim", 0) // VVMMPP
 HANDLE_DW_LNAME(0x0030, Erlang, "Erlang", 1) // VVMMPP
 HANDLE_DW_LNAME(0x0031, Elixir, "Elixir", 1) // VVMMPP
 HANDLE_DW_LNAME(0x0032, Gleam, "Gleam", 0) // VVMMPP
+HANDLE_DW_LNAME(0x0033, Roc, "Roc", 0) // VVMMPP
 
 // DWARF attribute type encodings.
 HANDLE_DW_ATE(0x01, address, 2, DWARF)
@@ -1473,6 +1487,7 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_END
 #undef HANDLE_DW_SECT
 #undef HANDLE_DW_APPLE_ENUM_KIND
+#undef HANDLE_DW_MSPACE
 #undef HANDLE_DW_LLVM_LANG_DIALECT
 #undef HANDLE_DW_ASPACE
 #undef HANDLE_DW_ASPACE_PRED

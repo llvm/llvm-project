@@ -166,7 +166,8 @@ end program
 ! ALL-NEXT:      CFGConversion
 
 ! ALL-NEXT: SCFToControlFlow
-! ALL-NEXT: Canonicalizer
+! O0-NEXT: O0CanonicalizerPass
+! O2-NEXT: Canonicalizer
 ! ALL-NEXT: SimplifyRegionLite
 ! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE

@@ -563,7 +563,7 @@ isConstantOrConstantSplatVectorFP(Register Def, const MachineRegisterInfo &MRI);
 /// value was undef.
 LLVM_ABI bool
 matchUnaryPredicate(const MachineRegisterInfo &MRI, Register Reg,
-                    std::function<bool(const Constant *ConstVal)> Match,
+                    llvm::function_ref<bool(const Constant *ConstVal)> Match,
                     bool AllowUndefs = false);
 
 /// Returns true if given the TargetLowering's boolean contents information,

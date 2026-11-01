@@ -269,7 +269,8 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   // Update EXEC, save the original EXEC value to SavedExec.
   B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(SavedExec)
-      .addReg(CondRegLM, RegState::Kill);
+      .addReg(CondRegLM, RegState::Kill)
+      .setOperandDead(3);
   MRI.setSimpleHint(SavedExec, CondRegLM);
 
   B.setInsertPt(*BodyBB, BodyBB->end());
@@ -278,7 +279,8 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   B.buildInstr(LMC.XorTermOpc)
       .addDef(LMC.ExecReg)
       .addReg(LMC.ExecReg)
-      .addReg(SavedExec);
+      .addReg(SavedExec)
+      .setOperandDead(3);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
@@ -769,9 +771,13 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
     }
     B.buildMergeLikeInstr(Dst, {Lo, Hi});
   } else {
-    auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
     // SHRSrc Hi|Lo: ??????sy|yyyyyyyl -> sssssssy|yyyyyyyl
-    auto Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt});
+    Register Hi = SHRSrcHi;
+    // V_BFE masks its width to 5 bits, so 64 would extract zero bits.
+    if (WidthImm < 64) {
+      auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
+      Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt}).getReg(0);
+    }
     B.buildMergeLikeInstr(Dst, {SHRSrcLo, Hi});
   }
 
@@ -943,6 +949,7 @@ bool RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
   auto Op2 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(2).getReg());
   auto Op3 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(3).getReg());
   Register Cond = MI.getOperand(1).getReg();
+  Cond = B.buildFreeze(VccRB_S1, Cond).getReg(0);
   auto Flags = MI.getFlags();
   auto Lo =
       B.buildSelect({VgprRB, Ty}, Cond, Op2.getReg(0), Op3.getReg(0), Flags);

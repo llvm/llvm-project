@@ -18,6 +18,9 @@
 
 namespace llvm {
 
+/// Returns whether -emit-bb-hash is set.
+LLVM_ABI bool shouldEmitBBHash();
+
 /// An object wrapping several components of a basic block hash. The combined
 /// (blended) hash is represented and stored as one uint64_t, while individual
 /// components are of smaller size (e.g., uint16_t or uint8_t).

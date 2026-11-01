@@ -779,7 +779,7 @@ exit:
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"scope_a"}
-!2 = distinct !{!2, !"domain"}
+!2 = distinct !{!2, i1 false, !"domain"}
 !3 = !{!4}
 !4 = distinct !{!4, !2, !"scope_b"}
 !5 = !{!6, !6, i64 0}

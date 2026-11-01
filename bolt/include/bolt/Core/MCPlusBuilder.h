@@ -897,7 +897,7 @@ public:
     return false;
   }
 
-  virtual bool isCleanRegXOR(const MCInst &Inst) const {
+  virtual bool isCleanReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1954,6 +1954,15 @@ public:
                                                  MCContext *Ctx,
                                                  MCPhysReg RegName,
                                                  int64_t Addend = 0) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
+  /// Materializing \p ConstantData value in the target register of \p Inst
+  virtual InstructionListType materializeConstant(BinaryContext &BC,
+                                                  const MCInst &Inst,
+                                                  StringRef ConstantData,
+                                                  uint64_t Offset) const {
     llvm_unreachable("not implemented");
     return {};
   }

@@ -193,6 +193,11 @@ void RewriteMutator::OpenMPSimdOnly(
                        &omp->value().u)}) {
           it = replaceInlineBlock(std::get<parser::Block>(ompBlock->t), it);
           continue;
+        } else if (auto *ompDispatch{
+                       std::get_if<parser::OpenMPDispatchConstruct>(
+                           &omp->value().u)}) {
+          it = replaceInlineBlock(std::get<parser::Block>(ompDispatch->t), it);
+          continue;
         } else if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(
                        &omp->value().u)}) {
           if (LoopConstructIsSIMD(ompLoop)) {

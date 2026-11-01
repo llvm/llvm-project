@@ -1073,23 +1073,16 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.vector.vector_to_llvm
       transform.apply_conversion_patterns.func.func_to_llvm
       transform.apply_conversion_patterns.dialect_to_llvm "memref"
-      transform.apply_conversion_patterns.gpu.gpu_to_nvvm {benefit = 10 : i16}
+      transform.apply_conversion_patterns.gpu.gpu_to_nvvm benefit = 10
       transform.apply_conversion_patterns.gpu.gpu_wmma_to_nvvm
       transform.apply_conversion_patterns.gpu.gpu_subgroup_reduce_to_nvvm
       transform.apply_conversion_patterns.nvgpu.nvgpu_to_nvvm
     } with type_converter {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-        {index_bitwidth = 64,
-        use_bare_ptr_call_conv = false}
-    } {
-      legal_dialects = ["llvm", "memref", "nvvm", "test"],
-      legal_ops = ["gpu.module", "gpu.yield"],
-      illegal_dialects = ["gpu"],
-      illegal_ops = ["llvm.copysign", "llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
+        index_bitwidth = 64 use_bare_ptr_call_conv = false
+    } <legal_dialects = ["llvm", "memref", "nvvm", "test"], legal_ops = ["gpu.module", "gpu.yield"], illegal_dialects = ["gpu"], illegal_ops = ["llvm.copysign", "llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
                     "llvm.ffloor", "llvm.frem", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",
-                    "llvm.roundeven", "llvm.round", "llvm.sin", "llvm.sqrt"],
-      partial_conversion
-    } : !transform.any_op
+                    "llvm.roundeven", "llvm.round", "llvm.sin", "llvm.sqrt"], partial_conversion> : !transform.any_op
     transform.yield
   }
 }
@@ -1115,6 +1108,22 @@ gpu.module @test_module_53 {
     %result64 = math.fpowi %arg_f64, %arg_i32 : f64, i32
     // CHECK: llvm.call @__nv_powi(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
     func.return %result32, %result64 : f32, f64
+  }
+
+  // A narrower exponent is sign-extended, also in a vector.
+  // CHECK-LABEL: func @gpu_powi_narrow
+  func.func @gpu_powi_narrow(%arg_f64 : vector<2xf64>, %arg_i16 : vector<2xi16>) -> vector<2xf64> {
+    // CHECK-COUNT-2: llvm.call @__nv_powi(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
+    %result = math.fpowi %arg_f64, %arg_i16 : vector<2xf64>, vector<2xi16>
+    func.return %result : vector<2xf64>
+  }
+
+  // A vector with an exponent wider than i32 is not scalarized.
+  // CHECK-LABEL: func @gpu_powi_wide
+  func.func @gpu_powi_wide(%arg_f32 : vector<2xf32>, %arg_i64 : vector<2xi64>) -> vector<2xf32> {
+    // CHECK: math.fpowi %{{.*}}, %{{.*}} : vector<2xf32>, vector<2xi64>
+    %result = math.fpowi %arg_f32, %arg_i64 : vector<2xf32>, vector<2xi64>
+    func.return %result : vector<2xf32>
   }
 }
 

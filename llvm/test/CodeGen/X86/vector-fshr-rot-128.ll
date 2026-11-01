@@ -418,15 +418,15 @@ define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %amt) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
-; AVX512VL-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm0[4,4,5,5,6,6,7,7]
-; AVX512VL-NEXT:    vpsrlvd %xmm2, %xmm3, %xmm2
+; AVX512VL-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; AVX512VL-NEXT:    vpunpckhwd {{.*#+}} xmm4 = xmm0[4,4,5,5,6,6,7,7]
+; AVX512VL-NEXT:    vpsrlvd %xmm3, %xmm4, %xmm3
+; AVX512VL-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0],xmm2[1],xmm3[2],xmm2[3],xmm3[4],xmm2[5],xmm3[6],xmm2[7]
 ; AVX512VL-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
 ; AVX512VL-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
+; AVX512VL-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: var_funnnel_v8i16:

@@ -117,14 +117,42 @@ const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
       x.u);
 }
 
-std::string GetUpperName(llvm::omp::Clause id, llvm::omp::Version version) {
+std::string GetUpperName(
+    llvm::omp::Clause id, llvm::omp::Version version, bool annotate) {
+  llvm::StringRef annot("");
+  if (annotate) {
+    switch (id) {
+    case llvm::omp::Clause::OMPC_default_variant:
+      annot = " (variant)";
+      break;
+    case llvm::omp::Clause::OMPC_update_depend_objects:
+      annot = " (depend-objects)";
+      break;
+    default:
+      break;
+    }
+  }
   llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
-  return parser::ToUpperCaseLetters(name);
+  return parser::ToUpperCaseLetters(name) + annot.str();
 }
 
-std::string GetUpperName(llvm::omp::Directive id, llvm::omp::Version version) {
+std::string GetUpperName(
+    llvm::omp::Directive id, llvm::omp::Version version, bool annotate) {
+  llvm::StringRef annot("");
+  if (annotate) {
+    switch (id) {
+    case llvm::omp::Directive::OMPD_ordered_standalone:
+      annot = " (standalone)";
+      break;
+    case llvm::omp::Directive::OMPD_ordered_blockassoc:
+      annot = " (block-associated)";
+      break;
+    default:
+      break;
+    }
+  }
   llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, version)};
-  return parser::ToUpperCaseLetters(name);
+  return parser::ToUpperCaseLetters(name) + annot.str();
 }
 
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x) {

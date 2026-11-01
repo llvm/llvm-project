@@ -174,8 +174,10 @@ backend adding passes to various parts of the pipeline.
 
 Pass plugins can also add passes into default pipelines. Different tools have
 different ways of loading dynamic pass plugins. For example, `opt
--load-pass-plugin=path/to/plugin.so` loads a pass plugin into `opt`. For
-information on writing a pass plugin, see {doc}`WritingAnLLVMNewPMPass`.
+-load-pass-plugin=path/to/plugin.so` loads a pass plugin into `opt`, and
+`-plugin-arg=Name,-opt` passes `-opt` to the `ParseArguments` callback of the
+plugin or statically linked extension named `Name`. For information on writing a pass plugin, see
+{doc}`WritingAnLLVMNewPMPass`.
 
 ## Using Analyses
 

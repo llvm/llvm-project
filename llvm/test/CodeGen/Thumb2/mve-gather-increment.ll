@@ -1590,24 +1590,97 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
+define void @_Z6gatherv() {
+; CHECK-LABEL: _Z6gatherv:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .pad #576
+; CHECK-NEXT:    sub.w sp, sp, #576
+; CHECK-NEXT:    mov.w lr, #30
+; CHECK-NEXT:    adr r0, .LCPI20_0
+; CHECK-NEXT:    add r1, sp, #96
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    movs r0, #4
+; CHECK-NEXT:    movs r2, #1
+; CHECK-NEXT:    mov r3, r1
+; CHECK-NEXT:  .LBB20_1: @ %vector.body
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vadd.i32 q1, q0, r0
+; CHECK-NEXT:    vadd.i32 q0, q0, r2
+; CHECK-NEXT:    vcvt.f32.u32 q0, q0
+; CHECK-NEXT:    vstrb.8 q0, [r3], #16
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    le lr, .LBB20_1
+; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
+; CHECK-NEXT:    adr r2, .LCPI20_1
+; CHECK-NEXT:    mov.w lr, #6
+; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vadd.i32 q0, q0, r1
+; CHECK-NEXT:    movs r1, #4
+; CHECK-NEXT:  .LBB20_3: @ %for.cond6.preheader
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vdup.32 q1, r2
+; CHECK-NEXT:    add r2, r1
+; CHECK-NEXT:    vshl.i32 q1, q1, #2
+; CHECK-NEXT:    vadd.i32 q1, q0, q1
+; CHECK-NEXT:    vldrw.u32 q2, [q1]
+; CHECK-NEXT:    vstrb.8 q2, [r0], #16
+; CHECK-NEXT:    le lr, .LBB20_3
+; CHECK-NEXT:  @ %bb.4: @ %for.cond.cleanup3
+; CHECK-NEXT:    add.w sp, sp, #576
+; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.5:
+; CHECK-NEXT:  .LCPI20_0:
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 1 @ 0x1
+; CHECK-NEXT:    .long 2 @ 0x2
+; CHECK-NEXT:    .long 3 @ 0x3
+; CHECK-NEXT:  .LCPI20_1:
+; CHECK-NEXT:    .long 12 @ 0xc
+; CHECK-NEXT:    .long 4 @ 0x4
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 8 @ 0x8
+entry:
+  %input = alloca [120 x float], align 4
+  %out = alloca [24 x float], align 4
+  call void @llvm.lifetime.start.p0(ptr nonnull %input) #4
+  br label %vector.body
 
-declare <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i32>)
-declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
-declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i32>)
-declare <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i32>)
-declare <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x float>)
-declare <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x float>)
-declare <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x float>)
-declare <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i16>)
-declare <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i16>)
-declare <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i16>)
-declare <16 x i16> @llvm.masked.gather.v16i16.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i16>)
-declare <4 x half> @llvm.masked.gather.v4f16.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x half>)
-declare <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x half>)
-declare <16 x half> @llvm.masked.gather.v16f16.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x half>)
-declare <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i8>)
-declare <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i8>)
-declare <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i8>)
-declare <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr>, i32, <32 x i1>, <32 x i8>)
-declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)
-declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.ind = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %entry ], [ %vec.ind.next, %vector.body ]
+  %0 = add nuw nsw <4 x i32> %vec.ind, splat (i32 1)
+  %1 = uitofp nneg <4 x i32> %0 to <4 x float>
+  %2 = getelementptr inbounds nuw [4 x i8], ptr %input, i32 %index
+  store <4 x float> %1, ptr %2, align 4
+  %index.next = add nuw i32 %index, 4
+  %vec.ind.next = add nuw nsw <4 x i32> %vec.ind, splat (i32 4)
+  %3 = icmp eq i32 %index.next, 120
+  br i1 %3, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  call void @llvm.lifetime.start.p0(ptr nonnull %out) #4
+  %invariant.gep = getelementptr [4 x i8], ptr %input, <4 x i32> <i32 3, i32 1, i32 0, i32 2>
+  br label %for.cond6.preheader
+
+for.cond6.preheader:                              ; preds = %for.cond.cleanup, %for.cond6.preheader
+  %outer.033 = phi i32 [ 0, %for.cond.cleanup ], [ %inc20, %for.cond6.preheader ]
+  %mul = shl nuw nsw i32 %outer.033, 2
+  %4 = getelementptr inbounds nuw [4 x i8], ptr %out, i32 %mul
+  %gep = getelementptr [4 x i8], <4 x ptr> %invariant.gep, i32 %mul
+  %wide.masked.gather = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %gep, <4 x i1> splat (i1 true), <4 x float> poison)
+  store <4 x float> %wide.masked.gather, ptr %4, align 4
+  %inc20 = add nuw nsw i32 %outer.033, 1
+  %exitcond35.not = icmp eq i32 %inc20, 6
+  br i1 %exitcond35.not, label %for.cond.cleanup3, label %for.cond6.preheader
+
+for.cond.cleanup3:                                ; preds = %for.cond6.preheader
+  store i32 24, ptr %out
+  call void @llvm.lifetime.end.p0(ptr nonnull %out) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %input) #4
+  ret void
+}

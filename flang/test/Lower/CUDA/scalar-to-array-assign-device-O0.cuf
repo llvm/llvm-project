@@ -1,0 +1,44 @@
+! At -O0, a scalar-to-array broadcast must be inlined in device code to keep
+! _FortranAAssign out of the kernel's call graph. Host code keeps the call so
+! that a breakpoint on the assignment fires once, not once per element.
+! CUDA Fortran is enabled here by the .cuf suffix rather than -x cuda.
+
+! RUN: %flang_fc1 -emit-fir -O0 %s -o - | FileCheck %s
+
+module m
+contains
+  attributes(global) subroutine device_broadcast(out)
+    integer(4), device :: out(*)
+    integer(4) :: arr(4)
+    arr = 11
+    out(1) = arr(1)
+  end subroutine
+
+  ! Inlined too, since this one func.func becomes both copies.
+  attributes(host,device) subroutine hostdev_broadcast(out)
+    integer(4) :: out(*)
+    integer(4) :: arr(4)
+    arr = 11
+    out(1) = arr(1)
+  end subroutine
+
+  subroutine host_broadcast(out)
+    integer(4) :: out(*)
+    integer(4) :: arr(4)
+    arr = 11
+    out(1) = arr(1)
+  end subroutine
+end module
+
+! CHECK-LABEL: func.func @_QMmPdevice_broadcast
+! CHECK-NOT:     fir.call @_FortranAAssign
+! CHECK:         fir.do_loop
+! CHECK-NOT:     fir.call @_FortranAAssign
+
+! CHECK-LABEL: func.func @_QMmPhostdev_broadcast
+! CHECK-NOT:     fir.call @_FortranAAssign
+! CHECK:         fir.do_loop
+! CHECK-NOT:     fir.call @_FortranAAssign
+
+! CHECK-LABEL: func.func @_QMmPhost_broadcast
+! CHECK:         fir.call @_FortranAAssign

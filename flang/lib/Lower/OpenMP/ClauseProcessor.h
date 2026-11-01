@@ -125,6 +125,7 @@ public:
   bool processSimd(mlir::omp::OrderedRegionOperands &result) const;
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
+  bool processThreadset(mlir::omp::ThreadsetClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.

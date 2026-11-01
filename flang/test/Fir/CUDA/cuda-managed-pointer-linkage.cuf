@@ -1,0 +1,53 @@
+! A non-allocatable managed module variable is accessed through a companion
+! pointer in __nv_managed_data__. That pointer is shared by the whole program:
+! the unit defining the variable emits the definition and registers it, and a
+! unit that only USEs the variable emits a declaration and no registration.
+!
+! A pointer per translation unit does not work. The runtime populates only the
+! registration it performs first for a given variable name, so every other unit
+! would be left loading through a null pointer. There is no runtime query to
+! fall back on either: a managed variable has no device symbol, so asking for
+! its address fails with cudaErrorInvalidSymbol.
+
+! The runs share a directory so that the second one picks up the module file
+! written by the first.
+! RUN: rm -rf %t && split-file %s %t
+! RUN: cd %t && bbc -fcuda -gpu=managed -emit-fir defining.cuf -o - \
+! RUN:   | fir-opt --cuf-device-global --cuf-add-constructor \
+! RUN:   | FileCheck %s --check-prefix=DEFINING
+! RUN: cd %t && bbc -fcuda -gpu=managed -emit-fir useonly.cuf -o - \
+! RUN:   | fir-opt --cuf-device-global --cuf-add-constructor \
+! RUN:   | FileCheck %s --check-prefix=USEONLY
+
+!--- defining.cuf
+module m
+  integer, managed :: g(100)
+end module
+
+! The defining unit owns the pointer: external linkage, in the
+! __nv_managed_data__ section, with an initializer.
+! DEFINING: fir.global external @_QMmEg.managed.ptr <{section = "__nv_managed_data__"}> : !fir.llvm_ptr<i8> {
+! DEFINING:   fir.zero_bits !fir.llvm_ptr<i8>
+
+! It is the unit that registers the pointer and initializes the module.
+! DEFINING: llvm.func internal @__cudaFortranConstructor()
+! DEFINING: fir.address_of(@_QMmEg.managed.ptr) : !fir.ref<!fir.llvm_ptr<i8>>
+! DEFINING: fir.call @_FortranACUFRegisterManagedVariable
+! DEFINING: fir.call @_FortranACUFInitModule
+
+!--- useonly.cuf
+subroutine sub()
+  use m
+  g(1) = 1
+end subroutine
+
+! A unit that only USEs the variable declares the pointer: external linkage,
+! no section, and no initializer, so it resolves to the definition above.
+! USEONLY: fir.global external @_QMmEg.managed.ptr : !fir.llvm_ptr<i8>
+! USEONLY-NOT: __nv_managed_data__
+! USEONLY-NOT: fir.zero_bits !fir.llvm_ptr<i8>
+
+! Registering here too would leave this unit loading through a null pointer.
+! USEONLY: llvm.func internal @__cudaFortranConstructor()
+! USEONLY-NOT: fir.call @_FortranACUFRegisterManagedVariable
+! USEONLY-NOT: fir.call @_FortranACUFInitModule

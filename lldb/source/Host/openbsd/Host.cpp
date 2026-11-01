@@ -197,6 +197,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return false;
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
   return Status::FromErrorString("unimplemented");
 }

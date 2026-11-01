@@ -17,6 +17,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -161,40 +163,6 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
   }
 }
 
-static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
-                                LoopLikeOpInterface loop) {
-  Value source = transferRead.getBase();
-
-  // Skip view-like Ops and retrive the actual soruce Operation
-  while (auto viewLike = source.getDefiningOp<ViewLikeOpInterface>()) {
-    if (viewLike.getViewDest() != source) {
-      break;
-    }
-    source = viewLike.getViewSource();
-  }
-
-  llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
-                                           source.getUsers().end());
-  llvm::SmallDenseSet<Operation *, 32> processed;
-  while (!users.empty()) {
-    Operation *user = users.pop_back_val();
-    // If the user has already been processed skip.
-    if (!processed.insert(user).second)
-      continue;
-    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
-      Value viewDest = viewLike.getViewDest();
-      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
-      continue;
-    }
-    if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
-      continue;
-    if (!loop->isAncestor(user))
-      continue;
-    return false;
-  }
-  return true;
-}
-
 void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
                                                  bool verifyNonZeroTrip) {
   bool changed = true;
@@ -243,14 +211,24 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       });
     }
 
+    // Case 1: hoist a vector.transfer_read and, when present, its matching
+    // vector.transfer_write (a pair); a read with no matching write is hoisted
+    // on its own.
     root->walk([&](vector::TransferReadOp transferRead) {
       if (!isa<MemRefType>(transferRead.getShapedType()))
         return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate for hoisting: "
                         << *transferRead.getOperation() << "\n");
-      auto loop = dyn_cast<LoopLikeOpInterface>(transferRead->getParentOp());
-      LLVM_DEBUG(DBGS() << "Parent op: " << *transferRead->getParentOp()
+      // When masked, the transfer_read is hoisted as its enclosing
+      // `vector.mask` op, so that op is what must sit directly under the loop.
+      Operation *readOrMaskedRead = transferRead;
+      if (auto mask = dyn_cast<vector::MaskOp>(transferRead->getParentOp()))
+        if (mask.getMaskableOp() == transferRead.getOperation())
+          readOrMaskedRead = mask.getOperation();
+      auto loop =
+          dyn_cast<LoopLikeOpInterface>(readOrMaskedRead->getParentOp());
+      LLVM_DEBUG(DBGS() << "Parent op: " << *readOrMaskedRead->getParentOp()
                         << "\n");
       if (!isa_and_nonnull<scf::ForOp, affine::AffineForOp>(loop))
         return WalkResult::advance();
@@ -265,10 +243,12 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
                         << "\n");
 
       SetVector<Operation *> forwardSlice;
-      getForwardSlice(transferRead.getOperation(), &forwardSlice);
+      getForwardSlice(readOrMaskedRead, &forwardSlice);
 
       // Look for the last TransferWriteOp in the forwardSlice of
-      // `transferRead` that operates on the same memref.
+      // `transferRead` that operates on the same memref. When masked, the write
+      // is the transfer_write nested in its `vector.mask` region, reached as a
+      // user of the read value.
       vector::TransferWriteOp transferWrite;
       for (auto *sliceOp : llvm::reverse(forwardSlice)) {
         auto candidateWrite = dyn_cast<vector::TransferWriteOp>(sliceOp);
@@ -282,16 +262,41 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       for (auto operand : transferRead.getOperands())
         if (!loop.isDefinedOutsideOfLoop(operand))
           return WalkResult::advance();
+      // A masked read is hoisted together with the `vector.mask` op wrapping
+      // it, so that op's mask and passthru operands must be loop-invariant too.
+      auto readMask = dyn_cast<vector::MaskOp>(readOrMaskedRead);
+      if (readMask) {
+        if (!loop.isDefinedOutsideOfLoop(readMask.getMask()))
+          return WalkResult::advance();
+        if (readMask.getPassthru() &&
+            !loop.isDefinedOutsideOfLoop(readMask.getPassthru()))
+          return WalkResult::advance();
+      }
 
       // Only hoist transfer_read / transfer_write pairs and singleton
       // transfer_reads for now.
       if (!transferWrite) {
-        // Make sure there are no other accesses to the memref before
-        // hoisting transfer_read.
-        if (noAliasingUseInLoop(transferRead, loop))
-          loop.moveOutOfLoop(transferRead);
+        // Hoisting a lone read is safe as long as no aliasing write remains in
+        // the loop; other reads never conflict.
+        if (memref::hasNoAliasingAccessInScope(transferRead.getBase(), loop,
+                                               /*excludedOps=*/{},
+                                               /*readsAreSafe=*/true))
+          loop.moveOutOfLoop(readOrMaskedRead);
         return WalkResult::advance();
       }
+
+      // The write is hoisted with its own `vector.mask` op, if any. A masked
+      // read must pair with a masked write carrying the same mask (and an
+      // unmasked read with an unmasked write).
+      Operation *writeOrMaskedWrite = transferWrite;
+      if (auto mask = dyn_cast<vector::MaskOp>(transferWrite->getParentOp()))
+        if (mask.getMaskableOp() == transferWrite.getOperation())
+          writeOrMaskedWrite = mask.getOperation();
+      auto writeMask = dyn_cast<vector::MaskOp>(writeOrMaskedWrite);
+      if (!!readMask != !!writeMask)
+        return WalkResult::advance();
+      if (readMask && readMask.getMask() != writeMask.getMask())
+        return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate: " << *transferWrite.getOperation()
                         << "\n");
@@ -314,6 +319,17 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // Check 2. Note, since both xfer Ops share the source, we only need to
       // look at one of them.
       auto base = transferRead.getBase();
+      // Whether hoisting is safe despite a view base. Computed lazily and
+      // cached since it is only consulted when a view is present.
+      std::optional<bool> viewAliasingIsSafeCache;
+      auto viewAliasingIsSafe = [&]() {
+        if (!viewAliasingIsSafeCache) {
+          Operation *hoistedPair[] = {transferRead, transferWrite};
+          viewAliasingIsSafeCache =
+              memref::hasNoAliasingAccessInScope(base, loop, hoistedPair);
+        }
+        return *viewAliasingIsSafeCache;
+      };
       auto *source = base.getDefiningOp();
       if (source) {
         // NOTE: We treat `memref.assume_alignment` as a special case.
@@ -337,18 +353,23 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
           if (numInLoopUses && memPreAlignment.hasOneUse())
             source = memPreAlignment.getDefiningOp();
         }
-        if (isa_and_nonnull<ViewLikeOpInterface>(source))
+        if (isa_and_nonnull<ViewLikeOpInterface>(source) &&
+            !viewAliasingIsSafe())
           return WalkResult::advance();
       }
 
-      if (llvm::any_of(base.getUsers(), llvm::IsaPred<ViewLikeOpInterface>))
+      if (llvm::any_of(base.getUsers(), llvm::IsaPred<ViewLikeOpInterface>) &&
+          !viewAliasingIsSafe())
         return WalkResult::advance();
 
       // Check 3.
       // TODO: may want to memoize this information for performance but it
       // likely gets invalidated often.
+      // The read must dominate the write. Compare `readOrMaskedRead` and
+      // `writeOrMaskedWrite`, not the inner transfers: when masked, those live
+      // in separate `vector.mask` regions, so neither dominates the other.
       DominanceInfo dom(loop);
-      if (!dom.properlyDominates(transferRead.getOperation(), transferWrite))
+      if (!dom.properlyDominates(readOrMaskedRead, writeOrMaskedWrite))
         return WalkResult::advance();
       for (auto &use : transferRead.getBase().getUses()) {
         if (!loop->isAncestor(use.getOwner()))
@@ -377,14 +398,15 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
         }
       }
 
-      // Hoist read before.
-      loop.moveOutOfLoop(transferRead);
+      // Hoist read before (with its mask op, if masked).
+      loop.moveOutOfLoop(readOrMaskedRead);
 
-      // Hoist write after.
-      transferWrite->moveAfter(loop);
+      // Hoist write after (with its mask op, if masked).
+      writeOrMaskedWrite->moveAfter(loop);
 
       // Rewrite `loop` with new yields by cloning and erase the original
-      // loop.
+      // loop. The carried value is `readOrMaskedRead`'s result (the masked read
+      // result when masked) and the yielded value is what the write stores.
       IRRewriter rewriter(transferRead.getContext());
       NewYieldValuesFn yieldFn = [&](OpBuilder &b, Location loc,
                                      ArrayRef<BlockArgument> newBBArgs) {
@@ -392,7 +414,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       };
 
       auto maybeNewLoop = loop.replaceWithAdditionalYields(
-          rewriter, transferRead.getVector(),
+          rewriter, readOrMaskedRead->getResult(0),
           /*replaceInitOperandUsesInLoop=*/true, yieldFn);
       if (failed(maybeNewLoop))
         return WalkResult::interrupt();
@@ -402,6 +424,53 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       changed = true;
       // Need to interrupt and restart because erasing the loop messes up
       // the walk.
+      return WalkResult::interrupt();
+    });
+
+    // Case 2: sink a singleton vector.transfer_write. A write whose operands
+    // are loop-invariant and that is the only op touching its memref stores the
+    // same value to the same place every iteration, so it is sunk past the loop
+    // and executed once (if the loop is proven to run at least once).
+    if (changed || !verifyNonZeroTrip)
+      continue;
+    root->walk([&](vector::TransferWriteOp transferWrite) {
+      if (!isa<MemRefType>(transferWrite.getShapedType()))
+        return WalkResult::advance();
+
+      // When masked, the transfer_write is sunk as its enclosing `vector.mask`
+      // op, so that op is what must sit directly under the loop.
+      Operation *writeOrMaskedWrite = transferWrite;
+      if (auto mask = dyn_cast<vector::MaskOp>(transferWrite->getParentOp()))
+        if (mask.getMaskableOp() == transferWrite.getOperation())
+          writeOrMaskedWrite = mask.getOperation();
+      auto loop =
+          dyn_cast<LoopLikeOpInterface>(writeOrMaskedWrite->getParentOp());
+      if (!isa_and_nonnull<scf::ForOp, affine::AffineForOp>(loop) ||
+          !definiteNonZeroTripCountLoops.contains(loop))
+        return WalkResult::advance();
+
+      // All operands of the transfer_write must be defined outside of the loop.
+      for (auto operand : transferWrite.getOperands())
+        if (!loop.isDefinedOutsideOfLoop(operand))
+          return WalkResult::advance();
+      // A masked write is sunk with its `vector.mask` op, so that op's mask
+      // operand must be loop-invariant too.
+      if (auto writeMask = dyn_cast<vector::MaskOp>(writeOrMaskedWrite))
+        if (!loop.isDefinedOutsideOfLoop(writeMask.getMask()))
+          return WalkResult::advance();
+
+      // Sinking is only safe if nothing else in the loop accesses the memref:
+      // any other read or write could observe an intermediate state.
+      Operation *sunkWrite[] = {transferWrite};
+      if (!memref::hasNoAliasingAccessInScope(transferWrite.getBase(), loop,
+                                              sunkWrite,
+                                              /*readsAreSafe=*/false))
+        return WalkResult::advance();
+
+      writeOrMaskedWrite->moveAfter(loop);
+      changed = true;
+      // Need to interrupt and restart because moving the write messes up the
+      // walk.
       return WalkResult::interrupt();
     });
   }

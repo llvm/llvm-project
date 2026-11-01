@@ -6,7 +6,7 @@
 module {
   func.func @_QFPshow(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "akeys"}) {
     %0 = fir.undefined !fir.dscope
-    %1 = fircg.ext_declare %arg0 dummy_scope %0 {uniq_name = "_QFFshowEakeys"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x!fir.char<1,?>>> loc(#loc1)
+    %1 = fircg.ext_declare %arg0 dummy_scope %0 uniq_name("_QFFshowEakeys") : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x!fir.char<1,?>>> loc(#loc1)
     return
   } loc(#loc2)
 }

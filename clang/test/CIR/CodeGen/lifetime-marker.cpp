@@ -134,10 +134,8 @@ void if_body(int n) {
 // LLVM:       [[IF_END]]:
 // LLVM:         call void @_Z3usei
 
-// With exceptions enabled the scope cleanup runs on both the normal and the
-// exceptional edge, so the cleanup kind is "all" and lifetime.end is emitted in
-// the EH cleanup handler (the landing pad) as well as on the normal path. The
-// may_throw() call is what forces an unwind edge.
+// Lifetime cleanups retain the "all" kind, but must not introduce an unwind
+// edge on their own. Only the normal-path marker is needed here.
 void may_throw();
 
 void eh_cleanup() {
@@ -156,14 +154,11 @@ void eh_cleanup() {
 // CIR-EH:         }
 
 // LLVM-EH-LABEL: define{{.*}} void @_Z10eh_cleanupv()
+// LLVM-EH-NOT:     personality
 // LLVM-EH:         %[[X:.*]] = alloca i32
 // LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[X]])
-// LLVM-EH:         invoke void @_Z9may_throwv()
-// The normal-path end marker.
-// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
-// The EH cleanup handler runs the same end marker on the unwind path.
-// LLVM-EH:         landingpad { ptr, i32 }
-// LLVM-EH-NEXT:      cleanup
+// LLVM-EH:         call void @_Z9may_throwv()
+// LLVM-EH:         call void @_Z3usei
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
 
 // A loop condition variable is destroyed and re-created on every iteration
@@ -196,11 +191,11 @@ void while_condvar() {
 // CIR-EH:         } cleanup all {
 // CIR-EH:           cir.lifetime.end %[[C]] : !cir.ptr<!s32i>
 
-// LLVM-EH-LABEL: define{{.*}} void @_Z13while_condvarv
+// LLVM-EH-LABEL: define{{.*}} void @_Z13while_condvarv()
+// LLVM-EH-NOT:     personality
 // LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
-// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
-// LLVM-EH:         landingpad { ptr, i32 }
-// LLVM-EH-NEXT:      cleanup
+// LLVM-EH:         call{{.*}} i32 @_Z6sourcev()
+// LLVM-EH:         call void @_Z3usei
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 
 void for_condvar() {
@@ -230,11 +225,11 @@ void for_condvar() {
 // CIR-EH:         } cleanup all {
 // CIR-EH:           cir.lifetime.end %[[C]] : !cir.ptr<!s32i>
 
-// LLVM-EH-LABEL: define{{.*}} void @_Z11for_condvarv
+// LLVM-EH-LABEL: define{{.*}} void @_Z11for_condvarv()
+// LLVM-EH-NOT:     personality
 // LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
-// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
-// LLVM-EH:         landingpad { ptr, i32 }
-// LLVM-EH-NEXT:      cleanup
+// LLVM-EH:         call{{.*}} i32 @_Z6sourcev()
+// LLVM-EH:         call void @_Z3usei
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 
 struct LoopCond {
@@ -340,5 +335,157 @@ void catch_by_value() {
 // LLVM-EH:         call void @_ZN4CopyD1Ev(ptr {{.*}} %[[C]])
 // LLVM-EH:         call void @__cxa_end_catch()
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+
+// An enclosing catch requires an unwind edge and the marker must run before
+// entering the handler.
+void lifetime_in_try() {
+  try {
+    int x = 1;
+    may_throw();
+    use(x);
+  } catch (...) {
+  }
+}
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z15lifetime_in_tryv()
+// CIR-EH:         %[[X:.*]] = cir.alloca "x"
+// CIR-EH:         cir.try {
+// CIR-EH:           cir.lifetime.start %[[X]]
+// CIR-EH:           cir.cleanup.scope {
+// CIR-EH:             cir.call @_Z9may_throwv()
+// CIR-EH:             cir.call @_Z3usei
+// CIR-EH:           } cleanup all {
+// CIR-EH:             cir.lifetime.end %[[X]]
+// CIR-EH:         } catch all
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z15lifetime_in_tryv()
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[X:.*]])
+// LLVM-EH:         invoke void @_Z9may_throwv()
+// LLVM-EH:         invoke void @_Z3usei
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
+// LLVM-EH:         landingpad { ptr, i32 }
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
+// LLVM-EH:         call ptr @__cxa_begin_catch
+
+// A real outer cleanup requires the inner lifetime marker on the EH path.
+void lifetime_in_dtor_scope() {
+  S s;
+  int x = 1;
+  use(x);
+}
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z22lifetime_in_dtor_scopev()
+// CIR-EH:         %[[S:.*]] = cir.alloca "s"
+// CIR-EH:         %[[X:.*]] = cir.alloca "x"
+// CIR-EH:         cir.lifetime.start %[[S]]
+// CIR-EH:         cir.lifetime.start %[[X]]
+// CIR-EH:         cir.call @_Z3usei
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.lifetime.end %[[X]]
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.call @_ZN1SD1Ev(%[[S]])
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.lifetime.end %[[S]]
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z22lifetime_in_dtor_scopev()
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[S:.*]])
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[X:.*]])
+// LLVM-EH:         invoke void @_Z3usei
+// LLVM-EH:         landingpad { ptr, i32 }
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
+// LLVM-EH:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[S]])
+
+// The first call needs no unwind edge. The inner destructor's existing EH
+// path must still pass through both outer lifetime markers.
+void lifetime_around_dtor_scope() {
+  int x = 1;
+  use(x);
+  S s;
+  use(x);
+}
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z26lifetime_around_dtor_scopev()
+// CIR-EH:         %[[X:.*]] = cir.alloca "x"
+// CIR-EH:         %[[S:.*]] = cir.alloca "s"
+// CIR-EH:         cir.lifetime.start %[[X]]
+// CIR-EH:         cir.call @_Z3usei
+// CIR-EH:         cir.lifetime.start %[[S]]
+// CIR-EH:         cir.call @_Z3usei
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.call @_ZN1SD1Ev(%[[S]])
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.lifetime.end %[[S]]
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.lifetime.end %[[X]]
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z26lifetime_around_dtor_scopev()
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[X:.*]])
+// LLVM-EH:         call void @_Z3usei
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[S:.*]])
+// LLVM-EH:         invoke void @_Z3usei
+// LLVM-EH:         landingpad { ptr, i32 }
+// LLVM-EH:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[S]])
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
+
+// The outer loop's destructor is still a loop cleanup region when the inner
+// lifetime scope is flattened.
+void lifetime_in_loop() {
+  while (LoopCond c{}) {
+    int x = 1;
+    use(x);
+  }
+}
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z16lifetime_in_loopv()
+// CIR-EH:         %[[C:.*]] = cir.alloca "c"
+// CIR-EH:         cir.while {
+// CIR-EH:         } do {
+// CIR-EH:           %[[X:.*]] = cir.alloca "x"
+// CIR-EH:           cir.lifetime.start %[[X]]
+// CIR-EH:           cir.call @_Z3usei
+// CIR-EH:           } cleanup all {
+// CIR-EH:             cir.lifetime.end %[[X]]
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.call @_ZN8LoopCondD1Ev(%[[C]])
+// CIR-EH:           cir.lifetime.end %[[C]]
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z16lifetime_in_loopv()
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[X:.*]])
+// LLVM-EH:         invoke void @_Z3usei
+// LLVM-EH:         landingpad { ptr, i32 }
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
+// LLVM-EH:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[C]])
+
+// A marker-only loop cleanup also participates in an enclosing try's EH path.
+void lifetime_loop_in_try() {
+  try {
+    while (int c = source())
+      use(c);
+  } catch (...) {
+  }
+}
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z20lifetime_loop_in_tryv()
+// CIR-EH:         cir.try {
+// CIR-EH:           %[[C:.*]] = cir.alloca "c"
+// CIR-EH:           cir.while {
+// CIR-EH:             cir.call @_Z6sourcev()
+// CIR-EH:           } do {
+// CIR-EH:             cir.call @_Z3usei
+// CIR-EH:           } cleanup all {
+// CIR-EH:             cir.lifetime.end %[[C]]
+// CIR-EH:         } catch all
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z20lifetime_loop_in_tryv()
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// LLVM-EH:         invoke{{.*}} i32 @_Z6sourcev()
+// LLVM-EH:         invoke void @_Z3usei
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+// LLVM-EH:         landingpad { ptr, i32 }
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+// LLVM-EH:         call ptr @__cxa_begin_catch
 
 #endif // __EXCEPTIONS

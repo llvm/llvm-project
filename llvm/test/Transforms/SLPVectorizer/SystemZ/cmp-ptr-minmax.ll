@@ -18,9 +18,7 @@ define i1 @test(i64 %0, i64 %1, ptr %2) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x ptr> [[TMP9]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <2 x ptr> [[TMP8]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP11]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP11]], i64 1
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[TMP11]])
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:

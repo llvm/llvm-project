@@ -39,8 +39,6 @@
 
 namespace llvm {
 
-LLVM_ABI extern cl::opt<bool> UseSegmentSetForPhysRegs;
-
 class BitVector;
 class MachineBlockFrequencyInfo;
 class MachineDominatorTree;
@@ -439,9 +437,7 @@ public:
     LiveRange *LR = RegUnitRanges[static_cast<unsigned>(Unit)];
     if (!LR) {
       // Compute missing ranges on demand.
-      // Use segment set to speed-up initial computation of the live range.
-      RegUnitRanges[static_cast<unsigned>(Unit)] = LR =
-          new LiveRange(UseSegmentSetForPhysRegs);
+      RegUnitRanges[static_cast<unsigned>(Unit)] = LR = createRegUnitRange();
       computeRegUnitRange(*LR, Unit);
     }
     return *LR;
@@ -501,12 +497,13 @@ private:
 
   /// Implementation of insertMBBInMaps(). \p MBB must contain no regmask
   /// operands when \p AssumeRegMaskEmpty is true.
-  void insertMBBInMapsImpl(MachineBasicBlock *MBB, bool AssumeRegMaskEmpty);
+  LLVM_ABI void insertMBBInMapsImpl(MachineBasicBlock *MBB,
+                                    bool AssumeRegMaskEmpty);
 
   /// Updates the regmask table for \p Orig's instructions that are moved into
   /// \p SplitBB, so that the table is sliced across both blocks.
-  void reassignRegMaskSlots(MachineBasicBlock &Orig,
-                            MachineBasicBlock &SplitBB);
+  LLVM_ABI void reassignRegMaskSlots(MachineBasicBlock &Orig,
+                                     MachineBasicBlock &SplitBB);
 
   /// Walk the values in \p LI and check for dead values:
   /// - Dead PHIDef values are marked as unused.
@@ -519,6 +516,7 @@ private:
                          SmallVectorImpl<MachineInstr *> *dead);
 
   LLVM_ABI static LiveInterval *createInterval(Register Reg);
+  LLVM_ABI static LiveRange *createRegUnitRange();
 
   void printInstrs(raw_ostream &O) const;
   void dumpInstrs() const;

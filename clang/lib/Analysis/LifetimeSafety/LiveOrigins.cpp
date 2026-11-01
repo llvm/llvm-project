@@ -60,9 +60,9 @@ struct Lattice {
 };
 
 static SourceLocation GetFactLoc(CausingFactType F) {
-  if (const auto *UF = F.dyn_cast<const UseFact *>())
+  if (const auto *UF = dyn_cast<const UseFact *>(F))
     return UF->getUseExpr()->getExprLoc();
-  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+  if (const auto *OEF = dyn_cast<const OriginEscapesFact *>(F)) {
     if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
       return ReturnEsc->getReturnExpr()->getExprLoc();
     if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
@@ -146,22 +146,14 @@ public:
     return Lattice(Joined, Factory.getEmptyMap());
   }
 
-  /// A read operation makes the origin live with definite confidence, as it
-  /// dominates this program point. A write operation kills the liveness of
-  /// the origin since it overwrites the value.
+  /// A use makes the origin live with definite confidence, as it dominates this
+  /// program point.
   Lattice transfer(Lattice In, const UseFact &UF) {
     Lattice Out = In;
     for (const OriginList *Cur = UF.getUsedOrigins(); Cur;
-         Cur = Cur->peelOuterOrigin()) {
-      OriginID OID = Cur->getOuterOriginID();
-      // Write kills liveness.
-      if (UF.isWritten())
-        Out = removeLive(Out, OID);
-      else
-        // Read makes origin live with definite confidence (dominates this
-        // point).
-        Out = addLive(Out, OID, LivenessInfo(&UF, LivenessKind::Must));
-    }
+         Cur = Cur->peelOuterOrigin())
+      Out = addLive(Out, Cur->getOuterOriginID(),
+                    LivenessInfo(&UF, LivenessKind::Must));
     return Out;
   }
 

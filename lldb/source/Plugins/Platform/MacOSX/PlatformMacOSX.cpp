@@ -102,44 +102,6 @@ PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch) {
 /// Default Constructor
 PlatformMacOSX::PlatformMacOSX() : PlatformDarwinDevice(true) {}
 
-ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
-  ModuleSP exe_module_sp(target.GetExecutableModule());
-  if (!exe_module_sp)
-    return {};
-
-  ObjectFile *objfile = exe_module_sp->GetObjectFile();
-  if (!objfile)
-    return {};
-
-  llvm::VersionTuple version = objfile->GetSDKVersion();
-  if (version.empty())
-    return {};
-
-  // First try to find an SDK that matches the given SDK version.
-  if (FileSpec fspec = HostInfo::GetXcodeContentsDirectory()) {
-    StreamString sdk_path;
-    sdk_path.Printf("%s/Developer/Platforms/MacOSX.platform/Developer/"
-                    "SDKs/MacOSX%u.%u.sdk",
-                    fspec.GetPath().c_str(), version.getMajor(),
-                    *version.getMinor());
-    if (FileSystem::Instance().Exists(fspec))
-      return ConstString(sdk_path.GetString());
-  }
-
-  // Use the default SDK as a fallback.
-  auto sdk_path_or_err =
-      PlatformDarwin::ResolveXcodeSDK(XcodeSDK::GetAnyMacOS());
-  if (!sdk_path_or_err) {
-    Debugger::ReportError(toString(sdk_path_or_err.takeError()));
-    return {};
-  }
-
-  if (FileSystem::Instance().Exists(*sdk_path_or_err))
-    return ConstString(sdk_path_or_err->GetPath());
-
-  return {};
-}
-
 std::vector<ArchSpec>
 PlatformMacOSX::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
   std::vector<ArchSpec> result;
@@ -216,8 +178,9 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
   return error;
 }
 
-llvm::StringRef PlatformMacOSX::GetDeviceSupportDirectoryName() {
-  return "macOS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformMacOSX::GetDeviceSupportDirectoryNames() {
+  return {"macOS DeviceSupport"};
 }
 
 llvm::StringRef PlatformMacOSX::GetPlatformName() { return "MacOSX.platform"; }

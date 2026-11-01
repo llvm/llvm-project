@@ -3032,7 +3032,9 @@ void MachineBlockPlacement::alignBlocks() {
     if (!L)
       continue;
 
-    const Align TLIAlign = TLI->getPrefLoopAlignment(L);
+    // Query the block being aligned rather than only the LoopInfo header.
+    // After loop rotation, ChainBB can be a different backedge destination.
+    const Align TLIAlign = TLI->getPrefLoopAlignment(L, ChainBB);
     unsigned MDAlign = 1;
     MDNode *LoopID = L->getLoopID();
     if (LoopID) {
@@ -3044,11 +3046,8 @@ void MachineBlockPlacement::alignBlocks() {
         if (S == nullptr)
           continue;
         if (S->getString() == "llvm.loop.align") {
-          assert(MD->getNumOperands() == 2 &&
-                 "per-loop align metadata should have two operands.");
           MDAlign =
               mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-          assert(MDAlign >= 1 && "per-loop align value must be positive.");
         }
       }
     }

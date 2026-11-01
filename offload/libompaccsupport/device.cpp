@@ -12,6 +12,7 @@
 
 #include "device.h"
 #include "OffloadEntry.h"
+#include "OmpAccError.h"
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
@@ -24,12 +25,14 @@
 #include "Shared/EnvironmentVar.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
 #include <cassert>
 #include <climits>
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -38,6 +41,7 @@
 using namespace llvm::omp::target::ompt;
 #endif
 
+using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::plugin;
 using namespace llvm::omp::target::debug;
 
@@ -68,9 +72,10 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
+DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+                   ol_device_handle_t DeviceHandle)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      MappingInfo(*this) {}
+      DeviceHandle(DeviceHandle), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -81,11 +86,13 @@ DeviceTy::~DeviceTy() {
 }
 
 llvm::Error DeviceTy::init() {
-  int32_t Ret = RTL->init_device(RTLDeviceID);
-  if (Ret != OFFLOAD_SUCCESS)
-    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                     "failed to initialize device %d\n",
-                                     DeviceID);
+  OMPT_IF_BUILT_AND_INITIALIZED({
+    GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
+    std::string ComputeUnitKind = GenericDevice.getComputeUnitKind();
+    performOmptCallback(device_initialize, DeviceID, ComputeUnitKind.c_str(),
+                        reinterpret_cast<ompt_device_t *>(&GenericDevice),
+                        lookupCallbackByName, /*documentation=*/nullptr);
+  });
 
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
@@ -105,15 +112,14 @@ llvm::Error DeviceTy::init() {
     bool EmitReport =
         OMPX_EmitRecordReport || !OMPX_RecordReportFilename.get().empty();
 
-    Ret = RTL->initialize_record_replay(
+    int32_t Ret = RTL->initialize_record_replay(
         RTLDeviceID, OMPX_RecordMemSize, nullptr,
         /*IsRecord=*/true, /*IsNative=*/true, OMPX_RecordOutput, EmitReport,
         OMPX_RecordReportFilename.get().c_str(),
         OMPX_RecordOutputDir.get().c_str());
     if (Ret != OFFLOAD_SUCCESS)
-      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                       "failed to initialize RR in device %d\n",
-                                       DeviceID);
+      return createError(ErrorCode::BackendFailure,
+                         "failed to initialize RR in device %d\n", DeviceID);
   }
 
   return llvm::Error::success();
@@ -146,17 +152,17 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       void *Vtable;
       void *res;
       if (Device.RTL->get_global(Binary, PtrSize, Entry.SymbolName, &Vtable))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
 
       // HstPtr = Entry.Address;
       if (Device.retrieveData(&res, Vtable, PtrSize, AsyncInfo))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
       if (Device.synchronize(AsyncInfo))
-        return error::createOffloadError(
-            error::ErrorCode::INVALID_BINARY,
-            "failed to synchronize after retrieving %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary,
+                           "failed to synchronize after retrieving %s",
+                           Entry.SymbolName);
       // Calculate and emplace entire Vtable from first Vtable byte
       for (uint64_t i = 0; i < Entry.Size / PtrSize; ++i) {
         auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
@@ -172,18 +178,18 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
       void *Ptr;
       if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName, &Ptr))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
 
       HstPtr = Entry.Address;
       if (Device.retrieveData(&DevPtr, Ptr, Entry.Size, AsyncInfo))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
     }
     if (Device.synchronize(AsyncInfo))
-      return error::createOffloadError(
-          error::ErrorCode::INVALID_BINARY,
-          "failed to synchronize after retrieving %s", Entry.SymbolName);
+      return createError(ErrorCode::InvalidBinary,
+                         "failed to synchronize after retrieving %s",
+                         Entry.SymbolName);
   }
 
   // If we do not have any indirect globals we exit early.
@@ -199,14 +205,12 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
   if (Device.submitData(DevicePtr, IndirectCallTable.data(), TableSize,
                         AsyncInfo))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to copy data");
+    return createError(ErrorCode::InvalidBinary, "failed to copy data");
   // The IndirectCallTable is on the stack, so we must synchronize to ensure
   // the data is copied before we return.
   if (Device.synchronize(AsyncInfo))
-    return error::createOffloadError(
-        error::ErrorCode::INVALID_BINARY,
-        "failed to synchronize after copying data");
+    return createError(ErrorCode::InvalidBinary,
+                       "failed to synchronize after copying data");
 
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
@@ -217,8 +221,16 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   __tgt_device_binary Binary;
 
   if (RTL->load_binary(RTLDeviceID, Img, &Binary) != OFFLOAD_SUCCESS)
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to load binary %p", Img);
+    return createError(ErrorCode::InvalidBinary, "failed to load binary %p",
+                       Img);
+
+  OMPT_IF_BUILT_AND_INITIALIZED(performOmptCallback(
+      device_load, DeviceID, /*FileName=*/nullptr, /*FileOffset=*/0,
+      /*VmaInFile=*/nullptr,
+      reinterpret_cast<uintptr_t>(Img->ImageEnd) -
+          reinterpret_cast<uintptr_t>(Img->ImageStart),
+      const_cast<void *>(Img->ImageStart),
+      /*DeviceAddr=*/nullptr, /*ModuleId=*/0));
 
   // This symbol is optional.
   void *DeviceEnvironmentPtr;
@@ -248,8 +260,7 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   AsyncInfoTy AsyncInfo(*this);
   if (submitData(DeviceEnvironmentPtr, &DeviceEnvironment,
                  sizeof(DeviceEnvironment), AsyncInfo))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to copy data");
+    return createError(ErrorCode::InvalidBinary, "failed to copy data");
 
   return Binary;
 }
@@ -387,27 +398,347 @@ static void resolveKernelLaunchParams(void **const TgtArgs,
   LaunchArgs.Args = &Ptrs[0];
 }
 
-// Run region on device
-int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
-                               ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
-                               KernelReplayOutcomeTy *ReplayOutcome,
-                               AsyncInfoTy &AsyncInfo) {
-  llvm::SmallVector<void *> Args, Ptrs;
-  llvm::SmallVector<int64_t> ArgSizes;
+namespace {
+/// Configuration of dynamic block memory needed for launching a kernel.
+struct DynBlockMemConfTy {
+  /// The size of the dynamic block memory buffer.
+  uint32_t Size = 0;
+  /// The size of dynamic shared memory natively provided by the device.
+  uint32_t NativeSize = 0;
+  /// The fallback that was triggered (if any).
+  DynCGroupMemFallbackType Fallback = DynCGroupMemFallbackType::None;
+  /// The fallback pointer if global memory was used as alternative.
+  void *FallbackPtr = nullptr;
+};
+} // namespace
 
+/// Prepare the block memory buffer requested for the kernel and execute the
+/// specified fallback if necessary.
+static llvm::Expected<DynBlockMemConfTy>
+prepareBlockMemory(GenericDeviceTy &GenericDevice,
+                   const KernelLaunchInfoTy &KernelEnv, uint32_t DynCGroupMem,
+                   DynCGroupMemFallbackType DynCGroupMemFallback,
+                   uint32_t NumBlocks) {
+
+  // If the fallback is abort, don't try to adjust the block memory size.
+  if (DynCGroupMemFallback == DynCGroupMemFallbackType::Abort)
+    return DynBlockMemConfTy{DynCGroupMem, DynCGroupMem,
+                             DynCGroupMemFallbackType::Abort, nullptr};
+
+  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
+  uint32_t DynBlockMemSize = DynCGroupMem;
+  uint32_t TotalBlockMemSize = KernelEnv.StaticBlockMemSize + DynBlockMemSize;
+  uint32_t DynNativeBlockMemSize = DynBlockMemSize;
+  void *DynFallbackPtr = nullptr;
+
+  DynCGroupMemFallbackType DynFallback = DynCGroupMemFallbackType::None;
+  if (DynBlockMemSize && TotalBlockMemSize > MaxBlockMemSize) {
+    // Launch without native dynamic block memory.
+    DynNativeBlockMemSize = 0;
+    DynFallback = DynCGroupMemFallback;
+    if (DynFallback != DynCGroupMemFallbackType::DefaultMem) {
+      // Do not provide any memory as fallback.
+      DynBlockMemSize = 0;
+    } else {
+      // Get global memory as fallback.
+      auto AllocOrErr = GenericDevice.dataAlloc(
+          NumBlocks * DynBlockMemSize,
+          /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+      if (!AllocOrErr)
+        return AllocOrErr.takeError();
+      DynFallbackPtr = *AllocOrErr;
+    }
+  }
+  return DynBlockMemConfTy{DynBlockMemSize, DynNativeBlockMemSize, DynFallback,
+                           DynFallbackPtr};
+}
+
+static void freeAfterSynchronization(GenericDeviceTy &GenericDevice,
+                                     AsyncInfoTy &AsyncInfo, void *Ptr,
+                                     TargetAllocTy Kind) {
+  AsyncInfo.addPostProcessingFunction([&GenericDevice, Ptr, Kind]() -> int {
+    if (auto Err = GenericDevice.dataDelete(Ptr, Kind)) {
+      REPORT() << "Failure to free device memory " << Ptr << ": "
+               << toString(std::move(Err));
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
+  });
+}
+
+/// Return a device pointer to a new kernel launch environment, or null if
+/// this launch has no reserved dyn_ptr slot to store one in. \p NumBlocks0 is
+/// the number of blocks for this launch and is used to size the reduction
+/// buffer.
+static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
+    GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
+    const KernelLaunchInfoTy &KernelEnv,
+    const DynBlockMemConfTy &DynBlockMemConf, uint32_t DynCGroupMem,
+    void **DynPtrSlot, AsyncInfoTy &AsyncInfo, uint32_t NumBlocks0) {
+  // Ctor/Dtor have no arguments, replaying uses the original kernel launch
+  // environment, and launches with no reserved dyn_ptr slot (e.g. older
+  // compiler versions, or non-OpenMP launches) have nowhere to store one.
+  if ((GenericDevice.getRecordReplay() &&
+       GenericDevice.getRecordReplay()->isReplaying()) ||
+      !DynPtrSlot)
+    return nullptr;
+
+  const bool NeedsReductionBuffer = KernelEnv.ReductionDataSize != 0;
+  if (NeedsReductionBuffer && LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
+    return createError(
+        ErrorCode::InvalidBinary,
+        "kernel was built against an older OpenMP kernel-launch-environment "
+        "ABI (v%u); current runtime requires v%u for cross-team reductions",
+        LaunchArgs.OmpABIVersion, OMP_KERNEL_ARG_VERSION);
+  if (!NeedsReductionBuffer && !DynCGroupMem)
+    return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
+
+  auto AllocOrErr = GenericDevice.dataAlloc(
+      sizeof(KernelLaunchEnvironmentTy),
+      /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
+
+  // Remember to free the memory later.
+  freeAfterSynchronization(GenericDevice, AsyncInfo, *AllocOrErr,
+                           TARGET_ALLOC_DEVICE);
+
+  // Use the KLE in the __tgt_async_info to ensure a stable address for the
+  // async data transfer.
+  auto &LocalKLE =
+      static_cast<__tgt_async_info *>(AsyncInfo)->KernelLaunchEnvironment;
+  LocalKLE = KernelLaunchEnvironmentTy{};
+  LocalKLE.DynCGroupMemSize = DynBlockMemConf.Size;
+  LocalKLE.DynCGroupMemFbPtr = DynBlockMemConf.FallbackPtr;
+  LocalKLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
+  LocalKLE.ReductionBuffer = nullptr;
+
+  if (NeedsReductionBuffer) {
+    // Use number of teams many buffer elements.
+    auto ReductionAllocOrErr = GenericDevice.dataAlloc(
+        uint64_t(KernelEnv.ReductionDataSize) * NumBlocks0,
+        /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+    if (!ReductionAllocOrErr)
+      return ReductionAllocOrErr.takeError();
+    LocalKLE.ReductionBuffer = *ReductionAllocOrErr;
+    // Remember to free the memory later.
+    freeAfterSynchronization(GenericDevice, AsyncInfo, *ReductionAllocOrErr,
+                             TARGET_ALLOC_DEVICE);
+  }
+
+  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
+       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
+       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
+       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
+       sizeof(KernelLaunchEnvironmentTy));
+
+  if (auto Err = GenericDevice.dataSubmit(
+          *AllocOrErr, &LocalKLE, sizeof(KernelLaunchEnvironmentTy), AsyncInfo))
+    return Err;
+  return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
+}
+
+/// Get the effective number of threads for the kernel based on the
+/// user-defined number of threads.
+static uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
+                                       uint32_t UserThreadLimit,
+                                       const KernelLaunchInfoTy &KernelEnv) {
+  assert(!KernelEnv.isBareMode() &&
+         "bare kernel should not call this function");
+
+  if (UserThreadLimit > 0 && KernelEnv.isGenericMode())
+    UserThreadLimit += GenericDevice.getWarpSize();
+
+  return std::min(KernelEnv.MaxNumThreads, (UserThreadLimit > 0)
+                                               ? UserThreadLimit
+                                               : KernelEnv.PreferredNumThreads);
+}
+
+/// Get the effective number of blocks for the kernel based on the
+/// user-defined number of blocks and the loop trip count.
+/// The number of threads \p EffectiveNumThreads can be adjusted by this
+/// method. \p IsNumThreadsFromUser is true if \p EffectiveNumThreads is
+/// defined by the user via the thread_limit clause.
+static uint32_t
+getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
+                      uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
+                      bool IsNumThreadsStrict, bool IsNumThreadsFromUser,
+                      const KernelLaunchInfoTy &KernelEnv) {
+  assert(!KernelEnv.isBareMode() &&
+         "bare kernel should not call this function");
+
+  // NOTE: This clamps the user-requested number of blocks to the device limit
+  // rather than honoring it exactly, which is non-standard behavior. Truly
+  // honoring an arbitrary value would require launching multiple kernels or
+  // reusing blocks until the requested count has been served.
+  if (UserNumBlocks > 0)
+    return std::min(UserNumBlocks,
+                    GenericDevice.getBlockLimit(EffectiveNumThreads));
+
+  // Return the number of blocks required to cover the loop iterations.
+  if (KernelEnv.isNoLoopMode())
+    return LoopTripCount > 0 ? (((LoopTripCount - 1) / EffectiveNumThreads) + 1)
+                             : 1;
+
+  uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
+  uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
+  if (LoopTripCount > 0) {
+    if (KernelEnv.isSPMDMode()) {
+      // We have a combined construct, i.e. `target teams distribute
+      // parallel for [simd]`. We launch so many blocks so that each thread
+      // will execute one iteration of the loop; rounded up to the nearest
+      // integer. However, if that results in too few blocks, we artificially
+      // reduce the thread count per block to increase the outer parallelism.
+      auto MinThreads = GenericDevice.getMinThreadsForLowTripCountLoop();
+      MinThreads = std::min(MinThreads, EffectiveNumThreads);
+
+      // Honor the thread_limit clause; only lower the number of threads.
+      [[maybe_unused]] auto OldNumThreads = EffectiveNumThreads;
+      if (LoopTripCount >= DefaultNumBlocks * EffectiveNumThreads ||
+          IsNumThreadsFromUser || IsNumThreadsStrict) {
+        // Enough parallelism for blocks and threads.
+        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
+        assert(IsNumThreadsFromUser ||
+               TripCountNumBlocks >= DefaultNumBlocks &&
+                   "Expected sufficient outer parallelism.");
+      } else if (LoopTripCount >= DefaultNumBlocks * MinThreads) {
+        // Enough parallelism for blocks, limit threads.
+
+        // This case is hard; for now, we force "full warps":
+        // First, compute a thread count assuming DefaultNumBlocks.
+        auto NumThreadsDefaultBlocks =
+            (LoopTripCount + DefaultNumBlocks - 1) / DefaultNumBlocks;
+        // Now get a power of two that is larger or equal.
+        auto NumThreadsDefaultBlocksP2 =
+            llvm::PowerOf2Ceil(NumThreadsDefaultBlocks);
+        // Do not increase a thread limit given be the user.
+        EffectiveNumThreads =
+            std::min(EffectiveNumThreads, uint32_t(NumThreadsDefaultBlocksP2));
+        assert(EffectiveNumThreads >= MinThreads &&
+               "Expected sufficient inner parallelism.");
+        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
+      } else {
+        // Not enough parallelism for blocks and threads, limit both.
+        EffectiveNumThreads = std::min(EffectiveNumThreads, MinThreads);
+        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
+      }
+
+      assert(EffectiveNumThreads * TripCountNumBlocks >= LoopTripCount &&
+             "Expected sufficient parallelism");
+      assert(OldNumThreads >= EffectiveNumThreads &&
+             "Number of threads cannot be increased!");
+    } else {
+      assert((KernelEnv.isGenericMode() || KernelEnv.isGenericSPMDMode()) &&
+             "Unexpected execution mode!");
+      // If we reach this point, then we have a non-combined construct, i.e.
+      // `teams distribute` with a nested `parallel for` and each block is
+      // assigned one iteration of the `distribute` loop. E.g.:
+      //
+      // #pragma omp target teams distribute
+      // for(...loop_tripcount...) {
+      //   #pragma omp parallel for
+      //   for(...) {}
+      // }
+      //
+      // Threads within a block will execute the iterations of the `parallel`
+      // loop.
+      TripCountNumBlocks = LoopTripCount;
+    }
+  }
+
+  uint32_t PreferredNumBlocks = TripCountNumBlocks;
+  // If the loops are long running we rather reuse blocks than spawn too many.
+  if (GenericDevice.getReuseBlocksForHighTripCount())
+    PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
+  return std::min(PreferredNumBlocks,
+                  GenericDevice.getBlockLimit(EffectiveNumThreads));
+}
+
+/// Build the base KernelLaunchArgsTy for a launch from the public
+/// KernelArgsTy and the kernel's cached launch-geometry properties.
+static KernelLaunchArgsTy buildLaunchArgs(const KernelArgsTy &KernelArgs,
+                                          KernelReplayOutcomeTy *ReplayOutcome,
+                                          const KernelLaunchInfoTy &KernelEnv) {
   KernelLaunchArgsTy LaunchArgs;
   LaunchArgs.OmpABIVersion = KernelArgs.Version;
   LaunchArgs.ReplayOutcome = ReplayOutcome;
   LaunchArgs.ArgSizes = KernelArgs.ArgSizes;
   LaunchArgs.Tripcount = KernelArgs.Tripcount;
-  LaunchArgs.DynCGroupMem = KernelArgs.DynCGroupMem;
   llvm::copy(KernelArgs.UserNumBlocks, LaunchArgs.UserNumBlocks);
+  // Save the requested value before computing the effective number of blocks so
+  // it can be used by record-replay mechanisms.
+  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = KernelArgs.UserNumBlocks[0];
+  LaunchArgs.KernelLaunchInfo.MaxNumThreads = KernelEnv.MaxNumThreads;
   llvm::copy(KernelArgs.UserThreadLimit, LaunchArgs.UserThreadLimit);
   LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
-  LaunchArgs.Flags.StrictBlocks = KernelArgs.Flags.StrictBlocks;
-  LaunchArgs.Flags.StrictThreads = KernelArgs.Flags.StrictThreads;
-  LaunchArgs.Flags.DynCGroupMemFallback = KernelArgs.Flags.DynCGroupMemFallback;
+  return LaunchArgs;
+}
 
+/// Assert the launch geometry invariants expected by the plugin layer.
+static void checkLaunchInvariants(const KernelLaunchArgsTy &LaunchArgs,
+                                  const KernelArgsTy &KernelArgs,
+                                  const KernelLaunchInfoTy &KernelLaunchInfo) {
+  // Multidimensional is only supported with bare mode for now.
+  assert(KernelLaunchInfo.isBareMode() ||
+         LaunchArgs.UserThreadLimit[1] == 1 &&
+             LaunchArgs.UserThreadLimit[2] == 1 &&
+             LaunchArgs.UserNumBlocks[1] == 1 &&
+             LaunchArgs.UserNumBlocks[2] == 1 &&
+             "Non-bare mode should only use the first thread and block "
+             "dimensions");
+
+  assert(!KernelArgs.Flags.StrictBlocks ||
+         LaunchArgs.UserNumBlocks[0] > 0 && LaunchArgs.UserNumBlocks[1] > 0 &&
+             LaunchArgs.UserNumBlocks[2] > 0 &&
+             "Strict requires number of blocks greater than zero");
+  assert(!KernelArgs.Flags.StrictThreads ||
+         LaunchArgs.UserThreadLimit[0] > 0 &&
+             LaunchArgs.UserThreadLimit[1] > 0 &&
+             LaunchArgs.UserThreadLimit[2] > 0 &&
+             "Strict requires number of threads greater than zero");
+}
+
+/// Calculate or adjust, in place, the effective number of threads and blocks
+/// for the first dimension, unless the caller requested strict counts.
+static void adjustEffectiveGeometry(GenericDeviceTy &GenericDevice,
+                                    KernelLaunchArgsTy &LaunchArgs,
+                                    const KernelArgsTy &KernelArgs,
+                                    const KernelLaunchInfoTy &KernelEnv) {
+  const bool StrictBlocks = KernelArgs.Flags.StrictBlocks;
+  const bool StrictThreads = KernelArgs.Flags.StrictThreads;
+  if (StrictThreads && StrictBlocks)
+    return;
+
+  assert(!KernelEnv.isBareMode() &&
+         "bare kernel launches must request strict thread/block counts");
+
+  // Record whether the user actually requested a thread limit (thread_limit
+  // clause) before possibly overwriting UserThreadLimit[0] below with the
+  // computed effective value.
+  const bool ThreadLimitFromUser = LaunchArgs.UserThreadLimit[0] > 0;
+
+  uint32_t EffectiveNumThreads = LaunchArgs.UserThreadLimit[0];
+  if (!StrictThreads)
+    EffectiveNumThreads =
+        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads, KernelEnv);
+
+  if (!StrictBlocks)
+    LaunchArgs.UserNumBlocks[0] = getEffectiveNumBlocks(
+        GenericDevice, LaunchArgs.UserNumBlocks[0], LaunchArgs.Tripcount,
+        EffectiveNumThreads, StrictThreads, ThreadLimitFromUser, KernelEnv);
+
+  LaunchArgs.UserThreadLimit[0] = EffectiveNumThreads;
+}
+
+/// Flatten the kernel arguments into \p LaunchArgs.Args. Returns the address
+/// of the element reserved for the kernel launch environment (dyn_ptr), or
+/// null if this launch has no such slot.
+static void **resolveArgsAndDynPtrSlot(KernelArgsTy &KernelArgs,
+                                       void **TgtVarsPtr, ptrdiff_t *TgtOffsets,
+                                       llvm::SmallVector<void *> &Args,
+                                       llvm::SmallVector<void *> &Ptrs,
+                                       llvm::SmallVector<int64_t> &ArgSizes,
+                                       KernelLaunchArgsTy &LaunchArgs) {
   if (KernelArgs.Flags.IsCUDA) {
     // Kernel languages (CUDA/HIP) pass an already-flattened argument-pointer
     // array through KernelArgs.ArgPtrs instead of using the OpenMP
@@ -416,39 +747,115 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
         reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
     LaunchArgs.NumArgs = LaunchParams->NumArgs;
     LaunchArgs.Args = LaunchParams->Args;
-  } else {
-    resolveKernelLaunchParams(TgtVarsPtr, TgtOffsets, KernelArgs.NumArgs, Args,
-                              Ptrs, LaunchArgs);
-    // The dyn_ptr slot is reserved by the host (version >= 4) or by
-    // upgradeKernelArgs (version 3) as the last element of the argument
-    // array. Version 3 device kernels expect it first instead, so rotate it
-    // to the front to match that ABI.
-    if (KernelArgs.NumArgs > 0 &&
-        KernelArgs.Version >= OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
-      if (KernelArgs.Version == OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
-        std::rotate(Args.begin(), Args.end() - 1, Args.end());
-        LaunchArgs.DynPtrSlot = &Args[0];
-
-        // Keep ArgSizes in sync with the rotated Args, if present.
-        if (LaunchArgs.ArgSizes) {
-          ArgSizes.assign(LaunchArgs.ArgSizes,
-                          LaunchArgs.ArgSizes + KernelArgs.NumArgs);
-          std::rotate(ArgSizes.begin(), ArgSizes.end() - 1, ArgSizes.end());
-          LaunchArgs.ArgSizes = ArgSizes.data();
-        }
-      } else {
-        LaunchArgs.DynPtrSlot = &Args[KernelArgs.NumArgs - 1];
-      }
-    }
+    return nullptr;
   }
 
-  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
+  resolveKernelLaunchParams(TgtVarsPtr, TgtOffsets, KernelArgs.NumArgs, Args,
+                            Ptrs, LaunchArgs);
+
+  if (KernelArgs.NumArgs == 0 ||
+      KernelArgs.Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
+    return nullptr;
+
+  // The dyn_ptr slot is reserved by the host (version >= 4) or by
+  // upgradeKernelArgs (version 3) as the last element of the argument array.
+  // Version 3 device kernels expect it first instead, so rotate it to the
+  // front to match that ABI.
+  if (KernelArgs.Version != OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
+    return &Args[KernelArgs.NumArgs - 1];
+
+  std::rotate(Args.begin(), Args.end() - 1, Args.end());
+
+  // Keep ArgSizes in sync with the rotated Args, if present.
+  if (LaunchArgs.ArgSizes) {
+    ArgSizes.assign(LaunchArgs.ArgSizes,
+                    LaunchArgs.ArgSizes + KernelArgs.NumArgs);
+    std::rotate(ArgSizes.begin(), ArgSizes.end() - 1, ArgSizes.end());
+    LaunchArgs.ArgSizes = ArgSizes.data();
+  }
+  return &Args[0];
+}
+
+/// Compute the dynamic block-memory configuration for this launch, filling in
+/// \p LaunchArgs.DynCGroupMem with the native size to request, and, if this
+/// launch has a reserved dyn_ptr slot (\p DynPtrSlot), the device-side kernel
+/// launch environment.
+static llvm::Error
+prepareDynamicLaunchState(GenericDeviceTy &GenericDevice,
+                          const KernelLaunchInfoTy &KernelEnv,
+                          KernelLaunchArgsTy &LaunchArgs, uint32_t DynCGroupMem,
+                          DynCGroupMemFallbackType DynCGroupMemFallback,
+                          void **DynPtrSlot, AsyncInfoTy &AsyncInfo) {
+  uint32_t NumBlocksTotal = LaunchArgs.UserNumBlocks[0] *
+                            LaunchArgs.UserNumBlocks[1] *
+                            LaunchArgs.UserNumBlocks[2];
+  auto DynBlockMemConfOrErr =
+      prepareBlockMemory(GenericDevice, KernelEnv, DynCGroupMem,
+                         DynCGroupMemFallback, NumBlocksTotal);
+  if (!DynBlockMemConfOrErr)
+    return DynBlockMemConfOrErr.takeError();
+
+  DynBlockMemConfTy &DynBlockMemConf = *DynBlockMemConfOrErr;
+  LaunchArgs.DynCGroupMem = DynBlockMemConf.NativeSize;
+  if (DynBlockMemConf.FallbackPtr)
+    freeAfterSynchronization(GenericDevice, AsyncInfo,
+                             DynBlockMemConf.FallbackPtr, TARGET_ALLOC_DEVICE);
+
+  auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
+      GenericDevice, LaunchArgs, KernelEnv, DynBlockMemConf, DynCGroupMem,
+      DynPtrSlot, AsyncInfo, LaunchArgs.UserNumBlocks[0]);
+  if (!KernelLaunchEnvOrErr)
+    return KernelLaunchEnvOrErr.takeError();
+
+  // Fill in the kernel launch environment (dyn_ptr) if this launch has a
+  // reserved slot for it. When replaying, getKernelLaunchEnvironment()
+  // returns null so the recorded value already in the slot is preserved.
+  if (DynPtrSlot && *KernelLaunchEnvOrErr)
+    *DynPtrSlot = *KernelLaunchEnvOrErr;
+
+  return llvm::Error::success();
 }
 
 // Run region on device
-bool DeviceTy::printDeviceInfo() {
-  RTL->print_device_info(RTLDeviceID);
-  return true;
+int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
+                               ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
+                               KernelReplayOutcomeTy *ReplayOutcome,
+                               AsyncInfoTy &AsyncInfo) {
+  llvm::SmallVector<void *> Args, Ptrs;
+  llvm::SmallVector<int64_t> ArgSizes;
+
+  GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
+  KernelLaunchInfoTy KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
+  KernelLaunchArgsTy LaunchArgs =
+      buildLaunchArgs(KernelArgs, ReplayOutcome, KernelLaunchInfo);
+
+  checkLaunchInvariants(LaunchArgs, KernelArgs, KernelLaunchInfo);
+  adjustEffectiveGeometry(GenericDevice, LaunchArgs, KernelArgs,
+                          KernelLaunchInfo);
+
+  void **DynPtrSlot = resolveArgsAndDynPtrSlot(
+      KernelArgs, TgtVarsPtr, TgtOffsets, Args, Ptrs, ArgSizes, LaunchArgs);
+
+  auto DynCGroupMemFallback = static_cast<DynCGroupMemFallbackType>(
+      KernelArgs.Flags.DynCGroupMemFallback);
+  if (auto Err = prepareDynamicLaunchState(
+          GenericDevice, KernelLaunchInfo, LaunchArgs, KernelArgs.DynCGroupMem,
+          DynCGroupMemFallback, DynPtrSlot, AsyncInfo)) {
+    REPORT() << "Failure to prepare launch state for kernel " << TgtEntryPtr
+             << ": " << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+
+  auto *Kernel = reinterpret_cast<GenericKernelTy *>(TgtEntryPtr);
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
+       "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
+       "%s mode\n",
+       Kernel->getName(), LaunchArgs.UserNumBlocks[0],
+       LaunchArgs.UserNumBlocks[1], LaunchArgs.UserNumBlocks[2],
+       LaunchArgs.UserThreadLimit[0], LaunchArgs.UserThreadLimit[1],
+       LaunchArgs.UserThreadLimit[2], KernelLaunchInfo.getExecutionModeName());
+
+  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
 }
 
 // Whether data can be copied to DstDevice directly

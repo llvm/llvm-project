@@ -19,6 +19,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
@@ -149,6 +150,24 @@ public:
       else
         llvmFunc->removeFnAttr("uniform-work-group-size");
     }
+
+    bool isXnack =
+        dialect->getXnackAttrHelper().getName() == attribute.getName();
+    bool isSramecc =
+        dialect->getSrameccAttrHelper().getName() == attribute.getName();
+    if (isXnack || isSramecc) {
+      auto value = dyn_cast<BoolAttr>(attribute.getValue());
+      if (!value)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must be a boolean");
+      StringRef key = isXnack
+                          ? ROCDL::ROCDLDialect::getModuleFlagKeyXnackName()
+                          : ROCDL::ROCDLDialect::getModuleFlagKeySramEccName();
+      moduleTranslation.getLLVMModule()->addModuleFlag(
+          llvm::Module::Error, key,
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext),
+                                 value.getValue()));
+    }
     if (dialect->getUnsafeFpAtomicsAttrHelper().getName() ==
         attribute.getName()) {
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
@@ -241,7 +260,7 @@ public:
     if (dialect->getIgnoreDenormalModeAttrHelper().getName() ==
         attribute.getName()) {
       for (llvm::Instruction *i : instructions)
-        i->setMetadata("amdgpu.ignore.denormal.mode",
+        i->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
                        llvm::MDNode::get(llvmContext, {}));
     }
 

@@ -31,6 +31,7 @@
 #include "DXILTranslateMetadata.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
+#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"
@@ -62,6 +63,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeDirectXTarget() {
   RegisterTargetMachine<DirectXTargetMachine> X(getTheDirectXTarget());
   auto *PR = PassRegistry::getPassRegistry();
+  initializeDXILDebugInfoLegacyPass(*PR);
   initializeDXILIntrinsicExpansionLegacyPass(*PR);
   initializeDXILMemIntrinsicsLegacyPass(*PR);
   initializeDXILDataScalarizationLegacyPass(*PR);
@@ -147,6 +149,7 @@ public:
     addPass(createDXILPostOptimizationValidationLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILPrepareModulePass());
+    addPass(createDXILDebugInfoLegacyPass());
   }
 };
 
@@ -156,8 +159,8 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
-                               Reloc::Static, CodeModel::Small, OL),
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options, Reloc::Static,
+                               CodeModel::Small, OL),
       TLOF(std::make_unique<DXILTargetObjectFile>()),
       Subtarget(std::make_unique<DirectXSubtarget>(TT, CPU, FS, *this)) {
   initAsmInfo();

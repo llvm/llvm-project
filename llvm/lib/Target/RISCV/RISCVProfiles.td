@@ -160,4 +160,6 @@ def RVA23U64 : RISCVProfile<"rva23u64", RVA23U64Features>;
 def RVA23S64 : RISCVProfile<"rva23s64", RVA23S64Features>;
 def RVB23U64 : RISCVProfile<"rvb23u64", RVB23U64Features>;
 def RVB23S64 : RISCVProfile<"rvb23s64", RVB23S64Features>;
+def RVA23P1S64 : RISCVExperimentalProfile<"rva23p1s64", RVA23S64Features>;
+def RVB23P1S64 : RISCVExperimentalProfile<"rvb23p1s64", RVB23S64Features>;
 def RVM23U32 : RISCVExperimentalProfile<"rvm23u32", RVM23U32Features>;

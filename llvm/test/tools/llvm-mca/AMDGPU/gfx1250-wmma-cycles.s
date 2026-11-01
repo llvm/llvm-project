@@ -11,17 +11,19 @@ v_wmma_f32_16x16x128_fp8_fp8 v[16:23], v[0:15], v[8:23], v[16:23]
 v_wmma_f32_16x16x128_bf8_bf8 v[16:23], v[0:15], v[8:23], v[16:23]
 v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23]
 v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23]
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:15], v[16:23], v[24:31] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:15], v[16:31], v[32:39] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP8
 v_wmma_i32_16x16x64_iu8 v[16:23], v[0:7], v[8:15], v[16:23]
 
 # CHECK:      Iterations:        100
-# CHECK-NEXT: Instructions:      700
-# CHECK-NEXT: Total Cycles:      5601
-# CHECK-NEXT: Total uOps:        700
+# CHECK-NEXT: Instructions:      900
+# CHECK-NEXT: Total Cycles:      6801
+# CHECK-NEXT: Total uOps:        900
 
 # CHECK:      Dispatch Width:    1
-# CHECK-NEXT: uOps Per Cycle:    0.12
-# CHECK-NEXT: IPC:               0.12
-# CHECK-NEXT: Block RThroughput: 56.0
+# CHECK-NEXT: uOps Per Cycle:    0.13
+# CHECK-NEXT: IPC:               0.13
+# CHECK-NEXT: Block RThroughput: 68.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -38,6 +40,8 @@ v_wmma_i32_16x16x64_iu8 v[16:23], v[0:7], v[8:15], v[16:23]
 # CHECK-NEXT:  1      8     8.00                  U     v_wmma_f32_16x16x128_bf8_bf8 v[16:23], v[0:15], v[8:23], v[16:23]
 # CHECK-NEXT:  1      8     8.00                  U     v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23]
 # CHECK-NEXT:  1      8     8.00                  U     v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23]
+# CHECK-NEXT:  1      4     4.00                  U     v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:15], v[16:23], v[24:31] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
+# CHECK-NEXT:  1      8     8.00                  U     v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:15], v[16:31], v[32:39] matrix_a_fmt:MATRIX_FMT_FP4
 # CHECK-NEXT:  1      16    16.00                 U     v_wmma_i32_16x16x64_iu8 v[16:23], v[0:7], v[8:15], v[16:23]
 
 # CHECK:      Resources:
@@ -53,7 +57,7 @@ v_wmma_i32_16x16x64_iu8 v[16:23], v[0:7], v[8:15], v[16:23]
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     56.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     68.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
@@ -63,4 +67,6 @@ v_wmma_i32_16x16x64_iu8 v[16:23], v[0:7], v[8:15], v[16:23]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     8.00   v_wmma_f32_16x16x128_bf8_bf8 v[16:23], v[0:15], v[8:23], v[16:23]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     8.00   v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     8.00   v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], v[16:23]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:15], v[16:23], v[24:31] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     8.00   v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:15], v[16:31], v[32:39] matrix_a_fmt:MATRIX_FMT_FP4
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     16.00  v_wmma_i32_16x16x64_iu8 v[16:23], v[0:7], v[8:15], v[16:23]

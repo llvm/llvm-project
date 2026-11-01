@@ -115,7 +115,8 @@ public:
           cudaUnified &&
           declareAttr.getDataClause().getValue() !=
               acc::DataClause::acc_declare_device_resident &&
-          (!globalVar || !globalVar.isConstant());
+          (!globalVar || !globalVar.isConstant() ||
+           globalVar.isCompilerGenerated());
       if (makeUnifiedDeclaration)
         makeDeviceGlobalDeclaration(*deviceGlobal);
 

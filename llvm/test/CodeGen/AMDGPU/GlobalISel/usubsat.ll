@@ -653,16 +653,12 @@ define i32 @v_usubsat_v4i8(i32 %lhs.arg, i32 %rhs.arg) {
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 8, v1
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 24, v1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v1.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v2.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v4.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v1.h
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v3.l
+; GFX11-TRUE16-NEXT:    v_perm_b32 v6, v2, v0, 0x5040100
+; GFX11-TRUE16-NEXT:    v_perm_b32 v7, v4, v1, 0x5040100
+; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v3, v0, 0x5040302
 ; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v2, 8, v6 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v3, 8, v7 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v5.l
+; GFX11-TRUE16-NEXT:    v_perm_b32 v1, v5, v1, 0x5040302
 ; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v0, 8, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_pk_sub_u16 v2, v2, v3 clamp
 ; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v1, 8, v1 op_sel_hi:[0,1]

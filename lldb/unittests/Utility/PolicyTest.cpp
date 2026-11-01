@@ -74,11 +74,24 @@ TEST(PolicyTest, PublicStateRunningExpression) {
 TEST(PolicyTest, ScriptedExtensionCall) {
   Policy p = Policy::CreateScriptedExtensionCall();
   EXPECT_TRUE(p.capabilities.can_bypass_target_api_mutex);
+  EXPECT_FALSE(p.capabilities.can_run_all_threads);
+  EXPECT_FALSE(p.capabilities.can_try_all_threads);
+  // An extension may still evaluate expressions and run commands; it just
+  // can't let the inferior's other threads run while doing so.
+  EXPECT_TRUE(p.capabilities.can_evaluate_expressions);
 
   PolicyStack::Guard guard = PolicyStack::Get().PushPrivateState();
   Policy nested = Policy::CreateScriptedExtensionCall();
   EXPECT_EQ(nested.view, Policy::View::Private);
   EXPECT_TRUE(nested.capabilities.can_bypass_target_api_mutex);
+  EXPECT_FALSE(nested.capabilities.can_run_all_threads);
+}
+
+TEST(PolicyTest, ScriptedExtensionCallWithdrawalIsInherited) {
+  PolicyStack::Guard guard = PolicyStack::Get().PushScriptedExtensionCall();
+  Policy nested = Policy::CreatePrivateState();
+  EXPECT_FALSE(nested.capabilities.can_run_all_threads);
+  EXPECT_FALSE(nested.capabilities.can_try_all_threads);
 }
 
 TEST(PolicyTest, StackDefaultIsPublicState) {

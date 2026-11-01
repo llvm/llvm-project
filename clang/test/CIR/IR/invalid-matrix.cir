@@ -1,0 +1,69 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+// expected-error @below {{failed to verify 'element_type'}}
+cir.global external @vec_b = #cir.zero : !cir.matrix<4 x 4 x !cir.array<!s32i x 10>>
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @invalid_row_number() {
+  // expected-error@+1 {{the number of matrix rows must be non-zero}}
+  %3 = cir.alloca !cir.matrix<0 x 4 x !s32i>, !cir.ptr<!cir.matrix<0 x 4 x !s32i>>
+  cir.return
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @invalid_column_number() {
+  // expected-error@+1 {{the number of matrix columns must be non-zero}}
+  %3 = cir.alloca !cir.matrix<4 x 0 x !s32i>, !cir.ptr<!cir.matrix<4 x 0 x !s32i>>
+  cir.return
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @negative_column_number() {
+  // expected-error@+1 {{custom op 'cir.alloca' invalid kind of attribute specified}}
+  %3 = cir.alloca !cir.matrix<4 x -1 x !s32i>, !cir.ptr<!cir.matrix<4 x -1 x !s32i>>
+  cir.return
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @builtin_tranpose_different_element_type() {
+  %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>
+  %1 = cir.alloca "b" align(4) init : !cir.ptr<!cir.matrix<2 x 3 x !cir.float>>
+  %2 = cir.load align(4) %0 : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>, !cir.matrix<3 x 2 x !cir.float>
+  // expected-error@+1 {{op operand type '!cir.matrix<3 x 2 x !cir.float>' expects result type of '!cir.matrix<2 x 3 x !cir.float>' but got '!cir.matrix<2 x 3 x !cir.int<s, 32>>}}
+  %3 = cir.matrix.transpose %2 : <3 x 2 x !cir.float>, !cir.matrix<2 x 3 x !s32i>
+  cir.return
+} 
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @builtin_tranpose_different_sizes() {
+  %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>
+  %1 = cir.alloca "b" align(4) init : !cir.ptr<!cir.matrix<2 x 3 x !cir.float>>
+  %2 = cir.load align(4) %0 : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>, !cir.matrix<3 x 2 x !cir.float>
+  // expected-error@+1 {{op operand type '!cir.matrix<3 x 2 x !cir.float>' expects result type of '!cir.matrix<2 x 3 x !cir.float>' but got '!cir.matrix<3 x 3 x !cir.float>}}
+  %3 = cir.matrix.transpose %2 : <3 x 2 x !cir.float>, !cir.matrix<3 x 3 x !cir.float>
+  cir.return
+} 

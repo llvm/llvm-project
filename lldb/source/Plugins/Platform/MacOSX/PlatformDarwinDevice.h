@@ -11,6 +11,7 @@
 
 #include "PlatformDarwin.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <string>
@@ -64,7 +65,8 @@ protected:
   const char *GetDeviceSupportDirectoryForOSVersion();
 
   virtual llvm::StringRef GetPlatformName() = 0;
-  virtual llvm::StringRef GetDeviceSupportDirectoryName() = 0;
+  virtual llvm::SmallVector<llvm::StringRef>
+  GetDeviceSupportDirectoryNames() = 0;
 
   std::mutex m_sdk_dir_mutex;
   SDKDirectoryInfoCollection m_sdk_directory_infos;

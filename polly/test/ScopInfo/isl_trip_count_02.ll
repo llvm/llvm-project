@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; TODO: We do not allow unbounded loops at the moment.
 ;

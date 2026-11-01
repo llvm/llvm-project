@@ -13,19 +13,16 @@ define void @forked_ptrs_simple(ptr nocapture readonly %Base1, ptr nocapture rea
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
-; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
-; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
@@ -905,7 +902,6 @@ define void @forked_ptrs_two_select(ptr nocapture readonly %Base1, ptr nocapture
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
-; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:

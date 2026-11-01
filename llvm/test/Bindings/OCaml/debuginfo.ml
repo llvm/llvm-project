@@ -28,12 +28,10 @@ let prepare_target llmod =
   let triple = Llvm_target.Target.default_triple () in
   let lltarget = Llvm_target.Target.by_triple triple in
   let llmachine = Llvm_target.TargetMachine.create ~triple lltarget in
-  let lldly =
-    Llvm_target.DataLayout.as_string
-      (Llvm_target.TargetMachine.data_layout llmachine)
+  let dl = Llvm_target.TargetMachine.data_layout llmachine
   in
   let _ = Llvm.set_target_triple triple llmod in
-  let _ = Llvm.set_data_layout lldly llmod in
+  let _ = Llvm.set_data_layout dl llmod in
   ()
 
 let new_module () =

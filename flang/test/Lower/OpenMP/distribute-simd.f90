@@ -61,7 +61,7 @@ end subroutine distribute_simd_simdlen
 ! CHECK-LABEL: func.func @_QPdistribute_simd_private(
 subroutine distribute_simd_private()
   integer, allocatable :: tmp
-  ! CHECK: %[[INDEX:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdistribute_simd_privateEindex_"}
+  ! CHECK: %[[INDEX:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdistribute_simd_privateEindex_")
   ! CHECK:      omp.teams
   !$omp teams
   ! CHECK:      omp.distribute

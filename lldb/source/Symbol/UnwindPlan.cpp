@@ -462,11 +462,11 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) const {
         LLDB_LOGF(log,
                   "UnwindPlan is invalid -- no unwind rows for UnwindPlan "
                   "'%s' at address %s",
-                  m_source_name.GetCString(), s.GetData());
+                  m_source_name.c_str(), s.GetData());
       } else {
         LLDB_LOGF(log,
                   "UnwindPlan is invalid -- no unwind rows for UnwindPlan '%s'",
-                  m_source_name.GetCString());
+                  m_source_name.c_str());
       }
     }
     return false;
@@ -485,12 +485,12 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) const {
         LLDB_LOGF(log,
                   "UnwindPlan is invalid -- no CFA register defined in row 0 "
                   "for UnwindPlan '%s' at address %s",
-                  m_source_name.GetCString(), s.GetData());
+                  m_source_name.c_str(), s.GetData());
       } else {
         LLDB_LOGF(log,
                   "UnwindPlan is invalid -- no CFA register defined in row 0 "
                   "for UnwindPlan '%s'",
-                  m_source_name.GetCString());
+                  m_source_name.c_str());
       }
     }
     return false;
@@ -508,9 +508,9 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) const {
 }
 
 void UnwindPlan::Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const {
-  if (!m_source_name.IsEmpty()) {
+  if (!m_source_name.empty()) {
     s.Printf("This UnwindPlan originally sourced from %s\n",
-             m_source_name.GetCString());
+             m_source_name.c_str());
   }
   s.PutCString("This UnwindPlan is sourced from the compiler: ");
   switch (m_plan_is_sourced_from_compiler) {
@@ -563,10 +563,10 @@ void UnwindPlan::Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const {
 }
 
 void UnwindPlan::SetSourceName(const char *source) {
-  m_source_name = ConstString(source);
+  m_source_name = llvm::StringRef(source).str();
 }
 
-ConstString UnwindPlan::GetSourceName() const { return m_source_name; }
+llvm::StringRef UnwindPlan::GetSourceName() const { return m_source_name; }
 
 const RegisterInfo *UnwindPlan::GetRegisterInfo(Thread *thread,
                                                 uint32_t unwind_reg) const {

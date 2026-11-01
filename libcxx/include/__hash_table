@@ -788,7 +788,7 @@ public:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique(_Args&&... __args) {
-    return std::__try_key_extraction<key_type>(
+    return std::__try_key_extraction<key_type, value_type>(
         [this](const key_type& __key, _Args&&... __args2) {
           size_t __hash   = hash_function()(__key);
           size_type __bc  = bucket_count();

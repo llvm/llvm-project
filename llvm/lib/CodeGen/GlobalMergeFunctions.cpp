@@ -238,7 +238,7 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
       auto *Inst = FI.IndexInstruction->lookup(InstIndex);
       auto *OrigC = Inst->getOperand(OpndIndex);
       if (OrigC->getType() != NewArg->getType()) {
-        IRBuilder<> Builder(Inst->getParent(), Inst->getIterator());
+        IRBuilder<> Builder(Inst->getIterator());
         Inst->setOperand(OpndIndex,
                          Builder.CreateAggregateCast(NewArg, OrigC->getType()));
       } else {

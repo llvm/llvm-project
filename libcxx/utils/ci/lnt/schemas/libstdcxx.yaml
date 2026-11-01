@@ -1,0 +1,43 @@
+# Schema definition for the libc++ benchmark suite when running it against libstdc++ and
+# submitting to a LNT instance. The metrics in this schema correspond to the metrics
+# gathered by libc++'s benchmark suite.
+format_version: '2'
+name: libstdcxx
+metrics:
+- name: execution_time
+  type: Real
+  display_name: Execution Time
+  unit: seconds
+  unit_abbrev: s
+- name: instructions
+  type: Real
+  display_name: Instructions Retired
+  unit: instructions
+  unit_abbrev: instr
+- name: max_rss
+  type: Real
+  display_name: Maximum Resident Set Size
+  unit: megabytes
+  unit_abbrev: mb
+- name: cycles
+  type: Real
+  display_name: Cycles Elapsed
+  unit: cycles
+  unit_abbrev: cycles
+- name: peak_memory
+  type: Real
+  display_name: Peak Memory Footprint
+  unit: megabytes
+  unit_abbrev: mb
+run_fields:
+# This is the version of libstdc++ being benchmarked (e.g. 16.2.0), not a LLVM revision. However,
+# LNT currently hardcodes the name of the order field as `llvm_project_revision` in several places,
+# so we must use that name.
+- name: llvm_project_revision
+  order: true
+machine_fields:
+- name: hardware
+- name: os
+- name: test_suite_commit
+- name: compiler
+- name: sdk

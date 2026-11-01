@@ -19,10 +19,12 @@ struct olMemAllocAlignedTypesTest
                                    void **Alloc) {
     ol_alloc_type_t AllocType = getTestParam();
     if (AllocType == OL_ALLOC_TYPE_HOST) {
-      return olMemAllocAlignedHost(this->Device, Size, Alignment, Alloc);
+      return olMemAllocAlignedHost(this->Context, this->Device, Size, Alignment,
+                                   Alloc);
     }
 
-    return olMemAllocAligned(this->Device, AllocType, Size, Alignment, Alloc);
+    return olMemAllocAligned(this->Context, this->Device, AllocType, Size,
+                             Alignment, Alloc);
   }
 };
 
@@ -40,11 +42,12 @@ TEST_P(olMemAllocAlignedTest, SuccessAllocMany) {
     void *Alloc = nullptr;
     ol_alloc_type_t AllocType = AllocTypes[I % 3];
     if (AllocType == OL_ALLOC_TYPE_HOST) {
-      ASSERT_SUCCESS(olMemAllocAlignedHost(Device, DefaultAllocSize * I,
-                                           DefaultAlignment, &Alloc));
+      ASSERT_SUCCESS(olMemAllocAlignedHost(
+          Context, Device, DefaultAllocSize * I, DefaultAlignment, &Alloc));
     } else {
-      ASSERT_SUCCESS(olMemAllocAligned(Device, AllocType, DefaultAllocSize * I,
-                                       DefaultAlignment, &Alloc));
+      ASSERT_SUCCESS(olMemAllocAligned(Context, Device, AllocType,
+                                       DefaultAllocSize * I, DefaultAlignment,
+                                       &Alloc));
     }
     ASSERT_NE(Alloc, nullptr);
 
@@ -52,43 +55,43 @@ TEST_P(olMemAllocAlignedTest, SuccessAllocMany) {
   }
 
   for (auto *A : Allocs) {
-    olMemFree(A);
+    olMemFree(Context, A);
   }
 }
 
 TEST_P(olMemAllocAlignedTest, InvalidNullDevice) {
   void *Alloc = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
-               olMemAllocAligned(nullptr, OL_ALLOC_TYPE_DEVICE, 1024,
+               olMemAllocAligned(Context, nullptr, OL_ALLOC_TYPE_DEVICE, 1024,
                                  DefaultAlignment, &Alloc));
 }
 
 TEST_P(olMemAllocAlignedTest, InvalidNullOutPtr) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
+               olMemAllocAligned(Context, Device, OL_ALLOC_TYPE_DEVICE, 1024,
                                  DefaultAlignment, nullptr));
 }
 
 TEST_P(olMemAllocAlignedTest, InvalidAlignmentZero) {
   void *Alloc = nullptr;
 
-  ASSERT_ERROR(
-      OL_ERRC_INVALID_ARGUMENT,
-      olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024, 0, &Alloc));
+  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
+               olMemAllocAligned(Context, Device, OL_ALLOC_TYPE_DEVICE, 1024, 0,
+                                 &Alloc));
 }
 
 TEST_P(olMemAllocAlignedTest, InvalidAlignmentNotAPowerOfTwo) {
   void *Alloc = nullptr;
 
-  ASSERT_ERROR(
-      OL_ERRC_INVALID_ARGUMENT,
-      olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024, 3, &Alloc));
+  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
+               olMemAllocAligned(Context, Device, OL_ALLOC_TYPE_DEVICE, 1024, 3,
+                                 &Alloc));
 }
 
 TEST_P(olMemAllocAlignedTest, InvalidHostType) {
   void *Alloc = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
-               olMemAllocAligned(Device, OL_ALLOC_TYPE_HOST, 1024,
+               olMemAllocAligned(Context, Device, OL_ALLOC_TYPE_HOST, 1024,
                                  DefaultAlignment, &Alloc));
 }
 
@@ -100,7 +103,7 @@ TEST_P(olMemAllocAlignedTest, CudaExceedDefaultAlignment) {
   void *Alloc = nullptr;
   // The default page size for cuda is 64 KB.
   ASSERT_ERROR(OL_ERRC_UNSUPPORTED,
-               olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
+               olMemAllocAligned(Context, Device, OL_ALLOC_TYPE_DEVICE, 1024,
                                  1024 * 64 * 64 * 64, &Alloc));
   ASSERT_EQ(Alloc, nullptr);
 }
@@ -116,7 +119,7 @@ TEST_P(olMemAllocAlignedTypesTest, SuccessAllocDifferentAlignments) {
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
     ASSERT_SUCCESS(allocateDeviceOrHost(DefaultAllocSize, Alignment, &Alloc));
     ASSERT_NE(Alloc, nullptr);
-    olMemFree(Alloc);
+    olMemFree(Context, Alloc);
   }
 }
 
@@ -142,6 +145,6 @@ TEST_P(olMemAllocAlignedTypesTest, SuccessMemcpyDiferentAlignments) {
       ASSERT_EQ(Val, 42);
     }
 
-    ASSERT_SUCCESS(olMemFree(Alloc));
+    ASSERT_SUCCESS(olMemFree(Context, Alloc));
   }
 }

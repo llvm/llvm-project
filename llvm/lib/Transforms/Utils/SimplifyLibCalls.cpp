@@ -28,8 +28,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
@@ -44,6 +46,8 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+
+#define DEBUG_TYPE "simplify-lib-calls"
 
 static cl::opt<bool>
     EnableUnsafeFPShrink("enable-double-float-shrink", cl::Hidden,
@@ -87,6 +91,10 @@ static cl::opt<bool> MinExistingHotColdNewHint(
     "min-existing-hot-cold-new-hint", cl::Hidden, cl::init(false),
     cl::desc("Take the minimum of compiler hint and existing hint when "
              "optimizing existing hot/cold operator new library calls"));
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 namespace {
 
@@ -435,7 +443,7 @@ Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
   // We have enough information to now generate the memcpy call to do the
   // concatenation for us.  Make a memcpy to copy the nul byte with align = 1.
   B.CreateMemCpy(CpyDst, Align(1), Src, Align(1),
-                 TLI->getAsSizeT(Len + 1, *B.GetInsertBlock()->getModule()));
+                 TLI->getAsSizeT(Len + 1, *B.getModule()));
   return Dst;
 }
 
@@ -501,6 +509,10 @@ static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
     Value *Zero = ConstantInt::get(NBytes->getType(), 0);
     Value *And = B.CreateICmpNE(NBytes, Zero);
     Cmp = B.CreateLogicalAnd(And, Cmp);
+    // The and above is based on the byte count and the query, neither of which
+    // we know without value profiling, so mark the profile as unknown.
+    if (auto *SI = dyn_cast<SelectInst>(Cmp))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   }
 
   Value *NullPtr = Constant::getNullValue(CI->getType());
@@ -1070,7 +1082,8 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
       });
       return B.CreateSelect(SI->getCondition(),
                             ConstantInt::get(CI->getType(), LenTrue - 1),
-                            ConstantInt::get(CI->getType(), LenFalse - 1));
+                            ConstantInt::get(CI->getType(), LenFalse - 1), "",
+                            ProfcheckDisableMetadataFixes ? nullptr : SI);
     }
   }
 
@@ -1262,7 +1275,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memrchr.char0cmp");
-      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
+      return B.CreateSelectWithUnknownProfile(Cmp, SrcStr, NullPtr, DEBUG_TYPE,
+                                              "memrchr.sel");
     }
   }
 
@@ -1357,7 +1371,11 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memchr.char0cmp");
-      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
+      // The condition depends on the value of the string being equal to the
+      // query, neither of which we know without value profiling, so mark the
+      // profile unknown.
+      return B.CreateSelectWithUnknownProfile(Cmp, SrcStr, NullPtr, DEBUG_TYPE,
+                                              "memchr.sel");
     }
   }
 
@@ -1379,7 +1397,9 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
                                  "memchr.cmp");
     Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos),
                                          "memchr.ptr");
-    return B.CreateSelect(Cmp, NullPtr, SrcPlus);
+    // The condition is dependent upon the value of n, which we cannot infer
+    // without value profiling, so mark the profile unknown.
+    return B.CreateSelectWithUnknownProfile(Cmp, NullPtr, SrcPlus, DEBUG_TYPE);
   }
 
   if (Str.size() == 0)
@@ -1418,14 +1438,20 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       Value *NGtPos = B.CreateICmp(ICmpInst::ICMP_UGT, Size, PosVal);
       Value *And = B.CreateAnd(CEqSPos, NGtPos);
       Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, PosVal);
-      Sel1 = B.CreateSelect(And, SrcPlus, NullPtr, "memchr.sel1");
+      // The condition depends on the value of the query and size, neither of
+      // which we know without value profiling, so mark the profile unknown.
+      Sel1 = B.CreateSelectWithUnknownProfile(And, SrcPlus, NullPtr, DEBUG_TYPE,
+                                              "memchr.sel1");
     }
 
     Value *Str0 = ConstantInt::get(Int8Ty, Str[0]);
     Value *CEqS0 = B.CreateICmpEQ(Str0, CharVal);
     Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
     Value *And = B.CreateAnd(NNeZ, CEqS0);
-    return B.CreateSelect(And, SrcStr, Sel1, "memchr.sel2");
+    // The condition depends on the value of the query and size, neither of
+    // which we know without value profiling, so mark the profile unknown.
+    return B.CreateSelectWithUnknownProfile(And, SrcStr, Sel1, DEBUG_TYPE,
+                                            "memchr.sel2");
   }
 
   if (!LenC) {
@@ -1519,8 +1545,13 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
 
   // Finally merge both checks and cast to pointer type. The inttoptr
   // implicitly zexts the i1 to intptr type.
-  return B.CreateIntToPtr(B.CreateLogicalAnd(Bounds, Bits, "memchr"),
-                          CI->getType());
+  Value *Memchr = B.CreateLogicalAnd(Bounds, Bits, "memchr");
+  // We construct an and between the value of the memory and the bytes to search
+  // for. We cannot infer how often this would be true without value profiling
+  // for the query, so mark the profile unknown.
+  if (auto *SI = dyn_cast<SelectInst>(Memchr))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
+  return B.CreateIntToPtr(Memchr, CI->getType());
 }
 
 // Optimize a memcmp or, when StrNCmp is true, strncmp call CI with constant
@@ -1993,11 +2024,19 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
 // Math Library Optimizations
 //===----------------------------------------------------------------------===//
 
+/// Preserve the accuracy requirement of \p Old on the replacement \p New.
+static void copyFPMath(const CallInst &Old, Value *New) {
+  if (auto *NewI = dyn_cast<Instruction>(New))
+    if (MDNode *MD = Old.getMetadata(LLVMContext::MD_fpmath))
+      NewI->setMetadata(LLVMContext::MD_fpmath, MD);
+}
+
 // Replace a libcall \p CI with a call to intrinsic \p IID
 static Value *replaceUnaryCall(CallInst *CI, IRBuilderBase &B,
                                Intrinsic::ID IID) {
   Value *NewCall = B.CreateUnaryIntrinsic(IID, CI->getArgOperand(0), CI);
   NewCall->takeName(CI);
+  copyFPMath(*CI, NewCall);
   return copyFlags(*CI, NewCall);
 }
 
@@ -2006,6 +2045,7 @@ static Value *replaceBinaryCall(CallInst *CI, IRBuilderBase &B,
   Value *NewCall = B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
                                            CI->getArgOperand(1), CI);
   NewCall->takeName(CI);
+  copyFPMath(*CI, NewCall);
   return copyFlags(*CI, NewCall);
 }
 
@@ -2451,6 +2491,15 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
           *NegInf = ConstantFP::getInfinity(Ty, true);
     Value *FCmp = B.CreateFCmpOEQ(Base, NegInf, "isinf");
     Sqrt = B.CreateSelect(FCmp, PosInf, Sqrt);
+    // We assume that the case where x == -infinity is unlikely, so we assign
+    // unlikely branch weights to that arm of the select.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (auto *SqrtSI = dyn_cast<SelectInst>(Sqrt))
+        setBranchWeights(
+            *SqrtSI,
+            {MDBuilder::kUnlikelyBranchWeight, MDBuilder::kLikelyBranchWeight},
+            /*IsExpected=*/false);
+    }
   }
 
   // If the exponent is negative, then get the reciprocal.
@@ -3068,12 +3117,12 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
     // If the argument is an instruction, it must dominate all uses so put our
     // sincos call there.
-    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
+    B.SetInsertPoint(++ArgInst->getIterator());
   } else {
     // Otherwise (e.g. for a constant) the beginning of the function is as
     // good a place as any.
     BasicBlock &EntryBB = B.GetInsertBlock()->getParent()->getEntryBlock();
-    B.SetInsertPoint(&EntryBB, EntryBB.begin());
+    B.SetInsertPoint(EntryBB.begin());
   }
 
   SinCos = B.CreateCall(Callee, Arg, "sincospi");
@@ -3089,12 +3138,20 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   return true;
 }
 
+/// Flushing a denormal to +0.0 breaks f(-x) = -f(x) for odd f.
+static bool mayFlushDenormalsToPositiveZero(const CallInst *CI) {
+  DenormalMode Mode = CI->getFunction()->getDenormalMode(
+      CI->getType()->getScalarType()->getFltSemantics());
+  return Mode.inputsMayBePositiveZero() || Mode.outputsMayBePositiveZero();
+}
+
 static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
                                     IRBuilderBase &B) {
   Value *X;
   Value *Src = CI->getArgOperand(0);
 
-  if (match(Src, m_OneUse(m_FNeg(m_Value(X))))) {
+  if (match(Src, m_OneUse(m_FNeg(m_Value(X)))) &&
+      (IsEven || !mayFlushDenormalsToPositiveZero(CI))) {
     auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     auto *CallInst = copyFlags(*CI, Call);
     if (IsEven) {
@@ -3127,6 +3184,10 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_coshl:
     return optimizeSymmetricCall(CI, /*IsEven*/ true, B);
 
+  case LibFunc_cbrt:
+  case LibFunc_cbrtf:
+  case LibFunc_cbrtl:
+
   case LibFunc_sin:
   case LibFunc_sinf:
   case LibFunc_sinl:
@@ -3135,6 +3196,14 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_sinhf:
   case LibFunc_sinhl:
 
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asinl:
+
+  case LibFunc_asinh:
+  case LibFunc_asinhf:
+  case LibFunc_asinhl:
+
   case LibFunc_tan:
   case LibFunc_tanf:
   case LibFunc_tanl:
@@ -3142,6 +3211,10 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_tanh:
   case LibFunc_tanhf:
   case LibFunc_tanhl:
+
+  case LibFunc_atan:
+  case LibFunc_atanf:
+  case LibFunc_atanl:
 
   case LibFunc_erf:
   case LibFunc_erff:
@@ -3308,7 +3381,14 @@ Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilderBase &B) {
   V = B.CreateIntCast(V, RetType, false);
 
   Value *Cond = B.CreateICmpNE(Op, Constant::getNullValue(ArgType));
-  return B.CreateSelect(Cond, V, ConstantInt::get(RetType, 0));
+  Value *S = B.CreateSelect(Cond, V, ConstantInt::get(RetType, 0));
+  if (ProfcheckDisableMetadataFixes)
+    return S;
+  if (auto *SI = dyn_cast<SelectInst>(S))
+    setBranchWeights(
+        *SI, {MDBuilder::kLikelyBranchWeight, MDBuilder::kUnlikelyBranchWeight},
+        /*IsExpected=*/false);
+  return S;
 }
 
 Value *LibCallSimplifier::optimizeFls(CallInst *CI, IRBuilderBase &B) {
@@ -4151,6 +4231,18 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp2:
   case LibFunc_exp2f:
     return optimizeExp2(CI, Builder);
+  case LibFunc_scalbn:
+  case LibFunc_scalbnf:
+  case LibFunc_scalbnl:
+    // LLVM floating-point types have radix 2, so scalbn is equivalent to
+    // ldexp. Do not replace a libcall that may set errno.
+    if (CI->doesNotAccessMemory()) {
+      Value *NewCall =
+          Builder.CreateLdexp(CI->getArgOperand(0), CI->getArgOperand(1), CI);
+      NewCall->takeName(CI);
+      return copyFlags(*CI, NewCall);
+    }
+    return nullptr;
   case LibFunc_fabsf:
   case LibFunc_fabs:
   case LibFunc_fabsl:

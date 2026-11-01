@@ -1642,7 +1642,7 @@ static SPCC::CondCodes FPCondCCodeToFCC(ISD::CondCode CC) {
 SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                                          const SparcSubtarget &STI)
     : TargetLowering(TM, STI), Subtarget(&STI) {
-  MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  MVT PtrVT = Subtarget->is64Bit() ? MVT::i64 : MVT::i32;
 
   // Instructions which use registers as conditionals examine all the
   // bits (as does the pseudo SELECT_CC expansion). I don't think it

@@ -1623,6 +1623,7 @@ defm S_CBRANCH_EXECNZ : SOPP_With_Relaxation <
 >;
 } // End Uses = [EXEC]
 
+let hasSideEffects = 1 in {
 defm S_CBRANCH_CDBGSYS : SOPP_With_Relaxation <
   "s_cbranch_cdbgsys" , (ins SOPPBrTarget:$simm16),
   "$simm16"
@@ -1642,6 +1643,7 @@ defm S_CBRANCH_CDBGUSER : SOPP_With_Relaxation <
   "s_cbranch_cdbguser" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
+} // End hasSideEffects = 1
 
 } // End isBranch = 1
 } // End isTerminator = 1

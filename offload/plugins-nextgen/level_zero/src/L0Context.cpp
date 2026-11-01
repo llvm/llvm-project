@@ -76,7 +76,8 @@ Error L0ContextTy::init() {
     CleanupOnError();
     return Err;
   }
-  if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions())) {
+  if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions(),
+                                               zeContext)) {
     if (auto DeinitErr = EventPool.deinit())
       Err = joinErrors(std::move(Err), std::move(DeinitErr));
     CleanupOnError();
@@ -156,16 +157,6 @@ Error L0ContextTy::deinit() {
   if (zeContext)
     CALL_ZE_RET_ERROR(zeContextDestroy, zeContext);
   return Plugin::success();
-}
-
-StagingBufferTy &L0ContextTy::getStagingBuffer() {
-  auto &TLS = Plugin.getContextTLS(getZeContext());
-  auto &Buffer = TLS.getStagingBuffer();
-  const auto &Options = Plugin.getOptions();
-  if (!Buffer.initialized())
-    Buffer.init(getZeContext(), Options.StagingBufferSize,
-                Options.StagingBufferCount);
-  return Buffer;
 }
 
 } // namespace llvm::omp::target::plugin

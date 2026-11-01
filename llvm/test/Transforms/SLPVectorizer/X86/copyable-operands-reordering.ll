@@ -5,30 +5,25 @@ define i64 @test(ptr %buf) {
 ; CHECK-LABEL: define i64 @test(
 ; CHECK-SAME: ptr [[BUF:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[BUF]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 poison, i32 1, i32 1, i32 1>, i32 [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> <i32 24, i32 0, i32 0, i32 0>, [[TMP5]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[BUF]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i16> [[TMP1]], <i16 24, i16 16, i16 8, i16 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i64
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i8>, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = zext <2 x i8> [[TMP8]] to <2 x i32>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i32> <i32 poison, i32 1, i32 1, i32 1>, <4 x i32> [[TMP17]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> <i32 16, i32 0, i32 0, i32 0>, [[TMP20]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint <4 x i32> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i32> <i32 poison, i32 1, i32 1, i32 1>, <4 x i32> [[TMP17]], <4 x i32> <i32 5, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> <i32 8, i32 0, i32 0, i32 0>, [[TMP22]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or disjoint <4 x i32> [[TMP7]], [[TMP9]]
-; CHECK-NEXT:    [[TMP19:%.*]] = load <4 x i8>, ptr [[ARRAYIDX8]], align 1
-; CHECK-NEXT:    [[TMP12:%.*]] = zext <4 x i8> [[TMP19]] to <4 x i32>
-; CHECK-NEXT:    [[TMP13:%.*]] = or disjoint <4 x i32> [[TMP18]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul <4 x i32> [[TMP13]], <i32 32, i32 24, i32 16, i32 8>
-; CHECK-NEXT:    [[ARRAYIDX27:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 7
-; CHECK-NEXT:    [[TMP16:%.*]] = load i8, ptr [[ARRAYIDX27]], align 1
-; CHECK-NEXT:    [[CONV28:%.*]] = zext i8 [[TMP16]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i32> [[TMP14]] to <4 x i64>
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 6
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i8> [[TMP8]] to <2 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP7]], i64 [[TMP4]], i64 2
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i8>, ptr [[ARRAYIDX22]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = zext <2 x i8> [[TMP9]] to <2 x i64>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i64> [[TMP10]], <2 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP10]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i64> [[TMP14]], <4 x i64> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
+; CHECK-NEXT:    [[TMP15:%.*]] = mul <4 x i64> [[TMP13]], <i64 16, i64 24, i64 32, i64 8>
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP15]])
+; CHECK-NEXT:    [[CONV28:%.*]] = extractelement <2 x i64> [[TMP10]], i64 1
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i64 [[TMP11]], [[CONV28]]
 ; CHECK-NEXT:    ret i64 [[OP_RDX]]
 ;

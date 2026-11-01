@@ -303,13 +303,45 @@ static Type convertStructType(spirv::StructType type,
 
 namespace {
 
-template <typename OpTy>
-static NamedAttrList collectAttrsForConversion(OpTy op) {
+template <typename TargetOp, typename SourceOp>
+static LogicalResult
+collectAttrsForConversion(SourceOp op,
+                          typename TargetOp::Properties &properties,
+                          SmallVectorImpl<NamedAttribute> &discardableAttrs) {
   NamedAttrList attrs(op->getDiscardableAttrDictionary());
-  if (auto properties =
+  if (auto sourceProperties =
           dyn_cast_or_null<DictionaryAttr>(op->getPropertiesAsAttribute()))
-    attrs.append(properties.getValue());
-  return attrs;
+    attrs.append(sourceProperties.getValue());
+
+  if constexpr (std::is_same_v<typename TargetOp::Properties,
+                               EmptyProperties>) {
+    llvm::append_range(discardableAttrs, attrs);
+    return success();
+  }
+
+  TargetOp::populateDefaultProperties(
+      OperationName(TargetOp::getOperationName(), op->getContext()),
+      properties);
+  if (failed(TargetOp::setPropertiesFromAttr(
+          properties, attrs.getDictionary(op->getContext()),
+          [&]() { return op.emitError("failed to convert properties"); })))
+    return failure();
+
+  auto convertedProperties = dyn_cast_or_null<DictionaryAttr>(
+      TargetOp::getPropertiesAsAttr(op->getContext(), properties));
+  for (NamedAttribute attr : attrs) {
+    StringRef name = attr.getName().getValue();
+    bool isProperty = convertedProperties && convertedProperties.contains(name);
+    if (name == "operand_segment_sizes")
+      isProperty |= convertedProperties &&
+                    convertedProperties.contains("operandSegmentSizes");
+    if (name == "result_segment_sizes")
+      isProperty |= convertedProperties &&
+                    convertedProperties.contains("resultSegmentSizes");
+    if (!isProperty)
+      discardableAttrs.push_back(attr);
+  }
+  return success();
 }
 
 class AccessChainPattern : public SPIRVToLLVMConversion<spirv::AccessChainOp> {
@@ -442,9 +474,13 @@ public:
       rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(constOp, dstType, dstAttr);
       return success();
     }
+    LLVM::ConstantOp::Properties properties{};
+    SmallVector<NamedAttribute> discardableAttrs;
+    if (failed(collectAttrsForConversion<LLVM::ConstantOp>(constOp, properties,
+                                                           discardableAttrs)))
+      return failure();
     rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(
-        constOp, dstType, adaptor.getOperands(),
-        collectAttrsForConversion(constOp));
+        constOp, dstType, adaptor.getOperands(), properties, discardableAttrs);
     return success();
   }
 };
@@ -653,8 +689,13 @@ public:
     auto dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
+    typename LLVMOp::Properties properties{};
+    SmallVector<NamedAttribute> discardableAttrs;
+    if (failed(collectAttrsForConversion<LLVMOp>(op, properties,
+                                                 discardableAttrs)))
+      return failure();
     rewriter.template replaceOpWithNewOp<LLVMOp>(
-        op, dstType, adaptor.getOperands(), collectAttrsForConversion(op));
+        op, dstType, adaptor.getOperands(), properties, discardableAttrs);
     return success();
   }
 };
@@ -887,13 +928,19 @@ public:
   LogicalResult
   matchAndRewrite(spirv::FunctionCallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    LLVM::CallOp::Properties properties{};
+    SmallVector<NamedAttribute> discardableAttrs;
+    if (failed(collectAttrsForConversion<LLVM::CallOp>(callOp, properties,
+                                                       discardableAttrs)))
+      return failure();
+    properties.operandSegmentSizes = {
+        static_cast<int32_t>(adaptor.getOperands().size()), 0};
+    properties.op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
+
     if (callOp.getNumResults() == 0) {
-      auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-          callOp, TypeRange(), adaptor.getOperands(),
-          collectAttrsForConversion(callOp));
-      newOp.getProperties().operandSegmentSizes = {
-          static_cast<int32_t>(adaptor.getOperands().size()), 0};
-      newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
+      rewriter.replaceOpWithNewOp<LLVM::CallOp>(callOp, TypeRange(),
+                                                adaptor.getOperands(),
+                                                properties, discardableAttrs);
       return success();
     }
 
@@ -901,12 +948,8 @@ public:
     auto dstType = getTypeConverter()->convertType(callOp.getType(0));
     if (!dstType)
       return rewriter.notifyMatchFailure(callOp, "type conversion failed");
-    auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        callOp, dstType, adaptor.getOperands(),
-        collectAttrsForConversion(callOp));
-    newOp.getProperties().operandSegmentSizes = {
-        static_cast<int32_t>(adaptor.getOperands().size()), 0};
-    newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
+        callOp, dstType, adaptor.getOperands(), properties, discardableAttrs);
     return success();
   }
 };
@@ -1951,9 +1994,14 @@ public:
       return success();
     }
 
-    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
-        bitcastOp, dstType, adaptor.getOperands(),
-        collectAttrsForConversion(bitcastOp));
+    LLVM::BitcastOp::Properties properties{};
+    SmallVector<NamedAttribute> discardableAttrs;
+    if (failed(collectAttrsForConversion<LLVM::BitcastOp>(bitcastOp, properties,
+                                                          discardableAttrs)))
+      return failure();
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(bitcastOp, dstType,
+                                                 adaptor.getOperands(),
+                                                 properties, discardableAttrs);
     return success();
   }
 };

@@ -8,7 +8,7 @@
 // masks in the main loop.
 
 func.func @conv(%arg0: tensor<1x1080x1962x48xi32>, %arg1: tensor<1x43x48xi32>) -> tensor<1x1080x1920x48xi32> {
-// CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (-(48 mod s0) + 48)>
+// CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (-(48 mod s0) + 48, 0)>
 
 // CHECK-LABEL:   func.func @conv(
 // CHECK-DAG:       %[[C_43:.*]] = arith.constant 43 : index
@@ -20,7 +20,7 @@ func.func @conv(%arg0: tensor<1x1080x1962x48xi32>, %arg1: tensor<1x43x48xi32>) -
 // CHECK:           %[[VSCALE_X_4:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
 
 // Loop over the channel/depth dim - the main part after vectorisation (vectorized, no masking)
-// CHECK:               %[[UB_DEPTH_LOOP:.*]] = affine.apply #[[$MAP]](){{\[}}%[[VSCALE_X_4]]]
+// CHECK:               %[[UB_DEPTH_LOOP:.*]] = affine.max #[[$MAP]](){{\[}}%[[VSCALE_X_4]]]
 // CHECK-NEXT:          %[[VAL_21:.*]] = scf.for {{.*}} to %[[UB_DEPTH_LOOP]] step %[[VSCALE_X_4]]
 // Loop over the Filter width dim
 // CHECK:                 scf.for %{{.*}} = %[[C0]] to %[[C_43]] step %[[C1]] {{.*}} -> (tensor<1x1x4x?xi32>) {

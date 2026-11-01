@@ -146,9 +146,6 @@ if getattr(config, "lldb_enable_mte", False):
 if config.lldb_enable_lua:
     config.available_features.add("lua")
 
-if config.lldb_enable_lzma:
-    config.available_features.add("lzma")
-
 if shutil.which("xz") is not None:
     config.available_features.add("xz")
 

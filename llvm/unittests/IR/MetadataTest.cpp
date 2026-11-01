@@ -44,7 +44,8 @@ TEST(ContextAndReplaceableUsesTest, FromContext) {
 
 TEST(ContextAndReplaceableUsesTest, FromReplaceableUses) {
   LLVMContext Context;
-  ContextAndReplaceableUses CRU(std::make_unique<ReplaceableMetadataImpl>(Context));
+  ContextAndReplaceableUses CRU(
+      std::make_unique<ReplaceableUsesWithContext>(Context));
   EXPECT_EQ(&Context, &CRU.getContext());
   EXPECT_TRUE(CRU.hasReplaceableUses());
   EXPECT_TRUE(CRU.getReplaceableUses());
@@ -53,7 +54,7 @@ TEST(ContextAndReplaceableUsesTest, FromReplaceableUses) {
 TEST(ContextAndReplaceableUsesTest, makeReplaceable) {
   LLVMContext Context;
   ContextAndReplaceableUses CRU(Context);
-  CRU.makeReplaceable(std::make_unique<ReplaceableMetadataImpl>(Context));
+  CRU.makeReplaceable(std::make_unique<ReplaceableUsesWithContext>(Context));
   EXPECT_EQ(&Context, &CRU.getContext());
   EXPECT_TRUE(CRU.hasReplaceableUses());
   EXPECT_TRUE(CRU.getReplaceableUses());
@@ -61,7 +62,7 @@ TEST(ContextAndReplaceableUsesTest, makeReplaceable) {
 
 TEST(ContextAndReplaceableUsesTest, takeReplaceableUses) {
   LLVMContext Context;
-  auto ReplaceableUses = std::make_unique<ReplaceableMetadataImpl>(Context);
+  auto ReplaceableUses = std::make_unique<ReplaceableUsesWithContext>(Context);
   auto *Ptr = ReplaceableUses.get();
   ContextAndReplaceableUses CRU(std::move(ReplaceableUses));
   ReplaceableUses = CRU.takeReplaceableUses();
@@ -120,6 +121,13 @@ protected:
   }
   ConstantAsMetadata *getConstantAsMetadata() {
     return ConstantAsMetadata::get(getConstant());
+  }
+  /// Uses of \a ConstantData are not tracked, so tests that replace or delete
+  /// a constant need one with a use list.
+  ConstantAsMetadata *getGlobalAsMetadata() {
+    return ConstantAsMetadata::get(new GlobalVariable(
+        M, Type::getInt8Ty(Context), false, GlobalValue::ExternalLinkage,
+        nullptr, "g" + Twine(Counter++)));
   }
   DIType *getCompositeType() {
     return DICompositeType::getDistinct(Context, dwarf::DW_TAG_structure_type,
@@ -5208,9 +5216,12 @@ TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
   EXPECT_TRUE(MD->getValue() == GV0.get());
   ASSERT_TRUE(GV0->use_empty());
 
+  TrackingMDRef Ref(MD);
   std::unique_ptr<GlobalVariable> GV1(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  // RAUW updates `Ref`.
   GV0->replaceAllUsesWith(GV1.get());
+  MD = cast<ValueAsMetadata>(Ref.get());
   EXPECT_TRUE(MD->getValue() == GV1.get());
 }
 
@@ -5218,18 +5229,18 @@ TEST_F(ValueAsMetadataTest, handleRAUWWithTypeChange) {
   // Test that handleRAUW supports type changes.
   // This is helpful in cases where poison values are used to encode
   // types in metadata, e.g. in type annotations.
-  // Changing the type stored in metadata requires to change the type of
-  // the stored poison value.
-  auto *I32Poison = PoisonValue::get(Type::getInt32Ty(Context));
   auto *I64Poison = PoisonValue::get(Type::getInt64Ty(Context));
-  auto *MD = ConstantAsMetadata::get(I32Poison);
+  auto *MD = getGlobalAsMetadata();
+  Value *GV = MD->getValue();
+  TrackingMDRef Ref(MD);
 
-  EXPECT_EQ(MD->getValue(), I32Poison);
+  EXPECT_EQ(MD->getValue(), GV);
   EXPECT_NE(MD->getValue(), I64Poison);
 
-  ValueAsMetadata::handleRAUW(I32Poison, I64Poison);
+  ValueAsMetadata::handleRAUW(GV, I64Poison);
+  MD = cast<ConstantAsMetadata>(Ref.get());
 
-  EXPECT_NE(MD->getValue(), I32Poison);
+  EXPECT_NE(MD->getValue(), GV);
   EXPECT_EQ(MD->getValue(), I64Poison);
 }
 
@@ -5252,8 +5263,7 @@ TEST_F(ValueAsMetadataTest, TempTempReplacement) {
 
 TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
   // Create a constant.
-  ConstantAsMetadata *CI =
-      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
+  ConstantAsMetadata *CI = getGlobalAsMetadata();
 
   // Create a temporary to prevent nodes from resolving.
   auto Temp = MDTuple::getTemporary(Context, {});
@@ -5614,7 +5624,7 @@ typedef MetadataTest MDTupleAllocationTest;
 TEST_F(MDTupleAllocationTest, Tracking) {
   // Make sure that the move constructor and move assignment op
   // for MDOperand correctly adjust tracking information.
-  auto *Value1 = getConstantAsMetadata();
+  auto *Value1 = getGlobalAsMetadata();
   MDTuple *A = MDTuple::getDistinct(Context, {Value1, Value1});
   EXPECT_EQ(A->getOperand(0), Value1);
   EXPECT_EQ(A->getOperand(1), Value1);
@@ -5630,7 +5640,7 @@ TEST_F(MDTupleAllocationTest, Tracking) {
   EXPECT_EQ(NewOps1.get(), static_cast<Metadata *>(Value1));
   EXPECT_EQ(NewOps2.get(), static_cast<Metadata *>(Value1));
 
-  auto *Value2 = getConstantAsMetadata();
+  auto *Value2 = getGlobalAsMetadata();
   Value *V1 = Value1->getValue();
   Value *V2 = Value2->getValue();
   ValueAsMetadata::handleRAUW(V1, V2);
@@ -5723,7 +5733,7 @@ TEST_F(MDTupleAllocationTest, Resize) {
 
 TEST_F(MDTupleAllocationTest, Tracking2) {
   // Resize a tuple and check that we can still RAUW one of its operands.
-  auto *Value1 = getConstantAsMetadata();
+  auto *Value1 = getGlobalAsMetadata();
   MDTuple *A = getTuple();
   A->push_back(Value1);
   A->push_back(Value1);
@@ -5732,7 +5742,7 @@ TEST_F(MDTupleAllocationTest, Tracking2) {
   EXPECT_EQ(A->getOperand(1), Value1);
   EXPECT_EQ(A->getOperand(2), Value1);
 
-  auto *Value2 = getConstantAsMetadata();
+  auto *Value2 = getGlobalAsMetadata();
   Value *V1 = Value1->getValue();
   Value *V2 = Value2->getValue();
   ValueAsMetadata::handleRAUW(V1, V2);

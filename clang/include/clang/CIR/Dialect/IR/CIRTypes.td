@@ -402,6 +402,20 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
 }
 
 //===----------------------------------------------------------------------===//
+// CUDADeviceSurfaceType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceSurfaceType :
+    CIR_Type<"CUDADeviceSurface", "cuda_surface"> {
+  let summary = "CUDA device surface reference type";
+  let description = [{
+    `!cir.cuda_surface` represents a CUDA built-in surface reference in CIR.
+    The type preserves surface semantics at the CIR level and lowers to the NVPTX
+    device-side handle representation (`i64`) during lowering to LLVM IR.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CUDADeviceTextureType
 //===----------------------------------------------------------------------===//
 
@@ -482,7 +496,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     ```
     vector-type ::= !cir.vector<size x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
-    element-type ::= float-type | integer-type | pointer-type
+    element-type ::= float-type | integer-type | bool-type
     ```
 
     The `element-type` must be a scalar CIR type. Zero-sized vectors are not
@@ -527,6 +541,60 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixType
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
+]> {
+  let summary = "CIR matrix type";
+  let description = [{
+    The `!cir.matrix` type represents a fixed-size 2-dimensional matrix.
+    It takes three parameters: the element type, the number of rows,
+    and columns.
+
+    Syntax:
+
+    ```
+    matrix-type ::= !cir.matrix<row x colum x element-type>
+    size ::= (decimal-literal | `[` decimal-literal `]`)
+    element-type ::= float-type | integer-type | bool-type
+    ```
+
+    The `element-type` must be a scalar CIR type. Zero-sized matrices are not
+    allowed. The `row` and `column` count must be a positive integer.
+
+    Examples:
+
+    ```
+    !cir.matrix<3 x 3 x !cir.int<u, 8>>
+    !cir.matrix<2 x 4 x !cir.float>
+    ```
+  }];
+
+  let parameters = (ins
+    CIR_MatrixElementType:$element_type,
+    "uint64_t":$row_num,
+    "uint64_t":$column_num
+  );
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$element_type, "uint64_t":$row_num, "uint64_t":$column_num
+    ), [{
+        return $_get(element_type.getContext(), element_type, row_num, column_num);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $row_num `x` $column_num `x` $element_type `>`
+  }];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -734,6 +802,7 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
         offset += decl.getWidth();
       return offset;
     }
+
   }];
 
   let genVerifyDecl = 1;
@@ -745,12 +814,12 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
 // What a record member holds, and whether its extent is a declared one.
 //===----------------------------------------------------------------------===//
 
-def CIR_RecordMemberKind : CIR_I32EnumAttr<
+def CIR_RecordMemberKind : CIR_I32Enum<
     "RecordMemberKind", "what a record member holds", [
-  I32EnumAttrCase<"Data", 0, "data">,
-  I32EnumAttrCase<"Pad", 1, "pad">,
-  I32EnumAttrCase<"Empty", 2, "empty">,
-  I32EnumAttrCase<"BitField", 3, "bitfield">
+  I32EnumCase<"Data", 0, "data">,
+  I32EnumCase<"Pad", 1, "pad">,
+  I32EnumCase<"Empty", 2, "empty">,
+  I32EnumCase<"BitField", 3, "bitfield">
 ]> {
   let description = [{
     `pad` is storage the compiler inserted to place a later member at its
@@ -783,8 +852,6 @@ def CIR_RecordMemberKind : CIR_I32EnumAttr<
     whose trailing member is a unit of unnamed bit-fields keeps that unit in
     its data size.
   }];
-
-  let genSpecializedAttr = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1162,10 +1229,11 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
-  CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_MatrixType,
+  CIR_IntType, CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
   CIR_UnionType, CIR_BitFieldType,
-  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceTextureType,
+  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
+  CIR_CUDADeviceTextureType,
   CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;

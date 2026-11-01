@@ -188,6 +188,7 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
         /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
   }
   thunkInfo.sym->used = true;
+  thunkInfo.sym->branchExtensionThunk = true;
   target->populateThunk(thunkInfo.isec, funcSym, r.addend);
   updateBranchTargetToThunk(r, thunkInfo.sym);
   finalizeOne(thunkInfo.isec);

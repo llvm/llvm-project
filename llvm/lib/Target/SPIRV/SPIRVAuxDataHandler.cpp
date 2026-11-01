@@ -32,7 +32,7 @@ static cl::opt<bool> SPVPreserveAuxData(
     cl::desc("Preserve LLVM attributes and metadata as "
              "NonSemantic.AuxData ExtInst annotations (requires "
              "SPV_KHR_non_semantic_info)"),
-    cl::Optional, cl::Hidden, cl::init(false));
+    cl::Hidden, cl::init(false));
 
 namespace {
 enum AuxDataLinkageType : uint32_t {
@@ -63,7 +63,10 @@ SPIRVAuxDataHandler::SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M)
       LinkagePreservedGOs.push_back(&GO);
 }
 
-bool SPIRVAuxDataHandler::hasWork() const { return SPVPreserveAuxData; }
+bool SPIRVAuxDataHandler::hasWork() const {
+  return SPVPreserveAuxData ||
+         Mod.getTargetTriple().getVendor() == Triple::VendorType::AMD;
+}
 
 void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
                                               SPIRV::ModuleAnalysisInfo &MAI) {

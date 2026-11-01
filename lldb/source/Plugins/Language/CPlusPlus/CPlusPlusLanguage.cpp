@@ -23,6 +23,7 @@
 #include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
@@ -257,6 +258,14 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
   return true;
 }
 
+static DemangledNameInfoCache &GetDemangledInfoCache() {
+  static DemangledNameInfoCache g_cache;
+  // Pick up any changes to the size the user made since the last call.
+  g_cache.SetMaxEntries(ModuleList::GetGlobalModuleListProperties()
+                            .GetDemangledNameInfoCacheSize());
+  return g_cache;
+}
+
 static llvm::Expected<std::pair<llvm::StringRef, DemangledNameInfo>>
 GetAndValidateInfo(const SymbolContext &sc) {
   Mangled mangled = sc.GetPossiblyInlinedFunctionName();
@@ -269,7 +278,7 @@ GetAndValidateInfo(const SymbolContext &sc) {
         "function '{0}' does not have a demangled name",
         mangled.GetMangledName());
 
-  const DemangledNameInfo *info = mangled.GetDemangledInfo();
+  std::optional<DemangledNameInfo> info = GetDemangledInfoCache().Get(mangled);
   if (!info)
     return llvm::createStringErrorV(
         "function '{0}' does not have demangled info", demangled_name);

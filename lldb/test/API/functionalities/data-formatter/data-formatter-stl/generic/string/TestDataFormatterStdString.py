@@ -274,7 +274,7 @@ class StdStringDataFormatterTestCase(TestBase):
         self.do_test_overwritten()
 
     @expectedFailureAll(
-        bugnumber="libstdc++ format for non-null terminated std::string currently diverges from MSVC and libc++ formatter."
+        bugnumber="libstdc++ format for non-null-terminated std::string currently diverges from MSVC and libc++ formatter."
     )
     @add_test_categories(["libstdcxx"])
     def test_overwritten_libstdcxx(self):

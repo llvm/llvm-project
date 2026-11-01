@@ -74,7 +74,7 @@ body:             |
 # Single block loop that should also have latency enabled.
 # CHECK:      Current Schedule Region
 # CHECK-NEXT: fun2:%bb.1
-# CHECK: Pick Bot BOT-HEIGHT [pre-RA]
+# CHECK: Pick Bot Cand SU(12) BOT-HEIGHT [pre-RA]
 ---
 name:            fun2
 tracksRegLiveness: true

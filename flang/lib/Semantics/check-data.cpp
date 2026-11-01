@@ -265,7 +265,7 @@ void DataChecker::Leave(const parser::EntityDecl &decl) {
     const auto *list{
         std::get_if<std::list<common::Indirection<parser::DataStmtValue>>>(
             &init->u)};
-    if (name && list) {
+    if (name && list && !exprAnalyzer_.context().HasError(*name)) {
       AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
     }
   }

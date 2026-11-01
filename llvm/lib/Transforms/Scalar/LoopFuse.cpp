@@ -50,6 +50,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -63,6 +64,7 @@
 #include "llvm/Transforms/Utils/CodeMoverUtils.h"
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <list>
 
 using namespace llvm;
@@ -402,6 +404,86 @@ printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
   }
 }
 #endif // NDEBUG
+
+/// Fold away an empty block on the "skip" edge of \p L's loop guard, if any.
+///
+/// Loop::getLoopGuardBranch() recognizes a guard only when the non-loop
+/// successor of the guard branch is the block that the loop exit flows into
+/// (looking through empty blocks on the exit side only). Passes such as
+/// JumpThreading can leave an empty forwarding block on the guard side
+/// instead:
+///
+///   Guard:    br %c, %Preheader, %Skip
+///   Skip:     br %Merge             ; empty, only reachable from Guard
+///   ...
+///   Exit:     br %Merge
+///   Merge:    ...
+///
+/// which makes getLoopGuardBranch() treat \p L as unguarded.
+/// This function folds %Skip: it redirects the guard branch to %Merge and
+/// deletes the empty %Skip block. Loop fusion calls this on every loop before
+/// collecting fusion candidates so that a guarded loop left in this shape by
+/// an earlier pass is still recognized as guarded and as adjacent to its
+/// neighbor. Returns true if the CFG was changed.
+static bool simplifyLoopGuard(Loop *L, DomTreeUpdater &DTU, LoopInfo &LI,
+                              ScalarEvolution &SE) {
+  if (!L->isLoopSimplifyForm() || !L->isRotatedForm())
+    return false;
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  BasicBlock *ExitBlock = L->getUniqueExitBlock();
+  if (!ExitBlock)
+    return false;
+
+  BasicBlock *GuardBB = Preheader->getUniquePredecessor();
+  if (!GuardBB)
+    return false;
+
+  auto *GuardBI = dyn_cast<CondBrInst>(GuardBB->getTerminator());
+  if (!GuardBI)
+    return false;
+
+  BasicBlock *SkipBB = GuardBI->getSuccessor(0) == Preheader
+                           ? GuardBI->getSuccessor(1)
+                           : GuardBI->getSuccessor(0);
+  if (SkipBB == Preheader)
+    return false;
+
+  // The skip block must contain nothing but an unconditional branch and must
+  // be reachable only from the guard, so that removing it cannot change any
+  // other path.
+  if (SkipBB->size() != 1 || !isa<UncondBrInst>(SkipBB->getTerminator()) ||
+      SkipBB->hasAddressTaken() || SkipBB->getUniquePredecessor() != GuardBB)
+    return false;
+
+  BasicBlock *MergeBB = SkipBB->getUniqueSuccessor();
+  if (!MergeBB || MergeBB == SkipBB || MergeBB == GuardBB ||
+      LI.isLoopHeader(MergeBB))
+    return false;
+
+  // The loop exit must flow into the same block; otherwise the branch is
+  // not a loop guard.
+  if (&LoopNest::skipEmptyBlockUntil(ExitBlock, MergeBB,
+                                     /*CheckUniquePred=*/true) != MergeBB)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Removing empty guard skip block " << SkipBB->getName()
+                    << " of loop " << L->getHeader()->getName() << "\n");
+
+  MergeBB->replacePhiUsesWith(SkipBB, GuardBB);
+  GuardBI->replaceSuccessorWith(SkipBB, MergeBB);
+  SkipBB->getTerminator()->eraseFromParent();
+  new UnreachableInst(SkipBB->getContext(), SkipBB);
+
+  DTU.applyUpdates({{DominatorTree::Delete, GuardBB, SkipBB},
+                    {DominatorTree::Delete, SkipBB, MergeBB},
+                    {DominatorTree::Insert, GuardBB, MergeBB}});
+  LI.removeBlock(SkipBB);
+  DTU.deleteBB(SkipBB);
+  DTU.flush();
+
+  return true;
+}
 
 namespace {
 
@@ -1842,10 +1924,15 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   // pass. Added only for new PM since the legacy PM has already added
   // LoopSimplify pass as a dependency.
   bool Changed = false;
+  DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
   for (auto &L : LI) {
     Changed |=
         simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
   }
+  for (Loop *L : LI.getLoopsInPreorder()) {
+    Changed |= simplifyLoopGuard(L, DTU, LI, SE);
+  }
+
   if (Changed)
     PDT.recalculate(F);
 

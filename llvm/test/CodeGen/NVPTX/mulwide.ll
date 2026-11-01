@@ -258,7 +258,7 @@ define i64 @mulwides7(i7 %a, i7 %b) {
 ; NOOPT-LABEL: mulwides7(
 ; NOOPT:       {
 ; NOOPT-NEXT:    .reg .b16 %rs<9>;
-; NOOPT-NEXT:    .reg .b64 %rd<6>;
+; NOOPT-NEXT:    .reg .b64 %rd<8>;
 ; NOOPT-EMPTY:
 ; NOOPT-NEXT:  // %bb.0:
 ; NOOPT-NEXT:    ld.param.b8 %rs3, [mulwides7_param_0+1];
@@ -271,10 +271,12 @@ define i64 @mulwides7(i7 %a, i7 %b) {
 ; NOOPT-NEXT:    ld.param.b8 %rs7, [mulwides7_param_1+1];
 ; NOOPT-NEXT:    shl.b16 %rs8, %rs7, 8;
 ; NOOPT-NEXT:    or.b16 %rs2, %rs8, %rs6;
-; NOOPT-NEXT:    bfe.s64 %rd3, %rd2, 0, 7;
-; NOOPT-NEXT:    bfe.s64 %rd4, %rd1, 0, 7;
-; NOOPT-NEXT:    mul.lo.s64 %rd5, %rd3, %rd4;
-; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd5;
+; NOOPT-NEXT:    shl.b64 %rd3, %rd2, 57;
+; NOOPT-NEXT:    shr.s64 %rd4, %rd3, 57;
+; NOOPT-NEXT:    shl.b64 %rd5, %rd1, 57;
+; NOOPT-NEXT:    shr.s64 %rd6, %rd5, 57;
+; NOOPT-NEXT:    mul.lo.s64 %rd7, %rd4, %rd6;
+; NOOPT-NEXT:    st.param.b64 [func_retval0], %rd7;
 ; NOOPT-NEXT:    ret;
   %val0 = sext i7 %a to i64
   %val1 = sext i7 %b to i64

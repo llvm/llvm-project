@@ -137,7 +137,7 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
 
 Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                         OpBuilder &builder) {
-  return ub::PoisonOp::create(builder, getLoc(), slot.elemType);
+  return ub::PoisonOp::create(builder, getLoc(), slot.valueType);
 }
 
 std::optional<PromotableAllocationOpInterface>
@@ -223,7 +223,7 @@ bool memref::LoadOp::canUsesBeRemoved(
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getMemRef() == slot.ptr &&
-         getResult().getType() == slot.elemType;
+         getResult().getType() == slot.valueType;
 }
 
 DeletionKind memref::LoadOp::removeBlockingUses(
@@ -303,7 +303,7 @@ bool memref::StoreOp::canUsesBeRemoved(
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getMemRef() == slot.ptr &&
-         getValue() != slot.ptr && getValue().getType() == slot.elemType;
+         getValue() != slot.ptr && getValue().getType() == slot.valueType;
 }
 
 DeletionKind memref::StoreOp::removeBlockingUses(
@@ -394,7 +394,8 @@ struct MemRefDestructurableTypeExternalModel
 //  Register external models
 //===----------------------------------------------------------------------===//
 
-void mlir::memref::registerMemorySlotExternalModels(DialectRegistry &registry) {
+void mlir::memref::registerDestructurableTypeExternalModels(
+    DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
     MemRefType::attachInterface<MemRefDestructurableTypeExternalModel>(*ctx);
   });

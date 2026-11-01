@@ -93,7 +93,7 @@ bool MachineSanitizerBinaryMetadata::run(MachineFunction &MF) {
     return false;
   // Non-zero size, update metadata.
   auto &F = MF.getFunction();
-  IRBuilder<> IRB(F.getContext());
+  IRBuilder<> IRB(*F.getParent());
   MDBuilder MDB(F.getContext());
   // Keep the features and append size of stack args to the metadata.
   APInt NewFeatures = Features->getUniqueInteger();

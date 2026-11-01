@@ -252,35 +252,35 @@ entry:
 define amdgpu_kernel void @nearbyint_v2f64(ptr addrspace(1) %out, <2 x double> %in) {
 ; SI-LABEL: nearbyint_v2f64:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xd
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
-; SI-NEXT:    s_brev_b32 s10, -2
+; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0xd
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_brev_b32 s6, -2
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v7, s3
-; SI-NEXT:    v_bfi_b32 v1, s10, v6, v7
-; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_add_f64 v[2:3], s[2:3], v[0:1]
-; SI-NEXT:    s_mov_b32 s9, 0x432fffff
-; SI-NEXT:    s_mov_b32 s8, s6
-; SI-NEXT:    v_mov_b32_e32 v4, s8
-; SI-NEXT:    v_mov_b32_e32 v5, s9
+; SI-NEXT:    v_mov_b32_e32 v7, s11
+; SI-NEXT:    v_bfi_b32 v1, s6, v6, v7
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_add_f64 v[2:3], s[10:11], v[0:1]
+; SI-NEXT:    s_mov_b32 s5, 0x432fffff
+; SI-NEXT:    s_mov_b32 s4, s2
+; SI-NEXT:    v_mov_b32_e32 v4, s4
+; SI-NEXT:    v_mov_b32_e32 v5, s5
 ; SI-NEXT:    v_add_f64 v[2:3], v[2:3], -v[0:1]
-; SI-NEXT:    v_cmp_gt_f64_e64 vcc, |s[2:3]|, v[4:5]
-; SI-NEXT:    v_mov_b32_e32 v9, s1
-; SI-NEXT:    v_bfi_b32 v1, s10, v6, v9
+; SI-NEXT:    v_cmp_gt_f64_e64 vcc, |s[10:11]|, v[4:5]
+; SI-NEXT:    v_mov_b32_e32 v9, s9
+; SI-NEXT:    v_bfi_b32 v1, s6, v6, v9
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v3, v7, vcc
-; SI-NEXT:    v_add_f64 v[6:7], s[0:1], v[0:1]
-; SI-NEXT:    v_mov_b32_e32 v8, s2
+; SI-NEXT:    v_add_f64 v[6:7], s[8:9], v[0:1]
+; SI-NEXT:    v_mov_b32_e32 v8, s10
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v2, v8, vcc
 ; SI-NEXT:    v_add_f64 v[0:1], v[6:7], -v[0:1]
-; SI-NEXT:    v_cmp_gt_f64_e64 vcc, |s[0:1]|, v[4:5]
-; SI-NEXT:    v_mov_b32_e32 v4, s0
-; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    v_cmp_gt_f64_e64 vcc, |s[8:9]|, v[4:5]
+; SI-NEXT:    v_mov_b32_e32 v4, s8
+; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v9, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; CI-LABEL: nearbyint_v2f64:

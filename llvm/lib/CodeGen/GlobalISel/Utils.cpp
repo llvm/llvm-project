@@ -1160,8 +1160,8 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
       int GCDMinElts = std::gcd(OrigTy.getElementCount().getKnownMinValue(),
                                 TargetTy.getElementCount().getKnownMinValue());
       // Prefer the original element type.
-      ElementCount Mul = OrigTy.getElementCount().multiplyCoefficientBy(
-          TargetTy.getElementCount().getKnownMinValue());
+      ElementCount Mul = OrigTy.getElementCount() *
+                         TargetTy.getElementCount().getKnownMinValue();
       return LLT::vector(Mul.divideCoefficientBy(GCDMinElts),
                          OrigTy.getElementType());
     }
@@ -1571,7 +1571,8 @@ bool llvm::isAllOnesOrAllOnesSplat(const MachineInstr &MI,
 
 bool llvm::matchUnaryPredicate(
     const MachineRegisterInfo &MRI, Register Reg,
-    std::function<bool(const Constant *ConstVal)> Match, bool AllowUndefs) {
+    llvm::function_ref<bool(const Constant *ConstVal)> Match,
+    bool AllowUndefs) {
 
   const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (AllowUndefs && Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)

@@ -136,8 +136,6 @@ static cl::opt<unsigned>
                                "accepted for the transformation"),
                       cl::Hidden, cl::init(40));
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
 } // namespace llvm
 
 namespace {
@@ -277,9 +275,8 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     auto *BI =
         CondBrInst::Create(SI->getCondition(), EndBlock, NewBlock, StartBlock);
     BI->setDebugLoc(SelectBranchLoc);
-    if (!ProfcheckDisableMetadataFixes)
-      BI->setMetadata(LLVMContext::MD_prof,
-                      SI->getMetadata(LLVMContext::MD_prof));
+    BI->setMetadata(LLVMContext::MD_prof,
+                    SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
     BasicBlock *EndBlock = SIUse->getParent();
@@ -320,9 +317,8 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     DebugLoc SelectLoc = SI->getDebugLoc();
     NewFToEnd->setDebugLoc(SelectLoc);
     BI->setDebugLoc(SelectLoc);
-    if (!ProfcheckDisableMetadataFixes)
-      BI->setMetadata(LLVMContext::MD_prof,
-                      SI->getMetadata(LLVMContext::MD_prof));
+    BI->setMetadata(LLVMContext::MD_prof,
+                    SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, NewBlockT, NewBlockF},
                        {DominatorTree::Insert, NewBlockT, EndBlock},
                        {DominatorTree::Insert, NewBlockF, EndBlock}});

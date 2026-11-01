@@ -489,6 +489,11 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
            CCAssignToStack<16, 16>>
 ]>;
 
+let Entry = 1 in
+def CC_AArch64_AnyReg : CallingConv<[
+  CCCustom<"CC_AArch64_AnyReg_Error">
+]>;
+
 //===----------------------------------------------------------------------===//
 // ARM64 Calling Convention for GHC
 //===----------------------------------------------------------------------===//

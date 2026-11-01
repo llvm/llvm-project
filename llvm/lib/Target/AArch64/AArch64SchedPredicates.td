@@ -197,38 +197,41 @@ def IsStoreASIMDPostOp     : CheckOpcode<[ST1Onev8b_POST, ST1Onev4h_POST, ST1One
 def IsLoadStoreASIMDPostOp : CheckOpcode<!listconcat(IsLoadASIMDPostOp.ValidOpcodes,
                                                      IsStoreASIMDPostOp.ValidOpcodes)>;
 
-// Identify whether an instruction is a load
-// using the register offset addressing mode.
-def IsLoadRegOffsetOp      : CheckOpcode<[PRFMroW, PRFMroX,
-                                          LDRBBroW, LDRBBroX,
-                                          LDRSBWroW, LDRSBWroX, LDRSBXroW, LDRSBXroX,
-                                          LDRHHroW, LDRHHroX,
-                                          LDRSHWroW, LDRSHWroX, LDRSHXroW, LDRSHXroX,
-                                          LDRWroW, LDRWroX,
-                                          LDRSWroW, LDRSWroX,
-                                          LDRXroW, LDRXroX,
-                                          LDRBroW, LDRBroX,
-                                          LDRHroW, LDRHroX,
-                                          LDRSroW, LDRSroX,
-                                          LDRDroW, LDRDroX,
-                                          LDRQroW, LDRQroX]>;
+// Identify whether an instruction is a load using the register offset
+// addressing mode.
 
-// Identify whether an instruction is a store
-// using the register offset addressing mode.
-def IsStoreRegOffsetOp     : CheckOpcode<[STRBBroW, STRBBroX,
-                                          STRHHroW, STRHHroX,
-                                          STRWroW, STRWroX,
-                                          STRXroW, STRXroX,
-                                          STRBroW, STRBroX,
-                                          STRHroW, STRHroX,
-                                          STRSroW, STRSroX,
-                                          STRDroW, STRDroX,
-                                          STRQroW, STRQroX]>;
+def IsLoadRegOffsetWOp      : CheckOpcode<[PRFMroW,
+                                           LDRBBroW, LDRSBWroW, LDRSBXroW,
+                                           LDRHHroW, LDRSHWroW, LDRSHXroW,
+                                           LDRWroW, LDRSWroW, LDRXroW,
+                                           LDRBroW, LDRHroW, LDRSroW,
+                                           LDRDroW, LDRQroW]>;
+def IsLoadRegOffsetXOp      : CheckOpcode<[PRFMroX,
+                                           LDRBBroX, LDRSBWroX, LDRSBXroX,
+                                           LDRHHroX, LDRSHWroX, LDRSHXroX,
+                                           LDRWroX, LDRSWroX, LDRXroX,
+                                           LDRBroX, LDRHroX, LDRSroX,
+                                           LDRDroX, LDRQroX]>;
+def IsLoadRegOffsetOp       : CheckOpcode<!listconcat(IsLoadRegOffsetWOp.ValidOpcodes,
+                                                      IsLoadRegOffsetXOp.ValidOpcodes)>;
 
-// Identify whether an instruction is a load or
-// store using the register offset addressing mode.
-def IsLoadStoreRegOffsetOp : CheckOpcode<!listconcat(IsLoadRegOffsetOp.ValidOpcodes,
-                                                     IsStoreRegOffsetOp.ValidOpcodes)>;
+def IsStoreRegOffsetWOp     : CheckOpcode<[STRBBroW, STRHHroW,
+                                           STRWroW, STRXroW,
+                                           STRBroW, STRHroW, STRSroW,
+                                           STRDroW, STRQroW]>;
+def IsStoreRegOffsetXOp     : CheckOpcode<[STRBBroX, STRHHroX,
+                                           STRWroX, STRXroX,
+                                           STRBroX, STRHroX, STRSroX,
+                                           STRDroX, STRQroX]>;
+def IsStoreRegOffsetOp      : CheckOpcode<!listconcat(IsStoreRegOffsetWOp.ValidOpcodes,
+                                                      IsStoreRegOffsetXOp.ValidOpcodes)>;
+
+def IsLoadStoreRegOffsetWOp : CheckOpcode<!listconcat(IsLoadRegOffsetWOp.ValidOpcodes,
+                                                      IsStoreRegOffsetWOp.ValidOpcodes)>;
+def IsLoadStoreRegOffsetXOp : CheckOpcode<!listconcat(IsLoadRegOffsetXOp.ValidOpcodes,
+                                                      IsStoreRegOffsetXOp.ValidOpcodes)>;
+def IsLoadStoreRegOffsetOp  : CheckOpcode<!listconcat(IsLoadStoreRegOffsetWOp.ValidOpcodes,
+                                                      IsLoadStoreRegOffsetXOp.ValidOpcodes)>;
 
 // Target predicates.
 
@@ -258,15 +261,17 @@ def RegShiftedFn      : TIIPredicate<"hasShiftedReg",
                                        MCReturnStatement<FalsePred>>>;
 def RegShiftedPred    : MCSchedPredicate<RegShiftedFn>;
 
-// Identify a load or store using the register offset addressing mode
-// with an extended or scaled register.
+// Identify a load or store using the register offset addressing mode where the
+// index requires extension or scaling.  The W forms always extend Wm to 64 bits;
+// the X forms use uxtx/sxtx, which are no-ops, so only the scaling bit matters.
 def ScaledIdxFn       : TIIPredicate<"isScaledAddr",
                                      MCOpcodeSwitchStatement<
                                        [MCOpcodeSwitchCase<
-                                          IsLoadStoreRegOffsetOp.ValidOpcodes,
-                                          MCReturnStatement<
-                                            CheckAny<[CheckNot<CheckMemExtLSL>,
-                                                      CheckMemScaled]>>>],
+                                          IsLoadStoreRegOffsetWOp.ValidOpcodes,
+                                          MCReturnStatement<TruePred>>,
+                                        MCOpcodeSwitchCase<
+                                          IsLoadStoreRegOffsetXOp.ValidOpcodes,
+                                          MCReturnStatement<CheckMemScaled>>],
                                        MCReturnStatement<FalsePred>>>;
 def ScaledIdxPred     : MCSchedPredicate<ScaledIdxFn>;
 

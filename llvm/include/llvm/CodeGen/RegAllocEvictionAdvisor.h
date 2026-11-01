@@ -280,7 +280,7 @@ createReleaseModeAdvisorAnalysisLegacy();
 LLVM_ABI RegAllocEvictionAdvisorAnalysisLegacy *
 createDevelopmentModeAdvisorAnalysisLegacy();
 
-LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ABI RegAllocEvictionAdvisorProvider *
+LLVM_ABI RegAllocEvictionAdvisorProvider *
 createReleaseModeAdvisorProvider(LLVMContext &Ctx);
 
 LLVM_ABI RegAllocEvictionAdvisorProvider *

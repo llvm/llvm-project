@@ -83,9 +83,9 @@ void test_s_barrier_signal()
 // CHECK-NEXT:    store ptr [[BAR:%.*]], ptr addrspace(5) [[BAR_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[BAR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
+// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(15)
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[A_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_s_barrier_signal_var(void *bar, int a)
@@ -132,9 +132,9 @@ void test_s_barrier_signal_isfirst(int* a, int* b, int *c)
 // CHECK-NEXT:    store ptr [[BAR:%.*]], ptr addrspace(5) [[BAR_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[BAR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
+// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(15)
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[A_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_s_barrier_init(void *bar, int a)
@@ -147,8 +147,8 @@ void test_s_barrier_init(void *bar, int a)
 // CHECK-NEXT:    [[BAR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    store ptr [[BAR:%.*]], ptr addrspace(5) [[BAR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[BAR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
-// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(15)
+// CHECK-NEXT:    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_s_barrier_join(void *bar)
@@ -189,8 +189,8 @@ unsigned test_s_get_barrier_state(int a)
 // CHECK-NEXT:    [[STATE:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    store ptr [[BAR:%.*]], ptr addrspace(5) [[BAR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[BAR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(15)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) [[TMP1]])
 // CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[STATE]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[STATE]], align 4
 // CHECK-NEXT:    ret i32 [[TMP3]]

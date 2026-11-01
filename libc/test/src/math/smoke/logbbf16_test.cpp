@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/logbbf16.h"
 
-LIST_LOGB_TESTS(bfloat16, LIBC_NAMESPACE::logbbf16)
+LIST_LOGB_TESTS(Logbbf16, bfloat16, LIBC_NAMESPACE::logbbf16)

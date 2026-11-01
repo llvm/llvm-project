@@ -9,6 +9,7 @@
 #include <detail/offload/offload_utils.hpp>
 
 #include <cassert>
+#include <cstdint>
 #include <limits>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL

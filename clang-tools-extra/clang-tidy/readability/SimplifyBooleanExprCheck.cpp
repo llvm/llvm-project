@@ -250,6 +250,21 @@ static bool containsDiscardedTokens(const ASTContext &Context,
   return false;
 }
 
+static std::optional<bool>
+tryFixCXXOperator(const Expr *E, SmallVectorImpl<FixItHint> &Fixes) {
+  if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(E)) {
+    const StringRef NegatedOperator = negatedOperator(OpCall);
+    if (!NegatedOperator.empty()) {
+      if (OpCall->getOperatorLoc().isMacroID())
+        return true;
+      Fixes.push_back(FixItHint::CreateReplacement(OpCall->getOperatorLoc(),
+                                                   NegatedOperator));
+      return false;
+    }
+  }
+  return std::nullopt;
+}
+
 class SimplifyBooleanExprCheck::Visitor : public RecursiveASTVisitor<Visitor> {
   using Base = RecursiveASTVisitor<Visitor>;
 
@@ -916,9 +931,17 @@ static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
   }
   if (const auto *BinOp = dyn_cast<BinaryOperator>(E))
     return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO);
+  // Overloaded comparisons are represented as CXXOperatorCallExpr rather than
+  // BinaryOperator, so negate them by replacing their operator location.
+  if (auto Fixed = tryFixCXXOperator(E, Fixes))
+    return *Fixed;
+
   if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
     if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr()))
       return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
+    // Overloaded comparisons in parentheses, e.g. (T1 < T2).
+    if (auto Fixed = tryFixCXXOperator(Paren->getSubExpr(), Fixes))
+      return *Fixed;
   }
   // Fallback case just insert a logical not operator.
   if (E->getBeginLoc().isMacroID())

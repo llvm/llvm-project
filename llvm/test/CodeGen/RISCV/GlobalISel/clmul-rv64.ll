@@ -7,6 +7,8 @@
 ; RUN:   | FileCheck %s --check-prefix=RV64ZBKC
 
 declare i64 @llvm.clmul.i64(i64, i64)
+declare i64 @llvm.riscv.clmulh.i64(i64, i64)
+declare i32 @llvm.riscv.clmulh.i32(i32, i32)
 
 define i64 @clmul_i64(i64 %a, i64 %b) {
 ; RV64ZBC-LABEL: clmul_i64:
@@ -19,5 +21,63 @@ define i64 @clmul_i64(i64 %a, i64 %b) {
 ; RV64ZBKC-NEXT:    clmul a0, a0, a1
 ; RV64ZBKC-NEXT:    ret
   %r = call i64 @llvm.clmul.i64(i64 %a, i64 %b)
+  ret i64 %r
+}
+
+define signext i32 @clmulh_i32(i32 signext %a, i32 signext %b) {
+; RV64ZBC-LABEL: clmulh_i32:
+; RV64ZBC:       # %bb.0:
+; RV64ZBC-NEXT:    slli a0, a0, 32
+; RV64ZBC-NEXT:    slli a1, a1, 32
+; RV64ZBC-NEXT:    clmulh a0, a0, a1
+; RV64ZBC-NEXT:    srli a0, a0, 32
+; RV64ZBC-NEXT:    sext.w a0, a0
+; RV64ZBC-NEXT:    ret
+;
+; RV64ZBKC-LABEL: clmulh_i32:
+; RV64ZBKC:       # %bb.0:
+; RV64ZBKC-NEXT:    slli a0, a0, 32
+; RV64ZBKC-NEXT:    slli a1, a1, 32
+; RV64ZBKC-NEXT:    clmulh a0, a0, a1
+; RV64ZBKC-NEXT:    srli a0, a0, 32
+; RV64ZBKC-NEXT:    sext.w a0, a0
+; RV64ZBKC-NEXT:    ret
+  %r = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
+  ret i32 %r
+}
+
+define signext i32 @clmulh_i32_zext(i32 zeroext %a, i32 zeroext %b) {
+; RV64ZBC-LABEL: clmulh_i32_zext:
+; RV64ZBC:       # %bb.0:
+; RV64ZBC-NEXT:    slli a0, a0, 32
+; RV64ZBC-NEXT:    slli a1, a1, 32
+; RV64ZBC-NEXT:    clmulh a0, a0, a1
+; RV64ZBC-NEXT:    srli a0, a0, 32
+; RV64ZBC-NEXT:    sext.w a0, a0
+; RV64ZBC-NEXT:    ret
+;
+; RV64ZBKC-LABEL: clmulh_i32_zext:
+; RV64ZBKC:       # %bb.0:
+; RV64ZBKC-NEXT:    slli a0, a0, 32
+; RV64ZBKC-NEXT:    slli a1, a1, 32
+; RV64ZBKC-NEXT:    clmulh a0, a0, a1
+; RV64ZBKC-NEXT:    srli a0, a0, 32
+; RV64ZBKC-NEXT:    sext.w a0, a0
+; RV64ZBKC-NEXT:    ret
+  %r = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
+  ret i32 %r
+}
+
+define i64 @clmulh_i64(i64 %a, i64 %b) {
+; RV64ZBC-LABEL: clmulh_i64:
+; RV64ZBC:       # %bb.0:
+; RV64ZBC-NEXT:    clmulh a0, a0, a1
+; RV64ZBC-NEXT:    ret
+;
+; RV64ZBKC-LABEL: clmulh_i64:
+; RV64ZBKC:       # %bb.0:
+; RV64ZBKC-NEXT:    clmulh a0, a0, a1
+; RV64ZBKC-NEXT:    ret
+  %r = call i64 @llvm.riscv.clmulh.i64(i64 %a, i64 %b)
   ret i64 %r
 }

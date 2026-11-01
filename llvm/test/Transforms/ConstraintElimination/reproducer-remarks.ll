@@ -251,8 +251,8 @@ define <2 x i1> @vector_cmp(<2 x ptr> %vec) {
 define i1 @shared_operand() {
 ; CHECK-LABEL: define i1 @"{{.+}}shared_operandrepro"() {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   %sub = sub i8 0, 0
-; CHECK-NEXT:   %sub.2 = sub nuw i8 %sub, 0
+; CHECK-NEXT:   %sub = sub nuw nsw i8 0, 0
+; CHECK-NEXT:   %sub.2 = sub nuw nsw i8 %sub, 0
 ; CHECK-NEXT:   %c.5 = icmp ult i8 %sub.2, %sub
 ; CHECK-NEXT:   ret i1 %c.5
 ; CHECK-NEXT: }
@@ -272,7 +272,7 @@ define i1 @shared_operand_no_const(i8 %a, i8 %b) {
 ; CHECK-NEXT:   %0 = icmp ule i8 %b, %a
 ; CHECK-NEXT:   call void @llvm.assume(i1 %0)
 ; CHECK-NEXT:   %sub = sub nuw i8 %a, %b
-; CHECK-NEXT:   %sub.2 = sub nuw i8 %sub, 0
+; CHECK-NEXT:   %sub.2 = sub nuw nsw i8 %sub, 0
 ; CHECK-NEXT:   %c.5 = icmp ult i8 %sub.2, %sub
 ; CHECK-NEXT:   ret i1 %c.5
 ; CHECK-NEXT: }

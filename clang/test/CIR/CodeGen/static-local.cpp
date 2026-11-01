@@ -26,38 +26,40 @@
 // LLVM-DAG: @_ZGVZ1fvE1a = internal global i64 0
 // CIR-DAG: cir.global "private" linkonce_odr comdat @_ZGVZ10getInlineAvE1a = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ10getInlineAvE1a = linkonce_odr global i64 0, comdat
+// CIR-DAG: cir.global "private" hidden linkonce_odr comdat @_ZGVZ16getHiddenInlineAvE1a = #cir.int<0> : !s64i
+// LLVM-DAG: @_ZGVZ16getHiddenInlineAvE1a = linkonce_odr hidden global i64 0, comdat
 // CIR-DAG: cir.global "private" internal dso_local @_ZGVZ8ref_initvE1y = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ8ref_initvE1y = internal global i64 0
 // CIR-DAG: cir.global "private" internal dso_local @_ZGVZ23array_static_local_dtorvE2sm = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ23array_static_local_dtorvE2sm = internal global i64 0
 
-// CIR-BOTH-DAG: cir.global linkonce_odr comdat static_local_guard<"_ZGVZ10getInlineAvE1a"> @_ZZ10getInlineAvE1a = #cir.zero : !rec_A
+// CIR-BOTH-DAG: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVZ10getInlineAvE1a"> @_ZZ10getInlineAvE1a = #cir.zero : !rec_A
 // LLVM-DAG: @_ZZ10getInlineAvE1a = linkonce_odr global %class.A zeroinitializer, comdat
 // CIR-BOTH-DAG: cir.global "private" internal dso_local @_ZZ23referenced_inside_constvE12static_local = #cir.int<42> : !s32i
 // LLVM-DAG: @_ZZ23referenced_inside_constvE12static_local = internal global i32 42
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ17referenced_insidevE12static_local"> @_ZZ17referenced_insidevE12static_local = #cir.int<0> : !s32i
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ17referenced_insidevE12static_local"> @_ZZ17referenced_insidevE12static_local = #cir.int<0> : !s32i
 // LLVM-DAG: @_ZZ17referenced_insidevE12static_local = internal global i32 0
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ14test_ctor_dtorvE9ctor_dtor"> @_ZZ14test_ctor_dtorvE9ctor_dtor = #cir.zero : !rec_HasCtorDtor
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ14test_ctor_dtorvE9ctor_dtor"> @_ZZ14test_ctor_dtorvE9ctor_dtor = #cir.zero : !rec_HasCtorDtor
 // LLVM-DAG: @_ZZ14test_ctor_dtorvE9ctor_dtor = internal global %struct.HasCtorDtor zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ9test_dtorvE4dtor"> @_ZZ9test_dtorvE4dtor = #cir.zero : !rec_HasDtor
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ9test_dtorvE4dtor"> @_ZZ9test_dtorvE4dtor = #cir.zero : !rec_HasDtor
 // LLVM-DAG: @_ZZ9test_dtorvE4dtor = internal global %struct.HasDtor zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ8self_refiE12magic_static"> @_ZZ8self_refiE12magic_static = #cir.int<0> : !s32i
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ8self_refiE12magic_static"> @_ZZ8self_refiE12magic_static = #cir.int<0> : !s32i
 // LLVM-DAG: @_ZZ8self_refiE12magic_static = internal global i32 0
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZN8InMember8mem_funcEiiiiE12magic_static"> @_ZZN8InMember8mem_funcEiiiiE12magic_static = #cir.int<0> : !s32i
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZN8InMember8mem_funcEiiiiE12magic_static"> @_ZZN8InMember8mem_funcEiiiiE12magic_static = #cir.int<0> : !s32i
 // LLVM-DAG: @_ZZN8InMember8mem_funcEiiiiE12magic_static = internal global i32 0
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ10multi_refsiiiiiiiE17refs_magic_static"> @_ZZ10multi_refsiiiiiiiE17refs_magic_static = #cir.zero : !rec_A
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ10multi_refsiiiiiiiE17refs_magic_static"> @_ZZ10multi_refsiiiiiiiE17refs_magic_static = #cir.zero : !rec_A
 // LLVM-DAG: @_ZZ10multi_refsiiiiiiiE17refs_magic_static = internal global %class.A zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ10multi_refsiiiiiiiE12magic_static"> @_ZZ10multi_refsiiiiiiiE12magic_static = #cir.zero : !rec_A
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ10multi_refsiiiiiiiE12magic_static"> @_ZZ10multi_refsiiiiiiiE12magic_static = #cir.zero : !rec_A
 // LLVM-DAG: @_ZZ10multi_refsiiiiiiiE12magic_static = internal global %class.A zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ29references_param_and_previousiE17refs_magic_static"> @_ZZ29references_param_and_previousiE17refs_magic_static = #cir.int<0> : !s32i
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ29references_param_and_previousiE17refs_magic_static"> @_ZZ29references_param_and_previousiE17refs_magic_static = #cir.int<0> : !s32i
 // LLVM-DAG: @_ZZ29references_param_and_previousiE17refs_magic_static = internal global i32 0
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ29references_param_and_previousiE12magic_static"> @_ZZ29references_param_and_previousiE12magic_static = #cir.int<0> : !s32i
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ29references_param_and_previousiE12magic_static"> @_ZZ29references_param_and_previousiE12magic_static = #cir.int<0> : !s32i
 // LLVM-DAG: @_ZZ29references_param_and_previousiE12magic_static = internal global i32 0
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ1fvE1a"> @_ZZ1fvE1a = #cir.zero : !rec_A
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ1fvE1a"> @_ZZ1fvE1a = #cir.zero : !rec_A
 // LLVM-DAG: @_ZZ1fvE1a = internal global %class.A zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ8ref_initvE1y"> @_ZZ8ref_initvE1y = #cir.ptr<null> : !cir.ptr<!s32i>
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ8ref_initvE1y"> @_ZZ8ref_initvE1y = #cir.ptr<null> : !cir.ptr<!s32i>
 // LLVM-DAG: @_ZZ8ref_initvE1y = internal global ptr null
-// CIR-BOTH-DAG: cir.global "private" internal dso_local static_local_guard<"_ZGVZ23array_static_local_dtorvE2sm"> @_ZZ23array_static_local_dtorvE2sm = #cir.zero : !cir.array<!rec_HasCtorDtor x 2>
+// CIR-BOTH-DAG: cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ23array_static_local_dtorvE2sm"> @_ZZ23array_static_local_dtorvE2sm = #cir.zero : !cir.array<!rec_HasCtorDtor x 2>
 // LLVM-DAG: @_ZZ23array_static_local_dtorvE2sm = internal global [2 x %struct.HasCtorDtor] zeroinitializer
 // CIR-BOTH-DAG: cir.global "private" internal dso_local @_ZZ15use_static_declvE1p = #cir.global_view<@_ZZ15use_static_declvE1x> : !cir.ptr<!s32i>
 // LLVM-DAG: @_ZZ15use_static_declvE1p = internal global ptr @_ZZ15use_static_declvE1x
@@ -180,6 +182,18 @@ void call_inline() {
 //
 // LLVM:  call void @_ZN1AC1Ev(ptr {{.*}}@_ZZ10getInlineAvE1a)
 // LLVM:  call void @__cxa_guard_release(ptr @_ZGVZ10getInlineAvE1a)
+
+__attribute__((visibility("hidden")))
+inline const A &getHiddenInlineA() {
+  static A a;
+  return a;
+}
+
+void call_hidden_inline() {
+  use(&getHiddenInlineA());
+}
+
+// CIR-BOTH-LABEL: cir.func no_inline comdat linkonce_odr hidden @_Z16getHiddenInlineAv()
 
 int bar();
 
@@ -386,7 +400,7 @@ struct InMember {
 void InMember::mem_func(int one, int two, int, int three) {
   int some_local = mem_get_int();
   static int magic_static = three + mem_get_int() + one + some_local;
-// CIR-BOTH-LABEL:  cir.func no_inline dso_local @_ZN8InMember8mem_funcEiiii(
+// CIR-BOTH-LABEL:  cir.func no_inline alignment(2) dso_local @_ZN8InMember8mem_funcEiiii(
 // CIR-BOTH:    %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_InMember>>
 // CIR-BOTH:    %[[ONE_ALLOCA:.*]] = cir.alloca "one" {{.*}} init : !cir.ptr<!s32i>
 // CIR-BOTH:    %[[THREE_ALLOCA:.*]] = cir.alloca "three" {{.*}} init : !cir.ptr<!s32i>
@@ -662,7 +676,7 @@ int referenced_inside() {
 // CIR-BOTH:   cir.return %[[RET_LOAD]] : !s32i
 // CIR-BOTH: }
 //
-// CIR-BOTH-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ17referenced_insidevENK3$_0clEv(
+// CIR-BOTH-LABEL: cir.func no_inline lambda alignment(2) internal private dso_local @_ZZ17referenced_insidevENK3$_0clEv(
 // CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!{{.*}}>>
 // CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>
@@ -723,7 +737,7 @@ int referenced_inside_const() {
 // CIR-BOTH:   cir.return %[[RET_LOAD]] : !s32i
 // CIR-BOTH: }
 //
-// CIR-BOTH-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ23referenced_inside_constvENK3$_0clEv(
+// CIR-BOTH-LABEL: cir.func no_inline lambda alignment(2) internal private dso_local @_ZZ23referenced_inside_constvENK3$_0clEv(
 // CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!{{.*}}>>
 // CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>
@@ -752,7 +766,7 @@ int referenced_inside_const() {
 // Reference-typed static local with a non-constant initializer. The
 // cir.get_global emitted inside the initializer region for the reference
 // must carry the static_local marker so that it matches the
-// static_local_guard attribute on the corresponding cir.global. Otherwise
+// dynamic_init_guard attribute on the corresponding cir.global. Otherwise
 // the cir.get_global verifier rejects the IR with
 // "static_local attribute mismatch".
 int g = 5;
@@ -792,7 +806,7 @@ int &ref_init() {
 
 // Static local array with a non-trivial destructor. The cir.get_global
 // emitted inside the dtor region for the array must carry the static_local
-// marker so that it matches the static_local_guard attribute on the
+// marker so that it matches the dynamic_init_guard attribute on the
 // corresponding cir.global. Otherwise the cir.get_global verifier rejects
 // the IR with "static_local attribute mismatch".
 void array_static_local_dtor() {

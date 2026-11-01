@@ -201,10 +201,8 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-DISABLED-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK-DISABLED:       is_worker_check:
-; CHECK-DISABLED-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; CHECK-DISABLED-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; CHECK-DISABLED-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; CHECK-DISABLED-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
+; CHECK-DISABLED-NEXT:    [[MAX_TEAM_THREADS:%.*]] = call i32 @__kmpc_get_max_team_threads(i32 0)
+; CHECK-DISABLED-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[MAX_TEAM_THREADS]]
 ; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK-DISABLED:       worker_state_machine.begin:
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
@@ -431,7 +429,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 !7 = !{!"clang version 14.0.0"}
 !8 = !{!9}
 !9 = distinct !{!9, !10, !"__omp_outlined__: %__context"}
-!10 = distinct !{!10, !"__omp_outlined__"}
+!10 = distinct !{!10, i1 false, !"__omp_outlined__"}
 !11 = distinct !{!11, !12}
 !12 = !{!"llvm.loop.mustprogress"}
 ;.
@@ -468,7 +466,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK: [[META9]] = distinct !{[[META9]], i1 false, !"__omp_outlined__"}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
 ; CHECK: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.
@@ -481,7 +479,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK-DISABLED: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ; CHECK-DISABLED: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK-DISABLED: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], i1 false, !"__omp_outlined__"}
 ; CHECK-DISABLED: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
 ; CHECK-DISABLED: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.

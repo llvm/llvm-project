@@ -1625,6 +1625,21 @@ define void @instructions.bitwise_binops(i8 %op1, i8 %op2) {
   ret void
 }
 
+; Instructions -- Byte Operations
+define void @instructions.byteops(b32 %v32, b64 %v64, i8 %v8, i16 %v16, i32 %off) {
+  bitinsert b32 %v32, i8 %v8, i32 3
+  ; CHECK: bitinsert b32 %v32, i8 %v8, i32 3
+  bitinsert b32 %v32, i16 %v16, i32 %off
+  ; CHECK: bitinsert b32 %v32, i16 %v16, i32 %off
+  bitextract i8, b32 %v32, i32 24
+  ; CHECK: bitextract i8, b32 %v32, i32 24
+  bitextract i16, b32 %v32, i32 %off
+  ; CHECK: bitextract i16, b32 %v32, i32 %off
+  bitextract i8, b64 %v64, i32 0
+  ; CHECK: bitextract i8, b64 %v64, i32 0
+  ret void
+}
+
 ; Instructions -- Vector Operations
 define void @instructions.vectorops(<4 x float> %vec, <4 x float> %vec2) {
   extractelement <4 x float> %vec, i8 0
