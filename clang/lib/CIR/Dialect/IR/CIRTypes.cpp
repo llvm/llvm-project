@@ -29,6 +29,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/MathExtras.h"
 
+#include "CIROpDefinitions.h"
+
 //===----------------------------------------------------------------------===//
 // CIR Helpers
 //===----------------------------------------------------------------------===//
@@ -1787,8 +1789,8 @@ void printMemorySpace(mlir::AsmPrinter &p,
 }
 
 mlir::OptionalParseResult
-parseGlobalMemorySpace(mlir::AsmParser &p,
-                       mlir::ptr::MemorySpaceAttrInterface &attr) {
+cir::parseGlobalMemorySpace(mlir::AsmParser &p,
+                            mlir::ptr::MemorySpaceAttrInterface &attr) {
 
   mlir::SMLoc loc = p.getCurrentLocation();
   if (parseMemorySpace(p, attr).failed())
@@ -1796,8 +1798,8 @@ parseGlobalMemorySpace(mlir::AsmParser &p,
   return mlir::success();
 }
 
-void printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp,
-                            mlir::ptr::MemorySpaceAttrInterface attr) {
+void cir::printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp,
+                                 mlir::ptr::MemorySpaceAttrInterface attr) {
   printMemorySpace(printer, attr);
 }
 

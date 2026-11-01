@@ -1213,38 +1213,38 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
   StringRef Name(RegName);
   Name.consume_front("%");
   Register Reg = StringSwitch<Register>(Name)
-                     .Case("i0", SP::I0)
-                     .Case("i1", SP::I1)
-                     .Case("i2", SP::I2)
-                     .Case("i3", SP::I3)
-                     .Case("i4", SP::I4)
-                     .Case("i5", SP::I5)
-                     .Cases({"i6", "fp"}, SP::I6)
-                     .Case("i7", SP::I7)
-                     .Case("o0", SP::O0)
-                     .Case("o1", SP::O1)
-                     .Case("o2", SP::O2)
-                     .Case("o3", SP::O3)
-                     .Case("o4", SP::O4)
-                     .Case("o5", SP::O5)
-                     .Cases({"o6", "sp"}, SP::O6)
-                     .Case("o7", SP::O7)
-                     .Case("l0", SP::L0)
-                     .Case("l1", SP::L1)
-                     .Case("l2", SP::L2)
-                     .Case("l3", SP::L3)
-                     .Case("l4", SP::L4)
-                     .Case("l5", SP::L5)
-                     .Case("l6", SP::L6)
-                     .Case("l7", SP::L7)
-                     .Case("g0", SP::G0)
-                     .Case("g1", SP::G1)
-                     .Case("g2", SP::G2)
-                     .Case("g3", SP::G3)
-                     .Case("g4", SP::G4)
-                     .Case("g5", SP::G5)
-                     .Case("g6", SP::G6)
-                     .Case("g7", SP::G7)
+                     .Cases({"r24", "i0"}, SP::I0)
+                     .Cases({"r25", "i1"}, SP::I1)
+                     .Cases({"r26", "i2"}, SP::I2)
+                     .Cases({"r27", "i3"}, SP::I3)
+                     .Cases({"r28", "i4"}, SP::I4)
+                     .Cases({"r29", "i5"}, SP::I5)
+                     .Cases({"r30", "i6", "fp"}, SP::I6)
+                     .Cases({"r31", "i7"}, SP::I7)
+                     .Cases({"r8", "o0"}, SP::O0)
+                     .Cases({"r9", "o1"}, SP::O1)
+                     .Cases({"r10", "o2"}, SP::O2)
+                     .Cases({"r11", "o3"}, SP::O3)
+                     .Cases({"r12", "o4"}, SP::O4)
+                     .Cases({"r13", "o5"}, SP::O5)
+                     .Cases({"r14", "o6", "sp"}, SP::O6)
+                     .Cases({"r15", "o7"}, SP::O7)
+                     .Cases({"r16", "l0"}, SP::L0)
+                     .Cases({"r17", "l1"}, SP::L1)
+                     .Cases({"r18", "l2"}, SP::L2)
+                     .Cases({"r19", "l3"}, SP::L3)
+                     .Cases({"r20", "l4"}, SP::L4)
+                     .Cases({"r21", "l5"}, SP::L5)
+                     .Cases({"r22", "l6"}, SP::L6)
+                     .Cases({"r23", "l7"}, SP::L7)
+                     .Cases({"r0", "g0"}, SP::G0)
+                     .Cases({"r1", "g1"}, SP::G1)
+                     .Cases({"r2", "g2"}, SP::G2)
+                     .Cases({"r3", "g3"}, SP::G3)
+                     .Cases({"r4", "g4"}, SP::G4)
+                     .Cases({"r5", "g5"}, SP::G5)
+                     .Cases({"r6", "g6"}, SP::G6)
+                     .Cases({"r7", "g7"}, SP::G7)
                      .Default(0);
 
   // If we're directly referencing register names
@@ -2355,9 +2355,11 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     SDValue TGA = makeHiLoPair(Op, ELF::R_SPARC_TLS_IE_HI22,
                                ELF::R_SPARC_TLS_IE_LO10, DAG);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, Base, TGA);
-    SDValue Offset = DAG.getNode(SPISD::TLS_LD,
-                                 DL, PtrVT, Ptr,
-                                 withTargetFlags(Op, ldTF, DAG));
+    SDValue Ops[] = {DAG.getEntryNode(), Ptr, withTargetFlags(Op, ldTF, DAG)};
+    SDValue Offset = DAG.getMemIntrinsicNode(
+        SPISD::TLS_LD, DL, DAG.getVTList(PtrVT, MVT::Other), Ops, PtrVT,
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()),
+        /*Alignment=*/std::nullopt, MachineMemOperand::MOLoad);
     return DAG.getNode(SPISD::TLS_ADD, DL, PtrVT,
                        DAG.getRegister(SP::G7, PtrVT), Offset,
                        withTargetFlags(Op, ELF::R_SPARC_TLS_IE_ADD, DAG));
@@ -2532,15 +2534,19 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_LG :  {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
-    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    SDValue Two = DAG.getConstant(2, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Two);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UE : {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
-    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    SDValue Two = DAG.getConstant(2, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Two);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
@@ -3652,6 +3658,18 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (RegName.empty())
     return std::make_pair(0U, nullptr);
 
+  unsigned CCReg = StringSwitch<unsigned>(RegName)
+                       .Cases({"cc", "icc"}, SP::ICC)
+                       .Case("fcc0", SP::FCC0)
+                       .Case("fcc1", SP::FCC1)
+                       .Case("fcc2", SP::FCC2)
+                       .Case("fcc3", SP::FCC3)
+                       .Default(0);
+  if (CCReg == SP::ICC)
+    return std::make_pair(CCReg, &SP::ICCRegsRegClass);
+  if (CCReg)
+    return std::make_pair(CCReg, &SP::FCCRegsRegClass);
+
   unsigned long long RegNo;
   // Handle numbered register aliases.
   if (RegName[0] == 'r' &&
@@ -3792,11 +3810,9 @@ SparcTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
     return FPImmAction::ConstantPool;
   if (Subtarget->isVIS() && Imm.isZero())
     return FPImmAction::Legal;
-  if (Subtarget->isVIS3())
-    return Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5) ||
-                   Imm.getExactLog2Abs() == -1
-               ? FPImmAction::Legal
-               : FPImmAction::ConstantPool;
+  // Check for +/-0.5.
+  if (Subtarget->isVIS3() && Imm.getExactLog2Abs() == -1)
+    return FPImmAction::Legal;
   return FPImmAction::ConstantPool;
 }
 

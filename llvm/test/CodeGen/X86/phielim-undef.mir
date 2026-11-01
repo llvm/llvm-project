@@ -60,7 +60,7 @@ body: |
     successors: %bb.6(0x40000000), %bb.1(0x40000000)
 
     %5:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @b114, $noreg
-    %6:gr16 = MOV16rm killed %5, 1, $noreg, 0, $noreg :: (load (s16) from @b114, align 1)
+    %6:gr16 = MOV16rm %5, 1, $noreg, 0, $noreg :: (load (s16) from @b114, align 1)
     TEST8ri undef %4:gr8, 1, implicit-def $eflags
     JCC_1 %bb.6, 5, implicit killed $eflags
 
@@ -82,8 +82,8 @@ body: |
     successors: %bb.7(0x40000000), %bb.5(0x40000000)
 
     %8:gr32 = MOV32r0 implicit-def dead $eflags
-    %9:gr16 = COPY killed %8.sub_16bit
-    CMP16ri8 killed %1, 0, implicit-def $eflags
+    %9:gr16 = COPY %8.sub_16bit
+    CMP16ri8 %1, 0, implicit-def $eflags
     JCC_1 %bb.7, 5, implicit killed $eflags
 
   bb.5:

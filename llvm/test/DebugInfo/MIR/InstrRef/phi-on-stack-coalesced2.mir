@@ -87,7 +87,7 @@ body:             |
     %6:gr8 = COPY %1.sub_8bit_hi
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     %3:gr32 = MOV32r0 implicit-def dead $eflags
-    $edi = COPY killed %3, debug-location !15
+    $edi = COPY %3, debug-location !15
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !15
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     %4:gr32 = COPY killed $eax, debug-location !15
@@ -106,7 +106,7 @@ body:             |
     %22:gr32 = MOV32ri 12
     %23:gr32 = MOV32ri 13
     %24:gr32 = MOV32ri 14
-    TEST32rr killed %4, %4, implicit-def $eflags, debug-location !15
+    TEST32rr %4, %4, implicit-def $eflags, debug-location !15
     JCC_1 %bb.2, 5, implicit killed $eflags, debug-location !17
     JMP_1 %bb.1, debug-location !17
 
@@ -151,7 +151,7 @@ body:             |
     ; CHECK-NOT:  DBG_PHI
     ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
     ; CHECK-NOT:  DBG_PHI
-    $eax = COPY killed %0, debug-location !19
+    $eax = COPY %0, debug-location !19
     RET 0, killed $eax, debug-location !19
 
 ...
