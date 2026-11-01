@@ -185,6 +185,15 @@ void RuntimeLibcallsInfo::initExtensionsForTriple(bool &ShouldExtI32Param,
   ShouldSignExtI32Return = shouldSignExtI32Return(T);
 }
 
+static bool shouldZExtBool(const Triple &T) {
+  return !T.isAArch64() && !T.isOSDarwin();
+}
+
+void RuntimeLibcallsInfo::initBoolExtensionsForTriple(
+    bool &ShouldZExtBoolParam, bool &ShouldZExtBoolReturn, const Triple &T) {
+  ShouldZExtBoolParam = ShouldZExtBoolReturn = shouldZExtBool(T);
+}
+
 /// TODO: There is really no guarantee that sizeof(size_t) is equal to the index
 /// size of the default address space. This matches TargetLibraryInfo and should
 /// be kept in sync.
@@ -223,7 +232,7 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
   case Void:
     return {Type::getVoidTy(Ctx), Attribute()};
   case Bool:
-    return {IntegerType::get(Ctx, 1), Attribute::get(Ctx, Attribute::ZExt)};
+    return {IntegerType::get(Ctx, 1), Attribute()};
   case Int8:
   case UInt8:
     return {IntegerType::get(Ctx, 8), Attribute()};
@@ -340,10 +349,15 @@ static std::optional<bool> isSignedIntArgType(FuncArgTypeID ID) {
 static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
                                          const Triple &TT, unsigned IntBits,
                                          bool IsReturn) {
+  if (ID == Bool)
+    return shouldZExtBool(TT) ? Attribute::ZExt : Attribute::None;
+
   std::optional<bool> Signed = isSignedIntArgType(ID);
   if (!Signed)
     return Attribute::None;
 
+  // All targets currently extend types narrower than int according to their
+  // signedness, but this could become target dependent if a target needs it.
   unsigned Bits = Ty->getIntegerBitWidth();
   if (Bits < IntBits)
     return *Signed ? Attribute::SExt : Attribute::ZExt;
