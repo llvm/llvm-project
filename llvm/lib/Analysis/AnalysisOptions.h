@@ -15,6 +15,11 @@
 
 namespace llvm {
 
+// Forward-declared so that Analysis headers can include this one. Fields of
+// these types default to the zero enumerator.
+enum class IR2VecKind;
+enum class PGOViewCountsType;
+
 enum class OutputCostKind {
   RecipThroughput,
   Latency,
