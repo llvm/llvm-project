@@ -6217,7 +6217,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                         Q, Depth + 1);
 
     bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() ||
+        KnownRHS.isKnownNever(fcSNan) ||
         KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
 

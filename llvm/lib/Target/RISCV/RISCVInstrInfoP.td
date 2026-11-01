@@ -3405,6 +3405,12 @@ let append Predicates = [IsRV64] in {
             (MACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1, zexti32:$rs2))),
             (MACCU_W00 GPR:$rd, zexti32:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1,
+                                           (srl GPR:$rs2, (XLenVT 32))))),
+            (MACCU_W01 GPR:$rd, zexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse (srl GPR:$rs1, (XLenVT 32)),
+                                           (srl GPR:$rs2, (XLenVT 32))))),
+            (MACCU_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, zexti32:$rs2))),
             (MACCSU_W00 GPR:$rd, sexti32:$rs1, zexti32:$rs2)>;
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse (sra GPR:$rs1, (XLenVT 32)),

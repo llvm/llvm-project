@@ -2355,9 +2355,11 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     SDValue TGA = makeHiLoPair(Op, ELF::R_SPARC_TLS_IE_HI22,
                                ELF::R_SPARC_TLS_IE_LO10, DAG);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, Base, TGA);
-    SDValue Offset = DAG.getNode(SPISD::TLS_LD,
-                                 DL, PtrVT, Ptr,
-                                 withTargetFlags(Op, ldTF, DAG));
+    SDValue Ops[] = {DAG.getEntryNode(), Ptr, withTargetFlags(Op, ldTF, DAG)};
+    SDValue Offset = DAG.getMemIntrinsicNode(
+        SPISD::TLS_LD, DL, DAG.getVTList(PtrVT, MVT::Other), Ops, PtrVT,
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()),
+        /*Alignment=*/std::nullopt, MachineMemOperand::MOLoad);
     return DAG.getNode(SPISD::TLS_ADD, DL, PtrVT,
                        DAG.getRegister(SP::G7, PtrVT), Offset,
                        withTargetFlags(Op, ELF::R_SPARC_TLS_IE_ADD, DAG));
