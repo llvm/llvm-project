@@ -293,6 +293,32 @@ static Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
                        "error in hsa_amd_agent_iterate_memory_pools: %s");
 }
 
+/// Get the SDMA engine ID for a mem copy operation from src to dst agent.
+/// Use a round-robin system to target all available engines. Check availability
+/// using hsa_amd_memory_copy_engine_status.
+/// Return nullopt if no available engine ID could be found.
+static std::optional<hsa_amd_sdma_engine_id_t>
+getSdmaEngineId(hsa_agent_t DstAgent, hsa_agent_t SrcAgent) {
+  static std::atomic<uint32_t> Select{0u};
+
+  uint32_t AvailMask;
+  if (hsa_amd_memory_copy_engine_status(DstAgent, SrcAgent, &AvailMask) ||
+      !AvailMask)
+    return std::nullopt;
+
+  uint32_t LocalSelect = Select.load(std::memory_order_acquire);
+  uint32_t EngineId = 1u;
+
+  do {
+    EngineId <<= LocalSelect++;
+    if (EngineId > AvailMask)
+      EngineId = 1u;
+  } while (!(AvailMask & EngineId));
+
+  Select.store(LocalSelect, std::memory_order_relaxed);
+  return static_cast<hsa_amd_sdma_engine_id_t>(EngineId);
+}
+
 /// Dispatches an asynchronous memory copy.
 /// Enables different SDMA engines for the dispatch in a round-robin fashion.
 static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
@@ -308,22 +334,16 @@ static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
     return Plugin::check(S, "error in hsa_amd_memory_async_copy: %s");
   }
 
-  static std::atomic<int> SdmaEngine{1};
+  std::optional<hsa_amd_sdma_engine_id_t> SdmaEngine =
+      getSdmaEngineId(DstAgent, SrcAgent);
+  if (!SdmaEngine)
+    return asyncMemCopy(/*UseMultipleSdmaEngines=*/false, Dst, DstAgent, Src,
+                        SrcAgent, Size, NumDepSignals, DepSignals,
+                        CompletionSignal);
 
-  // This atomics solution is probably not the best, but should be sufficient
-  // for now.
-  // In a worst case scenario, in which threads read the same value, they will
-  // dispatch to the same SDMA engine. This may result in sub-optimal
-  // performance. However, I think the possibility to be fairly low.
-  int LocalSdmaEngine = SdmaEngine.load(std::memory_order_acquire);
   hsa_status_t S = hsa_amd_memory_async_copy_on_engine(
       Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
-      CompletionSignal, (hsa_amd_sdma_engine_id_t)LocalSdmaEngine,
-      /*force_copy_on_sdma=*/true);
-  // Increment to use one of two SDMA engines: 0x1, 0x2
-  LocalSdmaEngine = (LocalSdmaEngine << 1) % 3;
-  SdmaEngine.store(LocalSdmaEngine, std::memory_order_relaxed);
-
+      CompletionSignal, *SdmaEngine, /*force_copy_on_sdma=*/true);
   return Plugin::check(S, "error in hsa_amd_memory_async_copy_on_engine: %s");
 }
 
