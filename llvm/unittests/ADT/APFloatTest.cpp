@@ -2630,6 +2630,26 @@ TEST(APFloatTest, SubtractToNegativeInUnsignedFormat) {
   EXPECT_TRUE(x.isPosZero());
 }
 
+TEST(APFloatTest, RemainderInUnsignedFormat) {
+  const fltSemantics &Sem = APFloat::Float8E5M3FNU();
+
+  // A negative remainder is NaN, whichever step of the computation it is from.
+  for (auto [Num, Denom] : {std::pair("3", "3.5"), std::pair("5", "3")}) {
+    APFloat X(Sem, Num);
+    EXPECT_EQ(APFloat::opInvalidOp, X.remainder(APFloat(Sem, Denom)));
+    EXPECT_TRUE(X.isNaN());
+    EXPECT_FALSE(X.isNegative());
+  }
+
+  APFloat X(Sem, "4");
+  EXPECT_EQ(APFloat::opOK, X.remainder(APFloat(Sem, "3")));
+  EXPECT_TRUE(X.bitwiseIsEqual(APFloat(Sem, "1")));
+
+  X = APFloat(Sem, "3");
+  EXPECT_EQ(APFloat::opOK, X.remainder(APFloat(Sem, "3")));
+  EXPECT_TRUE(X.isPosZero());
+}
+
 TEST(APFloatTest, getLargest) {
   EXPECT_EQ(3.402823466e+38f, APFloat::getLargest(APFloat::IEEEsingle()).convertToFloat());
   EXPECT_EQ(1.7976931348623158e+308, APFloat::getLargest(APFloat::IEEEdouble()).convertToDouble());

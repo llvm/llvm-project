@@ -2207,6 +2207,26 @@ APFloat::opStatus IEEEFloat::remainder(const IEEEFloat &rhs) {
   if (fs != opDivByZero)
     return fs;
 
+  // The steps below go through negative values, so a format without a sign
+  // computes in a signed copy of itself. A negative remainder has no encoding.
+  if (!semantics->hasSignedRepr) {
+    fltSemantics signedSemantics = *semantics;
+    signedSemantics.hasSignedRepr = true;
+    const fltSemantics &origSemantics = *semantics;
+    bool losesInfo;
+    IEEEFloat V = *this, P = rhs;
+    V.convert(signedSemantics, rmNearestTiesToEven, &losesInfo);
+    P.convert(signedSemantics, rmNearestTiesToEven, &losesInfo);
+    fs = V.remainder(P);
+    if (V.isNegative() && !V.isZero()) {
+      makeNaN();
+      return opInvalidOp;
+    }
+    V.convert(origSemantics, rmNearestTiesToEven, &losesInfo);
+    *this = V;
+    return fs;
+  }
+
   fs = opOK;
 
   // Make sure the current value is less than twice the denom. If the addition
