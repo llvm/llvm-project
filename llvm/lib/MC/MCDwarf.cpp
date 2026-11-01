@@ -1567,8 +1567,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     return;
   case MCCFIInstruction::OpRestoreState:
     Streamer.emitInt8(dwarf::DW_CFA_restore_state);
-    if (!SavedCFAOffsets.empty())
-      CFAOffset = SavedCFAOffsets.pop_back_val();
+    CFAOffset = SavedCFAOffsets.pop_back_val();
     return;
   case MCCFIInstruction::OpSameValue: {
     unsigned Reg = Instr.getRegister();
