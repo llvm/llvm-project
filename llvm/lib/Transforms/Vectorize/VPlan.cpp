@@ -805,6 +805,14 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   // conditionally executed block to the exiting block for each lane.
   assert(VF.isVector() && "Can only compute vector cost at the moment.");
   VPBasicBlock *Then = cast<VPBasicBlock>(getEntry()->getSuccessors()[0]);
+
+  // If the vector loop executes at most once and the region is predicated on
+  // the header mask, the branches fold away.
+  if (VPCostContext::executesAtMostOnce(*getPlan(), VF) &&
+      match(getEntryBranchOnMask()->getOperand(0),
+            m_ICmp(m_Isa<VPWidenCanonicalIVRecipe>(), m_VPValue())))
+    return Then->cost(VF, Ctx);
+
   InstructionCost Cost = getEntry()->cost(VF, Ctx);
   Cost += Then->cost(VF, Ctx);
   InstructionCost ThenBranchCost;
