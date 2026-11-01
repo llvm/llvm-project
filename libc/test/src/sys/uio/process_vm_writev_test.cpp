@@ -28,7 +28,7 @@ TEST(LlvmLibcSysUioProcessVmWritevTest, SmokeTest) {
   local_iov[0].iov_base = part0;
   local_iov[0].iov_len = 7;
   local_iov[1].iov_base = part1;
-  local_iov[1].iov_len = 8; // includes '\n' and '\0'
+  local_iov[1].iov_len = 8;
 
   ASSERT_THAT(
       LIBC_NAMESPACE::process_vm_writev(pid, local_iov, 2, remote_iov, 1, 0),
