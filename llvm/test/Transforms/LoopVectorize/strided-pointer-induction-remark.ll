@@ -38,6 +38,6 @@ exit:
 }
 
 ; CHECK-LABEL: Function: strided_pointer_induction{{$}}
-; CHECK:         - String: value that could not be identified as reduction is used outside the loop
+; CHECK:         - String: pointer induction with a non-constant step
 ; CHECK-LABEL: Function: unidentified_phi{{$}}
 ; CHECK:         - String: value that could not be identified as reduction is used outside the loop

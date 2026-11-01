@@ -931,6 +931,14 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return true;
     }
 
+    if (isDisallowedStridedPointerInduction(ID, Opts)) {
+      reportVectorizationFailure(
+          "Found a pointer induction with a non-constant step",
+          "pointer induction with a non-constant step",
+          "StridedPointerInduction", ORE, TheLoop, Phi);
+      return false;
+    }
+
     reportVectorizationFailure("Found an unidentified PHI",
                                "value that could not be identified as "
                                "reduction is used outside the loop",
