@@ -41,10 +41,8 @@ public:
       : Corpus(0) {
     for (auto &&Sym : Symbols)
       this->Symbols.push_back(&Sym);
-    if constexpr (std::is_same_v<std::decay_t<RefsRange>,
-                                 decltype(this->Refs)>) {
-      // A map of the right type can be taken as is instead of rehashing every
-      // entry.
+    if constexpr (std::is_assignable_v<decltype(this->Refs) &, RefsRange>) {
+      // Take a map that can be assigned as is instead of rehashing every entry.
       this->Refs = std::forward<RefsRange>(Refs);
     } else {
       for (auto &&Ref : Refs)
