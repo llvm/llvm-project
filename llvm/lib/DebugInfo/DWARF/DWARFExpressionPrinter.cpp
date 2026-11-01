@@ -23,7 +23,6 @@ using namespace dwarf;
 namespace llvm {
 
 typedef DWARFExpression::Operation Op;
-typedef Op::Description Desc;
 
 /// Some backends (e.g. NVPTX) encode virtual register names as the DWARF
 /// register number: the ASCII bytes of the name are concatenated into a

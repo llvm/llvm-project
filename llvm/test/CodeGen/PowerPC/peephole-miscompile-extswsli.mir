@@ -17,7 +17,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
   ; CHECK-NEXT:   [[ANDI8_rec:%[0-9]+]]:g8rc = ANDI8_rec [[COPY1]], 1, implicit-def $cr0
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:crbitrc = COPY $cr0gt
-  ; CHECK-NEXT:   BCn killed [[COPY4]], %bb.2
+  ; CHECK-NEXT:   BCn [[COPY4]], %bb.2
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -47,7 +47,7 @@ body:             |
     %1:g8rc_and_g8rc_nox0 = COPY $x3
     %11:g8rc = ANDI8_rec %3, 1, implicit-def $cr0
     %6:crbitrc = COPY $cr0gt
-    BCn killed %6, %bb.2
+    BCn %6, %bb.2
     B %bb.1
 
   bb.1:

@@ -463,29 +463,29 @@ body:             |
   
     %64:g8rc_and_g8rc_nox0 = LDtoc @shortArray, $x2 :: (load (s64) from got)
     %65:g8rc = LI8 -1
-    STH8 killed %65, 6, %64 :: (store (s16) into `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3)`, !tbaa !3)
+    STH8 %65, 6, %64 :: (store (s16) into `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3)`, !tbaa !3)
     %66:g8rc_and_g8rc_nox0 = LDtoc @largeNumber, $x2 :: (load (s64) from got)
-    %67:gprc_and_gprc_nor0 = LHA 6, killed %66 :: (dereferenceable load (s16) from @largeNumber + 6, basealign 8, !tbaa !7)
-    %68:gprc = ADDI killed %67, -1705
+    %67:gprc_and_gprc_nor0 = LHA 6, %66 :: (dereferenceable load (s16) from @largeNumber + 6, basealign 8, !tbaa !7)
+    %68:gprc = ADDI %67, -1705
     ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
     %69:g8rc_and_g8rc_nox0 = LDtoc @_MergedGlobals, $x2 :: (load (s64) from got)
-    %70:g8rc = nuw ADDI8 killed %69, 29
-    %71:g8rc = EXTSW_32_64 killed %68
+    %70:g8rc = nuw ADDI8 %69, 29
+    %71:g8rc = EXTSW_32_64 %68
     $x3 = COPY %70
     $x4 = COPY %71
     BL8_NOP <mcsymbol .printf>, csr_ppc64_r2, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit-def $r1, implicit-def $x3
     ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
     %73:g8rc_and_g8rc_nox0 = LDtoc @globalShortValue, $x2 :: (load (s64) from got)
-    %0:gprc = LHZ 0, killed %73 :: (dereferenceable load (s16) from @globalShortValue, !tbaa !3)
+    %0:gprc = LHZ 0, %73 :: (dereferenceable load (s16) from @globalShortValue, !tbaa !3)
     %74:g8rc_and_g8rc_nox0 = LDtoc @someIntValue, $x2 :: (load (s64) from got)
-    %75:gprc_and_gprc_nor0 = LBZ 3, killed %74 :: (dereferenceable load (s8) from @someIntValue + 3, basealign 4, !tbaa !9)
-    %76:gprc = ADDI killed %75, -19
+    %75:gprc_and_gprc_nor0 = LBZ 3, %74 :: (dereferenceable load (s8) from @someIntValue + 3, basealign 4, !tbaa !9)
+    %76:gprc = ADDI %75, -19
     %1:gprc = EXTSB %76
     %77:g8rc_and_g8rc_nox0 = LDtoc @unitIncrement, $x2 :: (load (s64) from got)
-    %2:gprc = LWZ 0, killed %77 :: (dereferenceable load (s32) from @unitIncrement)
+    %2:gprc = LWZ 0, %77 :: (dereferenceable load (s32) from @unitIncrement)
     %78:g8rc_and_g8rc_nox0 = LDtoc @globalCharValue, $x2 :: (load (s64) from got)
-    %79:gprc = LBZ 0, killed %78 :: (dereferenceable load (s8) from @globalCharValue)
-    %80:gprc_and_gprc_nor0 = EXTSB killed %79
+    %79:gprc = LBZ 0, %78 :: (dereferenceable load (s8) from @globalCharValue)
+    %80:gprc_and_gprc_nor0 = EXTSB %79
     %81:g8rc_and_g8rc_nox0 = LDtoc @computedResultShort, $x2 :: (load (s64) from got)
     %3:gprc = LHZ 0, %81 :: (dereferenceable load (s16) from @computedResultShort, !tbaa !3)
     %82:g8rc_and_g8rc_nox0 = LDtoc @resultArray, $x2 :: (load (s64) from got)
@@ -494,45 +494,45 @@ body:             |
     %5:gprc = LBZ 0, %83 :: (dereferenceable load (s8) from @computedResultChar, !tbaa !11)
     %85:g8rc = IMPLICIT_DEF
     %84:g8rc = INSERT_SUBREG %85, %76, %subreg.sub_32
-    %6:g8rc_and_g8rc_nox0 = EXTSB8 killed %84
+    %6:g8rc_and_g8rc_nox0 = EXTSB8 %84
     %7:gprc = LHZ 6, %64 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3)`, !tbaa !3)
     %86:gprc_and_gprc_nor0 = LHA 4, %64 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 2)`)
     ; CHECK:       [[VIRREG162:%[0-9]+]]:g8rc = LHA8 6, %64
     ; CHECK-NEXT:  [[VIRREG150:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[VIRREG162]].sub_32
     %87:crrc = CMPW %80, %86
     %88:gprc = ISEL %80, %86, %87.sub_lt
-    %89:crrc = CMPLWI killed %88, 0
+    %89:crrc = CMPLWI %88, 0
     %91:gprc_and_gprc_nor0 = LI 1
     %8:gprc = ISEL $zero, %91, %89.sub_eq
     %92:g8rc_and_g8rc_nox0 = LDtoc @ullArray, $x2 :: (load (s64) from got)
-    %93:g8rc = LD 24, killed %92 :: (dereferenceable load (s64) from `ptr getelementptr inbounds ([8 x i64], ptr @ullArray, i64 0, i64 3)`)
-    %94:crrc = CMPLDI killed %93, 0
+    %93:g8rc = LD 24, %92 :: (dereferenceable load (s64) from `ptr getelementptr inbounds ([8 x i64], ptr @ullArray, i64 0, i64 3)`)
+    %94:crrc = CMPLDI %93, 0
     $cr7 = COPY %94
     %95:gprc = MFOCRF $cr7
-    %96:gprc = RLWINM killed %95, 31, 31, 31
-    %9:gprc = XORI killed %96, 1
+    %96:gprc = RLWINM %95, 31, 31, 31
+    %9:gprc = XORI %96, 1
     %97:crrc = CMPDI %6, 4
     %98:g8rc_and_g8rc_nox0 = LI8 4
     %99:g8rc = ISEL8 %6, %98, %97.sub_gt
-    %100:g8rc_and_g8rc_nox0 = SUBF8 %6, killed %99
-    %10:g8rc = ADDI8 killed %100, 3
+    %100:g8rc_and_g8rc_nox0 = SUBF8 %6, %99
+    %10:g8rc = ADDI8 %100, 3
     %101:g8rc_and_g8rc_nox0 = RLDICL %10, 62, 2
-    %11:g8rc = nuw nsw ADDI8 killed %101, 1
+    %11:g8rc = nuw nsw ADDI8 %101, 1
     %102:g8rc = RLDICL %11, 63, 1
-    %12:g8rc_and_g8rc_nox0 = RLDICL killed %102, 1, 1
+    %12:g8rc_and_g8rc_nox0 = RLDICL %102, 1, 1
     %103:g8rc = RLDICR %11, 2, 60
-    %13:g8rc = ADD8 killed %103, %6
+    %13:g8rc = ADD8 %103, %6
     %104:g8rc = RLDICR %6, 2, 61
     %105:g8rc = RLDICR %6, 3, 60
     %106:g8rc = LDtoc @longArray, $x2 :: (load (s64) from got)
-    %107:g8rc_and_g8rc_nox0 = ADD8 killed %105, %106
-    %14:g8rc = ADDI8 killed %107, -64
+    %107:g8rc_and_g8rc_nox0 = ADD8 %105, %106
+    %14:g8rc = ADDI8 %107, -64
     %108:g8rc = LDtoc @intArray, $x2 :: (load (s64) from got)
-    %109:g8rc_and_g8rc_nox0 = ADD8 killed %104, %108
-    %15:g8rc = ADDI8 killed %109, 64
+    %109:g8rc_and_g8rc_nox0 = ADD8 %104, %108
+    %15:g8rc = ADDI8 %109, 64
     %110:g8rc = nsw ADDI8 %12, -2
     %111:g8rc_and_g8rc_nox0 = RLDICL %110, 63, 1
-    %16:g8rc = nuw ADDI8 killed %111, 1
+    %16:g8rc = nuw ADDI8 %111, 1
     %63:gprc = LI 8
     %112:crrc = CMPWI %1, 7
     %113:g8rc_and_g8rc_nox0 = LDtoc @computedResultUChar, $x2 :: (load (s64) from got)
@@ -554,14 +554,14 @@ body:             |
 
     %152:crrc = CMPW %151, %150
     %153:gprc = ISEL %151, %150, %152.sub_lt
-    %154:g8rc = EXTSW_32_64 killed %153
+    %154:g8rc = EXTSW_32_64 %153
     ; CHECK:      [[VIRREG165:%[0-9]+]]:g8rc = IMPLICIT_DEF
     ; CHECK-NEXT: [[VIRREG166:%[0-9]+]]:g8rc = INSERT_SUBREG [[VIRREG165]], [[VIRREG150]], %subreg.sub_32
     ; CHECK-NEXT: [[VIRREG167:%[0-9]+]]:g8rc = ISEL8 %164, [[VIRREG166]], %152.sub_lt
     ; CHECK-NEXT: %{{[0-9]+}}:gprc = COPY [[VIRREG167]].sub_32
     ; CHECK-NOT:  EXTSW_32_64
     %155:g8rc_and_g8rc_nox0 = LDtoc @computedResultUll, $x2 :: (load (s64) from got)
-    STD %154, 0, killed %155 :: (store (s64) into @computedResultUll, !tbaa !7)
+    STD %154, 0, %155 :: (store (s64) into @computedResultUll, !tbaa !7)
     ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
     %156:g8rc = LDtoc @_MergedGlobals, $x2 :: (load (s64) from got)
     $x3 = COPY %156
@@ -613,14 +613,14 @@ body:             |
     %120:gprc = LHZ 102, %27 :: (load (s16) from %ir.32 + 6, basealign 8, !tbaa !7)
     %121:gprc = LBZ 35, %28 :: (load (s8) from %ir.29 + 3, basealign 4, !tbaa !9)
     %122:gprc = LBZ 51, %28 :: (load (s8) from %ir.30 + 3, basealign 4, !tbaa !9)
-    %123:gprc = MULLI killed %121, -6
-    %124:gprc = MULLI killed %122, -6
+    %123:gprc = MULLI %121, -6
+    %124:gprc = MULLI %122, -6
     %31:gprc = SUBF %2, %21
     %32:gprc = SUBF %2, %22
-    %33:gprc = AND %23, killed %119
-    %34:gprc = AND %24, killed %120
-    %35:gprc = ADD4 killed %123, %25
-    %36:gprc = ADD4 killed %124, %26
+    %33:gprc = AND %23, %119
+    %34:gprc = AND %24, %120
+    %35:gprc = ADD4 %123, %25
+    %36:gprc = ADD4 %124, %26
     BDNZ8 %bb.5, implicit-def $ctr8, implicit $ctr8
     B %bb.6
   
@@ -642,17 +642,17 @@ body:             |
     %43:gprc = PHI %20, %bb.3, %39, %bb.6
     %127:g8rc = RLDICR %40, 2, 61
     %128:g8rc = RLDICR %40, 3, 60
-    %130:g8rc_and_g8rc_nox0 = ADD8 %106, killed %128
-    %44:g8rc = ADDI8 killed %130, -32
-    %132:g8rc_and_g8rc_nox0 = ADD8 %108, killed %127
-    %45:g8rc = ADDI8 killed %132, 80
+    %130:g8rc_and_g8rc_nox0 = ADD8 %106, %128
+    %44:g8rc = ADDI8 %130, -32
+    %132:g8rc_and_g8rc_nox0 = ADD8 %108, %127
+    %45:g8rc = ADDI8 %132, 80
     %133:crrc = CMPDI %40, 4
     %135:g8rc = ISEL8 %40, %98, %133.sub_gt
-    %136:g8rc_and_g8rc_nox0 = SUBF8 %40, killed %135
-    %137:g8rc = ADDI8 killed %136, 3
+    %136:g8rc_and_g8rc_nox0 = SUBF8 %40, %135
+    %137:g8rc = ADDI8 %136, 3
     %138:g8rc_and_g8rc_nox0 = RLDICL %137, 62, 2
-    %139:g8rc = nuw nsw ADDI8 killed %138, 1
-    MTCTR8loop killed %139, implicit-def dead $ctr8
+    %139:g8rc = nuw nsw ADDI8 %138, 1
+    MTCTR8loop %139, implicit-def dead $ctr8
     B %bb.10
   
   bb.8.for.cond21.for.cond.cleanup25_crit_edge (landing-pad):
@@ -664,10 +664,10 @@ body:             |
     %48:gprc = PHI %39, %bb.6, %62, %bb.10
     STH %46, 0, %81 :: (store (s16) into @computedResultShort, !tbaa !3)
     %145:g8rc_and_g8rc_nox0 = LDtoc @charArray, $x2 :: (load (s64) from got)
-    STB %0, 131, killed %145 :: (store (s8) into `ptr getelementptr inbounds ([8 x [8 x [8 x i8]]], ptr @charArray, i64 0, i64 2, i64 0, i64 3)`, !tbaa !11)
+    STB %0, 131, %145 :: (store (s8) into `ptr getelementptr inbounds ([8 x [8 x [8 x i8]]], ptr @charArray, i64 0, i64 2, i64 0, i64 3)`, !tbaa !11)
     STH %47, 0, %82 :: (store (s16) into @resultArray, !tbaa !3)
     %147:g8rc_and_g8rc_nox0 = LDtoc @computedResultBool, $x2 :: (load (s64) from got)
-    STB %9, 0, killed %147 :: (store (s8) into @computedResultBool, !tbaa !16)
+    STB %9, 0, %147 :: (store (s8) into @computedResultBool, !tbaa !16)
     STB %48, 0, %83 :: (store (s8) into @computedResultChar, !tbaa !11)
   
   bb.9.for.cond.cleanup25:
@@ -678,7 +678,7 @@ body:             |
     %51:gprc = PHI %18, %bb.2, %46, %bb.8
     %52:gprc = nsw ADDI %17, -1
     %149:crrc = CMPLWI %52, 0
-    BCC 76, killed %149, %bb.1
+    BCC 76, %149, %bb.1
     B %bb.2
   
   bb.10.for.body31:
@@ -693,10 +693,10 @@ body:             |
     %59:g8rc = ADDI8 %56, 32
     %140:gprc = LHZ 38, %56 :: (load (s16) from %ir.62 + 6, basealign 8, !tbaa !7)
     %141:gprc = LBZ 19, %57 :: (load (s8) from %ir.61 + 3, basealign 4, !tbaa !9)
-    %142:gprc = MULLI killed %141, -6
+    %142:gprc = MULLI %141, -6
     %60:gprc = SUBF %2, %53
-    %61:gprc = AND %54, killed %140
-    %62:gprc = ADD4 killed %142, %55
+    %61:gprc = AND %54, %140
+    %62:gprc = ADD4 %142, %55
     BDNZ8 %bb.10, implicit-def $ctr8, implicit $ctr8
     B %bb.8
 

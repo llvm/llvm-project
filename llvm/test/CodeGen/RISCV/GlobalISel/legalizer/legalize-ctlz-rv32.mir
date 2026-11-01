@@ -3,6 +3,8 @@
 # RUN: | FileCheck %s --check-prefix=RV32I
 # RUN: llc -mattr=+m -mtriple=riscv32 -mattr=+zbb -run-pass=legalizer %s -o - \
 # RUN: | FileCheck %s --check-prefix=RV32ZBB
+# RUN: llc -mattr=+m -mtriple=riscv32 -mattr=+xtheadbb -run-pass=legalizer %s -o - \
+# RUN: | FileCheck %s --check-prefix=RV32XTHEADBB
 
 ---
 name:            ctlz_i8
@@ -62,6 +64,19 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: ctlz_i8
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = nuw G_SUB [[CTLZ]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s8) = G_TRUNC %1(s32)
     %2:_(s8) = G_CTLZ %0(s8)
@@ -133,6 +148,19 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: ctlz_i16
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = nuw G_SUB [[CTLZ]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s16) = G_TRUNC %1(s32)
     %2:_(s16) = G_CTLZ %0(s16)
@@ -195,6 +223,14 @@ body:             |
     ; RV32ZBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[CTLZ]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: ctlz_i32
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[CTLZ]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = G_CTLZ %0(s32)
     $x10 = COPY %1(s32)
@@ -292,6 +328,22 @@ body:             |
     ; RV32ZBB-NEXT: $x10 = COPY [[SELECT]](s32)
     ; RV32ZBB-NEXT: $x11 = COPY [[C]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10, implicit $x11
+    ;
+    ; RV32XTHEADBB-LABEL: name: ctlz_i64
+    ; RV32XTHEADBB: liveins: $x10, $x11
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; RV32XTHEADBB-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ1:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
+    ; RV32XTHEADBB-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[ADD]], [[CTLZ1]]
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[SELECT]](s32)
+    ; RV32XTHEADBB-NEXT: $x11 = COPY [[C]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10, implicit $x11
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
@@ -360,6 +412,19 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: ctlz_zero_poison_i8
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = nuw G_SUB [[CTLZ]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s8) = G_TRUNC %1(s32)
     %2:_(s8) = G_CTLZ_ZERO_POISON %0(s8)
@@ -431,6 +496,19 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[COPY1]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: ctlz_zero_poison_i16
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; RV32XTHEADBB-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[AND]](s32)
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; RV32XTHEADBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = nuw G_SUB [[CTLZ]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SUB]](s32)
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[COPY1]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s16) = G_TRUNC %1(s32)
     %2:_(s16) = G_CTLZ_ZERO_POISON %0(s16)
@@ -493,6 +571,14 @@ body:             |
     ; RV32ZBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
     ; RV32ZBB-NEXT: $x10 = COPY [[CTLZ]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32XTHEADBB-LABEL: name: ctlz_zero_poison_i32
+    ; RV32XTHEADBB: liveins: $x10
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[CTLZ]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = G_CTLZ_ZERO_POISON %0(s32)
     $x10 = COPY %1(s32)
@@ -590,6 +676,22 @@ body:             |
     ; RV32ZBB-NEXT: $x10 = COPY [[SELECT]](s32)
     ; RV32ZBB-NEXT: $x11 = COPY [[C]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10, implicit $x11
+    ;
+    ; RV32XTHEADBB-LABEL: name: ctlz_zero_poison_i64
+    ; RV32XTHEADBB: liveins: $x10, $x11
+    ; RV32XTHEADBB-NEXT: {{  $}}
+    ; RV32XTHEADBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32XTHEADBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32XTHEADBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; RV32XTHEADBB-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
+    ; RV32XTHEADBB-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; RV32XTHEADBB-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ]], [[C1]]
+    ; RV32XTHEADBB-NEXT: [[CTLZ1:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
+    ; RV32XTHEADBB-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[ADD]], [[CTLZ1]]
+    ; RV32XTHEADBB-NEXT: $x10 = COPY [[SELECT]](s32)
+    ; RV32XTHEADBB-NEXT: $x11 = COPY [[C]](s32)
+    ; RV32XTHEADBB-NEXT: PseudoRET implicit $x10, implicit $x11
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)

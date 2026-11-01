@@ -12,6 +12,9 @@
 # Maintainers.md files in the the respective subproject directories.
 
 /libc/ @llvm/reviewers-libc
+/libc/**/*math* @lntue
+/libc/**/FPUtil/ @lntue
+/libc/**/*complex* @lntue
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
@@ -240,6 +243,9 @@
 /llvm/tools/llvm-offload-wrapper/ @jhuber6
 /clang/tools/clang-linker-wrapper/ @jhuber6
 /clang/tools/clang-nvlink-wrapper/ @jhuber6
+
+# OpenMP runtime library
+/openmp @mjklemm @TerryLWilmarth
 
 # Offloading runtime
 /offload/plugins-nextgen/common @jhuber6
