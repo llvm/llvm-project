@@ -196,6 +196,37 @@ void testNewExpr() {
   v.push_back(Derived(new int, Something{}));
 }
 
+struct WithMember {
+  int Member;
+};
+
+struct MemberPointer {
+  MemberPointer(int WithMember::*) {}
+};
+
+void testNullPointerConstants() {
+  std::vector<Base> v;
+  v.push_back(Base(42, 0));
+  v.push_back(Base(42, (0)));
+  v.push_back(Base(42, 0L));
+  v.push_back(Base(42, __null));
+
+  v.push_back(Base(42, nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(42, nullptr);
+
+  v.push_back(Base(0, nullptr, 0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(0, nullptr, 0);
+
+  std::vector<MemberPointer> w;
+  w.push_back(MemberPointer(0));
+
+  w.push_back(MemberPointer(nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: w.emplace_back(nullptr);
+}
+
 void testSpaces() {
   std::vector<Something> v;
 
