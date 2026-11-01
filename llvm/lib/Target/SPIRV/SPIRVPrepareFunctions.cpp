@@ -408,7 +408,7 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   // Otherwise we should lower the intrinsic to the corresponding SPIR-V
   // instruction.
   // For @llvm.assume we have OpAssumeTrueKHR.
-  // For @llvm.expect we have OpExpectKHR.
+  // For @llvm.expect and @llvm.expect.with.probability we have OpExpectKHR.
   //
   // We need to lower this into a builtin and then the builtin into a SPIR-V
   // instruction.
@@ -421,6 +421,15 @@ static void lowerExpectAssume(IntrinsicInst *II) {
         II->getModule(), Intrinsic::SPVIntrinsics::spv_expect,
         {II->getOperand(0)->getType()});
     II->setCalledFunction(F);
+  } else if (II->getIntrinsicID() == Intrinsic::expect_with_probability) {
+    // OpExpectKHR has no probability operand, so drop it.
+    IRBuilder<> Builder(II);
+    Value *Expect = Builder.CreateIntrinsic(
+        Intrinsic::SPVIntrinsics::spv_expect, {II->getType()},
+        {II->getArgOperand(0), II->getArgOperand(1)});
+    Expect->takeName(II);
+    II->replaceAllUsesWith(Expect);
+    II->eraseFromParent();
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
@@ -575,6 +584,7 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
         break;
       case Intrinsic::assume:
       case Intrinsic::expect:
+      case Intrinsic::expect_with_probability:
         if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
