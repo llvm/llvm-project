@@ -1261,22 +1261,43 @@ getDpasInstDataLayouts(
   return std::make_tuple(instDataA, instDataB, instDataCD);
 }
 
+/// Returns the widest per-lane chunk that is a power of two, is at most
+/// `maxChunkSize`, and divides both `extent` (the elements a lane takes along
+/// the dim) and `contiguity` (the length of the aligned contiguous runs). A
+/// chunk that does not divide the runs crosses the end of one: 6 elements per
+/// lane over runs of 16 put lane 2 on elements 12..17, across a block edge.
+/// Powers of two keep the chunks of a load and of its consumer convertible
+/// with a lane_data repack, which only maps between 1 and k elements.
+static int64_t getScatterChunkSize(int64_t extent, int64_t contiguity,
+                                   int64_t maxChunkSize) {
+  int64_t runs = std::gcd(extent, contiguity);
+  int64_t chunk = runs & -runs; // Largest power of two dividing `runs`.
+  while (chunk > 1 && chunk > maxChunkSize)
+    chunk /= 2;
+  return chunk;
+}
+
 /// Computes lane_layout and lane_data for scatter-style store anchor layouts
 /// (store scatter, store matrix). Lanes and the per-lane vector both live on
 /// the innermost dim:
 ///   - laneLayout[innermost] = min(subgroupSize, srcShape[innermost])
-///   - laneData[innermost]   = min(srcShape[innermost] / laneLayout[innermost],
-///                                 maxChunkSize)
+///   - laneData[innermost]   = the widest chunk of
+///     srcShape[innermost] / laneLayout[innermost] elements that fits in
+///     maxChunkSize and, when `contiguity` is given, tiles its runs (see
+///     getScatterChunkSize). Without `contiguity` the chunk is only capped.
 /// All other entries are 1.
 static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
-computeScatterIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
-                                  int64_t subgroupSize, int64_t maxChunkSize) {
+computeScatterIOLaneLayoutAndData(
+    ArrayRef<int64_t> instShape, int64_t subgroupSize, int64_t maxChunkSize,
+    std::optional<int64_t> contiguity = std::nullopt) {
   int64_t rank = instShape.size();
   SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
   int64_t innermost = rank - 1;
   laneLayout[innermost] = std::min(subgroupSize, instShape[innermost]);
+  int64_t extent = instShape[innermost] / laneLayout[innermost];
   laneData[innermost] =
-      std::min(instShape[innermost] / laneLayout[innermost], maxChunkSize);
+      contiguity ? getScatterChunkSize(extent, *contiguity, maxChunkSize)
+                 : std::min(extent, maxChunkSize);
   return {laneLayout, laneData};
 }
 
@@ -2031,9 +2052,10 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 ///
 /// For Lane layout, lane_layout/lane_data are taken from the consumer.
 ///
-/// A consumer layout that carries lane_layout and lane_data is required.
-/// `maxChunkSize` is not read yet: the consumer's lane_data already fixes the
-/// per-lane chunk.
+/// A consumer layout that carries lane_layout and lane_data is required. The
+/// per-lane chunk is the consumer's lane_data, narrowed when needed to one
+/// that fits in `maxChunkSize` and tiles the runs of `contiguity` (see
+/// getScatterChunkSize).
 ///
 /// TODO: derive lane_layout/lane_data here when the consumer has none, capped
 /// by `maxChunkSize`, the way `setupGenericStoreAnchorLayout` does via
@@ -2042,7 +2064,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,
-    ArrayRef<int64_t> resShape, int subgroupSize) {
+    int contiguity, ArrayRef<int64_t> resShape, int subgroupSize) {
 
   if (layoutKind == xegpu::LayoutKind::Subgroup)
     return consumerLayout;
@@ -2059,10 +2081,11 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   SmallVector<int64_t> laneLayout(consumerLaneLayout);
 
   // A matrix/gather load reads one contiguous span per lane, so a lane can pack
-  // only along the innermost dim, and only up to maxChunkSize.
+  // only along the innermost dim, up to maxChunkSize, and in chunks that tile
+  // the contiguous runs.
   SmallVector<int64_t> laneData(consumerLaneData.size(), 1);
   laneData.back() =
-      std::min(consumerLaneData.back(), static_cast<int64_t>(maxChunkSize));
+      getScatterChunkSize(consumerLaneData.back(), contiguity, maxChunkSize);
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
     SmallVector<int64_t> instData;
@@ -2085,15 +2108,16 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   ArrayRef<int64_t> resShape = resVecTy.getShape();
   auto context = resVecTy.getContext();
 
-  // The per-lane chunk is bounded by what the offsets prove contiguous
-  // (`contigChunkSize`) and by what one lane can access in one instruction.
+  // The per-lane chunk tiles the runs the offsets prove contiguous
+  // (`contigChunkSize`) and is bounded by what one lane can access in one
+  // instruction.
   const auto *uArchInstruction = dyn_cast<xegpu::uArch::LoadGatherInstruction>(
       uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  int maxChunkSize =
-      std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
+  int maxChunkSize = uArchInstruction->getMaxLaneAccessSizeBytes();
 
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      maxChunkSize, resShape, subgroupSize);
+                                      maxChunkSize, contigChunkSize, resShape,
+                                      subgroupSize);
 }
 
 /// Sets up the anchor layout for load matrix operation.
@@ -2110,10 +2134,10 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 
   const auto *uArchInstruction = dyn_cast<xegpu::uArch::LoadGatherInstruction>(
       uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  int maxChunkSize =
-      std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
+  int maxChunkSize = uArchInstruction->getMaxLaneAccessSizeBytes();
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      maxChunkSize, resShape, subgroupSize);
+                                      maxChunkSize, contigChunkSize, resShape,
+                                      subgroupSize);
 }
 
 /// Picks the subgroup layout for a scatter-style store (store_scatter /
@@ -2134,10 +2158,10 @@ getStoreSubgroupLayouts(mlir::MLIRContext *context, ArrayRef<int64_t> wgShape,
 /// `computeScatterIOLaneLayoutAndData`; inst_data is lane_layout * lane_data.
 static xegpu::DistributeLayoutAttr setupGenericStoreAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context, int maxChunkSize,
-    ArrayRef<int64_t> srcShape, int subgroupSize, int numSg) {
+    int contiguity, ArrayRef<int64_t> srcShape, int subgroupSize, int numSg) {
 
-  auto [laneLayout, laneData] =
-      computeScatterIOLaneLayoutAndData(srcShape, subgroupSize, maxChunkSize);
+  auto [laneLayout, laneData] = computeScatterIOLaneLayoutAndData(
+      srcShape, subgroupSize, maxChunkSize, contiguity);
 
   SmallVector<int64_t> instData(srcShape.size());
   for (size_t i = 0; i < srcShape.size(); ++i)
@@ -2167,15 +2191,16 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
   auto context = srcVecTy.getContext();
 
-  // The per-lane chunk is bounded by what the offsets prove contiguous
-  // (`contigChunkSize`) and by what one lane can access in one instruction.
+  // The per-lane chunk tiles the runs the offsets prove contiguous
+  // (`contigChunkSize`) and is bounded by what one lane can access in one
+  // instruction.
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstruction>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize =
-      std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
+  int maxChunkSize = uArchInstruction->getMaxLaneAccessSizeBytes();
   return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize, numSg);
+                                       contigChunkSize, srcShape, subgroupSize,
+                                       numSg);
 }
 
 /// Sets up the anchor layout for a store matrix operation.
@@ -2190,11 +2215,11 @@ xegpu::DistributeLayoutAttr xegpu::setupStoreMatrixAnchorLayout(
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstruction>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize =
-      std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
+  int maxChunkSize = uArchInstruction->getMaxLaneAccessSizeBytes();
 
   return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize, numSg);
+                                       contigChunkSize, srcShape, subgroupSize,
+                                       numSg);
 }
 
 /// Completes a scatter IO layout by deriving lane_layout and lane_data from

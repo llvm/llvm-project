@@ -732,10 +732,13 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
     - `contiguity`: [optional] the number of neighbouring elements in the
-      innermost dimension that are contiguous in memory. It is an upper bound,
-      not the final access width: `xegpu-propagate-layout` turns it into
-      `lane_data`, capped by what one lane can access in one instruction. It
-      must be at least 2 and must divide the innermost offsets dimension.
+      innermost dimension that are contiguous in memory, in aligned runs. It
+      is not the final access width: `xegpu-propagate-layout` turns it into
+      `lane_data` by picking a per-lane chunk that tiles the runs (a power of
+      two that divides `contiguity`) and that one lane can access in one
+      instruction. A smaller chunk that does not divide `contiguity` can cross
+      the end of a run, so it is not safe. It must be at least 2 and must
+      divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result
       of load. Only valid at workgroup and subgroup levels.
@@ -868,10 +871,13 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
     - `contiguity`: [optional] the number of neighbouring elements in the
-      innermost dimension that are contiguous in memory. It is an upper bound,
-      not the final access width: `xegpu-propagate-layout` turns it into
-      `lane_data`, capped by what one lane can access in one instruction. It
-      must be at least 2 and must divide the innermost offsets dimension.
+      innermost dimension that are contiguous in memory, in aligned runs. It
+      is not the final access width: `xegpu-propagate-layout` turns it into
+      `lane_data` by picking a per-lane chunk that tiles the runs (a power of
+      two that divides `contiguity`) and that one lane can access in one
+      instruction. A smaller chunk that does not divide `contiguity` can cross
+      the end of a run, so it is not safe. It must be at least 2 and must
+      divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the value
       to be stored. Only valid at workgroup and subgroup levels.
@@ -1336,7 +1342,8 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
     OptionalAttr<UnitAttr>:$subgroup_block_io,
-    OptionalAttr<DistributeLayoutAttr>:$layout
+    OptionalAttr<DistributeLayoutAttr>:$layout,
+    OptionalAttr<I64Attr>:$contiguity
   );
   let results = (outs XeGPU_ValueOrScalarType:$res);
   let assemblyFormat = [{
@@ -1360,6 +1367,14 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
      - `layout`: [optional] Describes the expected layout of the `mem_desc` operand as well as
       the result of load (they are identical).
         Only valid at workgroup and subgroup levels.
+     - `contiguity`: [optional] the number of neighbouring elements in the innermost
+        dimension of the result that are contiguous in SLM, in aligned runs. It comes
+        from the `mem_desc` memory layout and the innermost offset. It is not the final
+        access width: `xegpu-propagate-layout` turns it into `lane_data` by picking a
+        per-lane chunk that tiles the runs (a power of two that divides `contiguity`)
+        and that one lane can access in one instruction. A smaller chunk that does not
+        divide `contiguity` can cross the end of a run, so it is not safe. It must be
+        at least 2 and must divide the innermost result dimension.
 
     Results:
      - `res`: the elements loaded from SLM.
@@ -1367,6 +1382,13 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     Example (1D):
     ```mlir
         %1 = xegpu.load_matrix %0[%c0] : !xegpu.mem_desc<64xf16>, index -> vector<16xf16>
+    ```
+
+    Example (subgroup level, contiguous runs):
+    The `mem_desc` is row-major, so each row of the result is contiguous in SLM.
+    ```mlir
+        %1 = xegpu.load_matrix %0[%c0, %c0] <{contiguity = 32 : i64}>
+          : !xegpu.mem_desc<32x64xf32>, index, index -> vector<8x32xf32>
     ```
 
     Example (Workgroup level, 2D):
@@ -1416,7 +1438,8 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
     OptionalAttr<UnitAttr>:$subgroup_block_io,
-    OptionalAttr<DistributeLayoutAttr>:$layout
+    OptionalAttr<DistributeLayoutAttr>:$layout,
+    OptionalAttr<I64Attr>:$contiguity
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
                           prop-dict attr-dict `:` type(operands)}];
@@ -1436,6 +1459,14 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
         across all lanes. Only used on subgroup and lane level.
      - `layout`: [optional] Describes the expected layout of the `mem_desc` operand as well as
         the value to be stored (they are identical). Only valid at workgroup and subgroup levels.
+     - `contiguity`: [optional] the number of neighbouring elements in the innermost
+        dimension of `data` that are contiguous in SLM, in aligned runs. It comes from
+        the `mem_desc` memory layout and the innermost offset. It is not the final
+        access width: `xegpu-propagate-layout` turns it into `lane_data` by picking a
+        per-lane chunk that tiles the runs (a power of two that divides `contiguity`)
+        and that one lane can access in one instruction. A smaller chunk that does not
+        divide `contiguity` can cross the end of a run, so it is not safe. It must be
+        at least 2 and must divide the innermost `data` dimension.
 
     Example (1D):
     ```mlir
