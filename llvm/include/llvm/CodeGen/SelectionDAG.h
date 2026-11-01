@@ -2450,12 +2450,14 @@ public:
   /// +nan are considered positive, -0.0, -inf and -nan are not.
   LLVM_ABI bool cannotBeOrderedNegativeFP(SDValue Op) const;
 
-  /// Check if a use of a float value is insensitive to signed zeros.
+  /// Check if the user of \p Use produces the same result regardless of the
+  /// sign of a zero in the used float operand.
   LLVM_ABI bool canIgnoreSignBitOfZero(const SDUse &Use) const;
 
-  /// Check if \p Op has no-signed-zeros, or all users (limited to checking two
-  /// for compile-time performance) are insensitive to signed zeros.
-  LLVM_ABI bool canIgnoreSignBitOfZero(SDValue Op) const;
+  /// Check if all uses of \p Op (limited to checking two for compile-time
+  /// performance) are insensitive to signed zeros. An nsz flag on \p Op does
+  /// not necessarily permit this.
+  LLVM_ABI bool canIgnoreSignBitOfZeroResult(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This
   /// is true if they are the same value, or if one is negative zero and the
@@ -2717,6 +2719,8 @@ public:
   }
 
   LLVM_ABI bool shouldOptForSize() const;
+
+  LLVM_ABI const BasicBlock *getBasicBlock() const;
 
   /// Get the (commutative) identity element for the given opcode, if it exists.
   LLVM_ABI SDValue getIdentityElement(unsigned Opcode, const SDLoc &DL, EVT VT,

@@ -395,6 +395,94 @@ def SPIRV_KillOp : SPIRV_Op<"Kill", [Terminator]> {
 
 // -----
 
+def SPIRV_LifetimeStartOp : SPIRV_Op<"LifetimeStart", [InFunctionScope]> {
+  let summary = "Declare that an object was not defined before this instruction.";
+
+  let description = [{
+    Pointer is a pointer to the object whose lifetime is starting. Its type
+    must be an OpTypePointer with Storage Class Function.
+
+    Size is an unsigned 32-bit integer. Size must be 0 if Pointer is a
+    pointer to a non-void type or the Addresses capability is not declared.
+    If Size is non-zero, it is the number of bytes of memory whose lifetime
+    is starting.
+
+    <!-- End of AutoGen section -->
+
+    Only zero sizes are currently supported because SPIR-V dialect pointers
+    cannot point to void.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    spirv.LifetimeStart %0, 0 : !spirv.ptr<f32, Function>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = "$pointer `,` $size attr-dict `:` type($pointer)";
+}
+
+// -----
+
+def SPIRV_LifetimeStopOp : SPIRV_Op<"LifetimeStop", [InFunctionScope]> {
+  let summary = "Declare that an object is dead after this instruction.";
+
+  let description = [{
+    Pointer is a pointer to the object whose lifetime is ending. Its type
+    must be an OpTypePointer with Storage Class Function.
+
+    Size is an unsigned 32-bit integer. Size must be 0 if Pointer is a
+    pointer to a non-void type or the Addresses capability is not declared.
+    If Size is non-zero, it is the number of bytes of memory whose lifetime
+    is ending.
+
+    <!-- End of AutoGen section -->
+
+    Only zero sizes are currently supported because SPIR-V dialect pointers
+    cannot point to void.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    spirv.LifetimeStop %0, 0 : !spirv.ptr<f32, Function>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = "$pointer `,` $size attr-dict `:` type($pointer)";
+}
+
+// -----
+
 def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
   let summary = "Define a structured loop.";
 

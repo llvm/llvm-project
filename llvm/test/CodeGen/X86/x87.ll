@@ -589,3 +589,321 @@ define void @int2fp128(i32 %a0, i64 %a1, ptr %p) nounwind readnone {
   store fp128 %r, ptr %p
   ret void
 }
+
+define i64 @fptosi_f32_i64(float %x) nounwind readnone {
+; X86-X87-LABEL: fptosi_f32_i64:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    movl %esp, %ebp
+; X86-X87-NEXT:    andl $-8, %esp
+; X86-X87-NEXT:    subl $16, %esp
+; X86-X87-NEXT:    flds 8(%ebp)
+; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-X87-NEXT:    movl %ebp, %esp
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl
+;
+; X64-X87-LABEL: fptosi_f32_i64:
+; X64-X87:       # %bb.0:
+; X64-X87-NEXT:    flds {{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-X87-NEXT:    retq
+;
+; X86-NOX87-LABEL: fptosi_f32_i64:
+; X86-NOX87:       # %bb.0:
+; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    calll __fixsfdi
+; X86-NOX87-NEXT:    addl $4, %esp
+; X86-NOX87-NEXT:    retl
+;
+; X64-NOX87-LABEL: fptosi_f32_i64:
+; X64-NOX87:       # %bb.0:
+; X64-NOX87-NEXT:    pushq %rax
+; X64-NOX87-NEXT:    callq __fixsfdi@PLT
+; X64-NOX87-NEXT:    popq %rcx
+; X64-NOX87-NEXT:    retq
+;
+; X86-SSE1-LABEL: fptosi_f32_i64:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    calll __fixsfdi
+; X86-SSE1-NEXT:    addl $4, %esp
+; X86-SSE1-NEXT:    retl
+;
+; X64-SSE1-LABEL: fptosi_f32_i64:
+; X64-SSE1:       # %bb.0:
+; X64-SSE1-NEXT:    cvttss2si %xmm0, %rax
+; X64-SSE1-NEXT:    retq
+  %r = fptosi float %x to i64
+  ret i64 %r
+}
+
+define i64 @fptoui_f32_i64(float %x) nounwind readnone {
+; X86-X87-LABEL: fptoui_f32_i64:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    movl %esp, %ebp
+; X86-X87-NEXT:    andl $-8, %esp
+; X86-X87-NEXT:    subl $16, %esp
+; X86-X87-NEXT:    flds 8(%ebp)
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %edx, %edx
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    setbe %al
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    jbe .LBB4_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:  .LBB4_2:
+; X86-X87-NEXT:    fstp %st(0)
+; X86-X87-NEXT:    fsubrp %st, %st(1)
+; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X86-X87-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movb %al, %dl
+; X86-X87-NEXT:    shll $31, %edx
+; X86-X87-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %ebp, %esp
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl
+;
+; X64-X87-LABEL: fptoui_f32_i64:
+; X64-X87:       # %bb.0:
+; X64-X87-NEXT:    flds {{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; X64-X87-NEXT:    xorl %eax, %eax
+; X64-X87-NEXT:    fucomi %st(1), %st
+; X64-X87-NEXT:    setbe %al
+; X64-X87-NEXT:    fldz
+; X64-X87-NEXT:    fcmovbe %st(1), %st
+; X64-X87-NEXT:    fstp %st(1)
+; X64-X87-NEXT:    fsubrp %st, %st(1)
+; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
+; X64-X87-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X64-X87-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    shlq $63, %rax
+; X64-X87-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
+; X64-X87-NEXT:    retq
+;
+; X86-NOX87-LABEL: fptoui_f32_i64:
+; X86-NOX87:       # %bb.0:
+; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    calll __fixunssfdi
+; X86-NOX87-NEXT:    addl $4, %esp
+; X86-NOX87-NEXT:    retl
+;
+; X64-NOX87-LABEL: fptoui_f32_i64:
+; X64-NOX87:       # %bb.0:
+; X64-NOX87-NEXT:    pushq %rax
+; X64-NOX87-NEXT:    callq __fixunssfdi@PLT
+; X64-NOX87-NEXT:    popq %rcx
+; X64-NOX87-NEXT:    retq
+;
+; X86-SSE1-LABEL: fptoui_f32_i64:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    calll __fixunssfdi
+; X86-SSE1-NEXT:    addl $4, %esp
+; X86-SSE1-NEXT:    retl
+;
+; X64-SSE1-LABEL: fptoui_f32_i64:
+; X64-SSE1:       # %bb.0:
+; X64-SSE1-NEXT:    cvttss2si %xmm0, %rcx
+; X64-SSE1-NEXT:    movq %rcx, %rdx
+; X64-SSE1-NEXT:    sarq $63, %rdx
+; X64-SSE1-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE1-NEXT:    cvttss2si %xmm0, %rax
+; X64-SSE1-NEXT:    andq %rdx, %rax
+; X64-SSE1-NEXT:    orq %rcx, %rax
+; X64-SSE1-NEXT:    retq
+  %r = fptoui float %x to i64
+  ret i64 %r
+}
+
+define i64 @fptosi_f64_i64(double %x) nounwind readnone {
+; X86-X87-LABEL: fptosi_f64_i64:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    movl %esp, %ebp
+; X86-X87-NEXT:    andl $-8, %esp
+; X86-X87-NEXT:    subl $16, %esp
+; X86-X87-NEXT:    fldl 8(%ebp)
+; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-X87-NEXT:    movl %ebp, %esp
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl
+;
+; X64-X87-LABEL: fptosi_f64_i64:
+; X64-X87:       # %bb.0:
+; X64-X87-NEXT:    fldl {{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; X64-X87-NEXT:    retq
+;
+; X86-NOX87-LABEL: fptosi_f64_i64:
+; X86-NOX87:       # %bb.0:
+; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    calll __fixdfdi
+; X86-NOX87-NEXT:    addl $8, %esp
+; X86-NOX87-NEXT:    retl
+;
+; X64-NOX87-LABEL: fptosi_f64_i64:
+; X64-NOX87:       # %bb.0:
+; X64-NOX87-NEXT:    pushq %rax
+; X64-NOX87-NEXT:    callq __fixdfdi@PLT
+; X64-NOX87-NEXT:    popq %rcx
+; X64-NOX87-NEXT:    retq
+;
+; X86-SSE1-LABEL: fptosi_f64_i64:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    calll __fixdfdi
+; X86-SSE1-NEXT:    addl $8, %esp
+; X86-SSE1-NEXT:    retl
+;
+; X64-SSE1-LABEL: fptosi_f64_i64:
+; X64-SSE1:       # %bb.0:
+; X64-SSE1-NEXT:    pushq %rax
+; X64-SSE1-NEXT:    callq __fixdfdi@PLT
+; X64-SSE1-NEXT:    popq %rcx
+; X64-SSE1-NEXT:    retq
+  %r = fptosi double %x to i64
+  ret i64 %r
+}
+
+define i64 @fptoui_f64_i64(double %x) nounwind readnone {
+; X86-X87-LABEL: fptoui_f64_i64:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    movl %esp, %ebp
+; X86-X87-NEXT:    andl $-8, %esp
+; X86-X87-NEXT:    subl $16, %esp
+; X86-X87-NEXT:    fldl 8(%ebp)
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %edx, %edx
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    setbe %al
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    jbe .LBB6_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:  .LBB6_2:
+; X86-X87-NEXT:    fstp %st(0)
+; X86-X87-NEXT:    fsubrp %st, %st(1)
+; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X86-X87-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movb %al, %dl
+; X86-X87-NEXT:    shll $31, %edx
+; X86-X87-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %ebp, %esp
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl
+;
+; X64-X87-LABEL: fptoui_f64_i64:
+; X64-X87:       # %bb.0:
+; X64-X87-NEXT:    fldl {{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; X64-X87-NEXT:    xorl %eax, %eax
+; X64-X87-NEXT:    fucomi %st(1), %st
+; X64-X87-NEXT:    setbe %al
+; X64-X87-NEXT:    fldz
+; X64-X87-NEXT:    fcmovbe %st(1), %st
+; X64-X87-NEXT:    fstp %st(1)
+; X64-X87-NEXT:    fsubrp %st, %st(1)
+; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
+; X64-X87-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X64-X87-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    shlq $63, %rax
+; X64-X87-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
+; X64-X87-NEXT:    retq
+;
+; X86-NOX87-LABEL: fptoui_f64_i64:
+; X86-NOX87:       # %bb.0:
+; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOX87-NEXT:    calll __fixunsdfdi
+; X86-NOX87-NEXT:    addl $8, %esp
+; X86-NOX87-NEXT:    retl
+;
+; X64-NOX87-LABEL: fptoui_f64_i64:
+; X64-NOX87:       # %bb.0:
+; X64-NOX87-NEXT:    pushq %rax
+; X64-NOX87-NEXT:    callq __fixunsdfdi@PLT
+; X64-NOX87-NEXT:    popq %rcx
+; X64-NOX87-NEXT:    retq
+;
+; X86-SSE1-LABEL: fptoui_f64_i64:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    calll __fixunsdfdi
+; X86-SSE1-NEXT:    addl $8, %esp
+; X86-SSE1-NEXT:    retl
+;
+; X64-SSE1-LABEL: fptoui_f64_i64:
+; X64-SSE1:       # %bb.0:
+; X64-SSE1-NEXT:    pushq %rax
+; X64-SSE1-NEXT:    callq __fixunsdfdi@PLT
+; X64-SSE1-NEXT:    popq %rcx
+; X64-SSE1-NEXT:    retq
+  %r = fptoui double %x to i64
+  ret i64 %r
+}

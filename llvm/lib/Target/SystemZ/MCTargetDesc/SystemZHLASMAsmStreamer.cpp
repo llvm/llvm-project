@@ -13,6 +13,7 @@
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/Signals.h"
 #include <sstream>
 
@@ -178,12 +179,22 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
   OS << '\n';
 }
 
+static void emitALIAS(raw_ostream &OS, StringRef Name, StringRef ExternalName) {
+  OS << Name << " ALIAS C'";
+  for (char C : ExternalName) {
+    if (C == '\'' || C == '&')
+      OS << C;
+    OS << C;
+  }
+  OS << "'\n";
+}
+
 void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
                                             uint32_t Subsection) {
   auto &Sec = *static_cast<MCSectionGOFF *>(Section);
   auto EmitExternalName = [&Sec, this]() {
     if (Sec.hasExternalName())
-      OS << Sec.getName() << " ALIAS C'" << Sec.getExternalName() << "'\n";
+      emitALIAS(OS, Sec.getName(), Sec.getExternalName());
   };
   switch (Sec.getSymbolType()) {
   case GOFF::ESD_ST_SectionDefinition: {
@@ -350,6 +361,29 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
   EmitEOL();
 }
 
+void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
+                                       uint64_t FillValue, SMLoc Loc) {
+  int64_t Count;
+  if (!NumBytes.evaluateAsAbsolute(Count)) {
+    getContext().reportError(Loc, "fill length must be absolute in HLASM");
+    return;
+  }
+  if (Count < 0) {
+    getContext().reportError(Loc, "invalid number of bytes");
+    return;
+  }
+  if (Count > 0x7FFFFFFF) {
+    getContext().reportError(Loc, "fill length too large for HLASM");
+    return;
+  }
+  if (Count == 0)
+    return;
+
+  OS << " DC " << Count << "XL1'"
+     << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
+  EmitEOL();
+}
+
 void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
                                                  const MCSubtargetInfo &STI) {
   raw_ostream &OS = getCommentOS();
@@ -475,13 +509,24 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
               Sym->getLinkage(), Sym->getCodeData(), Sym->getBindingScope());
     EmitEOL();
     if (Sym->hasExternalName())
-      OS << Sym->getName() << " ALIAS C'" << Sym->getExternalName() << "'\n";
+      emitALIAS(OS, Sym->getName(), Sym->getExternalName());
   }
 
   if (EmitLabelAndEntry) {
     OS << Sym->getName() << " DS 0H";
     EmitEOL();
   }
+}
+
+// Print the HLASM address constant type for a value of the given size:
+// A(...) is a fullword, AD(...) a doubleword, AL<n>(...) any other length.
+static void printAddrConstPrefix(raw_ostream &OS, unsigned Size) {
+  if (Size == 4)
+    OS << "A(";
+  else if (Size == 8)
+    OS << "AD(";
+  else
+    OS << "AL" << Size << '(';
 }
 
 bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
@@ -513,9 +558,9 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
                                                  unsigned Size, bool Parens) {
   switch (Value->getKind()) {
   case MCExpr::Constant: {
-    OS << "XL" << Size << '\'';
-    MAI->printExpr(OS, *Value);
-    OS << '\'';
+    int64_t Val = cast<MCConstantExpr>(Value)->getValue();
+    OS << "XL" << Size << '\''
+       << format_hex_no_prefix(Val, Size * 2, /*Upper=*/true) << '\'';
     return;
   }
   case MCExpr::Binary: {
@@ -530,7 +575,7 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
     }
 
     if (Parens)
-      OS << "AD(";
+      printAddrConstPrefix(OS, Size);
     emitHLASMValueImpl(BE.getLHS(), Size);
 
     switch (BE.getOpcode()) {
@@ -568,7 +613,7 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
   default:
     Parens &= isa<MCSymbolRefExpr>(Value);
     if (Parens)
-      OS << "AD(";
+      printAddrConstPrefix(OS, Size);
     MAI->printExpr(OS, *Value);
     if (Parens)
       OS << ')';
@@ -605,7 +650,7 @@ void SystemZHLASMAsmStreamer::finishImpl() {
               Sym.getLinkage(), Sym.getCodeData(), Sym.getBindingScope());
     EmitEOL();
     if (Sym.hasExternalName())
-      OS << Sym.getName() << " ALIAS C'" << Sym.getExternalName() << "'\n";
+      emitALIAS(OS, Sym.getName(), Sym.getExternalName());
   }
 
   // Finish the assembly output.

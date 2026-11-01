@@ -170,6 +170,20 @@ struct ModuleAnalysisInfo {
   // the order of their bit widths.
   FPFastMathDefaultInfoMapTy FPFastMathDefaultInfoMap;
 
+  enum class AMDGPUAtomicMDKind : uint8_t {
+    NoFineGrainedMemory,
+    NoRemoteMemory,
+    IgnoreDenormalMode,
+
+    Last = IgnoreDenormalMode,
+  };
+  struct InstrAuxDataRecord {
+    const MachineFunction *MF;
+    Register TargetReg;
+    AMDGPUAtomicMDKind Kind;
+  };
+  SmallVector<InstrAuxDataRecord> InstrAuxDataRecords;
+
   MCRegister getGlobalObjReg(const GlobalObject *GO) {
     assert(GO && "GlobalObject is null");
     return GlobalObjMap.lookup(GO);
@@ -202,10 +216,6 @@ struct ModuleAnalysisInfo {
   MCRegister getNextIDRegister() {
     return MCRegister((1U << 31) | getNextID());
   }
-  bool hasMBBRegister(const MachineBasicBlock &MBB) {
-    auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
-    return BBNumToRegMap.contains(Key);
-  }
   // Convert MBB's number to corresponding ID register.
   MCRegister getOrCreateMBBRegister(const MachineBasicBlock &MBB) {
     auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
@@ -213,6 +223,17 @@ struct ModuleAnalysisInfo {
     if (Inserted)
       It->second = getNextIDRegister();
     return It->second;
+  }
+  static StringRef getAMDGPUAtomicMDName(AMDGPUAtomicMDKind Kind) {
+    switch (Kind) {
+    case AMDGPUAtomicMDKind::NoFineGrainedMemory:
+      return "amdgpu.no.fine.grained.memory";
+    case AMDGPUAtomicMDKind::NoRemoteMemory:
+      return "amdgpu.no.remote.memory";
+    case AMDGPUAtomicMDKind::IgnoreDenormalMode:
+      return "atomic.ignore.denormal.mode";
+    }
+    llvm_unreachable("unknown AMDGPUAtomicMDKind");
   }
   // Must stay alive until the AsmPrinter consumes it.
   bool invalidate(Module &, const PreservedAnalyses &,

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
@@ -39,6 +40,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Assumptions.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -262,7 +264,8 @@ static bool isDenselyPacked(Type *Ty, const DataLayout &DL) {
     StartPos += DL.getTypeAllocSizeInBits(ElTy);
   }
 
-  return true;
+  // Check for tail padding.
+  return StartPos == Layout->getSizeInBits();
 }
 
 /// Get pointer operand of memory accessing instruction. If \p I is
@@ -585,6 +588,11 @@ struct AACalleeToCallSite : public BaseType {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     auto CalleePred = [&](ArrayRef<const Function *> Callees) {
       for (const Function *Callee : Callees) {
+        // The returned position of the callee does not describe the call if
+        // the call uses a different return type.
+        if (IRPKind == IRPosition::IRP_CALL_SITE_RETURNED &&
+            Callee->getReturnType() != CB.getType())
+          return false;
         IRPosition FnPos =
             IRPKind == llvm::IRPosition::IRP_CALL_SITE_RETURNED
                 ? IRPosition::returned(*Callee,
@@ -1465,7 +1473,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       int64_t ElementSize = DL.getTypeStoreSize(ElementType).getFixedValue();
       auto *ConstContent = cast<Constant>(*Content);
       Type *Int32Ty = Type::getInt32Ty(ElementType->getContext());
-      SmallVector<int64_t> ElementOffsets(Offsets.begin(), Offsets.end());
+      SmallVector<int64_t> ElementOffsets(OffsetsSorted.begin(),
+                                          OffsetsSorted.end());
 
       for (int i = 0, e = VT->getElementCount().getFixedValue(); i != e; ++i) {
         Value *ElementContent = ConstantExpr::getExtractElement(
@@ -1603,15 +1612,12 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     assert(!OffsetInfoMap[CurPtr].isUnassigned() &&
            "Current pointer should be assigned");
 
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
-      if (CE->isCast())
-        return HandlePassthroughUser(Usr, CurPtr, Follow);
-      if (!isa<GEPOperator>(CE)) {
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
-                          << "\n");
-        return false;
-      }
-    }
+    // Only address space casts are followed; other casts of a pointer (e.g.,
+    // ptrtoint, ptrtoaddr, or a bitcast to a byte type) do not produce a
+    // pointer that can be tracked.
+    if (isa<AddrSpaceCastOperator>(Usr))
+      return HandlePassthroughUser(Usr, CurPtr, Follow);
+
     if (auto *GEP = dyn_cast<GEPOperator>(Usr)) {
       // Note the order here, the Usr access might change the map, CurPtr is
       // already in it though.
@@ -1630,9 +1636,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       Follow = collectConstantsForGEP(A, DL, UsrOI, PtrOI, GEP);
       return true;
     }
-    if (isa<PtrToIntInst>(Usr))
-      return false;
-    if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
+    if (isa<SelectInst>(Usr))
       return HandlePassthroughUser(Usr, CurPtr, Follow);
     // Returns are allowed if they are in the associated functions. Users can
     // then check the call site return. Returns from other functions can't be
@@ -2526,11 +2530,19 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   const DataLayout &DL = A.getInfoCache().getDL();
   if (const auto *CB = dyn_cast<CallBase>(I)) {
     if (CB->isBundleOperand(U)) {
-      if (RetainedKnowledge RK = getKnowledgeFromUse(
-              U, {Attribute::NonNull, Attribute::Dereferenceable})) {
-        IsNonNull |=
-            (RK.AttrKind == Attribute::NonNull || !NullPointerIsDefined);
-        return RK.ArgValue;
+      auto OBU = CB->getOperandBundleForOperand(U->getOperandNo());
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::NonNull:
+        IsNonNull = true;
+        break;
+      case BundleAttr::Dereferenceable: {
+        IsNonNull |= !NullPointerIsDefined;
+        Value *Count = getAssumeDereferenceableInfo(OBU).Count;
+        if (auto *CI = dyn_cast<ConstantInt>(Count))
+          return CI->getZExtValue();
+      } break;
+      default:
+        break;
       }
       return 0;
     }
@@ -4542,6 +4554,12 @@ struct AAIsDeadFunction : public AAIsDead {
 
   bool isAssumedDeadInternalFunction(Attributor &A) {
     if (!getAnchorScope()->hasLocalLinkage())
+      return false;
+    // An AA that will not be updated is fixed pessimistically right after
+    // initialization, so an assumed-dead result would be discarded. Checking
+    // the call sites recursively initializes the liveness of every internal
+    // caller, which in CGSCC cleanup repeats for each callee SCC.
+    if (!A.shouldUpdateAA<AAIsDead>(getIRPosition()))
       return false;
     bool UsedAssumedInformation = false;
     return A.checkForAllCallSites([](AbstractCallSite) { return false; }, *this,
@@ -8788,9 +8806,10 @@ void AAMemoryLocationImpl::categorizePtrValue(
         MLK = NO_GLOBAL_INTERNAL_MEM;
       else
         MLK = NO_GLOBAL_EXTERNAL_MEM;
-    } else if (isa<ConstantPointerNull>(&Obj) &&
-               (!NullPointerIsDefined(getAssociatedFunction(), AccessAS) ||
-                !NullPointerIsDefined(getAssociatedFunction(), ObjectAS))) {
+    } else if (isa<ConstantPointerNull>(&Obj) && ObjectAS == AccessAS &&
+               !NullPointerIsDefined(getAssociatedFunction(), AccessAS)) {
+      // Accessing null is undefined, but not accessing a null pointer cast to
+      // another address space, which may be a valid address there.
       return true;
     } else if (isa<AllocaInst>(&Obj)) {
       MLK = NO_LOCAL_MEM;
@@ -10467,6 +10486,20 @@ struct AANoUndefReturned final
   AANoUndefReturned(const IRPosition &IRP, Attributor &A)
       : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>(IRP, A) {}
 
+  void initialize(Attributor &A) override {
+    AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>::initialize(A);
+    if (isAtFixpoint())
+      return;
+
+    // Returning a value that violates a return attribute, e.g., nonnull, is
+    // poison.
+    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
+    AttributeSet RetAttrs =
+        getAssociatedFunction()->getAttributes().getRetAttrs();
+    if (any_of(RetAttrs, [&](Attribute Attr) { return AM.contains(Attr); }))
+      indicatePessimisticFixpoint();
+  }
+
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
 };
@@ -10786,10 +10819,20 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Change = ChangeStatus::UNCHANGED;
+    bool AllCallsDirect = true;
 
     auto ProcessCallInst = [&](Instruction &Inst) {
       CallBase &CB = cast<CallBase>(Inst);
 
+      // A direct call without callbacks only calls its callee; there is no
+      // need for a call site attribute.
+      auto *Callee = dyn_cast<Function>(CB.getCalledOperand());
+      if (Callee && !Callee->hasMetadata(LLVMContext::MD_callback)) {
+        addCalledFunction(Callee, Change);
+        return true;
+      }
+
+      AllCallsDirect = false;
       auto *CBEdges = A.getAAFor<AACallEdges>(
           *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
       if (!CBEdges)
@@ -10814,6 +10857,10 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
       // are unknown callees.
       setHasUnknownCallee(true, Change);
     }
+
+    // The callees of direct calls in code known to be live do not change.
+    if (AllCallsDirect && !UsedAssumedInformation)
+      indicateOptimisticFixpoint();
 
     return Change;
   }
@@ -12986,8 +13033,12 @@ struct AAInvariantLoadPointerCallSiteReturned final
       : AAInvariantLoadPointerImpl(IRP, A) {}
 
   void initialize(Attributor &A) override {
+    // Nothing is known about the result of an indirect call.
     const Function *F = getAssociatedFunction();
-    assert(F && "no associated function for return from call");
+    if (!F) {
+      indicatePessimisticFixpoint();
+      return;
+    }
 
     if (!F->isDeclaration() && !F->isIntrinsic())
       return AAInvariantLoadPointerImpl::initialize(A);

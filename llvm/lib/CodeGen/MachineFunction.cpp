@@ -55,6 +55,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/SectionKind.h"
@@ -308,6 +309,8 @@ void MachineFunction::clear() {
   BasicBlockRecycler.clear(Allocator);
   CodeViewAnnotations.clear();
   VariableDbgInfos.clear();
+  CallSitesInfo.clear();
+  CalledGlobalsInfo.clear();
   if (RegInfo) {
     RegInfo->~MachineRegisterInfo();
     Allocator.Deallocate(RegInfo);
@@ -745,6 +748,15 @@ bool MachineFunction::needsFrameMoves() const {
   return getTarget().Options.ForceDwarfFrameSection ||
          F.needsUnwindTableEntry() ||
          !F.getParent()->debug_compile_units().empty();
+}
+
+bool MachineFunction::usesWindowsUnwindInfo() const {
+  return getTarget().getMCAsmInfo().usesWindowsCFI() &&
+         F.getParent()->getExceptionModel() == ExceptionHandling::WinEH;
+}
+
+bool MachineFunction::needsWinCFI() const {
+  return getFunction().needsUnwindTableEntry() && usesWindowsUnwindInfo();
 }
 
 bool MachineFunction::disableFramePointerElim() const {
@@ -1695,14 +1707,20 @@ void MachineConstantPool::print(raw_ostream &OS) const {
 }
 
 //===----------------------------------------------------------------------===//
-// Template specialization for MachineFunction implementation of
-// ProfileSummaryInfo::getEntryCount().
+// Template specializations for MachineFunction implementations of
+// ProfileSummaryInfo::getEntryCount() and ProfileSummaryInfo::hasHotAttr().
 //===----------------------------------------------------------------------===//
 template <>
 std::optional<uint64_t>
 ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
     const llvm::MachineFunction *F) const {
   return F->getFunction().getEntryCount();
+}
+
+template <>
+bool ProfileSummaryInfo::hasHotAttr<llvm::MachineFunction>(
+    const llvm::MachineFunction *F) const {
+  return F->getFunction().hasFnAttribute(Attribute::Hot);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
