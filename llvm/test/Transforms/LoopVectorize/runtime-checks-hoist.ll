@@ -1979,3 +1979,64 @@ outer.latch:
 exit:
   ret void
 }
+
+; The minimum iteration check only folds to true after the hoisted runtime
+; check bounds were created, making the vector loop dead. Make sure no IR is
+; generated for the dead bounds.
+define void @vector_loop_dead_after_hoisting_checks(ptr %dst, ptr %src, i1 %c, i32 %n, i64 %stride) {
+; CHECK-LABEL: define void @vector_loop_dead_after_hoisting_checks(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i1 [[C:%.*]], i32 [[N:%.*]], i64 [[STRIDE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 0, i32 0
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp sgt i32 [[SEL]], [[N]]
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[EXIT:.*]], label %[[OUTER_PH:.*]]
+; CHECK:       [[OUTER_PH]]:
+; CHECK-NEXT:    [[TC:%.*]] = zext i32 [[SEL]] to i64
+; CHECK-NEXT:    br label %[[OUTER:.*]]
+; CHECK:       [[OUTER_LOOPEXIT:.*]]:
+; CHECK-NEXT:    br label %[[OUTER]]
+; CHECK:       [[OUTER]]:
+; CHECK-NEXT:    br label %[[INNER:.*]]
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[OUTER]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[PTR_DST:%.*]] = phi ptr [ [[DST]], %[[OUTER]] ], [ [[PTR_DST_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[STRIDE_SQ:%.*]] = mul i64 [[STRIDE]], [[STRIDE]]
+; CHECK-NEXT:    [[OFF:%.*]] = mul i64 [[STRIDE_SQ]], [[IV]]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[OFF]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[PTR_DST]], align 4
+; CHECK-NEXT:    [[PTR_DST_NEXT]] = getelementptr i8, ptr [[PTR_DST]], i64 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[TC]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[OUTER_LOOPEXIT]], label %[[INNER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sel = select i1 %c, i32 0, i32 0
+  %guard = icmp sgt i32 %sel, %n
+  br i1 %guard, label %exit, label %outer.ph
+
+outer.ph:
+  %tc = zext i32 %sel to i64
+  br label %outer
+
+outer:
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %ptr.dst = phi ptr [ %dst, %outer ], [ %ptr.dst.next, %inner ]
+  %stride.sq = mul i64 %stride, %stride
+  %off = mul i64 %stride.sq, %iv
+  %gep.src = getelementptr i8, ptr %src, i64 %off
+  %l = load float, ptr %gep.src, align 4
+  store float 0.000000e+00, ptr %ptr.dst, align 4
+  %ptr.dst.next = getelementptr i8, ptr %ptr.dst, i64 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %tc
+  br i1 %ec, label %outer, label %inner
+
+exit:
+  ret void
+}
