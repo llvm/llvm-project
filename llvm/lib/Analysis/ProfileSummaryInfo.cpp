@@ -20,21 +20,8 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/ProfileCommon.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include <optional>
 using namespace llvm;
-
-namespace llvm {
-
-LLVM_ABI cl::opt<bool> ScalePartialSampleProfileWorkingSetSize(
-    "scale-partial-sample-profile-working-set-size", cl::Hidden, cl::init(true),
-    cl::desc(
-        "If true, scale the working set size of the partial sample profile "
-        "by the partial profile ratio to reflect the size of the program "
-        "being compiled."));
-
-} // end namespace llvm
 
 ProfileSummaryInfo::ProfileSummaryInfo(const Module &M)
     : Opts(getAnalysisOptions(M)), M(&M) {
@@ -135,7 +122,8 @@ void ProfileSummaryInfo::computeThresholds() {
   }
   assert(ColdCountThreshold < HotCountThreshold &&
          "Cold count threshold should be less than hot count threshold!");
-  if (!hasPartialSampleProfile() || !ScalePartialSampleProfileWorkingSetSize) {
+  if (!hasPartialSampleProfile() ||
+      !Opts.scale_partial_sample_profile_working_set_size) {
     HasHugeWorkingSetSize =
         HotEntry.NumCounts > ProfileSummaryHugeWorkingSetSizeThreshold;
     HasLargeWorkingSetSize =

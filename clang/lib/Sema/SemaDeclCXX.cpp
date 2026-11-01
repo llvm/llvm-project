@@ -15575,7 +15575,6 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     }
 
     // Build references to the field in the object we're copying from and to.
-    CXXScopeSpec SS; // Intentionally empty
     LookupResult MemberLookup(*this, Field->getDeclName(), Loc,
                               LookupMemberName);
     MemberLookup.addDecl(Field);
@@ -17973,8 +17972,6 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
     DeclarationName DN = SemaRef.PP.getIdentifierInfo(Member);
     LookupResult MemberLookup(SemaRef, DN, Loc, Sema::LookupMemberName);
     SemaRef.LookupQualifiedName(MemberLookup, RD);
-    OverloadCandidateSet Candidates(MemberLookup.getNameLoc(),
-                                    OverloadCandidateSet::CSK_Normal);
     if (MemberLookup.empty())
       return std::nullopt;
     return std::move(MemberLookup);
