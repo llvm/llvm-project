@@ -64,7 +64,7 @@ entry:
   ; CHECK: The upper and lower limits cannot be the same value{{$}}
   load i32, ptr %x, !range !{i32 123, i32 123}
 
-  ret void
+  br label %bb
 
 bb:
   ; This one is valid

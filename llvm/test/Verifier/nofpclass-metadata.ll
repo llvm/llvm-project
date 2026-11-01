@@ -42,7 +42,7 @@ entry:
   ; CHECK: Invalid value for 'nofpclass' test mask
   load float, ptr %ptr, align 4, !nofpclass !{i32 1024}
 
-  ret void
+  br label %bb
 
 bb:
   ; This one is valid

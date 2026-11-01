@@ -12,7 +12,8 @@ entry:
 
   ; CHECK: nonnull metadata must be empty
   load ptr, ptr %p, !nonnull !{i32 0}
-  ret void
+
+  br label %bb
 
 bb:
   ; This one is valid

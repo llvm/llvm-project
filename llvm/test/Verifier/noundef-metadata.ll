@@ -11,7 +11,7 @@ entry:
   ; CHECK: noundef applies only to load instructions
   store i32 0, ptr %ptr, !noundef !{}
 
-  ret void
+  br label %bb
 
 bb:
   ; This one is valid

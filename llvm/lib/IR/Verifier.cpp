@@ -5593,7 +5593,7 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
         "dereferenceable, dereferenceable_or_null "
         "apply only to pointer types",
         &I);
-  Check((isa<LoadInst>(I) || isa<IntToPtrInst>(I)),
+  Check((isa<LoadInst, IntToPtrInst, PHINode>(I)),
         "dereferenceable, dereferenceable_or_null apply only to load"
         " and inttoptr instructions, use attributes for calls or invokes",
         &I);
@@ -6233,8 +6233,8 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *AlignMD = I.getMetadata(LLVMContext::MD_align)) {
     Check(I.getType()->isPointerTy(), "align applies only to pointer types",
           &I);
-    Check(isa<LoadInst>(I),
-          "align applies only to load instructions, "
+    Check((isa<LoadInst, PHINode>(I)),
+          "align applies only to load instructions or phi nodes, "
           "use attributes for calls or invokes",
           &I);
     Check(AlignMD->getNumOperands() == 1, "align takes one operand!", &I);

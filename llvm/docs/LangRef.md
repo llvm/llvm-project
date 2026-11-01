@@ -13962,7 +13962,7 @@ assumptions to be made about the values of input arguments; namely
 ##### Syntax:
 
 ```
-<result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...[, !nonnull !<empty_node>][, !noundef !<empty_node>][, !range !<range-info>][, !nofpclass !<fpclass-info>]
+<result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...[, !nonnull !<empty_node>][, !noundef !<empty_node>][, !range !<range-info>][, !nofpclass !<fpclass-info>][, !align !<align_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>]
 ```
 
 ##### Overview:
