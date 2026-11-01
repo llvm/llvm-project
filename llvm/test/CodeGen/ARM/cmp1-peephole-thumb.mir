@@ -66,22 +66,24 @@ frameInfo:
 body:             |
   ; CHECK-LABEL: name: f
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   [[COPY:%[0-9]+]]:tgpr = COPY $r1
-  ; CHECK:   [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-  ; CHECK:   %3:tgpr, $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
-  ; CHECK:   %4:tgpr, $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
-  ; CHECK:   %2:tgpr, $cpsr = tMUL [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
-  ; CHECK:   DBG_VALUE %2, $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
-  ; CHECK-NOT: tCMPi8
-  ; CHECK:   tBcc %bb.2, 0 /* CC::eq */, $cpsr
-  ; CHECK: bb.1.entry:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK: bb.2.entry:
-  ; CHECK:   [[PHI:%[0-9]+]]:tgpr = PHI %4, %bb.1, %3, %bb.0
-  ; CHECK:   $r0 = COPY [[PHI]]
-  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:tgpr = COPY $r1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+  ; CHECK-NEXT:   %3:tgpr, $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   %4:tgpr, $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   %2:tgpr, $cpsr = tMUL [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   DBG_VALUE %2, $noreg, !7, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !3)
+  ; CHECK-NEXT:   tBcc %bb.2, 0 /* CC::eq */, $cpsr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.entry:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.entry:
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:tgpr = PHI %4, %bb.1, %3, %bb.0
+  ; CHECK-NEXT:   $r0 = COPY [[PHI]]
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit $r0
   bb.0.entry:
     liveins: $r0, $r1
 
