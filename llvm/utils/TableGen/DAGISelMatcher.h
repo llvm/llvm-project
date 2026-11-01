@@ -725,8 +725,8 @@ private:
 };
 
 /// SwitchTypeMatcher - Switch based on the current node's type, dispatching
-/// to one matcher per case. If the type doesn't match any of the cases,
-/// then the match fails. This is semantically equivalent to a Scope node where
+/// to one matcher per case.  If the type doesn't match any of the cases,
+/// then the match fails.  This is semantically equivalent to a Scope node where
 /// every child does a CheckType, but is much faster.
 class SwitchTypeMatcher : public Matcher {
   SmallVector<std::pair<MVT, MatcherList>, 8> Cases;
@@ -823,7 +823,7 @@ private:
 };
 
 /// SwitchChildIntegerMatcher - Switch based on the value of an integer constant
-/// child of the current node, dispatching to one matcher per case.  If the
+/// child of the current node, dispatching to one matcher per case. If the
 /// child isn't a constant or its value doesn't match any case, then the match
 /// fails. This is semantically equivalent to a Scope node where every child
 /// does a CheckChildInteger on the same child, but is much faster.
