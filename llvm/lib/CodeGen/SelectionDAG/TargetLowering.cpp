@@ -423,8 +423,9 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   // not supporting it. We can update this code when libgcc provides such
   // functions.
 
-  assert((VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128 || VT == MVT::ppcf128)
-         && "Unsupported setcc type!");
+  assert((VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f80 ||
+          VT == MVT::f128 || VT == MVT::ppcf128) &&
+         "Unsupported setcc type!");
 
   // Expand into one or more soft-fp libcall(s).
   ISD::CondCode OrigCCCode = CCCode;
@@ -436,7 +437,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   // RTLIB::Libcall for VT.
 #define FP_CMP_LIBCALL(BASE)                                                   \
   RTLIB::getFPLibCall(VT, RTLIB::BASE##_F32, RTLIB::BASE##_F64,                \
-                      RTLIB::UNKNOWN_LIBCALL, RTLIB::BASE##_F128,              \
+                      RTLIB::BASE##_F80, RTLIB::BASE##_F128,                   \
                       RTLIB::BASE##_PPCF128)
 
   switch (CCCode) {
