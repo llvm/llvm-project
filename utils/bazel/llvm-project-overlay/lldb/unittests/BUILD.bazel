@@ -976,13 +976,11 @@ cc_test(
 # systems, which bazel does not build for.
 cc_test(
     name = "RegisterSupportTests",
-    srcs = ["Process/Utility/RegisterContextTest.cpp"],
+    # CMake adds the FreeBSD and NetBSD register info tests only on those
+    # systems.
+    srcs = ["Process/Utility/RegisterInfo_x86Test.cpp"],
     deps = [
-        "//lldb:Core",
-        "//lldb:Interpreter",
-        "//lldb:Target",
-        "//lldb:Utility",
-        "//lldb/source/Plugins:PluginProcessUtility",
+        "//lldb:Register",
         "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",

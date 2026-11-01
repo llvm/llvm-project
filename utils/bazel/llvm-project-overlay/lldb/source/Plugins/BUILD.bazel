@@ -2149,7 +2149,19 @@ cc_library(
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = [":PluginProcessLinux"],
+    deps = [
+        ":PluginProcessLinux",
+        ":PluginProcessPOSIX",
+        ":PluginProcessUtility",
+        ":PluginRegisterNative",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
 )
 
 cc_library(
