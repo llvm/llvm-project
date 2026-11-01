@@ -185,11 +185,12 @@ bool SIFormMemoryClausesImpl::canBundle(const MachineInstr &MI,
 // bundled into a memory clause.
 bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
                                             GCNDownwardRPTracker &RPT) {
-  // NB: skip advanceBeforeNext() call. Since all defs will be marked
-  // early-clobber they will all stay alive at least to the end of the
-  // clause. Therefor we should not decrease pressure even if load
-  // pointer becomes dead and could otherwise be reused for destination.
-  RPT.advanceToNext();
+  // NB: do not retire the uses of MI. Since all defs will be marked
+  // early-clobber they will all stay alive at least to the end of the clause.
+  // Therefore we should not decrease pressure even if load pointer becomes
+  // dead and could otherwise be reused for destination. The tracker is reset
+  // after the clause is formed, so its position does not need to be updated.
+  RPT.addDefs(MI);
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
   unsigned Occupancy = MaxPressure.getOccupancy(
       *ST,

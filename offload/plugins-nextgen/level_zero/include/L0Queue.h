@@ -51,6 +51,10 @@ public:
   LevelZeroPluginContextTy *getUserCtx() const { return UserCtx; }
   void setUserCtx(LevelZeroPluginContextTy *Ctx) { UserCtx = Ctx; }
 
+  ze_command_list_handle_t getZeCmdList() const {
+    return CmdList ? CmdList->getCmdList() : nullptr;
+  }
+
   /// Clear data.
   void reset() { resetImpl(); }
 

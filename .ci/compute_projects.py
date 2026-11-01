@@ -32,7 +32,7 @@ PROJECT_DEPENDENCIES = {
     "lldb": {"llvm", "clang"},
     "libclc": {"llvm", "clang"},
     "lld": {"llvm"},
-    "mlir": {"llvm"},
+    "mlir": {"clang", "llvm"},
     "polly": {"llvm"},
     "offload": {"clang", "lld", "flang"},
 }
@@ -271,6 +271,11 @@ def _compute_project_check_targets(
             continue
         if project_to_test in PROJECT_CHECK_TARGETS:
             check_targets.add(PROJECT_CHECK_TARGETS[project_to_test])
+    # If we are testing mlir, but not clang, add 'check-clang-cir' which is a
+    # subset of the full set of clang tests. Clang is a build dependency of
+    # mlir because CIR depends on MLIR, but we don't want to test all of clang.
+    if "mlir" in projects_to_test and "clang" not in projects_to_test:
+        check_targets.add("check-clang-cir")
     return check_targets
 
 

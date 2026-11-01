@@ -8,8 +8,10 @@ add_libc_test(
   SRCS
     select_ui_test.cpp
   DEPENDS
+    libc.hdr.sys_select_macros
+    libc.hdr.types.fd_set
+    libc.hdr.types.struct_timeval
     libc.include.unistd
-    libc.src.errno.errno
     libc.src.sys.select.select
     libc.src.unistd.read
     libc.test.UnitTest.ErrnoCheckingTest
@@ -23,8 +25,10 @@ add_libc_test(
   SRCS
     select_failure_test.cpp
   DEPENDS
+    libc.hdr.sys_select_macros
+    libc.hdr.types.fd_set
+    libc.hdr.types.struct_timeval
     libc.include.unistd
-    libc.src.errno.errno
     libc.src.sys.select.select
     libc.src.unistd.read
     libc.test.UnitTest.ErrnoCheckingTest
@@ -48,7 +52,6 @@ add_libc_test(
     libc.hdr.types.struct_sigaction
     libc.hdr.types.struct_timespec
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.sigaction
     libc.src.signal.sigaddset

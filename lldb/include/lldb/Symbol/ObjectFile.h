@@ -261,6 +261,9 @@ public:
   ///     \b true if it is, \b false otherwise.
   virtual bool IsExecutable() const = 0;
 
+  /// Tells whether this object file is part of a shared cache.
+  virtual bool IsSharedCacheBinary() const { return false; }
+
   /// Returns the offset into a file at which this object resides.
   ///
   /// Some files contain many object files, and this function allows access to

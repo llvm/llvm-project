@@ -60,7 +60,7 @@
 /// B) Transforming a delay slot branch into compact branch. This case can be
 ///    difficult to process as lookahead for hazards is insufficient, as
 ///    backwards delay slot fillling can also produce hazards in previously
-///    processed instuctions.
+///    processed instructions.
 ///
 /// In future this pass can be extended (or new pass can be created) to handle
 /// other pipeline hazards, such as various MIPS1 hazards, processor errata that

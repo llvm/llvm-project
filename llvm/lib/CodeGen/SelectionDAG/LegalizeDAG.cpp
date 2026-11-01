@@ -179,7 +179,6 @@ private:
   SDValue ExpandFNEG(SDNode *Node) const;
   SDValue expandLdexp(SDNode *Node) const;
   SDValue expandFrexp(SDNode *Node) const;
-  SDValue expandModf(SDNode *Node) const;
 
   SDValue ExpandLegalINT_TO_FP(SDNode *Node, SDValue &Chain);
   void PromoteLegalINT_TO_FP(SDNode *N, const SDLoc &dl,
@@ -202,7 +201,7 @@ private:
   SDValue ExpandVectorBuildThroughStack(SDNode* Node);
   SDValue ExpandConcatVectors(SDNode *Node);
 
-  SDValue ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP);
+  SDValue ExpandConstantFP(ConstantFPSDNode *CFP);
   SDValue ExpandConstant(ConstantSDNode *CP);
 
   // if ExpandNode returns false, LegalizeOp falls back to ConvertNodeToLibcall
@@ -314,10 +313,8 @@ SDValue SelectionDAGLegalize::ShuffleWithNarrowerEltType(
   return DAG.getVectorShuffle(NVT, dl, N1, N2, NewMask);
 }
 
-/// Expands the ConstantFP node to an integer constant or
-/// a load from the constant pool.
-SDValue
-SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
+/// Expands the ConstantFP node to a load from the constant pool.
+SDValue SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP) {
   bool Extend = false;
   SDLoc dl(CFP);
 
@@ -329,11 +326,6 @@ SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
   // fp stack or PPC FP unit).
   EVT VT = CFP->getValueType(0);
   ConstantFP *LLVMC = const_cast<ConstantFP*>(CFP->getConstantFPValue());
-  if (!UseCP) {
-    assert((VT == MVT::f64 || VT == MVT::f32) && "Invalid type expansion");
-    return DAG.getConstant(LLVMC->getValueAPF().bitcastToAPInt(), dl,
-                           (VT == MVT::f64) ? MVT::i64 : MVT::i32);
-  }
 
   APFloat APF = CFP->getValueAPF();
   EVT OrigVT = VT;
@@ -2773,34 +2765,6 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
   return DAG.getMergeValues({Result0, Result1}, dl);
 }
 
-SDValue SelectionDAGLegalize::expandModf(SDNode *Node) const {
-  SDLoc dl(Node);
-  SDValue Val = Node->getOperand(0);
-  EVT VT = Val.getValueType();
-  SDNodeFlags Flags = Node->getFlags();
-
-  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
-  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
-
-  SDValue FracToUse;
-  if (Flags.hasNoInfs()) {
-    FracToUse = FracPart;
-  } else {
-    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
-    SDValue Inf =
-        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
-    EVT SetCCVT =
-        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
-    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
-    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
-  }
-
-  SDValue ResultFrac =
-      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
-  return DAG.getMergeValues({ResultFrac, IntPart}, dl);
-}
-
 /// This function is responsible for legalizing a
 /// INT_TO_FP operation of the specified operand when the target requests that
 /// we expand it.  At this point, we know that the result and operand types are
@@ -3939,10 +3903,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported)
       break;
 
-    if (SDValue Expanded = expandModf(Node)) {
-      Results.push_back(Expanded);
-      Results.push_back(Expanded.getValue(1));
-    }
+    TLI.expandMODF(Node, DAG, Results);
     break;
   }
   case ISD::FSINCOS: {
@@ -4004,11 +3965,28 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::ConstantFP: {
     ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Node);
-    // Check to see if this FP immediate is already legal.
-    // If this is a legal constant, turn it into a TargetConstantFP node.
-    if (!TLI.isFPImmLegal(CFP->getValueAPF(), Node->getValueType(0),
-                          DAG.shouldOptForSize()))
-      Results.push_back(ExpandConstantFP(CFP, true));
+    EVT VT = Node->getValueType(0);
+    TargetLowering::FPImmAction Action =
+        TLI.getFPImmAction(CFP->getValueAPF(), VT, DAG.shouldOptForSize());
+    switch (Action) {
+    case TargetLowering::FPImmAction::Legal:
+      break;
+    case TargetLowering::FPImmAction::Bitcast: {
+      EVT IntVT = VT.changeTypeToInteger();
+      assert(TLI.isTypeLegal(IntVT) &&
+             "integer type for FP immediate bits must be legal");
+      // The constant is opaque so the bitcast is not folded back.
+      SDValue Bits =
+          DAG.getConstant(CFP->getValueAPF().bitcastToAPInt(), dl, IntVT,
+                          /*isTarget=*/false, /*isOpaque=*/true);
+      Results.push_back(DAG.getBitcast(VT, Bits));
+      break;
+    }
+    case TargetLowering::FPImmAction::ConstantPool:
+      Results.push_back(ExpandConstantFP(CFP));
+      break;
+    }
+
     break;
   }
   case ISD::Constant: {

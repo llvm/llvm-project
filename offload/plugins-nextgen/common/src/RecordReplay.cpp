@@ -29,11 +29,11 @@ using namespace target;
 using namespace plugin;
 using namespace error;
 
-RecordReplayTy::InstanceTy::InstanceTy(const GenericKernelTy &Kernel,
+RecordReplayTy::InstanceTy::InstanceTy(const KernelInfoTy &Kernel,
                                        uint32_t NumTeams, uint32_t NumThreads,
                                        uint32_t SharedMemorySize,
                                        KernelReplayOutcomeTy *ReplayOutcome)
-    : Kernel(Kernel), NumTeams(NumTeams), NumThreads(NumThreads),
+    : KernelName(Kernel.getName()), NumTeams(NumTeams), NumThreads(NumThreads),
       SharedMemorySize(SharedMemorySize), ReplayOutcome(ReplayOutcome) {
   KernelHash = stable_hash_name(Kernel.getName());
   LaunchConfigHash =
@@ -113,17 +113,16 @@ Error RecordReplayTy::emitInstanceReport() {
   for (const auto *Inst : OrderedInstances)
     *OutStream
         << getFilename(*Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()
-        << ", " << Inst->Kernel.getName() << ", " << Inst->getRecordedTimeNs()
-        << ", " << Inst->Occurrences << "\n";
+        << ", " << Inst->KernelName << ", " << Inst->getRecordedTimeNs() << ", "
+        << Inst->Occurrences << "\n";
   *OutStream << "=== End Kernel Record Report ===\n";
 
   return Plugin::success();
 }
 
 std::pair<const RecordReplayTy::InstanceTy &, bool>
-RecordReplayTy::registerInstance(const GenericKernelTy &Kernel,
-                                 uint32_t NumTeams, uint32_t NumThreads,
-                                 uint32_t SharedMemorySize,
+RecordReplayTy::registerInstance(const KernelInfoTy &Kernel, uint32_t NumTeams,
+                                 uint32_t NumThreads, uint32_t SharedMemorySize,
                                  KernelReplayOutcomeTy *ReplayOutcome) {
   std::lock_guard<std::mutex> LG(InstancesLock);
   auto [It, Inserted] = Instances.emplace(Kernel, NumTeams, NumThreads,
@@ -167,7 +166,7 @@ Expected<void *> RecordReplayTy::allocate(uint64_t Size) {
 Error RecordReplayTy::deallocate(void *Ptr) { return Plugin::success(); }
 
 Expected<RecordReplayTy::HandleTy>
-RecordReplayTy::recordPrologue(const GenericKernelTy &Kernel,
+RecordReplayTy::recordPrologue(const KernelInfoTy &Kernel,
                                const KernelRecordArgsTy &RecordArgs) {
   if (!isRecordingOrReplaying())
     return HandleTy{nullptr, false};
@@ -195,7 +194,7 @@ RecordReplayTy::recordPrologue(const GenericKernelTy &Kernel,
   return Handle;
 }
 
-Error RecordReplayTy::recordEpilogue(const GenericKernelTy &Kernel,
+Error RecordReplayTy::recordEpilogue(const KernelInfoTy &Kernel,
                                      HandleTy Handle) {
   if (!Handle.Active)
     return Plugin::success();
@@ -230,7 +229,7 @@ void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance,
   Outcome.KernelReplayTimeNs = Instance.getRecordedTimeNs();
 }
 
-Error NativeRecordReplayTy::recordPrologueImpl(const GenericKernelTy &Kernel,
+Error NativeRecordReplayTy::recordPrologueImpl(const KernelInfoTy &Kernel,
                                                const InstanceTy &Instance) {
   SmallString<128> SnapshotFilename =
       getFilename(Instance, FileTy::PrologueSnapshot);
@@ -247,7 +246,7 @@ Error NativeRecordReplayTy::recordPrologueImpl(const GenericKernelTy &Kernel,
   return recordImage(Kernel, ImageFilename.c_str(), IRImageFilename.c_str());
 }
 
-Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
+Error NativeRecordReplayTy::recordEpilogueImpl(const KernelInfoTy &Kernel,
                                                const InstanceTy &Instance) {
   SmallString<128> SnapshotFilename =
       getFilename(Instance, FileTy::EpilogueSnapshot);
@@ -255,10 +254,10 @@ Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
 }
 
 Error NativeRecordReplayTy::recordDescImpl(
-    const GenericKernelTy &Kernel, const InstanceTy &Instance,
+    const KernelInfoTy &Kernel, const InstanceTy &Instance,
     const KernelRecordArgsTy &RecordArgs) {
   json::Object JsonKernelInfo;
-  JsonKernelInfo["Name"] = Kernel.getName();
+  JsonKernelInfo["Name"] = Instance.KernelName;
   JsonKernelInfo["NumArgs"] = RecordArgs.NumArgs;
   JsonKernelInfo["NumTeams"] = Instance.NumTeams;
   JsonKernelInfo["NumThreads"] = Instance.NumThreads;
@@ -362,21 +361,21 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
   return Plugin::success();
 }
 
-Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
+Error NativeRecordReplayTy::recordImage(const KernelInfoTy &Kernel,
                                         StringRef Filename,
                                         StringRef IRImageFilename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving image file");
-  OS << Kernel.getImage().getMemoryBuffer().getBuffer();
+  OS << Kernel.getImage().getBuffer();
   OS.close();
 
-  if (!IRImageFilename.empty() && Kernel.getImage().hasIRImage()) {
+  if (!IRImageFilename.empty() && Kernel.hasIRImage()) {
     raw_fd_ostream IROS(IRImageFilename, EC);
     if (EC)
       return Plugin::error(ErrorCode::HOST_IO, "saving IR image file");
-    IROS << Kernel.getImage().getIRImageMemoryBuffer().getBuffer();
+    IROS << Kernel.getIRImage().getBuffer();
     IROS.close();
   }
 

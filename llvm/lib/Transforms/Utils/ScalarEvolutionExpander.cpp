@@ -975,34 +975,6 @@ static bool canBeCheaplyTransformed(ScalarEvolution &SE,
   return false;
 }
 
-static bool IsIncrementNSW(ScalarEvolution &SE, const SCEVAddRecExpr *AR) {
-  if (!isa<IntegerType>(AR->getType()))
-    return false;
-
-  unsigned BitWidth = cast<IntegerType>(AR->getType())->getBitWidth();
-  Type *WideTy = IntegerType::get(AR->getType()->getContext(), BitWidth * 2);
-  const SCEV *Step = AR->getStepRecurrence(SE);
-  const SCEV *OpAfterExtend = SE.getAddExpr(SE.getSignExtendExpr(Step, WideTy),
-                                            SE.getSignExtendExpr(AR, WideTy));
-  const SCEV *ExtendAfterOp =
-    SE.getSignExtendExpr(SE.getAddExpr(AR, Step), WideTy);
-  return ExtendAfterOp == OpAfterExtend;
-}
-
-static bool IsIncrementNUW(ScalarEvolution &SE, const SCEVAddRecExpr *AR) {
-  if (!isa<IntegerType>(AR->getType()))
-    return false;
-
-  unsigned BitWidth = cast<IntegerType>(AR->getType())->getBitWidth();
-  Type *WideTy = IntegerType::get(AR->getType()->getContext(), BitWidth * 2);
-  const SCEV *Step = AR->getStepRecurrence(SE);
-  const SCEV *OpAfterExtend = SE.getAddExpr(SE.getZeroExtendExpr(Step, WideTy),
-                                            SE.getZeroExtendExpr(AR, WideTy));
-  const SCEV *ExtendAfterOp =
-    SE.getZeroExtendExpr(SE.getAddExpr(AR, Step), WideTy);
-  return ExtendAfterOp == OpAfterExtend;
-}
-
 /// getAddRecExprPHILiterally - Helper for expandAddRecExprLiterally. Expand
 /// the base addrec, which is the addrec without any non-loop-dominating
 /// values, and return the PHI.
@@ -1137,11 +1109,15 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   // Expand the step somewhere that dominates the loop header.
   Value *StepV = expand(Step, L->getHeader()->getFirstInsertionPt());
 
-  // The no-wrap behavior proved by IsIncrement(NUW|NSW) is only applicable if
-  // we actually do emit an addition.  It does not apply if we emit a
-  // subtraction.
-  bool IncrementIsNUW = !useSubtract && IsIncrementNUW(SE, Normalized);
-  bool IncrementIsNSW = !useSubtract && IsIncrementNSW(SE, Normalized);
+  // The no-wrap behavior proved here is only applicable if we actually do emit
+  // an addition.  It does not apply if we emit a subtraction.
+  bool CanHaveNoWrap = !useSubtract && ExpandTy->isIntegerTy();
+  bool IncrementIsNUW =
+      CanHaveNoWrap &&
+      SE.willNotOverflow(Instruction::Add, /*Signed=*/false, Normalized, Step);
+  bool IncrementIsNSW =
+      CanHaveNoWrap &&
+      SE.willNotOverflow(Instruction::Add, /*Signed=*/true, Normalized, Step);
 
   // Create the PHI.
   BasicBlock *Header = L->getHeader();

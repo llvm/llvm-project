@@ -9667,7 +9667,7 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero.setBitsFrom(2);
     return;
   }
-  EVT VT = Op.getValueType();
+  [[maybe_unused]] EVT VT = Op.getValueType();
   if (Op.getResNo() != 0)
     return;
   assert (Known.getBitWidth() == VT.getScalarSizeInBits() &&

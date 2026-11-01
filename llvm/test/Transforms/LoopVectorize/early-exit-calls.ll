@@ -84,7 +84,7 @@ define void @readnone_call_site_non_deref_load(ptr dereferenceable(1024) %a, ptr
 ; CHECK-NEXT:    [[L_A:%.*]] = load i8, ptr [[GEP_A]], align 1
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr float, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load float, ptr [[GEP_B]], align 4
-; CHECK-NEXT:    [[C:%.*]] = call float @fabsf(float [[L_B]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = call float @fabsf(float [[L_B]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[L_A]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
@@ -117,3 +117,116 @@ exit:
 }
 
 declare float @fabsf(float) speculatable
+
+; The call is memory(none) only via its call-site attributes.
+define i64 @readnone_call_site(ptr dereferenceable(64) %p) {
+; CHECK-LABEL: define i64 @readnone_call_site(
+; CHECK-SAME: ptr dereferenceable(64) [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @g_vec(<4 x i8> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[TMP1]], splat (i8 3)
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP3]], i1 false)
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], [[TMP6]]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP7]], %[[VECTOR_EARLY_EXIT]] ], [ -1, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep = getelementptr inbounds i8, ptr %p, i64 %iv
+  %l = load i8, ptr %gep, align 1
+  %c = call i8 @g(i8 %l) #0
+  %cmp = icmp eq i8 %c, 3
+  br i1 %cmp, label %exit, label %latch
+
+latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 64
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %r = phi i64 [ %iv, %loop ], [ -1, %latch ]
+  ret i64 %r
+}
+
+; The call-site and callee memory attributes are disjoint, so the call is
+; memory(none).
+define i64 @disjoint_call_site_and_callee_memory(ptr dereferenceable(64) %p) {
+; CHECK-LABEL: define i64 @disjoint_call_site_and_callee_memory(
+; CHECK-SAME: ptr dereferenceable(64) [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @h_vec(<4 x i8> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[TMP1]], splat (i8 3)
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP3]], i1 false)
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], [[TMP6]]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP7]], %[[VECTOR_EARLY_EXIT]] ], [ -1, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep = getelementptr inbounds i8, ptr %p, i64 %iv
+  %l = load i8, ptr %gep, align 1
+  %c = call i8 @h(i8 %l) #1
+  %cmp = icmp eq i8 %c, 3
+  br i1 %cmp, label %exit, label %latch
+
+latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 64
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %r = phi i64 [ %iv, %loop ], [ -1, %latch ]
+  ret i64 %r
+}
+
+declare i8 @g(i8) speculatable
+declare <4 x i8> @g_vec(<4 x i8>)
+declare i8 @h(i8) nounwind speculatable memory(inaccessiblemem: readwrite)
+declare <4 x i8> @h_vec(<4 x i8>)
+
+attributes #0 = { memory(none) nounwind "vector-function-abi-variant"="_ZGV_LLVM_N4v_g(g_vec)" }
+attributes #1 = { memory(argmem: read) "vector-function-abi-variant"="_ZGV_LLVM_N4v_h(h_vec)" }

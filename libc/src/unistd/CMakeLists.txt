@@ -232,6 +232,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getgroups
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getgroups
+)
+
+add_entrypoint_object(
   gethostname
   ALIAS
   DEPENDS
@@ -271,6 +278,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.getppid
+)
+
+add_entrypoint_object(
+  getresgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getresgid
+)
+
+add_entrypoint_object(
+  getresuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getresuid
 )
 
 add_entrypoint_object(

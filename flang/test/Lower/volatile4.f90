@@ -60,13 +60,13 @@ end program
 ! CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QFEarr) : !fir.ref<!fir.array<10xi32>>
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ADDRESS_OF_0]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
-! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) uniq_name("_QFEarr") fortran_attrs<volatile> : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
+! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) uniq_name("_QFEarr") fortran_attrs<volatile, internal_assoc> : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
 ! CHECK:           %[[ADDRESS_OF_1:.*]] = fir.address_of(@_QFEptr) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VOLATILE_CAST_1:.*]] = fir.volatile_cast %[[ADDRESS_OF_1]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>
-! CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_1]] uniq_name("_QFEptr") fortran_attrs<pointer, volatile> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>)
+! CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_1]] uniq_name("_QFEptr") fortran_attrs<pointer, volatile, internal_assoc> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>, volatile>, volatile>)
 ! CHECK:           %[[ADDRESS_OF_2:.*]] = fir.address_of(@_QFEtgt) : !fir.ref<!fir.array<10xi32>>
 ! CHECK:           %[[VOLATILE_CAST_2:.*]] = fir.volatile_cast %[[ADDRESS_OF_2]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
-! CHECK:           %[[DECLARE_2:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_2]](%[[SHAPE_0]]) uniq_name("_QFEtgt") fortran_attrs<target, volatile> : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
+! CHECK:           %[[DECLARE_2:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_2]](%[[SHAPE_0]]) uniq_name("_QFEtgt") fortran_attrs<target, volatile, internal_assoc> : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
 ! CHECK:           %[[COORDINATE_OF_0:.*]] = fir.coordinate_of %[[ARG0]], %[[CONSTANT_1]] : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[COORDINATE_OF_0]] : !fir.llvm_ptr<!fir.ref<i32>>
 ! CHECK:           %[[VOLATILE_CAST_3:.*]] = fir.volatile_cast %[[LOAD_0]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>

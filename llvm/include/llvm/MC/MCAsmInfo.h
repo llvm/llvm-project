@@ -212,6 +212,9 @@ protected:
   /// True if full register names are printed.
   bool PPCUseFullRegisterNames = false;
 
+  /// True if the target supports the .addrsig directive.
+  bool HasAddrsigDirective = true;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -352,9 +355,6 @@ protected:
   /// True if target supports emission of debugging information.  Defaults to
   /// false.
   bool SupportsDebugInformation = false;
-
-  /// Default exception handling model for the target.  Defaults to None.
-  ExceptionHandling ExceptionsType = ExceptionHandling::None;
 
   /// True if target uses CFI unwind information for other purposes than EH
   /// (debugging / sanitizers) when the exception model is
@@ -603,6 +603,8 @@ public:
   bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
   void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
 
+  bool hasAddrsigDirective() const { return HasAddrsigDirective; }
+
   const char *getZeroDirective() const { return ZeroDirective; }
   const char *getAsciiDirective() const { return AsciiDirective; }
   const char *getAscizDirective() const { return AscizDirective; }
@@ -654,7 +656,6 @@ public:
 
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
 
-  ExceptionHandling getExceptionHandlingType() const { return ExceptionsType; }
   WinEH::EncodingType getWinEHEncodingType() const { return WinEHEncodingType; }
 
   bool usesCFIWithoutEH(ExceptionHandling EH) const {

@@ -1077,8 +1077,8 @@ StringRef ASTNodeImporter::ImportASTStringRef(StringRef FromStr) {
 
 Error ASTNodeImporter::ImportConstraintSatisfaction(
     const ASTConstraintSatisfaction &FromSat, ConstraintSatisfaction &ToSat) {
-  ToSat.IsSatisfied = FromSat.IsSatisfied;
-  ToSat.ContainsErrors = FromSat.ContainsErrors;
+  ToSat.IsSatisfied = FromSat.isSatisfied();
+  ToSat.ContainsErrors = FromSat.containsErrors();
   if (!ToSat.IsSatisfied) {
     for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
       if (const Expr *E = dyn_cast<const Expr *>(*Record)) {
@@ -7381,10 +7381,10 @@ static ExpectedStmt ImportLoopControlStmt(ASTNodeImporter &NodeImporter,
                                           ASTImporter &Importer, StmtClass *S) {
   Error Err = Error::success();
   auto ToLoc = NodeImporter.importChecked(Err, S->getKwLoc());
-  auto ToLabelLoc = S->hasLabelTarget()
+  auto ToLabelLoc = S->isNamed()
                         ? NodeImporter.importChecked(Err, S->getLabelLoc())
                         : SourceLocation();
-  auto ToDecl = S->hasLabelTarget()
+  auto ToDecl = S->isNamed()
                     ? NodeImporter.importChecked(Err, S->getLabelDecl())
                     : nullptr;
   if (Err)

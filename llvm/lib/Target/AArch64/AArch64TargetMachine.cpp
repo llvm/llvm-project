@@ -705,8 +705,6 @@ void AArch64PassConfig::addPreRegAlloc() {
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerLegacyID);
   }
-  if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_pipeliner)
-    addPass(&MachinePipelinerID);
 }
 
 void AArch64PassConfig::addPostRewrite() {

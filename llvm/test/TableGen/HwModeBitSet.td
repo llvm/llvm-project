@@ -129,6 +129,12 @@ def foo : Instruction {
 }
 
 // CHECK-SUBTARGET-LABEL: struct TestTargetGenMCSubtargetInfo : public MCSubtargetInfo {
+// CHECK-SUBTARGET:         explicit TestTargetGenMCSubtargetInfo(const MCSubtargetInfo &STI)
+// CHECK-SUBTARGET-NEXT:        : MCSubtargetInfo(STI) {}
+// CHECK-SUBTARGET-EMPTY:
+// CHECK-SUBTARGET-NEXT:    std::unique_ptr<MCSubtargetInfo> clone() const final {
+// CHECK-SUBTARGET-NEXT:      return std::make_unique<TestTargetGenMCSubtargetInfo>(*this);
+// CHECK-SUBTARGET-NEXT:    }
 // CHECK-SUBTARGET:         unsigned getHwModeSet() const final;
 // CHECK-SUBTARGET-NEXT:    unsigned getHwMode(enum HwModeType type = HwMode_Default) const final;
 // CHECK-SUBTARGET-NEXT:  };
@@ -141,10 +147,19 @@ def foo : Instruction {
 // CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1] && FB[TestTarget::Feat2]) Modes |= (1 << 2);
 // CHECK-SUBTARGET-NEXT:    return Modes;
 // CHECK-SUBTARGET-NEXT:  }
+// CHECK-SUBTARGET-LABEL: namespace TestTarget_MC {
+// CHECK-SUBTARGET:       std::unique_ptr<MCSubtargetInfo> cloneSubtargetInfo(const MCSubtargetInfo &STI) {
+// CHECK-SUBTARGET-NEXT:    return std::make_unique<TestTargetGenMCSubtargetInfo>(STI);
+// CHECK-SUBTARGET-NEXT:  }
+// CHECK-SUBTARGET:       } // namespace TestTarget_MC
 
 // CHECK-SUBTARGET-LABEL: struct TestTargetGenSubtargetInfo : public TargetSubtargetInfo {
+// CHECK-SUBTARGET:         std::unique_ptr<MCSubtargetInfo> clone() const final;
 // CHECK-SUBTARGET:         unsigned getHwModeSet() const final;
 // CHECK-SUBTARGET-NEXT:    unsigned getHwMode(enum HwModeType type = HwMode_Default) const final;
+// CHECK-SUBTARGET-LABEL: std::unique_ptr<MCSubtargetInfo> TestTargetGenSubtargetInfo::clone() const {
+// CHECK-SUBTARGET-NEXT:    return TestTarget_MC::cloneSubtargetInfo(*this);
+// CHECK-SUBTARGET-NEXT:  } // TestTargetGenSubtargetInfo::clone
 // CHECK-SUBTARGET-LABEL: unsigned TestTargetGenSubtargetInfo::getHwModeSet() const {
 // CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const auto *Subtarget =
 // CHECK-SUBTARGET-NEXT:        static_cast<const TestTargetSubtarget *>(this);
