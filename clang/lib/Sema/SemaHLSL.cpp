@@ -3796,8 +3796,9 @@ static bool CheckNoDoubleVectors(Sema *S, SourceLocation Loc, int ArgOrdinal,
   return false;
 }
 
-static bool CheckFloatingOrNonBoolIntRepresentation(
-    Sema *S, SourceLocation Loc, int ArgOrdinal, clang::QualType PassedType) {
+static bool CheckNumericRepresentation(Sema *S, SourceLocation Loc,
+                                       int ArgOrdinal,
+                                       clang::QualType PassedType) {
   if (getScalarComponentType(PassedType)->isBooleanType() ||
       (!PassedType->hasIntegerRepresentation() &&
        !PassedType->hasFloatingRepresentation()))
@@ -5146,7 +5147,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatingOrNonBoolIntRepresentation))
+                                   CheckNumericRepresentation))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
     break;
