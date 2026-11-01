@@ -90,8 +90,11 @@ class MemoryManagerTy {
     int L = 0, H = NumBuckets - 1;
     while (H - L > 1) {
       int M = (L + H) >> 1;
-      if (BucketSize[M] == F)
+      if (BucketSize[M] == F) {
+        ODBG(OLDT_Alloc) << "findBucket: Size " << Size << " goes to bucket "
+                         << M;
         return M;
+      }
       if (BucketSize[M] > F)
         H = M - 1;
       else
