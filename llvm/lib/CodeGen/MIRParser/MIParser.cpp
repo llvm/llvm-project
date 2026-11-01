@@ -739,6 +739,7 @@ bool MIParser::parseBasicBlockDefinition(
   auto Name = Token.stringValue();
   lex();
   bool MachineBlockAddressTaken = false;
+  bool LabelMustBeEmitted = false;
   BasicBlock *AddressTakenIRBlock = nullptr;
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
@@ -758,6 +759,10 @@ bool MIParser::parseBasicBlockDefinition(
       switch (Token.kind()) {
       case MIToken::kw_machine_block_address_taken:
         MachineBlockAddressTaken = true;
+        lex();
+        break;
+      case MIToken::kw_label_must_be_emitted:
+        LabelMustBeEmitted = true;
         lex();
         break;
       case MIToken::kw_ir_block_address_taken:
@@ -846,6 +851,8 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setMaxBytesForAlignment(MaxBytesForAlignment);
   if (MachineBlockAddressTaken)
     MBB->setMachineBlockAddressTaken();
+  if (LabelMustBeEmitted)
+    MBB->setLabelMustBeEmitted();
   if (AddressTakenIRBlock)
     MBB->setAddressTakenIRBlock(AddressTakenIRBlock);
   MBB->setIsEHPad(IsLandingPad);
@@ -1872,63 +1879,72 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
     return false;
   }
 
-  // Parse optional constraint after ':'.
-  if (Token.isNot(MIToken::colon)) {
-    Dest = MachineOperand::CreateImm(F);
-    return false;
+  // Parse an optional constraint after ':'.
+  if (Token.is(MIToken::colon)) {
+    lex();
+
+    if (Token.isNot(MIToken::Identifier))
+      return error(
+          "expected register class or memory constraint name after ':'");
+
+    StringRef ConstraintStr = Token.stringValue();
+    if (F.isMemKind()) {
+      InlineAsm::ConstraintCode CC =
+          StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
+              .Case("es", InlineAsm::ConstraintCode::es)
+              .Case("i", InlineAsm::ConstraintCode::i)
+              .Case("k", InlineAsm::ConstraintCode::k)
+              .Case("m", InlineAsm::ConstraintCode::m)
+              .Case("o", InlineAsm::ConstraintCode::o)
+              .Case("v", InlineAsm::ConstraintCode::v)
+              .Case("A", InlineAsm::ConstraintCode::A)
+              .Case("Q", InlineAsm::ConstraintCode::Q)
+              .Case("R", InlineAsm::ConstraintCode::R)
+              .Case("S", InlineAsm::ConstraintCode::S)
+              .Case("T", InlineAsm::ConstraintCode::T)
+              .Case("Um", InlineAsm::ConstraintCode::Um)
+              .Case("Un", InlineAsm::ConstraintCode::Un)
+              .Case("Uq", InlineAsm::ConstraintCode::Uq)
+              .Case("Us", InlineAsm::ConstraintCode::Us)
+              .Case("Ut", InlineAsm::ConstraintCode::Ut)
+              .Case("Uv", InlineAsm::ConstraintCode::Uv)
+              .Case("Uy", InlineAsm::ConstraintCode::Uy)
+              .Case("X", InlineAsm::ConstraintCode::X)
+              .Case("Z", InlineAsm::ConstraintCode::Z)
+              .Case("ZB", InlineAsm::ConstraintCode::ZB)
+              .Case("ZC", InlineAsm::ConstraintCode::ZC)
+              .Case("Zy", InlineAsm::ConstraintCode::Zy)
+              .Case("p", InlineAsm::ConstraintCode::p)
+              .Case("ZQ", InlineAsm::ConstraintCode::ZQ)
+              .Case("ZR", InlineAsm::ConstraintCode::ZR)
+              .Case("ZS", InlineAsm::ConstraintCode::ZS)
+              .Case("ZT", InlineAsm::ConstraintCode::ZT)
+              .Default(InlineAsm::ConstraintCode::Unknown);
+      if (CC == InlineAsm::ConstraintCode::Unknown)
+        return error("unknown memory constraint '" + ConstraintStr + "'");
+      F.setMemConstraint(CC);
+    } else if (F.isRegDefKind() || F.isRegUseKind() ||
+               F.isRegDefEarlyClobberKind()) {
+      const TargetRegisterClass *RC =
+          PFS.Target.getRegClass(ConstraintStr.lower());
+      if (!RC)
+        return error("unknown register class '" + ConstraintStr + "'");
+      F.setRegClass(RC->getID());
+    }
+
+    lex();
   }
 
-  lex();
+  // Parse an optional 'foldable' marker: the register allocator may fold the
+  // operand's register to a stack slot (see
+  // InlineAsm::Flag::setRegMayBeFolded()).
+  if (Token.is(MIToken::Identifier) && Token.stringValue() == "foldable") {
+    if (!F.isRegDefKind() && !F.isRegUseKind() && !F.isRegDefEarlyClobberKind())
+      return error("only a register operand can be 'foldable'");
 
-  if (Token.isNot(MIToken::Identifier))
-    return error("expected register class or memory constraint name after ':'");
-
-  StringRef ConstraintStr = Token.stringValue();
-  if (K == InlineAsm::Kind::Mem) {
-    InlineAsm::ConstraintCode CC =
-        StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
-            .Case("es", InlineAsm::ConstraintCode::es)
-            .Case("i", InlineAsm::ConstraintCode::i)
-            .Case("k", InlineAsm::ConstraintCode::k)
-            .Case("m", InlineAsm::ConstraintCode::m)
-            .Case("o", InlineAsm::ConstraintCode::o)
-            .Case("v", InlineAsm::ConstraintCode::v)
-            .Case("A", InlineAsm::ConstraintCode::A)
-            .Case("Q", InlineAsm::ConstraintCode::Q)
-            .Case("R", InlineAsm::ConstraintCode::R)
-            .Case("S", InlineAsm::ConstraintCode::S)
-            .Case("T", InlineAsm::ConstraintCode::T)
-            .Case("Um", InlineAsm::ConstraintCode::Um)
-            .Case("Un", InlineAsm::ConstraintCode::Un)
-            .Case("Uq", InlineAsm::ConstraintCode::Uq)
-            .Case("Us", InlineAsm::ConstraintCode::Us)
-            .Case("Ut", InlineAsm::ConstraintCode::Ut)
-            .Case("Uv", InlineAsm::ConstraintCode::Uv)
-            .Case("Uy", InlineAsm::ConstraintCode::Uy)
-            .Case("X", InlineAsm::ConstraintCode::X)
-            .Case("Z", InlineAsm::ConstraintCode::Z)
-            .Case("ZB", InlineAsm::ConstraintCode::ZB)
-            .Case("ZC", InlineAsm::ConstraintCode::ZC)
-            .Case("Zy", InlineAsm::ConstraintCode::Zy)
-            .Case("p", InlineAsm::ConstraintCode::p)
-            .Case("ZQ", InlineAsm::ConstraintCode::ZQ)
-            .Case("ZR", InlineAsm::ConstraintCode::ZR)
-            .Case("ZS", InlineAsm::ConstraintCode::ZS)
-            .Case("ZT", InlineAsm::ConstraintCode::ZT)
-            .Default(InlineAsm::ConstraintCode::Unknown);
-    if (CC == InlineAsm::ConstraintCode::Unknown)
-      return error("unknown memory constraint '" + ConstraintStr + "'");
-    F.setMemConstraint(CC);
-  } else if (K == InlineAsm::Kind::RegDef || K == InlineAsm::Kind::RegUse ||
-             K == InlineAsm::Kind::RegDefEarlyClobber) {
-    const TargetRegisterClass *RC =
-        PFS.Target.getRegClass(ConstraintStr.lower());
-    if (!RC)
-      return error("unknown register class '" + ConstraintStr + "'");
-    F.setRegClass(RC->getID());
+    F.setRegMayBeFolded(true);
+    lex();
   }
-
-  lex();
 
   Dest = MachineOperand::CreateImm(F);
   return false;

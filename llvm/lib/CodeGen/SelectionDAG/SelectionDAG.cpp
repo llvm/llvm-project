@@ -3784,6 +3784,20 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = KnownBits::avgCeilS(Known, Known2);
     break;
   }
+  case ISD::AVGSUBFLOORU:
+  case ISD::AVGSUBFLOORS: {
+    bool IsSigned = Op.getOpcode() == ISD::AVGSUBFLOORS;
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    // Subtract in i[N+1] so the difference can't overflow, then halve.
+    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
+    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+    Known = KnownBits::sub(Known, Known2);
+    // The shifted in top bit is unknown, but it is truncated away.
+    Known >>= 1;
+    Known = Known.trunc(BitWidth);
+    break;
+  }
   case ISD::SELECT:
   case ISD::VSELECT:
     Known = computeKnownBits(Op.getOperand(2), DemandedElts, Depth+1);
@@ -5283,6 +5297,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::GET_ACTIVE_LANE_MASK:
+  case ISD::MASK_BEFOREFIRST:
     // Semantically similar to icmp ult.
     if (TLI->getBooleanContents(VT.isVector(), /*isFloat=*/false) ==
         TargetLowering::ZeroOrNegativeOneBooleanContent)
@@ -5371,6 +5386,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
+  case ISD::AVGSUBFLOORS:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
       return 1; // Early out.
@@ -6007,6 +6023,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
   case ISD::ABDU:
   case ISD::ABDS:
   case ISD::SMIN:
@@ -6226,8 +6244,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case ISD::POISON: {
-    Known.setKnownFPClasses(fcNone);
-    Known.setSignBit(false);
+    Known = KnownFPClass::getEmpty();
     break;
   }
   case ISD::FNEG: {
@@ -6269,7 +6286,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                     Depth + 1);
       } else {
         // Out of bounds index is poison.
-        Known.setKnownFPClasses(fcNone);
+        Known = KnownFPClass::getEmpty();
       }
     } else {
       Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
@@ -6839,15 +6856,53 @@ bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
   llvm_unreachable("covered opcode switch");
 }
 
+/// Return true if the standard nsz semantics may not apply for this opcode.
+/// Opcode is assumed to take float inputs.
+/// FIXME: Target min/max nodes (e.g. X86ISD::FMINC) aren't included.
+static bool hasSpecialNszSemantics(unsigned Opcode) {
+  switch (Opcode) {
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FMAXIMUM:
+  case ISD::PSEUDO_FMIN:
+  case ISD::PSEUDO_FMAX:
+  case ISD::STRICT_PSEUDO_FMIN:
+  case ISD::STRICT_PSEUDO_FMAX:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_FMAX:
+  case ISD::VP_REDUCE_FMINIMUM:
+  case ISD::VP_REDUCE_FMAXIMUM:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
   assert(Use.getValueType().isFloatingPoint());
   const SDNode *User = Use.getUser();
-  if (User->getFlags().hasNoSignedZeros())
+  unsigned Opcode = User->getOpcode();
+  if (User->getFlags().hasNoSignedZeros() && !hasSpecialNszSemantics(Opcode))
     return true;
 
   unsigned OperandNo = Use.getOperandNo();
   // Check if this use is insensitive to the sign of zero
-  switch (User->getOpcode()) {
+  switch (Opcode) {
   case ISD::SETCC:
     // Comparisons: IEEE-754 specifies +0.0 == -0.0.
   case ISD::FABS:
@@ -6867,14 +6922,33 @@ bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
   case ISD::FP_TO_UINT:
     // fp-to-int conversions normalize signed zeros.
     return true;
+  case ISD::FMINNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::PSEUDO_FMIN:
+  case ISD::PSEUDO_FMAX: {
+    // If other value always beats zero, the zero can be ignored.
+    bool IsMin = Opcode == ISD::FMINNUM || Opcode == ISD::FMINNUM_IEEE ||
+                 Opcode == ISD::FMINIMUM || Opcode == ISD::FMINIMUMNUM ||
+                 Opcode == ISD::PSEUDO_FMIN;
+    FPClassTest AlwaysBeatsZero =
+        IsMin ? fcNegNormal | fcNegInf : fcPosNormal | fcPosInf;
+    SDValue Other = User->getOperand(1 - OperandNo);
+    KnownFPClass Known = computeKnownFPClass(Other, ~AlwaysBeatsZero);
+    return Known.isKnownNever(~AlwaysBeatsZero);
+  }
   default:
     return false;
   }
 }
 
-bool SelectionDAG::canIgnoreSignBitOfZero(SDValue Op) const {
-  if (Op->getFlags().hasNoSignedZeros())
-    return true;
+bool SelectionDAG::canIgnoreSignBitOfZeroResult(SDValue Op) const {
+  assert(Op->getNumValues() == 1);
   // FIXME: Limit the amount of checked uses to not introduce a compile-time
   // regression. Ideally, this should be implemented as a demanded-bits
   // optimization that stems from the users.
@@ -7614,6 +7688,10 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     return APIntOps::avgCeilS(C1, C2);
   case ISD::AVGCEILU:
     return APIntOps::avgCeilU(C1, C2);
+  case ISD::AVGSUBFLOORS:
+    return APIntOps::avgSubFloorS(C1, C2);
+  case ISD::AVGSUBFLOORU:
+    return APIntOps::avgSubFloorU(C1, C2);
   case ISD::ABDS:
     return APIntOps::abds(C1, C2);
   case ISD::ABDU:
@@ -7803,6 +7881,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           return V;
         break;
       case ISD::BITCAST:
+        if (C->isOpaque())
+          break;
         if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
           return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
         if (VT == MVT::f32 && C->getValueType(0) == MVT::i32)
@@ -8685,6 +8765,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
@@ -10339,6 +10421,14 @@ SDValue SelectionDAG::getMemcpy(
   return CallResult.second;
 }
 
+static TargetLoweringBase::ArgListEntry
+getAtomicMemOpSizeArg(SelectionDAG *DAG, const SDLoc &dl, SDValue Size) {
+  const Module &M = *DAG->getMachineFunction().getFunction().getParent();
+  Type *SizeTTy = DAG->getLibInfo().getSizeTType(M);
+  return TargetLoweringBase::ArgListEntry(
+      DAG->getZExtOrTrunc(Size, dl, MVT::getVT(SizeTTy)), SizeTTy);
+}
+
 SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
                                       SDValue Dst, SDValue Src, SDValue Size,
                                       Type *SizeTy, unsigned ElemSz,
@@ -10354,7 +10444,7 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
   Type *ArgTy = getDataLayout().getIntPtrType(*getContext());
   Args.emplace_back(Dst, ArgTy);
   Args.emplace_back(Src, ArgTy);
-  Args.emplace_back(Size, SizeTy);
+  Args.emplace_back(getAtomicMemOpSizeArg(this, dl, Size));
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -10471,7 +10561,7 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
   Type *IntPtrTy = getDataLayout().getIntPtrType(*getContext());
   Args.emplace_back(Dst, IntPtrTy);
   Args.emplace_back(Src, IntPtrTy);
-  Args.emplace_back(Size, SizeTy);
+  Args.emplace_back(getAtomicMemOpSizeArg(this, dl, Size));
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -10607,10 +10697,13 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
   isTailCall &= !hasSwiftErrorArg();
 
   // Emit a library call.
+  MVT IntVT = MVT::getIntegerVT(LibInfo->getIntSize());
   TargetLowering::ArgListTy Args;
   Args.emplace_back(Dst, getDataLayout().getIntPtrType(*getContext()));
-  Args.emplace_back(Value, Type::getInt8Ty(*getContext()));
-  Args.emplace_back(Size, SizeTy);
+  Args.emplace_back(getAnyExtOrTrunc(Value, dl, IntVT),
+                    Type::getIntNTy(*getContext(), LibInfo->getIntSize()),
+                    LibInfo->getExtAttrForI32Param());
+  Args.emplace_back(getAtomicMemOpSizeArg(this, dl, Size));
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -10686,6 +10779,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
           Opcode == ISD::ATOMIC_LOAD_FMIN ||
           Opcode == ISD::ATOMIC_LOAD_FMINIMUM ||
           Opcode == ISD::ATOMIC_LOAD_FMAXIMUM ||
+          Opcode == ISD::ATOMIC_LOAD_FMINIMUMNUM ||
+          Opcode == ISD::ATOMIC_LOAD_FMAXIMUMNUM ||
           Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_USUB_COND ||
@@ -12575,8 +12670,8 @@ SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
 /// UpdateSDLocOnMergeSDNode - If the opt level is -O0 then it throws away
 /// the line number information on the merged node since it is not possible to
 /// preserve the information that operation is associated with multiple lines.
-/// This will make the debugger working better at -O0, were there is a higher
-/// probability having other instructions associated with that line.
+/// This will make the debugger work better at -O0, where there is a higher
+/// probability of having other instructions associated with that line.
 ///
 /// For IROrder, we keep the smaller of the two
 SDNode *SelectionDAG::UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &OLoc) {
@@ -14964,6 +15059,12 @@ bool BuildVectorSDNode::getConstantRawBits(
   assert(((NumSrcOps * SrcEltSizeInBits) % DstEltSizeInBits) == 0 &&
          "Invalid bitcast scale");
 
+  // If the elements don't pack cleanly, don't attempt to recast.
+  // TODO: Add handling (e.g. bitcast <33 x i8> --> <8 x i33>)
+  if ((SrcEltSizeInBits % DstEltSizeInBits) != 0 &&
+      (DstEltSizeInBits % SrcEltSizeInBits) != 0)
+    return false;
+
   // Extract raw src bits.
   SmallVector<APInt> SrcBitElements(NumSrcOps,
                                     APInt::getZero(SrcEltSizeInBits));
@@ -14998,8 +15099,10 @@ void BuildVectorSDNode::recastRawBits(bool IsLittleEndian,
   unsigned SrcEltSizeInBits = SrcBitElements[0].getBitWidth();
   assert(((NumSrcOps * SrcEltSizeInBits) % DstEltSizeInBits) == 0 &&
          "Invalid bitcast scale");
-  assert(NumSrcOps == SrcUndefElements.size() &&
-         "Vector size mismatch");
+  assert(((SrcEltSizeInBits % DstEltSizeInBits) == 0 ||
+          (DstEltSizeInBits % SrcEltSizeInBits) == 0) &&
+         "Unsupported bitcast scale");
+  assert(NumSrcOps == SrcUndefElements.size() && "Vector size mismatch");
 
   unsigned NumDstOps = (NumSrcOps * SrcEltSizeInBits) / DstEltSizeInBits;
   DstUndefElements.clear();

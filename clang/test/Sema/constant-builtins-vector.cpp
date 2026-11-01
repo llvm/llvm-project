@@ -692,6 +692,29 @@ static_assert(__builtin_bit_cast(unsigned long long,
 #undef CHECK_TO_ALL_TYPES
 #undef CHECK_NUM
 
+// Conversion to a bool
+typedef bool vector4bool __attribute__((ext_vector_type(4)));
+namespace ConvertVectorToBool {
+constexpr vector4bool fromDouble = __builtin_convertvector(
+    (vector4double){0.5, -0.5, 0.0, -0.0}, vector4bool);
+static_assert(fromDouble[0] && fromDouble[1] && !fromDouble[2] &&
+              !fromDouble[3]);
+
+constexpr vector4bool fromDoubleMagnitudes = __builtin_convertvector(
+    (vector4double){2.0, 1e-300, __builtin_nan(""), __builtin_inf()},
+    vector4bool);
+static_assert(fromDoubleMagnitudes[0] && fromDoubleMagnitudes[1] &&
+              fromDoubleMagnitudes[2] && fromDoubleMagnitudes[3]);
+
+constexpr vector4bool fromFloat = __builtin_convertvector(
+    (vector4float){0.5f, 0.0f, -0.0f, 2.0f}, vector4bool);
+static_assert(fromFloat[0] && !fromFloat[1] && !fromFloat[2] && fromFloat[3]);
+
+constexpr vector4bool fromInt =
+    __builtin_convertvector((vector4int){2, -1, 0, 1}, vector4bool);
+static_assert(fromInt[0] && fromInt[1] && !fromInt[2] && fromInt[3]);
+}
+
 // Shuffle vector
 constexpr vector4char vector4charConst1 = {0, 1, 2, 3};
 constexpr vector4char vector4charConst2 = {4, 5, 6, 7};

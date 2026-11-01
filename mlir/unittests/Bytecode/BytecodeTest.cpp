@@ -129,6 +129,10 @@ TEST(Bytecode, AlignmentFailure) {
   OwningOpRef<Operation *> module =
       parseSourceString<Operation *>(irWithResources, parseConfig);
   ASSERT_TRUE(module);
+  // Ensure that the resource section needs an explicit alignment marker. The
+  // test below exercises the reader's handling of that marker.
+  module.get()->setDiscardableAttr("bytecode.padding",
+                                   builder.getStringAttr("padding"));
 
   // Write the module to bytecode.
   std::string serializedBytecode;

@@ -1234,6 +1234,8 @@ void VarLocBasedLDV::collectIDsForRegs(VarLocsInRange &Collected,
                                        const VarLocSet &CollectFrom,
                                        const VarLocMap &VarLocIDs) {
   assert(!Regs.empty() && "Nothing to collect");
+  if (CollectFrom.empty())
+    return;
   SmallVector<Register, 32> SortedRegs;
   append_range(SortedRegs, Regs);
   llvm::sort(SortedRegs, [](Register LHS, Register RHS) { return LHS < RHS; });

@@ -292,6 +292,9 @@ if(COMPILER_RT_USE_LIBC_MATH)
   use_libc_builtin(GENERIC_SOURCES    divsf3)
   use_libc_builtin(GENERIC_TF_SOURCES divtf3)
   use_libc_builtin(GENERIC_TF_SOURCES extenddftf2)
+  use_libc_builtin(GENERIC_SOURCES    extendhfsf2)
+  use_libc_builtin(GENERIC_SOURCES    extendhfdf2)
+  use_libc_builtin(GENERIC_TF_SOURCES extendhftf2)
   use_libc_builtin(GENERIC_SOURCES    extendsfdf2)
   use_libc_builtin(GENERIC_TF_SOURCES extendsftf2)
   use_libc_builtin(x86_80_BIT_SOURCES extendxftf2)
@@ -329,6 +332,9 @@ if(COMPILER_RT_USE_LIBC_MATH)
   use_libc_builtin(GENERIC_TF_SOURCES subtf3)
   use_libc_builtin(GENERIC_SOURCES    truncdfsf2)  
   use_libc_builtin(GENERIC_TF_SOURCES trunctfdf2)
+  use_libc_builtin(GENERIC_SOURCES    truncsfhf2)
+  use_libc_builtin(GENERIC_SOURCES    truncdfhf2)
+  use_libc_builtin(GENERIC_TF_SOURCES trunctfhf2)
   use_libc_builtin(GENERIC_TF_SOURCES trunctfsf2)
   use_libc_builtin(x86_80_BIT_SOURCES trunctfxf2)
 endif()
@@ -437,6 +443,9 @@ if (NOT MSVC)
 
   # Darwin x86_64 Haswell
   set(x86_64h_SOURCES ${x86_64_SOURCES})
+
+  # x86_64 LFI
+  set(x86_64_lfi_SOURCES ${x86_64_SOURCES})
 
   if (WIN32)
     set(x86_64_SOURCES
@@ -891,6 +900,7 @@ set(arm64e_SOURCES ${aarch64_SOURCES})
 set(arm64_32_SOURCES ${aarch64_SOURCES})
 set(arm64ec_SOURCES ${aarch64_SOURCES})
 set(aarch64_lfi_SOURCES ${aarch64_SOURCES})
+set(aarch64_be_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})

@@ -27,8 +27,6 @@ _LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 
 #include <memory>
 #include <string_view>
-#include <unordered_map>
-#include <utility>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
@@ -63,36 +61,30 @@ public:
   ol_program_handle_t getOLHandle() { return MProgram; }
 
   /// Returns the liboffload kernel symbol for the specified kernel, looking it
-  /// up in this program on first use.
+  /// up in this program.
   ///
-  /// Symbols belong to the program they were retrieved from: liboffload has no
-  /// olDestroySymbol, so they are released together with this program. Caching
-  /// them here rather than per device keeps a symbol from ever being handed out
-  /// for a program it does not belong to.
+  /// liboffload caches symbols per program, so repeated and concurrent lookups
+  /// of the same kernel return the same handle. Symbols belong to the program
+  /// they were retrieved from: liboffload has no olDestroySymbol, so they are
+  /// released together with this program.
   ///
   /// \param KernelName the name of the kernel to look up.
   /// \throw sycl::exception with sycl::errc::runtime when the symbol lookup
   /// fails.
   /// \return the liboffload symbol handle of the kernel.
-  ol_symbol_handle_t getOrCreateKernel(std::string_view KernelName);
+  ol_symbol_handle_t getKernel(std::string_view KernelName);
 
 private:
   // Programs are owned by their context, so the context outlives them.
   ContextImpl &MContext;
   ol_program_handle_t MProgram{};
-
-  // Kernel names are backed by the "symbols" string of the device image this
-  // program was created from, so entries stay valid only while that image is
-  // registered. ContextImpl::releaseProgramsForImage() destroys this program
-  // before the image goes away.
-  std::unordered_map<std::string_view, ol_symbol_handle_t> MKernels;
 };
 
 /// This class manages data parsing of device images.
 class DeviceImageManager {
 public:
   explicit DeviceImageManager(std::unique_ptr<llvm::object::OffloadBinary> Bin)
-      : MBin(std::move(Bin)) {}
+      : MBin(std::move(Bin)), MTargetArch(MBin->getTriple().split('-').first) {}
   // Explicitly delete copy constructor/operator= to avoid unintentional copies.
   DeviceImageManager(const DeviceImageManager &) = delete;
   DeviceImageManager &operator=(const DeviceImageManager &) = delete;
@@ -105,8 +97,15 @@ public:
   /// \return a reference to the corresponding parsed OffloadBinary object.
   const llvm::object::OffloadBinary &getOffloadBinary() const { return *MBin; }
 
+  /// \return the architecture component of this image's target triple.
+  std::string_view getTargetArch() const { return MTargetArch; }
+
 private:
   std::unique_ptr<llvm::object::OffloadBinary> MBin;
+
+  // Points into the image's triple string, so it stays valid exactly as long as
+  // the fat binary this image was parsed from is registered.
+  std::string_view MTargetArch;
 };
 
 } // namespace detail

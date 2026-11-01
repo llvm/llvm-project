@@ -80,13 +80,6 @@ void CodeGenTargetMachineImpl::initAsmInfo() {
 
   TmpAsmInfo->setFullRegisterNames(Options.MCOptions.PPCUseFullRegisterNames);
 
-  assert(TmpAsmInfo->getExceptionHandlingType() ==
-             getTargetTriple().getDefaultExceptionHandling() &&
-         "MCAsmInfo and Triple disagree on default exception handling type");
-
-  if (Options.ExceptionModel != ExceptionHandling::Default)
-    TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
-
   AsmInfo.reset(TmpAsmInfo);
 }
 
@@ -238,7 +231,7 @@ bool CodeGenTargetMachineImpl::addPassesToEmitFile(
   if (!PassConfig)
     return true;
 
-  if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+  if (PassConfig->willCompleteCodeGenPipeline()) {
     if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
       return true;
   } else {
@@ -268,7 +261,7 @@ bool CodeGenTargetMachineImpl::addPassesToEmitMC(PassManagerBase &PM,
       addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
   if (!PassConfig)
     return true;
-  assert(TargetPassConfig::willCompleteCodeGenPipeline() &&
+  assert(PassConfig->willCompleteCodeGenPipeline() &&
          "Cannot emit MC with limited codegen pipeline");
 
   Ctx = &MMIWP->getMMI().getContext();

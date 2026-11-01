@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Record.h"
@@ -110,8 +111,17 @@ void processFunction(const FunctionRec &F, raw_ostream &OS) {
      << "\n\n";
 
   OS << "  " << F.getDesc() << "\n\n";
-  for (StringRef D : F.getDetails()) {
-    OS << "  " << D << "\n";
+  // Details starting with "- " are bullets, anything else is a paragraph.
+  bool PrevWasBullet = false;
+  for (auto [I, D] : llvm::enumerate(F.getDetails())) {
+    bool IsBullet = D.starts_with("- ");
+    if (I > 0 && (!IsBullet || !PrevWasBullet))
+      OS << "\n";
+    if (IsBullet)
+      OS << "  * " << D.drop_front(2) << "\n";
+    else
+      OS << "  " << D << "\n";
+    PrevWasBullet = IsBullet;
   }
   if (!F.getDetails().empty()) {
     OS << "\n";
@@ -125,7 +135,7 @@ void processFunction(const FunctionRec &F, raw_ostream &OS) {
     OS << formatv("  :retval {0}:\n", R.getValue());
     for (StringRef C : R.getConditions()) {
       OS << "    * ";
-      if (C.starts_with("`") && C.ends_with("`")) {
+      if (ReturnRec::isValidationCondition(C)) {
         OS << ":c:expr:" << C;
       } else {
         OS << makeDoubleBackticks(C);

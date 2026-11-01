@@ -18,6 +18,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -149,7 +150,7 @@ private:
     auto *VarRef = dyn_cast<DeclRefExpr>(Arg);
     if (!VarRef || VarRef->getDecl() != Guardian)
       return false;
-    if (GuardianIsRawPtrOrRef && !Guardian->getType()->isPointerType())
+    if (GuardianIsRawPtrOrRef && !Guardian->getType()->isAnyPointerType())
       return false;
     if (IsAddressOf) {
       if (!ArgType->isPointerType())
@@ -536,6 +537,17 @@ public:
       return false;
 
     QualType GuardianType = MaybeGuardian->getType();
+    // The collection of a fast enumeration is evaluated before the loop body is
+    // entered and keeps its elements alive. A raw pointer local variable or
+    // parameter holding the collection is checked on its own, so it only needs
+    // to be left untouched by the loop body.
+    if (auto *FCS = findObjCForCollectionStmtOfElement(V);
+        FCS && !GuardianType.isNull() && GuardianType->isAnyPointerType() &&
+        (MaybeGuardian->isLocalVarDecl() || isa<ParmVarDecl>(MaybeGuardian))) {
+      GuardianVisitor Visitor(MaybeGuardian, /*GuardianIsRawPtrOrRef=*/true);
+      return Visitor.TraverseStmt(const_cast<Stmt *>(FCS->getBody()));
+    }
+
     if (!GuardianType.isNull()) {
       if (auto *Record = GuardianType->getAsCXXRecordDecl()) {
         if (MaybeGuardian->isLocalVarDecl() &&
@@ -646,8 +658,8 @@ public:
 class UnborrowedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
 public:
   UnborrowedLocalVarsChecker()
-      : RawPtrRefLocalVarsChecker("Loan on a CanBorrow object not guarded by "
-                                  "const or a Borrow",
+      : RawPtrRefLocalVarsChecker("Unborrowed raw pointer or reference not "
+                                  "provably backed by a Borrow",
                                   makeBorrowSafetyModel()) {}
 };
 

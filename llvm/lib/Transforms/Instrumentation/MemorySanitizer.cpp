@@ -592,13 +592,17 @@ void insertModuleCtor(const InstrumentationOptions &Opts, Module &M) {
 
 } // end anonymous namespace
 
-MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
-                                               bool EC) {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
-  Kernel = valueOr(Opts.msan_kernel, K);
-  TrackOrigins = Opts.msan_track_origins.value_or(Kernel ? 2 : TO);
-  Recover = valueOr(Opts.msan_keep_going, Kernel || R);
-  EagerChecks = valueOr(Opts.msan_eager_checks, EC);
+MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K, bool EC)
+    : Kernel(K), TrackOrigins(TO), Recover(R), EagerChecks(EC) {}
+
+static MemorySanitizerOptions resolveOptions(const InstrumentationOptions &Opts,
+                                             MemorySanitizerOptions O) {
+  O.Kernel = valueOr(Opts.msan_kernel, O.Kernel);
+  O.TrackOrigins =
+      Opts.msan_track_origins.value_or(O.Kernel ? 2 : O.TrackOrigins);
+  O.Recover = valueOr(Opts.msan_keep_going, O.Kernel || O.Recover);
+  O.EagerChecks = valueOr(Opts.msan_eager_checks, O.EagerChecks);
+  return O;
 }
 
 PreservedAnalyses MemorySanitizerPass::run(Module &M,
@@ -606,9 +610,10 @@ PreservedAnalyses MemorySanitizerPass::run(Module &M,
   // Return early if nosanitize_memory module flag is present for the module.
   if (checkIfAlreadyInstrumented(M, "nosanitize_memory"))
     return PreservedAnalyses::all();
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
+  MemorySanitizerOptions MSanOpts = resolveOptions(Opts, Options);
   bool Modified = false;
-  if (!Options.Kernel) {
+  if (!MSanOpts.Kernel) {
     insertModuleCtor(Opts, M);
     Modified = true;
   }
@@ -617,7 +622,7 @@ PreservedAnalyses MemorySanitizerPass::run(Module &M,
   for (Function &F : M) {
     if (F.empty())
       continue;
-    MemorySanitizer Msan(Opts, *F.getParent(), Options);
+    MemorySanitizer Msan(Opts, *F.getParent(), MSanOpts);
     Modified |=
         Msan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F));
   }
@@ -1825,6 +1830,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Set SV to be the shadow value for V.
   void setShadow(Value *V, Value *SV) {
     assert(!ShadowMap.count(V) && "Values may only have one shadow");
+
+    // getShadowTy(VoidType) == nullptr
+    if (SV && !V->getType()->isVoidTy() && getShadowTy(V) != SV->getType()) {
+      LLVM_DEBUG(dbgs() << "V:  " << *V << "\n");
+      LLVM_DEBUG(dbgs() << "SV: " << *SV << "\n");
+      assert(getShadowTy(V) == SV->getType() &&
+             "setShadow called with mismatching types");
+    }
+
     ShadowMap[V] = PropagateShadow ? SV : getCleanShadow(V);
   }
 
@@ -4557,6 +4571,48 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(Dividend));
   }
 
+  // e.g., i32 @llvm.experimental.vector.extract.last.active.v4i32(
+  //           <4 x i32> %data, <4 x i1> %mask, i32 %passthru)
+  void handleVectorExtractLastActive(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    IRBuilder<> IRB(&I);
+    Value *Data = I.getArgOperand(0);
+    Value *Mask = I.getArgOperand(1);
+    Value *PassThru = I.getArgOperand(2);
+
+    assert(isa<VectorType>(Data->getType()));
+    assert(isa<VectorType>(Mask->getType()));
+    assert(!isa<VectorType>(PassThru->getType()));
+    assert(!isa<VectorType>(I.getType()));
+    assert(I.getType() == PassThru->getType());
+    assert(cast<VectorType>(Data->getType())->getElementType() == I.getType());
+    assert(cast<VectorType>(Mask->getType())->getElementType() ==
+           IRB.getInt1Ty());
+    assert(cast<VectorType>(Data->getType())->getElementCount() ==
+           cast<VectorType>(Mask->getType())->getElementCount());
+
+    insertCheckShadowOf(Mask, &I);
+
+    if (!PropagateShadow) {
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
+
+    Value *DataShadow = getShadow(Data);
+    Value *Shadow = IRB.CreateIntrinsic(
+        Intrinsic::experimental_vector_extract_last_active,
+        {DataShadow->getType()}, {DataShadow, Mask, getShadow(PassThru)},
+        /*FMFSource=*/{}, "_msprop_vector_extract_last_active");
+    setShadow(&I, Shadow);
+
+    if (MS.TrackOrigins) {
+      Value *AnyActive = IRB.CreateOrReduce(Mask);
+      setOrigin(&I, IRB.CreateSelect(AnyActive, getOrigin(Data),
+                                     getOrigin(PassThru)));
+    }
+  }
+
   // e.g., void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>)
   //                                           dst  mask       src
   //
@@ -5994,6 +6050,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::vector_partial_reduce_add:
     case Intrinsic::vector_partial_reduce_fadd:
       handleVectorPartialReduceAddIntrinsic(I);
+      break;
+
+    case Intrinsic::experimental_vector_extract_last_active:
+      handleVectorExtractLastActive(I);
       break;
 
     case Intrinsic::scmp:

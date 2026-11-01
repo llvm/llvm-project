@@ -1,8 +1,8 @@
 set(FREEBSD_SOURCES
-  RegisterContextFreeBSDTest.cpp)
+  RegisterInfoFreeBSDTest.cpp)
 set(NETBSD_SOURCES
-  RegisterContextNetBSDTest_i386.cpp
-  RegisterContextNetBSDTest_x86_64.cpp)
+  RegisterInfoNetBSDTest_i386.cpp
+  RegisterInfoNetBSDTest_x86_64.cpp)
 
 if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   list(APPEND PLATFORM_SOURCES ${FREEBSD_SOURCES})
@@ -26,7 +26,7 @@ add_lldb_unittest(ProcessUtilityTests
 
 add_lldb_unittest(RegisterSupportTests
   PARTIAL_SOURCES_INTENDED
-  RegisterContextTest.cpp
+  RegisterInfo_x86Test.cpp
   ${PLATFORM_SOURCES}
 
   LINK_LIBS

@@ -15,21 +15,21 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; FP32-LABEL: name: i32tof32
-    ; FP32: liveins: $a0
-    ; FP32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; FP32: liveins: $r4
+    ; FP32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
     ; FP32: [[SITOFP:%[0-9]+]]:fprb(s32) = G_SITOFP [[COPY]](s32)
     ; FP32: $f0 = COPY [[SITOFP]](s32)
     ; FP32: RetRA implicit $f0
     ; FP64-LABEL: name: i32tof32
-    ; FP64: liveins: $a0
-    ; FP64: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; FP64: liveins: $r4
+    ; FP64: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
     ; FP64: [[SITOFP:%[0-9]+]]:fprb(s32) = G_SITOFP [[COPY]](s32)
     ; FP64: $f0 = COPY [[SITOFP]](s32)
     ; FP64: RetRA implicit $f0
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %1:_(s32) = G_SITOFP %0(s32)
     $f0 = COPY %1(s32)
     RetRA implicit $f0
@@ -42,21 +42,21 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; FP32-LABEL: name: i32tof64
-    ; FP32: liveins: $a0
-    ; FP32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; FP32: liveins: $r4
+    ; FP32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
     ; FP32: [[SITOFP:%[0-9]+]]:fprb(s64) = G_SITOFP [[COPY]](s32)
     ; FP32: $d0 = COPY [[SITOFP]](s64)
     ; FP32: RetRA implicit $d0
     ; FP64-LABEL: name: i32tof64
-    ; FP64: liveins: $a0
-    ; FP64: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; FP64: liveins: $r4
+    ; FP64: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
     ; FP64: [[SITOFP:%[0-9]+]]:fprb(s64) = G_SITOFP [[COPY]](s32)
     ; FP64: $d0 = COPY [[SITOFP]](s64)
     ; FP64: RetRA implicit $d0
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %1:_(s64) = G_SITOFP %0(s32)
     $d0 = COPY %1(s64)
     RetRA implicit $d0
@@ -69,11 +69,11 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; FP32-LABEL: name: u32tof64
-    ; FP32: liveins: $a0
-    ; FP32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; FP32: liveins: $r4
+    ; FP32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
     ; FP32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1127219200
     ; FP32: [[MV:%[0-9]+]]:fprb(s64) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32)
     ; FP32: [[C1:%[0-9]+]]:fprb(s64) = G_FCONSTANT double f0x4330000000000000
@@ -81,15 +81,15 @@ body:             |
     ; FP32: $d0 = COPY [[FSUB]](s64)
     ; FP32: RetRA implicit $d0
     ; FP64-LABEL: name: u32tof64
-    ; FP64: liveins: $a0
-    ; FP64: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; FP64: liveins: $r4
+    ; FP64: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
     ; FP64: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1127219200
     ; FP64: [[MV:%[0-9]+]]:fprb(s64) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32)
     ; FP64: [[C1:%[0-9]+]]:fprb(s64) = G_FCONSTANT double f0x4330000000000000
     ; FP64: [[FSUB:%[0-9]+]]:fprb(s64) = G_FSUB [[MV]], [[C1]]
     ; FP64: $d0 = COPY [[FSUB]](s64)
     ; FP64: RetRA implicit $d0
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %2:_(s32) = G_CONSTANT i32 1127219200
     %3:_(s64) = G_MERGE_VALUES %0(s32), %2(s32)
     %4:_(s64) = G_FCONSTANT double 0x4330000000000000

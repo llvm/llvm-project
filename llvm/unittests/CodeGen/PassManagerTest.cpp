@@ -188,7 +188,7 @@ TEST_F(PassManagerTest, Basic) {
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  PassBuilder PB(TM.get());
+  PassBuilder PB(Context, TM.get());
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
@@ -237,7 +237,7 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  PassBuilder PB(TM.get());
+  PassBuilder PB(Context, TM.get());
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);

@@ -367,6 +367,8 @@ set(files
   __exception/nested_exception.h
   __exception/operations.h
   __exception/terminate.h
+  __execution/execution_policies.h
+  __execution/is_execution_policy.h
   __expected/bad_expected_access.h
   __expected/expected.h
   __expected/unexpect.h
@@ -653,7 +655,6 @@ set(files
   __mutex/tag_types.h
   __mutex/unique_lock.h
   __new/align_val_t.h
-  __new/allocate.h
   __new/destroying_delete_t.h
   __new/exceptions.h
   __new/global_new_delete.h
@@ -695,6 +696,27 @@ set(files
   __pstl/backends/default.h
   __pstl/backends/libdispatch.h
   __pstl/backends/serial.h
+  __pstl/backends/statpart.h
+  __pstl/backends/statpart/any_of.h
+  __pstl/backends/statpart/basis.h
+  __pstl/backends/statpart/fill.h
+  __pstl/backends/statpart/find_end.h
+  __pstl/backends/statpart/find_if.h
+  __pstl/backends/statpart/for_each.h
+  __pstl/backends/statpart/is_heap_until.h
+  __pstl/backends/statpart/merge.h
+  __pstl/backends/statpart/min_element.h
+  __pstl/backends/statpart/minmax_element.h
+  __pstl/backends/statpart/mismatch.h
+  __pstl/backends/statpart/reverse.h
+  __pstl/backends/statpart/search.h
+  __pstl/backends/statpart/search_n.h
+  __pstl/backends/statpart/stable_sort.h
+  __pstl/backends/statpart/swap_ranges.h
+  __pstl/backends/statpart/transform.h
+  __pstl/backends/statpart/transform_reduce.h
+  __pstl/backends/statpart/uninitialized_copy.h
+  __pstl/backends/statpart/uninitialized_move.h
   __pstl/backends/std_thread.h
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h
@@ -828,6 +850,7 @@ set(files
   __system_error/system_error.h
   __system_error/throw_system_error.h
   __thread/formatter.h
+  __thread/hardware_concurrency.h
   __thread/id.h
   __thread/jthread.h
   __thread/poll_with_backoff.h
@@ -894,7 +917,6 @@ set(files
   __type_traits/is_empty.h
   __type_traits/is_enum.h
   __type_traits/is_equality_comparable.h
-  __type_traits/is_execution_policy.h
   __type_traits/is_final.h
   __type_traits/is_floating_point.h
   __type_traits/is_function.h

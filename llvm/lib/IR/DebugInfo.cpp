@@ -219,6 +219,7 @@ void DebugInfoFinder::processGlobalVariableExpression(
   auto *GV = GVE->getVariable();
   processScope(GV->getScope());
   processType(GV->getType());
+  processType(GV->getStaticDataMemberDeclaration());
 }
 
 void DebugInfoFinder::processInstruction(const Module &M,

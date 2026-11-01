@@ -94,9 +94,8 @@ DebugMapObject &
 DebugMap::addDebugMapObject(StringRef ObjectFilePath,
                             sys::TimePoint<std::chrono::seconds> Timestamp,
                             uint8_t Type) {
-  getObjects().emplace_back(
-      new DebugMapObject(ObjectFilePath, Timestamp, Type));
-  return *getObjects().back();
+  Objects.emplace_back(new DebugMapObject(ObjectFilePath, Timestamp, Type));
+  return *Objects.back();
 }
 
 const DebugMapObject::DebugMapEntry *
@@ -265,7 +264,7 @@ void MappingTraits<dsymutil::DebugMap>::mapping(IO &io,
   io.mapOptional("binary-path", DM.BinaryPath);
   if (void *Ctxt = io.getContext())
     reinterpret_cast<YAMLContext *>(Ctxt)->BinaryTriple = DM.BinaryTriple;
-  io.mapOptional("objects", DM.getObjects());
+  io.mapOptional("objects", DM.Objects);
 }
 
 void MappingTraits<std::unique_ptr<dsymutil::DebugMap>>::mapping(
@@ -276,7 +275,7 @@ void MappingTraits<std::unique_ptr<dsymutil::DebugMap>>::mapping(
   io.mapOptional("binary-path", DM->BinaryPath);
   if (void *Ctxt = io.getContext())
     reinterpret_cast<YAMLContext *>(Ctxt)->BinaryTriple = DM->BinaryTriple;
-  io.mapOptional("objects", DM->getObjects());
+  io.mapOptional("objects", DM->Objects);
 }
 
 MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(

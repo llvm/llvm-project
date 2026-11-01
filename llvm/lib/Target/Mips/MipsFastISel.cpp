@@ -360,10 +360,10 @@ unsigned MipsFastISel::materialize32BitInt(int64_t Imm,
 
   if (isInt<16>(Imm)) {
     unsigned Opc = Mips::ADDiu;
-    emitInst(Opc, ResultReg).addReg(Mips::ZERO).addImm(Imm);
+    emitInst(Opc, ResultReg).addReg(Mips::R0).addImm(Imm);
     return ResultReg;
   } else if (isUInt<16>(Imm)) {
-    emitInst(Mips::ORi, ResultReg).addReg(Mips::ZERO).addImm(Imm);
+    emitInst(Mips::ORi, ResultReg).addReg(Mips::R0).addImm(Imm);
     return ResultReg;
   }
   unsigned Lo = Imm & 0xFFFF;
@@ -649,7 +649,7 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
   case CmpInst::ICMP_NE: {
     Register TempReg = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::XOR, TempReg).addReg(LeftReg).addReg(RightReg);
-    emitInst(Mips::SLTu, ResultReg).addReg(Mips::ZERO).addReg(TempReg);
+    emitInst(Mips::SLTu, ResultReg).addReg(Mips::R0).addReg(TempReg);
     break;
   }
   case CmpInst::ICMP_UGT:
@@ -731,8 +731,8 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     }
     Register RegWithZero = createResultReg(&Mips::GPR32RegClass);
     Register RegWithOne = createResultReg(&Mips::GPR32RegClass);
-    emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::ZERO).addImm(0);
-    emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::ZERO).addImm(1);
+    emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::R0).addImm(0);
+    emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::R0).addImm(1);
     emitInst(Opc).addReg(Mips::FCC0, RegState::Define).addReg(LeftReg)
                  .addReg(RightReg);
     emitInst(CondMovOpc, ResultReg)
@@ -1950,7 +1950,7 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
   if (!Subtarget->getMCCLOpts().mno_check_zero_division &&
       (!isa<ConstantInt>(I->getOperand(1)) ||
        dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
-    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
+    emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::R0).addImm(7);
   }
 
   Register ResultReg = createResultReg(&Mips::GPR32RegClass);

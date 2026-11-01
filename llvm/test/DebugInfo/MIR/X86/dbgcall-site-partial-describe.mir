@@ -42,7 +42,7 @@
 ---
 name:            foo
 callSites:
-  - { bb: 0, offset: 4, fwdArgRegs:
+  - { bb: '%bb.0', offset: 4, fwdArgRegs:
       - { arg: 0, reg: '$edi' }
       - { arg: 1, reg: '$esi' } }
 body:             |

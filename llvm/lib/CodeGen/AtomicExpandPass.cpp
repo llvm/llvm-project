@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -187,7 +188,7 @@ struct ReplacementIRBuilder
       : IRBuilder(
             I->getIterator(), InstSimplifyFolder(DL),
             IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
-    if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
+    if (I->getFunction()->hasFnAttribute(Attribute::StrictFP))
       this->setIsFPConstrained(true);
 
     MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
@@ -254,6 +255,7 @@ static void copyMetadataForAtomic(Instruction &Dest,
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_mmra:
+    case LLVMContext::MD_atomic_ignore_denormal_mode:
       Dest.setMetadata(ID, N);
       break;
     default:
@@ -261,9 +263,8 @@ static void copyMetadataForAtomic(Instruction &Dest,
         Dest.setMetadata(ID, N);
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
         Dest.setMetadata(ID, N);
-
-      // Losing atomic.ignore.denormal.mode, but it doesn't matter for current
-      // uses.
+      else if (ID == Ctx.getMDKindID("amdgpu.cfs"))
+        Dest.setMetadata(ID, N);
       break;
     }
   }
@@ -274,7 +275,7 @@ static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
   unsigned Size = getAtomicOpSize(I);
   Align Alignment = I->getAlign();
   unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
-  return Alignment >= Size && Size <= MaxSize;
+  return Size <= MaxSize && TLI->isAtomicAlignmentSupported(Alignment, Size);
 }
 
 template <typename Inst>
@@ -284,7 +285,7 @@ static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI, Inst *I,
   Align Alignment = I->getAlign();
   bool NeedSeparator = false;
 
-  if (Alignment < Size) {
+  if (!TLI->isAtomicAlignmentSupported(Alignment, Size)) {
     OS << "instruction alignment " << Alignment.value()
        << " is smaller than the required " << Size
        << "-byte alignment for this atomic operation";
@@ -397,8 +398,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       MadeChange = true;
     }
 
-    MadeChange |= tryInsertFencesForAtomic(
-        LI, isAcquireOrStronger(LI->getOrdering()), AtomicOrdering::Monotonic);
+    MadeChange |=
+        tryInsertFencesForAtomic(LI, isAcquireOrStronger(LI->getOrdering()),
+                                 TLI->atomicOperationOrderAfterFenceSplit(LI));
 
     MadeChange |= tryExpandAtomicLoad(LI);
     return MadeChange;
@@ -420,8 +422,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       MadeChange = true;
     }
 
-    MadeChange |= tryInsertFencesForAtomic(
-        SI, isReleaseOrStronger(SI->getOrdering()), AtomicOrdering::Monotonic);
+    MadeChange |=
+        tryInsertFencesForAtomic(SI, isReleaseOrStronger(SI->getOrdering()),
+                                 TLI->atomicOperationOrderAfterFenceSplit(SI));
 
     MadeChange |= tryExpandAtomicStore(SI);
     return MadeChange;
@@ -1672,7 +1675,11 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
   // There's no overhead for sinking the release barrier in a weak cmpxchg, so
   // do it even on minsize.
-  bool UseUnconditionalReleaseBarrier = F->hasMinSize() && !CI->isWeak();
+  // A fence between the LL and SC may clear the reservation on some targets.
+  // Strong cmpxchg retries, but weak cmpxchg cannot recover.
+  bool UseUnconditionalReleaseBarrier =
+      (F->hasMinSize() && !CI->isWeak()) ||
+      (CI->isWeak() && TLI->fenceClearsLoadLinkedReservation());
 
   // Given: cmpxchg some_op iN* %addr, iN %desired, iN %new success_ord fail_ord
   //
@@ -2261,16 +2268,16 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
 
-  // TODO: the "order" argument type is "int", not int32. So
-  // getInt32Ty may be wrong if the arch uses e.g. 16-bit ints.
+  // TODO: Take the signature from RuntimeLibcallsInfo
+  IntegerType *OrderingTy =
+      Type::getIntNTy(Ctx, LibcallLowering->getRuntimeLibcallsInfo().getIntSize(
+                               M->getTargetTriple()));
   assert(Ordering != AtomicOrdering::NotAtomic && "expect atomic MO");
-  Constant *OrderingVal =
-      ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(Ordering));
+  Constant *OrderingVal = ConstantInt::get(OrderingTy, (int)toCABI(Ordering));
   Constant *Ordering2Val = nullptr;
   if (CASExpected) {
     assert(Ordering2 != AtomicOrdering::NotAtomic && "expect atomic MO");
-    Ordering2Val =
-        ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(Ordering2));
+    Ordering2Val = ConstantInt::get(OrderingTy, (int)toCABI(Ordering2));
   }
   bool HasResult = I->getType() != Type::getVoidTy(Ctx);
 
@@ -2388,14 +2395,23 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Args.push_back(AllocaResult);
   }
 
+  // The ordering arguments are C ints, which may need to be extended.
+  // FIXME: Once runtime libcall attribute derivation is centralized in
+  // RuntimeLibcalls, TargetLibraryInfo should not be used here.
+  Attribute::AttrKind OrderingExt =
+      TargetLibraryInfo::getExtAttrForI32Param(M->getTargetTriple());
+
   // 'ordering' ('success_order' for cas) argument.
   Args.push_back(OrderingVal);
+  Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
 
   // 'failure_order' argument, if present.
-  if (Ordering2Val)
+  if (Ordering2Val) {
     Args.push_back(Ordering2Val);
+    Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
+  }
 
-  // Now, the return type.
+  // Now, the return type.  FIXME: Properly add extension attributes.
   if (CASExpected) {
     ResultTy = Type::getInt1Ty(Ctx);
     Attr = Attr.addRetAttribute(Ctx, Attribute::ZExt);

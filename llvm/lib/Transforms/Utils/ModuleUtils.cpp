@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"

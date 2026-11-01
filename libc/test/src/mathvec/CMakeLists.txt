@@ -1,4 +1,4 @@
-add_custom_target(libc-mathvec-unittests)
+add_libc_testsuite(libc-mathvec-tests)
 
 add_header_library(
   unit_test_wrappers
@@ -11,7 +11,7 @@ add_header_library(
 add_fp_unittest(
   acosf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     acosf_test.cpp
   DEPENDS
@@ -28,7 +28,7 @@ add_fp_unittest(
 add_fp_unittest(
   acoshf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     acoshf_test.cpp
   DEPENDS
@@ -45,7 +45,7 @@ add_fp_unittest(
 add_fp_unittest(
   acospif_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     acospif_test.cpp
   DEPENDS
@@ -62,7 +62,7 @@ add_fp_unittest(
 add_fp_unittest(
   asinf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     asinf_test.cpp
   DEPENDS
@@ -79,7 +79,7 @@ add_fp_unittest(
 add_fp_unittest(
   asinhf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     asinhf_test.cpp
   DEPENDS
@@ -96,7 +96,7 @@ add_fp_unittest(
 add_fp_unittest(
   asinpif_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     asinpif_test.cpp
   DEPENDS
@@ -113,7 +113,7 @@ add_fp_unittest(
 add_fp_unittest(
   atanf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     atanf_test.cpp
   DEPENDS
@@ -130,7 +130,7 @@ add_fp_unittest(
 add_fp_unittest(
   atanhf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     atanhf_test.cpp
   DEPENDS
@@ -147,7 +147,7 @@ add_fp_unittest(
 add_fp_unittest(
   cbrtf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     cbrtf_test.cpp
   DEPENDS
@@ -164,7 +164,7 @@ add_fp_unittest(
 add_fp_unittest(
   cosf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     cosf_test.cpp
   HDRS
@@ -183,7 +183,7 @@ add_fp_unittest(
 add_fp_unittest(
   coshf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     coshf_test.cpp
   DEPENDS
@@ -200,7 +200,7 @@ add_fp_unittest(
 add_fp_unittest(
   cospif_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     cospif_test.cpp
   HDRS
@@ -219,7 +219,7 @@ add_fp_unittest(
 add_fp_unittest(
   erff_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     erff_test.cpp
   DEPENDS
@@ -236,7 +236,7 @@ add_fp_unittest(
 add_fp_unittest(
   exp2f_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     exp2f_test.cpp
   DEPENDS
@@ -253,7 +253,7 @@ add_fp_unittest(
 add_fp_unittest(
   exp2m1f_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     exp2m1f_test.cpp
   DEPENDS
@@ -270,7 +270,7 @@ add_fp_unittest(
 add_fp_unittest(
   exp10f_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     exp10f_test.cpp
   DEPENDS
@@ -287,7 +287,7 @@ add_fp_unittest(
 add_fp_unittest(
   exp10m1f_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     exp10m1f_test.cpp
   DEPENDS
@@ -304,7 +304,7 @@ add_fp_unittest(
 add_fp_unittest(
   expf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     expf_test.cpp
   DEPENDS
@@ -321,7 +321,7 @@ add_fp_unittest(
 add_fp_unittest(
   expm1f_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     expm1f_test.cpp
   DEPENDS
@@ -338,7 +338,7 @@ add_fp_unittest(
 add_fp_unittest(
   log10f_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     log10f_test.cpp
   DEPENDS
@@ -355,7 +355,7 @@ add_fp_unittest(
 add_fp_unittest(
   log1pf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     log1pf_test.cpp
   DEPENDS
@@ -372,7 +372,7 @@ add_fp_unittest(
 add_fp_unittest(
   log2f_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     log2f_test.cpp
   DEPENDS
@@ -389,7 +389,7 @@ add_fp_unittest(
 add_fp_unittest(
   logf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     logf_test.cpp
   DEPENDS
@@ -406,7 +406,7 @@ add_fp_unittest(
 add_fp_unittest(
   rsqrtf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     rsqrtf_test.cpp
   DEPENDS
@@ -425,7 +425,7 @@ if(NOT LIBC_CONF_MATH_OPTIMIZATIONS MATCHES
   add_fp_unittest(
     sinf_test
     SUITE
-      libc-mathvec-unittests
+      libc-mathvec-tests
     SRCS
       sinf_test.cpp
     HDRS
@@ -446,7 +446,7 @@ endif()
 add_fp_unittest(
   sinhf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     sinhf_test.cpp
   DEPENDS
@@ -463,7 +463,7 @@ add_fp_unittest(
 add_fp_unittest(
   sinpif_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     sinpif_test.cpp
   HDRS
@@ -482,7 +482,7 @@ add_fp_unittest(
 add_fp_unittest(
   sqrtf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     sqrtf_test.cpp
   DEPENDS
@@ -499,7 +499,7 @@ add_fp_unittest(
 add_fp_unittest(
   tanf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     tanf_test.cpp
   HDRS
@@ -518,7 +518,7 @@ add_fp_unittest(
 add_fp_unittest(
   tanhf_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     tanhf_test.cpp
   DEPENDS
@@ -535,7 +535,7 @@ add_fp_unittest(
 add_fp_unittest(
   tanpif_test
   SUITE
-    libc-mathvec-unittests
+    libc-mathvec-tests
   SRCS
     tanpif_test.cpp
   HDRS

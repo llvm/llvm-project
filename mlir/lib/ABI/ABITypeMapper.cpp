@@ -91,11 +91,16 @@ const llvm::abi::Type *ABITypeMapper::mapMemRefType(mlir::MemRefType type) {
   llvm::TypeSize sizeInBits = dl.getTypeSizeInBits(type);
   uint64_t abiAlign = dl.getTypeABIAlignment(type);
   unsigned addrSpace = 0;
-  if (auto as = type.getMemorySpace())
-    if (auto intAttr = dyn_cast<IntegerAttr>(as))
+  bool hasAddressSpaceQualifier = false;
+  if (auto as = type.getMemorySpace()) {
+    if (auto intAttr = dyn_cast<IntegerAttr>(as)) {
       addrSpace = intAttr.getInt();
+      hasAddressSpaceQualifier = true;
+    }
+  }
   return builder.getPointerType(sizeInBits.getFixedValue(),
-                                llvm::Align(abiAlign), addrSpace);
+                                llvm::Align(abiAlign), addrSpace,
+                                hasAddressSpaceQualifier);
 }
 
 const llvm::abi::Type *ABITypeMapper::mapNoneType(mlir::NoneType type) {

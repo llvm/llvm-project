@@ -752,3 +752,18 @@ static_assert(count == 2);
 
 }
 
+namespace GH205000 {
+
+template <int N>
+struct StringLiteral {
+  constexpr StringLiteral(const auto... c)
+    requires (__is_same(decltype(c), const char) && ...) {}
+  constexpr StringLiteral(const char (&s)[N]) {}
+};
+
+template <StringLiteral... fields>
+struct Lit {};
+
+using Unit = Lit<"a">;
+
+}

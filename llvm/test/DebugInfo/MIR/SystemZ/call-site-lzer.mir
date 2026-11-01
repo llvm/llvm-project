@@ -62,7 +62,7 @@
 name:            caller
 tracksRegLiveness: true
 callSites:
-  - { bb: 0, offset: 9, fwdArgRegs:
+  - { bb: '%bb.0', offset: 9, fwdArgRegs:
       - { arg: 0, reg: '$f0s' } }
 body:             |
   bb.0.entry:

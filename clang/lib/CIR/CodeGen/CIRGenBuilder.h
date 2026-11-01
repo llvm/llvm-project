@@ -203,9 +203,12 @@ public:
         getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
-  cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
-                               mlir::Value src, mlir::Value len) {
-    return cir::MemMoveOp::create(*this, loc, dst, src, len);
+  cir::MemMoveOp createMemMove(mlir::Location loc, Address dst, Address src,
+                               mlir::Value len) {
+    return cir::MemMoveOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
@@ -465,9 +468,8 @@ public:
 
   mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
                                   bool vtableUseRelativeLayout) {
-    // TODO(cir): consider address space here.
-    assert(!cir::MissingFeatures::addressSpace());
-    cir::PointerType destTy = getVoidPtrTy();
+    auto srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
+    cir::PointerType destTy = getVoidPtrTy(srcPtrTy.getAddrSpace());
     return cir::DynamicCastOp::create(
         *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
         cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
@@ -618,7 +620,8 @@ public:
 
   using CIRBaseBuilderTy::createGetMember;
   Address createGetMember(mlir::Location loc, Address base,
-                          llvm::StringRef name, unsigned index) {
+                          llvm::StringRef name, unsigned index,
+                          const cir::CIRDataLayout &layout) {
     auto recordTy = mlir::cast<cir::RecordType>(base.getElementType());
 
     assert(index < recordTy.getMembers().size() &&
@@ -626,11 +629,8 @@ public:
     mlir::Type memberTy = recordTy.getMembers()[index];
     mlir::Type memberPtrTy = getPointerTo(memberTy, base.getAddressSpace());
 
-    auto moduleOp =
-        getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
-    mlir::DataLayout layout(moduleOp);
-    auto memberOffset =
-        CharUnits::fromQuantity(recordTy.getElementOffset(layout, index));
+    auto memberOffset = CharUnits::fromQuantity(
+        recordTy.getElementOffset(layout.layout, index));
 
     mlir::Value memberPtr =
         createGetMember(loc, memberPtrTy, base.getBasePointer(), name, index);
@@ -676,7 +676,7 @@ public:
   // caller must describe the address with a byte offset, using a
   // GlobalOffsetAttr, instead.
   [[nodiscard]] bool computeGlobalViewIndicesFromFlatOffset(
-      int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
+      int64_t offset, mlir::Type ty, const cir::CIRDataLayout &layout,
       llvm::SmallVectorImpl<int64_t> &indices);
 
   // Convert high-level indices (e.g. from GlobalViewAttr) to byte offset.
@@ -802,7 +802,7 @@ public:
                    llvm::ArrayRef<mlir::Attribute> maskAttrs) {
     auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
     auto resultTy =
-        cir::VectorType::get(vecType.getElementType(), maskAttrs.size());
+        cir::VectorType::getFixed(vecType.getElementType(), maskAttrs.size());
     return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
                                      getArrayAttr(maskAttrs));
   }
@@ -831,6 +831,12 @@ public:
                                            mlir::Value rowIdx,
                                            mlir::Value columnIdx) {
     return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
+  }
+
+  cir::MatrixExtractRowOp createMatrixExtractRow(mlir::Location loc,
+                                                 mlir::Value matrix,
+                                                 mlir::Value rowIdx) {
+    return cir::MatrixExtractRowOp::create(*this, loc, matrix, rowIdx);
   }
 
   cir::MatrixInsertOp createMatrixInsert(mlir::Location loc, mlir::Value value,

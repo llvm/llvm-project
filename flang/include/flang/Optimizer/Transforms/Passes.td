@@ -470,7 +470,10 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     Loop Versioning pass adds a check and two variants of a loop when the input
     array is an assumed shape array, to optimize for the (often common) case where
     an array has element sized stride. The element sizes stride allows some
-    loops to be vectorized as well as other loop optimizations.
+    loops to be vectorized as well as other loop optimizations. Accesses through
+    a local POINTER associated with such an array are handled the same way. A
+    loop that is versioned anyway also checks the local POINTER arrays that it
+    accesses if their pointer assignment is not visible.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
   let options = [
@@ -478,6 +481,47 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
            /*default=*/"true",
            "Enable versioning for supported static-unit array slices; disabling "
            "this option leaves other loop versioning active">
+  ];
+}
+
+def LoopTripCountVersioning
+    : Pass<"loop-tripcount-versioning", "mlir::func::FuncOp"> {
+  let summary = "Version innermost loops on a likely constant trip count";
+  let description = [{
+    Adds a runtime check and two variants of an innermost loop whose trip count
+    is likely to equal a compile-time constant, so that one variant has a
+    constant trip count that LLVM can fully unroll, or at least vectorize
+    without a minimum-iteration check and remainder loop. Both variants are the
+    original loop with only the bound changed, so the transformation is legal
+    wherever the runtime check is uniform across the threads executing the
+    loop. Device code is excluded: on a GPU the check could differ between
+    threads and send them to different copies of a convergent operation such
+    as a barrier.
+
+    The heuristics decide only where it is worthwhile. The first heuristic
+    takes the constant from the declared extent of an explicit-shape array
+    whose leading dimension the loop indexes: for `a(1:n, :)` on `a(4, :)` the
+    innermost loop runs `1..n`, and versioning on `n == 4` gives the fast
+    variant a trip count of 4. Further heuristics may be added in the future.
+
+    Candidates are limited by the declared extent (`max-section-extent`) and
+    by the size of the fully unrolled fast variant, extent times FIR operations
+    in the loop body (`max-unrolled-ops`). The latter is a heuristic proxy for
+    LLVM's full-unroll decision, which is made on target-costed instructions
+    after lowering. The default of 300 is a proxy for LLVM's -O3 threshold on
+    the scalar unroll path; where the vectorizer takes the loop first, LLVM
+    collapses larger products as well, so the default is conservative on
+    wide-vector targets.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::arith::ArithDialect" ];
+  let options = [
+    Option<"maxSectionExtent", "max-section-extent", "unsigned",
+           /*default=*/"32",
+           "Do not version on declared extents larger than this; 0 disables">,
+    Option<"maxUnrolledOps", "max-unrolled-ops", "unsigned",
+           /*default=*/"300",
+           "Do not version if the declared extent times the number of FIR "
+           "operations in the loop body exceeds this; 0 removes the limit">
   ];
 }
 
@@ -589,7 +633,8 @@ def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
   let summary = "Delay cuf.alloc of descriptor types to just before first use";
   let description = [{
     Moves cuf.alloc operations for allocatable/pointer descriptors (box types)
-    from function entry to just before their first use. This defers
+    from function entry to just before their first use, but never into a block
+    on a CFG cycle, where the alloc would run on every trip. This defers
     cudaMallocManaged calls so that users can call cudaSetDevice before any
     CUDA context is created.
   }];

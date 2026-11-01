@@ -97,9 +97,8 @@ target_compile_options(orc-rt-bedrock-objects PRIVATE ${ORC_RT_COMPILE_FLAGS})
 # shipped on its own).
 add_library(orc-rt-bedrock ${ORC_RT_BEDROCK_LIBRARY_TYPE})
 
-target_link_libraries(orc-rt-bedrock PUBLIC orc-rt-headers)
-
 target_link_libraries(orc-rt-bedrock
+  PUBLIC orc-rt-headers
   PRIVATE $<BUILD_INTERFACE:orc-rt-bedrock-objects>
           $<BUILD_INTERFACE:orc-rt-support-objects>)
 

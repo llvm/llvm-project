@@ -1155,19 +1155,16 @@ public:
 
   /// Tests whether the target 64-bit PowerPC big endian ABI is ELFv2.
   bool isPPC64ELFv2ABI() const {
-    return (getArch() == Triple::ppc64 &&
-            ((getOS() == Triple::FreeBSD &&
-              (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
-             getOS() == Triple::OpenBSD || isMusl()));
+    return (
+        getArch() == Triple::ppc64 &&
+        (getOS() == Triple::FreeBSD || getOS() == Triple::OpenBSD || isMusl()));
   }
 
   /// Tests whether the target 32-bit PowerPC uses Secure PLT.
   bool isPPC32SecurePlt() const {
     return ((getArch() == Triple::ppc || getArch() == Triple::ppcle) &&
-            ((getOS() == Triple::FreeBSD &&
-              (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
-             getOS() == Triple::NetBSD || getOS() == Triple::OpenBSD ||
-             isMusl()));
+            (getOS() == Triple::FreeBSD || getOS() == Triple::NetBSD ||
+             getOS() == Triple::OpenBSD || isMusl()));
   }
 
   /// Tests whether the target is 32-bit RISC-V.
@@ -1277,6 +1274,10 @@ public:
   /// Returns the default floating-point format for the "long double" type. A
   /// particular module may override this default.
   LLVM_ABI LongDoubleFormat getDefaultLongDoubleFormat() const;
+
+  /// Returns the default debugger tuning for this target triple, i.e. the
+  /// tuning used when the "debugger-tuning" module flag is absent.
+  LLVM_ABI DebuggerKind getDefaultDebuggerTuning() const;
 
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {

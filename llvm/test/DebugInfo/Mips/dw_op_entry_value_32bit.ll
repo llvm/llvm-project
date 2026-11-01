@@ -18,12 +18,12 @@
 ;; Confirm that info from callSites attribute is used as entry_value in DIExpression.
 
 ;; Test mips32:
-; CHECK: $a0 = nsw ADDu $a1, killed renamable $a0,
-; CHECK-NEXT: DBG_VALUE $a0, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1)
+; CHECK: $r4 = nsw ADDu $r5, killed renamable $r4,
+; CHECK-NEXT: DBG_VALUE $r4, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1)
 
 ;; Test mipsel:
-; CHECKel: $a0 = nsw ADDu $a1, killed renamable $a0,
-; CHECKel-NEXT: DBG_VALUE $a0, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1)
+; CHECKel: $r4 = nsw ADDu $r5, killed renamable $r4,
+; CHECKel-NEXT: DBG_VALUE $r4, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1)
 
 ; ModuleID = 'm.c'
 source_filename = "m.c"

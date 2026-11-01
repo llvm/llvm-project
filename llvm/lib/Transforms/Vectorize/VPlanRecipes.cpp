@@ -27,6 +27,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -47,6 +48,34 @@ using namespace llvm::VPlanPatternMatch;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
+
+/// For call VPInstruction operands, return the operand index of the called
+/// function. The function is either the last operand (for unmasked calls) or
+/// the second-to-last operand (for masked calls).
+static unsigned getCalledFnOperandIndex(ArrayRef<VPValue *> Operands) {
+  unsigned NumOps = Operands.size();
+  auto *LastOp = dyn_cast<VPIRValue>(Operands[NumOps - 1]);
+  if (LastOp && isa<Function>(LastOp->getValue()))
+    return NumOps - 1;
+  assert(isa<Function>(cast<VPIRValue>(Operands[NumOps - 2])->getValue()) &&
+         "expected function operand");
+  return NumOps - 2;
+}
+
+/// For call VPInstruction operands, return the called function.
+static Function *getCalledFunction(ArrayRef<VPValue *> Operands) {
+  unsigned Idx = getCalledFnOperandIndex(Operands);
+  return cast<Function>(cast<VPIRValue>(Operands[Idx])->getValue());
+}
+
+/// Return the function attributes of the callee of \p VPI, which must be a
+/// call or intrinsic VPInstruction.
+static AttributeSet getCalleeFnAttrs(const VPInstruction &VPI) {
+  if (VPI.getOpcode() == VPInstruction::Intrinsic)
+    return Intrinsic::getFnAttributes(VPI.getScalarType()->getContext(),
+                                      vputils::getIntrinsicID(&VPI));
+  return getCalledFunction(VPI.operands())->getAttributes().getFnAttrs();
+}
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
@@ -90,6 +119,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
+  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -135,6 +165,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
+  case VPActiveLaneMaskPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPCurrentIterationPHISC:
@@ -150,6 +181,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
+  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -185,6 +217,13 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return false;
   case VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(this);
+    if (VPI->getOpcode() == Instruction::Call ||
+        VPI->getOpcode() == VPInstruction::Intrinsic) {
+      AttributeSet CalleeFnAttrs = getCalleeFnAttrs(*VPI);
+      return mayWriteToMemory() ||
+             !VPI->hasFnAttr(Attribute::NoUnwind, CalleeFnAttrs) ||
+             !VPI->hasFnAttr(Attribute::WillReturn, CalleeFnAttrs);
+    }
     return mayWriteToMemory() ||
            VPI->getOpcode() == VPInstruction::BranchOnCount ||
            VPI->getOpcode() == VPInstruction::BranchOnCond ||
@@ -255,39 +294,38 @@ bool VPRecipeBase::isSafeToSpeculativelyExecute() const {
     case Instruction::Mul:
     case Instruction::GetElementPtr:
       return true;
+    case Instruction::Call:
+    case VPInstruction::Intrinsic:
+      return getCalleeFnAttrs(*cast<VPInstruction>(this))
+          .hasAttribute(Attribute::Speculatable);
     }
   }
   }
 }
 
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
-  assert(!Parent && "Recipe already in some VPBasicBlock");
-  assert(InsertPos->getParent() &&
-         "Insertion position not in any VPBasicBlock");
-  InsertPos->getParent()->insert(this, InsertPos->getIterator());
+  insertBefore(InsertPos->getIterator());
 }
 
-void VPRecipeBase::insertBefore(VPBasicBlock &BB,
-                                iplist<VPRecipeBase>::iterator I) {
-  assert(!Parent && "Recipe already in some VPBasicBlock");
-  assert(I == BB.end() || I->getParent() == &BB);
-  BB.insert(this, I);
+void VPRecipeBase::insertBefore(RecipeListTy::iterator I) {
+  assert(!getParent() && "Recipe already in some VPBasicBlock");
+  assert(I.getNodeParent() && "Insertion position not in any VPBasicBlock");
+  I.getNodeParent()->insert(this, I);
 }
 
 void VPRecipeBase::insertAfter(VPRecipeBase *InsertPos) {
-  assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  InsertPos->getParent()->insert(this, std::next(InsertPos->getIterator()));
+  insertBefore(std::next(InsertPos->getIterator()));
 }
 
 void VPRecipeBase::removeFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
   getParent()->getRecipeList().remove(getIterator());
-  Parent = nullptr;
+  setParent(nullptr);
 }
 
-iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
+VPRecipeBase::RecipeListTy::iterator VPRecipeBase::eraseFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
   return getParent()->getRecipeList().erase(getIterator());
 }
@@ -297,10 +335,9 @@ void VPRecipeBase::moveAfter(VPRecipeBase *InsertPos) {
   insertAfter(InsertPos);
 }
 
-void VPRecipeBase::moveBefore(VPBasicBlock &BB,
-                              iplist<VPRecipeBase>::iterator I) {
+void VPRecipeBase::moveBefore(RecipeListTy::iterator I) {
   removeFromParent();
-  insertBefore(BB, I);
+  insertBefore(I);
 }
 
 InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
@@ -432,28 +469,9 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr)
+VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr, bool ExpandInIR)
     : VPSingleDefRecipe(VPRecipeBase::VPExpandSCEVSC, {}, Expr->getType()),
-      Expr(Expr) {}
-
-/// For call VPInstruction operands, return the operand index of the called
-/// function. The function is either the last operand (for unmasked calls) or
-/// the second-to-last operand (for masked calls).
-static unsigned getCalledFnOperandIndex(ArrayRef<VPValue *> Operands) {
-  unsigned NumOps = Operands.size();
-  auto *LastOp = dyn_cast<VPIRValue>(Operands[NumOps - 1]);
-  if (LastOp && isa<Function>(LastOp->getValue()))
-    return NumOps - 1;
-  assert(isa<Function>(cast<VPIRValue>(Operands[NumOps - 2])->getValue()) &&
-         "expected function operand");
-  return NumOps - 2;
-}
-
-/// For call VPInstruction operands, return the called function.
-static Function *getCalledFunction(ArrayRef<VPValue *> Operands) {
-  unsigned Idx = getCalledFnOperandIndex(Operands);
-  return cast<Function>(cast<VPIRValue>(Operands[Idx])->getValue());
-}
+      Expr(Expr), ExpandInIR(ExpandInIR) {}
 
 static SmallVector<unsigned> getExtractValueIndices(ArrayRef<VPValue *> Ops) {
   return map_to_vector(drop_begin(Ops), [](VPValue *Op) {
@@ -616,13 +634,15 @@ Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
 
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
-                             DebugLoc DL, const Twine &Name, Type *ResultTy)
+                             DebugLoc DL, const Twine &Name, Type *ResultTy,
+                             const VPIRAttributes &Attrs)
     : VPRecipeWithIRFlags(
           VPRecipeBase::VPInstructionSC, Operands,
           ResultTy ? ResultTy
                    : computeScalarTypeForInstruction(Opcode, Operands),
           Flags, DL),
-      VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
+      VPIRMetadata(MD), VPIRAttributes(Attrs), Opcode(Opcode),
+      Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
@@ -1727,7 +1747,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
     return false;
   switch (getOpcode()) {
   case Instruction::ExtractValue:
-  case Instruction::InsertValue:
   case Instruction::GetElementPtr:
   case Instruction::ExtractElement:
   case Instruction::InsertElement:
@@ -1771,14 +1790,9 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
     return false;
-  case VPInstruction::Intrinsic: {
-    LLVMContext &Ctx = getScalarType()->getContext();
-    AttributeSet Attrs =
-        Intrinsic::getFnAttributes(Ctx, vputils::getIntrinsicID(this));
-    return !Attrs.getMemoryEffects().doesNotAccessMemory();
-  }
+  case VPInstruction::Intrinsic:
   case Instruction::Call:
-    return !getCalledFunction(operands())->doesNotAccessMemory();
+    return !getMemoryEffects(getCalleeFnAttrs(*this)).doesNotAccessMemory();
   default:
     return true;
   }
@@ -1786,7 +1800,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
 
 bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
+  if (vputils::propagatesFirstLaneUse(this, Op))
     return vputils::onlyFirstLaneUsed(this);
 
   switch (getOpcode()) {
@@ -1799,16 +1813,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ExtractLastActive:
     return Op == getOperand(0);
   case Instruction::PHI:
-    return true;
-  case Instruction::ExtractValue:
-  case Instruction::FCmp:
-  case Instruction::ICmp:
-  case Instruction::Select:
-  case Instruction::Or:
-  case Instruction::Freeze:
-  case VPInstruction::Not:
-    // TODO: Cover additional opcodes.
-    return vputils::onlyFirstLaneUsed(this);
   case Instruction::Load:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
@@ -1824,18 +1828,13 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::WideVectorLoad:
   case VPInstruction::BuildVector:
     return true;
-  case VPInstruction::PtrAdd:
-    return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
-  case VPInstruction::WidePtrAdd:
-    // WidePtrAdd supports scalar and vector base addresses.
-    return false;
   case VPInstruction::WideVectorStore:
     return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
+  case VPInstruction::PtrAdd:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
-  };
-  llvm_unreachable("switch should return");
+  }
 }
 
 bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
@@ -1989,13 +1988,33 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::StepVector:
     O << "step-vector " << *getScalarType();
     break;
-  case VPInstruction::Intrinsic: {
-    O << "call " << *getScalarType() << " @"
-      << Intrinsic::getBaseName(vputils::getIntrinsicID(this)) << "(";
-    interleaveComma(drop_end(operands()), O, [&O, &SlotTracker](VPValue *Op) {
-      Op->printAsOperand(O, SlotTracker);
-    });
+  case VPInstruction::Intrinsic:
+  case Instruction::Call: {
+    O << "call";
+    printFlags(O);
+    printRetAttrs(O);
+    O << *getScalarType() << " ";
+    unsigned NumArgs;
+    if (getOpcode() == VPInstruction::Intrinsic) {
+      O << "@" << Intrinsic::getBaseName(vputils::getIntrinsicID(this));
+      NumArgs = getNumOperands() - 1;
+    } else {
+      getCalledFunction(operands())->printAsOperand(O, /*PrintType=*/false);
+      NumArgs = getCalledFnOperandIndex(operands());
+    }
+    O << "(";
+    interleaveComma(enumerate(drop_end(operands(), getNumOperands() - NumArgs)),
+                    O, [&O, &SlotTracker, this](const auto &IndexedOp) {
+                      auto [Idx, Op] = IndexedOp;
+                      printParamAttrs(O, Idx);
+                      Op->printAsOperand(O, SlotTracker);
+                    });
     O << ")";
+    printFnAttrs(O);
+    if (VPValue *Mask = getMask()) {
+      O << ", ";
+      Mask->printAsOperand(O, SlotTracker);
+    }
     return;
   }
   case Instruction::Load:
@@ -2252,6 +2271,80 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
 }
 #endif
 
+VPIRAttributes::VPIRAttributes(const VPInstruction &Call,
+                               FunctionType *WideTy) {
+  assert(Call.getOpcode() == Instruction::Call && "expected call");
+  unsigned NumArgs = getCalledFnOperandIndex(Call.operands());
+  assert(NumArgs <= WideTy->getNumParams() &&
+         "widened call must take all scalar arguments");
+  LLVMContext &Ctx = WideTy->getContext();
+  AttributeList ScalarAttrs = Call.CallAttrs;
+
+  // Limit initial supported set of attributes to subset of poison-generating
+  // ones that can be transferred to the widened return value and arguments.
+  // TODO: Support additional attributes.
+  static constexpr Attribute::AttrKind PropagatableAttrKinds[] = {
+      Attribute::Alignment, Attribute::NonNull, Attribute::NoFPClass,
+      Attribute::Range};
+
+  // Only keep allowed attributes (which do not trigger UB) and ones that are
+  // compatible with the widened type Ty.
+  auto Filter = [&](Type *Ty, AttributeSet AS) {
+    AttributeMask Incompatible = AttributeFuncs::typeIncompatible(Ty, AS);
+    AttrBuilder AB(Ctx);
+    for (Attribute::AttrKind K : PropagatableAttrKinds)
+      if (AS.hasAttribute(K) && !Incompatible.contains(K))
+        AB.addAttribute(AS.getAttribute(K));
+    return AttributeSet::get(Ctx, AB);
+  };
+
+  AttributeSet RetAttrs =
+      Filter(WideTy->getReturnType(), ScalarAttrs.getRetAttrs());
+
+  // For masked calls, the widened call also executes for lanes the scalar call
+  // did not execute for. Masked variants ignore the inactive lanes of widened
+  // arguments, but scalar (uniform or linear) arguments are shared by all
+  // lanes, e.g. linear arguments pass the value of the first lane, which may
+  // be inactive. Unmasked variants process all lanes.
+  bool IsMaskedVariant = WideTy->getNumParams() > NumArgs;
+  SmallVector<AttributeSet> ArgAttrs(WideTy->getNumParams());
+  for (unsigned I = 0; I != NumArgs; ++I) {
+    Type *WideArgTy = WideTy->getParamType(I);
+    bool IsWidenedArg = WideArgTy != Call.getOperand(I)->getScalarType();
+    if (Call.isMasked() && (!IsMaskedVariant || !IsWidenedArg))
+      continue;
+    ArgAttrs[I] = Filter(WideArgTy, ScalarAttrs.getParamAttrs(I));
+  }
+
+  CallAttrs = AttributeList::get(Ctx, AttributeSet(), RetAttrs, ArgAttrs);
+}
+
+void VPIRAttributes::intersectAttrs(const VPIRAttributes &Other,
+                                    LLVMContext &Ctx) {
+  CallAttrs =
+      CallAttrs.intersectWith(Ctx, Other.CallAttrs).value_or(AttributeList());
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIRAttributes::printRetAttrs(raw_ostream &O) const {
+  AttributeSet RetAttrs = CallAttrs.getRetAttrs();
+  if (RetAttrs.hasAttributes())
+    O << RetAttrs.getAsString() << " ";
+}
+
+void VPIRAttributes::printParamAttrs(raw_ostream &O, unsigned ArgIdx) const {
+  AttributeSet PA = CallAttrs.getParamAttrs(ArgIdx);
+  if (PA.hasAttributes())
+    O << PA.getAsString() << " ";
+}
+
+void VPIRAttributes::printFnAttrs(raw_ostream &O) const {
+  AttributeSet FnAttrs = CallAttrs.getFnAttrs();
+  if (FnAttrs.hasAttributes())
+    O << " " << FnAttrs.getAsString();
+}
+#endif
+
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
   assert(Variant != nullptr && "Can't create vector function.");
@@ -2271,14 +2364,10 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     Args.push_back(Arg);
   }
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  if (CI)
-    CI->getOperandBundlesAsDefs(OpBundles);
-
-  CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
+  CallInst *V = State.Builder.CreateCall(Variant, Args);
   applyFlags(*V);
   applyMetadata(*V);
+  applyAttrs(*V);
   V->setCallingConv(Variant->getCallingConv());
 
   if (!V->getType()->isVoidTy())
@@ -2326,10 +2415,14 @@ void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
   O << "call";
   printFlags(O);
+  printRetAttrs(O);
   O << "@" << CalledFn->getName() << "(";
-  interleaveComma(args(), O, [&O, &SlotTracker](VPValue *Op) {
-    Op->printAsOperand(O, SlotTracker);
-  });
+  interleaveComma(enumerate(args()), O,
+                  [&O, &SlotTracker, this](const auto &IndexedOp) {
+                    auto [Idx, Op] = IndexedOp;
+                    printParamAttrs(O, Idx);
+                    Op->printAsOperand(O, SlotTracker);
+                  });
   O << ")";
 
   O << " (using library function";
@@ -2377,12 +2470,7 @@ CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   assert(VectorF &&
          "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
-  SmallVector<OperandBundleDef, 1> OpBundles;
-  if (CI)
-    CI->getOperandBundlesAsDefs(OpBundles);
-
-  CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+  CallInst *V = State.Builder.CreateCall(VectorF, Args);
 
   applyFlags(*V);
   applyMetadata(*V);
@@ -4043,6 +4131,9 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       Cloned->mutateType(ResultTy);
   }
 
+  Cloned->dropUBImplyingAttrsAndUnknownMetadata();
+  Cloned->dropPoisonGeneratingAttributes();
+  Cloned->dropPoisonGeneratingFlags();
   applyFlags(*Cloned);
   applyMetadata(*Cloned);
 
@@ -4261,7 +4352,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
            (isSingleScalar() ? 1 : VF.getFixedValue());
   }
   case Instruction::ExtractValue:
-  case Instruction::InsertValue:
     return Ctx.TTI.getInsertExtractValueCost(getOpcode(), Ctx.CostKind);
   }
 
@@ -4458,6 +4548,7 @@ void VPWidenLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = load ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4515,6 +4606,7 @@ void VPWidenLoadEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vp.load ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4545,6 +4637,7 @@ void VPWidenStoreRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN store ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4601,6 +4694,7 @@ void VPWidenStoreEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN vp.store ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -5113,6 +5207,8 @@ void VPExpandSCEVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
   O << " = EXPAND SCEV " << *Expr;
+  if (ExpandInIR)
+    O << " (in IR)";
 }
 #endif
 
@@ -5218,6 +5314,8 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  assert(vputils::propagatesFirstLaneUse(this, Op) &&
+         "Blend should propagate first lane use");
   return vputils::onlyFirstLaneUsed(this);
 }
 

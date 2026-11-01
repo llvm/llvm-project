@@ -43,6 +43,7 @@ class Function;
 class MachineFunction;
 class PassInstrumentationCallbacks;
 struct ExtendedIRContext;
+struct PassesOptions;
 
 /// Instrumentation to print IR before/after passes.
 ///
@@ -50,6 +51,7 @@ struct ExtendedIRContext;
 /// (typically Loop or SCC).
 class PrintIRInstrumentation {
 public:
+  explicit PrintIRInstrumentation(const PassesOptions &Opts) : Opts(Opts) {}
   LLVM_ABI ~PrintIRInstrumentation();
 
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
@@ -98,6 +100,7 @@ private:
                                 unsigned PassNumber,
                                 IRDumpFileSuffixType SuffixType);
 
+  const PassesOptions &Opts;
   PassInstrumentationCallbacks *PIC;
   /// Stack of Pass Run descriptions, enough to print the IR unit after a given
   /// pass.
@@ -121,10 +124,12 @@ private:
 };
 
 class OptPassGateInstrumentation {
+  const PassesOptions &Opts;
   LLVMContext &Context;
   bool HasWrittenIR = false;
 public:
-  OptPassGateInstrumentation(LLVMContext &Context) : Context(Context) {}
+  OptPassGateInstrumentation(const PassesOptions &Opts, LLVMContext &Context)
+      : Opts(Opts), Context(Context) {}
   LLVM_ABI bool shouldRun(StringRef PassName, IRUnitRef IR);
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
                                   ExtendedIRContext *IRContext = nullptr);
@@ -161,6 +166,9 @@ private:
 
 class PreservedCFGCheckerInstrumentation {
 public:
+  explicit PreservedCFGCheckerInstrumentation(const PassesOptions &Opts)
+      : Opts(Opts) {}
+
   // Keeps sticky poisoned flag for the given basic block once it has been
   // deleted or RAUWed.
   struct BBGuard final : public CallbackVH {
@@ -206,6 +214,9 @@ public:
 
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
                                   ModuleAnalysisManager &MAM);
+
+private:
+  const PassesOptions &Opts;
 };
 
 class ExtendedIRTraits {
@@ -336,12 +347,14 @@ protected:
 // included in this representation but it is massaged before reporting.
 class LLVM_ABI IRChangedPrinter : public TextChangeReporter<std::string> {
 public:
-  IRChangedPrinter(bool VerboseMode)
-      : TextChangeReporter<std::string>(VerboseMode) {}
+  IRChangedPrinter(const PassesOptions &Opts, bool VerboseMode)
+      : TextChangeReporter<std::string>(VerboseMode), Opts(Opts) {}
   ~IRChangedPrinter() override;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 protected:
+  const PassesOptions &Opts;
+
   // Called before and after a pass to get the representation of the IR.
   void generateIRRepresentation(IRUnitRef IR, StringRef PassID,
                                 std::string &Output) override;
@@ -353,7 +366,8 @@ protected:
 
 class LLVM_ABI IRChangedTester : public IRChangedPrinter {
 public:
-  IRChangedTester() : IRChangedPrinter(true) {}
+  explicit IRChangedTester(const PassesOptions &Opts)
+      : IRChangedPrinter(Opts, true) {}
   ~IRChangedTester() override;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
@@ -590,7 +604,7 @@ protected:
 // dot control flow graphs with changed instructions shown in colour.
 class LLVM_ABI DotCfgChangeReporter : public ChangeReporter<IRDataT<DCData>> {
 public:
-  DotCfgChangeReporter(bool Verbose);
+  DotCfgChangeReporter(const PassesOptions &Opts, bool Verbose);
   ~DotCfgChangeReporter() override;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
@@ -626,6 +640,7 @@ protected:
                              const FuncDataT<DCData> &Before,
                              const FuncDataT<DCData> &After);
 
+  const PassesOptions &Opts;
   unsigned N = 0;
   // -dot-cfg-dir with ~ expanded, made absolute.
   std::string OutputDir;
@@ -635,13 +650,14 @@ protected:
 // Print IR on crash.
 class PrintCrashIRInstrumentation {
 public:
-  PrintCrashIRInstrumentation()
-      : SavedIR("*** Dump of IR Before Last Pass Unknown ***") {}
+  explicit PrintCrashIRInstrumentation(const PassesOptions &Opts)
+      : Opts(Opts), SavedIR("*** Dump of IR Before Last Pass Unknown ***") {}
   LLVM_ABI ~PrintCrashIRInstrumentation();
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
   LLVM_ABI void reportCrashIR();
 
 protected:
+  const PassesOptions &Opts;
   std::string SavedIR;
 
 private:
@@ -654,6 +670,7 @@ private:
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
+  const PassesOptions &Opts;
   PrintIRInstrumentation PrintIR;
   PrintPassInstrumentation PrintPass;
   TimePassesHandler TimePasses;

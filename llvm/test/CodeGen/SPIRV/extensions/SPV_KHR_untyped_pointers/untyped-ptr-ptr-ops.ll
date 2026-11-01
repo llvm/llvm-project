@@ -30,3 +30,12 @@ define spir_func ptr addrspace(1) @i2p(i64 %i) {
   %p = inttoptr i64 %i to ptr addrspace(1)
   ret ptr addrspace(1) %p
 }
+
+; Operands typed by different paths must not get duplicate untyped pointer types.
+@G = external addrspace(1) global i32
+
+; CHECK: OpSelect %[[#PTR]] %[[#]] %[[#]] %[[#]]
+define spir_func ptr addrspace(1) @sel(i1 %c, ptr addrspace(1) %a) {
+  %s = select i1 %c, ptr addrspace(1) %a, ptr addrspace(1) @G
+  ret ptr addrspace(1) %s
+}

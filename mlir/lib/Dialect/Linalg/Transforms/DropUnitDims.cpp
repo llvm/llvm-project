@@ -702,6 +702,10 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
       return rewriter.notifyMatchFailure(padOp, "Failed to collapse source");
     }
 
+    // Clone the padding value if it is defined in the region of the pad op.
+    if (paddingVal.getParentBlock() == &padOp.getRegion().front())
+      paddingVal = rewriter.clone(*paddingVal.getDefiningOp())->getResult(0);
+
     auto newResultType = RankedTensorType::get(
         newResultShape, padOp.getResultType().getElementType());
     auto newPadOp = tensor::PadOp::create(

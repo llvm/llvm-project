@@ -581,7 +581,7 @@ std::optional<std::int64_t> GetInt64ArgOr(
 
 template <typename A, typename B>
 std::optional<std::vector<A>> GetIntegerVector(const B &x) {
-  static_assert(std::is_integral_v<A>);
+  static_assert(common::is_integral_v<A>);
   if (const auto *someInteger{UnwrapExpr<Expr<SomeInteger>>(x)}) {
     return common::visit(
         [](const auto &typedExpr) -> std::optional<std::vector<A>> {
@@ -1347,6 +1347,25 @@ static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
   return Expr<SomeDerived>{std::move(funcRef)};
 }
 
+// Returns true when the j-th dummy argument of an intrinsic contributes only
+// its declared type, kind type parameters, and rank to the result, such as X
+// in PRECISION(X). The intrinsic table marks these dummies with
+// ArgFlag::onlyConstantInquiry, and IsConstantExpr() uses the same attribute.
+// STORAGE_SIZE and LEN aren't marked, because their results also depend on
+// the dynamic type or on length type parameters.
+static inline bool IsTypeOnlyInquiryArg(
+    const SpecificIntrinsic &intrinsic, std::size_t j) {
+  const auto &dummies{intrinsic.characteristics.value().dummyArguments};
+  if (j < dummies.size()) {
+    if (const auto *object{
+            std::get_if<characteristics::DummyDataObject>(&dummies[j].u)}) {
+      return object->attrs.test(
+          characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry);
+    }
+  }
+  return false;
+}
+
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   ActualArguments &args{funcRef.arguments()};
@@ -1373,10 +1392,14 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     }
   }
   if (intrinsic) {
-    // Skip intrinsic folding if any argument is still a conditional arg
-    // (i.e. its condition was not a compile-time constant).  When the
-    // condition is a compile-time constant, FoldConditionalArg already resolved
-    // it to a plain Expr above, and intrinsic folding proceeds normally.
+    // A conditional arg that survives the argument folding above has a
+    // condition that isn't a compile-time constant, or belongs to KIND, whose
+    // arguments aren't folded. Either way, skip intrinsic folding unless every
+    // such argument corresponds to a type-only inquiry dummy. F2023 C1538
+    // (declared type and kind type parameters) and C1539 (rank) make every
+    // consequent-arg agree on what such an inquiry examines, so the first
+    // consequent-arg stands in for the whole argument in a copy of the
+    // reference.
     //
     // TODO:
     // For elemental/pure intrinsics, distribute the call over each
@@ -1387,31 +1410,36 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     // consequent, fold each clone, and reassemble into a new ConditionalArg.
     // When multiple arguments are conditional args, distribute one at a
     // time to avoid a combinatorial cross-product expansion.
-    // This is NOT valid for non-elemental intrinsics like RESHAPE or
-    // TRANSFER whose results depend on seeing all arguments together.
-    //
-    // TODO (conformance):
-    // Type-inquiry intrinsics whose result depends only on the argument's
-    // declared type/rank (e.g. KIND, BIT_SIZE, DIGITS, HUGE, TINY, EPSILON,
-    // PRECISION, RANGE, RADIX, MAXEXPONENT, MINEXPONENT, STORAGE_SIZE, RANK)
-    // are foldable even when the condition is not constant, because C1538/C1539
-    // guarantee every consequent has the same type and rank.  Because they are
-    // not folded here, a reference such as
-    //   integer, parameter :: k = kind((flag ? a : b))
-    // is wrongly rejected ("cannot be computed as a constant value") even
-    // though it is a valid F2023 constant expression.
-    // Fix:
-    // For such a curated allow-list of type-only inquiries, before the bailout
-    // below, a curated allow-list of type-only inquiries, before the bailout
-    // below, replace the conditional-arg argument with its first non-.NIL.
-    // consequent (a representative) and fold normally.  This must NOT be
-    // applied to shape/value inquiries (SIZE, SHAPE, LBOUND/UBOUND, LEN of
-    // deferred length, ALLOCATED, ASSOCIATED, PRESENT, IS_CONTIGUOUS), whose
-    // results can differ between consequents.
-    for (const std::optional<ActualArgument> &arg : args) {
-      if (arg && arg->isConditionalArg()) {
-        return Expr<T>{std::move(funcRef)};
+    // This is not valid for non-elemental intrinsics such as RESHAPE or
+    // TRANSFER, whose results depend on seeing all arguments together.
+    std::optional<FunctionRef<T>> viaRepresentative;
+    for (std::size_t j{0}; j < args.size(); ++j) {
+      if (args[j] && args[j]->isConditionalArg()) {
+        const ActualArgument::ConditionalArg &condArg{
+            DEREF(args[j]->GetConditionalArg())};
+        // C1540 rules out .NIL. here in conforming code: no type-only inquiry
+        // dummy is OPTIONAL in the standard (the IEEE_SUPPORT_* inquiries are
+        // generic with and without X). Bail out defensively.
+        if (condArg.HasNilConsequent() ||
+            !IsTypeOnlyInquiryArg(*intrinsic, j)) {
+          return Expr<T>{std::move(funcRef)};
+        }
+        if (!viaRepresentative) {
+          viaRepresentative.emplace(funcRef);
+        }
+        // Assigning the Expr keeps the argument's keyword and dummy intent.
+        *viaRepresentative->arguments()[j] =
+            common::Clone(DEREF(condArg.FirstNonNilConsequent()));
       }
+    }
+    if (viaRepresentative) {
+      Expr<T> folded{FoldOperation(context, std::move(*viaRepresentative))};
+      // Anything but a constant still refers to the representative alone, so
+      // keep the conditional reference. RANK of consequent-args that are all
+      // assumed-rank, which C1539 allows, folds to a DescriptorInquiry.
+      return std::holds_alternative<Constant<T>>(folded.u)
+          ? std::move(folded)
+          : Expr<T>{std::move(funcRef)};
     }
     const std::string name{intrinsic->name};
     if (name == "cshift") {
@@ -2388,7 +2416,27 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
   return common::visit(
       [&](auto &y) -> Expr<T> {
         if (auto folded{OperandsAreConstants(x.left(), y)}) {
-          auto power{evaluate::IntPower(folded->first, folded->second)};
+          ValueWithRealFlags<Scalar<T>> power;
+          if constexpr (T::category == TypeCategory::Complex && T::kind == 4) {
+            // Match flang-rt's cpowi/cpowk (complex-powi.cpp): accumulate in
+            // COMPLEX(8) and round to single once, rather than rounding every
+            // intermediate product (which costs a few single-precision ULPs).
+            using DoubleComplex = Scalar<Type<TypeCategory::Complex, 8>>;
+            using DoublePart = DoubleComplex::Part;
+            using SinglePart = typename Scalar<T>::Part;
+            // Single -> double is exact, so these conversions raise no flags.
+            DoubleComplex wideBase{
+                DoublePart::Convert(folded->first.REAL()).value,
+                DoublePart::Convert(folded->first.AIMAG()).value};
+            auto wide{evaluate::IntPower(wideBase, folded->second)};
+            power.flags = wide.flags;
+            power.value = Scalar<T>{SinglePart::Convert(wide.value.REAL())
+                                        .AccumulateFlags(power.flags),
+                SinglePart::Convert(wide.value.AIMAG())
+                    .AccumulateFlags(power.flags)};
+          } else {
+            power = evaluate::IntPower(folded->first, folded->second);
+          }
           context.RealFlagWarnings(power.flags, "power with INTEGER exponent");
           if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
             power.value = power.value.FlushSubnormalToZero();
@@ -2449,6 +2497,36 @@ Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
       return Expr<T>{Constant<T>{std::move(res)}};
     }
     return Expr<T>{Constant<T>{folded->second}};
+  }
+  // max(c, max(c, x)) -> max(c, x), and likewise for min, in any operand
+  // order, when c is a constant.  An extent max(0,ub) whose ub serializes as
+  // ubound(a,dim) is re-folded on read-back into max(0,max(0,ub)); collapsing
+  // it makes the module-file round trip a fixed point, so structural
+  // comparisons of function results and character lengths across module files
+  // still match.  Only a repeated constant is absorbed: Expr::operator== is
+  // defined for comparing procedure characteristics, where two dummy arguments
+  // at the same position compare equal regardless of identity, so a repeated
+  // variable is not reliably the same variable, and a repeated impure function
+  // reference or VOLATILE read must not be dropped.
+  if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    auto absorbs{[&](const Expr<T> &operand, const Expr<T> &nested) {
+      const auto *c{std::get_if<Constant<T>>(&operand.u)};
+      const auto *inner{std::get_if<Extremum<T>>(&nested.u)};
+      if (!c || !inner || inner->ordering != x.ordering) {
+        return false;
+      }
+      auto isSameConstant{[&](const Expr<T> &y) {
+        const auto *ic{std::get_if<Constant<T>>(&y.u)};
+        return ic && *ic == *c;
+      }};
+      return isSameConstant(inner->left()) || isSameConstant(inner->right());
+    }};
+    if (absorbs(x.left(), x.right())) {
+      return Expr<T>{std::move(x.right())};
+    } else if (absorbs(x.right(), x.left())) {
+      return Expr<T>{std::move(x.left())};
+    }
   }
   return Expr<T>{std::move(x)};
 }

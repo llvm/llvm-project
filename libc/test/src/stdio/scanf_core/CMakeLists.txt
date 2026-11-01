@@ -6,7 +6,7 @@ endif()
 add_libc_test(
   parser_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     parser_test.cpp
   DEPENDS
@@ -27,7 +27,7 @@ endif()
 add_libc_test(
   reader_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     reader_test.cpp
   DEPENDS
@@ -40,7 +40,7 @@ add_libc_test(
 add_libc_test(
   converter_test
   SUITE
-    libc_stdio_unittests
+    libc-stdio-tests
   SRCS
     converter_test.cpp
   DEPENDS

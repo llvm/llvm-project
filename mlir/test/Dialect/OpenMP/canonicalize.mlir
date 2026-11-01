@@ -143,3 +143,83 @@ func.func @constant_hoisting_target(%x : !llvm.ptr) {
 // CHECK-NOT: arith.constant
 // CHECK: omp.target
 // CHECK: arith.constant
+
+// -----
+
+// Pure sections and their enclosing nowait construct can both be removed.
+// CHECK-LABEL: func.func @sections_nowait_no_side_effects
+// CHECK-NEXT: return
+func.func @sections_nowait_no_side_effects(%a: i32, %b: i32) {
+  omp.sections nowait {
+    omp.section {
+      %unused = arith.addi %a, %b : i32
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// Sections also retain their implicit barrier when their body is empty.
+// CHECK-LABEL: func.func @sections_only_terminator
+// CHECK-NEXT: omp.sections {
+// CHECK-NEXT: omp.terminator
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+func.func @sections_only_terminator() {
+  omp.sections {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// Effects must be considered recursively through both sections and section.
+// CHECK-LABEL: func.func @sections_nowait_store
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[VALUE:.*]]: i32)
+// CHECK-NEXT: omp.sections nowait {
+// CHECK-NEXT: omp.section {
+// CHECK-NEXT: memref.store %[[VALUE]], %[[X]][] : memref<i32>
+// CHECK-NEXT: omp.terminator
+// CHECK-NEXT: }
+// CHECK-NEXT: omp.terminator
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+func.func @sections_nowait_store(%x: memref<i32>, %value: i32) {
+  omp.sections nowait {
+    omp.section {
+      memref.store %value, %x[] : memref<i32>
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// Unknown effects in a nested operation also prevent removal.
+// CHECK-LABEL: func.func @sections_nowait_call
+// CHECK-NEXT: omp.sections nowait {
+// CHECK-NEXT: omp.section {
+// CHECK-NEXT: func.call @opaque() : () -> ()
+// CHECK-NEXT: omp.terminator
+// CHECK-NEXT: }
+// CHECK-NEXT: omp.terminator
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+func.func @sections_nowait_call() {
+  omp.sections nowait {
+    omp.section {
+      func.call @opaque() : () -> ()
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+func.func private @opaque()

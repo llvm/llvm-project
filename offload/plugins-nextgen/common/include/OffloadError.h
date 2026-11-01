@@ -82,6 +82,20 @@ inline llvm::Error createOffloadError(error::ErrorCode Code,
 
   return llvm::make_error<error::OffloadError>(Code, Buffer);
 }
+
+/// Swallow an OffloadError carrying the given code, returning success instead.
+/// Any other error, including one that is not an OffloadError, is returned
+/// unchanged. Useful when a specific failure is an expected outcome rather
+/// than an error, e.g. a lookup that did not find anything.
+inline llvm::Error consumeErrorIfCode(llvm::Error Err, error::ErrorCode Code) {
+  return llvm::handleErrors(
+      std::move(Err),
+      [Code](std::unique_ptr<error::OffloadError> E) -> llvm::Error {
+        if (E->convertToErrorCode() == error::make_error_code(Code))
+          return llvm::Error::success();
+        return llvm::Error(std::move(E));
+      });
+}
 } // namespace error
 
 #endif

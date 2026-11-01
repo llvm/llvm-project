@@ -266,6 +266,7 @@ class DeclArgument<DeclNode kind, string name, bit opt = 0, bit fake = 0>
 //
 class OMPTraitInfoArgument<string name> : Argument<name, 0>;
 class VariadicOMPInteropInfoArgument<string name> : Argument<name, 0>;
+class VariadicOMPAdjustArgsDescriptorArgument<string name> : Argument<name, 0>;
 
 class TypeArgument<string name, bit opt = 0> : Argument<name, opt>;
 class UnsignedArgument<string name, bit opt = 0> : Argument<name, opt>;
@@ -4951,9 +4952,7 @@ def OMPDeclareVariant : InheritableAttr {
   let Args = [
     ExprArgument<"VariantFuncRef">,
     OMPTraitInfoArgument<"TraitInfos">,
-    VariadicExprArgument<"AdjustArgsNothing">,
-    VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
-    VariadicExprArgument<"AdjustArgsNeedDeviceAddr">,
+    VariadicOMPAdjustArgsDescriptorArgument<"AdjustArgs">,
     VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{

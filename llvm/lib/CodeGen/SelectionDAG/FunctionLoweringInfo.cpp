@@ -94,10 +94,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
   UA = DAG->getUniformityInfo();
-  // Prefer the "exception-model" module flag, else the TargetOptions default.
   ExceptionModel = Fn->getParent()->getExceptionModel();
-  if (ExceptionModel == ExceptionHandling::Default)
-    ExceptionModel = MF->getTarget().getExceptionModel();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;

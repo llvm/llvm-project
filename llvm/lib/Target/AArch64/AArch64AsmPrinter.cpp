@@ -358,6 +358,7 @@ private:
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
 
   void emitFunctionBodyEnd() override;
+  void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
 
   MCSymbol *GetCPISymbol(unsigned CPID) const override;
@@ -1155,6 +1156,29 @@ void AArch64AsmPrinter::emitLOHs() {
   }
 }
 
+// Unwinding can get confused if the last instruction in an exception-handling
+// region (function, funclet, try block, etc.) is a call, because the return
+// address then points to the *next* region (see
+// X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH for the X86 equivalent).
+// Trap after a noreturn call that would end a function or funclet, and elide
+// the trap when the next instruction is in the same function.
+void AArch64AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  if (MBB.succ_empty() && MF->usesWindowsUnwindInfo()) {
+    auto Next = std::next(MBB.getIterator());
+    if (Next == MF->end() || Next->isEHFuncletEntry()) {
+      for (const MachineInstr &MI : reverse(MBB)) {
+        if (MI.isMetaInstruction() || AArch64InstrInfo::isSEHInstruction(MI))
+          continue;
+        if (MI.isCall() && !MI.isReturn())
+          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(1));
+        break;
+      }
+    }
+  }
+
+  AsmPrinter::emitBasicBlockEnd(MBB);
+}
+
 void AArch64AsmPrinter::emitFunctionBodyEnd() {
   if (!AArch64FI->getLOHRelated().empty())
     emitLOHs();
@@ -1784,8 +1808,11 @@ void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
   MachineBasicBlock::const_iterator MII(MI);
   ++MII;
   while (NumNOPBytes > 0) {
+    if (MII != MBB.end() && MII->isDebugInstr()) {
+      ++MII;
+      continue;
+    }
     if (MII == MBB.end() || MII->isCall() ||
-        MII->getOpcode() == AArch64::DBG_VALUE ||
         MII->getOpcode() == TargetOpcode::PATCHPOINT ||
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
@@ -3564,8 +3591,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     return;
 
-  case AArch64::EMITBKEY: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+  case AArch64::EMITBKEY:
+  case AArch64::EMITNONHINTED: {
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3573,12 +3601,16 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (getFunctionCFISectionType(*MF) == CFISection::None)
       return;
 
-    OutStreamer->emitCFIBKeyFrame();
+    if (MI->getOpcode() == AArch64::EMITBKEY)
+      OutStreamer->emitCFIBKeyFrame();
+    else
+      OutStreamer->emitCFINonHintPAuthFrame();
+
     return;
   }
 
   case AArch64::EMITMTETAGGED: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3948,6 +3980,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::HWASAN_CHECK_MEMACCESS_FIXEDSHADOW:
   case AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
+    return;
+
+  case AArch64::SEH_EndC:
+    TS->emitARM64WinCFIEndC();
     return;
 
   case AArch64::SEH_StackAlloc:

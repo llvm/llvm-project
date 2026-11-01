@@ -192,6 +192,8 @@ public:
   Instruction *simplifyBinOpSplats(ShuffleVectorInst &SVI);
   Instruction *visitShuffleVectorInst(ShuffleVectorInst &SVI);
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
+  Instruction *visitBitInsertInst(BitInsertInst &BI);
+  Instruction *visitBitExtractInst(BitExtractInst &BE);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
   Instruction *visitVAEndInst(VAEndInst &I);
   Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI);
@@ -738,7 +740,8 @@ public:
   bool foldAllocaCmp(AllocaInst *Alloca);
   Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
                                             GetElementPtrInst *GEP,
-                                            CmpInst &ICI,
+                                            CmpPredicate Pred, Constant *RHSC,
+                                            Instruction &CtxI,
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
@@ -756,6 +759,10 @@ public:
   Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstantAllowPoison(ICmpInst &Cmp,
                                                    const APInt &C);
+  /// Match Op0 Pred Op1 on binops with a removable common operand.
+  bool matchCommonBinOpOperands(Value *Op0, Value *Op1, CmpInst::Predicate Pred,
+                                Value *&LHS, Value *&RHS,
+                                const SimplifyQuery &Q);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
                                   Value *Z, CmpPredicate Pred);

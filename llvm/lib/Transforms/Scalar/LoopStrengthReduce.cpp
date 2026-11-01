@@ -769,6 +769,10 @@ static bool isMulSExtable(const SCEVMulExpr *M, ScalarEvolution &SE) {
 static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
                                 ScalarEvolution &SE,
                                 bool IgnoreSignificantBits = false) {
+  // A stride can fold to zero once the callers sign-extend it.
+  if (RHS->isZero())
+    return nullptr;
+
   // Handle the trivial case, which works for any SCEV type.
   if (LHS == RHS)
     return SE.getConstant(LHS->getType(), 1);
@@ -1711,7 +1715,7 @@ bool LSRUse::InsertFormula(const Formula &F, const Loop &L) {
   SmallVector<const SCEV *, 4> Key = F.BaseRegs;
   if (F.ScaledReg) Key.push_back(F.ScaledReg);
   // Unstable sort by host order ok, because this is only used for uniquifying.
-  llvm::sort(Key);
+  llvm::sort(Key, std::less<>());
 
   if (!Uniquifier.insert(Key).second)
     return false;
@@ -2195,6 +2199,9 @@ class LSRInstance {
   void OptimizeShadowIV();
   bool FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse);
   Instruction *OptimizeMax(ICmpInst *Cond, IVStrideUse *&CondUse);
+  ICmpInst *OptimizeLoopTermCondToEquality(ICmpInst *Cond,
+                                           IVStrideUse *&CondUse,
+                                           BasicBlock *ExitingBlock);
   void OptimizeLoopTermCond();
 
   void ChainInstruction(Instruction *UserInst, Instruction *IVOper,
@@ -2448,6 +2455,70 @@ bool LSRInstance::FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse) {
   return false;
 }
 
+/// Replace a relational loop exit with an equality comparison when the target
+/// prefers the exact exit value as an equality immediate.
+ICmpInst *LSRInstance::OptimizeLoopTermCondToEquality(
+    ICmpInst *Cond, IVStrideUse *&CondUse, BasicBlock *ExitingBlock) {
+  if (Cond->isEquality() || ExitingBlock != L->getLoopLatch())
+    return Cond;
+
+  auto *IV = dyn_cast<PHINode>(CondUse->getOperandValToReplace());
+  if (!IV || !IV->getType()->isIntegerTy() || IV->getParent() != L->getHeader())
+    return Cond;
+
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(IV));
+  if (!AR || AR->getLoop() != L || !AR->isAffine())
+    return Cond;
+
+  const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE));
+  if (!Step || Step->isZero())
+    return Cond;
+
+  const SCEV *ExitCount = SE.getExitCount(L, ExitingBlock);
+  if (isa<SCEVCouldNotCompute>(ExitCount))
+    return Cond;
+
+  // A W-bit add recurrence with step S has period
+  // 2^W / gcd(2^W, S) = 2^(W - countr_zero(S)). Require the exit count to be
+  // smaller without relying on poison-derived no-wrap flags, so equality
+  // cannot match on an earlier iteration.
+  const APInt &StepValue = Step->getAPInt();
+  unsigned RecurrencePeriodLog2 =
+      StepValue.getBitWidth() - StepValue.countr_zero();
+  if (!SE.getUnsignedRangeMax(ExitCount).isIntN(RecurrencePeriodLog2))
+    return Cond;
+
+  const auto *ExitValue =
+      dyn_cast<SCEVConstant>(AR->evaluateAtIteration(ExitCount, SE));
+  if (!ExitValue || !TTI.preferLoopExitWithEqualityComparison(
+                        *Cond, ExitValue->getAPInt() + StepValue))
+    return Cond;
+
+  LLVM_DEBUG(dbgs() << "  Rewriting loop exit to compare " << *IV << " against "
+                    << *ExitValue << '\n');
+
+  auto *TermBr = cast<CondBrInst>(ExitingBlock->getTerminator());
+  bool TrueContinues = L->contains(TermBr->getSuccessor(0));
+  assert(TrueContinues != L->contains(TermBr->getSuccessor(1)) &&
+         "Expected exactly one in-loop successor");
+
+  auto Pred = TrueContinues ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+  auto *NewCond = new ICmpInst(TermBr->getIterator(), Pred, IV,
+                               ExitValue->getValue(), "lsr.exitcond");
+  NewCond->setDebugLoc(Cond->getDebugLoc());
+  TermBr->setCondition(NewCond);
+
+  if (Cond->use_empty()) {
+    CondUse->setUser(NewCond);
+    Cond->eraseFromParent();
+  } else {
+    CondUse = &IU.AddUser(NewCond, IV);
+  }
+
+  Changed = true;
+  return NewCond;
+}
+
 /// Rewrite the loop's terminating condition if it uses a max computation.
 ///
 /// This is a narrow solution to a specific, but acute, problem. For loops
@@ -2673,6 +2744,9 @@ LSRInstance::OptimizeLoopTermCond() {
     // Check for dominance.
     if (!DT.dominates(ExitingBlock, LatchBlock))
       continue;
+
+    if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
+      Cond = OptimizeLoopTermCondToEquality(Cmp, CondUse, ExitingBlock);
 
     // Conservatively avoid trying to use the post-inc value in non-latch
     // exits if there may be pre-inc users in intervening blocks.
@@ -5999,7 +6073,8 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
           } else {
             SmallVector<BasicBlock *, 2> NewBBs;
             DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI);
+            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI,
+                                        MSSAU, ShouldPreserveLCSSA);
             NewBB = NewBBs[0];
           }
           // If NewBB==NULL, then SplitCriticalEdge refused to split because all
@@ -7131,7 +7206,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                                const TargetTransformInfo &TTI,
                                AssumptionCache &AC, TargetLibraryInfo &TLI,
                                MemorySSA *MSSA, bool PreserveLCSSA) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+  const ScalarOptions &Opts = getScalarOptions(*L);
 
   // Debug preservation - before we start removing anything identify which DVI
   // meet the salvageable criteria and store their DIExpression and SCEVs.

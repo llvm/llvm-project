@@ -162,6 +162,7 @@ define void @sufficient_alignment(ptr noalias %src, ptr noalias %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [4 x i32], ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [4 x i32], ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i32], ptr [[SRC]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP5]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 16
@@ -169,27 +170,27 @@ define void @sufficient_alignment(ptr noalias %src, ptr noalias %dst, i64 %n) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i64 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP10]], i64 2
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i64 3
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> poison, i32 [[TMP16]], i64 0
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> [[TMP20]], i32 [[TMP17]], i64 1
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> [[TMP21]], i32 [[TMP18]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> [[TMP22]], i32 [[TMP19]], i64 3
-; CHECK-NEXT:    [[TMP24:%.*]] = add <4 x i32> [[TMP15]], [[TMP23]]
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i64 3
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP34]], align 1
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> poison, i32 [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> [[TMP21]], i32 [[TMP18]], i64 1
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> [[TMP22]], i32 [[TMP19]], i64 2
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> [[TMP23]], i32 [[TMP20]], i64 3
+; CHECK-NEXT:    [[TMP24:%.*]] = add <4 x i32> [[TMP33]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <4 x i32> [[TMP24]], zeroinitializer
-; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP4]], align 16
-; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP6]], align 16
-; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP7]], align 16
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> poison, i32 [[TMP26]], i64 0
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP27]], i64 1
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> [[TMP31]], i32 [[TMP28]], i64 2
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP29]], i64 3
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP25]], <4 x i32> [[TMP33]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP4]], align 16
+; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP5]], align 16
+; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP6]], align 16
+; CHECK-NEXT:    [[TMP30:%.*]] = load i32, ptr [[TMP7]], align 16
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> poison, i32 [[TMP27]], i64 0
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> [[TMP31]], i32 [[TMP28]], i64 1
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP29]], i64 2
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> [[TMP36]], i32 [[TMP30]], i64 3
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP25]], <4 x i32> [[TMP37]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP34]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -205,7 +206,9 @@ entry:
 loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
   %p = getelementptr [4 x i32], ptr %src, i64 %iv
+  %out = getelementptr i32, ptr %dst, i64 %iv
   %guard = load i32, ptr %p, align 16
+  store i32 0, ptr %out, align 1
   %weak = load i32, ptr %p, align 4
   %sum = add i32 %guard, %weak
   %keep = icmp ne i32 %sum, 0
@@ -217,7 +220,6 @@ read:
 
 loop.latch:
   %result = phi i32 [ %value, %read ], [ 0, %loop.header ]
-  %out = getelementptr i32, ptr %dst, i64 %iv
   store i32 %result, ptr %out, align 1
   %iv.next = add nuw i64 %iv, 1
   %done = icmp eq i64 %iv.next, %n

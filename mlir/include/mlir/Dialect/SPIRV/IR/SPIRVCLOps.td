@@ -1296,7 +1296,7 @@ def SPIRV_CLSincosOp : SPIRV_CLOp<"sincos", 58, [
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x,
-    SPIRV_AnyPtr:$cosval
+    Arg<SPIRV_AnyPtr, "", [MemWrite]>:$cosval
   );
 
   let results = (outs

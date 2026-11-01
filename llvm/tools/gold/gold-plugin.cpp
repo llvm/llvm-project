@@ -27,6 +27,7 @@
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -872,11 +873,13 @@ static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
 /// OnIndexWrite is callback to let caller know when LTO writes index files.
 /// LinkedObjectsFile is an output stream to write the list of object files for
 /// the final ThinLTO linking. Can be nullptr.
-static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
-                                      raw_fd_ostream *LinkedObjectsFile) {
+static std::unique_ptr<LTO>
+createLTO(const cl::LibraryOptionsContext &LibraryOptions,
+          IndexWriteCallback OnIndexWrite, raw_fd_ostream *LinkedObjectsFile) {
   Config Conf;
   ThinBackend Backend;
 
+  Conf.LibraryOptions = &LibraryOptions;
   Conf.CPU = options::mcpu;
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
 
@@ -899,6 +902,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.CGOptLevel = *CGOptLevelOrNone;
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;
+  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   Conf.PTO.LoopVectorization = options::OptLevel > 1;
   Conf.PTO.SLPVectorization = options::OptLevel > 1;
   Conf.PTO.MergeFunctions = options::merge_functions;
@@ -1046,7 +1050,8 @@ static std::unique_ptr<raw_fd_ostream> CreateLinkedObjectsFile() {
 }
 
 /// Runs LTO and return a list of pairs <FileName, IsTemporary>.
-static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
+static std::vector<std::pair<SmallString<128>, bool>>
+runLTO(const cl::LibraryOptionsContext &LibraryOptions) {
   // Map to own RAII objects that manage the file opening and releasing
   // interfaces with gold. This is needed only for ThinLTO mode, since
   // unlike regular LTO, where addModule will result in the opened file
@@ -1059,6 +1064,7 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
 
   std::unique_ptr<raw_fd_ostream> LinkedObjects = CreateLinkedObjectsFile();
   std::unique_ptr<LTO> Lto = createLTO(
+      LibraryOptions,
       [&ObjectToIndexFileState](const std::string &Identifier) {
         ObjectToIndexFileState[Identifier] = true;
       },
@@ -1148,8 +1154,9 @@ static ld_plugin_status allSymbolsReadHook() {
   if (Modules.empty())
     return LDPS_OK;
 
-  if (unsigned NumOpts = options::extra.size())
-    cl::ParseCommandLineOptions(NumOpts, &options::extra[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  if (!options::extra.empty())
+    cl::parseCommandLineOptions(LibraryOptions, options::extra);
 
   // Initialize time trace profiler
   if (!options::time_trace_file.empty())
@@ -1164,7 +1171,7 @@ static ld_plugin_status allSymbolsReadHook() {
     llvm::timeTraceProfilerCleanup();
   });
 
-  std::vector<std::pair<SmallString<128>, bool>> Files = runLTO();
+  std::vector<std::pair<SmallString<128>, bool>> Files = runLTO(LibraryOptions);
 
   if (options::TheOutputType == options::OT_DISABLE ||
       options::TheOutputType == options::OT_BC_ONLY ||

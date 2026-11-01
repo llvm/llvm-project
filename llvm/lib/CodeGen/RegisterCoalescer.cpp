@@ -2411,18 +2411,21 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     MachineInstr &DestMI = *MRI->getVRegDef(SrcReg);
     CopyMI = &*MRI->use_instr_nodbg_begin(SrcReg);
     SlotIndex CopyRegIdx = LIS->getInstructionIndex(*CopyMI).getRegSlot();
-    SlotIndex DestRegIdx = LIS->getInstructionIndex(DestMI).getRegSlot();
+    bool IsEarlyClobber =
+        DestMI.findRegisterDefOperand(SrcReg, TRI)->isEarlyClobber();
+    SlotIndex DestRegIdx =
+        LIS->getInstructionIndex(DestMI).getRegSlot(IsEarlyClobber);
 
     if (!MRI->isConstantPhysReg(DstReg)) {
       // We checked above that there are no interfering defs of the physical
       // register. However, for this case, where we intend to move up the def of
       // the physical register, we also need to check for interfering uses.
-      SlotIndexes *Indexes = LIS->getSlotIndexes();
-      for (SlotIndex SI = Indexes->getNextNonNullIndex(DestRegIdx);
-           SI != CopyRegIdx; SI = Indexes->getNextNonNullIndex(SI)) {
-        MachineInstr *MI = LIS->getInstructionFromIndex(SI);
-        if (MI->readsRegister(DstReg, TRI)) {
-          LLVM_DEBUG(dbgs() << "\t\tInterference (read): " << *MI);
+      for (MachineInstr &MI :
+           make_range(std::next(DestMI.getIterator()), CopyMI->getIterator())) {
+        if (MI.isDebugInstr())
+          continue;
+        if (MI.readsRegister(DstReg, TRI)) {
+          LLVM_DEBUG(dbgs() << "\t\tInterference (read): " << MI);
           return false;
         }
       }
@@ -4320,7 +4323,9 @@ void RegisterCoalescer::joinAllIntervals() {
     MBBs.push_back(MBBPriorityInfo(&MBB, Loops->getLoopDepth(&MBB),
                                    JoinSplitEdges && isSplitEdge(&MBB)));
   }
-  array_pod_sort(MBBs.begin(), MBBs.end(), compareMBBPriority);
+  llvm::sort(MBBs, [](const MBBPriorityInfo &LHS, const MBBPriorityInfo &RHS) {
+    return compareMBBPriority(&LHS, &RHS) < 0;
+  });
 
   // Coalesce intervals in MBB priority order.
   unsigned CurrDepth = std::numeric_limits<unsigned>::max();
