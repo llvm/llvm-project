@@ -949,9 +949,14 @@ void MipsGotSection::build() {
       uint64_t offset = p.second * ctx.arg.wordsize;
       if (&got == primGot)
         addConstant({R_ABS, ctx.target->relativeRel, offset, 0, p.first});
-      else
+      else {
+        // A lazy stub requires the primary GOT's resolver slots and $gp.
+        // Calls through secondary GOTs must be resolved eagerly.
+        if (ctx.in.mipsStubs)
+          ctx.in.mipsStubs->exclude(*p.first);
         ctx.in.relaDyn->addSymbolReloc(ctx.target->relativeRel, *this, offset,
                                        *p.first);
+      }
     }
     // Relocation-only entries exist as dummy entries for dynamic symbols that
     // aren't otherwise in the primary GOT, as the ABI requires an entry for
@@ -1028,6 +1033,63 @@ void MipsGotSection::writeTo(uint8_t *buf) {
   writeUint(ctx, buf + ctx.arg.wordsize,
             (uint64_t)1 << (ctx.arg.wordsize * 8 - 1));
   ctx.target->relocateAlloc(*this, buf);
+
+  if (!ctx.in.mipsStubs || gots.empty())
+    return;
+  auto writeStubAddresses = [&](const auto &entries) {
+    for (const auto &[sym, index] : entries)
+      if (std::optional<uint64_t> va = ctx.in.mipsStubs->getStubVA(*sym))
+        writeUint(ctx, buf + index * ctx.arg.wordsize, *va);
+  };
+  writeStubAddresses(gots.front().global);
+  writeStubAddresses(gots.front().relocs);
+}
+
+MipsStubsSection::MipsStubsSection(Ctx &ctx)
+    : SyntheticSection(ctx, ".MIPS.stubs", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR, ctx.arg.wordsize) {}
+
+void MipsStubsSection::addSymbols() {
+  // microMIPS stubs are not implemented.
+  if (isMicroMips(ctx))
+    return;
+  for (Symbol *sym : ctx.symtab->getSymbols()) {
+    if (!sym->isPreemptible || !(sym->isUndefined() || sym->isShared()) ||
+        !sym->isFunc() || !callOnly.lookup(sym) || sym->hasFlag(NEEDS_PLT))
+      continue;
+    entries.push_back(sym);
+  }
+
+  // Include the full stub size in GOT page counts before GOT layout.
+  // Removing secondary GOT candidates later can only shrink this size.
+  stubSize = ctx.in.dynSymTab->getNumSymbols() > 0x10000 ? stubBigSize
+                                                         : stubNormalSize;
+}
+
+std::optional<uint64_t> MipsStubsSection::getStubVA(const Symbol &sym) const {
+  // The resolver requires a canonical $gp, which custom layouts can change.
+  if (!getParent() ||
+      ctx.in.mipsGot->getGp() != ctx.in.mipsGot->getVA() + 0x7ff0)
+    return std::nullopt;
+  auto it = indices.find(&sym);
+  if (it == indices.end())
+    return std::nullopt;
+  return getVA() + it->second * stubSize;
+}
+
+void MipsStubsSection::finalizeContents() {
+  llvm::erase_if(entries, [&](const Symbol *sym) {
+    return !callOnly.lookup(sym) || !sym->isInGot(ctx);
+  });
+  for (size_t i = 0; i != entries.size(); ++i)
+    indices[entries[i]] = i;
+}
+
+void MipsStubsSection::writeTo(uint8_t *buf) {
+  for (const Symbol *sym : entries) {
+    writeMipsStub(ctx, buf, sym->dynsymIndex, stubSize == stubBigSize);
+    buf += stubSize;
+  }
 }
 
 // On PowerPC the .plt section is used to hold the table of function addresses
@@ -2182,6 +2244,9 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
       Symbol *sym = ent.sym;
       if (sym->isInPlt(ctx) && sym->hasFlag(NEEDS_COPY))
         eSym->st_other |= STO_MIPS_PLT;
+      if (type == SHT_DYNSYM && ctx.in.mipsStubs)
+        if (std::optional<uint64_t> va = ctx.in.mipsStubs->getStubVA(*sym))
+          eSym->st_value = *va;
       if (isMicroMips(ctx)) {
         // We already set the less-significant bit for symbols
         // marked by the `STO_MIPS_MICROMIPS` flag and for microMIPS PLT
@@ -4654,6 +4719,11 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   add(*ctx.in.plt);
   ctx.in.iplt = std::make_unique<IpltSection>(ctx);
   add(*ctx.in.iplt);
+
+  if (ctx.arg.emachine == EM_MIPS && !ctx.arg.relocatable && ctx.hasDynsym) {
+    ctx.in.mipsStubs = std::make_unique<MipsStubsSection>(ctx);
+    add(*ctx.in.mipsStubs);
+  }
 
   if (ctx.arg.andFeatures || ctx.aarch64PauthAbiCoreInfo) {
     ctx.in.gnuProperty = std::make_unique<GnuPropertySection>(ctx);

@@ -357,6 +357,29 @@ private:
   bool tryMergeGots(FileGot & dst, FileGot & src, bool isPrimary);
 };
 
+class MipsStubsSection final : public SyntheticSection {
+  static constexpr size_t stubNormalSize = 16;
+  static constexpr size_t stubBigSize = 20;
+
+public:
+  MipsStubsSection(Ctx &);
+  void addSymbols();
+  void recordCall(const Symbol &sym) { callOnly.try_emplace(&sym, true); }
+  void exclude(const Symbol &sym) { callOnly[&sym] = false; }
+  std::optional<uint64_t> getStubVA(const Symbol &sym) const;
+  size_t getSize() const override { return entries.size() * stubSize; }
+  bool isNeeded() const override { return !entries.empty(); }
+  void finalizeContents() override;
+  void writeTo(uint8_t *buf) override;
+
+private:
+  SmallVector<const Symbol *, 0> entries;
+  llvm::DenseMap<const Symbol *, uint32_t> indices;
+  // False entries record exclusions that later calls must not override.
+  llvm::DenseMap<const Symbol *, bool> callOnly;
+  size_t stubSize = stubNormalSize;
+};
+
 class GotPltSection final : public SyntheticSection {
 public:
   GotPltSection(Ctx &);

@@ -94,6 +94,41 @@ uint64_t elf::getMipsPageAddr(uint64_t addr) {
   return (addr + 0x8000) & ~0xffff;
 }
 
+void elf::writeMipsStub(Ctx &ctx, uint8_t *buf, uint32_t dynsymIndex,
+                        bool big) {
+  if (dynsymIndex > 0x7fffffff) {
+    ErrAlways(ctx) << "MIPS lazy-binding stub dynamic symbol index "
+                   << dynsymIndex << " exceeds 31 bits";
+    return;
+  }
+
+  const uint32_t load = ctx.arg.is64 ? 0xdf998010  // ld $25, -0x7ff0($28)
+                                     : 0x8f998010; // lw $25, -0x7ff0($28)
+  const uint32_t lui = 0x3c180000 | ((dynsymIndex >> 16) & 0x7fff);
+  const uint32_t jalr = ctx.arg.zHazardplt ? 0x0320fc09 : 0x0320f809;
+  uint32_t loadIndex;
+  if (big)
+    loadIndex = 0x37180000 | (dynsymIndex & 0xffff); // ori $24, $24, idx
+  else if (dynsymIndex & ~0x7fff)
+    loadIndex = 0x34180000 | (dynsymIndex & 0xffff); // ori $24, $0, idx
+  else
+    loadIndex = (ctx.arg.is64 ? 0x64180000 : 0x24180000) | // [d]addiu $24,
+                dynsymIndex;                               //   $0, idx
+
+  if (big) {
+    write32(ctx, buf, load);
+    write32(ctx, buf + 4, 0x03e07825); // move $15, $31
+    write32(ctx, buf + 8, lui);
+    write32(ctx, buf + 12, jalr);      // jalr[.hb] $25
+    write32(ctx, buf + 16, loadIndex); // delay slot
+  } else {
+    write32(ctx, buf, load);
+    write32(ctx, buf + 4, 0x03e07825); // move $15, $31
+    write32(ctx, buf + 8, jalr);       // jalr[.hb] $25
+    write32(ctx, buf + 12, loadIndex); // delay slot
+  }
+}
+
 template <class ELFT> MIPS<ELFT>::MIPS(Ctx &ctx) : TargetInfo(ctx) {
   gotPltHeaderEntriesNum = 2;
   defaultMaxPageSize = 65536;
@@ -668,6 +703,12 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
   }
 }
 
+static bool isCallReloc(RelType type) {
+  return type == R_MIPS_CALL16 || type == R_MIPS_CALL_HI16 ||
+         type == R_MIPS_CALL_LO16 || type == R_MICROMIPS_CALL16 ||
+         type == R_MICROMIPS_CALL_HI16 || type == R_MICROMIPS_CALL_LO16;
+}
+
 template <class ELFT>
 template <class RelTy>
 void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
@@ -698,6 +739,21 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
+
+    // In a shared object, turn untyped undefined symbols with a call
+    // relocation into function symbols so that the dynamic linker handles
+    // them correctly.
+    if (ctx.arg.shared && sym.isUndefined() && symIdx != 0 &&
+        sym.type == STT_NOTYPE && isCallReloc(type.v & 0xff))
+      sym.type = STT_FUNC;
+
+    if (symIdx != 0 && ctx.in.mipsStubs) {
+      uint32_t baseType = type.v & 0xff;
+      if (isCallReloc(baseType))
+        ctx.in.mipsStubs->recordCall(sym);
+      else if (baseType != R_MIPS_JALR && baseType != R_MICROMIPS_JALR)
+        ctx.in.mipsStubs->exclude(sym);
+    }
 
     auto addend = rs.getAddend<ELFT>(rel, type);
     if (expr == RE_MIPS_GOTREL && sym.isLocal()) {

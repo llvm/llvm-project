@@ -248,6 +248,7 @@ uint64_t getMipsPageAddr(uint64_t addr);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
 bool isMipsR6(Ctx &);
+void writeMipsStub(Ctx &, uint8_t *buf, uint32_t dynsymIndex, bool big);
 
 void writePPC32GlinkSection(Ctx &, uint8_t *buf, size_t numEntries);
 
