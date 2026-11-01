@@ -7,7 +7,8 @@ func.func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32
   // CHECK:      %[[C0:.*]] = arith.constant 0 : index
 
   // CHECK:      %[[RANGE:.*]] = arith.subi %[[UB]], %[[LB]]
-  // CHECK:      %[[TRIP_CNT:.*]] = arith.ceildivsi %[[RANGE]], %[[STEP]]
+  // CHECK:      %[[RAW_TRIP_CNT:.*]] = arith.ceildivsi %[[RANGE]], %[[STEP]]
+  // CHECK:      %[[TRIP_CNT:.*]] = arith.maxsi %[[RAW_TRIP_CNT]], %[[C0]]
   // CHECK:      %[[IS_NOOP:.*]] = arith.cmpi eq, %[[TRIP_CNT]], %[[C0]] : index
 
   // CHECK:      scf.if %[[IS_NOOP]] {
