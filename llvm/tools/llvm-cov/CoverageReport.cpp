@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoverageReport.h"
+#include "CoverageExclusions.h"
 #include "RenderingSupport.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
@@ -428,7 +429,11 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
     OS << "\n";
     FunctionCoverageSummary Totals("TOTAL");
     for (const auto &F : Functions) {
-      auto Function = FunctionCoverageSummary::get(Coverage, F);
+      if (Options.SourceExclusions &&
+          Options.SourceExclusions->isFunctionExcluded(F, Filename))
+        continue;
+      auto Function =
+          FunctionCoverageSummary::get(Coverage, F, Options.SourceExclusions);
       ++Totals.ExecutionCount;
       Totals.RegionCoverage += Function.RegionCoverage;
       Totals.LineCoverage += Function.LineCoverage;
@@ -451,9 +456,13 @@ void CoverageReport::prepareSingleFileReport(const StringRef Filename,
   for (const auto &Group : Coverage->getInstantiationGroups(Filename)) {
     std::vector<FunctionCoverageSummary> InstantiationSummaries;
     for (const coverage::FunctionRecord *F : Group.getInstantiations()) {
-      if (!Filters->matches(*Coverage, *F))
+      if (Options.SourceExclusions &&
+          Options.SourceExclusions->isFunctionExcluded(*F, Filename))
         continue;
-      auto InstantiationSummary = FunctionCoverageSummary::get(*Coverage, *F);
+      if (!Filters->matches(*Coverage, *F, Options.SourceExclusions))
+        continue;
+      auto InstantiationSummary =
+          FunctionCoverageSummary::get(*Coverage, *F, Options.SourceExclusions);
       FileReport->addInstantiation(InstantiationSummary);
       InstantiationSummaries.push_back(InstantiationSummary);
     }

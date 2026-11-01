@@ -52,6 +52,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoverageExporterJson.h"
+#include "CoverageExclusions.h"
 #include "CoverageReport.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -204,41 +205,56 @@ void renderMCDCRecord(json::OStream &JOS, const coverage::MCDCRecord &Record,
 }
 
 void renderRegions(json::OStream &JOS,
-                   ArrayRef<coverage::CountedRegion> Regions) {
+                   ArrayRef<coverage::CountedRegion> Regions,
+                   const coverage::FunctionRecord &Function,
+                   const CoverageViewOptions &Options) {
   JOS.array([&] {
     for (const auto &Region : Regions)
-      renderRegion(JOS, Region);
+      if (!Options.SourceExclusions ||
+          !Options.SourceExclusions->isRegionExcluded(Function, Region))
+        renderRegion(JOS, Region);
   });
 }
 
 void renderBranchRegions(json::OStream &JOS,
-                         ArrayRef<coverage::CountedRegion> Regions) {
+                         ArrayRef<coverage::CountedRegion> Regions,
+                         const coverage::FunctionRecord &Function,
+                         const CoverageViewOptions &Options) {
   JOS.array([&] {
     for (const auto &Region : Regions)
-      if (!Region.TrueFolded || !Region.FalseFolded)
+      if ((!Options.SourceExclusions ||
+           !Options.SourceExclusions->isRegionExcluded(Function, Region)) &&
+          (!Region.TrueFolded || !Region.FalseFolded))
         renderBranch(JOS, Region);
   });
 }
 
 void renderMCDCRecords(json::OStream &JOS,
                        ArrayRef<coverage::MCDCRecord> Records,
+                       const coverage::FunctionRecord &Function,
                        const CoverageViewOptions &Options) {
   JOS.array([&] {
     for (auto &Record : Records)
-      renderMCDCRecord(JOS, Record, Options);
+      if (!Options.SourceExclusions ||
+          !Options.SourceExclusions->isRegionExcluded(
+              Function, Record.getDecisionRegion()))
+        renderMCDCRecord(JOS, Record, Options);
   });
 }
 
 std::vector<llvm::coverage::CountedRegion>
 collectNestedBranches(const coverage::CoverageMapping &Coverage,
-                      ArrayRef<llvm::coverage::ExpansionRecord> Expansions) {
+                      ArrayRef<llvm::coverage::ExpansionRecord> Expansions,
+                      const CoverageViewOptions &Options) {
   std::vector<llvm::coverage::CountedRegion> Branches;
   for (const auto &Expansion : Expansions) {
-    auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
+    auto ExpansionCoverage = applyCoverageExclusions(
+        Options.SourceExclusions, Coverage.getCoverageForExpansion(Expansion));
 
     // Recursively collect branches from nested expansions.
     auto NestedExpansions = ExpansionCoverage.getExpansions();
-    auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions);
+    auto NestedExBranches =
+        collectNestedBranches(Coverage, NestedExpansions, Options);
     append_range(Branches, NestedExBranches);
 
     // Add branches from this level of expansion.
@@ -253,7 +269,8 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
 
 void renderExpansion(json::OStream &JOS,
                      const coverage::CoverageMapping &Coverage,
-                     const coverage::ExpansionRecord &Expansion) {
+                     const coverage::ExpansionRecord &Expansion,
+                     const CoverageViewOptions &Options) {
   std::vector<llvm::coverage::ExpansionRecord> Expansions = {Expansion};
   JOS.object([&] {
     JOS.attributeArray("filenames", [&] {
@@ -262,7 +279,11 @@ void renderExpansion(json::OStream &JOS,
     });
     // Enumerate the branch coverage information for the expansion.
     JOS.attributeBegin("branches");
-    renderBranchRegions(JOS, collectNestedBranches(Coverage, Expansions));
+    JOS.array([&] {
+      for (const auto &Branch :
+           collectNestedBranches(Coverage, Expansions, Options))
+        renderBranch(JOS, Branch);
+    });
     JOS.attributeEnd();
     // Mark the beginning and end of this expansion in the source file.
     JOS.attributeBegin("source_region");
@@ -270,7 +291,8 @@ void renderExpansion(json::OStream &JOS,
     JOS.attributeEnd();
     // Enumerate the coverage information for the expansion.
     JOS.attributeBegin("target_regions");
-    renderRegions(JOS, Expansion.Function.CountedRegions);
+    renderRegions(JOS, Expansion.Function.CountedRegions, Expansion.Function,
+                  Options);
     JOS.attributeEnd();
   });
 }
@@ -331,7 +353,8 @@ void renderFile(json::OStream &JOS, const coverage::CoverageMapping &Coverage,
     JOS.attribute("filename", Filename);
     if (!Options.ExportSummaryOnly) {
       // Calculate and render detailed coverage information for given file.
-      auto FileCoverage = Coverage.getCoverageForFile(Filename);
+      auto FileCoverage = applyCoverageExclusions(
+          Options.SourceExclusions, Coverage.getCoverageForFile(Filename));
       JOS.attributeArray("branches", [&] {
         for (const auto &Branch : FileCoverage.getBranches())
           renderBranch(JOS, Branch);
@@ -339,7 +362,7 @@ void renderFile(json::OStream &JOS, const coverage::CoverageMapping &Coverage,
       if (!Options.SkipExpansions) {
         JOS.attributeArray("expansions", [&] {
           for (const auto &Expansion : FileCoverage.getExpansions())
-            renderExpansion(JOS, Coverage, Expansion);
+            renderExpansion(JOS, Coverage, Expansion, Options);
         });
       }
       JOS.attributeArray("mcdc_records", [&] {
@@ -405,9 +428,12 @@ void renderFunctions(
     const CoverageViewOptions &Options) {
   JOS.array([&] {
     for (const auto &F : Functions) {
+      if (Options.SourceExclusions &&
+          Options.SourceExclusions->isFunctionExcluded(F))
+        continue;
       JOS.object([&] {
         JOS.attributeBegin("branches");
-        renderBranchRegions(JOS, F.CountedBranchRegions);
+        renderBranchRegions(JOS, F.CountedBranchRegions, F, Options);
         JOS.attributeEnd();
 
         JOS.attribute("count", clamp_uint64_to_int64(F.ExecutionCount));
@@ -418,13 +444,13 @@ void renderFunctions(
         });
 
         JOS.attributeBegin("mcdc_records");
-        renderMCDCRecords(JOS, F.MCDCRecords, Options);
+        renderMCDCRecords(JOS, F.MCDCRecords, F, Options);
         JOS.attributeEnd();
 
         JOS.attribute("name", F.Name);
 
         JOS.attributeBegin("regions");
-        renderRegions(JOS, F.CountedRegions);
+        renderRegions(JOS, F.CountedRegions, F, Options);
         JOS.attributeEnd();
       });
     }
