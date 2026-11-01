@@ -18,6 +18,8 @@
 #include <memory>
 #include <utility>
 
+#include "test_macros.h"
+
 struct UserDefined {};
 
 struct CustomDeleter {
@@ -145,7 +147,9 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 23
   static_assert(test());
+#endif
 
   return 0;
 }
