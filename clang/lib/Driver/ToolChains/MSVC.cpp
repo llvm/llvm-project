@@ -122,8 +122,20 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
       !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
-    CmdArgs.push_back("-defaultlib:libcmt");
-    CmdArgs.push_back("-defaultlib:oldnames");
+    if (!Args.hasArg(options::OPT_nodefaultlibs,
+                     options::OPT_fms_omit_default_lib)) {
+      StringRef CRT = "libcmt";
+      if (const Arg *A = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+        CRT = llvm::StringSwitch<StringRef>(A->getValue())
+                  .Case("dll", "msvcrt")
+                  .Case("dll_dbg", "msvcrtd")
+                  .Case("static", "libcmt")
+                  .Case("static_dbg", "libcmtd")
+                  .Default("libcmt");
+      }
+      CmdArgs.push_back(Args.MakeArgString("-defaultlib:" + CRT));
+      CmdArgs.push_back("-defaultlib:oldnames");
+    }
 
     // SYCL: Add runtime library for clang (non-clang-cl) with MSVC target.
     // For clang-cl, --dependent-lib is used at compiler stage instead.
