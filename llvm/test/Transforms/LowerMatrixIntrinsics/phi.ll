@@ -862,6 +862,43 @@ exit:
   ret <4 x float> %phi
 }
 
+define <4 x float> @matrix_phi_invoke_incoming_from_invoke_block() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @matrix_phi_invoke_incoming_from_invoke_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INV:%.*]] = invoke <4 x float> @get_matrix()
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI:%.*]] = phi <4 x float> [ [[INV]], [[ENTRY:%.*]] ], [ zeroinitializer, [[LPAD]] ]
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x float> [[PHI]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <4 x float> [[PHI]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x float> [[SPLIT]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[SPLIT1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP1]], float [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[SPLIT]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[SPLIT1]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP8]]
+;
+entry:
+  %inv = invoke <4 x float> @get_matrix() to label %exit unwind label %lpad
+
+lpad:
+  %l = landingpad { ptr, i32 } cleanup
+  br label %exit
+
+exit:
+  %phi = phi <4 x float> [ %inv, %entry ], [ zeroinitializer, %lpad ]
+  %t = call <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> %phi, i32 2, i32 2)
+  ret <4 x float> %t
+}
+
 define <4 x float> @matrix_phi_duplicate_predecessor(ptr %arg, i32 %sw) {
 ; CHECK-LABEL: @matrix_phi_duplicate_predecessor(
 ; CHECK-NEXT:  entry:

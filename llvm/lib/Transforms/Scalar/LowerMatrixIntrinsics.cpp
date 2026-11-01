@@ -705,6 +705,15 @@ public:
       default:
         break;
       }
+
+    // Lowered PHIs split incoming values in the incoming block. A value defined
+    // by its terminator (invoke, callbr) is only available on the edge, so keep
+    // such PHIs flat.
+    if (auto *PHI = dyn_cast<PHINode>(Inst))
+      for (auto [V, BB] : zip_equal(PHI->incoming_values(), PHI->blocks()))
+        if (V == BB->getTerminator())
+          return false;
+
     return isShapePreserving(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
   }
 
