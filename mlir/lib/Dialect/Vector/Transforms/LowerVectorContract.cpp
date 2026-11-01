@@ -362,7 +362,8 @@ private:
                                  int64_t rhsIndex, Value mask) const;
   // Lower one reduction dimension.
   FailureOr<Value> lowerReduction(PatternRewriter &rewriter,
-                                  vector::ContractionOp op, Value mask) const;
+                                  vector::ContractionOp op, int64_t lhsIndex,
+                                  int64_t rhsIndex, Value mask) const;
 };
 
 /// Generate a vector implementation for matmat, matvec and tmatvec.
@@ -946,8 +947,9 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
   Value mask;
   if (maskOp)
     mask = maskOp.getMask();
+  using DimPair = std::pair<int64_t, int64_t>;
   // Find first batch dimension in LHS/RHS, and lower when found.
-  std::vector<std::pair<int64_t, int64_t>> batchDimMap = op.getBatchDimMap();
+  std::vector<DimPair> batchDimMap = op.getBatchDimMap();
   if (!batchDimMap.empty()) {
     int64_t lhsIndex = batchDimMap[0].first;
     int64_t rhsIndex = batchDimMap[0].second;
@@ -957,51 +959,40 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
     return newOp;
   }
 
-  // Collect contracting dimensions.
-  std::vector<std::pair<int64_t, int64_t>> contractingDimMap =
-      op.getContractingDimMap();
-  DenseSet<int64_t> lhsContractingDimSet;
-  DenseSet<int64_t> rhsContractingDimSet;
-  for (auto &dimPair : contractingDimMap) {
-    lhsContractingDimSet.insert(dimPair.first);
-    rhsContractingDimSet.insert(dimPair.second);
+  // Find the first free or one-operand reduction dimension, in LHS and then
+  // in RHS, and lower when found.
+  std::vector<DimPair> freeDimMap = op.getFreeDimMap();
+  std::vector<DimPair> reductionDimMap = op.getOneOperandReductionDimMap();
+  for (bool onLhs : {true, false}) {
+    auto getDim = [&](const DimPair &dims) {
+      return onLhs ? dims.first : dims.second;
+    };
+    auto findFirst = [&](ArrayRef<DimPair> dimMap) -> const DimPair * {
+      const DimPair *first = nullptr;
+      for (const DimPair &dims : dimMap)
+        if (getDim(dims) >= 0 && (!first || getDim(dims) < getDim(*first)))
+          first = &dims;
+      return first;
+    };
+    const DimPair *freeDim = findFirst(freeDimMap);
+    const DimPair *reductionDim = findFirst(reductionDimMap);
+    if (freeDim && (!reductionDim || getDim(*freeDim) < getDim(*reductionDim)))
+      return lowerParallel(rewriter, op, freeDim->first, freeDim->second, mask);
+    if (reductionDim)
+      return lowerReduction(rewriter, op, reductionDim->first,
+                            reductionDim->second, mask);
   }
 
-  // Find first free dimension in LHS, and lower when found.
-  VectorType lhsType = op.getLhsType();
-  for (int64_t lhsIndex = 0, e = lhsType.getRank(); lhsIndex < e; ++lhsIndex) {
-    if (lhsContractingDimSet.count(lhsIndex) == 0) {
-      auto newOp = lowerParallel(rewriter, op, lhsIndex, /*rhsIndex=*/-1, mask);
-      if (failed(newOp))
-        return failure();
-      return newOp;
-    }
-  }
-
-  // Find first free dimension in RHS, and lower when found.
-  VectorType rhsType = op.getRhsType();
-  for (int64_t rhsIndex = 0, e = rhsType.getRank(); rhsIndex < e; ++rhsIndex) {
-    if (rhsContractingDimSet.count(rhsIndex) == 0) {
-      auto newOp = lowerParallel(rewriter, op, /*lhsIndex=*/-1, rhsIndex, mask);
-      if (failed(newOp))
-        return failure();
-      return newOp;
-    }
-  }
-
-  // Lower the first remaining reduction dimension.
-  if (!contractingDimMap.empty()) {
-    auto newOp = lowerReduction(rewriter, op, mask);
-    if (failed(newOp))
-      return failure();
-    return newOp;
-  }
+  // Lower the first remaining contracting dimension.
+  std::vector<DimPair> contractingDimMap = op.getContractingDimMap();
+  if (!contractingDimMap.empty())
+    return lowerReduction(rewriter, op, contractingDimMap[0].first,
+                          contractingDimMap[0].second, mask);
 
   return failure();
 }
 
 // Lower one parallel dimension.
-// Incidentally also tolerates unit-size (hence trivial) reduction dimensions.
 // TODO: consider reusing existing contract unrolling
 FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
                                                       vector::ContractionOp op,
@@ -1042,19 +1033,13 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
       diag << "expected either lhsIndex=" << lhsIndex
            << " or rhsIndex=" << rhsIndex << " to be nonnegative";
     });
-  // value_or(-1) means that we tolerate a dimension not appearing
-  // in the result map. That can't happen for actual parallel iterators, but
-  // the caller ContractionOpLowering::matchAndRewrite is currently calling
-  // lowerParallel also for the case of unit-size reduction dims appearing only
-  // on one of LHS or RHS, not both. At the moment, such cases are created by
-  // CastAwayContractionLeadingOneDim, so we need to either support that or
-  // modify that pattern.
-  int64_t resIndex = getResultIndex(iMap[2], iterIndex).value_or(-1);
-  if (resIndex == -1 && dimSize != 1)
+  std::optional<int64_t> lookupRes = getResultIndex(iMap[2], iterIndex);
+  if (!lookupRes.has_value())
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
       diag << "expected the dimension for iterIndex=" << iterIndex
-           << " to either appear in the result map, or to be a unit dimension";
+           << " to appear in the result map";
     });
+  int64_t resIndex = *lookupRes;
 
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
@@ -1088,43 +1073,67 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
   return result;
 }
 
-// Lower one reduction dimension.
+// Lower one reduction dimension. The dimension is either a contracting one
+// (both lhsIndex and rhsIndex are nonnegative), or appears on only one operand
+// (the other index is -1), in which case it must be a unit dimension.
 FailureOr<Value> ContractionOpLowering::lowerReduction(
-    PatternRewriter &rewriter, vector::ContractionOp op, Value mask) const {
+    PatternRewriter &rewriter, vector::ContractionOp op, int64_t lhsIndex,
+    int64_t rhsIndex, Value mask) const {
   auto loc = op.getLoc();
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   Type resType = op.getResultType();
-  if (isa<VectorType>(resType))
+  bool isContracting = lhsIndex >= 0 && rhsIndex >= 0;
+  bool isOneOperand = (lhsIndex >= 0) != (rhsIndex >= 0);
+  if (isContracting && isa<VectorType>(resType))
     return rewriter.notifyMatchFailure(op,
                                        "did not expect a VectorType result");
-  bool isInt = isa<IntegerType>(resType);
-  // Use iterator index 0.
-  int64_t iterIndex = 0;
   SmallVector<AffineMap> iMap = op.getIndexingMapsArray();
-  std::optional<int64_t> lookupLhs = getResultIndex(iMap[0], iterIndex);
-  std::optional<int64_t> lookupRhs = getResultIndex(iMap[1], iterIndex);
-  if (!lookupLhs.has_value())
+  int64_t iterIndex = -1;
+  int64_t dimSize = -1;
+  if (isContracting) {
+    // The dimension must map to the same iterator and have the same size on
+    // both operands.
+    iterIndex = iMap[0].getDimPosition(lhsIndex);
+    if (iterIndex != iMap[1].getDimPosition(rhsIndex))
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "expected lhsIndex=" << lhsIndex << " and rhsIndex=" << rhsIndex
+             << " to map to the same dimension";
+      });
+    dimSize = lhsType.getDimSize(lhsIndex);
+    if (dimSize != rhsType.getDimSize(rhsIndex))
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "expect LHS dimension " << lhsIndex
+             << " to have the same size as RHS dimension " << rhsIndex;
+      });
+  } else if (isOneOperand) {
+    // The dimension appears on one operand only, so the reduction is a no-op
+    // only if it has a single iteration. A scalable dim is not known to have
+    // a single iteration.
+    bool onLhs = lhsIndex >= 0;
+    VectorType type = onLhs ? lhsType : rhsType;
+    int64_t index = onLhs ? lhsIndex : rhsIndex;
+    iterIndex = iMap[onLhs ? 0 : 1].getDimPosition(index);
+    dimSize = type.getDimSize(index);
+    if (type.getScalableDims()[index] || dimSize != 1)
+      return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+        diag << "expected the reduction dimension " << index
+             << " appearing on one operand only to be a non-scalable unit "
+                "dimension";
+      });
+  } else {
+    // No dimension to lower.
     return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-      diag << "expected iterIndex=" << iterIndex << "to map to a LHS dimension";
+      diag << "expected either lhsIndex=" << lhsIndex
+           << " or rhsIndex=" << rhsIndex << " to be nonnegative";
     });
-  if (!lookupRhs.has_value())
-    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-      diag << "expected iterIndex=" << iterIndex << "to map to a RHS dimension";
-    });
-  int64_t lhsIndex = *lookupLhs;
-  int64_t rhsIndex = *lookupRhs;
-  int64_t dimSize = lhsType.getDimSize(lhsIndex);
-  if (dimSize != rhsType.getDimSize(rhsIndex))
-    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-      diag << "expect LHS dimension " << lhsIndex
-           << " to have the same size as RHS dimension " << rhsIndex;
-    });
+  }
   // Base case.
-  if (lhsType.getRank() == 1) {
+  if (isContracting && lhsType.getRank() == 1) {
     if (rhsType.getRank() != 1)
       return rewriter.notifyMatchFailure(
           op, "When LHS has rank 1, expected also RHS to have rank 1");
+    bool isInt = isa<IntegerType>(resType);
     arith::FastMathFlagsAttr fmf = op.getFastmathAttr();
     Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter, fmf);
     auto kind = vector::CombiningKind::ADD;

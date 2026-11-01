@@ -935,3 +935,26 @@ func.func @masked_vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf3
 // CHECK-LABEL: func @masked_vector_multi_reduction
 //  CHECK-NEXT:   %[[R:.*]] = vector.mask %{{.*}} { vector.multi_reduction <add>, {{.*}} : vector<4x6xf32> to vector<4xf32> }
 //  CHECK-NEXT:   return %[[R]]
+
+// -----
+
+// The reduction dim d0 appears on the RHS only, so its size is taken from the
+// RHS shape.
+func.func @vector_contract_one_operand_reduction(%lhs : vector<4x4xf32>, %rhs : vector<4x4xf32>, %init : vector<4xf32>) -> vector<4xf32> {
+  %0 = vector.contract
+         {indexing_maps = [affine_map<(d0, d1, d2) -> (d1, d2)>,
+                           affine_map<(d0, d1, d2) -> (d0, d2)>,
+                           affine_map<(d0, d1, d2) -> (d1)>],
+          iterator_types = ["reduction", "parallel", "reduction"]}
+       %lhs, %rhs, %init : vector<4x4xf32>, vector<4x4xf32> into vector<4xf32>
+  return %0 : vector<4xf32>
+}
+// CHECK-LABEL: func @vector_contract_one_operand_reduction
+// CHECK-SAME: %[[LHS:.+]]: vector<4x4xf32>, %[[RHS:.+]]: vector<4x4xf32>, %[[INIT:.+]]: vector<4xf32>
+//       CHECK:   %[[L0:.+]] = vector.extract_strided_slice %[[LHS]]{{.*}} offsets = [0, 0]
+//       CHECK:   %[[R0:.+]] = vector.extract_strided_slice %[[RHS]]{{.*}} offsets = [0, 0]
+//       CHECK:   %[[C0:.+]] = vector.contract {{.*}} %[[L0]], %[[R0]], %[[INIT]] : vector<4x2xf32>, vector<4x2xf32> into vector<4xf32>
+//       CHECK:   %[[L1:.+]] = vector.extract_strided_slice %[[LHS]]{{.*}} offsets = [0, 2]
+//       CHECK:   %[[R1:.+]] = vector.extract_strided_slice %[[RHS]]{{.*}} offsets = [0, 2]
+//       CHECK:   %[[C1:.+]] = vector.contract {{.*}} %[[L1]], %[[R1]], %[[C0]] : vector<4x2xf32>, vector<4x2xf32> into vector<4xf32>
+//       CHECK:   return %[[C1]] : vector<4xf32>
