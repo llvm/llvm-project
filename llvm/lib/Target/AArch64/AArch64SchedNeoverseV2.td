@@ -27,7 +27,8 @@ def NeoverseV2Model : SchedMachineModel {
                                                     SVE2p1Unsupported.F,
                                                     [HasSVE2p1, HasSVEB16B16,
                                                      HasSVEBFSCALE,
-                                                     HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
+                                                     HasCPA, HasCSSC, HasMOPS, HasMOPS_GO,
+                                                     HasFPv2]);
 }
 
 //===----------------------------------------------------------------------===//

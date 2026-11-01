@@ -1,7 +1,7 @@
 ; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
-;; Check that the new slices of an alloca and memcpy intructions get dbg.assign
+;; Check that the new slices of an alloca and memcpy instructions get dbg.assign
 ;; intrinsics with the correct fragment info.
 ;;
 ;; Also check that the new dbg.assign intrinsics are inserted after each split

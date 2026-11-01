@@ -6,6 +6,10 @@ define void @dependency_check_and_runtime_checks_needed_gepb_is_inbounds_iv2_ste
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
+; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -67,6 +71,10 @@ define void @dependency_check_and_runtime_checks_needed_gepb_not_inbounds_iv2_st
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
+; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -129,6 +137,10 @@ define void @dependency_check_and_runtime_checks_needed_gepb_is_inbounds_iv2_ste
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
+; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -195,6 +207,10 @@ define void @dependency_check_and_runtime_checks_needed_gepb_not_inbounds_iv2_st
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
+; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -260,6 +276,10 @@ define void @dependency_check_and_runtime_checks_needed_gepb_may_wrap(ptr %a, pt
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
+; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -383,6 +403,10 @@ define void @unknown_dep_load_and_store_via_non_header_phis(ptr %a, ptr %b, i64 
 ; CHECK-NEXT:    loop.header:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l = load float, ptr %ptr.ld, align 4 ->
+; CHECK-NEXT:            store float %l, ptr %ptr.st, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -563,6 +587,10 @@ define void @backward_vectorizable_dep_and_unknown_deps(ptr %a, i64 %offset, i64
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 128 bits, with a maximum safe store-load forward width of 128 bits with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %l.a = load i32, ptr %gep.a, align 4 ->
+; CHECK-NEXT:            store i32 %l.a, ptr %gep.a.4, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -623,6 +651,10 @@ define void @unknown_dep_with_one_of_stores_within_step(ptr %a, i64 %offset, i64
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            store i16 2, ptr %gep.a.10, align 1 ->
+; CHECK-NEXT:            store i32 3, ptr %gep.a.4, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -702,6 +734,10 @@ define void @written_ptr_with_unknown_dep_only_for_load(ptr %a, i64 %offset, i64
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l.a = load i64, ptr %gep.a, align 1 ->
+; CHECK-NEXT:            store i32 1, ptr %gep.a, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -763,6 +799,10 @@ define void @interleaved_stores_with_unknown_deps_to_two_objects(ptr %a, ptr %b,
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l.b.off = load i32, ptr %gep.b.off, align 4 ->
+; CHECK-NEXT:            store i32 %l.b.off, ptr %gep.b.off, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:

@@ -476,6 +476,283 @@ define void @load_of_select_with_noundef_nonnull(ptr %buffer, i1 %b) {
   ret void
 }
 
+
+define i32 @test_select_spec(i1 %cond) {
+; CHECK-LABEL: @test_select_spec(
+; CHECK-NEXT:    [[VAL_SROA_SPECULATED:%.*]] = select i1 [[COND:%.*]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[VAL_SROA_SPECULATED]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  store i32 1, ptr %alloc0
+  store i32 2, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  %val = load i32, ptr %sel
+  ret i32 %val
+}
+
+define i32 @test_select_spec_addrspace(i1 %cond) {
+; CHECK-LABEL: @test_select_spec_addrspace(
+; CHECK-NEXT:    [[VAL:%.*]] = select i1 [[COND:%.*]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  store i32 1, ptr %alloc0
+  store i32 2, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  %cast = addrspacecast ptr %sel to ptr addrspace(5)
+  %val = load i32, ptr addrspace(5) %cast
+  ret i32 %val
+}
+
+define i32 @test_select_spec_addrspace_2loads(i1 %cond) {
+; CHECK-LABEL: @test_select_spec_addrspace_2loads(
+; CHECK-NEXT:    [[VAL0:%.*]] = select i1 [[COND:%.*]], i32 1, i32 2
+; CHECK-NEXT:    [[VAL1:%.*]] = select i1 [[COND]], i32 1, i32 2
+; CHECK-NEXT:    [[VAL2:%.*]] = add i32 [[VAL0]], [[VAL1]]
+; CHECK-NEXT:    ret i32 [[VAL2]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  store i32 1, ptr %alloc0
+  store i32 2, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  %cast = addrspacecast ptr %sel to ptr addrspace(5)
+  %val0 = load i32, ptr addrspace(5) %cast
+  %val1 = load i32, ptr addrspace(5) %cast
+  %val2 = add i32 %val0, %val1
+  ret i32 %val2
+}
+
+define i32 @test_select_spec_noalias(i1 %cond, ptr %v) {
+; CHECK-LABEL: @test_select_spec_noalias(
+; CHECK-NEXT:    store i32 5, ptr [[V:%.*]], align 4
+; CHECK-NEXT:    [[VAL_SROA_SPECULATED:%.*]] = select i1 [[COND:%.*]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[VAL_SROA_SPECULATED]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  store i32 1, ptr %alloc0
+  store i32 2, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  store i32 5, ptr %v
+  %val = load i32, ptr %sel
+  ret i32 %val
+}
+
+define i32 @test_select_spec_mayalias_1(i1 %cond) {
+; CHECK-LABEL: @test_select_spec_mayalias_1(
+; CHECK-NEXT:    [[VAL_SROA_SPECULATED:%.*]] = select i1 [[COND:%.*]], i32 5, i32 2
+; CHECK-NEXT:    ret i32 [[VAL_SROA_SPECULATED]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  store i32 1, ptr %alloc0
+  store i32 2, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  store i32 5, ptr %alloc0
+  %val = load i32, ptr %sel
+  ret i32 %val
+}
+
+define i32 @test_select_spec_mayalias_2(i1 %cond, i32 %i) {
+; CHECK-LABEL: @test_select_spec_mayalias_2(
+; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 1, ptr [[ALLOC0]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[ALLOC1]], align 4
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC0]], ptr [[ALLOC1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[SEL]], i32 [[I:%.*]]
+; CHECK-NEXT:    store i32 5, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[SEL]], align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  store i32 1, ptr %alloc0
+  store i32 2, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  %gep = getelementptr i32, ptr %sel, i32 %i
+  store i32 5, ptr %gep
+  %val = load i32, ptr %sel
+  ret i32 %val
+}
+
+define i32 @test_select_spec_mustalias(i1 %cond, ptr %param0, ptr %param1) {
+; CHECK-PRESERVE-CFG-LABEL: @test_select_spec_mustalias(
+; CHECK-PRESERVE-CFG-NEXT:    [[ALLOC0:%.*]] = alloca i32, align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[ALLOC1:%.*]] = alloca i32, align 4
+; CHECK-PRESERVE-CFG-NEXT:    store i32 1, ptr [[ALLOC0]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    store i32 2, ptr [[ALLOC1]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[SEL_SROA_SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC0]], ptr [[ALLOC1]]
+; CHECK-PRESERVE-CFG-NEXT:    store i32 10, ptr [[ALLOC0]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    store i32 15, ptr [[PARAM0:%.*]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    store i32 5, ptr [[SEL_SROA_SEL]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    store i32 20, ptr [[PARAM1:%.*]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[VAL:%.*]] = load i32, ptr [[SEL_SROA_SEL]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    ret i32 [[VAL]]
+;
+; CHECK-MODIFY-CFG-LABEL: @test_select_spec_mustalias(
+; CHECK-MODIFY-CFG-NEXT:    store i32 15, ptr [[PARAM0:%.*]], align 4
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[COND:%.*]], label [[DOTTHEN:%.*]], label [[DOTELSE:%.*]]
+; CHECK-MODIFY-CFG:       .then:
+; CHECK-MODIFY-CFG-NEXT:    br label [[DOTCONT:%.*]]
+; CHECK-MODIFY-CFG:       .else:
+; CHECK-MODIFY-CFG-NEXT:    br label [[DOTCONT]]
+; CHECK-MODIFY-CFG:       .cont:
+; CHECK-MODIFY-CFG-NEXT:    [[ALLOC0_0:%.*]] = phi i32 [ 5, [[DOTTHEN]] ], [ 10, [[DOTELSE]] ]
+; CHECK-MODIFY-CFG-NEXT:    [[ALLOC1_0:%.*]] = phi i32 [ 2, [[DOTTHEN]] ], [ 5, [[DOTELSE]] ]
+; CHECK-MODIFY-CFG-NEXT:    store i32 20, ptr [[PARAM1:%.*]], align 4
+; CHECK-MODIFY-CFG-NEXT:    [[VAL_SROA_SPECULATED:%.*]] = select i1 [[COND]], i32 [[ALLOC0_0]], i32 [[ALLOC1_0]]
+; CHECK-MODIFY-CFG-NEXT:    ret i32 [[VAL_SROA_SPECULATED]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  store i32 1, ptr %alloc0
+  store i32 2, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  store i32 10, ptr %alloc0
+  store i32 15, ptr %param0
+  store i32 5, ptr %sel
+  store i32 20, ptr %param1
+  %val = load i32, ptr %sel
+  ret i32 %val
+}
+
+define i32 @test_select_spec_volatile1(i1 %cond) {
+; CHECK-LABEL: @test_select_spec_volatile1(
+; CHECK-NEXT:    [[ALLOC2:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[ALLOC2]], align 4
+; CHECK-NEXT:    [[ALLOC0_0_VAL_SROA_SPECULATE_LOAD_TRUE:%.*]] = load i32, ptr [[ALLOC2]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = select i1 [[COND:%.*]], i32 [[ALLOC0_0_VAL_SROA_SPECULATE_LOAD_TRUE]], i32 2
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  store volatile i32 1, ptr %alloc0
+  store i32 2, ptr %alloc1
+  %sel = select i1 %cond, ptr %alloc0, ptr %alloc1
+  %cast = addrspacecast ptr %sel to ptr addrspace(5)
+  %val = load i32, ptr addrspace(5) %cast
+  ret i32 %val
+}
+
+define i32 @test_select_spec_volatile2(i1 %cond) {
+; CHECK-LABEL: @test_select_spec_volatile2(
+; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[ALLOC0]] to ptr addrspace(5)
+; CHECK-NEXT:    store volatile i32 1, ptr addrspace(5) [[TMP1]], align 4
+; CHECK-NEXT:    [[ALLOC0_0_VAL_SROA_SPECULATE_LOAD_TRUE:%.*]] = load i32, ptr [[ALLOC0]], align 4
+; CHECK-NEXT:    [[VAL_SROA_SPECULATED:%.*]] = select i1 [[COND:%.*]], i32 [[ALLOC0_0_VAL_SROA_SPECULATE_LOAD_TRUE]], i32 2
+; CHECK-NEXT:    ret i32 [[VAL_SROA_SPECULATED]]
+;
+  %alloc0 = alloca i32, align 4
+  %alloc1 = alloca i32, align 4
+  %cast0 = addrspacecast ptr %alloc0 to ptr addrspace(5)
+  %cast1 = addrspacecast ptr %alloc1 to ptr addrspace(5)
+  store volatile i32 1, ptr addrspace(5) %cast0
+  store i32 2, ptr addrspace(5) %cast1
+  %sel = select i1 %cond, ptr addrspace(5) %cast0, ptr addrspace(5) %cast1
+  %val = load i32, ptr addrspace(5) %sel
+  ret i32 %val
+}
+
+; Memory operations that cannot be speculated are predicated instead. The
+; predicated access must keep its original address space.
+define i32 @test_select_predicated_load_addrspace(i1 %cond, ptr %p) {
+; CHECK-PRESERVE-CFG-LABEL: @test_select_predicated_load_addrspace(
+; CHECK-PRESERVE-CFG-NEXT:    [[ALLOC:%.*]] = alloca i32, align 4
+; CHECK-PRESERVE-CFG-NEXT:    store i32 1, ptr [[ALLOC]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC]], ptr [[P:%.*]]
+; CHECK-PRESERVE-CFG-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[SEL]] to ptr addrspace(5)
+; CHECK-PRESERVE-CFG-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(5) [[CAST]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    ret i32 [[VAL]]
+;
+; CHECK-MODIFY-CFG-LABEL: @test_select_predicated_load_addrspace(
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[COND:%.*]], label [[DOTCONT:%.*]], label [[DOTELSE:%.*]]
+; CHECK-MODIFY-CFG:       .else:
+; CHECK-MODIFY-CFG-NEXT:    [[VAL_ELSE_CAST:%.*]] = addrspacecast ptr [[P:%.*]] to ptr addrspace(5)
+; CHECK-MODIFY-CFG-NEXT:    [[VAL_ELSE_VAL:%.*]] = load i32, ptr addrspace(5) [[VAL_ELSE_CAST]], align 4
+; CHECK-MODIFY-CFG-NEXT:    br label [[DOTCONT]]
+; CHECK-MODIFY-CFG:       .cont:
+; CHECK-MODIFY-CFG-NEXT:    [[VAL:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ [[VAL_ELSE_VAL]], [[DOTELSE]] ]
+; CHECK-MODIFY-CFG-NEXT:    ret i32 [[VAL]]
+;
+  %alloc = alloca i32, align 4
+  store i32 1, ptr %alloc
+  %sel = select i1 %cond, ptr %alloc, ptr %p
+  %cast = addrspacecast ptr %sel to ptr addrspace(5)
+  %val = load i32, ptr addrspace(5) %cast
+  ret i32 %val
+}
+
+define void @test_select_predicated_store_addrspace(i1 %cond, ptr %p) {
+; CHECK-PRESERVE-CFG-LABEL: @test_select_predicated_store_addrspace(
+; CHECK-PRESERVE-CFG-NEXT:    [[ALLOC:%.*]] = alloca i32, align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC]], ptr [[P:%.*]]
+; CHECK-PRESERVE-CFG-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[SEL]] to ptr addrspace(5)
+; CHECK-PRESERVE-CFG-NEXT:    store i32 7, ptr addrspace(5) [[CAST]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    ret void
+;
+; CHECK-MODIFY-CFG-LABEL: @test_select_predicated_store_addrspace(
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[COND:%.*]], label [[DOTTHEN:%.*]], label [[DOTELSE:%.*]]
+; CHECK-MODIFY-CFG:       .then:
+; CHECK-MODIFY-CFG-NEXT:    br label [[DOTCONT:%.*]]
+; CHECK-MODIFY-CFG:       .else:
+; CHECK-MODIFY-CFG-NEXT:    [[DOTELSE_CAST:%.*]] = addrspacecast ptr [[P:%.*]] to ptr addrspace(5)
+; CHECK-MODIFY-CFG-NEXT:    store i32 7, ptr addrspace(5) [[DOTELSE_CAST]], align 4
+; CHECK-MODIFY-CFG-NEXT:    br label [[DOTCONT]]
+; CHECK-MODIFY-CFG:       .cont:
+; CHECK-MODIFY-CFG-NEXT:    ret void
+;
+  %alloc = alloca i32, align 4
+  %sel = select i1 %cond, ptr %alloc, ptr %p
+  %cast = addrspacecast ptr %sel to ptr addrspace(5)
+  store i32 7, ptr addrspace(5) %cast
+  ret void
+}
+
+define i32 @test_select_volatile_load_addrspace(i1 %cond, ptr %p) {
+; CHECK-LABEL: @test_select_volatile_load_addrspace(
+; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 1, ptr [[ALLOC]], align 4
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC]], ptr [[P:%.*]]
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[SEL]] to ptr addrspace(5)
+; CHECK-NEXT:    [[VAL:%.*]] = load volatile i32, ptr addrspace(5) [[CAST]], align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %alloc = alloca i32, align 4
+  store i32 1, ptr %alloc
+  %sel = select i1 %cond, ptr %alloc, ptr %p
+  %cast = addrspacecast ptr %sel to ptr addrspace(5)
+  %val = load volatile i32, ptr addrspace(5) %cast
+  ret i32 %val
+}
+
+define i32 @test_select_chained_addrspacecast(i1 %cond) {
+; CHECK-LABEL: @test_select_chained_addrspacecast(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 1, ptr [[A]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[B]], align 4
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[C1:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(1)
+; CHECK-NEXT:    [[C2:%.*]] = addrspacecast ptr addrspace(1) [[C1]] to ptr addrspace(2)
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(2) [[C2]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %a = alloca i32, align 4
+  %b = alloca i32, align 4
+  store i32 1, ptr %a
+  store i32 2, ptr %b
+  %s = select i1 %cond, ptr %a, ptr %b
+  %c1 = addrspacecast ptr %s to ptr addrspace(1)
+  %c2 = addrspacecast ptr addrspace(1) %c1 to ptr addrspace(2)
+  %v = load i32, ptr addrspace(2) %c2
+  ret i32 %v
+}
+
 !0  = !{!"branch_weights", i32 1,  i32 99}
 !1 = !{}
 

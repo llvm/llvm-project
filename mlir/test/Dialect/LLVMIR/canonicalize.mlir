@@ -549,3 +549,27 @@ llvm.func @metadata_as_value_dedup() -> i32 {
   %4 = llvm.add %2, %3 : i32
   llvm.return %4 : i32
 }
+
+// -----
+
+// `inttoptr(ptrtoint(x))` must NOT be folded to `x`, even when the integer is
+// wide enough to hold every bit of the pointer: the pointer produced by
+// `inttoptr` may carry different (potentially wider) provenance than `x`, so
+// an access that is well-defined through the round-tripped pointer may be
+// undefined through `x`. Doing this fold in InstCombine is a known LLVM
+// miscompile. See:
+//  - https://github.com/llvm/llvm-project/issues/33896
+//  - https://groups.google.com/g/llvm-dev/c/tol05fa7PU0
+//  - https://alive2.llvm.org/ce/z/SboEbP
+//  - https://github.com/llvm/llvm-project/pull/234302
+
+// CHECK-LABEL: llvm.func @no_fold_inttoptr_ptrtoint
+// CHECK-SAME: (%[[PTR:.*]]: !llvm.ptr)
+llvm.func @no_fold_inttoptr_ptrtoint(%ptr: !llvm.ptr) -> !llvm.ptr {
+  // CHECK: %[[INT:.*]] = llvm.ptrtoint %[[PTR]] : !llvm.ptr to i64
+  // CHECK: %[[RES:.*]] = llvm.inttoptr %[[INT]] : i64 to !llvm.ptr
+  // CHECK: llvm.return %[[RES]] : !llvm.ptr
+  %0 = llvm.ptrtoint %ptr : !llvm.ptr to i64
+  %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}

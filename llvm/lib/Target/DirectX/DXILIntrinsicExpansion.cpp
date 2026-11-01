@@ -578,9 +578,8 @@ static Value *expandIsFPClass(CallInst *Orig) {
   Value *FBitCast = Builder.CreateBitCast(F, BitCastTy);
   switch (TCI->getZExtValue()) {
   case FPClassTest::fcNegZero: {
-    Value *NegZero =
-        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1),
-                         /*IsSigned=*/true);
+    Value *NegZero = ConstantInt::get(Builder.getIntNTy(BitWidth),
+                                      APInt::getSignMask(BitWidth));
     Value *RetVal;
     if (FNumElem) {
       Value *NegZeroSplat = Builder.CreateVectorSplat(FNumElem, NegZero);

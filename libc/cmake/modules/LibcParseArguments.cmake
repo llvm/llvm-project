@@ -25,7 +25,7 @@
 #
 #      add_libc_test(
 #        sin_test
-#        SUITE libc_math_tests
+#        SUITE libc-math-tests
 #        SRCS sin_test.cpp
 #        DEPENDS libc.src.math.sin
 #        OVERLAY_DEPENDS libc.test.UnitTest.OverlaySupport
@@ -48,7 +48,7 @@
 #      add_libc_test(
 #        loader_test
 #        FULL_BUILD_ONLY
-#        SUITE libc_loader_tests
+#        SUITE libc-loader-tests
 #        SRCS loader_test.cpp
 #        DEPENDS ...
 #      )
@@ -87,16 +87,14 @@ set(LLVM_LIBC_OPTIONAL_ARGS
   REDIRECTED
   SKIPPED
   NO_GPU_BUNDLE
-  NO_RUN_POSTBUILD
   C_TEST
   NEED_MPFR
   NEED_MPFR_F80
   NEED_MPFR_F128
   NEED_MPC
-  IS_GPU_BENCHMARK
   FP_TEST
+  INTEGRATION_TEST
   BUILD_ONLY
-  EXHAUSTIVE
   ROOT
   PACKAGE_VARIANTS
   DISPATCH_VARIANTS

@@ -90,11 +90,11 @@ def CIR_OpenCLVersionAttr : CIR_Attr<"OpenCLVersion", "cl.version"> {
   }];
 
   let parameters = (ins
-    "int32_t":$major,
-    "int32_t":$minor
+    "int32_t":$majorVersion,
+    "int32_t":$minorVersion
   );
 
-  let assemblyFormat = "`<` $major `,` $minor `>`";
+  let assemblyFormat = "`<` $majorVersion `,` $minorVersion `>`";
   let genVerifyDecl = 1;
   let canHaveIllegalCXXABIType = 0;
 }

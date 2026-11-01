@@ -12,6 +12,8 @@
 
 #include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
@@ -351,6 +353,16 @@ public:
     llvm::SmallVector<int64_t> paddingVals;
     for (auto idx : paddingElems.getValues<IntegerAttr>()) {
       paddingVals.push_back(static_cast<int64_t>(idx.getInt()));
+    }
+
+    // The TOSA specification requires a negative padding to be diagnosed.
+    // We emit a runtime assertion, as this could be dead or unreachable code.
+    if (llvm::any_of(paddingVals, [](int64_t val) { return val < 0; })) {
+      Value fail =
+          arith::ConstantOp::create(rewriter, loc, rewriter.getBoolAttr(false));
+      cf::AssertOp::create(
+          rewriter, loc, fail,
+          rewriter.getStringAttr("tosa.pad: padding must be non-negative"));
     }
 
     ShapedType inputTy = cast<ShapedType>(input.getType());

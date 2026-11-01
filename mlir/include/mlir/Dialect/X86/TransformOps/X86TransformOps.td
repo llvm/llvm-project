@@ -93,12 +93,34 @@ def ApplyMoveAccumulatorForContractLoopPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyPrepareVectorContractLoopsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.prepare_vector_contract_loops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns that prepare vector contraction loops for x86 lowering.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyVectorContractMultiLevelUnrollForAMXPatternsOp : Op<Transform_Dialect,
     "apply_patterns.x86.vector_contract_multi_level_unroll_for_amx",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Collect patterns that tile and unroll contractions in order to prepare them
     for the AMX nanokernel lowerings.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyMathRsqrtApproximationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.math_rsqrt_approximation",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns that approximate vectorized f32 `math.rsqrt` operations
+    using the AVX `vrsqrtps` instruction (`x86.avx.rsqrt`) followed by one
+    Newton-Raphson step. The inner vector dimension must be a multiple of 8.
   }];
 
   let assemblyFormat = "attr-dict";

@@ -9,7 +9,7 @@ body:             |
     liveins: $edi
   
     %0:gr32 = COPY $edi
-    %1:gr32 = COPY killed %0
+    %1:gr32 = COPY %0
     %4:gr32 = MOV32ri 2
     $eax = COPY %1
     CDQ implicit-def $eax, implicit-def $edx, implicit $eax

@@ -693,5 +693,5 @@ const char *SBModule::GetObjectName() const {
 
   if (!m_opaque_sp)
     return nullptr;
-  return m_opaque_sp->GetObjectName().AsCString(nullptr);
+  return ConstString(m_opaque_sp->GetObjectName()).AsCString(nullptr);
 }

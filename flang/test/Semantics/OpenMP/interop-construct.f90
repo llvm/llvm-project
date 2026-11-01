@@ -154,7 +154,7 @@ END SUBROUTINE test_interop_17
 ! only a device (or other non-action) clause is invalid.
 SUBROUTINE test_interop_18(dev)
   INTEGER :: dev
-  !ERROR: At least one action-clause (INIT, USE, or DESTROY) must appear on the INTEROP construct
+  !ERROR: One of DESTROY, INIT or USE clauses is required on INTEROP directive
   !$OMP INTEROP DEVICE(dev)
   PRINT *, 'pass'
 END SUBROUTINE test_interop_18

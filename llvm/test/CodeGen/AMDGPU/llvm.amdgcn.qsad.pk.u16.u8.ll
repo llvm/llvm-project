@@ -13,7 +13,7 @@ define amdgpu_kernel void @v_qsad_pk_u16_u8(ptr addrspace(1) %out, i64 %src) {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-SDAG-NEXT:    ;;#ASMSTART
-; VI-SDAG-NEXT:    v_lsrlrev_b64 v[4:5], v[0:1], 1
+; VI-SDAG-NEXT:    ; def v[4:5], use v[0:1]
 ; VI-SDAG-NEXT:    ;;#ASMEND
 ; VI-SDAG-NEXT:    v_qsad_pk_u16_u8 v[0:1], v[4:5], s4, v[2:3]
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s0
@@ -36,7 +36,7 @@ define amdgpu_kernel void @v_qsad_pk_u16_u8(ptr addrspace(1) %out, i64 %src) {
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-GISEL-NEXT:    ;;#ASMSTART
-; VI-GISEL-NEXT:    v_lsrlrev_b64 v[4:5], v[0:1], 1
+; VI-GISEL-NEXT:    ; def v[4:5], use v[0:1]
 ; VI-GISEL-NEXT:    ;;#ASMEND
 ; VI-GISEL-NEXT:    v_qsad_pk_u16_u8 v[0:1], v[4:5], v6, v[2:3]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
@@ -48,7 +48,7 @@ define amdgpu_kernel void @v_qsad_pk_u16_u8(ptr addrspace(1) %out, i64 %src) {
 ; VI-GISEL-NEXT:    ;;#ASMEND
 ; VI-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-GISEL-NEXT:    s_endpgm
-  %tmp = call i64 asm "v_lsrlrev_b64 $0, $1, 1", "={v[4:5]},v"(i64 %src) #0
+  %tmp = call i64 asm "; def $0, use $1", "={v[4:5]},v"(i64 %src) #0
   %tmp1 = call i64 @llvm.amdgcn.qsad.pk.u16.u8(i64 %tmp, i32 100, i64 100) #0
   %tmp2 = call i64 asm ";; force constraint", "=v,{v[4:5]}"(i64 %tmp1) #0
   store i64 %tmp2, ptr addrspace(1) %out, align 4
@@ -66,15 +66,15 @@ define amdgpu_kernel void @v_qsad_pk_u16_u8_non_immediate(ptr addrspace(1) %out,
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s6
 ; VI-SDAG-NEXT:    ;;#ASMSTART
-; VI-SDAG-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
+; VI-SDAG-NEXT:    ; def v[2:3], use v[0:1]
 ; VI-SDAG-NEXT:    ;;#ASMEND
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-SDAG-NEXT:    ;;#ASMSTART
-; VI-SDAG-NEXT:    v_mov_b32 v4, v4
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, v4
 ; VI-SDAG-NEXT:    ;;#ASMEND
 ; VI-SDAG-NEXT:    ;;#ASMSTART
-; VI-SDAG-NEXT:    v_lshlrev_b64 v[6:7], v[0:1], 1
+; VI-SDAG-NEXT:    ; def v[6:7], use v[0:1]
 ; VI-SDAG-NEXT:    ;;#ASMEND
 ; VI-SDAG-NEXT:    v_qsad_pk_u16_u8 v[0:1], v[2:3], v4, v[6:7]
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v4, s0
@@ -97,15 +97,15 @@ define amdgpu_kernel void @v_qsad_pk_u16_u8_non_immediate(ptr addrspace(1) %out,
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; VI-GISEL-NEXT:    ;;#ASMSTART
-; VI-GISEL-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
+; VI-GISEL-NEXT:    ; def v[2:3], use v[0:1]
 ; VI-GISEL-NEXT:    ;;#ASMEND
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-GISEL-NEXT:    ;;#ASMSTART
-; VI-GISEL-NEXT:    v_mov_b32 v4, v4
+; VI-GISEL-NEXT:    v_mov_b32_e32 v4, v4
 ; VI-GISEL-NEXT:    ;;#ASMEND
 ; VI-GISEL-NEXT:    ;;#ASMSTART
-; VI-GISEL-NEXT:    v_lshlrev_b64 v[6:7], v[0:1], 1
+; VI-GISEL-NEXT:    ; def v[6:7], use v[0:1]
 ; VI-GISEL-NEXT:    ;;#ASMEND
 ; VI-GISEL-NEXT:    v_qsad_pk_u16_u8 v[0:1], v[2:3], v4, v[6:7]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v3, v1
@@ -117,9 +117,9 @@ define amdgpu_kernel void @v_qsad_pk_u16_u8_non_immediate(ptr addrspace(1) %out,
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-GISEL-NEXT:    s_endpgm
-  %tmp = call i64 asm "v_lsrlrev_b64 $0, $1, 1", "={v[2:3]},v"(i64 %src) #0
-  %tmp1 = call i32 asm "v_mov_b32 $0, $1", "={v4},v"(i32 %a) #0
-  %tmp2 = call i64 asm "v_lshlrev_b64 $0, $1, 1", "={v[6:7]},v"(i64 %b) #0
+  %tmp = call i64 asm "; def $0, use $1", "={v[2:3]},v"(i64 %src) #0
+  %tmp1 = call i32 asm "v_mov_b32_e32 $0, $1", "={v4},v"(i32 %a) #0
+  %tmp2 = call i64 asm "; def $0, use $1", "={v[6:7]},v"(i64 %b) #0
   %tmp3 = call i64 @llvm.amdgcn.qsad.pk.u16.u8(i64 %tmp, i32 %tmp1, i64 %tmp2) #0
   %tmp4 = call i64 asm ";; force constraint", "=v,{v[2:3]}"(i64 %tmp3) #0
   store i64 %tmp4, ptr addrspace(1) %out, align 4

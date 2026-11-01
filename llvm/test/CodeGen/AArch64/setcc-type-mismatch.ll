@@ -58,17 +58,13 @@ define <2 x i64> @splat(<2 x double> %x, <2 x i64> %vb, i1 %c) {
 ;
 ; CHECK-GI-LABEL: splat:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v2.8b, w0
-; CHECK-GI-NEXT:    fcmeq v3.2d, v0.2d, v0.2d
-; CHECK-GI-NEXT:    cmeq v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
-; CHECK-GI-NEXT:    umov w8, v2.b[0]
-; CHECK-GI-NEXT:    umov w9, v2.b[1]
-; CHECK-GI-NEXT:    mvn v2.16b, v3.16b
-; CHECK-GI-NEXT:    xtn v2.2s, v2.2d
-; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    fcmeq v2.2d, v0.2d, v0.2d
+; CHECK-GI-NEXT:    dup v3.2s, w0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI1_0
-; CHECK-GI-NEXT:    mov v3.s[1], w9
+; CHECK-GI-NEXT:    cmeq v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    mvn v2.16b, v2.16b
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    xtn v2.2s, v2.2d
 ; CHECK-GI-NEXT:    and v1.8b, v2.8b, v3.8b
 ; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
