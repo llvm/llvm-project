@@ -11,7 +11,6 @@
 
 #include "index/SymbolID.h"
 #include "index/SymbolLocation.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"
@@ -145,9 +144,6 @@ public:
   private:
     llvm::BumpPtrAllocator Arena;
     llvm::UniqueStringSaver UniqueStrings; // Contents on the arena.
-    /// Input FileURI pointer -> interned copy. The input usually points into
-    /// a string table, so most lookups hit without hashing the string.
-    llvm::DenseMap<const char *, const char *> InternedURIs;
     std::vector<value_type> Refs;
     size_t NumRefs = 0;
   };

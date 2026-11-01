@@ -563,6 +563,26 @@ TEST(RefSlabTest, BundleBuilderMatchesBuilder) {
   }
 }
 
+TEST(RefSlabTest, BundleBuilderCopiesReusedBuffers) {
+  // The same buffer holds a different file URI for each insert.
+  char Buffer[] = "file:///x.cc";
+  Ref R;
+  R.Location.FileURI = Buffer;
+  RefSlab::BundleBuilder Builder;
+  Builder.insert(SymbolID("a"), {R});
+  Buffer[8] = 'y';
+  Builder.insert(SymbolID("b"), {R});
+  Buffer[8] = '?';
+  RefSlab Slab = std::move(Builder).build();
+  llvm::StringMap<SymbolID> FileToSymbol;
+  for (const auto &[ID, Refs] : Slab)
+    for (const Ref &Ref : Refs)
+      FileToSymbol.try_emplace(Ref.Location.FileURI, ID);
+  EXPECT_EQ(FileToSymbol.size(), 2u);
+  EXPECT_EQ(FileToSymbol.lookup("file:///x.cc"), SymbolID("a"));
+  EXPECT_EQ(FileToSymbol.lookup("file:///y.cc"), SymbolID("b"));
+}
+
 TEST(MergeIndexTest, IndexedFiles) {
   SymbolSlab DynSymbols;
   RefSlab DynRefs;

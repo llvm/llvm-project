@@ -46,10 +46,7 @@ void RefSlab::BundleBuilder::insert(const SymbolID &ID,
   Ref *Copy = Arena.Allocate<Ref>(SymbolRefs.size());
   for (size_t I = 0; I < SymbolRefs.size(); ++I) {
     Ref R = SymbolRefs[I];
-    const char *&Interned = InternedURIs[R.Location.FileURI];
-    if (!Interned)
-      Interned = UniqueStrings.save(R.Location.FileURI).data();
-    R.Location.FileURI = Interned;
+    R.Location.FileURI = UniqueStrings.save(R.Location.FileURI).data();
     new (&Copy[I]) Ref(R);
   }
   llvm::MutableArrayRef<Ref> Stored(Copy, SymbolRefs.size());
