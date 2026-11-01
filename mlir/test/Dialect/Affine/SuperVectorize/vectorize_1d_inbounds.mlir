@@ -5,8 +5,11 @@
 
 // CHECK-LABEL: func.func @offset_index
 //       CHECK:   affine.for %{{.*}} = 0 to 15 step 8 {
-//       CHECK:     vector.transfer_read %{{.*}}[%{{.*}}], %{{[0-9]+}} : memref<16xf32>, vector<8xf32>
-//       CHECK:     vector.transfer_write %{{.*}}, %{{.*}}[%{{[a-z0-9]+}}] : vector<8xf32>, memref<16xf32>
+//       CHECK:     vector.transfer_read
+//   CHECK-NOT:   in_bounds
+//       CHECK:     vector.transfer_write
+//   CHECK-NOT:   in_bounds
+//       CHECK:   return
 func.func @offset_index(%A: memref<16xf32>, %B: memref<16xf32>) {
   affine.for %i = 0 to 15 {
     %v = affine.load %A[%i + 1] : memref<16xf32>
@@ -38,8 +41,11 @@ func.func @aligned_offset_index(%A: memref<16xf32>, %B: memref<16xf32>) {
 
 // CHECK-LABEL: func.func @unaligned_lower_bound
 //       CHECK:   affine.for %{{.*}} = 4 to 16 step 8 {
-//       CHECK:     vector.transfer_read %{{.*}}[%{{.*}}], %{{[0-9]+}} : memref<16xf32>, vector<8xf32>
-//       CHECK:     vector.transfer_write %{{.*}}, %{{.*}}[%{{[a-z0-9]+}}] : vector<8xf32>, memref<16xf32>
+//       CHECK:     vector.transfer_read
+//   CHECK-NOT:   in_bounds
+//       CHECK:     vector.transfer_write
+//   CHECK-NOT:   in_bounds
+//       CHECK:   return
 func.func @unaligned_lower_bound(%A: memref<16xf32>, %B: memref<16xf32>) {
   affine.for %i = 4 to 16 {
     %v = affine.load %A[%i] : memref<16xf32>
@@ -90,8 +96,11 @@ func.func @lower_bound_from_outer_loop(%A: memref<32xf32>, %B: memref<32xf32>) {
 // CHECK-LABEL: func.func @unaligned_lower_bound_from_outer_loop
 //       CHECK:   affine.for %{{.*}} = 0 to 24 step 12 {
 //       CHECK:     affine.for %{{.*}} = #{{.*}}(%{{.*}}) to #{{.*}}(%{{.*}}) step 8 {
-//       CHECK:       vector.transfer_read %{{.*}}[%{{.*}}], %{{[0-9]+}} : memref<24xf32>, vector<8xf32>
-//       CHECK:       vector.transfer_write %{{.*}}, %{{.*}}[%{{[a-z0-9]+}}] : vector<8xf32>, memref<24xf32>
+//       CHECK:       vector.transfer_read
+//   CHECK-NOT:   in_bounds
+//       CHECK:       vector.transfer_write
+//   CHECK-NOT:   in_bounds
+//       CHECK:   return
 func.func @unaligned_lower_bound_from_outer_loop(%A: memref<24xf32>, %B: memref<24xf32>) {
   affine.for %i = 0 to 24 step 12 {
     affine.for %ii = affine_map<(d0) -> (d0)>(%i) to affine_map<(d0) -> (d0 + 12)>(%i) {

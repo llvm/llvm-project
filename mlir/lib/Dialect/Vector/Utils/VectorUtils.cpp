@@ -426,8 +426,10 @@ static bool isKnownMultipleOf(Value value, int64_t factor);
 /// a multiple of `factor`. Operands that are themselves multiples of `factor`
 /// are substituted with `factor * d` so that AffineExpr::isMultipleOf can see
 /// through them.
-static bool isKnownMultipleOf(AffineMap map, ValueRange operands,
-                              int64_t factor) {
+static bool areMapResultsKnownMultiplesOf(AffineMap map, ValueRange operands,
+                                          int64_t factor) {
+  assert(operands.size() == map.getNumDims() + map.getNumSymbols() &&
+         "expected one operand per map dim and symbol");
   MLIRContext *ctx = map.getContext();
   SmallVector<AffineExpr> dimRepls, symRepls;
   for (unsigned i = 0, e = map.getNumDims(); i < e; ++i) {
@@ -456,12 +458,14 @@ static bool isKnownMultipleOf(Value value, int64_t factor) {
   if (std::optional<int64_t> cst = getConstantIntValue(value))
     return *cst % factor == 0;
   if (affine::AffineForOp forOp = affine::getForInductionVarOwner(value))
+    // The values are `lowerBound + k * step`, so the upper bound only limits k
+    // and cannot affect divisibility.
     return forOp.getStepAsInt() % factor == 0 &&
-           isKnownMultipleOf(forOp.getLowerBoundMap(),
-                             forOp.getLowerBoundOperands(), factor);
+           areMapResultsKnownMultiplesOf(forOp.getLowerBoundMap(),
+                                         forOp.getLowerBoundOperands(), factor);
   if (auto applyOp = value.getDefiningOp<affine::AffineApplyOp>())
-    return isKnownMultipleOf(applyOp.getAffineMap(), applyOp.getMapOperands(),
-                             factor);
+    return areMapResultsKnownMultiplesOf(applyOp.getAffineMap(),
+                                         applyOp.getMapOperands(), factor);
   return false;
 }
 
@@ -469,7 +473,8 @@ static bool isKnownMultipleOf(Value value, int64_t factor) {
 /// the source being accessed and the indices into it. Dimension i is in-bounds
 /// when the map result is an AffineDimExpr pointing to a static source
 /// dimension divisible by the vector size whose index is a known multiple of
-/// the vector size, or an AffineConstantExpr (broadcast).
+/// the vector size, or an AffineConstantExpr (broadcast). A scalable dimension
+/// is not in-bounds, as its size is not known.
 static SmallVector<bool>
 computeInBoundsFromPermutationMap(AffineMap permutationMap,
                                   VectorType vectorType, ShapedType sourceType,
@@ -480,7 +485,8 @@ computeInBoundsFromPermutationMap(AffineMap permutationMap,
     if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
       unsigned memDim = dimExpr.getPosition();
       int64_t vectorSize = vectorType.getDimSize(i);
-      if (!sourceType.isDynamicDim(memDim) &&
+      if (!vectorType.getScalableDims()[i] &&
+          !sourceType.isDynamicDim(memDim) &&
           sourceType.getDimSize(memDim) % vectorSize == 0 &&
           isKnownMultipleOf(indices[memDim], vectorSize))
         inBounds[i] = true;

@@ -228,8 +228,12 @@ bool isLinearizableVector(VectorType type);
 /// it and from `indices`: dimension i is in-bounds when the map result is an
 /// AffineDimExpr pointing to a static memref dimension divisible by the vector
 /// size whose index is a known multiple of the vector size, or an
-/// AffineConstantExpr (broadcast). Custom `indices` must also be supplied in
-/// that case; if `indices` is empty, all offsets default to 0.
+/// AffineConstantExpr (broadcast). A scalable dimension is not in-bounds, as
+/// its size is not known. This assumes that the index itself is in range for
+/// the dimension, as it is for any valid access: a multiple of the vector size
+/// below a size divisible by it leaves room for a whole vector. Custom
+/// `indices` must also be supplied in that case; if `indices` is empty, all
+/// offsets default to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              const VectorType &vecToReadTy,
                              std::optional<Value> padValue = std::nullopt,
