@@ -64,3 +64,29 @@
 
 ; CHECK-DAG: .b8 splat_arr_pad[16] = {205, 171, 205, 171, 205, 171, 0, 0, 1, 1, 1, 1, 1, 1};
 @splat_arr_pad = global [2 x <3 x i16>] [<3 x i16> splat(i16 43981), <3 x i16> splat(i16 257)]
+
+; CHECK-DAG: .b8 splat_half_arr[8] = {0, 60, 0, 60, 0, 64, 0, 64};
+@splat_half_arr = global [2 x <2 x half>] [<2 x half> splat(half 1.0), <2 x half> splat(half 2.0)]
+
+; CHECK-DAG: .b8 splat_bfloat_arr[8] = {128, 63, 128, 63, 0, 64, 0, 64};
+@splat_bfloat_arr = global [2 x <2 x bfloat>] [<2 x bfloat> splat(bfloat 1.0), <2 x bfloat> splat(bfloat 2.0)]
+
+; CHECK-DAG: .b8 splat_struct_arr[32] = {0, 0, 128, 63, 0, 0, 128, 63, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 64, 4};
+@splat_struct_arr = global [2 x {<2 x float>, i32}] [{<2 x float>, i32} {<2 x float> splat(float 1.0), i32 3}, {<2 x float>, i32} {<2 x float> splat(float 2.0), i32 4}]
+
+; Elements that aren't a whole number of bytes are bit-packed, whatever the
+; enclosing aggregate and whether or not the vector is a splat.
+; CHECK-DAG: .b8 packed_splat[2] = {17, 17};
+@packed_splat = global <4 x i4> splat(i4 1)
+
+; CHECK-DAG: .b8 packed_splat_arr[4] = {17, 17, 34, 34};
+@packed_splat_arr = global [2 x <4 x i4>] [<4 x i4> splat(i4 1), <4 x i4> splat(i4 2)]
+
+; CHECK-DAG: .b8 packed_splat_field[2] = {17, 7};
+@packed_splat_field = global {<2 x i4>, i8} {<2 x i4> splat(i4 1), i8 7}
+
+; CHECK-DAG: .b8 packed_arr[4] = {33, 67, 101, 135};
+@packed_arr = global [4 x <2 x i4>] [<2 x i4> <i4 1, i4 2>, <2 x i4> <i4 3, i4 4>, <2 x i4> <i4 5, i4 6>, <2 x i4> <i4 7, i4 8>]
+
+; CHECK-DAG: .b8 packed_i12[3] = {1, 32};
+@packed_i12 = global <2 x i12> <i12 1, i12 2>
