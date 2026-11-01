@@ -365,6 +365,18 @@ bool HexagonDAGToDAGISel::SelectBrevLdIntrinsic(SDNode *IntN) {
   return false;
 }
 
+static SDValue getCircRegister(SelectionDAG &DAG, SDLoc DL, SDNode *N,
+                               unsigned MOp, unsigned CSOp) {
+  SDValue RC = DAG.getTargetConstant(Hexagon::CircRegsRegClassID, DL, MVT::i32);
+  SDValue SubRegCS = DAG.getTargetConstant(Hexagon::isub_lo, DL, MVT::i32);
+  SDValue SubRegM = DAG.getTargetConstant(Hexagon::isub_hi, DL, MVT::i32);
+  const SDValue RegSequenceOps[] = {RC, N->getOperand(MOp), SubRegM,
+                                    N->getOperand(CSOp), SubRegCS};
+  SDNode *M_CS = DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::i64,
+                                    RegSequenceOps);
+  return SDValue(M_CS, 0);
+}
+
 /// Generate a machine instruction node for the new circular buffer intrinsics.
 /// The new versions use a CSx register instead of the K field.
 bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
@@ -400,14 +412,15 @@ bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
     if (IntN->getNumOperands() == 6) {
       auto Inc = cast<ConstantSDNode>(IntN->getOperand(3));
       SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), DL, MVT::i32);
-      // Operands: { Base, Increment, Modifier, Start, Chain }.
-      Ops = { IntN->getOperand(2), I, IntN->getOperand(4), IntN->getOperand(5),
-              IntN->getOperand(0) };
-    } else
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 4, 5);
+      // Operands: { Base, Increment, Modifier_Start, Chain }.
+      Ops = {IntN->getOperand(2), I, M_CS, IntN->getOperand(0)};
+    } else {
       // Handle load.*_pcr case which has 5 operands.
-      // Operands: { Base, Modifier, Start, Chain }.
-      Ops = { IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(4),
-              IntN->getOperand(0) };
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 3, 4);
+      // Operands: { Base, Modifier_Start, Chain }.
+      Ops = {IntN->getOperand(2), M_CS, IntN->getOperand(0)};
+    }
     MachineSDNode *Res = CurDAG->getMachineNode(FLI->second, DL, RTys, Ops);
     ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
     ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));
@@ -435,14 +448,17 @@ bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
     if (IntN->getNumOperands() == 7) {
       auto Inc = cast<ConstantSDNode>(IntN->getOperand(3));
       SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), DL, MVT::i32);
-      // Operands: { Base, Increment, Modifier, Value, Start, Chain }.
-      Ops = { IntN->getOperand(2), I, IntN->getOperand(4), IntN->getOperand(5),
-              IntN->getOperand(6), IntN->getOperand(0) };
-    } else
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 4, 6);
+      // Operands: { Base, Increment, Modifier_Start, Value, Chain }.
+      Ops = {IntN->getOperand(2), I, M_CS, IntN->getOperand(5),
+             IntN->getOperand(0)};
+    } else {
       // Handle store.*_pcr case which has 6 operands.
-      // Operands: { Base, Modifier, Value, Start, Chain }.
-      Ops = { IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(4),
-              IntN->getOperand(5), IntN->getOperand(0) };
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 3, 5);
+      // Operands: { Base, Modifier_Start, Value, Chain }.
+      Ops = {IntN->getOperand(2), M_CS, IntN->getOperand(4),
+             IntN->getOperand(0)};
+    }
     MachineSDNode *Res = CurDAG->getMachineNode(FSI->second, DL, RTys, Ops);
     ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
     ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));

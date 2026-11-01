@@ -1618,7 +1618,7 @@ def PREFETCH_GENERIC_L1_32B : PREFETCH_SIZE_INTR<AddrSpaceGeneric>;
 
 //Applypriority intrinsics
 class APPLYPRIORITY_L2_INTRS<string addrspace> :
-          BasicNVPTXInst<(outs), (ins ADDR:$addr, B64:$size),
+          BasicNVPTXInst<(outs), (ins ADDR:$addr, i64imm:$size),
           StrJoin<".", ["applypriority", addrspace , "L2::evict_normal"]>.ret,
           [(!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_applypriority", addrspace , "L2_evict_normal"]>.ret)
           addr:$addr, i64:$size)]>,
@@ -1975,6 +1975,26 @@ class SADInst<string OpcStr, NVPTXRegClass t_regclass,
         [(set t_regclass:$dst, (IntOP s0_regclass:$src0, s1_regclass:$src1, s2_regclass:$src2))]>,
           Requires<Preds>;
 
+multiclass F_MATH_3_RND_TY<string OpcStr, RegTyInfo t, Intrinsic IntOP,
+                           TImmLeaf rnd, list<Predicate> Preds = []> {
+  def NAME : BasicNVPTXInst<(outs t.RC:$dst),
+        (ins t.SrcOp:$src0, t.SrcOp:$src1, t.SrcOp:$src2), OpcStr>;
+  def : Pat<(t.Ty (IntOP t.Ty:$src0, t.Ty:$src1, t.Ty:$src2, rnd)),
+            (!cast<Instruction>(NAME) t.InOp:$src0, t.InOp:$src1, t.InOp:$src2)>,
+        Requires<Preds>;
+}
+
+multiclass F_MATH_3_RNDOP_TY<string OpcStr, RegTyInfo t, Intrinsic IntOP,
+                             list<Predicate> Preds = []> {
+  def NAME : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+        (ins t.SrcOp:$src0, t.SrcOp:$src1, t.SrcOp:$src2),
+        (ins FPRoundingMode:$rnd), OpcStr>;
+  def : Pat<(t.Ty (IntOP t.Ty:$src0, t.Ty:$src1, t.Ty:$src2, timm:$rnd)),
+            (!cast<Instruction>(NAME) t.InOp:$src0, t.InOp:$src1, t.InOp:$src2,
+             $rnd)>,
+        Requires<Preds>;
+}
+
 defvar FPRoundingModes = ["rn", "rz", "rm", "rp"];
 
 //
@@ -2126,6 +2146,38 @@ defm MIN : MIN_MAX<"min">;
 defm MAX : MIN_MAX<"max">;
 
 //
+// Mixed Precision Helpers
+//
+
+// Match only when the fold removes at least one explicit conversion, and the
+// extended vector is not shared.
+class FoldableFPExtendV2F32<dag ops, dag frag>
+  : PatFrag<ops, frag, [{
+      return N->hasOneUse() && (N->getOperand(0)->hasOneUse() ||
+                                N->getOperand(1)->hasOneUse());
+    }]>;
+
+// FP_EXTEND to v2f32 is scalarized before ISEL, leaving one of two patterns
+// behind depending on whether the source lanes share a register.
+def fpextend_v2f32_from_packed
+  : FoldableFPExtendV2F32<(ops node:$a),
+                          (v2f32 (build_vector
+                            (f32 (fpextend (extractelt node:$a, 0))),
+                            (f32 (fpextend (extractelt node:$a, 1)))))>;
+
+def fpextend_v2f32_from_lanes
+  : FoldableFPExtendV2F32<(ops node:$a0, node:$a1),
+                          (v2f32 (build_vector
+                            (f32 (fpextend node:$a0)),
+                            (f32 (fpextend node:$a1))))>;
+
+// Fuse downconverting add/sub/mul only when the result of the operation is
+// solely used for downconverting.
+def extractelt_only_for_cvt
+  : PatFrag<(ops node:$vec, node:$lane), (extractelt node:$vec, node:$lane),
+            [{ return N->hasOneUse() && N->getOperand(0)->hasNUsesOfValue(2, 0); }]>;
+
+//
 // Multiplication
 //
 
@@ -2139,7 +2191,7 @@ foreach t = [F16RT, F16X2RT] in
       defm MUL_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
         F_MATH_2_RND_TY<StrJoin<".", ["mul.rn", ftz, sat, t.PtxType]>.ret, t,
                         !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret),
-                        fp_rnd_rn_imm>;
+                        fp_rnd_rn_imm, [SM53]>;
 
 // bf16/bf16x2
 foreach t = [BF16RT, BF16X2RT] in
@@ -2162,6 +2214,32 @@ foreach ftz = ["", "ftz"] in {
 
 defm MUL_F64 :
   F_MATH_2_RNDOP_TY<"mul.${rnd}.f64", F64RT, int_nvvm_fmul>;
+
+// Mixed Precision - Downconverting
+
+// f16x2 - rz rounding mode, only with ftz
+// bf16x2 - rz rounding mode, without ftz
+let Predicates = [hasFP16x2MixedPrecisionSupport] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
+    defvar MulOp = !cast<Intrinsic>("int_nvvm_fmul" # !if(!eq(ftz, ""), "", "_ftz"));
+    defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+
+    def MUL # !toupper(!subst(".", "_", ftz) # "_rz_" # t.PtxType # "_f32x2_f32x2") :
+      BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
+        "mul" # ftz # ".rz." # t.PtxType # ".f32x2.f32x2">;
+
+    defvar Inst = !cast<Instruction>("MUL" # !toupper(!subst(".", "_", ftz) #
+                                     "_rz_" # t.PtxType # "_f32x2_f32x2"));
+
+    // The cvt packs its first argument into the upper half of the result.
+    def : Pat<(CvtOp (extractelt_only_for_cvt
+                       (MulOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
+                     (extractelt_only_for_cvt
+                       (MulOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
+                     /*pzo=*/0),
+              (Inst $a, $b)>;
+  }
 
 //
 // Div
@@ -2186,6 +2264,10 @@ defm DIV_RZ_F64 : F_MATH_2<"div.rz.f64", F64RT, int_nvvm_div_rz_d>;
 defm DIV_RM_F64 : F_MATH_2<"div.rm.f64", F64RT, int_nvvm_div_rm_d>;
 defm DIV_RP_F64 : F_MATH_2<"div.rp.f64", F64RT, int_nvvm_div_rp_d>;
 
+def : Pat<(int_nvvm_div_full fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, NoFTZ)>;
+def : Pat<(int_nvvm_div_full_ftz fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, FTZ)>;
 def : Pat<(int_nvvm_div_full f32:$a, f32:$b),
           (DIV_FULL_F32 reg_or_fpimm:$a, reg_or_fpimm:$b, NoFTZ)>;
 def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b),
@@ -2321,72 +2403,61 @@ def : Pat<(int_nvvm_cos_approx_f f32:$a), (COS_APPROX_F32 reg_or_fpimm:$a, NoFTZ
 // Fma
 //
 
-class FMA_TUPLE<string V, Intrinsic I, RegTyInfo RT, list<Predicate> Preds = []> {
-  string Variant = V;
-  Intrinsic Intr = I;
-  RegTyInfo RegType = RT;
-  list<Predicate> Predicates = Preds;
-}
+// f16/f16x2
+foreach t = [F16RT, F16X2RT] in {
+  foreach ftz = ["", "ftz"] in {
+    foreach sat = ["", "sat"] in
+      defm FMA_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
+        F_MATH_3_RND_TY<StrJoin<".", ["fma.rn", ftz, sat, t.PtxType]>.ret, t,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz, sat]>.ret),
+                        fp_rnd_rn_imm, [SM53]>;
 
-multiclass FMA_INST {
-  foreach P = [
-    FMA_TUPLE<"_rn_f64", int_nvvm_fma_rn_d, F64RT>,
-    FMA_TUPLE<"_rz_f64", int_nvvm_fma_rz_d, F64RT>,
-    FMA_TUPLE<"_rm_f64", int_nvvm_fma_rm_d, F64RT>,
-    FMA_TUPLE<"_rp_f64", int_nvvm_fma_rp_d, F64RT>,
-
-    FMA_TUPLE<"_rn_ftz_f32", int_nvvm_fma_rn_ftz_f, F32RT>,
-    FMA_TUPLE<"_rn_ftz_sat_f32", int_nvvm_fma_rn_ftz_sat_f, F32RT>,
-    FMA_TUPLE<"_rn_f32", int_nvvm_fma_rn_f, F32RT>,
-    FMA_TUPLE<"_rn_sat_f32", int_nvvm_fma_rn_sat_f, F32RT>,
-    FMA_TUPLE<"_rz_ftz_f32", int_nvvm_fma_rz_ftz_f, F32RT>,
-    FMA_TUPLE<"_rz_ftz_sat_f32", int_nvvm_fma_rz_ftz_sat_f, F32RT>,
-    FMA_TUPLE<"_rz_f32", int_nvvm_fma_rz_f, F32RT>,
-    FMA_TUPLE<"_rz_sat_f32", int_nvvm_fma_rz_sat_f, F32RT>,
-    FMA_TUPLE<"_rm_f32", int_nvvm_fma_rm_f, F32RT>,
-    FMA_TUPLE<"_rm_sat_f32", int_nvvm_fma_rm_sat_f, F32RT>,
-    FMA_TUPLE<"_rm_ftz_f32", int_nvvm_fma_rm_ftz_f, F32RT>,
-    FMA_TUPLE<"_rm_ftz_sat_f32", int_nvvm_fma_rm_ftz_sat_f, F32RT>,
-    FMA_TUPLE<"_rp_f32", int_nvvm_fma_rp_f, F32RT>,
-    FMA_TUPLE<"_rp_sat_f32", int_nvvm_fma_rp_sat_f, F32RT>,
-    FMA_TUPLE<"_rp_ftz_f32", int_nvvm_fma_rp_ftz_f, F32RT>,
-    FMA_TUPLE<"_rp_ftz_sat_f32", int_nvvm_fma_rp_ftz_sat_f, F32RT>,
-
-    FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_f16", int_nvvm_fma_rn_ftz_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_sat_f16", int_nvvm_fma_rn_sat_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_sat_f16", int_nvvm_fma_rn_ftz_sat_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_relu_f16", int_nvvm_fma_rn_relu_f16, F16RT, [SM80]>,
-    FMA_TUPLE<"_rn_ftz_relu_f16", int_nvvm_fma_rn_ftz_relu_f16, F16RT, [SM80]>,
-
-    FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, BF16RT, [SM80]>,
-    FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, BF16RT, [SM80]>,
-
-    FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_f16x2", int_nvvm_fma_rn_ftz_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_sat_f16x2", int_nvvm_fma_rn_sat_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_sat_f16x2", int_nvvm_fma_rn_ftz_sat_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_relu_f16x2", int_nvvm_fma_rn_relu_f16x2, F16X2RT, [SM80]>,
-    FMA_TUPLE<"_rn_ftz_relu_f16x2", int_nvvm_fma_rn_ftz_relu_f16x2, F16X2RT, [SM80]>,
-
-    FMA_TUPLE<"_rn_bf16x2", int_nvvm_fma_rn_bf16x2, BF16X2RT, [SM80]>,
-    FMA_TUPLE<"_rn_relu_bf16x2", int_nvvm_fma_rn_relu_bf16x2, BF16X2RT, [SM80]>,
-  ] in {
-    defm !toupper(P.Variant) : F_MATH_3<!strconcat("fma", !subst("_", ".", P.Variant)),
-        P.RegType, P.Intr, P.Predicates>;
+    defm FMA_RN_ # !toupper(StrJoin<"_", [ftz, "relu", t.PtxType]>.ret) :
+      F_MATH_3_RND_TY<StrJoin<".", ["fma.rn", ftz, "relu", t.PtxType]>.ret, t,
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz, "relu"]>.ret),
+                      fp_rnd_rn_imm, [SM80]>;
   }
 }
 
-defm FMA : FMA_INST;
+// bf16/bf16x2
+foreach t = [BF16RT, BF16X2RT] in
+  foreach relu = ["", "relu"] in
+    defm FMA_RN_ # !toupper(StrJoin<"_", [relu, t.PtxType]>.ret) :
+      F_MATH_3_RND_TY<StrJoin<".", ["fma.rn", relu, t.PtxType]>.ret, t,
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", relu]>.ret),
+                      fp_rnd_rn_imm, [hasBF16Math, PTX70, SM80]>;
 
-foreach rnd = FPRoundingModes in
+// f32/f32x2/f64
+// Note: these are prefixed with FMA_RND to avoid clashing with the
+// fixed-rounding fma instructions for the generic fma node (FMA_F32 etc.).
+foreach ftz = ["", "ftz"] in {
+  foreach sat = ["", "sat"] in
+    defm StrJoin<"_", ["FMA_RND", !toupper(ftz), !toupper(sat), "F32"]>.ret :
+      F_MATH_3_RNDOP_TY<StrJoin<".", ["fma.${rnd}", ftz, sat, "f32"]>.ret, F32RT,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz, sat]>.ret)>;
+
+  defm StrJoin<"_", ["FMA_RND", !toupper(ftz), "F32X2"]>.ret :
+    F_MATH_3_RNDOP_TY<StrJoin<".", ["fma.${rnd}", ftz, "f32x2"]>.ret, F32X2RT,
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz]>.ret),
+                      [hasF32x2Instructions]>;
+}
+
+defm FMA_RND_F64 :
+  F_MATH_3_RNDOP_TY<"fma.${rnd}.f64", F64RT, int_nvvm_fma>;
+
+// Mixed Precision
+foreach rnd = FPRoundingModes in {
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
+
   foreach sat = ["", "sat"] in
     foreach type = [f16, bf16] in
       def FMA_ # !toupper(StrJoin<"_", [rnd, sat, "f32", type.LLVMName]>.ret) :
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b, B32:$c),
           StrJoin<".", ["fma", rnd, sat, "f32", type.LLVMName]>.ret, [(set f32:$dst,
-           (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", rnd, sat, "f"]>.ret)
-             (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c))]>, Requires<[SM100]>;
+           (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", sat]>.ret)
+             (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c, rnd_imm))]>,
+        Requires<[SM100]>;
+}
 
 // Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
 let Predicates = [SM100, doNoF32FTZ] in {
@@ -2496,8 +2567,9 @@ foreach t = [F16RT, F16X2RT] in
   foreach ftz = ["", "ftz"] in
     foreach sat = ["", "sat"] in
       defm ADD_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
-        F_MATH_2_RND_TY<StrJoin<".", ["add.rn", ftz, sat, t.PtxType]>.ret, t, !cast<Intrinsic>(
-                            StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret), fp_rnd_rn_imm>;
+        F_MATH_2_RND_TY<StrJoin<".", ["add.rn", ftz, sat, t.PtxType]>.ret, t,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret),
+                        fp_rnd_rn_imm, [SM53]>;
 
 // bf16/bf16x2
 foreach t = [BF16RT, BF16X2RT] in
@@ -2519,34 +2591,6 @@ foreach ftz = ["", "ftz"] in {
 defm ADD_F64 : F_MATH_2_RNDOP_TY<"add.${rnd}.f64", F64RT, int_nvvm_fadd>;
 
 // Mixed Precision
-
-// Match only when the fold removes at least one explicit conversion, and the
-// extended vector is not shared.
-class FoldableFPExtendV2F32<dag ops, dag frag>
-  : PatFrag<ops, frag, [{
-      return N->hasOneUse() && (N->getOperand(0)->hasOneUse() ||
-                                N->getOperand(1)->hasOneUse());
-    }]>;
-
-// FP_EXTEND to v2f32 is scalarized before ISEL, leaving one of two patterns
-// behind depending on whether the source lanes share a register.
-def fpextend_v2f32_from_packed
-  : FoldableFPExtendV2F32<(ops node:$a),
-                          (v2f32 (build_vector
-                            (f32 (fpextend (extractelt node:$a, 0))),
-                            (f32 (fpextend (extractelt node:$a, 1)))))>;
-
-def fpextend_v2f32_from_lanes
-  : FoldableFPExtendV2F32<(ops node:$a0, node:$a1),
-                          (v2f32 (build_vector
-                            (f32 (fpextend node:$a0)),
-                            (f32 (fpextend node:$a1))))>;
-
-// Fuse downconverting add/sub only when the result of the add/sub is solely
-// used for downconverting.
-def extractelt_only_for_cvt
-  : PatFrag<(ops node:$vec, node:$lane), (extractelt node:$vec, node:$lane),
-            [{ return N->hasOneUse() && N->getOperand(0)->hasNUsesOfValue(2, 0); }]>;
 
 foreach rnd = FPRoundingModes in {
   defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
@@ -3781,6 +3825,7 @@ defm isspace_shared_cluster : ISSPACEP<"shared::cluster",
                                        [SM90]>;
 
 // Special register reads
+let isAsCheapAsAMove = true in
 def MOV_SPECIAL : BasicNVPTXInst<(outs B32:$d),
                             (ins SpecialRegs:$r),
                             "mov.b32", []>;
@@ -5199,6 +5244,7 @@ class PTX_READ_SREG_R64<string regname, Intrinsic intop, list<Predicate> Preds=[
               [(set i64:$d, (intop))]>,
     Requires<Preds>;
 
+let isAsCheapAsAMove = true in
 class PTX_READ_SREG_R32<string regname, Intrinsic intop, list<Predicate> Preds=[]>
   : NVPTXInst<(outs B32:$d), (ins),
               "mov.u32 \t$d, %" # regname # ";",
@@ -5276,10 +5322,12 @@ def: Pat <(i64 (readcyclecounter)), (SREG_CLOCK64)>;
 def: Pat <(i64 (readsteadycounter)), (SREG_GLOBALTIMER)>;
 def: Pat <(i32 (readsteadycounter)), (SREG_GLOBALTIMER_LO)>;
 
+let isAsCheapAsAMove = false in {
 def INT_PTX_SREG_PM0 : PTX_READ_SREG_R32<"pm0", int_nvvm_read_ptx_sreg_pm0>;
 def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
 def INT_PTX_SREG_PM2 : PTX_READ_SREG_R32<"pm2", int_nvvm_read_ptx_sreg_pm2>;
 def INT_PTX_SREG_PM3 : PTX_READ_SREG_R32<"pm3", int_nvvm_read_ptx_sreg_pm3>;
+}
 
 // Reserved shared memory special register reads
 foreach suffix = ["begin", "end", "cap", "0", "1"] in {
@@ -5291,6 +5339,7 @@ foreach suffix = ["begin", "end", "cap", "0", "1"] in {
 
 // TODO: It would be nice to use PTX_READ_SREG here, but it doesn't
 // handle the constant.
+let isAsCheapAsAMove = true in
 def INT_PTX_SREG_WARPSIZE :
     NVPTXInst<(outs B32:$dst), (ins), "mov.u32 \t$dst, WARP_SZ;",
               [(set i32:$dst, (int_nvvm_read_ptx_sreg_warpsize))]>;
@@ -7268,58 +7317,56 @@ foreach NumSrc = SPNumSrcs in {
 //
 
 class TensormapReplaceInst_2<string state_space, string field_name,
-  string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
-  NVPTXAddressSpace as> :
+  RegTyInfo t, Intrinsic Intrin, NVPTXAddressSpace as> :
   BasicNVPTXInst<(outs),
-    (ins ADDR:$addr, val_RC:$val),
-    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
-    [(IntrinsicInAS<Intrin, as> addr:$addr, ValTy:$val)]>;
+    (ins ADDR:$addr, t.RegOrImm:$val),
+    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # t.PtxType,
+    [(IntrinsicInAS<Intrin, as> addr:$addr, t.Ty:$val)]>;
 
 class TensormapReplaceInst_3<string state_space, string field_name,
-  string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
-  NVPTXAddressSpace as> :
+  RegTyInfo t, Intrinsic Intrin, NVPTXAddressSpace as> :
   BasicNVPTXInst<(outs),
-    (ins ADDR:$addr, B32:$ord, val_RC:$val),
-    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
-    [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, ValTy:$val)]>;
+    (ins ADDR:$addr, i32imm:$ord, t.RegOrImm:$val),
+    "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # t.PtxType,
+    [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, t.Ty:$val)]>;
 
 foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   defvar as = !if(!eq(ss, "GLOBAL"), AddrSpaceGlobal, AddrSpaceShared);
   defvar ss_ptx = !tolower(!subst("_", "::", ss));
   let Predicates = [hasTensormapReplaceSupport] in {
     def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss :
-      TensormapReplaceInst_2<ss_ptx, "global_address", "b64", B64, i64,
+      TensormapReplaceInst_2<ss_ptx, "global_address", I64RT,
         int_nvvm_tensormap_replace_global_address, as>;
 
     foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
-        TensormapReplaceInst_2<ss_ptx, !tolower(field_name), "b32", B32, i32,
+        TensormapReplaceInst_2<ss_ptx, !tolower(field_name), I32RT,
           intrin, as>;
     } // field_name
 
     def TENSORMAP_REPLACE_TILE_GLOBAL_STRIDE_ # ss :
-      TensormapReplaceInst_3<ss_ptx, "global_stride", "b64", B64, i64,
+      TensormapReplaceInst_3<ss_ptx, "global_stride", I64RT,
         int_nvvm_tensormap_replace_global_stride, as>;
 
     foreach field_name = ["BOX_DIM", "GLOBAL_DIM", "ELEMENT_STRIDE"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
-        TensormapReplaceInst_3<ss_ptx, !tolower(field_name), "b32", B32, i32,
+        TensormapReplaceInst_3<ss_ptx, !tolower(field_name), I32RT,
           intrin, as>;
     } // field_name
   } // hasTensormapReplaceSupport
 
   def TENSORMAP_REPLACE_TILE_ELEMTYPE_ # ss :
-    TensormapReplaceInst_2<ss_ptx, "elemtype", "b32", B32, i32,
+    TensormapReplaceInst_2<ss_ptx, "elemtype", I32RT,
       int_nvvm_tensormap_replace_elemtype, as>;
 
   def TENSORMAP_REPLACE_SWIZZLE_ATOMICITY_ # ss :
-    TensormapReplaceInst_2<ss_ptx, "swizzle_atomicity", "b32", B32, i32,
+    TensormapReplaceInst_2<ss_ptx, "swizzle_atomicity", I32RT,
       int_nvvm_tensormap_replace_swizzle_atomicity, as>,
     Requires<[hasTensormapReplaceSwizzleAtomicitySupport]>;
 
   def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss :
-    TensormapReplaceInst_2<ss_ptx, "swizzle_mode", "b32", B32, i32,
+    TensormapReplaceInst_2<ss_ptx, "swizzle_mode", I32RT,
       int_nvvm_tensormap_replace_swizzle_mode, as>;
 } // state_space

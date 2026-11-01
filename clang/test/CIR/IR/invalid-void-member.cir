@@ -25,7 +25,7 @@ module {}
 
 // -----
 
-// expected-error @below {{failed to verify 'elementType': any type except void}}
+// expected-error @below {{failed to verify 'elementType': any CIR type except void}}
 !arr = !cir.array<!cir.void x 4>
 
 module {}

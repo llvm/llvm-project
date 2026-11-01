@@ -64,7 +64,7 @@ body:             |
   ; CHECK-NEXT: bb.7:
   ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.8(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit undef $vcc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit undef $vcc_lo
   ; CHECK-NEXT:   S_BRANCH %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8:
@@ -175,7 +175,7 @@ body:             |
   ; CHECK-NEXT: bb.7:
   ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.8(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit undef $vcc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit undef $vcc_lo
   ; CHECK-NEXT:   S_BRANCH %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8:

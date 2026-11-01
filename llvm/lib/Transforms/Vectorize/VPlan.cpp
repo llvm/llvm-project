@@ -541,7 +541,7 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   // Finally, move the recipes starting at SplitAt to new block.
   for (VPRecipeBase &ToMove :
        make_early_inc_range(make_range(SplitAt, this->end())))
-    ToMove.moveBefore(*SplitBlock, SplitBlock->end());
+    ToMove.moveBefore(SplitBlock->end());
 
   return SplitBlock;
 }
@@ -828,7 +828,7 @@ void VPRegionBlock::dissolveToCFGLoop() {
     auto *Zero = Plan.getZero(CanIV->getType());
     DebugLoc DL = CanIV->getDebugLoc();
     VPInstruction *CanIVInc = getOrCreateCanonicalIVIncrement();
-    VPBuilder HeaderBuilder(Header, Header->begin());
+    VPBuilder HeaderBuilder(Header->begin());
     auto *ScalarR =
         HeaderBuilder.createScalarPhi({Zero, CanIVInc}, DL, "index");
     CanIV->replaceAllUsesWith(ScalarR);
@@ -889,7 +889,6 @@ VPlan::~VPlan() {
   }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
-  delete BackedgeTakenCount;
 }
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
@@ -1088,12 +1087,6 @@ void VPlan::printLiveIns(raw_ostream &O) const {
     O << " = vector-trip-count";
   }
 
-  if (BackedgeTakenCount && !BackedgeTakenCount->user_empty()) {
-    O << "\nLive-in ";
-    BackedgeTakenCount->printAsOperand(O, SlotTracker);
-    O << " = backedge-taken count";
-  }
-
   O << "\n";
   if (TripCount && !TripCount->user_empty()) {
     if (isa<VPIRValue>(TripCount))
@@ -1234,19 +1227,12 @@ VPlan *VPlan::duplicate() {
     }
   }
 
-  if (BackedgeTakenCount)
-    NewPlan->BackedgeTakenCount =
-        new VPSymbolicValue(BackedgeTakenCount->getType());
-
   // Map and propagate materialized state for symbolic values.
   for (auto [OldSV, NewSV] :
        {std::pair{&VectorTripCount, &NewPlan->VectorTripCount},
         {&VF, &NewPlan->VF},
         {&UF, &NewPlan->UF},
-        {&VFxUF, &NewPlan->VFxUF},
-        {BackedgeTakenCount, NewPlan->BackedgeTakenCount}}) {
-    if (!OldSV)
-      continue;
+        {&VFxUF, &NewPlan->VFxUF}}) {
     Old2NewVPValues[OldSV] = NewSV;
     if (OldSV->isMaterialized())
       NewSV->markMaterialized();
@@ -1548,8 +1534,6 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   if (!Plan.VFxUF.user_empty())
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);
-  if (Plan.BackedgeTakenCount)
-    assignName(Plan.BackedgeTakenCount);
   for (VPValue *LI : Plan.getLiveIns())
     assignName(LI);
 

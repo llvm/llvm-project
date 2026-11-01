@@ -636,9 +636,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfhmin(), {s16})
-      .customFor(!ST.is64Bit(), {s32})
-      .customFor(ST.is64Bit(), {s32, s64})
-      .lowerFor({s64, s128});
+      .lowerFor({s32, s64, s128});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -1718,16 +1716,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
                                          {ShiftedLHS, ShiftedRHS});
     auto High = MIRBuilder.buildLShr(sXLen, Product, Shift);
     MIRBuilder.buildTrunc(MI.getOperand(0), High);
-    MI.eraseFromParent();
-    return true;
-  }
-  case TargetOpcode::G_FCONSTANT: {
-    const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
-
-    // Convert G_FCONSTANT to G_CONSTANT.
-    Register DstReg = MI.getOperand(0).getReg();
-    MIRBuilder.buildConstant(DstReg, FVal.bitcastToAPInt());
-
     MI.eraseFromParent();
     return true;
   }

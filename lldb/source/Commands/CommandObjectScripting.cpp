@@ -119,8 +119,10 @@ protected:
     DataVisualization::ForceUpdate();
 
     if (command.empty()) {
-      script_interpreter->ExecuteInterpreterLoop();
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      if (llvm::Error error = script_interpreter->ExecuteInterpreterLoop())
+        result.SetError(std::move(error));
+      else
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
     }
 

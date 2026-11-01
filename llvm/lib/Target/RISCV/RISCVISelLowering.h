@@ -64,6 +64,8 @@ public:
   int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
   FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
                              bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, LLT Ty,
+                             bool ForCodeSize) const override;
   ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const override;
 

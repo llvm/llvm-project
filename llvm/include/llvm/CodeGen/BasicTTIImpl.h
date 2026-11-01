@@ -2805,6 +2805,12 @@ public:
     case Intrinsic::bitreverse:
       ISD = ISD::BITREVERSE;
       break;
+    case Intrinsic::pdep:
+      ISD = ISD::PDEP;
+      break;
+    case Intrinsic::pext:
+      ISD = ISD::PEXT;
+      break;
     case Intrinsic::ucmp:
       ISD = ISD::UCMP;
       break;
@@ -2868,7 +2874,11 @@ public:
 
     const TargetLoweringBase *TLI = getTLI();
 
-    if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
+    // pdep/pext span the full scalar width; multi-register scalars can't split
+    bool BitManipSplit = (ISD == ISD::PDEP || ISD == ISD::PEXT) &&
+                         LT.first > 1 && !LT.second.isVector();
+
+    if (!BitManipSplit && TLI->isOperationLegalOrPromote(ISD, LT.second)) {
       if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
           TLI->isFAbsFree(LT.second)) {
         return 0;
@@ -2882,7 +2892,7 @@ public:
         return (LT.first * 2);
       else
         return (LT.first * 1);
-    } else if (TLI->isOperationCustom(ISD, LT.second)) {
+    } else if (!BitManipSplit && TLI->isOperationCustom(ISD, LT.second)) {
       // If the operation is custom lowered then assume
       // that the code is twice as expensive.
       return (LT.first * 2);
@@ -3239,6 +3249,35 @@ public:
           {TTI::OK_UniformConstantValue, TTI::OP_None});
       Cost += thisT()->getCastInstrCost(Instruction::Trunc, RetTy, WideTy,
                                         TTI::CastContextHint::None, CostKind);
+      return Cost;
+    }
+    case Intrinsic::pdep:
+    case Intrinsic::pext: {
+      if (RetTy->isVectorTy())
+        break;
+      // Based on Hacker's Delight §7-5: Expand, or Generalized Insert.
+      // Below cost is accurate for pext, pdep will be similar.
+      unsigned BW = RetTy->getScalarSizeInBits();
+      InstructionCost AndCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind);
+      InstructionCost ShiftCost =
+          thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind);
+      InstructionCost OrCost =
+          thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
+      InstructionCost XorCost =
+          thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      IntrinsicCostAttributes ClmulAttrs(Intrinsic::clmul, RetTy,
+                                         {RetTy, RetTy});
+      int Iterations = Log2_32_Ceil(BW);
+      // Expansion of CLMUL(Mk, ~0) is lot cheaper
+      InstructionCost GenericClmulCost =
+          thisT()->getIntrinsicInstrCost(ClmulAttrs, CostKind);
+      InstructionCost AllOnesClmulCost = Iterations * (ShiftCost + XorCost);
+      InstructionCost MulCost = std::min(GenericClmulCost, AllOnesClmulCost);
+
+      InstructionCost Cost = AndCost + ShiftCost; // Prefix cost
+      Cost += Iterations *
+              (MulCost + 2 * AndCost + 2 * ShiftCost + OrCost + 2 * XorCost);
       return Cost;
     }
     default:

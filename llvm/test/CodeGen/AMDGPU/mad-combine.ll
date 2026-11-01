@@ -1055,11 +1055,11 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(ptr addrspace(1)
 ; SI-STD-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-STD-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-STD-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; SI-STD-NEXT:    buffer_load_dword v3, v[0:1], s[4:7], 0 addr64 glc
+; SI-STD-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
-; SI-STD-NEXT:    buffer_load_dword v4, v[0:1], s[4:7], 0 addr64 offset:4 glc
+; SI-STD-NEXT:    buffer_load_dword v3, v[0:1], s[4:7], 0 addr64 offset:4 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
-; SI-STD-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 offset:8 glc
+; SI-STD-NEXT:    buffer_load_dword v4, v[0:1], s[4:7], 0 addr64 offset:8 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
 ; SI-STD-NEXT:    buffer_load_dword v5, v[0:1], s[4:7], 0 addr64 offset:12 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
@@ -1070,18 +1070,18 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(ptr addrspace(1)
 ; SI-STD-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; SI-STD-NEXT:    s_cbranch_vccz .LBB12_2
 ; SI-STD-NEXT:  ; %bb.1: ; %aggressive
-; SI-STD-NEXT:    v_mad_f32 v2, v5, v1, -v2
-; SI-STD-NEXT:    v_mac_f32_e32 v2, v3, v4
+; SI-STD-NEXT:    v_mad_f32 v4, v5, v1, -v4
+; SI-STD-NEXT:    v_mac_f32_e32 v4, v2, v3
 ; SI-STD-NEXT:    s_branch .LBB12_3
 ; SI-STD-NEXT:  .LBB12_2: ; %normal
 ; SI-STD-NEXT:    v_mul_f32_e32 v1, v5, v1
-; SI-STD-NEXT:    v_fma_f32 v1, v3, v4, v1
-; SI-STD-NEXT:    v_sub_f32_e32 v2, v1, v2
+; SI-STD-NEXT:    v_fma_f32 v1, v2, v3, v1
+; SI-STD-NEXT:    v_sub_f32_e32 v4, v1, v4
 ; SI-STD-NEXT:  .LBB12_3: ; %exit
 ; SI-STD-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_mov_b32_e32 v1, 0
-; SI-STD-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; SI-STD-NEXT:    buffer_store_dword v4, v[0:1], s[0:3], 0 addr64
 ; SI-STD-NEXT:    s_endpgm
 ;
 ; SI-DENORM-FASTFMAF-LABEL: aggressive_combine_to_mad_fsub_0_f32:
@@ -1250,11 +1250,11 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(ptr addrspace(1)
 ; SI-STD-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-STD-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; SI-STD-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; SI-STD-NEXT:    buffer_load_dword v3, v[0:1], s[4:7], 0 addr64 glc
+; SI-STD-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
-; SI-STD-NEXT:    buffer_load_dword v4, v[0:1], s[4:7], 0 addr64 offset:4 glc
+; SI-STD-NEXT:    buffer_load_dword v3, v[0:1], s[4:7], 0 addr64 offset:4 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
-; SI-STD-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 offset:8 glc
+; SI-STD-NEXT:    buffer_load_dword v4, v[0:1], s[4:7], 0 addr64 offset:8 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
 ; SI-STD-NEXT:    buffer_load_dword v5, v[0:1], s[4:7], 0 addr64 offset:12 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
@@ -1265,18 +1265,18 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(ptr addrspace(1)
 ; SI-STD-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; SI-STD-NEXT:    s_cbranch_vccz .LBB14_2
 ; SI-STD-NEXT:  ; %bb.1: ; %aggressive
-; SI-STD-NEXT:    v_mad_f32 v2, v5, v1, -v2
-; SI-STD-NEXT:    v_mac_f32_e32 v2, v3, v4
+; SI-STD-NEXT:    v_mad_f32 v4, v5, v1, -v4
+; SI-STD-NEXT:    v_mac_f32_e32 v4, v2, v3
 ; SI-STD-NEXT:    s_branch .LBB14_3
 ; SI-STD-NEXT:  .LBB14_2: ; %normal
 ; SI-STD-NEXT:    v_mul_f32_e32 v1, v5, v1
-; SI-STD-NEXT:    v_mac_f32_e32 v1, v3, v4
-; SI-STD-NEXT:    v_sub_f32_e32 v2, v1, v2
+; SI-STD-NEXT:    v_mac_f32_e32 v1, v2, v3
+; SI-STD-NEXT:    v_sub_f32_e32 v4, v1, v4
 ; SI-STD-NEXT:  .LBB14_3: ; %exit
 ; SI-STD-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-STD-NEXT:    s_mov_b32 s2, 0
 ; SI-STD-NEXT:    v_mov_b32_e32 v1, 0
-; SI-STD-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; SI-STD-NEXT:    buffer_store_dword v4, v[0:1], s[0:3], 0 addr64
 ; SI-STD-NEXT:    s_endpgm
 ;
 ; SI-DENORM-FASTFMAF-LABEL: aggressive_combine_to_mad_fsub_2_f32:

@@ -899,6 +899,7 @@ define void @outer_latch_heuristic(ptr %dst, ptr %src, i64 %p, i64 %dim) {
 ; SELECT-OPT:       latch:
 ; SELECT-OPT-NEXT:    [[CMP2_US:%.*]] = icmp sgt i64 [[CALL_I_US]], -1
 ; SELECT-OPT-NEXT:    [[DIFF_0_LCSSA_I_LOBIT_US:%.*]] = lshr i64 [[CALL_I_US]], 63
+; SELECT-OPT-NEXT:    [[INC4_US:%.*]] = zext i1 [[CMP2_US]] to i64
 ; SELECT-OPT-NEXT:    [[CMP2_US_FROZEN:%.*]] = freeze i1 [[CMP2_US]]
 ; SELECT-OPT-NEXT:    br i1 [[CMP2_US_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]]
 ; SELECT-OPT:       select.true.sink:
@@ -911,7 +912,6 @@ define void @outer_latch_heuristic(ptr %dst, ptr %src, i64 %p, i64 %dim) {
 ; SELECT-OPT-NEXT:    [[I_NEXT]] = phi i64 [ [[I]], [[SELECT_TRUE_SINK]] ], [ [[TMP3]], [[SELECT_FALSE_SINK]] ]
 ; SELECT-OPT-NEXT:    [[J_NEXT]] = phi i64 [ [[TMP2]], [[SELECT_TRUE_SINK]] ], [ [[J]], [[SELECT_FALSE_SINK]] ]
 ; SELECT-OPT-NEXT:    [[COND_IN_US:%.*]] = phi ptr [ [[ARRAYIDX1_US]], [[SELECT_TRUE_SINK]] ], [ [[ARRAYIDX_US]], [[SELECT_FALSE_SINK]] ]
-; SELECT-OPT-NEXT:    [[INC4_US:%.*]] = zext i1 [[CMP2_US]] to i64
 ; SELECT-OPT-NEXT:    [[COND_US:%.*]] = load ptr, ptr [[COND_IN_US]], align 8
 ; SELECT-OPT-NEXT:    [[ARRAYIDX6_US:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[K_020_US]]
 ; SELECT-OPT-NEXT:    store ptr [[COND_US]], ptr [[ARRAYIDX6_US]], align 8
