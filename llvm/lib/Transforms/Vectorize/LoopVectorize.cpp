@@ -1240,8 +1240,10 @@ public:
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
   /// un-linked from the IR and attached to VPlan as IR or recipes if
-  /// profitable. Otherwise, the check blocks are removed completely.
-  void create(Loop *L, const LoopAccessInfo &LAI,
+  /// profitable. Otherwise, the check blocks are removed completely. If \p LAI
+  /// is nullptr (outer loops have no LoopAccessInfo), no memory runtime checks
+  /// are generated.
+  void create(Loop *L, const LoopAccessInfo *LAI,
               const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC,
               OptimizationRemarkEmitter &ORE) {
 
@@ -1249,8 +1251,8 @@ public:
     // runtime checks needs to be generated.
     // TODO: Skip cutoff if the loop is guaranteed to execute, e.g. due to
     // profile info.
-    CostTooHigh = LAI.getNumRuntimePointerChecks() >
-                  VectorizerParams::VectorizeMemoryCheckThreshold;
+    CostTooHigh = LAI && LAI->getNumRuntimePointerChecks() >
+                             VectorizerParams::VectorizeMemoryCheckThreshold;
     if (CostTooHigh) {
       // Mark runtime checks as never succeeding when they exceed the threshold.
       MemRuntimeCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
@@ -1286,11 +1288,12 @@ public:
       }
     }
 
-    const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
     // TODO: We need to estimate the cost of alias-masking in
     // GeneratedRTChecks::getCost(). We can't check the MemCheckBlock as the
     // alias-mask is generated later in VPlan.
-    if (RtPtrChecking.Need && !LoopUsesPartialAliasMasking) {
+    if (LAI && LAI->getRuntimePointerChecking()->Need &&
+        !LoopUsesPartialAliasMasking) {
+      const auto &RtPtrChecking = *LAI->getRuntimePointerChecking();
       auto *Pred = SCEVCheckBlock ? SCEVCheckBlock : Preheader;
       MemCheckBlock = SplitBlock(Pred, Pred->getTerminator(), DT, LI, nullptr,
                                  "vector.memcheck");
@@ -6715,10 +6718,10 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   }
   const auto &[MemCheckCond, MemCheckBlock] = RTChecks.getMemRuntimeChecks();
   if (MemCheckBlock && MemCheckBlock->hasNPredecessors(0)) {
-    // VPlan-native path does not do any analysis for runtime checks
+    // VPlan-native path does not do any analysis for memory runtime checks
     // currently.
     assert((!Opts.enable_vplan_native_path || !Plan.isOuterLoop()) &&
-           "Runtime checks are not supported for outer loops yet");
+           "Memory runtime checks are not supported for outer loops yet");
 
     if (Config.OptForSize) {
       assert(
@@ -7527,15 +7530,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   GeneratedRTChecks Checks(Opts, PSE, DT, LI, TTI, Config.CostKind,
                            LVP.getCostModel().maskPartialAliasing());
-  if (IsInnerLoop && LVP.hasPlanWithVF(VF.Width)) {
-    // Select the interleave count.
-    IC = LVP.selectInterleaveCount(*BestPlanPtr, VF.Width, VF.Cost);
+  if (LVP.hasPlanWithVF(VF.Width)) {
+    // Select the interleave count. Outer loops are not interleaved.
+    if (IsInnerLoop)
+      IC = LVP.selectInterleaveCount(*BestPlanPtr, VF.Width, VF.Cost);
 
     unsigned SelectedIC = UserIC > 0 ? UserIC : IC;
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
     if (VF.Width.isVector() || SelectedIC > 1) {
-      Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,
+      Checks.create(L, LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,
                     *ORE);
 
       // Bail out early if either the SCEV or memory runtime checks are known to
@@ -7556,6 +7560,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+    assert((IsInnerLoop || ForceVectorization) &&
+           "Outer loops must be forced to vectorize");
     VPCostContext CostCtx(*TLI, *BestPlanPtr, LVP.getCostModel(), Config,
                           /*ReusePrintingSlotTracker=*/true);
     if (!ForceVectorization &&
