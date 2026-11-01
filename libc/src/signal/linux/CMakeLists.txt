@@ -27,6 +27,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
 )
+
 add_entrypoint_object(
   killpg
   SRCS
@@ -36,9 +37,13 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.types.pid_t
-    libc.src.errno.errno
-    libc.src.signal.kill
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
+
 add_entrypoint_object(
   raise
   SRCS

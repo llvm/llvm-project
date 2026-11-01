@@ -24,6 +24,7 @@ add_libc_test(
     libc.src.__support.OSUtil.osutil
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
 add_libc_test(
   killpg_test
   SUITE
@@ -32,12 +33,11 @@ add_libc_test(
     killpg_test.cpp
   DEPENDS
     libc.hdr.errno_macros
-    libc.hdr.signal_macros
     libc.src.signal.killpg
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.unistd.getpgrp
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
 add_libc_test(
   sigaction_test
   SUITE
