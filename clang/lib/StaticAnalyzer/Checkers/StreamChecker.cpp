@@ -1829,7 +1829,7 @@ StreamChecker::ensureStreamNonNull(SVal StreamVal, const Expr *StreamE,
   if (!StateNotNull && StateNull) {
     if (ExplodedNode *N = C.addSink(StateNull)) {
       auto R = std::make_unique<PathSensitiveBugReport>(
-          BT_FileNull, "Stream pointer might be NULL", N);
+          BT_FileNull, "Stream pointer might be NULL.", N);
       if (StreamE)
         bugreporter::trackExpressionValue(N, StreamE, *R);
       C.emitReport(std::move(R));
