@@ -16,7 +16,7 @@
 #include "src/__support/File/file_mode.h"
 #include "src/__support/alloc-checker.h"
 
-#include "src/__support/libc_errno.h"
+#include "hdr/errno_macros.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

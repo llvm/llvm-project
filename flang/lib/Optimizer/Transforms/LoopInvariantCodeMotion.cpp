@@ -463,6 +463,13 @@ void LoopInvariantCodeMotion::runOnOperation() {
     // restrictions like cuf.kernel blocking !fir.ref operands must be
     // checked transitively.
     auto canMoveOutOfOp = [&](Operation *regionOwner, Operation *candidate) {
+      // fir::canMoveOutOf() consults only the region owner's
+      // OperationMoveOpInterface. Without it, the candidate and everything
+      // nested in it may move, so skip the walk over the candidate's
+      // regions: repeating it for every nested candidate and every
+      // intermediate ancestor is quadratic in the size of the loop body.
+      if (!isa<fir::OperationMoveOpInterface>(regionOwner))
+        return true;
       if (!fir::canMoveOutOf(regionOwner, candidate))
         return false;
       bool blocked = false;

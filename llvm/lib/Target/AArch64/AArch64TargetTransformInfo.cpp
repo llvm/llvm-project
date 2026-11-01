@@ -15,6 +15,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -6440,7 +6441,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
        SE.getSmallConstantMaxTripCount(L) <= 32))
     return;
 
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.runtime.disable"))
     return;
 
   if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
@@ -7966,13 +7967,17 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   return false;
 }
 
-static bool isFNeg(Value *Op) { return match(Op, m_FNeg(m_Value())); }
+static bool isFNeg(Value *Op) {
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  return match(Op, m_FNegOrFSubNegZero(m_Value()));
+}
 
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
-bool AArch64TTIImpl::isProfitableToSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+bool AArch64TTIImpl::isProfitableToSinkOperands(Instruction *I,
+                                                SmallVectorImpl<Use *> &Ops,
+                                                const LoopInfo *LI) const {
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::aarch64_neon_smull:
@@ -8105,6 +8110,23 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
   };
 
   switch (I->getOpcode()) {
+  case Instruction::Store: {
+    auto *SI = cast<StoreInst>(I);
+    auto *II = dyn_cast<IntrinsicInst>(SI->getValueOperand());
+    if (!SI->isSimple() || !II)
+      break;
+
+    if (!LI ||
+        LI->getLoopFor(SI->getParent()) != LI->getLoopFor(II->getParent()))
+      break;
+
+    unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
+    if (Factor) {
+      Ops.push_back(&SI->getOperandUse(0));
+      return true;
+    }
+    break;
+  }
   case Instruction::GetElementPtr:
   case Instruction::Add:
   case Instruction::Sub:

@@ -2064,10 +2064,16 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
   switch (Scope) {
   case SIAtomicScope::SYSTEM:
-    ScopeImm = AMDGPU::CPol::SCOPE_SYS;
+    // If MTYPE NC is not used, HW ensures coherence in L2, so we only need to
+    // invalidate up to SE scope.
+    ScopeImm =
+        ST.hasNoMTypeNC() ? AMDGPU::CPol::SCOPE_SE : AMDGPU::CPol::SCOPE_SYS;
     break;
   case SIAtomicScope::AGENT:
-    ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+    // If MTYPE NC is not used, HW ensures coherence in L2, so we only need to
+    // invalidate up to SE scope.
+    ScopeImm =
+        ST.hasNoMTypeNC() ? AMDGPU::CPol::SCOPE_SE : AMDGPU::CPol::SCOPE_DEV;
     break;
   case SIAtomicScope::CLUSTER:
     ScopeImm = AMDGPU::CPol::SCOPE_SE;
@@ -2133,20 +2139,25 @@ bool SIGfx12CacheControl::insertWriteback(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  // global_wb is only necessary at system scope for GFX12.0,
-  // they're also necessary at device scope for GFX12.5 as stores
+  // global_wb is only necessary at system scope for GFX12.0.
+  // They're also necessary at device scope for GFX12.5 as stores
   // cannot report completion earlier than L2.
+  // global_wb is not necessary if the driver guarantees that MTYPE NC
+  // is not used, since the hardware keeps the L2s coherent in that
+  // case.
   //
   // Emitting it for lower scopes is a slow no-op, so we omit it
   // for performance.
   std::optional<AMDGPU::CPol::CPol> NeedsWB;
   switch (Scope) {
   case SIAtomicScope::SYSTEM:
-    NeedsWB = AMDGPU::CPol::SCOPE_SYS;
+    if (!ST.hasNoMTypeNC())
+      NeedsWB = AMDGPU::CPol::SCOPE_SYS;
     break;
   case SIAtomicScope::AGENT:
-    // GFX12.5 may have >1 L2 per device so we must emit a device scope WB.
-    if (ST.hasGFX1250Insts())
+    // GFX12.5 may have >1 L2 per device so we must emit a device scope WB,
+    // unless MTYPE NC is not used.
+    if (ST.hasGFX1250Insts() && !ST.hasNoMTypeNC())
       NeedsWB = AMDGPU::CPol::SCOPE_DEV;
     break;
   case SIAtomicScope::CLUSTER:

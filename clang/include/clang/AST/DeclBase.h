@@ -2673,16 +2673,6 @@ public:
   // If PreserveInternalState, avoids building lookup data structures too.
   lookups_range noload_lookups(bool PreserveInternalState) const;
 
-  /// Iterators over all possible lookups within this context.
-  all_lookups_iterator lookups_begin() const;
-  all_lookups_iterator lookups_end() const;
-
-  /// Iterators over all possible lookups within this context that are
-  /// currently loaded; don't attempt to retrieve anything from an external
-  /// source.
-  all_lookups_iterator noload_lookups_begin() const;
-  all_lookups_iterator noload_lookups_end() const;
-
   struct udir_iterator;
 
   using udir_iterator_base =
