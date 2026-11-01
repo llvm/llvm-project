@@ -3859,8 +3859,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     }
     case OPC_SwitchChildInteger: {
       unsigned ChildNo = MatcherTable[MatcherIndex++];
-      unsigned SwitchStart = MatcherIndex - 2;
-      (void)SwitchStart;
+      [[maybe_unused]] unsigned SwitchStart = MatcherIndex - 2;
       // The match fails if the child is missing or not a constant.
       std::optional<int64_t> ChildVal;
       if (ChildNo < N.getNumOperands())
