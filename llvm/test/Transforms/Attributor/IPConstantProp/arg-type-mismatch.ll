@@ -9,12 +9,13 @@ define dso_local i16 @foo(i16 %a) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
 ; TUNIT-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; TUNIT-NEXT:    ret i16 7
+; TUNIT-NEXT:    [[CALL:%.*]] = call i16 @bar(i16 undef, i32 noundef 7) #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    ret i16 [[CALL]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call noundef i16 @bar(i16 [[A]], i32 noundef 7) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i16 @bar(i16 [[A]], i32 noundef 7) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i16 [[CALL]]
 ;
   %call = call i16 @bar(i16 %a, i32 7)
@@ -22,6 +23,11 @@ define dso_local i16 @foo(i16 %a) {
 }
 
 define internal i16 @bar(i16 %p1, i16 %p2) {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@bar
+; TUNIT-SAME: (i16 [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    ret i16 [[P2]]
+;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
 ; CGSCC-SAME: (i16 [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR1:[0-9]+]] {
@@ -33,6 +39,7 @@ define internal i16 @bar(i16 %p1, i16 %p2) {
 
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }

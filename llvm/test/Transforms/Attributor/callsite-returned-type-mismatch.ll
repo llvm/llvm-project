@@ -116,3 +116,129 @@ define <2 x float> @ret_v2f32_from_nofpclass_float_callee(float %x) {
   %ret = call <2 x float> @nofpclass_float_callee(float %x)
   ret <2 x float> %ret
 }
+
+; The call does not pass the returned argument.
+define float @ret_second_float(float %a, float returned %b) {
+; FULL: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FULL-LABEL: define float @ret_second_float(
+; FULL-SAME: float [[A:%.*]], float returned [[B:%.*]]) #[[ATTR0]] {
+; FULL-NEXT:    ret float [[B]]
+;
+; LIGHT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; LIGHT-LABEL: define float @ret_second_float(
+; LIGHT-SAME: float [[A:%.*]], float returned [[B:%.*]]) #[[ATTR0]] {
+; LIGHT-NEXT:    ret float [[B]]
+;
+  ret float %b
+}
+
+define float @call_ret_second_float_one_arg(float %x) {
+; FULL: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FULL-LABEL: define float @call_ret_second_float_one_arg(
+; FULL-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; FULL-NEXT:    [[RET:%.*]] = call float @ret_second_float(float undef) #[[ATTR1]]
+; FULL-NEXT:    ret float [[RET]]
+;
+; LIGHT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; LIGHT-LABEL: define float @call_ret_second_float_one_arg(
+; LIGHT-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; LIGHT-NEXT:    [[RET:%.*]] = call float @ret_second_float(float [[X]]) #[[ATTR1]]
+; LIGHT-NEXT:    ret float [[RET]]
+;
+  %ret = call float @ret_second_float(float %x)
+  ret float %ret
+}
+
+define i32 @ret_second_i32(i32 %a, i32 returned %b) {
+; FULL: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FULL-LABEL: define i32 @ret_second_i32(
+; FULL-SAME: i32 [[A:%.*]], i32 returned [[B:%.*]]) #[[ATTR0]] {
+; FULL-NEXT:    ret i32 [[B]]
+;
+; LIGHT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; LIGHT-LABEL: define i32 @ret_second_i32(
+; LIGHT-SAME: i32 [[A:%.*]], i32 returned [[B:%.*]]) #[[ATTR0]] {
+; LIGHT-NEXT:    ret i32 [[B]]
+;
+  ret i32 %b
+}
+
+define i32 @call_ret_second_i32_one_arg(i32 %x) {
+; FULL: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FULL-LABEL: define i32 @call_ret_second_i32_one_arg(
+; FULL-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
+; FULL-NEXT:    [[RET:%.*]] = call i32 @ret_second_i32(i32 undef) #[[ATTR1]]
+; FULL-NEXT:    ret i32 [[RET]]
+;
+; LIGHT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; LIGHT-LABEL: define i32 @call_ret_second_i32_one_arg(
+; LIGHT-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
+; LIGHT-NEXT:    [[RET:%.*]] = call i32 @ret_second_i32(i32 [[X]]) #[[ATTR1]]
+; LIGHT-NEXT:    ret i32 [[RET]]
+;
+  %ret = call i32 @ret_second_i32(i32 %x)
+  ret i32 %ret
+}
+
+define ptr @ret_second_ptr(ptr %a, ptr returned %b) {
+; FULL: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FULL-LABEL: define ptr @ret_second_ptr(
+; FULL-SAME: ptr nofree readnone captures(none) [[A:%.*]], ptr nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; FULL-NEXT:    ret ptr [[B]]
+;
+; LIGHT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; LIGHT-LABEL: define ptr @ret_second_ptr(
+; LIGHT-SAME: ptr nofree readnone captures(none) [[A:%.*]], ptr nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; LIGHT-NEXT:    ret ptr [[B]]
+;
+  ret ptr %b
+}
+
+define ptr @call_ret_second_ptr_one_arg(ptr %x) {
+; FULL: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FULL-LABEL: define ptr @call_ret_second_ptr_one_arg(
+; FULL-SAME: ptr nofree readnone captures(none) [[X:%.*]]) #[[ATTR0]] {
+; FULL-NEXT:    [[RET:%.*]] = call ptr @ret_second_ptr(ptr noalias nofree readnone captures(none) undef) #[[ATTR1]]
+; FULL-NEXT:    ret ptr [[RET]]
+;
+; LIGHT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; LIGHT-LABEL: define ptr @call_ret_second_ptr_one_arg(
+; LIGHT-SAME: ptr nofree readnone captures(none) [[X:%.*]]) #[[ATTR0]] {
+; LIGHT-NEXT:    [[RET:%.*]] = call ptr @ret_second_ptr(ptr nofree readnone captures(none) [[X]]) #[[ATTR1]]
+; LIGHT-NEXT:    ret ptr [[RET]]
+;
+  %ret = call ptr @ret_second_ptr(ptr %x)
+  ret ptr %ret
+}
+
+; The call passes the returned argument with a different type.
+define float @ret_float_arg(float returned %a) {
+; FULL: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FULL-LABEL: define float @ret_float_arg(
+; FULL-SAME: float returned [[A:%.*]]) #[[ATTR0]] {
+; FULL-NEXT:    ret float [[A]]
+;
+; LIGHT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; LIGHT-LABEL: define float @ret_float_arg(
+; LIGHT-SAME: float returned [[A:%.*]]) #[[ATTR0]] {
+; LIGHT-NEXT:    ret float [[A]]
+;
+  ret float %a
+}
+
+define float @call_ret_float_arg_with_double(double nofpclass(nan) %x) {
+; FULL: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FULL-LABEL: define float @call_ret_float_arg_with_double(
+; FULL-SAME: double nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; FULL-NEXT:    [[RET:%.*]] = call float @ret_float_arg(double nofpclass(nan) [[X]]) #[[ATTR1]]
+; FULL-NEXT:    ret float [[RET]]
+;
+; LIGHT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; LIGHT-LABEL: define float @call_ret_float_arg_with_double(
+; LIGHT-SAME: double nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; LIGHT-NEXT:    [[RET:%.*]] = call float @ret_float_arg(double nofpclass(nan) [[X]]) #[[ATTR1]]
+; LIGHT-NEXT:    ret float [[RET]]
+;
+  %ret = call float @ret_float_arg(double %x)
+  ret float %ret
+}

@@ -1375,14 +1375,18 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
         if (SameType)
           IRPositions.emplace_back(IRPosition::returned(*Callee));
         IRPositions.emplace_back(IRPosition::function(*Callee));
-        for (const Argument &Arg : Callee->args())
-          if (SameType && Arg.hasReturnedAttr()) {
+        for (const Argument &Arg : Callee->args()) {
+          // A returned argument only describes the call if the call passes it
+          // with the type of the parameter.
+          unsigned ArgNo = Arg.getArgNo();
+          if (SameType && Arg.hasReturnedAttr() && ArgNo < CB->arg_size() &&
+              CB->getArgOperand(ArgNo)->getType() == Arg.getType()) {
+            IRPositions.emplace_back(IRPosition::callsite_argument(*CB, ArgNo));
             IRPositions.emplace_back(
-                IRPosition::callsite_argument(*CB, Arg.getArgNo()));
-            IRPositions.emplace_back(
-                IRPosition::value(*CB->getArgOperand(Arg.getArgNo())));
+                IRPosition::value(*CB->getArgOperand(ArgNo)));
             IRPositions.emplace_back(IRPosition::argument(Arg));
           }
+        }
       }
     }
     IRPositions.emplace_back(IRPosition::callsite_function(*CB));
@@ -1599,9 +1603,12 @@ std::optional<Value *> Attributor::translateArgumentToCallSiteContent(
     return V;
   if (*V == nullptr || isa<Constant>(*V))
     return V;
+  // The call site operand only describes the argument if the call passes it
+  // with the type of the parameter.
   if (auto *Arg = dyn_cast<Argument>(*V))
     if (CB.getCalledOperand() == Arg->getParent() &&
-        CB.arg_size() > Arg->getArgNo())
+        CB.arg_size() > Arg->getArgNo() &&
+        CB.getArgOperand(Arg->getArgNo())->getType() == Arg->getType())
       if (!Arg->hasPointeeInMemoryValueAttr())
         return getAssumedSimplified(
             IRPosition::callsite_argument(CB, Arg->getArgNo()), AA,

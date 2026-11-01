@@ -11598,8 +11598,8 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         NewV = AA::getWithType(*V->stripPointerCasts(), *V->getType());
       } else {
         if (auto *CB = dyn_cast<CallBase>(V))
-          if (auto *Callee =
-                  dyn_cast_if_present<Function>(CB->getCalledOperand())) {
+          // Only look through a call whose signature matches the callee.
+          if (Function *Callee = CB->getCalledFunction()) {
             for (Argument &Arg : Callee->args())
               if (Arg.hasReturnedAttr()) {
                 NewV = CB->getArgOperand(Arg.getArgNo());
