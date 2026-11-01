@@ -4320,10 +4320,9 @@ private:
   ///         '(' type-name ')' '{' initializer-list '}'
   ///         '(' type-name ')' '{' initializer-list ',' '}'
   /// \endverbatim
-  ExprResult ParseCompoundLiteralExpression(ParsedType Ty,
-                                            SourceLocation LParenLoc,
-                                            SourceLocation RParenLoc,
-                                            const DeclSpec *DS = nullptr);
+  ExprResult ParseCompoundLiteralExpression(
+      ParsedType Ty, SourceLocation LParenLoc, SourceLocation RParenLoc,
+      const std::optional<DeclSpec> &DS = std::nullopt);
 
   /// ParseGenericSelectionExpression - Parse a C11 generic-selection
   /// [C11 6.5.1.1].

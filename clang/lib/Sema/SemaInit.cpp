@@ -1426,8 +1426,7 @@ void InitListChecker::CheckListElementTypes(const InitializedEntity &Entity,
     // parts.
     CheckComplexType(Entity, IList, DeclType, Index,
                      StructuredList, StructuredIndex);
-  } else if (DeclType->isScalarType() ||
-             (!SemaRef.getLangOpts().CPlusPlus && DeclType->isAtomicType())) {
+  } else if (DeclType->isScalarType()) {
     CheckScalarType(Entity, IList, DeclType, Index,
                     StructuredList, StructuredIndex);
   } else if (DeclType->isVectorType()) {
@@ -1473,7 +1472,8 @@ void InitListChecker::CheckListElementTypes(const InitializedEntity &Entity,
       SemaRef.Diag(IList->getBeginLoc(), diag::err_init_objc_class) << DeclType;
     hadError = true;
   } else if (DeclType->isOCLIntelSubgroupAVCType() ||
-             DeclType->isSizelessBuiltinType()) {
+             DeclType->isSizelessBuiltinType() ||
+             (DeclType->isAtomicType() && !SemaRef.getLangOpts().CPlusPlus)) {
     // Checks for scalar type are sufficient for these types too.
     CheckScalarType(Entity, IList, DeclType, Index, StructuredList,
                     StructuredIndex);

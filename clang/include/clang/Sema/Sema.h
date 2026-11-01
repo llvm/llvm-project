@@ -7663,9 +7663,10 @@ private:
       ConstexprSpecKind ConstexprKind, SourceLocation ConstexprLoc);
 
 public:
-  ExprResult ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
-                                  SourceLocation RParenLoc, Expr *InitExpr,
-                                  const DeclSpec *DS = nullptr);
+  ExprResult
+  ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
+                       SourceLocation RParenLoc, Expr *InitExpr,
+                       const std::optional<DeclSpec> &DS = std::nullopt);
 
   ExprResult BuildCompoundLiteralExpr(
       SourceLocation LParenLoc, TypeSourceInfo *TInfo, SourceLocation RParenLoc,

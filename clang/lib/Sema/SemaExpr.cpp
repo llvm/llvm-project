@@ -7654,7 +7654,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
 
 ExprResult Sema::ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
                                       SourceLocation RParenLoc, Expr *InitExpr,
-                                      const DeclSpec *DS) {
+                                      const std::optional<DeclSpec> &DS) {
   assert(Ty && "ActOnCompoundLiteral(): missing type");
   assert(InitExpr && "ActOnCompoundLiteral(): missing expression");
 
