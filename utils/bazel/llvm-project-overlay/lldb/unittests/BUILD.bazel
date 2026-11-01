@@ -1015,6 +1015,26 @@ cc_test(
 )
 
 cc_test(
+    name = "ScriptInterpreterNoneTests",
+    srcs = ["ScriptInterpreter/None/ScriptInterpreterNoneTest.cpp"],
+    deps = [
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformLinux",
+        "//lldb/source/Plugins:PluginScriptInterpreterNone",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "SignalsTests",
     srcs = ["Signals/UnixSignalsTest.cpp"],
     deps = [
