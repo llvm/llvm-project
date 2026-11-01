@@ -2041,14 +2041,15 @@ void GCNSchedStage::checkScheduling() {
 
   // The region maximum keeps the VGPR and AVGPR pressure of a single point, so
   // distributing it across the banks can miss a rigid peak at another point.
-  // Distribute the pressure of each point instead, against MaxArchVGPRs, the
-  // limit tested below, rather than the strategy's occupancy-derived bank
-  // limits.
+  // Distribute the pressure of each point instead.
+  unsigned ArchVGPRBankLimit, AGPRBankLimit;
+  std::tie(ArchVGPRBankLimit, AGPRBankLimit) = S.getBankLimits();
   unsigned BankedArchVGPRPeak = 0, BankedAGPRPeak = 0;
   std::function<void(const GCNRegPressure &)> TrackBankedPeaks;
   if (AVGPRBanking) {
     TrackBankedPeaks = [&](const GCNRegPressure &RP) {
-      auto [ArchNum, AccNum] = RP.getBankedVGPRNum(MaxArchVGPRs, MaxArchVGPRs);
+      auto [ArchNum, AccNum] =
+          RP.getBankedVGPRNum(ArchVGPRBankLimit, AGPRBankLimit);
       BankedArchVGPRPeak = std::max(BankedArchVGPRPeak, ArchNum);
       BankedAGPRPeak = std::max(BankedAGPRPeak, AccNum);
     };
@@ -2111,13 +2112,13 @@ void GCNSchedStage::checkScheduling() {
   }
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
-  unsigned ArchVGPRsAfter =
-      AVGPRBanking ? BankedArchVGPRPeak : PressureAfter.getArchVGPRNum();
-  unsigned AGPRsAfter =
-      AVGPRBanking ? BankedAGPRPeak : PressureAfter.getAGPRNum();
+  bool BankExcess = AVGPRBanking
+                        ? BankedArchVGPRPeak > ArchVGPRBankLimit ||
+                              BankedAGPRPeak > AGPRBankLimit
+                        : PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
+                              PressureAfter.getAGPRNum() > MaxArchVGPRs;
 
-  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
-      ArchVGPRsAfter > MaxArchVGPRs || AGPRsAfter > MaxArchVGPRs ||
+  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs || BankExcess ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
     DAG.RegionsWithHighRP[RegionIdx] = true;
     DAG.RegionsWithExcessRP[RegionIdx] = true;

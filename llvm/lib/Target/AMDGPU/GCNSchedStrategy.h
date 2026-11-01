@@ -161,6 +161,11 @@ public:
 
   unsigned AGPRExcessLimit = 0;
 
+  /// \returns the allocatable ArchVGPR and AGPR counts.
+  std::pair<unsigned, unsigned> getBankLimits() const {
+    return {ArchVGPRBankLimit, AGPRBankLimit};
+  }
+
   unsigned SGPRCriticalLimit = 0;
 
   unsigned VGPRCriticalLimit = 0;
