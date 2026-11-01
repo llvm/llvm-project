@@ -294,39 +294,38 @@ bool VPRecipeBase::isSafeToSpeculativelyExecute() const {
     case Instruction::Mul:
     case Instruction::GetElementPtr:
       return true;
+    case Instruction::Call:
+    case VPInstruction::Intrinsic:
+      return getCalleeFnAttrs(*cast<VPInstruction>(this))
+          .hasAttribute(Attribute::Speculatable);
     }
   }
   }
 }
 
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
-  assert(!Parent && "Recipe already in some VPBasicBlock");
-  assert(InsertPos->getParent() &&
-         "Insertion position not in any VPBasicBlock");
-  InsertPos->getParent()->insert(this, InsertPos->getIterator());
+  insertBefore(InsertPos->getIterator());
 }
 
-void VPRecipeBase::insertBefore(VPBasicBlock &BB,
-                                iplist<VPRecipeBase>::iterator I) {
-  assert(!Parent && "Recipe already in some VPBasicBlock");
-  assert(I == BB.end() || I->getParent() == &BB);
-  BB.insert(this, I);
+void VPRecipeBase::insertBefore(RecipeListTy::iterator I) {
+  assert(!getParent() && "Recipe already in some VPBasicBlock");
+  assert(I.getNodeParent() && "Insertion position not in any VPBasicBlock");
+  I.getNodeParent()->insert(this, I);
 }
 
 void VPRecipeBase::insertAfter(VPRecipeBase *InsertPos) {
-  assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  InsertPos->getParent()->insert(this, std::next(InsertPos->getIterator()));
+  insertBefore(std::next(InsertPos->getIterator()));
 }
 
 void VPRecipeBase::removeFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
   getParent()->getRecipeList().remove(getIterator());
-  Parent = nullptr;
+  setParent(nullptr);
 }
 
-iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
+VPRecipeBase::RecipeListTy::iterator VPRecipeBase::eraseFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
   return getParent()->getRecipeList().erase(getIterator());
 }
@@ -336,10 +335,9 @@ void VPRecipeBase::moveAfter(VPRecipeBase *InsertPos) {
   insertAfter(InsertPos);
 }
 
-void VPRecipeBase::moveBefore(VPBasicBlock &BB,
-                              iplist<VPRecipeBase>::iterator I) {
+void VPRecipeBase::moveBefore(RecipeListTy::iterator I) {
   removeFromParent();
-  insertBefore(BB, I);
+  insertBefore(I);
 }
 
 InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
@@ -4550,6 +4548,7 @@ void VPWidenLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = load ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4607,6 +4606,7 @@ void VPWidenLoadEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vp.load ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4637,6 +4637,7 @@ void VPWidenStoreRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN store ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4693,6 +4694,7 @@ void VPWidenStoreEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN vp.store ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 

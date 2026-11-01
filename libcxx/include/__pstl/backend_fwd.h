@@ -227,6 +227,25 @@ struct __includes;
 //                                _Compare __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __inclusive_scan;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __inclusive_scan_init;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation, class _Tp>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce,
+//                       _Tp __value) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __is_heap;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<bool>
@@ -465,6 +484,27 @@ struct __transform_binary;
 //                       _ForwardIterator2 __first2,
 //                       _ForwardOutIterator __result,
 //                       _BinaryOperation __op) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __transform_inclusive_scan;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation, class _UnaryOperation>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce,
+//                       _UnaryOperation __transform) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __transform_inclusive_scan_init;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//                          class _BinaryOperation, class _UnaryOperation, class _Tp>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                       _ForwardIterator2 __result,
+//                       _BinaryOperation __reduce,
+//                       _UnaryOperation __transform,
+//                       _Tp __init) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __transform_reduce;
