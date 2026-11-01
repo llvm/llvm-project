@@ -571,7 +571,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
 
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (!ST.has1024AddressableVGPRs())
+  if (!ST.hasVGPRMSBs())
     return false;
 
   TII = ST.getInstrInfo();

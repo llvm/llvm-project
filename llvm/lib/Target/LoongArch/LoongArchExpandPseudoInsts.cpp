@@ -296,12 +296,12 @@ bool LoongArchPreRAExpandPseudo::expandLargeAddressLoad(
                    .addReg(LoongArch::R0);
   auto Part2 = BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU32I_D), TmpParts02)
                    // "rj" is needed due to InstrInfo pattern requirement.
-                   .addReg(TmpPart0, RegState::Kill);
+                   .addReg(TmpPart0);
   auto Part3 = BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU52I_D), TmpParts023)
-                   .addReg(TmpParts02, RegState::Kill);
+                   .addReg(TmpParts02);
   BuildMI(MBB, MBBI, DL, TII->get(LastOpcode), DestReg)
       .addReg(TmpParts023)
-      .addReg(TmpPart1, RegState::Kill);
+      .addReg(TmpPart1);
 
   if (Symbol.getType() == MachineOperand::MO_ExternalSymbol) {
     const char *SymName = Symbol.getSymbolName();
@@ -419,20 +419,20 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
     unsigned AddOp = STI.is64Bit() ? LoongArch::PseudoAddTPRel_D
                                    : LoongArch::PseudoAddTPRel_W;
     BuildMI(MBB, MBBI, DL, TII->get(AddOp), Parts01)
-        .addReg(Part1, RegState::Kill)
+        .addReg(Part1)
         .addReg(LoongArch::R2)
         .addDisp(Symbol, 0, LoongArchII::MO_LE_ADD_R);
 
     unsigned AddiOp = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
     BuildMI(MBB, MBBI, DL, TII->get(AddiOp), DestReg)
-        .addReg(Parts01, RegState::Kill)
+        .addReg(Parts01)
         .addDisp(Symbol, 0, LoongArchII::MO_LE_LO_R);
   } else {
     BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU12I_W), Part1)
         .addDisp(Symbol, 0, LoongArchII::MO_LE_HI);
 
     BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ORI), Parts01)
-        .addReg(Part1, RegState::Kill)
+        .addReg(Part1)
         .addDisp(Symbol, 0, LoongArchII::MO_LE_LO);
 
     Register Parts012 =
@@ -440,10 +440,10 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
 
     BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU32I_D), Parts012)
         // "rj" is needed due to InstrInfo pattern requirement.
-        .addReg(Parts01, RegState::Kill)
+        .addReg(Parts01)
         .addDisp(Symbol, 0, LoongArchII::MO_LE64_LO);
     BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU52I_D), DestReg)
-        .addReg(Parts012, RegState::Kill)
+        .addReg(Parts012)
         .addDisp(Symbol, 0, LoongArchII::MO_LE64_HI);
   }
 
@@ -597,7 +597,7 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
         .addReg(LoongArch::R0)
         .addDisp(Symbol, 0, LoongArchII::MO_DESC_PC_LO);
     BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU32I_D), Tmp3Reg)
-        .addReg(Tmp2Reg, RegState::Kill)
+        .addReg(Tmp2Reg)
         .addDisp(Symbol, 0, LoongArchII::MO_DESC64_PC_LO);
     BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU52I_D), Tmp4Reg)
         .addReg(Tmp3Reg)

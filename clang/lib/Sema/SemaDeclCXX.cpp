@@ -46,6 +46,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -14195,7 +14196,7 @@ bool Sema::tryResolveExplicitSpecifier(ExplicitSpecifier &ExplicitSpec) {
 
 ExplicitSpecifier Sema::ActOnExplicitBoolSpecifier(Expr *ExplicitExpr) {
   ExplicitSpecifier ES(ExplicitExpr, ExplicitSpecKind::Unresolved);
-  if (!ExplicitExpr->isTypeDependent())
+  if (!ExplicitExpr->isTypeDependent() && !ExplicitExpr->containsErrors())
     tryResolveExplicitSpecifier(ES);
   return ES;
 }
@@ -15574,7 +15575,6 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     }
 
     // Build references to the field in the object we're copying from and to.
-    CXXScopeSpec SS; // Intentionally empty
     LookupResult MemberLookup(*this, Field->getDeclName(), Loc,
                               LookupMemberName);
     MemberLookup.addDecl(Field);
@@ -16599,7 +16599,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, CXXRecordDecl *ClassDecl) {
     if (VD->getInit() && !VD->getInit()->isValueDependent())
       HasConstantInit = VD->evaluateValue();
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    if (!VD->evaluateDestruction(Notes) && VD->isConstexpr() &&
+    sema::EvalProxy SProxy(*this);
+    if (!VD->evaluateConstantDestruction(Notes, SProxy) && VD->isConstexpr() &&
         HasConstantInit) {
       Diag(VD->getLocation(),
            diag::err_constexpr_var_requires_const_destruction) << VD;
@@ -17971,8 +17972,6 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
     DeclarationName DN = SemaRef.PP.getIdentifierInfo(Member);
     LookupResult MemberLookup(SemaRef, DN, Loc, Sema::LookupMemberName);
     SemaRef.LookupQualifiedName(MemberLookup, RD);
-    OverloadCandidateSet Candidates(MemberLookup.getNameLoc(),
-                                    OverloadCandidateSet::CSK_Normal);
     if (MemberLookup.empty())
       return std::nullopt;
     return std::move(MemberLookup);
@@ -18040,8 +18039,10 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
   Expr::EvalResult Status;
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Status.Diag = &Notes;
+  sema::EvalProxy SProxy(SemaRef);
   if (!Message->EvaluateCharRangeAsString(Result, EvaluatedSize.get(),
-                                          EvaluatedData.get(), Ctx, Status) ||
+                                          EvaluatedData.get(), Ctx, SProxy,
+                                          Status) ||
       !Notes.empty()) {
     SemaRef.Diag(Message->getBeginLoc(),
                  ErrorOnInvalidMessage ? diag::err_user_defined_msg_constexpr
@@ -18144,7 +18145,7 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
               dyn_cast_or_null<ConceptSpecializationExpr>(InnerCond)) {
         const ASTConstraintSatisfaction &Satisfaction =
             ConceptIDExpr->getSatisfaction();
-        if (!Satisfaction.ContainsErrors || Satisfaction.NumRecords) {
+        if (!Satisfaction.containsErrors() || Satisfaction.record_size()) {
           Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
               << !HasMessage << Msg.str() << AssertExpr->getSourceRange();
           // Drill down into concept specialization expressions to see why they

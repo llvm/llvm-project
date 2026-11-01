@@ -107,6 +107,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
+    static llvm::StringRef getAMDGPUFlatWorkGroupSizeAttrName() { return "cir.amdgpu-flat-work-group-size"; }
+    static llvm::StringRef getAMDGPUWavesPerEUAttrName() { return "cir.amdgpu-waves-per-eu"; }
     // Raw bytes of the device-side fat binary, read by CIRGen so LoweringPrepare
     // can build the runtime-registration globals without doing file I/O.
     static llvm::StringRef getCUDADeviceBinaryAttrName() { return "cir.cu.device_binary"; }
@@ -124,6 +126,8 @@ def CIR_Dialect : Dialect {
     // Platform SDK version from -target-sdk-version, as printed by
     // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
     static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }
+    // Hash of the -cuid compilation unit ID. Absent when no CUID was given.
+    static llvm::StringRef getCUIDHashAttrName() { return "cir.cuid_hash"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 
@@ -149,14 +153,6 @@ def CIR_Dialect : Dialect {
     mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
     void printType(mlir::Type type,
                    mlir::DialectAsmPrinter &printer) const override;
-
-    /// Returns true if \p ty and every type nested in it are CIR types.
-    /// Memoized, since FuncType verification re-queries the same records.
-    bool isPureCIRType(mlir::Type ty) const;
-
-  private:
-    mutable llvm::DenseMap<mlir::Type, bool> pureCIRTypeCache;
-    mutable std::mutex pureCIRTypeCacheMutex;
   }];
 }
 

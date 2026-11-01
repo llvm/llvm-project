@@ -59,7 +59,8 @@ define i1 @gep_zext_idx(ptr %p, i8 %cnt, i8 %off) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[ADD]], 10
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[CNT]] to i16
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i16 [[EXT]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = zext i8 [[CNT]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds i32, ptr [[P]], i16 11
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt ptr [[ADD_PTR]], [[GEP_11]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
@@ -71,7 +72,8 @@ entry:
   %cmp = icmp ugt i8 %add, 10
   tail call void @llvm.assume(i1 %cmp)
   %ext = zext i8 %cnt to i16
-  %add.ptr = getelementptr inbounds i32, ptr %p, i16 %ext
+  %add.ptr.idx = zext i8 %cnt to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %t.1 = icmp uge ptr %add.ptr, %p
   %f.1 = icmp ult ptr %add.ptr, %p
   %gep.11 = getelementptr inbounds i32, ptr %p, i16 11
@@ -89,7 +91,8 @@ define i1 @gep_zext_idx_adds(ptr %p, i8 %cnt, i8 %off) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[CNT]] to i16
 ; CHECK-NEXT:    [[EXT_1:%.*]] = add nuw nsw i16 [[EXT]], 1
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i16 [[EXT_1]]
+; CHECK-NEXT:    [[ADD_PTR_IDX:%.*]] = sext i16 [[EXT_1]] to i64
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[ADD_PTR_IDX]]
 ; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds i32, ptr [[P]], i16 11
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[GEP_11]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
@@ -102,7 +105,8 @@ entry:
   tail call void @llvm.assume(i1 %cmp)
   %ext = zext i8 %cnt to i16
   %ext.1 = add nuw nsw i16 %ext, 1
-  %add.ptr = getelementptr inbounds i32, ptr %p, i16 %ext.1
+  %add.ptr.idx = sext i16 %ext.1 to i64
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %add.ptr.idx
   %t.1 = icmp uge ptr %add.ptr, %p
   %f.1 = icmp ult ptr %add.ptr, %p
   %gep.11 = getelementptr inbounds i32, ptr %p, i16 11

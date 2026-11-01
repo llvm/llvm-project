@@ -1635,6 +1635,14 @@ static unsigned offsetMinAlign(const MachineInstr &MI) {
   return offsetMinAlignForOpcode(OpC);
 }
 
+// Check that the offset fits in the instruction's immediate displacement field.
+static bool offsetFitsImmForm(unsigned OpC, int64_t Offset) {
+  // The SPE doubleword loads and stores have a 5-bit displacement, scaled by 8.
+  if (OpC == PPC::EVSTDD || OpC == PPC::EVLDD)
+    return isShiftedUInt<5, 3>(Offset);
+  return isInt<16>(Offset);
+}
+
 // Return the OffsetOperandNo given the FIOperandNum (and the instruction).
 static unsigned getOffsetONFromFION(const MachineInstr &MI,
                                     unsigned FIOperandNum) {
@@ -1801,9 +1809,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
          "This should be handled in a target-independent way");
   // FIXME: This should be factored out to a separate function as prefixed
   // instructions add a number of opcodes for which we can use 34-bit imm.
-  bool OffsetFitsMnemonic = (OpC == PPC::EVSTDD || OpC == PPC::EVLDD) ?
-                            isUInt<8>(Offset) :
-                            isInt<16>(Offset);
+  bool OffsetFitsMnemonic = offsetFitsImmForm(OpC, Offset);
   if (TII.isPrefixed(MI.getOpcode()))
     OffsetFitsMnemonic = isInt<34>(Offset);
   if (!noImmForm && ((OffsetFitsMnemonic &&
@@ -2048,5 +2054,6 @@ bool PPCRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
   return MI->getOpcode() == PPC::DBG_VALUE || // DBG_VALUE is always Reg+Imm
          MI->getOpcode() == TargetOpcode::STACKMAP ||
          MI->getOpcode() == TargetOpcode::PATCHPOINT ||
-         (isInt<16>(Offset) && (Offset % offsetMinAlign(*MI)) == 0);
+         (offsetFitsImmForm(MI->getOpcode(), Offset) &&
+          (Offset % offsetMinAlign(*MI)) == 0);
 }

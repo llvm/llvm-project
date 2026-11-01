@@ -90,7 +90,7 @@ private:
   const clang::CodeGenOptions &codeGenOpts;
 
   /// A "module" matches a c/cpp source file: containing a list of functions.
-  mlir::ModuleOp theModule;
+  mlir::OwningOpRef<mlir::ModuleOp> theModule;
 
   /// Cached data layout for the module. Built lazily: the layout spec is
   /// attached after construction, in CIRGenerator::Initialize.
@@ -188,7 +188,7 @@ private:
       materializedGlobalTemporaryMap;
 
 public:
-  mlir::ModuleOp getModule() const { return theModule; }
+  mlir::ModuleOp getModule() const { return *theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
 
   /// Queue a record layout entry for materialization in release().
@@ -213,7 +213,7 @@ public:
 
   const cir::CIRDataLayout &getDataLayout() const {
     if (!dataLayout)
-      dataLayout.emplace(theModule);
+      dataLayout.emplace(getModule());
     return *dataLayout;
   }
 

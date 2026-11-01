@@ -66,6 +66,11 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
           >(attr))
     return true;
 
+  // A distinct attribute (such as the id of a loop) is only an identity, so
+  // there is nothing in it to lower.
+  if (isa<mlir::DistinctAttr>(attr))
+    return true;
+
   // Data Member and method are ALWAYS illegal.
   if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
           attr))

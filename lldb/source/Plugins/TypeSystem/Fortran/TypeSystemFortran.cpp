@@ -9,6 +9,8 @@
 #include "TypeSystemFortran.h"
 #include "FortranTypes.h"
 
+#include "Plugins/SymbolFile/DWARF/DWARFASTParserFortran.h"
+
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -36,6 +38,12 @@ void TypeSystemFortran::Initialize() {
 
 void TypeSystemFortran::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
+}
+
+plugin::dwarf::DWARFASTParser *TypeSystemFortran::GetDWARFParser() {
+  if (!m_dwarf_ast_parser_up)
+    m_dwarf_ast_parser_up = std::make_unique<DWARFASTParserFortran>(*this);
+  return m_dwarf_ast_parser_up.get();
 }
 
 TypeSystemSP TypeSystemFortran::CreateInstance(LanguageType language,

@@ -305,6 +305,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     // For the instruction out of the loop, constant or undefined value
     // insert value itself.
     EpilogPN->addIncoming(V, EpilogLatch);
+    SE.forgetLcssaPhiWithNewPredecessor(L, EpilogPN);
 
     assert(EpilogPN->getBasicBlockIndex(EpilogPreHeader) >= 0 &&
           "EpilogPN should have EpilogPreHeader incoming block");

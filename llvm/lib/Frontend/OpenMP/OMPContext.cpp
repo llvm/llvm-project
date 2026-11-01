@@ -138,13 +138,9 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
   }
 }
 
-/// Return true if \p C0 is a subset of \p C1. Note that both arrays are
-/// expected to be sorted.
-template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
-#ifdef EXPENSIVE_CHECKS
-  assert(llvm::is_sorted(C0) && llvm::is_sorted(C1) &&
-         "Expected sorted arrays!");
-#endif
+/// Return true if \p C0 is an ordered subsequence of \p C1.
+template <typename T>
+static bool isOrderedSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
   if (C0.size() > C1.size())
     return false;
   auto It0 = C0.begin(), End0 = C0.end();
@@ -157,24 +153,39 @@ template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
       ++It1;
       continue;
     }
-    ++It0;
+    ++It1;
   }
   return true;
 }
 
 static bool isStrictSubset(const VariantMatchInfo &VMI0,
                            const VariantMatchInfo &VMI1) {
-  // If all required traits are a strict subset and the ordered vectors storing
-  // the construct traits, we say it is a strict subset. Note that the latter
-  // relation is not required to be strict.
-  if (VMI0.RequiredTraits.count() >= VMI1.RequiredTraits.count())
+  // VMI0 is a strict subset if its required traits are a subset of VMI1's, its
+  // construct traits are an ordered subsequence of VMI1's, and either relation
+  // is strict.
+  if (VMI0.RequiredTraits.count() > VMI1.RequiredTraits.count())
     return false;
   for (unsigned Bit : VMI0.RequiredTraits.set_bits())
     if (!VMI1.RequiredTraits.test(Bit))
       return false;
-  if (!isSubset<TraitProperty>(VMI0.ConstructTraits, VMI1.ConstructTraits))
+  if (!isOrderedSubset<TraitProperty>(VMI0.ConstructTraits,
+                                      VMI1.ConstructTraits))
     return false;
-  return true;
+  if (VMI0.RequiredTraits.count() < VMI1.RequiredTraits.count())
+    return true;
+  // With the same traits, only a repeated construct makes VMI0 strict.
+  if (VMI0.ConstructTraits.size() == VMI1.ConstructTraits.size())
+    return false;
+  // Different conditions or ISA names share a trait, so they can't be compared.
+  for (TraitProperty Property :
+       {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
+        TraitProperty::user_condition_unknown})
+    if (VMI0.RequiredTraits.test(unsigned(Property)))
+      return false;
+  return llvm::all_of(VMI0.ISATraits,
+                      [&](const VariantMatchInfo::ISATrait &Trait) {
+                        return llvm::is_contained(VMI1.ISATraits, Trait);
+                      });
 }
 
 static int
@@ -247,13 +258,10 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
 
     // We overwrite the isa trait as it is actually up to the OMPContext hook to
     // check the raw string(s).
-    if (Property == TraitProperty::device_isa___ANY)
-      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](StringRef RawString) {
-        return Ctx.matchesISATrait(RawString);
-      });
-    if (Property == TraitProperty::target_device_isa___ANY)
-      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](StringRef RawString) {
-        return Ctx.matchesISATrait(RawString);
+    if (Property == TraitProperty::device_isa___ANY ||
+        Property == TraitProperty::target_device_isa___ANY)
+      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](const auto &Trait) {
+        return Trait.Property != Property || Ctx.matchesISATrait(Trait.Name);
       });
 
     if (std::optional<bool> Result = HandleTrait(Property, IsActiveTrait))
@@ -261,7 +269,7 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
   }
 
   if (!DeviceOrImplementationSetOnly) {
-    // We could use isSubset here but we also want to record the match
+    // We could use isOrderedSubset here but we also want to record the match
     // locations.
     unsigned ConstructIdx = 0, NoConstructTraits = Ctx.ConstructTraits.size();
     for (TraitProperty Property : VMI.ConstructTraits) {
@@ -289,7 +297,8 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
       // TODO: Verify SIMD
     }
 
-    assert(isSubset<TraitProperty>(VMI.ConstructTraits, Ctx.ConstructTraits) &&
+    assert(isOrderedSubset<TraitProperty>(VMI.ConstructTraits,
+                                          Ctx.ConstructTraits) &&
            "Broken invariant!");
   }
 

@@ -1973,7 +1973,7 @@ TEST(InstructionsTest, AtomicSyncscope) {
   FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
   Function *F = Function::Create(FT, Function::ExternalLinkage, "Fun", M);
   BasicBlock *BB = BasicBlock::Create(Ctx, "Entry", F);
-  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(wrap(&M));
   LLVMPositionBuilderAtEnd(Builder, wrap(BB));
 
   // SyncScope-variants of LLVM C IRBuilder APIs are tested by llvm-c-test,

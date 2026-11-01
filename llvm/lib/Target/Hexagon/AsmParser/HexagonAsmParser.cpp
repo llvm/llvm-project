@@ -479,7 +479,6 @@ bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   MCSubtargetInfo const &STI = getSTI();
 
-  MCInst OrigBundle = MCB;
   HexagonMCChecker Check(getContext(), MII, STI, MCB, *RI, true);
 
   bool CheckOk = HexagonMCInstrInfo::canonicalizePacket(

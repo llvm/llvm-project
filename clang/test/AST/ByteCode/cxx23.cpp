@@ -714,4 +714,18 @@ namespace WithinLifetime {
   static_assert(f(42), ""); // all-error {{not an integral constant expression}} \
                             // all-note {{in call to}}
 }
+
+namespace InvalidDeclInIsTrivialMemoryOperation {
+  struct A { // all-note {{definition}}
+    A((B)); // all-error {{field has incomplete type}}
+    struct B {
+    } b;
+  };
+  constexpr int foo() {
+    A a, b;
+    b = a;
+  }
+  static_assert(foo(), ""); // all-error {{not an integral constant expression}}
+}
+
 #endif

@@ -68,7 +68,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -784,12 +783,10 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     }
   }
 
-  const MCAsmInfo &AsmInfo = TM->getMCAsmInfo();
   const BasicBlock *BB = MBB->getBasicBlock();
   const Function &F = MF->getFunction();
   if (LandingPadSuccs.size() > 1 &&
-      !(AsmInfo.getExceptionHandlingType() == ExceptionHandling::SjLj && BB &&
-        isa<SwitchInst>(BB->getTerminator())) &&
+      !(BB && isa<SwitchInst>(BB->getTerminator())) &&
       !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     report("MBB has more than one landing pad successor", MBB);
 

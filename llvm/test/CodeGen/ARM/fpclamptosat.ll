@@ -1556,32 +1556,33 @@ define i64 @stest_f16i64(half %x) {
 ;
 ; FULL-LABEL: stest_f16i64:
 ; FULL:       @ %bb.0: @ %entry
-; FULL-NEXT:    .save {r4, r5, r7, lr}
-; FULL-NEXT:    push {r4, r5, r7, lr}
-; FULL-NEXT:    vmov.f16 r0, s0
-; FULL-NEXT:    vmov s0, r0
-; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs.w lr, r0, #-1
-; FULL-NEXT:    mvn r12, #-2147483648
-; FULL-NEXT:    sbcs.w lr, r1, r12
-; FULL-NEXT:    sbcs lr, r2, #0
-; FULL-NEXT:    sbcs lr, r3, #0
-; FULL-NEXT:    cset lr, lt
-; FULL-NEXT:    cmp.w lr, #0
-; FULL-NEXT:    csel r5, r3, lr, ne
-; FULL-NEXT:    mov.w r3, #-1
-; FULL-NEXT:    csel r0, r0, r3, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
-; FULL-NEXT:    csel r2, r2, lr, ne
-; FULL-NEXT:    rsbs r4, r0, #0
-; FULL-NEXT:    mov.w r12, #-2147483648
-; FULL-NEXT:    sbcs.w r4, r12, r1
-; FULL-NEXT:    sbcs.w r2, r3, r2
-; FULL-NEXT:    sbcs.w r2, r3, r5
+; FULL-NEXT:    .save {r7, lr}
+; FULL-NEXT:    push {r7, lr}
+; FULL-NEXT:    vcvt.s32.f16 s0, s0
+; FULL-NEXT:    mvn r2, #-2147483648
+; FULL-NEXT:    vmov r1, s0
+; FULL-NEXT:    mov.w r12, #-1
+; FULL-NEXT:    mov.w lr, #-2147483648
+; FULL-NEXT:    subs.w r3, r1, #-1
+; FULL-NEXT:    asr.w r0, r1, #31
+; FULL-NEXT:    sbcs.w r3, r0, r2
+; FULL-NEXT:    sbcs r3, r0, #0
+; FULL-NEXT:    sbcs r0, r0, #0
+; FULL-NEXT:    it lt
+; FULL-NEXT:    asrlt r2, r1, #31
+; FULL-NEXT:    cset r3, lt
+; FULL-NEXT:    csel r0, r1, r12, lt
+; FULL-NEXT:    cmp r3, #0
+; FULL-NEXT:    it ne
+; FULL-NEXT:    asrne r3, r1, #31
+; FULL-NEXT:    rsbs r1, r0, #0
+; FULL-NEXT:    sbcs.w r1, lr, r2
+; FULL-NEXT:    sbcs.w r1, r12, r3
+; FULL-NEXT:    sbcs.w r1, r12, r3
 ; FULL-NEXT:    it ge
 ; FULL-NEXT:    movge r0, #0
-; FULL-NEXT:    csel r1, r1, r12, lt
-; FULL-NEXT:    pop {r4, r5, r7, pc}
+; FULL-NEXT:    csel r1, r2, lr, lt
+; FULL-NEXT:    pop {r7, pc}
 entry:
   %conv = fptosi half %x to i128
   %0 = icmp slt i128 %conv, 9223372036854775807
@@ -1633,17 +1634,10 @@ define i64 @utesth_f16i64(half %x) {
 ;
 ; FULL-LABEL: utesth_f16i64:
 ; FULL:       @ %bb.0: @ %entry
-; FULL-NEXT:    .save {r7, lr}
-; FULL-NEXT:    push {r7, lr}
-; FULL-NEXT:    vmov.f16 r0, s0
-; FULL-NEXT:    vmov s0, r0
-; FULL-NEXT:    bl __fixunshfti
-; FULL-NEXT:    subs r2, #1
-; FULL-NEXT:    mov.w r12, #0
-; FULL-NEXT:    sbcs r2, r3, #0
-; FULL-NEXT:    csel r0, r0, r12, lo
-; FULL-NEXT:    csel r1, r1, r12, lo
-; FULL-NEXT:    pop {r7, pc}
+; FULL-NEXT:    vcvt.u32.f16 s0, s0
+; FULL-NEXT:    movs r1, #0
+; FULL-NEXT:    vmov r0, s0
+; FULL-NEXT:    bx lr
 entry:
   %conv = fptoui half %x to i128
   %0 = icmp ult i128 %conv, 18446744073709551616
@@ -1706,20 +1700,18 @@ define i64 @ustest_f16i64(half %x) {
 ;
 ; FULL-LABEL: ustest_f16i64:
 ; FULL:       @ %bb.0: @ %entry
-; FULL-NEXT:    .save {r7, lr}
-; FULL-NEXT:    push {r7, lr}
-; FULL-NEXT:    vmov.f16 r0, s0
-; FULL-NEXT:    vmov s0, r0
-; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs r2, #1
-; FULL-NEXT:    mov.w r12, #0
-; FULL-NEXT:    sbcs r2, r3, #0
-; FULL-NEXT:    csel r2, r3, r12, lt
-; FULL-NEXT:    csel r0, r0, r12, lt
-; FULL-NEXT:    csel r1, r1, r12, lt
-; FULL-NEXT:    bic.w r0, r0, r2, asr #31
-; FULL-NEXT:    bic.w r1, r1, r2, asr #31
-; FULL-NEXT:    pop {r7, pc}
+; FULL-NEXT:    vcvt.s32.f16 s0, s0
+; FULL-NEXT:    movs r3, #1
+; FULL-NEXT:    vmov r1, s0
+; FULL-NEXT:    movs r2, #0
+; FULL-NEXT:    rsbs r3, r3, r1, asr #31
+; FULL-NEXT:    asr.w r0, r1, #31
+; FULL-NEXT:    sbcs r0, r0, #0
+; FULL-NEXT:    csel r0, r1, r2, lt
+; FULL-NEXT:    it lt
+; FULL-NEXT:    biclt.w r0, r0, r1, asr #31
+; FULL-NEXT:    movs r1, #0
+; FULL-NEXT:    bx lr
 entry:
   %conv = fptosi half %x to i128
   %0 = icmp slt i128 %conv, 18446744073709551616
@@ -3327,33 +3319,33 @@ define i64 @stest_f16i64_mm(half %x) {
 ;
 ; FULL-LABEL: stest_f16i64_mm:
 ; FULL:       @ %bb.0: @ %entry
-; FULL-NEXT:    .save {r4, r5, r7, lr}
-; FULL-NEXT:    push {r4, r5, r7, lr}
-; FULL-NEXT:    vmov.f16 r0, s0
-; FULL-NEXT:    vmov s0, r0
-; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs.w lr, r0, #-1
-; FULL-NEXT:    mvn r12, #-2147483648
-; FULL-NEXT:    sbcs.w lr, r1, r12
-; FULL-NEXT:    sbcs lr, r2, #0
-; FULL-NEXT:    sbcs lr, r3, #0
-; FULL-NEXT:    cset lr, lt
-; FULL-NEXT:    cmp.w lr, #0
-; FULL-NEXT:    csel r5, r3, lr, ne
-; FULL-NEXT:    mov.w r3, #-1
-; FULL-NEXT:    csel r0, r0, r3, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
-; FULL-NEXT:    csel r2, r2, lr, ne
-; FULL-NEXT:    rsbs r4, r0, #0
+; FULL-NEXT:    .save {r7, lr}
+; FULL-NEXT:    push {r7, lr}
+; FULL-NEXT:    vcvt.s32.f16 s0, s0
+; FULL-NEXT:    mvn r2, #-2147483648
+; FULL-NEXT:    vmov r0, s0
+; FULL-NEXT:    mov.w lr, #-1
 ; FULL-NEXT:    mov.w r12, #-2147483648
-; FULL-NEXT:    sbcs.w r4, r12, r1
-; FULL-NEXT:    sbcs.w r2, r3, r2
-; FULL-NEXT:    sbcs.w r2, r3, r5
-; FULL-NEXT:    cset r2, lt
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r1, r1, r12, ne
-; FULL-NEXT:    pop {r4, r5, r7, pc}
+; FULL-NEXT:    subs.w r3, r0, #-1
+; FULL-NEXT:    asr.w r1, r0, #31
+; FULL-NEXT:    sbcs.w r3, r1, r2
+; FULL-NEXT:    sbcs r3, r1, #0
+; FULL-NEXT:    sbcs r1, r1, #0
+; FULL-NEXT:    cset r1, lt
+; FULL-NEXT:    cmp r1, #0
+; FULL-NEXT:    itt ne
+; FULL-NEXT:    asrne r1, r0, #31
+; FULL-NEXT:    asrne r2, r0, #31
+; FULL-NEXT:    csel r0, r0, lr, ne
+; FULL-NEXT:    rsbs r3, r0, #0
+; FULL-NEXT:    sbcs.w r3, r12, r2
+; FULL-NEXT:    sbcs.w r3, lr, r1
+; FULL-NEXT:    sbcs.w r1, lr, r1
+; FULL-NEXT:    cset r1, lt
+; FULL-NEXT:    cmp r1, #0
+; FULL-NEXT:    csel r0, r0, r1, ne
+; FULL-NEXT:    csel r1, r2, r12, ne
+; FULL-NEXT:    pop {r7, pc}
 entry:
   %conv = fptosi half %x to i128
   %spec.store.select = call i128 @llvm.smin.i128(i128 %conv, i128 9223372036854775807)
@@ -3413,18 +3405,10 @@ define i64 @utesth_f16i64_mm(half %x) {
 ;
 ; FULL-LABEL: utesth_f16i64_mm:
 ; FULL:       @ %bb.0: @ %entry
-; FULL-NEXT:    .save {r7, lr}
-; FULL-NEXT:    push {r7, lr}
-; FULL-NEXT:    vmov.f16 r0, s0
-; FULL-NEXT:    vmov s0, r0
-; FULL-NEXT:    bl __fixunshfti
-; FULL-NEXT:    subs r2, #1
-; FULL-NEXT:    sbcs r2, r3, #0
-; FULL-NEXT:    cset r2, lo
-; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r1, r1, r2, ne
-; FULL-NEXT:    pop {r7, pc}
+; FULL-NEXT:    vcvt.u32.f16 s0, s0
+; FULL-NEXT:    movs r1, #0
+; FULL-NEXT:    vmov r0, s0
+; FULL-NEXT:    bx lr
 entry:
   %conv = fptoui half %x to i128
   %spec.store.select = call i128 @llvm.umin.i128(i128 %conv, i128 18446744073709551616)
@@ -3510,23 +3494,22 @@ define i64 @ustest_f16i64_mm(half %x) {
 ;
 ; FULL-LABEL: ustest_f16i64_mm:
 ; FULL:       @ %bb.0: @ %entry
-; FULL-NEXT:    .save {r7, lr}
-; FULL-NEXT:    push {r7, lr}
-; FULL-NEXT:    vmov.f16 r0, s0
-; FULL-NEXT:    vmov s0, r0
-; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs r2, #1
-; FULL-NEXT:    sbcs r2, r3, #0
+; FULL-NEXT:    vcvt.s32.f16 s0, s0
+; FULL-NEXT:    movs r2, #1
+; FULL-NEXT:    vmov r1, s0
+; FULL-NEXT:    rsbs r2, r2, r1, asr #31
+; FULL-NEXT:    asr.w r0, r1, #31
+; FULL-NEXT:    sbcs r0, r0, #0
 ; FULL-NEXT:    cset r2, lt
 ; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    csel r1, r1, r2, ne
-; FULL-NEXT:    csel r0, r0, r2, ne
-; FULL-NEXT:    csel r2, r3, r2, ne
+; FULL-NEXT:    csel r0, r1, r2, ne
+; FULL-NEXT:    it ne
+; FULL-NEXT:    asrne r2, r1, #31
+; FULL-NEXT:    bic.w r1, r2, r2, asr #31
 ; FULL-NEXT:    cmp r2, #0
-; FULL-NEXT:    itt mi
+; FULL-NEXT:    it mi
 ; FULL-NEXT:    movmi r0, #0
-; FULL-NEXT:    movmi r1, #0
-; FULL-NEXT:    pop {r7, pc}
+; FULL-NEXT:    bx lr
 entry:
   %conv = fptosi half %x to i128
   %spec.store.select = call i128 @llvm.smin.i128(i128 %conv, i128 18446744073709551616)

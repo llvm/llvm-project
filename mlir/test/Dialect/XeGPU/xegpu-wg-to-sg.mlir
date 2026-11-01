@@ -963,6 +963,57 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // AND has all ones as neutral element, not 1. Each subgroup's local
+  // reduction starts from the neutral element; the original accumulator is
+  // combined afterwards.
+  // CHECK-LABEL: gpu.func @vector_reduce_and_neutral(
+  // CHECK: %[[ACC:.*]] = arith.constant dense<7> : vector<16xi32>
+  // CHECK: %[[LOAD:.*]] = xegpu.load_nd {{.*}} -> vector<16x64xi32>
+  // CHECK: %[[N:.*]] = arith.constant dense<-1> : vector<16xi32>
+  // CHECK: %[[RED:.*]] = vector.multi_reduction <and>, %[[LOAD]], %[[N]] [1] : vector<16x64xi32> to vector<16xi32>
+  // CHECK: arith.andi %[[RED]], %[[ACC]] : vector<16xi32>
+  gpu.func @vector_reduce_and_neutral(%src: memref<256x64xi32>) {
+    %cst = arith.constant dense<7> : vector<256xi32>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x64xi32>
+      -> !xegpu.tensor_desc<256x64xi32>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>}>
+      : !xegpu.tensor_desc<256x64xi32>
+      -> vector<256x64xi32>
+    %r = vector.multi_reduction <and>, %load, %cst [1]
+      : vector<256x64xi32> to vector<256xi32>
+    %a = xegpu.convert_layout %r
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xi32>
+    gpu.return
+  }
+
+  // The final cross-subgroup reduction also starts from the neutral element.
+  // CHECK-LABEL: gpu.func @vector_reduce_and_neutral_cross_sg(
+  // CHECK: %[[ACC:.*]] = arith.constant 7 : i32
+  // CHECK: %[[LOAD:.*]] = xegpu.load_nd {{.*}} -> vector<8x8xi32>
+  // CHECK: %[[N0:.*]] = arith.constant -1 : i32
+  // CHECK: vector.multi_reduction <and>, %[[LOAD]], %[[N0]] [0, 1] : vector<8x8xi32> to i32
+  // CHECK: gpu.barrier
+  // CHECK: %[[LOAD_SLM:.*]] = xegpu.load_matrix {{.*}} -> vector<4x4xi32>
+  // CHECK: %[[N1:.*]] = arith.constant -1 : i32
+  // CHECK: %[[FINAL:.*]] = vector.multi_reduction <and>, %[[LOAD_SLM]], %[[N1]] [0, 1] : vector<4x4xi32> to i32
+  // CHECK: arith.andi %[[FINAL]], %[[ACC]] : i32
+  gpu.func @vector_reduce_and_neutral_cross_sg(%src: memref<32x32xi32>) {
+    %cst = arith.constant 7 : i32
+    %tdesc = xegpu.create_nd_tdesc %src : memref<32x32xi32>
+      -> !xegpu.tensor_desc<32x32xi32>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [4, 4], sg_data = [8, 8]>}>
+      : !xegpu.tensor_desc<32x32xi32>
+      -> vector<32x32xi32>
+    %reduce = vector.multi_reduction <and>, %load, %cst [0, 1]
+      : vector<32x32xi32> to i32
+    %anchor = xegpu.convert_layout %reduce
+        <{
+          target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 4], sg_data = [8, 8]>, dims = [0, 1]>
+        }> : i32
+    gpu.return
+  }
+
   // CHECK-LABEL: load_nd_tdesc_with_anchor_layout
   gpu.func @load_nd_tdesc_with_anchor_layout(%src: memref<256x128xf32>) {
     //CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<inst_data = [32, 16], lane_layout = [1, 16], lane_data = [1, 1]>>

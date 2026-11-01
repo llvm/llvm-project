@@ -481,11 +481,11 @@ bool areAllOperandsNonInsts(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
-  return !mayHaveNonDefUseDependency(*I) &&
-         all_of(make_isa_range<Instruction>(I->operands()),
+  return all_of(make_isa_range<Instruction>(I->operands()),
                 [I](Instruction *IO) {
                   return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-                });
+                }) &&
+         !mayHaveNonDefUseDependency(*I);
 }
 
 bool isUsedOutsideBlock(Value *V) {
@@ -493,13 +493,12 @@ bool isUsedOutsideBlock(Value *V) {
   if (!I)
     return true;
   // Limits the number of uses to save compile time.
-  return !I->mayReadOrWriteMemory() && !I->hasNUsesOrMore(UsesLimit) &&
-         all_of(I->users(), [I](User *U) {
-           auto *IU = dyn_cast<Instruction>(U);
-           if (!IU)
-             return true;
-           return IU->getParent() != I->getParent() || isa<PHINode>(IU);
-         });
+  return !I->hasNUsesOrMore(UsesLimit) && all_of(I->users(), [I](User *U) {
+    auto *IU = dyn_cast<Instruction>(U);
+    if (!IU)
+      return true;
+    return IU->getParent() != I->getParent() || isa<PHINode>(IU);
+  }) && !I->mayReadOrWriteMemory();
 }
 
 bool doesNotNeedToBeScheduled(Value *V) {
@@ -904,6 +903,13 @@ Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
         std::min(BaseAlignment, commonAlignment(cast<LoadInst>(V)->getAlign(),
                                                 Idx * ScalarSize));
   return BaseAlignment;
+}
+
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL) {
+  Value *Ptr = cast<LoadInst>(VL.front())->getPointerOperand();
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEP->getPointerOperand();
+  return cast<SelectInst>(Ptr);
 }
 
 Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
