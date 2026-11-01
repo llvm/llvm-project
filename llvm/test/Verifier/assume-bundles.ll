@@ -80,6 +80,27 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
 ; CHECK: noundef assumptions should have 1 argument
   call void @llvm.assume(i1 true) ["noundef"(ptr %P, ptr %P)]
 
+; Range checks
+;
+; CHECK: range assumptions should have 3 arguments
+  call void @llvm.assume(i1 true) ["range"()]
+; CHECK: range assumptions should have 3 arguments
+  call void @llvm.assume(i1 true) ["range"(i32 %P1)]
+; CHECK: range assumptions should have 3 arguments
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0)]
+; CHECK: range assumptions should have 3 arguments
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i32 0, i32 0)]
+; This one is valid
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i32 0)]
+; CHECK: first argument should be an integer
+  call void @llvm.assume(i1 true) ["range"(ptr %P, i32 0, i32 0)]
+; CHECK: all arguments should have the same bit width
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i33 0)]
+; CHECK: all arguments should have the same bit width
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i33 0, i32 0)]
+; CHECK: an empty range has to be represented as `0, 0`
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 1, i32 1)]
+
 ; SeparateStorage checks
 ;
 ; CHECK: separate_storage assumptions should have 2 arguments

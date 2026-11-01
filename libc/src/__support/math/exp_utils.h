@@ -161,6 +161,71 @@ LIBC_NOINLINE LIBC_INLINE double set_exceptional(double x) {
   return x + FPBits::inf().get_val();
 }
 
+// Fast range-reduction rounding constants for exp, exp2, sinh, and cosh:
+//
+// Instead of calling fputil::nearest_integer(x * SCALE) and
+// static_cast<int>(kd) (which has a serial dependency chain:
+//   multiply -> roundsd/frintn -> cvttsd2si/fcvtzs),
+// we fuse the scaling and rounding bias into a single FMA:
+//   k_biased = fma(x, SCALE, ROUND_BIAS).
+//
+// Derivation of ROUND_SHIFT, ROUND_BIAS, and ROUND_MASK:
+// 1) Why we cannot use 1.5 * 2^52:
+//    Adding 1.5 * 2^52 (ulp = 1) relies on the hardware FMA rounding mode to
+//    round z = x * SCALE to an integer. In directed rounding modes
+//    (FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO), that rounds toward -inf/+inf/0
+//    instead of nearest, doubling the reduced argument |u| from <= 0.5 * 2^-N
+//    to <= 2^-N.
+//    To round to nearest in all rounding modes, we keep F = 52 - M > 0
+//    fractional bits in the 52-bit mantissa using:
+//      ROUND_SHIFT = 1.5 * 2^M,
+//    add +0.5 explicitly in ROUND_BIAS, and mask out the F fractional bits.
+//
+// 2) Choosing M = 20 (20 integer bits + 32 fractional bits):
+//    For all non-overflowing/non-underflowing inputs of exp, exp2, sinh, and
+//    cosh, the scaled input z = x * SCALE satisfies |z| < 2^18. To keep
+//    z + 1.5 * 2^M inside the single binade:
+//      [1.25 * 2^M, 1.75 * 2^M) subset [2^M, 2^(M + 1))
+//    without carrying across 2^M, we need 2^18 <= 2^(M - 2), i.e., M >= 20.
+//    Choosing the minimum M = 20 maximizes the fractional precision at
+//    F = 52 - 20 = 32 fractional bits and aligns the binary point of k right
+//    at the 32-bit word boundary (bit 32):
+//      ROUND_SHIFT = 1.5 * 2^20 = 0x1.8p+20,  ulp = 2^(20 - 52) = 2^-32.
+//    In k_biased = z + ROUND_BIAS:
+//    - The low 32 bits [31:0] hold the 32 fractional bits in [0, 1).
+//    - Bits [50:32] hold the 19-bit signed two's-complement integer k (with
+//      |k| < 2^18 and sign bit at bit 50).
+//
+// 3) Deriving the bias (+0.5 + 2^-32):
+//    Masking out the low 32 fractional bits with:
+//      ROUND_MASK = 0xffff'ffff'0000'0000
+//    truncates toward -inf (floor). Adding +0.5 turns floor into nearest:
+//      floor(z + 0.5) = round(z).
+//    However, the FMA rounds z + ROUND_BIAS at ulp = 2^-32 before the mask.
+//    With only +0.5, a tiny negative input (-2^-32 < z < 0) in FE_DOWNWARD or
+//    FE_TOWARDZERO would round z + (1.5 * 2^20 + 0.5) down by 1 ULP to:
+//      1.5 * 2^20 + 0.5 - 2^-32,
+//    which truncates to k = -1 instead of k = 0.
+//    Adding +2^-32 (1 ULP at 2^20, i.e., mantissa bit 0) gives:
+//      ROUND_BIAS = 1.5 * 2^20 + 0.5 + 2^-32 = 0x1.8000080000001p+20,
+//    ensuring k_biased >= 1.5 * 2^20 (so k = 0 and kd = 0.0) for all
+//    |x| < 2^-9 across all rounding modes.
+//
+// 4) Note on rounding errors:
+//    Rounding the FMA at ulp(k_biased) = 2^-32 before truncating the 32
+//    fractional bits gives:
+//      k = floor(z + 0.5 + 2^-32 + delta),  |delta| < 2^-32.
+//    Since k (extracted from bits [50:32]) and:
+//      kd = (k_biased & ROUND_MASK) - ROUND_SHIFT
+//    are still equal integers, the range-reduction identity remains exact; the
+//    extra rounding error only shifts the half-integer rounding boundary by at
+//    most 2^-31, widening the reduced argument |u| by at most a factor of
+//    (1 + 2^-30) and increasing the polynomial approximation error by < 2^-90.
+LIBC_INLINE_VAR constexpr double ROUND_BIAS = 0x1.8000080000001p+20;
+LIBC_INLINE_VAR constexpr double ROUND_SHIFT = 0x1.8p+20;
+LIBC_BIT_CAST_CONSTEXPR_VAR double ROUND_MASK =
+    cpp::bit_cast<double>(0xffff'ffff'0000'0000ULL);
+
 #if !defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) ||                              \
     !defined(LIBC_MATH_HAS_SMALL_TABLES)
 

@@ -905,6 +905,13 @@ Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
   return BaseAlignment;
 }
 
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL) {
+  Value *Ptr = cast<LoadInst>(VL.front())->getPointerOperand();
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEP->getPointerOperand();
+  return cast<SelectInst>(Ptr);
+}
+
 Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
                             function_ref<bool(Value *)> IsGEPLane,
                             const DataLayout &DL) {

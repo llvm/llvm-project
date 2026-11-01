@@ -79,8 +79,8 @@ auto GetAllowedElements(const DescriptorTy &desc, llvm::omp::Version version) {
 template <typename ElemTy, typename OwnerTy>
 llvm::directive::VersionRange GetVersionRangeForElement(
     ElemTy elemId, OwnerTy ownerId) {
-  llvm::omp::Version minVer{std::numeric_limits<int>::max()};
-  llvm::omp::Version maxVer{0u};
+  llvm::omp::Version minVer{llvm::omp::Version::Max()};
+  llvm::omp::Version maxVer{0};
   const auto &desc{llvm::omp::getDescriptor(ownerId)};
   for (llvm::omp::Version v : desc.getVersions()) {
     if (GetAllowedElements(desc, v).test(elemId)) {
@@ -88,9 +88,7 @@ llvm::directive::VersionRange GetVersionRangeForElement(
       maxVer = std::max(maxVer, v);
     }
   }
-  return llvm::directive::VersionRange{
-      static_cast<int>(static_cast<unsigned>(minVer)),
-      static_cast<int>(static_cast<unsigned>(maxVer))};
+  return llvm::directive::VersionRange{minVer, maxVer};
 }
 
 llvm::directive::VersionRange GetVersionRangeForDirective(

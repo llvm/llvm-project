@@ -100,7 +100,7 @@ module attributes {cir.triple = "spirv64-unknown-unknown"} {
 !langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_local)>
 !ptr = !cir.ptr<!langptr>
 
-module attributes {cir.triple = "amdgcn-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
+module attributes {cir.triple = "amdgpu-amd-amdhsa", llvm.data_layout = "e-p:64:64-p3:32:32"} {
   // The stored pointer has a known layout even though its pointee does not.
   // CHECK-LABEL: llvm.func @copy_opaque_pointers
   cir.func @copy_opaque_pointers(%src: !cir.ptr<!ptr>, %dst: !cir.ptr<!ptr>) {

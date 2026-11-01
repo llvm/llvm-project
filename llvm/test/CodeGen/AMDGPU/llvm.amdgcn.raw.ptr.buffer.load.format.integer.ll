@@ -140,8 +140,6 @@ define amdgpu_ps <4 x half> @raw_ptr_buffer_load_format_v4i16(ptr addrspace(8) i
 ; GFX8-GISEL-NEXT:    s_mov_b32 s3, s5
 ; GFX8-GISEL-NEXT:    buffer_load_format_d16_xyzw v[0:3], v0, s[0:3], 0 offen
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD

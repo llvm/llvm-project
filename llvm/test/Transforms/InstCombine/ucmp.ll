@@ -771,3 +771,178 @@ define <2 x i8> @ucmp_zext_const_vec_not_narrowable(<2 x i8> %x) {
 }
 
 declare void @use64(i64 %value)
+
+define i8 @ucmp_add_common_op(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @ucmp_add_common_op(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = add nuw i32 %a, %n
+  %bn = add nuw i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @ucmp_add_common_op_commuted(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @ucmp_add_common_op_commuted(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = add nuw i32 %n, %a
+  %bn = add nuw i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @ucmp_addlike_common_op(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @ucmp_addlike_common_op(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = add nuw i32 %a, %n
+  %bn = or disjoint i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+; Negative test: unsigned ordering cannot be preserved without nuw.
+define i8 @ucmp_add_common_op_no_nuw(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @ucmp_add_common_op_no_nuw(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = add i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = add i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = add i32 %a, %n
+  %bn = add i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+; Negative test: nsw does not preserve unsigned ordering.
+define i8 @ucmp_add_common_op_nsw(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @ucmp_add_common_op_nsw(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = add nsw i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = add nsw i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = add nsw i32 %a, %n
+  %bn = add nsw i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @ucmp_sub_common_rhs(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @ucmp_sub_common_rhs(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = sub nuw i32 %a, %n
+  %bn = sub nuw i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @ucmp_sub_common_lhs(i32 %n, i32 %a, i32 %b) {
+; CHECK-LABEL: define i8 @ucmp_sub_common_lhs(
+; CHECK-SAME: i32 [[N:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[B]], i32 [[A]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %na = sub nuw i32 %n, %a
+  %nb = sub nuw i32 %n, %b
+  %r = call i8 @llvm.ucmp(i32 %na, i32 %nb)
+  ret i8 %r
+}
+
+; Negative test: unsigned subtraction needs nuw on both operations.
+define i8 @ucmp_sub_common_rhs_no_nuw(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @ucmp_sub_common_rhs_no_nuw(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = sub i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = sub nuw i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = sub i32 %a, %n
+  %bn = sub nuw i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @ucmp_mul_common_nonzero(i32 %a, i32 %b,
+; CHECK-LABEL: define i8 @ucmp_mul_common_nonzero(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 range(i32 1, 0) [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  i32 range(i32 1, 0) %n) {
+  %an = mul nuw i32 %a, %n
+  %bn = mul nuw i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @ucmp_mul_common_nonzero_commuted(i32 %a, i32 %b,
+; CHECK-LABEL: define i8 @ucmp_mul_common_nonzero_commuted(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 range(i32 1, 0) [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  i32 range(i32 1, 0) %n) {
+  %an = mul nuw i32 %n, %a
+  %bn = mul nuw i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+; Negative test: multiplication by zero would erase the original ordering.
+define i8 @ucmp_mul_common_maybe_zero(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @ucmp_mul_common_maybe_zero(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = mul nuw i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = mul nuw i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = mul nuw i32 %a, %n
+  %bn = mul nuw i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+; Negative test: unsigned multiplication needs nuw on both operations.
+define i8 @ucmp_mul_common_nonzero_no_nuw(i32 %a, i32 %b,
+; CHECK-LABEL: define i8 @ucmp_mul_common_nonzero_no_nuw(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 range(i32 1, 0) [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = mul i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = mul nuw i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  i32 range(i32 1, 0) %n) {
+  %an = mul i32 %a, %n
+  %bn = mul nuw i32 %b, %n
+  %r = call i8 @llvm.ucmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define <2 x i8> @ucmp_add_common_op_vec(<2 x i32> %a, <2 x i32> %b,
+; CHECK-LABEL: define <2 x i8> @ucmp_add_common_op_vec(
+; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], <2 x i32> [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ucmp.v2i8.v2i32(<2 x i32> [[A]], <2 x i32> [[B]])
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  <2 x i32> %n) {
+  %an = add nuw <2 x i32> %a, %n
+  %bn = add nuw <2 x i32> %b, %n
+  %r = call <2 x i8> @llvm.ucmp(<2 x i32> %an, <2 x i32> %bn)
+  ret <2 x i8> %r
+}

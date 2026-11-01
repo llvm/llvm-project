@@ -876,7 +876,7 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
     if (RV->getIvarAccessHistory() != RefVal::IvarAccessHistory::None)
       return;
 
-  ExplodedNode *N = C.generateErrorNode(St);
+  ExplodedNode *N = C.addSink(St);
   if (!N)
     return;
 
