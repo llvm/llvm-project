@@ -11,6 +11,7 @@ group("CIRUnitTests") {
     "PointerLikeTest.cpp",
     "RecordMemberKindTest.cpp",
     "RecordTypeMetadataTest.cpp",
+    "RecordTypeVerifyTest.cpp",
     "UnionTypeSizeTest.cpp",
     "VectorTypeABIAlignTest.cpp",
   ]

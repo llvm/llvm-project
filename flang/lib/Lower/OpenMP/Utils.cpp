@@ -145,6 +145,18 @@ mlir::Type getLoopVarType(lower::AbstractConverter &converter,
   return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
 }
 
+std::size_t getLoopVarSize(const semantics::Symbol &sym) {
+  const semantics::Symbol &ultimate = sym.GetUltimate();
+  // The storage of an ALLOCATABLE or POINTER is its descriptor; use the kind.
+  if (semantics::IsAllocatableOrPointer(ultimate))
+    if (const semantics::DeclTypeSpec *type = ultimate.GetType())
+      if (const semantics::IntrinsicTypeSpec *intrinsic = type->AsIntrinsic())
+        if (std::optional<std::int64_t> kind =
+                evaluate::ToInt64(intrinsic->kind()))
+          return *kind;
+  return ultimate.size();
+}
+
 semantics::Symbol *
 getIterationVariableSymbol(const lower::pft::Evaluation &eval) {
   return eval.visit(common::visitors{
@@ -897,8 +909,8 @@ void collectLoopRelatedInfo(
           currentLocation, firOpBuilder.getIntegerType(32), 1));
     }
     iv.push_back(bounds->Name().thing.symbol);
-    loopVarTypeSize = std::max(
-        loopVarTypeSize, bounds->Name().thing.symbol->GetUltimate().size());
+    loopVarTypeSize =
+        std::max(loopVarTypeSize, getLoopVarSize(*bounds->Name().thing.symbol));
     if (--collapseValue) {
       doConstructEval = tryGetNestedDoConstruct(*doConstructEval);
       // No DO construct left to descend into: COLLAPSE (or a tile SIZES list)

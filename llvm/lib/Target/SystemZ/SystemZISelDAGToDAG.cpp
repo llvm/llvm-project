@@ -1798,6 +1798,8 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
   }
 
   case ISD::BUILD_VECTOR: {
+    if (!Subtarget->hasVector())
+      break;
     auto *BVN = cast<BuildVectorSDNode>(Node);
     SystemZVectorConstantInfo VCI(BVN);
     if (VCI.isVectorConstantLegal(*Subtarget)) {

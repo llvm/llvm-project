@@ -1409,7 +1409,7 @@ def trunc_shift: GICombineRule <
 
 def simplify_demanded_bits : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_AND, G_OR):$root,
+  (match (wip_match_opcode G_AND, G_OR, G_SHL, G_LSHR, G_ASHR):$root,
          [{ return Helper.matchSimplifyDemandedBits(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
@@ -1735,6 +1735,25 @@ def bitfield_extract_from_shr : GICombineRule<
   (match (ashr_lshr_frags $dst):$root,
     [{ return Helper.matchBitfieldExtractFromShr(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
+
+// Replace a 1-bit G_UBFX of a bit that is a copy of the sign bit with a shift
+// of the sign bit into bit 0, which can fold into users such as G_ADD.
+def ubfx_sign_bit_to_lshr : GICombineRule<
+  (defs root:$root),
+  (match (G_CONSTANT $lsb, $lsbimm),
+         (G_UBFX $dst, $src, $lsb, 1):$root,
+         [{ LLT Ty = MRI.getType(${dst}.getReg());
+            unsigned BitWidth = Ty.getSizeInBits();
+            const APInt &Lsb = ${lsbimm}.getCImm()->getValue();
+            return Ty.isScalar() && Lsb.ult(BitWidth) &&
+                   VT->computeNumSignBits(${src}.getReg()) >=
+                       BitWidth - Lsb.getZExtValue(); }]),
+  (apply [{ LLT Ty = MRI.getType(${dst}.getReg());
+            LLT ShiftAmtTy =
+                Helper.getTargetLowering().getPreferredShiftAmountTy(Ty);
+            auto Amt = B.buildConstant(ShiftAmtTy, Ty.getSizeInBits() - 1);
+            B.buildLShr(${dst}.getReg(), ${src}.getReg(), Amt);
+            ${root}->eraseFromParent(); }])>;
 
 def bitfield_extract_from_shr_and : GICombineRule<
   (defs root:$dst, build_fn_matchinfo:$info),
@@ -2460,6 +2479,20 @@ def combine_shuffle_vector_to_build_vector : GICombineRule<
   (defs root:$root),
   (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
+
+// Combines shuffles of buildvector into buildvector
+def combine_shuffle_of_buildvector_to_buildvector : GICombineRule<
+  (defs root:$root),
+  (match (G_BUILD_VECTOR $src1, GIVariadic<>:$unused),
+         (G_IMPLICIT_DEF $src2),
+         (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
+  (apply [{ Helper.applyCombineShuffleOfBuildVector(*${root}); }])>;
+def combine_shuffle_of_buildvectors_to_buildvector : GICombineRule<
+  (defs root:$root),
+  (match (G_BUILD_VECTOR $src1, GIVariadic<>:$unused1),
+         (G_BUILD_VECTOR $src2, GIVariadic<>:$unused2),
+         (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
+  (apply [{ Helper.applyCombineShuffleOfBuildVector(*${root}); }])>;
 
 // Combines buildvector operations
 def combine_build_vector_of_bitcast : GICombineRule<

@@ -37,7 +37,7 @@ body:             |
 
     %1:g8rc = COPY $x4
     %0:g8rc = COPY $x3
-    %2:g8rc = RLDICL killed %1, 0, 32
+    %2:g8rc = RLDICL %1, 0, 32
     %3:g8rc = RLDICR %2, 2, 61
     $x3 = COPY %3
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -48,7 +48,7 @@ body:             |
 # CHECK-NEXT: 	rldic 3, 4, 2, 30
 # CHECK-NEXT: 	blr
 #
-# CHECK-PASS-NOT:     %2:g8rc = RLDICL killed %1, 0, 32
+# CHECK-PASS-NOT:     %2:g8rc = RLDICL %1, 0, 32
 # CHECK-PASS-NOT:     %3:g8rc = RLDICR %2, 2, 61
 # CHECK-PASS:     %3:g8rc = RLDIC %1, 2, 30
 

@@ -269,8 +269,7 @@ static void applyCommandLineOverridesToOptions(const ScalarOptions &Opts,
 
 static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
                                 DominatorTree *DT, SimplifyCFGOptions Options) {
-  applyCommandLineOverridesToOptions(
-      F.getContext().getLibraryOptions().get<ScalarOptions>(), Options);
+  applyCommandLineOverridesToOptions(getScalarOptions(F), Options);
   assert((!RequireAndPreserveDomTree ||
           (DT && DT->verify(DominatorTree::VerificationLevel::Full))) &&
          "Original domtree is invalid?");
