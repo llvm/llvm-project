@@ -3547,6 +3547,7 @@ static bool handleUncountableExitsWithSideEffects(
 static bool loopHasStores(VPBasicBlock *HeaderVPBB) {
   return any_of(vp_rpo_plain_cfg_loop_body(HeaderVPBB), [](VPBasicBlock *VPBB) {
     return any_of(*VPBB, [VPBB](VPRecipeBase &R) {
+      (void)VPBB;
       if (match(&R, m_Intrinsic<Intrinsic::pseudoprobe>()))
         return false;
       if (!R.mayWriteToMemory()) {
