@@ -50,8 +50,6 @@ if config.enable_profcheck:
     # Exclude llvm-objcopy tests - not the target of this effort, and some use
     # cat in ways that conflict with how profcheck uses it.
     config.excludes.append("llvm-objcopy")
-    # (Issue #161235) Temporarily exclude LoopVectorize.
-    config.excludes.append("LoopVectorize")
     # Exclude suites that fail due to inserted profile annotations.
     config.excludes.extend(["UpdateTestChecks", "Bitcode"])
     # TODO(#166655): Reenable Instrumentation tests
