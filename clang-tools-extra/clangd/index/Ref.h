@@ -131,13 +131,15 @@ public:
            sizeof(value_type) * Refs.capacity();
   }
 
-  /// Builds a RefSlab from refs that are already grouped by symbol, such as
-  /// the ones read from an index file. Unlike Builder, does not deduplicate
-  /// individual refs, which makes it much cheaper.
+  /// Builds a RefSlab from refs that are already in RefSlab order, such as the
+  /// ones read from an index file. Much cheaper than Builder, which has to
+  /// group, deduplicate and sort refs one by one.
   class BundleBuilder {
   public:
     BundleBuilder() : UniqueStrings(Arena) {}
     /// Adds all refs of \p ID. Deep copy: strings will be owned by the slab.
+    /// Symbols must be added in strictly increasing order of their IDs, and
+    /// \p SymbolRefs must be sorted.
     void insert(const SymbolID &ID, llvm::ArrayRef<Ref> SymbolRefs);
     RefSlab build() &&;
 

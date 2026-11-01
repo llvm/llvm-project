@@ -515,7 +515,6 @@ TEST(MergeIndexTest, Refs) {
 }
 
 TEST(RefSlabTest, BundleBuilderMatchesBuilder) {
-  SymbolID A("a"), B("b"), C("c");
   std::string FileX = "file:///x.cc", FileY = "file:///y.cc";
   auto MakeRef = [](const std::string &File, uint32_t Line) {
     Ref R;
@@ -525,53 +524,50 @@ TEST(RefSlabTest, BundleBuilderMatchesBuilder) {
     R.Kind = RefKind::Reference;
     return R;
   };
-  // Bundles out of SymbolID order, refs out of order within a bundle, and
-  // symbol C split over two bundles that share a ref.
   std::vector<std::pair<SymbolID, std::vector<Ref>>> Bundles = {
-      {B, {MakeRef(FileY, 2), MakeRef(FileX, 1)}},
-      {C, {MakeRef(FileX, 5)}},
-      {A, {MakeRef(FileX, 3)}},
-      {C, {MakeRef(FileY, 4), MakeRef(FileX, 5)}},
+      {SymbolID("a"), {MakeRef(FileX, 3)}},
+      {SymbolID("b"), {MakeRef(FileY, 2), MakeRef(FileX, 1)}},
+      {SymbolID("c"), {MakeRef(FileY, 4), MakeRef(FileX, 5)}},
   };
-  auto Build = [&](bool WithDuplicateSymbol) {
-    RefSlab::Builder Expected;
-    RefSlab::BundleBuilder Actual;
-    for (const auto &[ID, Refs] : Bundles) {
-      if (!WithDuplicateSymbol && &Bundles.back().second == &Refs)
-        continue;
-      for (const Ref &R : Refs)
-        Expected.insert(ID, R);
-      Actual.insert(ID, Refs);
-    }
-    return std::make_pair(std::move(Expected).build(),
-                          std::move(Actual).build());
-  };
-  for (bool WithDuplicateSymbol : {false, true}) {
-    auto [Expected, Actual] = Build(WithDuplicateSymbol);
-    // Strings must be owned by the slabs.
-    std::fill(FileX.begin(), FileX.end(), '?');
-    std::fill(FileY.begin(), FileY.end(), '?');
-    EXPECT_EQ(Expected.numRefs(), Actual.numRefs());
-    ASSERT_EQ(Expected.size(), Actual.size());
-    for (size_t I = 0; I < Expected.size(); ++I) {
-      auto ExpectedIt = Expected.begin() + I, ActualIt = Actual.begin() + I;
-      EXPECT_EQ(ExpectedIt->first, ActualIt->first);
-      EXPECT_EQ(ExpectedIt->second, ActualIt->second);
-    }
-    FileX = "file:///x.cc";
-    FileY = "file:///y.cc";
+  // BundleBuilder takes refs in RefSlab order.
+  llvm::sort(Bundles, llvm::less_first());
+  for (auto &[ID, Refs] : Bundles)
+    llvm::sort(Refs);
+
+  RefSlab::Builder ExpectedBuilder;
+  RefSlab::BundleBuilder ActualBuilder;
+  for (const auto &[ID, Refs] : Bundles) {
+    for (const Ref &R : Refs)
+      ExpectedBuilder.insert(ID, R);
+    ActualBuilder.insert(ID, Refs);
+  }
+  RefSlab Expected = std::move(ExpectedBuilder).build();
+  RefSlab Actual = std::move(ActualBuilder).build();
+  // Strings must be owned by the slabs.
+  std::fill(FileX.begin(), FileX.end(), '?');
+  std::fill(FileY.begin(), FileY.end(), '?');
+
+  EXPECT_EQ(Expected.numRefs(), Actual.numRefs());
+  ASSERT_EQ(Expected.size(), Actual.size());
+  for (size_t I = 0; I < Expected.size(); ++I) {
+    auto ExpectedIt = Expected.begin() + I, ActualIt = Actual.begin() + I;
+    EXPECT_EQ(ExpectedIt->first, ActualIt->first);
+    EXPECT_EQ(ExpectedIt->second, ActualIt->second);
   }
 }
 
 TEST(RefSlabTest, BundleBuilderCopiesReusedBuffers) {
+  SymbolID First("a"), Second("b");
+  if (Second < First)
+    std::swap(First, Second);
   // The same buffer holds a different file URI for each insert.
   char Buffer[] = "file:///x.cc";
   Ref R;
   R.Location.FileURI = Buffer;
   RefSlab::BundleBuilder Builder;
-  Builder.insert(SymbolID("a"), {R});
+  Builder.insert(First, {R});
   Buffer[8] = 'y';
-  Builder.insert(SymbolID("b"), {R});
+  Builder.insert(Second, {R});
   Buffer[8] = '?';
   RefSlab Slab = std::move(Builder).build();
   llvm::StringMap<SymbolID> FileToSymbol;
@@ -579,8 +575,8 @@ TEST(RefSlabTest, BundleBuilderCopiesReusedBuffers) {
     for (const Ref &Ref : Refs)
       FileToSymbol.try_emplace(Ref.Location.FileURI, ID);
   EXPECT_EQ(FileToSymbol.size(), 2u);
-  EXPECT_EQ(FileToSymbol.lookup("file:///x.cc"), SymbolID("a"));
-  EXPECT_EQ(FileToSymbol.lookup("file:///y.cc"), SymbolID("b"));
+  EXPECT_EQ(FileToSymbol.lookup("file:///x.cc"), First);
+  EXPECT_EQ(FileToSymbol.lookup("file:///y.cc"), Second);
 }
 
 TEST(MergeIndexTest, IndexedFiles) {

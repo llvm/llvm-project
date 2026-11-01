@@ -543,6 +543,31 @@ TEST(SerializationTest, NoCrashOnBadArraySize) {
             "malformed or truncated include uri");
 }
 
+// Refs are written in RefSlab order: one bundle per symbol, sorted by symbol.
+TEST(SerializationTest, RejectsRepeatedRefsBundle) {
+  auto In = readIndexFile(YAML);
+  ASSERT_FALSE(!In) << In.takeError();
+  IndexFileOut Out(*In);
+  Out.Format = IndexFileFormat::RIFF;
+  std::string Serialized = llvm::to_string(Out);
+  ASSERT_FALSE(!readIndexFile(Serialized));
+
+  auto Parsed = riff::readFile(Serialized);
+  ASSERT_FALSE(!Parsed) << Parsed.takeError();
+  auto Refs = llvm::find_if(Parsed->Chunks, [](riff::Chunk C) {
+    return C.ID == riff::fourCC("refs");
+  });
+  ASSERT_NE(Refs, Parsed->Chunks.end());
+  // The fixture has refs for a single symbol; repeat its bundle.
+  std::string RepeatedRefs = (Refs->Data + Refs->Data).str();
+  Refs->Data = RepeatedRefs;
+
+  auto CorruptParsed = readIndexFile(llvm::to_string(*Parsed));
+  ASSERT_TRUE(!CorruptParsed);
+  EXPECT_EQ(llvm::toString(CorruptParsed.takeError()),
+            "malformed refs: not sorted or repeated symbol");
+}
+
 // Check we detect invalid string table size size without allocating it first.
 // If this detection fails, the test should allocate a huge array and crash.
 TEST(SerializationTest, NoCrashOnBadStringTableSize) {

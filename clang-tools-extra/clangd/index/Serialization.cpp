@@ -23,6 +23,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -519,8 +520,15 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
   if (Chunks.count("refs")) {
     Reader RefsReader(Chunks.lookup("refs"));
     RefSlab::BundleBuilder Refs;
+    std::optional<SymbolID> PrevID;
     while (!RefsReader.eof()) {
       auto RefsBundle = readRefs(RefsReader, Strings->Strings);
+      // Refs are written from a RefSlab: sorted by symbol, one bundle per
+      // symbol, and each bundle sorted.
+      if ((PrevID && !(*PrevID < RefsBundle.first)) ||
+          !llvm::is_sorted(RefsBundle.second))
+        return error("malformed refs: not sorted or repeated symbol");
+      PrevID = RefsBundle.first;
       Refs.insert(RefsBundle.first, RefsBundle.second);
     }
     if (RefsReader.err())

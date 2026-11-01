@@ -41,6 +41,9 @@ void RefSlab::Builder::insert(const SymbolID &ID, const Ref &S) {
 
 void RefSlab::BundleBuilder::insert(const SymbolID &ID,
                                     llvm::ArrayRef<Ref> SymbolRefs) {
+  assert((Refs.empty() || Refs.back().first < ID) &&
+         "Symbols must be added in increasing order");
+  assert(llvm::is_sorted(SymbolRefs) && "Refs of a symbol must be sorted");
   if (SymbolRefs.empty())
     return;
   Ref *Copy = Arena.Allocate<Ref>(SymbolRefs.size());
@@ -49,30 +52,12 @@ void RefSlab::BundleBuilder::insert(const SymbolID &ID,
     R.Location.FileURI = UniqueStrings.save(R.Location.FileURI).data();
     new (&Copy[I]) Ref(R);
   }
-  llvm::MutableArrayRef<Ref> Stored(Copy, SymbolRefs.size());
-  if (!llvm::is_sorted(Stored))
-    llvm::sort(Stored); // By file, affects xrefs display order.
-  Refs.emplace_back(ID, Stored);
+  Refs.emplace_back(ID, llvm::ArrayRef<Ref>(Copy, SymbolRefs.size()));
   NumRefs += SymbolRefs.size();
 }
 
 RefSlab RefSlab::BundleBuilder::build() && {
-  // Keep the invariant of Builder: sorted by SymbolID, one entry per symbol.
-  if (!llvm::is_sorted(Refs, llvm::less_first()))
-    llvm::stable_sort(Refs, llvm::less_first());
-  std::vector<value_type> Merged;
-  bool HasDuplicates = false;
-  for (size_t I = 1; I < Refs.size() && !HasDuplicates; ++I)
-    HasDuplicates = Refs[I - 1].first == Refs[I].first;
-  if (!HasDuplicates)
-    return RefSlab(std::move(Refs), std::move(Arena), NumRefs);
-  // Rare: the same symbol appeared in several bundles. Fall back to Builder,
-  // which also removes duplicate refs.
-  Builder B;
-  for (const auto &[ID, SymbolRefs] : Refs)
-    for (const Ref &R : SymbolRefs)
-      B.insert(ID, R);
-  return std::move(B).build();
+  return RefSlab(std::move(Refs), std::move(Arena), NumRefs);
 }
 
 RefSlab RefSlab::Builder::build() && {
