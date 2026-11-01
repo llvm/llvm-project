@@ -1255,6 +1255,12 @@ features cannot lower the translation-unit ABI level;
 %   - Moved checkers
 %   - Diagnostic changes
 
+#### New checkers and features
+
+- Added the ``cplusplus.DestroyedAsWrongType`` checker, which reports storage
+  reused by placement new for an object of a different type that is then
+  destroyed or deleted as the original type.
+
 #### Improvements
 
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
