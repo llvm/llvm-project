@@ -14,7 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -30,6 +30,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
@@ -197,13 +198,6 @@ bool isVectorizableArgMemCall(const CallInst *CI, const TargetLibraryInfo *TLI,
           CI->hasFnAttr(VFABI::MappingsAttrName));
 }
 
-FunctionType *getScalarFunctionType(FunctionType *FTy) {
-  return FunctionType::get(
-      toScalarizedTy(FTy->getReturnType()),
-      map_to_vector(FTy->params(), [](Type *Ty) { return toScalarizedTy(Ty); }),
-      FTy->isVarArg());
-}
-
 /// Returns true if the trailing arguments of the calls \p VL are the linear
 /// arguments of the vector variant \p Info, which advance by the linear steps
 /// for each \p LaneVF elements across the lanes.
@@ -258,31 +252,35 @@ std::optional<VFInfo> getCallVectorVariant(const CallInst *CI, unsigned VF,
   // The calls of the vector function, processing LaneVF elements each, use the
   // vector function of the same scalar function for all the elements.
   unsigned LaneVF = 1;
+  ElementCount EC = ElementCount::getFixed(VF);
   SmallVector<VFInfo, 8> Mappings;
   if (const VecDesc *VD = TLI->getScalarizedMappingInfo(*CI)) {
     LaneVF = VD->getVectorizationFactor().getFixedValue();
     const VecDesc *WideVD =
-        VF % LaneVF == 0 ? TLI->getVectorMappingInfo(VD->getScalarFnName(),
-                                                     ElementCount::getFixed(VF),
+        VF % LaneVF == 0 ? TLI->getVectorMappingInfo(VD->getScalarFnName(), EC,
                                                      /*Masked=*/false)
                          : nullptr;
     if (WideVD) {
+      FunctionType *ScalarFTy = toScalarizedFunctionTy(CI->getFunctionType());
       if (std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(
-              WideVD->getVectorFunctionABIVariantString(),
-              getScalarFunctionType(CI->getFunctionType())))
-        Mappings.push_back(*Info);
+              WideVD->getVectorFunctionABIVariantString(), ScalarFTy)) {
+        // The already declared wider vector function must match the variant.
+        const Function *WideF = CI->getModule()->getFunction(Info->VectorName);
+        if (!WideF || WideF->getFunctionType() ==
+                          VFABI::createFunctionType(*Info, ScalarFTy))
+          Mappings.push_back(*Info);
+      }
     }
   } else {
     Mappings = VFDatabase::getMappings(*CI);
   }
   if (Mappings.empty())
     return std::nullopt;
-  ElementCount EC = ElementCount::getFixed(VF);
   // Each lane of the vector call accesses the memory through the linear
   // pointers, so all the lanes must be the calls to the same function.
-  if (VL.size() * LaneVF == VF && all_of(VL, IsaPred<CallInst>) &&
-      all_of(make_isa_range<CallInst>(VL), [&](CallInst *Call) {
-        return Call->getCalledFunction() == CI->getCalledFunction();
+  if (VL.size() * LaneVF == VF && all_of(VL, [&](Value *V) {
+        auto *Call = dyn_cast<CallInst>(V);
+        return Call && Call->getCalledFunction() == CI->getCalledFunction();
       })) {
     const auto *It = find_if(Mappings, [&](const VFInfo &Info) {
       return Info.Shape.VF == EC && !Info.isMasked() &&
@@ -320,11 +318,10 @@ unsigned getCallVariantPartVF(const CallInst *CI, ArrayRef<Value *> VL,
   if (VL.size() < 4)
     return 0;
   for (unsigned PartVF = bit_floor(VL.size() - 2); PartVF >= 2; PartVF /= 2) {
-    if (getCallVectorVariant(CI, getNumCallElements(VL.take_front(PartVF)),
-                             VL.take_front(PartVF), SE, TLI)) {
+    ArrayRef<Value *> Part = VL.take_front(PartVF);
+    if (getCallVectorVariant(CI, getNumCallElements(Part), Part, SE, TLI))
       return getCallVariantPartVF(CI, VL.drop_front(PartVF), SE, TLI) ? PartVF
                                                                       : 0;
-    }
   }
   return 0;
 }
@@ -340,6 +337,40 @@ unsigned getNumVectorCallArgs(const CallInst *CI, ArrayRef<Value *> VL,
     return P.ParamKind == VFParamKind::OMP_Linear;
   });
   return It == Variant->Shape.Parameters.end() ? CI->arg_size() : It->ParamPos;
+}
+
+bool mayOverlapLinearPointers(const VFInfo &Variant, ArrayRef<Value *> VL,
+                              BatchAAResults &BatchAA,
+                              const TargetLibraryInfo *TLI) {
+  SmallVector<unsigned> LinearPtrArgs;
+  for (const VFParameter &P : Variant.Shape.Parameters) {
+    if (P.ParamKind == VFParamKind::OMP_Linear &&
+        cast<CallInst>(VL.front())
+            ->getArgOperand(P.ParamPos)
+            ->getType()
+            ->isPointerTy())
+      LinearPtrArgs.push_back(P.ParamPos);
+  }
+  // The lanes of the variants without the linear pointers may be not calls.
+  if (LinearPtrArgs.size() < 2)
+    return false;
+  return any_of(VL, [&](Value *V) {
+    auto *Call = cast<CallInst>(V);
+    for (auto [Idx, I] : enumerate(LinearPtrArgs)) {
+      for (unsigned J : drop_begin(LinearPtrArgs, Idx + 1)) {
+        if (!BatchAA.isNoAlias(MemoryLocation::getForArgument(Call, I, TLI),
+                               MemoryLocation::getForArgument(Call, J, TLI)))
+          return true;
+      }
+    }
+    return false;
+  });
+}
+
+SmallVector<int> createPaddingMask(unsigned VF, unsigned PaddedVF) {
+  SmallVector<int> Mask = createSequentialMask(0, VF, PaddedVF - VF);
+  replace(Mask, PoisonMaskElem, 0);
+  return Mask;
 }
 
 bool isCommutative(const Instruction *I, const Value *ValWithUses,
@@ -964,7 +995,7 @@ template SmallBitVector isUndefVector<true>(const Value *,
                                             const SmallBitVector &);
 
 bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
-                                 TargetLibraryInfo *TLI,
+                                 unsigned NumVecArgs, TargetLibraryInfo *TLI,
                                  const TargetTransformInfo *TTI) {
   if (!UserInst)
     return false;
@@ -982,7 +1013,9 @@ bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
     CallInst *CI = cast<CallInst>(UserInst);
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
     return any_of(enumerate(CI->args()), [&](auto &&Arg) {
-      return isVectorIntrinsicWithScalarOpAtArg(ID, Arg.index(), TTI) &&
+      return (ID == Intrinsic::not_intrinsic
+                  ? Arg.index() >= NumVecArgs
+                  : isVectorIntrinsicWithScalarOpAtArg(ID, Arg.index(), TTI)) &&
              Arg.value().get() == Scalar;
     });
   }
@@ -1060,6 +1093,13 @@ Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
         std::min(BaseAlignment, commonAlignment(cast<LoadInst>(V)->getAlign(),
                                                 Idx * ScalarSize));
   return BaseAlignment;
+}
+
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL) {
+  Value *Ptr = cast<LoadInst>(VL.front())->getPointerOperand();
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEP->getPointerOperand();
+  return cast<SelectInst>(Ptr);
 }
 
 Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,

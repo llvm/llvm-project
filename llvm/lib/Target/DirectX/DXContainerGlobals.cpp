@@ -370,10 +370,16 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   unsigned PSVVersion = 3;
   if (MMI.ShaderProfile != Triple::Library &&
       MMI.EntryPropertyVec.size() == 1) {
+    const Function *Entry = MMI.EntryPropertyVec[0].Entry;
+    bool UsesViewID = getAnalysis<ShaderFlagsAnalysisWrapper>()
+                          .getShaderFlags()
+                          .getFunctionFlags(Entry)
+                          .ViewID;
+    PSV.BaseData.UsesViewID = UsesViewID;
     const auto &Signatures =
         getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo();
-    if (const auto *Sig = Signatures.get(MMI.EntryPropertyVec[0].Entry)) {
-      Sig->updatePSV(PSV, MMI.ValidatorVersion);
+    if (const auto *Sig = Signatures.get(Entry)) {
+      Sig->updatePSV(PSV, MMI.ValidatorVersion, UsesViewID);
       // Preserve the existing empty-signature path, and select an ABI version
       // compatible with the validator for graphics signature data.
       VersionTuple V = MMI.ValidatorVersion;

@@ -35,11 +35,11 @@
 
 namespace llvm {
 class AssumptionCache;
+class BatchAAResults;
 class CallInst;
 class Constant;
 class DataLayout;
 class DebugLoc;
-class FunctionType;
 class InsertElementInst;
 class Instruction;
 class IRBuilderBase;
@@ -47,6 +47,7 @@ class LoadInst;
 class Loop;
 class PHINode;
 class ScalarEvolution;
+class SelectInst;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -136,9 +137,6 @@ Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS);
 bool isVectorizableArgMemCall(const CallInst *CI, const TargetLibraryInfo *TLI,
                               bool ReVec);
 
-/// Returns the type of the scalar function of the vector function type \p FTy.
-FunctionType *getScalarFunctionType(FunctionType *FTy);
-
 /// Returns the unmasked vector variant of \p CI for \p VF elements. For the
 /// known lane calls \p VL, the variant, taking the trailing arguments as linear
 /// scalars of the first lane, is preferred if these arguments advance by the
@@ -165,6 +163,18 @@ unsigned getCallVariantPartVF(const CallInst *CI, ArrayRef<Value *> VL,
 unsigned getNumVectorCallArgs(const CallInst *CI, ArrayRef<Value *> VL,
                               ScalarEvolution *SE,
                               const TargetLibraryInfo *TLI);
+
+/// Returns true if the linear pointer arguments of the vector variant
+/// \p Variant may overlap in some of the calls \p VL. The vector function may
+/// write the results in the order, different from the scalar function.
+bool mayOverlapLinearPointers(const VFInfo &Variant, ArrayRef<Value *> VL,
+                              BatchAAResults &BatchAA,
+                              const TargetLibraryInfo *TLI);
+
+/// Returns the mask, widening \p VF lanes to \p PaddedVF lanes. The padded
+/// lanes repeat the first lane, since the vector function may require
+/// well-defined arguments.
+SmallVector<int> createPaddingMask(unsigned VF, unsigned PaddedVF);
 
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 /// For BinaryOperator, it also checks if \p ValWithUses is used in specific
@@ -367,9 +377,10 @@ SmallBitVector isUndefVector(const Value *V,
                              const SmallBitVector &UseMask = {});
 
 /// \returns True if in-tree use also needs extract. This refers to
-/// possible scalar operand in vectorized instruction.
+/// possible scalar operand in vectorized instruction, including the arguments
+/// of the vector function call after the first \p NumVecArgs vectorized ones.
 bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
-                                 TargetLibraryInfo *TLI,
+                                 unsigned NumVecArgs, TargetLibraryInfo *TLI,
                                  const TargetTransformInfo *TTI);
 
 /// \returns the AA location that is being access by the instruction.
@@ -396,6 +407,10 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
 /// the loads \p VL.
 Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
                                       const DataLayout &DL);
+
+/// Returns the select instruction picking between the candidate base pointers
+/// of the blended loads \p VL.
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL);
 
 /// Returns the common type for the indices of the single-index GEP lanes of
 /// a GEP node with the main op \p VL0, or nullptr if no such type exists.

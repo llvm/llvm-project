@@ -16,7 +16,9 @@
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/SystemLibraries.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
@@ -104,6 +106,16 @@ bool TargetLibraryInfoImpl::isCallingConvCCompatible(Function *F) {
   return ::isCallingConvCCompatible(F->getCallingConv(),
                                     F->getParent()->getTargetTriple(),
                                     F->getFunctionType());
+}
+
+void TargetLibraryInfo::initExtensionsForTriple(bool &ShouldExtI32Param,
+                                                bool &ShouldExtI32Return,
+                                                bool &ShouldSignExtI32Param,
+                                                bool &ShouldSignExtI32Return,
+                                                const Triple &T) {
+  RTLIB::RuntimeLibcallsInfo::initExtensionsForTriple(
+      ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param,
+      ShouldSignExtI32Return, T);
 }
 
 static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
@@ -1475,11 +1487,25 @@ TargetLibraryInfoImpl::getScalarizedMappingInfo(const CallBase &CB) const {
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(ScalarDescs, F, compareWithVectorFnName);
   if (I == ScalarDescs.end() || StringRef(I->getVectorFnName()) != F ||
-      I->isMasked() ||
-      I->getVectorizationFactor() !=
-          ElementCount::getFixed(VecTy->getNumElements()))
+      I->isMasked() || I->getVectorizationFactor() != VecTy->getElementCount())
     return nullptr;
-  return &*I;
+  // The scalarized call must match the prototypes of all the library functions,
+  // mapped to the vector function, and their mappings are preferred. Only the
+  // structures of vectors are scalarized.
+  if (any_of(FTy->subtypes(),
+             [](Type *Ty) { return Ty->isStructTy() && !isVectorizedTy(Ty); }))
+    return nullptr;
+  FunctionType *ScalarFTy = toScalarizedFunctionTy(FTy);
+  const VecDesc *VD = &*I;
+  for (; I != ScalarDescs.end() && StringRef(I->getVectorFnName()) == F; ++I) {
+    LibFunc LF = getLibFunc(I->getScalarFnName());
+    if (LF == NotLibFunc)
+      continue;
+    if (!isValidProtoForLibFunc(*ScalarFTy, LF, *Callee->getParent()))
+      return nullptr;
+    VD = &*I;
+  }
+  return VD;
 }
 
 TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,

@@ -226,6 +226,101 @@ func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>, i32
 
 // -----
 
+// CHECK-LABEL: func.func @extract_after_insert_dynamic(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_dynamic(%value: f32, %tensor: tensor<8xf32>, %i: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_dynamic_rank2(
+// CHECK-SAME: %[[VALUE:.*]]: i32,
+// CHECK-NEXT: return %[[VALUE]] : i32
+func.func @extract_after_insert_dynamic_rank2(%value: i32, %tensor: tensor<4x8xi32>, %i: index, %j: index) -> i32 {
+  %inserted = tensor.insert %value into %tensor[%i, %j] : tensor<4x8xi32>
+  %extracted = tensor.extract %inserted[%i, %j] : tensor<4x8xi32>
+  return %extracted : i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_mixed_indices(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_mixed_indices(%value: f32, %tensor: tensor<4x8xf32>, %i: index) -> f32 {
+  %c2 = arith.constant 2 : index
+  %inserted = tensor.insert %value into %tensor[%i, %c2] : tensor<4x8xf32>
+  %extracted = tensor.extract %inserted[%i, %c2] : tensor<4x8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_dynamic_shape(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_dynamic_shape(%value: f32, %tensor: tensor<?x?xf32>, %i: index, %j: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i, %j] : tensor<?x?xf32>
+  %extracted = tensor.extract %inserted[%i, %j] : tensor<?x?xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_other_index(
+// CHECK: %[[INSERTED:.*]] = tensor.insert
+// CHECK-NEXT: %[[EXTRACTED:.*]] = tensor.extract %[[INSERTED]]
+// CHECK-NEXT: return %[[EXTRACTED]] : f32
+func.func @extract_after_insert_other_index(%value: f32, %tensor: tensor<8xf32>, %i: index, %j: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%j] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_other_constant(
+// CHECK: %[[INSERTED:.*]] = tensor.insert
+// CHECK-NEXT: %[[EXTRACTED:.*]] = tensor.extract %[[INSERTED]]
+// CHECK-NEXT: return %[[EXTRACTED]] : f32
+func.func @extract_after_insert_other_constant(%value: f32, %tensor: tensor<4x8xf32>, %i: index) -> f32 {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %inserted = tensor.insert %value into %tensor[%i, %c1] : tensor<4x8xf32>
+  %extracted = tensor.extract %inserted[%i, %c2] : tensor<4x8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_shared_tensor(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK: %[[INSERTED:.*]] = tensor.insert %[[VALUE]]
+// CHECK-NEXT: return %[[INSERTED]], %[[VALUE]] : tensor<8xf32>, f32
+func.func @extract_after_insert_shared_tensor(%value: f32, %tensor: tensor<8xf32>, %i: index) -> (tensor<8xf32>, f32) {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %inserted, %extracted : tensor<8xf32>, f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_chain(
+// CHECK-SAME: %{{.*}}: f32, %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_chain(%first: f32, %value: f32, %tensor: tensor<8xf32>, %i: index) -> f32 {
+  %first_insert = tensor.insert %first into %tensor[%i] : tensor<8xf32>
+  %inserted = tensor.insert %value into %first_insert[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
 // Ensure extract dense resource elements not crash.
 
 // CHECK-LABEL: func @extract_dense_resource_nofold
