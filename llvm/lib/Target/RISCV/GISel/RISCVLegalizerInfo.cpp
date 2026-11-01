@@ -249,17 +249,28 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtZbc(), {s32})
       .unsupported();
 
-  auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
   auto &CountZerosPoisonActions =
       getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
   if (ST.hasStdExtZbb()) {
-    CountZerosActions.legalFor({{sXLen, sXLen}})
+    getActionDefinitionsBuilder({G_CTLZ, G_CTTZ})
+        .legalFor({{sXLen, sXLen}})
         .customFor({{s32, s32}})
         .clampScalar(0, s32, sXLen)
         .widenScalarToNextPow2(0)
         .scalarSameSizeAs(1, 0);
   } else {
-    CountZerosActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+    auto &CTLZActions = getActionDefinitionsBuilder(G_CTLZ);
+    if (ST.hasVendorXTHeadBb())
+      CTLZActions.legalFor({{sXLen, sXLen}})
+          .clampScalar(0, sXLen, sXLen)
+          .scalarSameSizeAs(1, 0);
+    else
+      CTLZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+
+    getActionDefinitionsBuilder(G_CTTZ)
+        .maxScalar(0, sXLen)
+        .scalarSameSizeAs(1, 0)
+        .lower();
     CountZerosPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
   }
   CountZerosPoisonActions.lower();

@@ -23,13 +23,13 @@ define void @test_widen_metadata(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.A>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !4)
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>, align 4 (!tbaa !4)
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float (!fpmath !8)
 ; CHECK-NEXT:      WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00> (!fpmath !8)
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
 ; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.B>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back> (!tbaa !4)
+; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back>, align 4 (!tbaa !4)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -104,11 +104,11 @@ define void @test_intrinsic_with_metadata(ptr noalias %A, ptr noalias %B, i32 %n
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.A>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !4)
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>, align 4 (!tbaa !4)
 ; CHECK-NEXT:      WIDEN-INTRINSIC ir<%sqrt> = call llvm.sqrt(ir<%lv>) (!fpmath !8)
 ; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.B>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%sqrt> (!tbaa !4)
+; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%sqrt>, align 4 (!tbaa !4)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -178,13 +178,13 @@ define void @test_widen_with_multiple_metadata(ptr noalias %A, ptr noalias %B, i
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.A>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !4)
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]>, align 4 (!tbaa !4)
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float
 ; CHECK-NEXT:      WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00>
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
 ; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.B>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back> (!tbaa !4)
+; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back>, align 4 (!tbaa !4)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -259,7 +259,7 @@ define void @test_narrowed_to_single_scalar_metadata(ptr noalias %A, float %a, f
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.A>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%div> (!tbaa !4)
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%div>, align 4 (!tbaa !4)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -325,12 +325,12 @@ define void @test_noalias_metadata(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.a>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]> (!alias.scope !28, !noalias !27)
+; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>, align 4 (!alias.scope !28, !noalias !27)
 ; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%l2> = load vp<[[VP6]]> (!alias.scope !27)
+; CHECK-NEXT:      WIDEN ir<%l2> = load vp<[[VP6]]>, align 4 (!alias.scope !27)
 ; CHECK-NEXT:      WIDEN ir<%add> = add ir<%l>, ir<%l2>
-; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%add> (!alias.scope !28, !noalias !27)
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%add>, align 4 (!alias.scope !28, !noalias !27)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
