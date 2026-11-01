@@ -19,6 +19,10 @@ namespace llvm {
 
 struct AnalysisOptions;
 class Instruction;
+class LLVMContext;
+
+/// Return -icp-max-num-vtables.
+LLVM_ABI unsigned getMaxNumVTableAnnotations(const LLVMContext &C);
 
 // Class for identifying profitable indirect call promotion candidates when
 // the indirect-call value profile metadata is available.
