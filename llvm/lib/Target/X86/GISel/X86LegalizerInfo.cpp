@@ -298,15 +298,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasPOPCNT, {{s16, s16}, {s32, s32}})
       .legalFor(HasPOPCNT && Is64Bit, {{s64, s64}})
       .legalFor(HasVPOPCNTDQ, {{v4s32, v4s32},
-                               {v2s64, v2s64},
                                {v8s32, v8s32},
-                               {v4s64, v4s64},
                                {v16s32, v16s32},
+                               {v2s64, v2s64},
+                               {v4s64, v4s64},
                                {v8s64, v8s64}})
       .legalFor(HasBITALG, {{v16s8, v16s8},
-                            {v8s16, v8s16},
                             {v32s8, v32s8},
                             {v64s8, v64s8},
+                            {v8s16, v8s16},
                             {v16s16, v16s16},
                             {v32s16, v32s16}})
       .widenScalarToNextPow2(1, /*Min=*/16)
