@@ -18,32 +18,29 @@ define void @test(ptr %p, ptr %k, i1 %c, i1 %h, ptr %o0, ptr %o1, ptr %o2, ptr %
 ; CHECK-NEXT:    [[TMP1:%.*]] = uitofp <2 x i16> [[TMP0]] to <2 x double>
 ; CHECK-NEXT:    [[L6:%.*]] = load i16, ptr [[P6]], align 2
 ; CHECK-NEXT:    [[I3:%.*]] = uitofp i16 [[L6]] to double
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[I0]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[I3]], i64 3
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[A0:%.*]] = phi double [ [[I0]], %[[INIT]] ], [ [[TMP11:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[A3:%.*]] = phi double [ [[I3]], %[[INIT]] ], [ [[TMP14:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[A4:%.*]] = phi double [ 0.000000e+00, %[[INIT]] ], [ [[F4:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ [[TMP1]], %[[INIT]] ], [ [[TMP7:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double> [ [[TMP4]], %[[INIT]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[KV:%.*]] = load double, ptr [[K]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i16>, ptr [[P]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <2 x i16> [[TMP3]] to <2 x double>
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[KV]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP4]], <2 x double> [[TMP6]], <2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i16>, ptr [[P4]], align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = uitofp <2 x i16> [[TMP8]] to <2 x double>
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP11]] = call double @llvm.fma.f64(double [[TMP10]], double [[KV]], double [[A0]])
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP9]], i64 1
-; CHECK-NEXT:    [[TMP14]] = call double @llvm.fma.f64(double [[TMP15]], double [[KV]], double [[A3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i16>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP7:%.*]] = uitofp <4 x i16> [[TMP6]] to <4 x double>
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> poison, double [[KV]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP8]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP7]], <4 x double> [[TMP9]], <4 x double> [[TMP5]])
 ; CHECK-NEXT:    [[F4]] = fadd double [[A4]], 1.000000e+00
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x double> [[TMP10]], i64 2
 ; CHECK-NEXT:    store double [[TMP11]], ptr [[O0]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x double> [[TMP10]], i64 1
 ; CHECK-NEXT:    store double [[TMP12]], ptr [[O1]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x double> [[TMP10]], i64 0
 ; CHECK-NEXT:    store double [[TMP13]], ptr [[O2]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x double> [[TMP10]], i64 3
 ; CHECK-NEXT:    store double [[TMP14]], ptr [[O3]], align 8
 ; CHECK-NEXT:    ret void
 ;

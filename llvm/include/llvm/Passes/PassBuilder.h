@@ -102,6 +102,11 @@ public:
   /// Tuning option to override the default inliner threshold.
   int InlinerThreshold;
 
+  /// Tuning option to cap how many times the inliner pipeline reruns on an SCC
+  /// after devirtualizing a call. Its default value is that of the flag:
+  /// `-max-devirt-iterations`.
+  unsigned MaxDevirtIterations;
+
   // Experimental option to eagerly invalidate more analyses. This has the
   // potential to decrease max memory usage in exchange for more compile time.
   // This may affect codegen due to either passes using analyses only when
