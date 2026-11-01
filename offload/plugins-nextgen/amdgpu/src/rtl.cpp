@@ -299,24 +299,27 @@ static Error iterateAgentMemoryPools(hsa_agent_t Agent, CallbackTy Cb) {
 /// Return nullopt if no available engine ID could be found.
 static std::optional<hsa_amd_sdma_engine_id_t>
 getSdmaEngineId(hsa_agent_t DstAgent, hsa_agent_t SrcAgent) {
-  static std::atomic<uint32_t> Select{0u};
+  static std::atomic<uint32_t> NextIdx{0u};
 
   uint32_t AvailMask;
   if (hsa_amd_memory_copy_engine_status(DstAgent, SrcAgent, &AvailMask) ||
       !AvailMask)
     return std::nullopt;
 
-  uint32_t LocalSelect = Select.load(std::memory_order_acquire);
-  uint32_t EngineId = 1u;
+  // The first engine ID we want to check is at NextIdx in the engine mask.
+  uint32_t Start = NextIdx.load(std::memory_order_relaxed);
+  // Inspect the bits starting from this ID.
+  uint32_t FromStart = llvm::rotr(AvailMask, Start);
+  // The first non-zero bit is the index of the next available engine. This
+  // might be in the wrapped-around part of the mask, so we need to do a "modulo
+  // bitwidth", aka & 0b11111. The addition of Start is necessary since we
+  // rotated by that amount.
+  uint32_t Idx = (Start + llvm::countr_zero(FromStart)) & 0b11111;
+  // The next engine we want to check is at + 1, again wrapped by bitwidth.
+  NextIdx.store((Idx + 1u) & 0b11111, std::memory_order_relaxed);
 
-  do {
-    if (LocalSelect >= 32 || (1u << LocalSelect) > AvailMask)
-      LocalSelect = 0u;
-    EngineId = 1u << LocalSelect++;
-  } while (!(AvailMask & EngineId));
-
-  Select.store(LocalSelect, std::memory_order_release);
-  return static_cast<hsa_amd_sdma_engine_id_t>(EngineId);
+  // We now have the *index* of the engine. The ID is the bit set at that index.
+  return static_cast<hsa_amd_sdma_engine_id_t>(1u << Idx);
 }
 
 /// Dispatches an asynchronous memory copy.
