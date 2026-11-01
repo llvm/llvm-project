@@ -1347,6 +1347,11 @@ public:
       LI->removeBlock(SCEVCheckBlock);
     }
 
+    // Clean up directly if the memory checks folded to false, to avoid further
+    // expansions re-using anything left over from MemCheckExp.
+    if (MemCheckBlock && !getMemRuntimeChecks().first)
+      eraseMemCheckBlock();
+
     // Outer loop is used as part of the later cost calculations.
     OuterLoop = L->getParentLoop();
   }
@@ -1634,11 +1639,11 @@ static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
   VPIRBasicBlock *IRVPBB = Plan->createEmptyVPIRBasicBlock(IRBB);
   auto IP = IRVPBB->begin();
   for (auto &R : make_early_inc_range(VPBB->phis()))
-    R.moveBefore(*IRVPBB, IP);
+    R.moveBefore(IP);
 
   for (auto &R :
        make_early_inc_range(make_range(VPBB->getFirstNonPhi(), VPBB->end())))
-    R.moveBefore(*IRVPBB, IRVPBB->end());
+    R.moveBefore(IRVPBB->end());
 
   VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
   // VPBB is now dead and will be cleaned up when the plan gets destroyed.
@@ -5577,19 +5582,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                    /*OnlyLatches=*/false);
-  if (BestVPlan.getEntry()->getSingleSuccessor() ==
-      BestVPlan.getScalarPreheader()) {
-    // TODO: The vector loop would be dead, should not even try to vectorize.
-    ORE->emit([&]() {
-      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationDead",
-                                        OrigLoop->getStartLoc(),
-                                        OrigLoop->getHeader())
-             << "Created vector loop never executes due to insufficient trip "
-                "count.";
-    });
-    return DenseMap<const SCEV *, Value *>();
-  }
-
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, BestVPlan);
 
   RUN_VPLAN_PASS(VPlanTransforms::convertToConcreteRecipes, BestVPlan);
@@ -5634,6 +5626,18 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                          EpilogueVectorizationKind::None))
     RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::simplifyKnownEVL, BestVPlan, BestVF, PSE);
+  if (BestVPlan.getEntry()->getSingleSuccessor() ==
+      BestVPlan.getScalarPreheader()) {
+    // TODO: The vector loop would be dead, should not even try to vectorize.
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationDead",
+                                        OrigLoop->getStartLoc(),
+                                        OrigLoop->getHeader())
+             << "Created vector loop never executes due to insufficient trip "
+                "count.";
+    });
+    return DenseMap<const SCEV *, Value *>();
+  }
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
   // making any changes to the CFG.
@@ -5794,8 +5798,9 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
 
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    auto *LoadR = Builder.createWidenLoad(*Load, Ptr, Mask, Consecutive, *VPI,
-                                          Load->getDebugLoc());
+    auto *LoadR =
+        Builder.createWidenLoad(*Load, Ptr, Mask, Consecutive, Load->getAlign(),
+                                *VPI, Load->getDebugLoc());
     if (Reverse)
       return Builder.createNaryOp(VPInstruction::Reverse, LoadR,
                                   LoadR->getDebugLoc());
@@ -5808,7 +5813,8 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
   return Builder.createWidenStore(*Store, Ptr, StoredVal, Mask, Consecutive,
-                                  *VPI, Store->getDebugLoc());
+                                  Store->getAlign(), *VPI,
+                                  Store->getDebugLoc());
 }
 
 bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
@@ -6554,7 +6560,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // also modeled in VPlan.
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
-    Builder.setInsertPoint(MiddleVPBB, IP);
+    Builder.setInsertPoint(IP);
     // For AnyOf reductions, find the select among PhiR's users and convert
     // the reduction phi to operate on bools before creating the final
     // reduction result.
@@ -6629,7 +6635,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       NewPhiR->setOperand(1, NewExiting);
       PhiR->replaceAllUsesWith(Plan->getPoison(PhiR->getScalarType()));
 
-      Builder.setInsertPoint(MiddleVPBB, IP);
+      Builder.setInsertPoint(IP);
       FinalReductionResult =
           Builder.createAnyOfReduction(NewExiting, NewVal, Start, ExitDL);
     } else {
@@ -6647,7 +6653,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         {
           VPBuilder::InsertPointGuard Guard(Builder);
           Builder.setInsertPoint(
-              NewExitingVPV->getDefiningRecipe()->getParent(),
               std::next(NewExitingVPV->getDefiningRecipe()->getIterator()));
           ReductionOp =
               Builder.createWidenCast(Instruction::Trunc, NewExitingVPV, RdxTy);
@@ -7038,7 +7043,7 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
   assert(MatchedTC && "must match vector trip count");
 
   VPBasicBlock *MiddleVPBB = MainPlan.getMiddleBlock();
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder MiddleBuilder(MiddleVPBB->getFirstNonPhi());
   VPInstruction *VectorTCMarker = MiddleBuilder.createNaryOp(
       VPInstruction::ResumeForEpilogue,
       {VectorTC, MainPlan.getZero(VectorTC->getScalarType())});
@@ -7048,8 +7053,8 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
   // them so they can be used as resume values when vectorizing the epilogue.
   // The epilogue plan creates the resume phis after the main plan executed.
   VPRecipeBase *MiddleTerm = MiddleVPBB->getTerminator();
-  MiddleBuilder.setInsertPoint(
-      MiddleVPBB, MiddleTerm ? MiddleTerm->getIterator() : MiddleVPBB->end());
+  MiddleBuilder.setInsertPoint(MiddleTerm ? MiddleTerm->getIterator()
+                                          : MiddleVPBB->end());
   auto ResumeValues = to_vector(
       map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
         auto *ResumePhi = cast<VPPhi>(R.getOperand(0));
@@ -7112,7 +7117,7 @@ static void preparePlanForEpilogueVectorLoop(
         Plan.getOrAddLiveIn(ResumeForEpi->getOperand(1)->getUnderlyingValue());
     if (MainV == BypassV)
       return MainV;
-    return VPBuilder(VectorPH, VectorPH->getFirstNonPhi())
+    return VPBuilder(VectorPH->getFirstNonPhi())
         .createScalarPhi({MainV, BypassV}, {}, Name);
   };
 
@@ -7140,7 +7145,7 @@ static void preparePlanForEpilogueVectorLoop(
          "the canonical IV should only be used by its increment, casts, "
          "stride scaling, ScalarIVSteps or DerivedIV when resetting the start "
          "value");
-  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPBuilder Builder(Header->getFirstNonPhi());
   VPInstruction *Add = Builder.createAdd(IV, VPV);
   // Replace all users of the canonical IV and its increment with the offset
   // version, except for the Add itself and the canonical IV increment.
@@ -7154,7 +7159,7 @@ static void preparePlanForEpilogueVectorLoop(
   OffsetIVInc->setOperand(0, Increment);
 
   // Resume values must be created in the vector preheader.
-  VPBuilder PHBuilder(VectorPH, VectorPH->getFirstNonPhi());
+  VPBuilder PHBuilder(VectorPH->getFirstNonPhi());
 
   // Ensure that the start values for all header phi recipes are updated before
   // vectorizing the epilogue loop.
