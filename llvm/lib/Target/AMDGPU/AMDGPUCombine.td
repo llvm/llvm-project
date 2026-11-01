@@ -169,6 +169,12 @@ def smulu64 : GICombineRule<
          [{ return matchCombine_s_mul_u64(*${smul}, ${matchinfo}); }]),
   (apply [{ Helper.replaceOpcodeWith(*${smul}, ${matchinfo}); }])>;
 
+def narrow_shl_to_s32: GICombineRule<
+  (defs root:$shl, unsigned_matchinfo:$matchinfo),
+  (match (G_SHL$dst, $src0, $src1):$shl,
+         [{ return matchCombineNarrowShlTo32(*${shl}, ${matchinfo}); }]),
+  (apply [{ applyCombineNarrowShlTo32(*${shl}, ${matchinfo}); }])>;
+
 def sign_exension_in_reg_matchdata : GIDefMatchData<"std::pair<MachineInstr *, unsigned>">;
 
 def sign_extension_in_reg : GICombineRule<
@@ -344,7 +350,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
-   sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
+   sign_extension_in_reg, smulu64, narrow_shl_to_s32, trunc_lshr16_to_unmerge,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32,
    fold_carry_into_addsub_combines, simplify_demanded_bits]> {
   let CombineAllMethodName = "tryCombineAllImpl";
