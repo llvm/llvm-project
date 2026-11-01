@@ -347,21 +347,22 @@ CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
   }
 
   return WithBasicString([kind](const auto &s) -> CharacterValueImpl {
-    return WithCharProto(kind, [&s](auto ct) -> CharacterValueImpl {
-      using CharT = std::decay_t<decltype(ct)>;
-      using StringT = std::basic_string<CharT>;
+    return CharacterValueImpl::WithCharProto(
+        kind, [&s](auto ct) -> CharacterValueImpl {
+          using CharT = std::decay_t<decltype(ct)>;
+          using StringT = std::basic_string<CharT>;
 
-      // Fortran character conversion is well defined between distinct kinds
-      // only when the actual characters are valid 7-bit ASCII.
-      StringT str;
-      for (auto iter{s.cbegin()}; iter != s.cend(); ++iter) {
-        if (static_cast<std::uint64_t>(*iter) > 127) {
-          return Zero(sizeof(ct));
-        }
-        str.push_back(static_cast<CharT>(*iter));
-      }
-      return CharacterValueImpl{sizeof(CharT), str};
-    });
+          // Fortran character conversion is well defined between distinct kinds
+          // only when the actual characters are valid 7-bit ASCII.
+          StringT str;
+          for (auto iter{s.cbegin()}; iter != s.cend(); ++iter) {
+            if (static_cast<std::uint64_t>(*iter) > 127) {
+              return Zero(sizeof(ct));
+            }
+            str.push_back(static_cast<CharT>(*iter));
+          }
+          return CharacterValueImpl{sizeof(CharT), str};
+        });
   });
 }
 

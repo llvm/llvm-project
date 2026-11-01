@@ -535,13 +535,14 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertSigned(
     // Now we know the kind
     return {Zero(toKind), false};
   }
-  return from.WithWord([&](const auto &x) -> ValueWithOverflow {
+  return from.WithWord([toKind](const auto &x) -> ValueWithOverflow {
     using S = std::decay_t<decltype(x)>;
-    return WithWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
-      using T = decltype(proto);
-      auto r{T::template ConvertSigned<S>(x)};
-      return {FromWord(r.value), r.overflow};
-    });
+    return IntegerValueImpl::WithWordProto(
+        toKind, [&](auto proto) -> ValueWithOverflow {
+          using T = decltype(proto);
+          auto r{T::template ConvertSigned<S>(x)};
+          return {FromWord(r.value), r.overflow};
+        });
   });
 }
 
@@ -551,13 +552,14 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertUnsigned(
     // Now we know the kind
     return {Zero(toKind), false};
   }
-  return from.WithWord([&](const auto &x) -> ValueWithOverflow {
+  return from.WithWord([toKind](const auto &x) -> ValueWithOverflow {
     using S = std::decay_t<decltype(x)>;
-    return WithWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
-      using T = decltype(proto);
-      auto r{T::template ConvertUnsigned<S>(x)};
-      return {FromWord(r.value), r.overflow};
-    });
+    return IntegerValueImpl::WithWordProto(
+        toKind, [&](auto proto) -> ValueWithOverflow {
+          using T = decltype(proto);
+          auto r{T::template ConvertUnsigned<S>(x)};
+          return {FromWord(r.value), r.overflow};
+        });
   });
 }
 
