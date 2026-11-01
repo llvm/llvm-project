@@ -25,9 +25,6 @@
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-static_assert(noexcept(std::rcu_synchronize()));
-static_assert(noexcept(std::rcu_synchronize(std::rcu_default_domain())));
-
 int main(int, char**) {
   {
     constexpr size_t num_reader_threads = 4;

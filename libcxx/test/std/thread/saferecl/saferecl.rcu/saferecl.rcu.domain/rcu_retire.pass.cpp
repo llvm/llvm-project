@@ -20,6 +20,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <concepts>
 #include <latch>
 #include <memory>
 #include <rcu>
