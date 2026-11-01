@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -1301,17 +1302,17 @@ public:
     // has to be recomputed, which needs a static offset.
     llvm::MaybeAlign alignment;
     if (!hasDynamicOffset)
-      alignment =
-          getAlignmentAfterOffset(loadOp.getMaybeAlign(), memType, offsets);
-    bool nontemporal = loadOp.getNontemporal();
+      alignment = memref::getAlignmentAfterOffset(loadOp.getMaybeAlign(),
+                                                  memType, offsets);
 
     Value base = loadOp.getBase();
     if (extractVecType) {
       rewriter.replaceOpWithNewOp<vector::LoadOp>(
-          op, extractVecType, base, indices, nontemporal, alignment);
+          op, extractVecType, base, indices, loadOp.getNontemporal(),
+          alignment);
     } else {
-      rewriter.replaceOpWithNewOp<memref::LoadOp>(op, base, indices,
-                                                  nontemporal, alignment);
+      rewriter.replaceOpWithNewOp<memref::LoadOp>(
+          op, base, indices, loadOp.getNontemporal(), alignment);
     }
     // We checked for single use so we can safely erase the load op.
     rewriter.eraseOp(loadOp);

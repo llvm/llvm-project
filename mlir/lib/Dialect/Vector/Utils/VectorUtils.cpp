@@ -308,39 +308,6 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
   return mixedSourceDims;
 }
 
-llvm::MaybeAlign vector::getAlignmentAfterOffset(llvm::MaybeAlign alignment,
-                                                 MemRefType memRefType,
-                                                 ArrayRef<int64_t> offsets) {
-  if (!alignment)
-    return {};
-  assert(offsets.size() <= static_cast<size_t>(memRefType.getRank()) &&
-         "more offsets than memref dimensions");
-  if (llvm::all_of(offsets, [](int64_t offset) { return offset == 0; }))
-    return alignment;
-
-  Type elementType = memRefType.getElementType();
-  if (!elementType.isIntOrFloat() ||
-      elementType.getIntOrFloatBitWidth() % 8 != 0)
-    return {};
-  SmallVector<int64_t> strides;
-  int64_t memRefOffset;
-  if (failed(memRefType.getStridesAndOffset(strides, memRefOffset)))
-    return {};
-
-  int64_t elementOffset = 0;
-  size_t start = strides.size() - offsets.size();
-  for (auto [i, offset] : llvm::enumerate(offsets)) {
-    if (offset == 0)
-      continue;
-    if (ShapedType::isDynamic(strides[start + i]))
-      return {};
-    elementOffset += offset * strides[start + i];
-  }
-  uint64_t byteOffset =
-      std::abs(elementOffset) * (elementType.getIntOrFloatBitWidth() / 8);
-  return llvm::commonAlignment(*alignment, byteOffset);
-}
-
 bool vector::isLinearizableVector(VectorType type) {
   return (type.getRank() > 1) && (type.getNumScalableDims() <= 1);
 }

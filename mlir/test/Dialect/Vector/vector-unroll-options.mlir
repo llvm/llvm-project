@@ -502,6 +502,42 @@ func.func @vector_store_2D_alignment(%mem: memref<4x4xf16>, %v: vector<4x4xf16>)
 
 // -----
 
+// A tile at a non-zero offset along a dynamic stride has no known alignment.
+func.func @vector_load_2D_alignment_dynamic_stride(%mem: memref<4x4xf16, strided<[?, 1]>>) -> vector<4x4xf16> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.load %mem[%c0, %c0] alignment = 16 : memref<4x4xf16, strided<[?, 1]>>, vector<4x4xf16>
+  return %0 : vector<4x4xf16>
+}
+
+// CHECK-LABEL: func.func @vector_load_2D_alignment_dynamic_stride(
+// CHECK-SAME:  %[[ARG:.*]]: memref<4x4xf16, strided<[?, 1]>>) -> vector<4x4xf16> {
+  // CHECK: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: vector.load %[[ARG]][%[[C0]], %[[C0]]] alignment = 16 : memref<4x4xf16, strided<[?, 1]>>, vector<2x2xf16>
+  // CHECK: vector.load %[[ARG]][%[[C0]], %[[C2]]] alignment = 4 : memref<4x4xf16, strided<[?, 1]>>, vector<2x2xf16>
+  // CHECK: vector.load %[[ARG]][%[[C2]], %[[C0]]] : memref<4x4xf16, strided<[?, 1]>>, vector<2x2xf16>
+  // CHECK: vector.load %[[ARG]][%[[C2]], %[[C2]]] : memref<4x4xf16, strided<[?, 1]>>, vector<2x2xf16>
+
+// -----
+
+// The byte offset of the tiles at [2, 0] and [2, 2] does not fit in 64 bits.
+func.func @vector_load_2D_alignment_overflow(%mem: memref<4x4xf16, strided<[4611686018427387904, 1]>>) -> vector<4x4xf16> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.load %mem[%c0, %c0] alignment = 16 : memref<4x4xf16, strided<[4611686018427387904, 1]>>, vector<4x4xf16>
+  return %0 : vector<4x4xf16>
+}
+
+// CHECK-LABEL: func.func @vector_load_2D_alignment_overflow(
+// CHECK-SAME:  %[[ARG:.*]]: memref<4x4xf16, strided<[4611686018427387904, 1]>>) -> vector<4x4xf16> {
+  // CHECK: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: vector.load %[[ARG]][%[[C0]], %[[C0]]] alignment = 16 : memref<4x4xf16, strided<[4611686018427387904, 1]>>, vector<2x2xf16>
+  // CHECK: vector.load %[[ARG]][%[[C0]], %[[C2]]] alignment = 4 : memref<4x4xf16, strided<[4611686018427387904, 1]>>, vector<2x2xf16>
+  // CHECK: vector.load %[[ARG]][%[[C2]], %[[C0]]] : memref<4x4xf16, strided<[4611686018427387904, 1]>>, vector<2x2xf16>
+  // CHECK: vector.load %[[ARG]][%[[C2]], %[[C2]]] : memref<4x4xf16, strided<[4611686018427387904, 1]>>, vector<2x2xf16>
+
+// -----
+
 func.func @vector_step() -> vector<32xindex> {
     %0 = vector.step : vector<32xindex>
     return %0 : vector<32xindex>
