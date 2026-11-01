@@ -172,14 +172,14 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v4i32_fp8__v8i32_fp8(
 }
 
 ; CHECK: invalid vector type for format
-; CHECK-NEXT: %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v4i32(<8 x i32> %arg0, <4 x i32> %arg1, <16 x float> %arg2, i32 0, i32 0, i32 0, i32 %scale0, i32 0, i32 %scale1)
+; CHECK-NEXT: %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v4i32(<8 x i32> %arg0, <4 x i32> %arg1, <16 x float> %arg2, i32 0, i32 0, i32 1, i32 %scale0, i32 0, i32 %scale1)
 ; CHECK-NEXT: <4 x i32> %arg1
 ; CHECK-NEXT: i32 0
 define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4__v8i32_fp8___v4i32_fp8(<8 x i32> %arg0, <4 x i32> %arg1, <16 x float> %arg2, i32 %scale0, i32 %scale1) {
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v4i32(<8 x i32> %arg0, <4 x i32> %arg1, <16 x float> %arg2,
                                                                                       i32 0, ; cbsz
                                                                                       i32 0, ; blgp
-                                                                                      i32 0, i32 %scale0, i32 0, i32 %scale1)
+                                                                                      i32 1, i32 %scale0, i32 0, i32 %scale1)
   ret <16 x float> %result
 }
 
