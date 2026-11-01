@@ -227,22 +227,26 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
       if (hasInZp && hasOutZp) {
         // Compute the maximum value that can occur in the intermediate buffer.
-        const int64_t zpAdd = inZp + outZp;
-        const int64_t maxValue =
-            APInt::getSignedMaxValue(inputBitWidth).getSExtValue() +
-            std::abs(zpAdd) + 1;
+        // Use 128 bits so that the computation cannot overflow for 64-bit
+        // inputs and zero points.
+        const APInt zpAdd = APInt(128, inZp, /*isSigned=*/true) +
+                            APInt(128, outZp, /*isSigned=*/true);
+        const APInt maxValue =
+            APInt::getSignedMaxValue(inputBitWidth).sext(128) + zpAdd.abs() + 1;
 
         // Convert that maximum value into the maximum bitwidth needed to
         // represent it.
-        if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
+        if (maxValue.sle(APInt::getSignedMaxValue(16).getSExtValue())) {
           intermediateBitWidth = 16;
-        } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
+        } else if (maxValue.sle(APInt::getSignedMaxValue(32).getSExtValue())) {
           intermediateBitWidth = 32;
         }
 
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
         zpAddValue = arith::ConstantOp::create(
-            rewriter, loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
+            rewriter, loc,
+            rewriter.getIntegerAttr(intermediateType,
+                                    zpAdd.trunc(intermediateBitWidth)));
       } else {
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
         Value arg1 = args[1];
