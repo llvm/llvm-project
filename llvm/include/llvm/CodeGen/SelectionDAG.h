@@ -341,6 +341,10 @@ public:
     /// The node N that was updated.
     virtual void NodeUpdated(SDNode *N);
 
+    /// An explicit UpdateNodeOperands or MorphNodeTo changed N in place.
+    /// These updates do not go through the RAUW/CSE NodeUpdated callback.
+    virtual void NodeOperandsChanged(SDNode *N);
+
     /// The node N that was inserted.
     virtual void NodeInserted(SDNode *N);
   };

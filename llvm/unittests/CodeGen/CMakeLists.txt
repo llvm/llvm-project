@@ -45,6 +45,7 @@ add_llvm_unittest(CodeGenTests
   RegisterPressureTest.cpp
   RegisterTest.cpp
   PassManagerTest.cpp
+  PostIndexCandidateCacheTest.cpp
   RematerializerTest.cpp
   ScalableVectorMVTsTest.cpp
   SchedBoundary.cpp
@@ -52,7 +53,6 @@ add_llvm_unittest(CodeGenTests
   SelectionDAGCSETest.cpp
   SelectionDAGNodeConstructionTest.cpp
   SelectionDAGPatternMatchTest.cpp
-  SelectionDAGUseTest.cpp
   SlotIndexesTest.cpp
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
