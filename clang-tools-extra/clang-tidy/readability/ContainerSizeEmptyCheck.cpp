@@ -172,11 +172,9 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   const auto ValidContainer = qualType(
       anyOf(ValidContainerNonTemplateType, ValidContainerTemplateType));
 
-  const auto ExcludedLengthTypesMatcher = qualType(
-      anyOf(hasDeclaration(cxxRecordDecl(
-                matchers::matchesAnyListedRegexName(ExcludedLengthTypes))),
-            hasCanonicalType(hasDeclaration(cxxRecordDecl(
-                matchers::matchesAnyListedRegexName(ExcludedLengthTypes))))));
+  const auto ExcludedLengthTypesMatcher =
+      qualType(hasCanonicalType(hasDeclaration(cxxRecordDecl(
+          matchers::matchesAnyListedRegexName(ExcludedLengthTypes)))));
   const auto ExcludedLengthExprType = qualType(
       anyOf(ExcludedLengthTypesMatcher, pointsTo(ExcludedLengthTypesMatcher),
             references(ExcludedLengthTypesMatcher)));
