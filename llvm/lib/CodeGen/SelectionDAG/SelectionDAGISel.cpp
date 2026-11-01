@@ -3862,9 +3862,11 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       [[maybe_unused]] unsigned SwitchStart = MatcherIndex - 2;
       // The match fails if the child is missing or not a constant.
       std::optional<int64_t> ChildVal;
-      if (ChildNo < N.getNumOperands())
+      if (ChildNo < N.getNumOperands()) {
         if (auto *C = dyn_cast<ConstantSDNode>(N.getOperand(ChildNo)))
           ChildVal = C->getAPIntValue().trySExtValue();
+      }
+      
       unsigned CaseSize;
       while (true) {
         // Get the size of this case.
