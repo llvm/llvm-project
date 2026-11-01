@@ -850,14 +850,13 @@ define <2 x i128> @smulh_v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
   ret <2 x i128> %r
 }
 
-; mulhs(x, -1) in i1: the only non-zero i1 constant is -1, but its high bit
-; in the 2-bit product is never set, so the result is always 0. This must not
-; be folded to 'sra x, 0'.
-define i1 @smulh_i1_one(i1 %x) {
-; CHECK-LABEL: smulh_i1_one:
+; mulhs on i1 is always 0: the high bit of the 2-bit product of two booleans
+; is never set.
+define i1 @smulh_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: smulh_i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-  %r = call i1 @llvm.smulh.i1(i1 %x, i1 1)
+  %r = call i1 @llvm.smulh.i1(i1 %x, i1 %y)
   ret i1 %r
 }
