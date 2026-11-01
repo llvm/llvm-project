@@ -1,0 +1,32 @@
+## Verify that when -o is not specified, the output file name defaults to
+## <exec>.dwp only when exactly one -e argument is provided.
+
+RUN: rm -rf %t
+RUN: mkdir %t
+RUN: cd %t
+RUN: cp %p/../Inputs/dwos_list_from_exec/a.dwo a.dwo
+RUN: cp %p/../Inputs/dwos_list_from_exec/b.dwo b.dwo
+RUN: cp %p/../Inputs/dwos_list_from_exec/d.dwo d.dwo
+RUN: cp %p/../Inputs/dwos_list_from_exec/main main
+RUN: cp %p/../Inputs/dwos_list_from_exec/libd.so libd.so
+
+## Single -e: output is <exec>.dwp.
+RUN: llvm-dwp -e main
+RUN: ls main.dwp
+
+## With multiple -e, an explicit -o is required.
+RUN: rm -f main.dwp libd.so.dwp
+RUN: not llvm-dwp -e main -e libd.so 2>&1 | FileCheck %s --check-prefix=MULTI
+MULTI: error: cannot derive a default output file name when multiple executables are specified; use -o
+RUN: not ls main.dwp
+RUN: not ls libd.so.dwp
+
+## An explicit -o still takes precedence.
+RUN: rm -f main.dwp explicit.dwp
+RUN: llvm-dwp -e main -o explicit.dwp
+RUN: ls explicit.dwp
+RUN: not ls main.dwp
+
+## Without -o or -e, emit a "no output file" error message.
+RUN: not llvm-dwp a.dwo 2>&1 | FileCheck %s --check-prefix=NO-OUTPUT
+NO-OUTPUT: error: no output file specified (use -o or -e)
