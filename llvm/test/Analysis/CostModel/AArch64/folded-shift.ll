@@ -65,7 +65,6 @@ define void @not_folded(i64 %x, i64 %y, i64 %amount, i1 %cond) {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: br i1 %cond, label %then, label %exit
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %fold.user = and i64 %crossblock, %with.constant
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: br label %exit
-; CHECK-NEXT:  Cost Model: Found costs of 0 for: %result = phi i64 [ %with.constant, %entry ], [ %fold.user, %then ]
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
@@ -87,7 +86,6 @@ then:
   br label %exit
 
 exit:
-  %result = phi i64 [ %with.constant, %entry ], [ %fold.user, %then ]
   ret void
 }
 
