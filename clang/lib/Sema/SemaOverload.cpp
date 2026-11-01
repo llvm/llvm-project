@@ -8891,7 +8891,8 @@ void Sema::AddTemplateConversionCandidate(
 
   CandidateSet.AddDeferredConversionTemplateCandidate(
       FunctionTemplate, FoundDecl, ActingDC, From, ToType,
-      AllowObjCConversionOnExplicit, AllowExplicit, AllowResultConversion, AllowRValues);
+      AllowObjCConversionOnExplicit, AllowExplicit, AllowResultConversion,
+      AllowRValues);
 }
 
 void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
