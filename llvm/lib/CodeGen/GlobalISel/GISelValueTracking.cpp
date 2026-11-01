@@ -2041,7 +2041,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Depth + 1);
 
     bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() ||
+        KnownRHS.isKnownNever(fcSNan) ||
         KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
 

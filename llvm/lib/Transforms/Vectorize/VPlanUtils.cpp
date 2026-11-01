@@ -80,7 +80,8 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
-VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
+VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
+                                                bool ExpandInIR) {
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     return Plan.getOrAddLiveIn(E->getValue());
   // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
@@ -90,12 +91,12 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   auto *U = dyn_cast<SCEVUnknown>(Expr);
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
-  auto *Expanded = new VPExpandSCEVRecipe(Expr);
+  auto *Expanded = new VPExpandSCEVRecipe(Expr, ExpandInIR);
   VPBasicBlock *EntryVPBB = Plan.getEntry();
   auto Iter = EntryVPBB->getFirstNonPhi();
   while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
     ++Iter;
-  EntryVPBB->insert(Expanded, Iter);
+  Expanded->insertBefore(Iter);
   return Expanded;
 }
 
@@ -986,6 +987,11 @@ VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
 
+  if (HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
+      SE.isGuaranteedNotToCauseUB(S))
+    return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S,
+                                                  /*ExpandInIR=*/true);
+
   switch (S->getSCEVType()) {
   case scConstant:
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
@@ -1537,7 +1543,7 @@ VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
 
   // Multiple predecessors, create a join.
   Type *Ty = Defs.begin()->second->getScalarType();
-  VPPhi *Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
+  VPPhi *Phi = VPBuilder(VPBB->getFirstNonPhi())
                    .createScalarPhi({}, DebugLoc::getUnknown(), "", {}, Ty);
   Defs[VPBB] = Phi;
   for (auto *Pred : VPBB->predecessors())

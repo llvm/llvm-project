@@ -294,39 +294,38 @@ bool VPRecipeBase::isSafeToSpeculativelyExecute() const {
     case Instruction::Mul:
     case Instruction::GetElementPtr:
       return true;
+    case Instruction::Call:
+    case VPInstruction::Intrinsic:
+      return getCalleeFnAttrs(*cast<VPInstruction>(this))
+          .hasAttribute(Attribute::Speculatable);
     }
   }
   }
 }
 
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
-  assert(!Parent && "Recipe already in some VPBasicBlock");
-  assert(InsertPos->getParent() &&
-         "Insertion position not in any VPBasicBlock");
-  InsertPos->getParent()->insert(this, InsertPos->getIterator());
+  insertBefore(InsertPos->getIterator());
 }
 
-void VPRecipeBase::insertBefore(VPBasicBlock &BB,
-                                iplist<VPRecipeBase>::iterator I) {
-  assert(!Parent && "Recipe already in some VPBasicBlock");
-  assert(I == BB.end() || I->getParent() == &BB);
-  BB.insert(this, I);
+void VPRecipeBase::insertBefore(RecipeListTy::iterator I) {
+  assert(!getParent() && "Recipe already in some VPBasicBlock");
+  assert(I.getNodeParent() && "Insertion position not in any VPBasicBlock");
+  I.getNodeParent()->insert(this, I);
 }
 
 void VPRecipeBase::insertAfter(VPRecipeBase *InsertPos) {
-  assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
          "Insertion position not in any VPBasicBlock");
-  InsertPos->getParent()->insert(this, std::next(InsertPos->getIterator()));
+  insertBefore(std::next(InsertPos->getIterator()));
 }
 
 void VPRecipeBase::removeFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
   getParent()->getRecipeList().remove(getIterator());
-  Parent = nullptr;
+  setParent(nullptr);
 }
 
-iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
+VPRecipeBase::RecipeListTy::iterator VPRecipeBase::eraseFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
   return getParent()->getRecipeList().erase(getIterator());
 }
@@ -336,10 +335,9 @@ void VPRecipeBase::moveAfter(VPRecipeBase *InsertPos) {
   insertAfter(InsertPos);
 }
 
-void VPRecipeBase::moveBefore(VPBasicBlock &BB,
-                              iplist<VPRecipeBase>::iterator I) {
+void VPRecipeBase::moveBefore(RecipeListTy::iterator I) {
   removeFromParent();
-  insertBefore(BB, I);
+  insertBefore(I);
 }
 
 InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
@@ -361,9 +359,11 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
   } else {
     RecipeCost = computeCost(VF, Ctx);
     if (Ctx.Opts.force_target_instruction_cost && RecipeCost.isValid()) {
-      // VPDerivedIVRecipe and VPScalarIVStepsRecipe never have underlying
-      // instructions.
-      if (UI || isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(this))
+      // VPDerivedIVRecipe, VPScalarIVStepsRecipe and VPBranchOnMaskRecipe never
+      // have underlying instructions.
+      if (UI ||
+          isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe, VPBranchOnMaskRecipe>(
+              this))
         RecipeCost = InstructionCost(*Ctx.Opts.force_target_instruction_cost);
       else
         RecipeCost = InstructionCost(0);
@@ -471,9 +471,9 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr)
+VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr, bool ExpandInIR)
     : VPSingleDefRecipe(VPRecipeBase::VPExpandSCEVSC, {}, Expr->getType()),
-      Expr(Expr) {}
+      Expr(Expr), ExpandInIR(ExpandInIR) {}
 
 static SmallVector<unsigned> getExtractValueIndices(ArrayRef<VPValue *> Ops) {
   return map_to_vector(drop_begin(Ops), [](VPValue *Op) {
@@ -4315,17 +4315,9 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     const VPRegionBlock *ParentRegion = getRegion();
     if (ParentRegion && ParentRegion->isReplicator()) {
-      if (!PtrSCEV)
-        break;
+      // The cost of the branches is accounted for by the replicate region.
       Cost /= Ctx.getCostDivisor(
           ParentRegion->getEntryBranchOnMask()->getExecutionFrequency());
-      Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
-
-      auto *VecI1Ty = VectorType::get(
-          IntegerType::getInt1Ty(Ctx.L->getHeader()->getContext()), VF);
-      Cost += Ctx.TTI.getScalarizationOverhead(
-          VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
-          /*Insert=*/false, /*Extract=*/true, Ctx.CostKind);
 
       if (Ctx.useEmulatedMaskMemRefHack(this, VF)) {
         // Artificially setting to a high enough value to practically disable
@@ -4434,10 +4426,15 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
 
 InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
                                                   VPCostContext &Ctx) const {
-  // The legacy cost model doesn't assign costs to branches for individual
-  // replicate regions. Match the current behavior in the VPlan cost model for
-  // now.
-  return 0;
+  // Replicating isn't supported for scalable vectors.
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+  auto *VecI1Ty = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+  return Ctx.TTI.getScalarizationOverhead(
+             VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
+             /*Insert=*/false, /*Extract=*/true, Ctx.CostKind) +
+         VF.getFixedValue() *
+             Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
@@ -4550,6 +4547,7 @@ void VPWidenLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = load ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4607,6 +4605,7 @@ void VPWidenLoadEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vp.load ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4637,6 +4636,7 @@ void VPWidenStoreRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN store ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -4693,6 +4693,7 @@ void VPWidenStoreEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN vp.store ";
   printOperands(O, SlotTracker);
+  O << ", align " << getAlign().value();
 }
 #endif
 
@@ -5205,6 +5206,8 @@ void VPExpandSCEVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
   O << " = EXPAND SCEV " << *Expr;
+  if (ExpandInIR)
+    O << " (in IR)";
 }
 #endif
 

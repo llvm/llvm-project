@@ -1326,6 +1326,12 @@ public:
     return FPImmAction::ConstantPool;
   }
 
+  /// \copydoc getFPImmAction(const APFloat&,EVT,bool) const
+  virtual FPImmAction getFPImmAction(const APFloat & /*Imm*/, LLT /*Ty*/,
+                                     bool ForCodeSize = false) const {
+    return FPImmAction::ConstantPool;
+  }
+
   /// Returns true if the specified FP immediate can be materialized without a
   /// load from the constant pool.
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -4360,6 +4366,14 @@ public:
                           unsigned OpNo) const {
     return false;
   }
+
+  /// Return true if a function used as an inline asm address operand (e.g.
+  /// "p", or a call target that isInlineAsmTargetBranch() recognizes) can be
+  /// the bare function symbol, in an operand of kind InlineAsm::Kind::Func.
+  /// The target then has to select the symbol as an address and print it with
+  /// AsmPrinter::PrintAsmOperand(). Otherwise the function's address is
+  /// computed like that of any other global.
+  virtual bool supportsInlineAsmFuncOperands() const { return false; }
 
   bool isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
                             SDValue &Chain) const;

@@ -86,12 +86,8 @@ enum LegalizeAction : std::uint8_t {
   /// operand and type. A callback will be issued when it is needed.
   Custom,
 
-  /// This operation is completely unsupported on the target. A programming
-  /// error has occurred.
+  /// This operation is completely unsupported on the target.
   Unsupported,
-
-  /// Sentinel value for when no action was found in the specified table.
-  NotFound,
 };
 } // end namespace LegalizeActions
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,

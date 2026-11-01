@@ -24,6 +24,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MakeSupport.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -9927,9 +9928,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       }
 
       // If the user explicitly requested it via `--offload-arch` we should
-      // extract it from any static libraries if present.
-      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ))
-        CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Arg));
+      // extract it from any static libraries if present. Device images are
+      // labeled with the canonical target ID, so request that.
+      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ)) {
+        std::optional<std::string> TargetID =
+            getCanonicalTargetID(TC->getTriple(), Arg);
+        CmdArgs.emplace_back(Args.MakeArgString(
+            "--should-extract=" + (TargetID ? StringRef(*TargetID) : Arg)));
+      }
 
       // If this is OpenMP the device linker will need `-lompdevice`.
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
