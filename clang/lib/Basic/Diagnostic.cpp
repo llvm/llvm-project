@@ -535,6 +535,9 @@ public:
   bool isDiagSuppressed(diag::kind DiagId, SourceLocation DiagLoc,
                         const SourceManager &SM) const;
 
+  /// The diagnostics that have a section.
+  auto mappedDiags() const { return DiagToSection.keys(); }
+
 private:
   llvm::DenseMap<diag::kind, const Section *> DiagToSection;
 };
@@ -587,6 +590,8 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
     return;
   }
   WarningSuppressionList->processSections(*this);
+  DiagsInSuppressionMapping.clear();
+  DiagsInSuppressionMapping.insert_range(WarningSuppressionList->mappedDiags());
   DiagSuppressionMapping =
       [WarningSuppressionList(std::move(WarningSuppressionList))](
           diag::kind DiagId, SourceLocation DiagLoc, const SourceManager &SM) {

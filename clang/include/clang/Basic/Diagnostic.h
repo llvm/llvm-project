@@ -21,6 +21,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
@@ -603,6 +604,9 @@ private:
                              const SourceManager &) const>
       DiagSuppressionMapping;
 
+  /// The diagnostics that DiagSuppressionMapping has a section for.
+  llvm::DenseSet<unsigned> DiagsInSuppressionMapping;
+
 public:
   /// Returns a cache key representing the diagnostic state at \p Loc.
   const void *getDiagStateKeyForLoc(SourceLocation Loc) const {
@@ -619,6 +623,12 @@ public:
   /// on the file path.
   bool hasDiagSuppressionMapping() const {
     return static_cast<bool>(DiagSuppressionMapping);
+  }
+
+  /// True if an active diagnostic suppression mapping has a section for
+  /// \p DiagId, so that its severity can depend on the file path.
+  bool hasDiagSuppressionMappingFor(diag::kind DiagId) const {
+    return DiagsInSuppressionMapping.contains(DiagId);
   }
 
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
