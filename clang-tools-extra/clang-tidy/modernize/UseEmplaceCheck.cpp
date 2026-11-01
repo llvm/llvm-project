@@ -12,17 +12,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-namespace {
-AST_MATCHER_P(InitListExpr, initCountLeq, unsigned, N) {
-  return Node.getNumInits() <= N;
-}
-
-// Identical to hasAnyName, except it does not take template specifiers into
-// account. This is used to match the functions names as in
-// DefaultEmplacyFunctions below without caring about the template types of the
-// containers.
-AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
-              Names) {
+// Returns the fully qualified name of Node without template specifiers.
+static std::string getNameIgnoringTemplates(const NamedDecl &Node) {
   const std::string FullName = "::" + Node.getQualifiedNameAsString();
 
   // This loop removes template specifiers by only keeping characters not within
@@ -37,16 +28,33 @@ AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
       --Depth;
     else if (Depth == 0)
       FullNameTrimmed.append(1, Character);
+  return FullNameTrimmed;
+}
 
-  // This loop is taken from HasNameMatcher::matchesNodeFullSlow in
-  // clang/lib/ASTMatchers/ASTMatchersInternal.cpp and checks whether
-  // FullNameTrimmed matches any of the given Names.
-  const StringRef FullNameTrimmedRef = FullNameTrimmed;
+// Checks whether a name returned by getNameIgnoringTemplates matches Pattern.
+// This is taken from HasNameMatcher::matchesNodeFullSlow in
+// clang/lib/ASTMatchers/ASTMatchersInternal.cpp.
+static bool nameMatches(StringRef FullNameTrimmed, StringRef Pattern) {
+  if (Pattern.starts_with("::"))
+    return FullNameTrimmed == Pattern;
+  return FullNameTrimmed.ends_with(Pattern) &&
+         FullNameTrimmed.drop_back(Pattern.size()).ends_with("::");
+}
+
+namespace {
+AST_MATCHER_P(InitListExpr, initCountLeq, unsigned, N) {
+  return Node.getNumInits() <= N;
+}
+
+// Identical to hasAnyName, except it does not take template specifiers into
+// account. This is used to match the functions names as in
+// DefaultEmplacyFunctions below without caring about the template types of the
+// containers.
+AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
+              Names) {
+  const std::string FullNameTrimmed = getNameIgnoringTemplates(Node);
   return llvm::any_of(Names, [&](const StringRef Pattern) {
-    if (Pattern.starts_with("::"))
-      return FullNameTrimmed == Pattern;
-    return FullNameTrimmedRef.ends_with(Pattern) &&
-           FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::");
+    return nameMatches(FullNameTrimmed, Pattern);
   });
 }
 
@@ -142,7 +150,21 @@ UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
       TupleMakeFunctions(utils::options::parseStringList(
           Options.get("TupleMakeFunctions", DefaultTupleMakeFunctions))),
       EmplacyFunctions(utils::options::parseStringList(
-          Options.get("EmplacyFunctions", DefaultEmplacyFunctions))) {}
+          Options.get("EmplacyFunctions", DefaultEmplacyFunctions))),
+      PushLikeFunctions(utils::options::parseStringList(
+          Options.get("PushLikeFunctions", ""))) {
+  for (const StringRef Entry : PushLikeFunctions) {
+    const auto [Function, Replacement] = Entry.split('=');
+    if (Function.trim().empty() || Replacement.trim().empty()) {
+      configurationDiag("invalid entry '%0' in option '%1.PushLikeFunctions'; "
+                        "expected 'function=replacement'")
+          << Entry << Name;
+      continue;
+    }
+    PushLikeFunctionNames.push_back(Function.trim());
+    PushLikeReplacements.push_back(Replacement.trim());
+  }
+}
 
 void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // FIXME: Bunch of functionality that could be easily added:
@@ -296,6 +318,30 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
                    unless(isInTemplateInstantiation()))
                    .bind("emplacy_call")),
       this);
+
+  if (PushLikeFunctionNames.empty())
+    return;
+
+  // A push_back-like method may be a template that accepts any type, so require
+  // the temporary to be of the container's value_type. Both the method and
+  // value_type may be declared in a base class of the container.
+  const auto HasValueType = has(typedefNameDecl(
+      hasName("value_type"),
+      hasType(hasCanonicalType(recordType().bind("value_type")))));
+  const auto CallPushLike = cxxMemberCallExpr(
+      hasDeclaration(
+          functionDecl(hasAnyNameIgnoringTemplates(PushLikeFunctionNames))),
+      on(hasTypeOrPointeeType(hasCanonicalType(hasDeclaration(
+          cxxRecordDecl(isSameOrDerivedFrom(cxxRecordDecl(HasValueType))))))),
+      argumentCountIs(1));
+
+  Finder->addMatcher(
+      traverse(TK_AsIs, cxxMemberCallExpr(
+                            CallPushLike,
+                            HasConstructExprWithValueTypeTypeAsLastArgument,
+                            unless(isInTemplateInstantiation()))
+                            .bind("push_like_call")),
+      this);
 }
 
 void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
@@ -304,6 +350,8 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PushCall = Result.Nodes.getNodeAs<CXXMemberCallExpr>("push_call");
   const auto *PushFrontCall =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("push_front_call");
+  const auto *PushLikeCall =
+      Result.Nodes.getNodeAs<CXXMemberCallExpr>("push_like_call");
   const auto *EmplacyCall =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("emplacy_call");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
@@ -318,6 +366,8 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
       return PushCall;
     if (PushFrontCall)
       return PushFrontCall;
+    if (PushLikeCall)
+      return PushLikeCall;
     return EmplacyCall;
   }();
 
@@ -328,6 +378,21 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
       CtorCall->getArg(0)->getSourceRange() == CtorCall->getSourceRange())
     return;
 
+  StringRef PushLikeReplacement;
+  if (PushLikeCall) {
+    const std::string Name =
+        getNameIgnoringTemplates(*PushLikeCall->getMethodDecl());
+    for (const auto [Function, Replacement] :
+         llvm::zip_equal(PushLikeFunctionNames, PushLikeReplacements)) {
+      if (nameMatches(Name, Function)) {
+        PushLikeReplacement = Replacement;
+        break;
+      }
+    }
+    assert(!PushLikeReplacement.empty() &&
+           "No push_back-like function matched");
+  }
+
   const auto FunctionNameSourceRange = CharSourceRange::getCharRange(
       Call->getExprLoc(), Call->getArg(0)->getExprLoc());
 
@@ -337,10 +402,14 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
                  : CtorCall    ? CtorCall->getBeginLoc()
                                : MakeCall->getBeginLoc(),
                  "unnecessary temporary object created while calling %0")
+      : PushLikeCall
+          ? diag(Call->getExprLoc(), "use %0 instead of %1")
           : diag(Call->getExprLoc(), "use emplace%select{|_back|_front}0 "
                                      "instead of push%select{|_back|_front}0");
   if (EmplacyCall)
     Diag << Call->getMethodDecl()->getName();
+  else if (PushLikeCall)
+    Diag << PushLikeReplacement << Call->getMethodDecl()->getName();
   else if (PushCall)
     Diag << 0;
   else if (PushBackCall)
@@ -363,6 +432,9 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
     const char *EmplacePrefix = MakeCall ? "emplace_front" : "emplace_front(";
     Diag << FixItHint::CreateReplacement(FunctionNameSourceRange,
                                          EmplacePrefix);
+  } else if (PushLikeCall) {
+    Diag << FixItHint::CreateReplacement(FunctionNameSourceRange,
+                                         (PushLikeReplacement + "(").str());
   }
 
   const SourceRange CallParensRange =
@@ -415,6 +487,8 @@ void UseEmplaceCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 utils::options::serializeStringList(TupleMakeFunctions));
   Options.store(Opts, "EmplacyFunctions",
                 utils::options::serializeStringList(EmplacyFunctions));
+  Options.store(Opts, "PushLikeFunctions",
+                utils::options::serializeStringList(PushLikeFunctions));
 }
 
 } // namespace clang::tidy::modernize

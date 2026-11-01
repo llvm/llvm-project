@@ -301,6 +301,12 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
   malformed code with nested classes and ambiguous initializer.
 
+- Improved {doc}`modernize-use-emplace
+  <clang-tidy/checks/modernize/use-emplace>` check by adding the
+  {option}`PushLikeFunctions` option to support containers whose insertion
+  and emplacement methods have other names, such as `append` and
+  `emplaceBack`.
+
 - Improved {doc}`modernize-use-equals-default
   <clang-tidy/checks/modernize/use-equals-default>` check to also capture
   default constructor with explicit default-initialization of parents.
