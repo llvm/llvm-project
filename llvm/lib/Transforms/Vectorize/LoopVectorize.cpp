@@ -228,7 +228,8 @@ static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
     return 0;
   ScalarEvolution *SE = PSE.getSE();
   const SCEV *TripCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
-  ConstantRange TCRange = SE->getUnsignedRange(TripCount);
+  ConstantRange TCRange =
+      SE->getUnsignedRange(SE->applyLoopGuards(TripCount, L));
   APInt MaxTCFromRange = TCRange.getUnsignedMax();
   if (!MaxTCFromRange.isZero() && MaxTCFromRange.getActiveBits() <= 32)
     return MaxTCFromRange.getZExtValue();
