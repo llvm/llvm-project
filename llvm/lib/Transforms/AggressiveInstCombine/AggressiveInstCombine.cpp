@@ -2655,7 +2655,7 @@ static bool foldFloorIndex(Instruction &I, DominatorTree &DT,
         Builder.SetInsertPoint(Floor);
         Value *Frozen = Builder.CreateFreeze(X, "floor.input");
         Floor->setArgOperand(0, Frozen);
-        Builder.SetInsertPoint(FI.getParent(), std::next(FI.getIterator()));
+        Builder.SetInsertPoint(std::next(FI.getIterator()));
         Value *Converted =
             Builder.CreateSIToFP(&FI, Floor->getType(), "floor.int");
         Value *Rebuilt = Builder.CreateBinaryIntrinsic(
