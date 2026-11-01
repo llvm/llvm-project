@@ -1396,6 +1396,7 @@ namespace {
 class FrameEmitterImpl {
   int64_t CFAOffset = 0;
   int64_t InitialCFAOffset = 0;
+  SmallVector<int64_t, 0> SavedCFAOffsets;
   bool IsEH;
   MCObjectStreamer &Streamer;
 
@@ -1562,9 +1563,11 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   }
   case MCCFIInstruction::OpRememberState:
     Streamer.emitInt8(dwarf::DW_CFA_remember_state);
+    SavedCFAOffsets.push_back(CFAOffset);
     return;
   case MCCFIInstruction::OpRestoreState:
     Streamer.emitInt8(dwarf::DW_CFA_restore_state);
+    CFAOffset = SavedCFAOffsets.pop_back_val();
     return;
   case MCCFIInstruction::OpSameValue: {
     unsigned Reg = Instr.getRegister();
@@ -2036,6 +2039,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   const MCObjectFileInfo *MOFI = context.getObjectFileInfo();
 
   CFAOffset = InitialCFAOffset;
+  SavedCFAOffsets.clear();
 
   dwarf::DwarfFormat Format = IsEH ? dwarf::DWARF32 : context.getDwarfFormat();
   unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(Format);

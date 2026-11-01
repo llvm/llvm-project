@@ -1862,6 +1862,8 @@ public:
     IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
     AllocaInst *Alloca =
         AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+    // The fused loads use the original load's alignment.
+    Alloca->setAlignment(std::max(Alloca->getAlign(), Load->getAlign()));
 
     // If the pointers are in different address spaces, we cannot compare them
     // at runtime. Conservatively copy the load operand to a new buffer.
