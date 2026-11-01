@@ -18,6 +18,7 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <concepts>
 #include <rcu>
 #include <thread>
 #include <vector>
