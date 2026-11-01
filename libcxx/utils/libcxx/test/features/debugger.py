@@ -55,6 +55,34 @@ features += [
 ]
 
 
+# Detect whether LLDB is on the system and can actually run Python scripts.
+# The %{lldb} substitution is provided by the host-has-lldb feature above.
+def check_lldb_with_python(cfg):
+    lldb_path = shutil.which("lldb")
+    if lldb_path is None:
+        return False
+
+    try:
+        stdout = subprocess.check_output(
+            [
+                lldb_path,
+                "--batch",
+                "-o",
+                'script -l python -- print("Has", "Python", "!")',
+            ],
+            stderr=subprocess.DEVNULL,
+            universal_newlines=True,
+        )
+    except subprocess.CalledProcessError:
+        return False
+
+    # Check we actually ran the Python
+    return "Has Python !" in stdout
+
+
+features += [Feature(name="host-has-lldb-with-python", when=check_lldb_with_python)]
+
+
 # Detect whether GDB is on the system, has Python scripting and supports
 # adding breakpoint commands. If so add a substitution to access it.
 def check_gdb(cfg):

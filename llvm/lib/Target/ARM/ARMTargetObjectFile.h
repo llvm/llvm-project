@@ -16,6 +16,8 @@
 namespace llvm {
 
 class ARMElfTargetObjectFile : public TargetLoweringObjectFileELF {
+  bool UsesARMEH = false;
+
 public:
   ARMElfTargetObjectFile();
   void initialize(MCContext &Ctx, const TargetMachine &TM,

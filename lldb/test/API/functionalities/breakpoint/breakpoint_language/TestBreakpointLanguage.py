@@ -18,7 +18,6 @@ class TestBreakpointLanguage(TestBase):
         comp_name = comp_unit.GetFileSpec().GetFilename()
         return comp_name == test_name
 
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_regex_breakpoint_language(self):
         """Test that the name regex breakpoint commands obey the language filter."""
 

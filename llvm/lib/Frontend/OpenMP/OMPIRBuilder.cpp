@@ -425,11 +425,12 @@ BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
+  BasicBlock *Old = Builder.GetInsertBlock();
   BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+    Builder.SetInsertPoint(Old->getTerminator());
   else
-    Builder.SetInsertPoint(Builder.GetInsertBlock());
+    Builder.SetInsertPoint(Old);
   // SetInsertPoint also updates the Builder's debug location, but we want to
   // keep the one the Builder was configured to use.
   Builder.SetCurrentDebugLocation(DebugLoc);
@@ -439,11 +440,12 @@ BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilder<> &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
+  BasicBlock *Old = Builder.GetInsertBlock();
   BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+    Builder.SetInsertPoint(Old->getTerminator());
   else
-    Builder.SetInsertPoint(Builder.GetInsertBlock());
+    Builder.SetInsertPoint(Old);
   // SetInsertPoint also updates the Builder's debug location, but we want to
   // keep the one the Builder was configured to use.
   Builder.SetCurrentDebugLocation(DebugLoc);
@@ -2315,8 +2317,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     Builder.CreateBr(*FiniBBOrErr);
     // There's currently a branch to omp.par.exit. Delete it. We will get there
     // via the fini block
-    if (Instruction *Term = Builder.GetInsertBlock()->getTerminator())
-      Term->eraseFromParent();
+    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
   }
 
   // Register the outlined info.
@@ -10713,8 +10714,6 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   auto *FnTy =
       FunctionType::get(Builder.getVoidTy(), Params, /* IsVarArg */ false);
 
-  SmallString<64> TyStr;
-  raw_svector_ostream Out(TyStr);
   Function *MapperFn =
       Function::Create(FnTy, GlobalValue::InternalLinkage, FuncName, M);
   MapperFn->addFnAttr(Attribute::NoInline);

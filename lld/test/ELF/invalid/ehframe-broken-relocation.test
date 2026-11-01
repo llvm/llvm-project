@@ -2,6 +2,13 @@
 # RUN: not ld.lld --icf=all %t.o -o /dev/null 2>&1 | FileCheck %s
 # CHECK: error: .eh_frame: relocation is not in any piece
 
+## With --noinhibit-exec, the relocation is skipped and does not overwrite the CIE.
+# RUN: ld.lld --icf=all %t.o -o %t --noinhibit-exec 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: llvm-readelf -x .eh_frame %t | FileCheck %s --check-prefix=HEX
+# WARN: warning: .eh_frame: relocation is not in any piece
+# HEX:      Hex dump of section '.eh_frame':
+# HEX-NEXT: 0x{{[0-9a-f]+}} 14000000 00000000 017a5200 01781001
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

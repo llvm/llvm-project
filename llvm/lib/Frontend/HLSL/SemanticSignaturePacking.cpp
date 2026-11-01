@@ -158,6 +158,7 @@ getOptimizedPackingGroup(const SemanticSignatureElement &Element,
   case SemanticInterpretation::SGV:
     return PackingGroup::SystemGenerated;
   case SemanticInterpretation::NotAllocated:
+  case SemanticInterpretation::NotPacked:
     return PackingGroup::NotAllocated;
   case SemanticInterpretation::Invalid:
   case SemanticInterpretation::Target:
@@ -602,7 +603,8 @@ Expected<unsigned> llvm::hlsl::packSignatureStacked(
 
     SemanticInterpretation Interpretation =
         getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
-    if (Interpretation == SemanticInterpretation::NotAllocated)
+    if (Interpretation == SemanticInterpretation::NotAllocated ||
+        Interpretation == SemanticInterpretation::NotPacked)
       continue;
 
     assert((Interpretation == SemanticInterpretation::Arbitrary ||
@@ -645,7 +647,8 @@ static Expected<unsigned> packSignatureInOrder(
 
     SemanticInterpretation Interpretation =
         getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
-    if (Interpretation == SemanticInterpretation::NotAllocated)
+    if (Interpretation == SemanticInterpretation::NotAllocated ||
+        Interpretation == SemanticInterpretation::NotPacked)
       continue;
 
     assert((Interpretation == SemanticInterpretation::Arbitrary ||
@@ -718,7 +721,8 @@ Expected<unsigned> llvm::hlsl::packSignatureIndexed(
 
     SemanticInterpretation Interpretation =
         getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
-    if (Interpretation == SemanticInterpretation::NotAllocated)
+    if (Interpretation == SemanticInterpretation::NotAllocated ||
+        Interpretation == SemanticInterpretation::NotPacked)
       continue;
 
     assert(Interpretation == SemanticInterpretation::Target &&

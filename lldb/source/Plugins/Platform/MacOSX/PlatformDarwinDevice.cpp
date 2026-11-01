@@ -230,7 +230,8 @@ const char *PlatformDarwinDevice::GetDeviceSupportDirectoryForOSVersion() {
   if (!m_sdk_sysroot.empty())
     return m_sdk_sysroot.c_str();
 
-  if (m_device_support_directory_for_os_version.empty()) {
+  auto os_version_dir = m_device_support_directory_for_os_version.Lock();
+  if (os_version_dir->empty()) {
     const PlatformDarwinDevice::SDKDirectoryInfo *sdk_dir_info =
         GetSDKDirectoryForCurrentOSVersion();
     if (sdk_dir_info == nullptr)
@@ -238,21 +239,21 @@ const char *PlatformDarwinDevice::GetDeviceSupportDirectoryForOSVersion() {
     if (sdk_dir_info) {
       char path[PATH_MAX];
       if (sdk_dir_info->directory.GetPath(path, sizeof(path))) {
-        m_device_support_directory_for_os_version = path;
-        return m_device_support_directory_for_os_version.c_str();
+        *os_version_dir = path;
+        return os_version_dir->c_str();
       }
     } else {
       // Assign a single NULL character so we know we tried to find the device
       // support directory and we don't keep trying to find it over and over.
-      m_device_support_directory_for_os_version.assign(1, '\0');
+      os_version_dir->assign(1, '\0');
     }
   }
   // We should have put a single NULL character into
   // m_device_support_directory_for_os_version or it should have a valid path
   // if the code gets here
-  assert(m_device_support_directory_for_os_version.empty() == false);
-  if (m_device_support_directory_for_os_version[0])
-    return m_device_support_directory_for_os_version.c_str();
+  assert(os_version_dir->empty() == false);
+  if ((*os_version_dir)[0])
+    return os_version_dir->c_str();
   return nullptr;
 }
 

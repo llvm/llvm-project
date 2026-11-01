@@ -132,7 +132,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -173,6 +172,7 @@
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ProcessImplicitDefs.h"
+#include "llvm/CodeGen/PseudoProbeInserter.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
@@ -572,8 +572,7 @@ PassBuilder::PassBuilder(LLVMContext &Context, TargetMachine *TM,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : Context(Context), Opts(Context.getLibraryOptions().get<PassesOptions>()),
-      TM(TM),
+    : Context(Context), Opts(getPassesOptions(Context)), TM(TM),
       PTO(PTO ? *PTO : PipelineTuningOptions(&Context.getLibraryOptions())),
       PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)

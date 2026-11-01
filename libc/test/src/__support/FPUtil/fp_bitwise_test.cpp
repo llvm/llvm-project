@@ -25,6 +25,7 @@ using LIBC_NAMESPACE::fputil::fp_not;
 using LIBC_NAMESPACE::fputil::fp_or;
 using LIBC_NAMESPACE::fputil::fp_xor;
 using LIBC_NAMESPACE::fputil::FPBits;
+using LIBC_NAMESPACE::fputil::scale_exp2;
 
 template <typename T>
 class LlvmLibcFPBitwiseTest : public LIBC_NAMESPACE::testing::Test {
@@ -92,6 +93,15 @@ public:
     EXPECT_EQ(bits_of(fp_andnot(pos_val, other_val)),
               bits_of(fp_and(pos_val, fp_not(other_val))));
   }
+
+  void test_scale_exp2() {
+    EXPECT_EQ(bits_of(scale_exp2(pos_val, 0)), bits_of(pos_val));
+    EXPECT_EQ(bits_of(scale_exp2(neg_val, 0)), bits_of(neg_val));
+    EXPECT_EQ(bits_of(scale_exp2(pos_val, 2)), bits_of(T(6.0)));
+    EXPECT_EQ(bits_of(scale_exp2(neg_val, 2)), bits_of(T(-6.0)));
+    EXPECT_EQ(bits_of(scale_exp2(pos_val, -2)), bits_of(T(0.375)));
+    EXPECT_EQ(bits_of(scale_exp2(neg_val, -2)), bits_of(T(-0.375)));
+  }
 };
 
 using FPBitwiseTypes = LIBC_NAMESPACE::testing::TypeList<float, double,
@@ -110,6 +120,9 @@ TYPED_TEST_F(LlvmLibcFPBitwiseTest, AndNot, FPBitwiseTypes) {
   this->test_andnot();
 }
 TYPED_TEST_F(LlvmLibcFPBitwiseTest, Not, FPBitwiseTypes) { this->test_not(); }
+TYPED_TEST_F(LlvmLibcFPBitwiseTest, ScaleExp2, FPBitwiseTypes) {
+  this->test_scale_exp2();
+}
 
 TEST(LlvmLibcFPBitwiseConstexprTest, ConstexprEval) {
   static_assert(FPBits<double>(fp_xor(-1.5, 1.5)).uintval() ==
@@ -122,9 +135,17 @@ TEST(LlvmLibcFPBitwiseConstexprTest, ConstexprEval) {
                 FPBits<double>::SIGN_MASK);
   static_assert(FPBits<double>(fp_not(fp_not(1.5))).uintval() ==
                 FPBits<double>(1.5).uintval());
+  static_assert(FPBits<double>(scale_exp2(1.5, 2)).uintval() ==
+                FPBits<double>(6.0).uintval());
+  static_assert(FPBits<double>(scale_exp2(1.5, -2)).uintval() ==
+                FPBits<double>(0.375).uintval());
 
   static_assert(FPBits<float>(fp_xor(-1.5f, 1.5f)).uintval() ==
                 FPBits<float>::SIGN_MASK);
   static_assert(FPBits<float>(fp_andnot(-1.5f, -0.0f)).uintval() ==
                 FPBits<float>(1.5f).uintval());
+  static_assert(FPBits<float>(scale_exp2(1.5f, 2)).uintval() ==
+                FPBits<float>(6.0f).uintval());
+  static_assert(FPBits<float>(scale_exp2(1.5f, -2)).uintval() ==
+                FPBits<float>(0.375f).uintval());
 }

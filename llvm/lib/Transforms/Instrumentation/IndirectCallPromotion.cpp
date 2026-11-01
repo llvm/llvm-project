@@ -57,8 +57,6 @@ STATISTIC(NumOfPGOICallPromotion, "Number of indirect call promotions.");
 STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 
 namespace llvm {
-extern cl::opt<unsigned> MaxNumVTableAnnotations;
-
 extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
@@ -507,9 +505,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
     CalleeIndexMap[Candidates[I].TargetFunction] = I;
 
   uint64_t TotalVTableCount = 0;
-  auto VTableValueDataArray =
-      getValueProfDataFromInst(*VirtualCallInfo.VPtr, IPVK_VTableTarget,
-                               MaxNumVTableAnnotations, TotalVTableCount);
+  auto VTableValueDataArray = getValueProfDataFromInst(
+      *VirtualCallInfo.VPtr, IPVK_VTableTarget,
+      getMaxNumVTableAnnotations(VPtr->getContext()), TotalVTableCount);
   if (VTableValueDataArray.empty())
     return VPtr;
 
@@ -1017,8 +1015,7 @@ PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
                                                 ModuleAnalysisManager &MAM) {
   ProfileSummaryInfo *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
 
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (!promoteIndirectCalls(Opts, M, PSI, InLTO | Opts.icp_lto,
                             SamplePGO | Opts.icp_samplepgo, MAM))
     return PreservedAnalyses::all();

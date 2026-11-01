@@ -4244,6 +4244,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       Expr **Args = &From;
       unsigned NumArgs = 1;
       bool ListInitializing = false;
+      SmallVector<Expr *, 8> ExpandedInits;
       if (InitListExpr *InitList = dyn_cast<InitListExpr>(From)) {
         // But first, see if there is an init-list-constructor that will work.
         OverloadingResult Result = IsInitializerListConstructorConversion(
@@ -4257,8 +4258,10 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
 
         // If we're list-initializing, we pass the individual elements as
         // arguments, not the entire list.
-        Args = InitList->getInits();
-        NumArgs = InitList->getNumInits();
+        MultiExprArg Inits =
+            S.getInitsWithEmbedExpanded(InitList, ExpandedInits);
+        Args = Inits.data();
+        NumArgs = Inits.size();
         ListInitializing = true;
       }
 
@@ -5866,7 +5869,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   //   and the initializer list has a single element that is an
   //   appropriately-typed string literal (8.5.2 [dcl.init.string]), the
   //   implicit conversion sequence is the identity conversion.
-  if (From->getNumInits() == 1 && !IsDesignatedInit) {
+  if (From->hasOneInit() && !IsDesignatedInit) {
     if (ToType->isRecordType() && ToType->isAggregateType()) {
       QualType InitType = From->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, ToType) ||
@@ -5905,7 +5908,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   //   can be implicitly converted to X, the implicit conversion sequence is
   //   the worst conversion necessary to convert an element of the list to X.
   if ((AT || S.isStdInitializerList(ToType, &InitTy)) && !IsDesignatedInit) {
-    unsigned e = From->getNumInits();
+    unsigned e = From->getNumInitsWithEmbedExpanded();
     ImplicitConversionSequence DfltElt;
     DfltElt.setBad(BadConversionSequence::no_conversion, QualType(),
                    QualType());
@@ -5957,8 +5960,9 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     Result.Standard.setAsIdentityConversion();
     Result.Standard.setFromType(InitTy);
     Result.Standard.setAllToTypes(InitTy);
-    for (unsigned i = 0; i < e; ++i) {
-      Expr *Init = From->getInit(i);
+    // An EmbedExpr is a single int prvalue, so one conversion sequence covers
+    // all of its elements; narrowing is checked per element after resolution.
+    for (Expr *Init : From->inits()) {
       ImplicitConversionSequence ICS = TryCopyInitialization(
           S, Init, InitTy, SuppressUserConversions, InOverloadResolution,
           AllowObjCWritebackConversion);
@@ -6046,7 +6050,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
 
     // If the initializer list has a single element that is reference-related
     // to the parameter type, we initialize the reference from that.
-    if (From->getNumInits() == 1 && !IsDesignatedInit) {
+    if (From->hasOneInit() && !IsDesignatedInit) {
       Expr *Init = From->getInit(0);
 
       QualType T2 = Init->getType();
@@ -6108,11 +6112,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     //    - if the initializer list has one element that is not itself an
     //      initializer list, the implicit conversion sequence is the one
     //      required to convert the element to the parameter type.
-    // Bail out on EmbedExpr as well since we never create EmbedExpr for a
-    // single integer.
-    unsigned NumInits = From->getNumInits();
-    if (NumInits == 1 && !isa<InitListExpr>(From->getInit(0)) &&
-        !isa<EmbedExpr>(From->getInit(0))) {
+    if (From->hasOneInit() && !isa<InitListExpr>(From->getInit(0))) {
       Result = TryCopyInitialization(
           S, From->getInit(0), ToType, SuppressUserConversions,
           InOverloadResolution, AllowObjCWritebackConversion);
@@ -6121,7 +6121,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     }
     //    - if the initializer list has no elements, the implicit conversion
     //      sequence is the identity conversion.
-    else if (NumInits == 0) {
+    else if (From->hasZeroInits()) {
       Result.setStandard();
       Result.Standard.setAsIdentityConversion();
       Result.Standard.setFromType(ToType);
@@ -6586,17 +6586,6 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
 
   if (checkPlaceholderForOverload(S, From))
     return ExprError();
-
-  if (From->containsErrors()) {
-    if (S.Context.hasSameType(From->getType(), T))
-      return From;
-
-    // The expression already has errors, so the correct cast kind can't be
-    // determined. Use RecoveryExpr to keep the expected type T and mark the
-    // result as invalid, preventing further cascading errors.
-    return S.CreateRecoveryExpr(From->getBeginLoc(), From->getEndLoc(), {From},
-                                T);
-  }
 
   // C++1z [expr.const]p3:
   //  A converted constant expression of type T is an expression,

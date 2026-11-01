@@ -140,6 +140,7 @@ void registerTestOpaqueLoc();
 void registerTestOpLoweringPasses();
 void registerTestPadFusion();
 void registerTestParallelLoopUnrollingPass();
+void registerTestPtrSetTypeOffset();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUpliftWhileToFor();
 void registerTestSCFUtilsPass();
@@ -289,6 +290,7 @@ static void registerTestPasses() {
   mlir::test::registerTestOpLoweringPasses();
   mlir::test::registerTestPadFusion();
   mlir::test::registerTestParallelLoopUnrollingPass();
+  mlir::test::registerTestPtrSetTypeOffset();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUpliftWhileToFor();
   mlir::test::registerTestSCFUtilsPass();

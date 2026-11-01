@@ -316,6 +316,7 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopUnswitchAttr">:$unswitch,
     OptionalParameter<"BoolAttr">:$mustProgress,
     OptionalParameter<"BoolAttr">:$isVectorized,
+    OptionalParameter<"uint32_t">:$align,
     OptionalParameter<"FusedLoc">:$startLoc,
     OptionalParameter<"FusedLoc">:$endLoc,
     OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses

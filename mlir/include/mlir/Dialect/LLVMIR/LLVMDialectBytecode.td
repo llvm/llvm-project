@@ -330,6 +330,7 @@ def LoopAnnotationAttr : DialectAttribute<(attr
   OptionalAttribute<"LoopUnswitchAttr">:$unswitch,
   OptionalAttribute<"BoolAttr">:$mustProgress,
   OptionalAttribute<"BoolAttr">:$isVectorized,
+  VarInt:$align,
   OptionalAttribute<"FusedLoc">:$startLoc,
   OptionalAttribute<"FusedLoc">:$endLoc,
   OptionalArrayRef<"AccessGroupAttr">:$parallelAccesses

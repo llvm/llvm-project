@@ -193,7 +193,6 @@ defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
 defm out_of_bounds_subscripts : OptOutFC1FFlag<"out-of-bounds-subscripts",
   "Accept a constant subscript that is out of bounds, with a warning (default)",
   "Reject a constant subscript that is out of bounds with an error">;
-defm enumeration_type : OptInFC1FFlag<"enumeration-type", "Enables F2023 ENUMERATION TYPE (experimental; FIR lowering is incomplete)">;
 defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-scalars-strict",
   "Require explicit data clauses for all variables (including scalars) under OpenACC DEFAULT(NONE)",
   "Allow scalars without explicit data clauses under OpenACC DEFAULT(NONE) (default, pre-OpenACC-3.2 behavior)">;

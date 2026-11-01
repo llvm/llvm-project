@@ -502,27 +502,27 @@ define amdgpu_ps half @s_constained_fadd_f16_fpexcept_strict(half inreg %x, half
 ;
 ; GFX11-SDAG-TRUE16-LABEL: s_constained_fadd_f16_fpexcept_strict:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e64 v0.l, s2, s3
+; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e64 v0.l, s0, s1
 ; GFX11-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-FAKE16-LABEL: s_constained_fadd_f16_fpexcept_strict:
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
-; GFX11-SDAG-FAKE16-NEXT:    v_add_f16_e64 v0, s2, s3
+; GFX11-SDAG-FAKE16-NEXT:    v_add_f16_e64 v0, s0, s1
 ; GFX11-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-TRUE16-LABEL: s_constained_fadd_f16_fpexcept_strict:
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
-; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e64 v0.l, s2, s3
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e64 v0.l, s0, s1
 ; GFX11-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-FAKE16-LABEL: s_constained_fadd_f16_fpexcept_strict:
 ; GFX11-GISEL-FAKE16:       ; %bb.0:
-; GFX11-GISEL-FAKE16-NEXT:    v_add_f16_e64 v0, s2, s3
+; GFX11-GISEL-FAKE16-NEXT:    v_add_f16_e64 v0, s0, s1
 ; GFX11-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_constained_fadd_f16_fpexcept_strict:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_add_f16 s0, s2, s3
+; GFX12-NEXT:    s_add_f16 s0, s0, s1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -573,12 +573,12 @@ define amdgpu_ps <2 x half> @s_constained_fadd_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX11-LABEL: s_constained_fadd_v2f16_fpexcept_strict:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_pk_add_f16 v0, s2, s3
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, s1
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: s_constained_fadd_v2f16_fpexcept_strict:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_pk_add_f16 v0, s2, s3
+; GFX12-NEXT:    v_pk_add_f16 v0, s0, s1
 ; GFX12-NEXT:    ; return to shader part epilog
   %val = call <2 x half> @llvm.experimental.constrained.fadd.v2f16(<2 x half> %x, <2 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x half> %val

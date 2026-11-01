@@ -45,16 +45,23 @@ struct EntrySignature {
                        VersionTuple ValidatorVersion) const;
 
   /// Append PSV signature elements and set vector extents, the dependency map,
-  /// and stage-specific signature flags. Does not finalize or serialize PSV.
-  void updatePSV(mcdxbc::PSVRuntimeInfo &PSV,
-                 VersionTuple ValidatorVersion) const;
+  /// the view ID output mask if it is present, and stage-specific signature
+  /// flags. Does not finalize or serialize PSV.
+  void updatePSV(mcdxbc::PSVRuntimeInfo &PSV, VersionTuple ValidatorVersion,
+                 bool UsesViewID) const;
 
   /// Return the serialized dx.viewIdState words for this entry: input scalar
-  /// count, output scalar count, then the input/output dependency table. Scalar
-  /// counts include padding and equal four times the respective vector extent.
-  /// Each input scalar has ceil(output scalar count / 32) consecutive words,
-  /// where bit (4 * row + column) identifies an output scalar.
-  SmallVector<uint32_t> getDependencyState() const;
+  /// count, output scalar count, the outputs that depend on the view ID if
+  /// it is present, then the input/output dependency table. Scalar counts
+  /// include padding and equal four times the respective vector extent. Each
+  /// output mask has ceil(output scalar count / 32) consecutive words, where
+  /// bit (4 * row + column) identifies an output scalar. There is one such
+  /// mask for each input scalar in the dependency table.
+  SmallVector<uint32_t> getDependencyState(bool UsesViewID) const;
+
+  /// Return the mask of output scalars that depend on the view ID.
+  SmallVector<uint32_t> getViewIDOutputMask() const;
+
   void print(raw_ostream &OS) const;
 };
 

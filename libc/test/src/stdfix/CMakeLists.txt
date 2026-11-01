@@ -2,7 +2,7 @@ if(NOT LIBC_COMPILER_HAS_FIXED_POINT)
   return()
 endif()
 
-add_custom_target(libc-stdfix-tests)
+add_libc_testsuite(libc-stdfix-tests)
 
 foreach(suffix IN ITEMS hr r lr hk k lk)
   add_libc_test(

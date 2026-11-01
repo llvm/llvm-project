@@ -41,9 +41,10 @@ if config.llvm_use_sanitizer:
     tsan_suppressions = os.path.join(
         os.path.dirname(os.path.dirname(__file__)), "tsan-suppressions.txt"
     )
-    config.environment["TSAN_OPTIONS"] = (
-        "halt_on_error=1:suppressions=" + tsan_suppressions
-    )
+    tsan_options = "halt_on_error=1:suppressions=" + tsan_suppressions
+    if config.lldb_test_extra_tsan_options:
+        tsan_options += ":" + config.lldb_test_extra_tsan_options
+    config.environment["TSAN_OPTIONS"] = tsan_options
     config.environment["MallocNanoZone"] = "0"
 
 # testFormat: The test format to use to interpret tests.

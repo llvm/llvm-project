@@ -15,6 +15,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -990,6 +991,23 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         return LegalisationCost.first * Entry->Cost + 1;
 
       return LegalisationCost.first * Entry->Cost;
+    }
+    break;
+  }
+  case Intrinsic::pdep:
+  case Intrinsic::pext: {
+    unsigned BW = RetTy->getScalarSizeInBits();
+    if (!RetTy->isVectorTy() && ST->isSVEBitPermAvailable() && BW <= 64) {
+      Type *VecTy = VectorType::get(RetTy, 64 / BW, false);
+      InstructionCost Cost =
+          getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                             nullptr, nullptr) +
+          getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                             nullptr, nullptr) +
+          1 +
+          getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind, 0,
+                             nullptr, nullptr);
+      return Cost;
     }
     break;
   }
@@ -4149,6 +4167,33 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       (DstTy.isScalableVector() && DstTy.getScalarSizeInBits() > 64))
     return InstructionCost::getInvalid();
 
+  // A bitcast that crosses register banks is costed as a vector insert/extract.
+  // Between the same register bank it is free. Note: Some costs are not handled
+  // well by this, like i1 vectors that need to be packed.
+  if (ISD == ISD::BITCAST && ST->isLittleEndian()) {
+    std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
+    std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
+    bool SrcIsFloatOrVec =
+        SrcLT.second.isVector() || SrcLT.second.isFloatingPoint();
+    bool DstIsFloatOrVec =
+        DstLT.second.isVector() || DstLT.second.isFloatingPoint();
+
+    // Consider the bitcast free if they are both the same type and have the
+    // same size after legalization. Scalable vectors are handled specially as
+    // the type legalization cost of v2i16 is v2i64.
+    if (SrcIsFloatOrVec == DstIsFloatOrVec &&
+        (SrcLT.second.getSizeInBits() == DstLT.second.getSizeInBits() ||
+         (SrcLT.second.isScalableVector() &&
+          SrcLT.second.getScalarSizeInBits() != 1 &&
+          DstLT.second.getScalarSizeInBits() != 1)))
+      return 0;
+
+    return std::max(SrcLT.first, DstLT.first) *
+           (CostKind == TTI::TCK_CodeSize
+                ? 1
+                : ST->getVectorInsertExtractBaseCost());
+  }
+
   // From a vector to a scalarized vector will be an series of extract-element
   // and extends.
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
@@ -4656,16 +4701,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f32, 1},
       {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f32, 2},
       {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f32, 6},
-
-      // Bitcasts from float to integer
-      {ISD::BITCAST, MVT::nxv2f16, MVT::nxv2i16, 0},
-      {ISD::BITCAST, MVT::nxv4f16, MVT::nxv4i16, 0},
-      {ISD::BITCAST, MVT::nxv2f32, MVT::nxv2i32, 0},
-
-      // Bitcasts from integer to float
-      {ISD::BITCAST, MVT::nxv2i16, MVT::nxv2f16, 0},
-      {ISD::BITCAST, MVT::nxv4i16, MVT::nxv4f16, 0},
-      {ISD::BITCAST, MVT::nxv2i32, MVT::nxv2f32, 0},
 
       // Add cost for extending to illegal -too wide- scalable vectors.
       // zero/sign extend are implemented by multiple unpack operations,
@@ -6406,7 +6441,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
        SE.getSmallConstantMaxTripCount(L) <= 32))
     return;
 
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.runtime.disable"))
     return;
 
   if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
@@ -7932,13 +7967,17 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   return false;
 }
 
-static bool isFNeg(Value *Op) { return match(Op, m_FNeg(m_Value())); }
+static bool isFNeg(Value *Op) {
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  return match(Op, m_FNegOrFSubNegZero(m_Value()));
+}
 
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
-bool AArch64TTIImpl::isProfitableToSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+bool AArch64TTIImpl::isProfitableToSinkOperands(Instruction *I,
+                                                SmallVectorImpl<Use *> &Ops,
+                                                const LoopInfo *LI) const {
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::aarch64_neon_smull:
@@ -8071,6 +8110,23 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
   };
 
   switch (I->getOpcode()) {
+  case Instruction::Store: {
+    auto *SI = cast<StoreInst>(I);
+    auto *II = dyn_cast<IntrinsicInst>(SI->getValueOperand());
+    if (!SI->isSimple() || !II)
+      break;
+
+    if (!LI ||
+        LI->getLoopFor(SI->getParent()) != LI->getLoopFor(II->getParent()))
+      break;
+
+    unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
+    if (Factor) {
+      Ops.push_back(&SI->getOperandUse(0));
+      return true;
+    }
+    break;
+  }
   case Instruction::GetElementPtr:
   case Instruction::Add:
   case Instruction::Sub:

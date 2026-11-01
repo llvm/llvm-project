@@ -974,7 +974,8 @@ else()
 endif()
 
 # Used to test building the llvm shared library with explicit symbol visibility on
-# Windows and Linux. For ELF platforms default symbols visibility is set to hidden.
+# Windows, Linux and macOS. For ELF and Mach-O platforms default symbol visibility
+# is set to hidden.
 set(LLVM_BUILD_LLVM_DYLIB_VIS FALSE CACHE BOOL "")
 mark_as_advanced(LLVM_BUILD_LLVM_DYLIB_VIS)
 

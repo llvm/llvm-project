@@ -164,7 +164,7 @@ private:
 
 void CallAndMessageChecker::emitBadCall(const BugType &BT, CheckerContext &C,
                                         const Expr *BadE) {
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
 
@@ -336,7 +336,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
   };
 
   if (PointeeV.isUndef()) {
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       std::string Msg = llvm::formatv(
           "{0}{1} function call argument {2} an uninitialized value; {3}",
           ArgumentNumber + 1, llvm::getOrdinalSuffix(ArgumentNumber + 1),
@@ -359,7 +359,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
                              D->getStore(), AllowPartialInitializedness);
 
     if (F.Find(D->getRegion())) {
-      if (ExplodedNode *N = C.generateErrorNode()) {
+      if (ExplodedNode *N = C.addSink()) {
         std::string Msg = llvm::formatv(
             "{0}{1} function call argument {2} an uninitialized value{3}; {4}",
             (ArgumentNumber + 1), llvm::getOrdinalSuffix(ArgumentNumber + 1),
@@ -391,7 +391,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(
       C.addSink();
       return true;
     }
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       // Generate a report for this bug.
       SmallString<200> Buf;
       llvm::raw_svector_ostream Os(Buf);
@@ -420,7 +420,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(
         C.addSink();
         return true;
       }
-      if (ExplodedNode *N = C.generateErrorNode()) {
+      if (ExplodedNode *N = C.addSink()) {
         std::string Msg = llvm::formatv(
             "Passed-by-value struct argument contains uninitialized data{0}",
             F.FieldChain);
@@ -486,7 +486,7 @@ ProgramStateRef CallAndMessageChecker::checkParameterCount(
     return nullptr;
   }
 
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return nullptr;
 
@@ -550,7 +550,7 @@ CallAndMessageChecker::checkCXXDeallocation(const CXXDeallocatorCall *DC,
   }
 
   StringRef Desc;
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return nullptr;
   if (DE->isArrayFormAsWritten())
@@ -632,7 +632,7 @@ void CallAndMessageChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       C.addSink();
       return;
     }
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       const BugType *BT = nullptr;
       switch (msg.getMessageKind()) {
       case OCM_Message:
@@ -739,7 +739,7 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
             Ctx.LongDoubleTy == CanRetTy ||
             Ctx.LongLongTy == CanRetTy ||
             Ctx.UnsignedLongLongTy == CanRetTy)))) {
-      if (ExplodedNode *N = C.generateErrorNode(state))
+      if (ExplodedNode *N = C.addSink(state))
         emitNilReceiverBug(C, Msg, N);
       return;
     }

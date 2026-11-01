@@ -62,6 +62,15 @@ class LiveIntervals;
 class NodeSet;
 class SMSchedule;
 
+/// Return true if BaseMI and OtherMI may access overlapping memory in a later
+/// iteration of the loop LoopBB. Returns true conservatively whenever overlap
+/// cannot be ruled out.
+LLVM_ABI bool mayOverlapInLaterIter(const MachineInstr *BaseMI,
+                                    const MachineInstr *OtherMI,
+                                    const MachineBasicBlock *LoopBB,
+                                    const MachineRegisterInfo &MRI,
+                                    const TargetInstrInfo &TII);
+
 /// Software pipelining policy for a loop, which a target can customize by
 /// implementing TargetSubtargetInfo::overridePipelinerPolicy.
 struct MachinePipelinerPolicy {
@@ -424,9 +433,6 @@ public:
 
   const SwingSchedulerDDG *getDDG() const { return DDG.get(); }
 
-  bool mayOverlapInLaterIter(const MachineInstr *BaseMI,
-                             const MachineInstr *OtherMI) const;
-
 private:
   /// Set the policy for this loop, allowing the target to override it.
   void initPolicy();
@@ -448,7 +454,6 @@ private:
   void computeNodeOrder(NodeSetType &NodeSets);
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
-  bool computeDelta(const MachineInstr &MI, int &Delta) const;
   MachineInstr *findDefInLoop(Register Reg);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, Register &NewBase,

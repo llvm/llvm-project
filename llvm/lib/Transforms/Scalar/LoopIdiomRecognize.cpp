@@ -297,8 +297,7 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   LoopIdiomRecognize LIR(Opts, &AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
                          AR.MSSA, DL, ORE);
   if (!LIR.runOnLoop(&L))
@@ -415,9 +414,6 @@ static APInt getStoreStride(const SCEVAddRecExpr *StoreEv) {
 /// memset.pattern intrinsic rather than directly the memset_pattern16
 /// libcall.
 static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
-  // FIXME: This could check for UndefValue because it can be merged into any
-  // other valid pattern.
-
   // If the value isn't a constant, we can't promote it to being in a constant
   // array.  We could theoretically do a store to an alloca or something, but
   // that doesn't seem worthwhile.
@@ -667,10 +663,15 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     Value *FirstSplatValue = nullptr;
     Constant *FirstPatternValue = nullptr;
 
-    if (For == ForMemset::Yes)
+    if (For == ForMemset::Yes) {
       FirstSplatValue = isBytewiseValue(FirstStoredVal, *DL);
-    else
+      if (isa<UndefValue>(FirstSplatValue))
+        continue;
+    } else {
       FirstPatternValue = getMemSetPatternValue(FirstStoredVal, DL);
+      if (isa<UndefValue>(FirstPatternValue))
+        continue;
+    }
 
     assert((FirstSplatValue || FirstPatternValue) &&
            "Expected either splat value or pattern value.");
@@ -710,13 +711,9 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
 
       if (isConsecutiveAccess(SL[i], SL[k], *DL, *SE, false)) {
         if (For == ForMemset::Yes) {
-          if (isa<UndefValue>(FirstSplatValue))
-            FirstSplatValue = SecondSplatValue;
           if (FirstSplatValue != SecondSplatValue)
             continue;
         } else {
-          if (isa<UndefValue>(FirstPatternValue))
-            FirstPatternValue = SecondPatternValue;
           if (FirstPatternValue != SecondPatternValue)
             continue;
         }

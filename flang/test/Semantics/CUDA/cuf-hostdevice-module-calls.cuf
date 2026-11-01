@@ -39,9 +39,9 @@ contains
   module procedure caller
     caller = both(n)
     call both_subroutine(n)
-    !ERROR: 'host_only' may not be called in device code
+    !ERROR: 'host_only', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     caller = host_only(n)
-    !ERROR: 'device_only' may not be called in host code
+    !ERROR: 'device_only', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     caller = device_only(n)
     if (on_device()) then
       caller = device_only(n)
