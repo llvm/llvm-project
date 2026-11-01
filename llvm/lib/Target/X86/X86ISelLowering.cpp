@@ -52245,9 +52245,10 @@ static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineVectorShiftVar(SDNode *N, SelectionDAG &DAG,
-                                     TargetLowering::DAGCombinerInfo &DCI,
-                                     const X86Subtarget &Subtarget) {
+static SDValue
+combineVectorShiftUniformVar(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI,
+                             const X86Subtarget &Subtarget) {
   assert((X86ISD::VSHL == N->getOpcode() || X86ISD::VSRA == N->getOpcode() ||
           X86ISD::VSRL == N->getOpcode()) &&
          "Unexpected shift opcode");
@@ -64357,7 +64358,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VSHL:
   case X86ISD::VSRA:
   case X86ISD::VSRL:
-    return combineVectorShiftVar(N, DAG, DCI, Subtarget);
+    return combineVectorShiftUniformVar(N, DAG, DCI, Subtarget);
   case X86ISD::VSHLI:
   case X86ISD::VSRAI:
   case X86ISD::VSRLI:
