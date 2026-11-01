@@ -3866,7 +3866,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         if (auto *C = dyn_cast<ConstantSDNode>(N.getOperand(ChildNo)))
           ChildVal = C->getAPIntValue().trySExtValue();
       }
-      
+
       unsigned CaseSize;
       while (true) {
         // Get the size of this case.
@@ -3879,7 +3879,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         int64_t CaseVal = GetSignedVBR(MatcherTable, MatcherIndex);
 
         // If the value matches, then we will execute this case.
-        if (ChildVal && *ChildVal == CaseVal)
+        if (ChildVal == CaseVal)
           break;
 
         // Otherwise, skip over this case.

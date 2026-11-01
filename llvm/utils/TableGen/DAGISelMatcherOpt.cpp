@@ -626,7 +626,8 @@ static void FactorNodes(MatcherList &ML) {
             dyn_cast<ScopeMatcher>(Cases[Entry - 1].second.front());
         // Create a new scope if we don't have one.
         if (!SM) {
-          SmallVector<MatcherList, 1> Entries = { std::move(Cases[Entry - 1].second) };
+          SmallVector<MatcherList, 1> Entries;
+          Entries.push_back(std::move(Cases[Entry - 1].second));
           Cases[Entry - 1].second.push_front(
               new ScopeMatcher(std::move(Entries)));
           SM = cast<ScopeMatcher>(Cases[Entry - 1].second.front());
@@ -661,8 +662,8 @@ static void FactorNodes(MatcherList &ML) {
       ML.insert_after(
           Prev, new SwitchChildIntegerMatcher(SwitchChildNo, std::move(Cases)));
     } else {
-      // If we factored and ended up with one case, insert a type check and
-      // splice the rest.
+      // If we factored and ended up with one case, insert a child integer check
+      // and splice the rest.
       auto I = ML.insert_after(
           Prev, new CheckChildIntegerMatcher(SwitchChildNo, Cases[0].first));
       ML.splice_after(I, Cases[0].second);

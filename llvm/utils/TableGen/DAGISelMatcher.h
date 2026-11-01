@@ -725,8 +725,8 @@ private:
 };
 
 /// SwitchTypeMatcher - Switch based on the current node's type, dispatching
-/// to one matcher per case.  If the type doesn't match any of the cases,
-/// then the match fails.  This is semantically equivalent to a Scope node where
+/// to one matcher per case. If the type doesn't match any of the cases,
+/// then the match fails. This is semantically equivalent to a Scope node where
 /// every child does a CheckType, but is much faster.
 class SwitchTypeMatcher : public Matcher {
   SmallVector<std::pair<MVT, MatcherList>, 8> Cases;
