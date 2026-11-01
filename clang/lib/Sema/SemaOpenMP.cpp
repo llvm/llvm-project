@@ -2613,7 +2613,6 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
       Expr *ThisExpr = SemaRef.BuildCXXThisExpr(SourceLocation(),
                                                 SemaRef.getCurrentThisType(),
                                                 /*IsImplicit=*/true);
-      const CXXScopeSpec CS = CXXScopeSpec();
       Expr *ME = SemaRef.BuildMemberExpr(
           ThisExpr, /*IsArrow=*/true, SourceLocation(),
           NestedNameSpecifierLoc(), SourceLocation(), FD,

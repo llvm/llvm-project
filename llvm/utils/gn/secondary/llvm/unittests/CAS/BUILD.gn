@@ -19,6 +19,7 @@ unittest("CASTests") {
   if (llvm_enable_ondisk_cas) {
     sources += [
       "BuiltinUnifiedCASDatabasesTest.cpp",
+      "FileLockTest.cpp",
       "OnDiskCASLoggerTest.cpp",
       "OnDiskDataAllocatorTest.cpp",
       "OnDiskGraphDBTest.cpp",
