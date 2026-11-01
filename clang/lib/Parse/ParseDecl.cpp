@@ -3395,12 +3395,12 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
 }
 
 void Parser::ParseStorageClassSpecifier(DeclSpec &DS,
-                                        StorageClassSpecifierContext Context) {
+                                        StorageClassSpecifierContext Context,
+                                        const PrintingPolicy &Policy) {
   SourceLocation Loc = Tok.getLocation();
   const char *PrevSpec = nullptr;
   unsigned DiagID = 0;
   bool IsInvalid = false;
-  PrintingPolicy Policy = Actions.getPrintingPolicy();
 
   switch (Tok.getKind()) {
   case tok::kw_typedef:
@@ -4268,7 +4268,8 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_thread_local:
     case tok::kw__Thread_local:
     case tok::kw_constexpr:
-      ParseStorageClassSpecifier(DS, StorageClassSpecifierContext::Declaration);
+      ParseStorageClassSpecifier(DS, StorageClassSpecifierContext::Declaration,
+                                 Policy);
       AttrsLastTime = false;
       continue;
 

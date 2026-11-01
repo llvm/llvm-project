@@ -1901,7 +1901,8 @@ private:
 
   enum class StorageClassSpecifierContext { Declaration, CompoundLiteral };
   void ParseStorageClassSpecifier(DeclSpec &DS,
-                                  StorageClassSpecifierContext Context);
+                                  StorageClassSpecifierContext Context,
+                                  const PrintingPolicy &Policy);
 
   void
   ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
@@ -5134,6 +5135,7 @@ private:
 
   bool isCompoundLiteralStorageClassSpecifier() const;
   bool isTypeIdInParensWithStorageClassSpecifiers();
+  bool isTypeIdInParensAfterStorageClassSpecifiers();
   void ParseCompoundLiteralStorageClassSpecifiers(DeclSpec &DS);
 
   /// Finish parsing a C++ unqualified-id that is a template-id of

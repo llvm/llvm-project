@@ -2672,9 +2672,13 @@ bool Parser::isCompoundLiteralStorageClassSpecifier() const {
 }
 
 bool Parser::isTypeIdInParensWithStorageClassSpecifiers() {
-  if (!isCompoundLiteralStorageClassSpecifier())
-    return false;
+  return isCompoundLiteralStorageClassSpecifier() &&
+         isTypeIdInParensAfterStorageClassSpecifiers();
+}
 
+bool Parser::isTypeIdInParensAfterStorageClassSpecifiers() {
+  assert(isCompoundLiteralStorageClassSpecifier() &&
+         "expected a compound literal storage-class specifier");
   RevertingTentativeParsingAction TPA(*this);
   do
     ConsumeToken();
@@ -2687,7 +2691,8 @@ void Parser::ParseCompoundLiteralStorageClassSpecifiers(DeclSpec &DS) {
     if (DS.getBeginLoc().isInvalid())
       DS.SetRangeStart(Tok.getLocation());
     ParseStorageClassSpecifier(DS,
-                               StorageClassSpecifierContext::CompoundLiteral);
+                               StorageClassSpecifierContext::CompoundLiteral,
+                               Actions.getPrintingPolicy());
   }
 }
 
