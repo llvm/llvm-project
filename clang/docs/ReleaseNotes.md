@@ -1388,6 +1388,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   the clause was parsed but its condition was discarded without effect.
 - Fixed a crash when the loop variable or a loop bound of an OpenMP loop has a
   `_BitInt` type wider than any standard integer type. (#GH140074)
+- Fixed a crash when a `linear` clause with the `uval` modifier names a
+  reference without an initializer, such as a reference parameter. (#GH108166)
 - Loop-transforming constructs such as `tile` and `unroll` are now allowed
   inside a `simd` region for OpenMP 6.0 or later, which classifies them as
   simdizable.

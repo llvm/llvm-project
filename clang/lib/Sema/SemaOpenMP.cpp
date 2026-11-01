@@ -22934,7 +22934,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
     DeclRefExpr *PrivateRef = buildDeclRefExpr(SemaRef, Private, Type, ELoc);
     // Build var to save initial value.
     VarDecl *Init = buildVarDecl(SemaRef, ELoc, Type, ".linear.start");
-    Expr *InitExpr;
     DeclRefExpr *Ref = nullptr;
     bool IsBindingDecl = isa<BindingDecl>(D);
     if (!VD && !IsBindingDecl && !SemaRef.CurContext->isDependentContext()) {
@@ -22955,10 +22954,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
         }
       }
     }
-    if (LinKind == OMPC_LINEAR_uval)
-      InitExpr = VD ? VD->getInit() : SimpleRefExpr;
-    else
-      InitExpr = (VD || IsBindingDecl) ? SimpleRefExpr : Ref;
+    // Read the initial value through the list item itself for every modifier;
+    // a 'uval' item is a reference whose referenced value is linear, exactly as
+    // for 'val', and need not have an initializer (e.g. a reference parameter).
+    Expr *InitExpr = (VD || IsBindingDecl) ? SimpleRefExpr : Ref;
     SemaRef.AddInitializerToDecl(
         Init, SemaRef.DefaultLvalueConversion(InitExpr).get(),
         /*DirectInit=*/false);
@@ -23036,7 +23035,6 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
   bool HasErrors = false;
   auto CurInit = Clause.inits().begin();
   auto CurPrivate = Clause.privates().begin();
-  OpenMPLinearClauseKind LinKind = Clause.getModifier();
   for (Expr *RefExpr : Clause.varlist()) {
     SourceLocation ELoc;
     SourceRange ERange;
@@ -23064,13 +23062,12 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     }
     Expr *InitExpr = *CurInit;
 
-    // Build privatized reference to the current linear var.
+    // Build privatized reference to the current linear var. The final value is
+    // written back through the variable itself, also for 'uval' references.
     auto *DE = cast<DeclRefExpr>(SimpleRefExpr);
     Expr *CapturedRef;
     if (isa<BindingDecl>(DE->getDecl())) {
       CapturedRef = SimpleRefExpr;
-    } else if (LinKind == OMPC_LINEAR_uval) {
-      CapturedRef = cast<VarDecl>(DE->getDecl())->getInit();
     } else {
       CapturedRef =
           buildDeclRefExpr(SemaRef, cast<VarDecl>(DE->getDecl()),
