@@ -345,7 +345,12 @@ define ptr @D98611_3(ptr %c1, i64 %offset) {
 define ptr @D98611_2_not_exact(ptr %c1, i64 %offset) {
 ; CHECK-LABEL: @D98611_2_not_exact(
 ; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i8, ptr [[C1:%.*]], i64 [[OFFSET:%.*]]
-; CHECK-NEXT:    ret ptr [[C2]]
+; CHECK-NEXT:    [[PTRTOINT1:%.*]] = ptrtoint ptr [[C1]] to i64
+; CHECK-NEXT:    [[PTRTOINT2:%.*]] = ptrtoint ptr [[C2]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PTRTOINT2]], [[PTRTOINT1]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i64 [[SUB]], 7
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[C1]], i64 [[SDIV]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %c2 = getelementptr inbounds i8, ptr %c1, i64 %offset
   %ptrtoint1 = ptrtoint ptr %c1 to i64
@@ -359,7 +364,12 @@ define ptr @D98611_2_not_exact(ptr %c1, i64 %offset) {
 define ptr @D98611_3_not_exact(ptr %c1, i64 %offset) {
 ; CHECK-LABEL: @D98611_3_not_exact(
 ; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i8, ptr [[C1:%.*]], i64 [[OFFSET:%.*]]
-; CHECK-NEXT:    ret ptr [[C2]]
+; CHECK-NEXT:    [[PTRTOINT1:%.*]] = ptrtoint ptr [[C1]] to i64
+; CHECK-NEXT:    [[PTRTOINT2:%.*]] = ptrtoint ptr [[C2]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[PTRTOINT2]], [[PTRTOINT1]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i64 [[SUB]], 2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[C1]], i64 [[ASHR]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %c2 = getelementptr inbounds i8, ptr %c1, i64 %offset
   %ptrtoint1 = ptrtoint ptr %c1 to i64
