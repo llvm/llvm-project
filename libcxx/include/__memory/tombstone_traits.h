@@ -39,6 +39,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class>
 struct __tombstone_traits;
 
+template <size_t _PaddingSize>
+struct __padding {
+  char __padding_[_PaddingSize];
+};
+
+template <>
+struct __padding<0> {};
+
 #if _LIBCPP_STD_VER >= 20
 
 // bools always have exactly one bit set. If there is more than one set it's disengaged.
@@ -57,14 +65,6 @@ struct __tombstone_traits<bool> {
 
   static constexpr size_t __max_tombstone = 254;
 };
-
-template <size_t _PaddingSize>
-struct __padding {
-  char __padding_[_PaddingSize];
-};
-
-template <>
-struct __padding<0> {};
 
 // Pointers to a type that has an alignment greater than one always have the lowest bits set to zero. This is a single
 // implementation for all the places where we have an invalid pointer to _Tp as the "invalid state" representation.
