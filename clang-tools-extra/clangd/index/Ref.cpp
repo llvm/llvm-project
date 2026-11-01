@@ -41,9 +41,6 @@ void RefSlab::Builder::insert(const SymbolID &ID, const Ref &S) {
 
 void RefSlab::BundleBuilder::insert(const SymbolID &ID,
                                     llvm::ArrayRef<Ref> SymbolRefs) {
-  assert((Refs.empty() || Refs.back().first < ID) &&
-         "Symbols must be added in increasing order");
-  assert(llvm::is_sorted(SymbolRefs) && "Refs of a symbol must be sorted");
   if (SymbolRefs.empty())
     return;
   Ref *Copy = Arena.Allocate<Ref>(SymbolRefs.size());
@@ -52,11 +49,16 @@ void RefSlab::BundleBuilder::insert(const SymbolID &ID,
     R.Location.FileURI = UniqueStrings.save(R.Location.FileURI).data();
     new (&Copy[I]) Ref(R);
   }
-  Refs.emplace_back(ID, llvm::ArrayRef<Ref>(Copy, SymbolRefs.size()));
+  llvm::MutableArrayRef<Ref> Stored(Copy, SymbolRefs.size());
+  if (!llvm::is_sorted(Stored))
+    llvm::sort(Stored); // By file, affects xrefs display order.
+  Refs.emplace_back(ID, Stored);
   NumRefs += SymbolRefs.size();
 }
 
 RefSlab RefSlab::BundleBuilder::build() && {
+  if (!llvm::is_sorted(Refs, llvm::less_first()))
+    llvm::sort(Refs, llvm::less_first());
   return RefSlab(std::move(Refs), std::move(Arena), NumRefs);
 }
 

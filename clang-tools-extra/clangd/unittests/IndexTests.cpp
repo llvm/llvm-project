@@ -529,10 +529,12 @@ TEST(RefSlabTest, BundleBuilderMatchesBuilder) {
       {SymbolID("b"), {MakeRef(FileY, 2), MakeRef(FileX, 1)}},
       {SymbolID("c"), {MakeRef(FileY, 4), MakeRef(FileX, 5)}},
   };
-  // BundleBuilder takes refs in RefSlab order.
-  llvm::sort(Bundles, llvm::less_first());
+  // The order of a file written on another host may differ from ours: give
+  // BundleBuilder bundles in decreasing order and refs out of order.
+  llvm::sort(Bundles,
+             [](const auto &L, const auto &R) { return R.first < L.first; });
   for (auto &[ID, Refs] : Bundles)
-    llvm::sort(Refs);
+    llvm::sort(Refs, [](const Ref &L, const Ref &R) { return R < L; });
 
   RefSlab::Builder ExpectedBuilder;
   RefSlab::BundleBuilder ActualBuilder;
@@ -558,8 +560,6 @@ TEST(RefSlabTest, BundleBuilderMatchesBuilder) {
 
 TEST(RefSlabTest, BundleBuilderCopiesReusedBuffers) {
   SymbolID First("a"), Second("b");
-  if (Second < First)
-    std::swap(First, Second);
   // The same buffer holds a different file URI for each insert.
   char Buffer[] = "file:///x.cc";
   Ref R;
