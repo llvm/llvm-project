@@ -1089,6 +1089,7 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.ssize_t
+    .llvm-libc-types.pid_t
 )
 
 add_header_macro(

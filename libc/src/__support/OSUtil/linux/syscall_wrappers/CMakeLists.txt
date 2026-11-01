@@ -434,7 +434,35 @@ add_header_library(
     libc.hdr.types.ssize_t
     libc.include.sys_syscall
 )
+add_header_library(
+  process_vm_readv
+  HDRS
+    process_vm_readv.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
 
+add_header_library(
+  process_vm_writev
+  HDRS
+    process_vm_writev.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
 add_header_library(
   recvfrom
   HDRS
