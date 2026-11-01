@@ -57,15 +57,15 @@ T1 f1 = a1;
 void foo1(T1 a = T1()) {
   return;
 }
-// CHECK: define{{ hidden | }}[[T1]] @{{.+}}bar1{{.+}}()
+// CHECK: define{{ hidden | }}[64 x i8] @{{.+}}bar1{{.+}}()
 T1 bar1() {
-// CHECK:      load [[T1]], ptr
-// CHECK-NEXT: ret [[T1]]
+// CHECK:      load [64 x i8], ptr
+// CHECK-NEXT: ret [64 x i8]
   return T1();
 }
 // CHECK: define{{ hidden | }}void @{{.+}}baz1{{.+}}()
 void baz1() {
-// CHECK: call [[T1]] @{{.+}}bar1{{.+}}()
+// CHECK: call [64 x i8] @{{.+}}bar1{{.+}}()
   T1 t = bar1();
 }
 #pragma omp end declare target

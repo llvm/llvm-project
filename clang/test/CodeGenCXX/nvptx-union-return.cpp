@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple nvptx64 -emit-llvm -o - %s | FileCheck %s
 
-// A union in a base class is returned as an integer array, like a union
-// member, so that bytes of the active member are not dropped.
+// A union in a base class is returned as an integer array, so that bytes of
+// the active member are not dropped.
 union U {
   unsigned long long l;
   struct {

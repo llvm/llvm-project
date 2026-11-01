@@ -6,7 +6,7 @@ typedef struct float4_s {
 } float4_t;
 
 float4_t my_function(void) {
-// CHECK-LABEL: define{{.*}} %struct.float4_s @my_function
+// CHECK-LABEL: define{{.*}} [4 x i32] @my_function
   float4_t t;
   return t;
 };
@@ -14,7 +14,7 @@ float4_t my_function(void) {
 float bar(void) {
   float4_t ret;
 // CHECK-LABEL: @bar
-// CHECK: call %struct.float4_s @my_function
+// CHECK: call [4 x i32] @my_function
   ret = my_function();
   return ret.x;
 }
@@ -43,8 +43,8 @@ void baz(nested_t x) {
 }
 
 // A union is lowered to the LLVM type of one member, here pad_t, whose padding
-// holds data of the other member. Aggregates containing a union are returned
-// as an integer array so that those bytes are not dropped.
+// holds data of the other member. Records are returned as an integer array so
+// that those bytes are not dropped.
 typedef struct pad_s {
   short s;
   unsigned long long l;

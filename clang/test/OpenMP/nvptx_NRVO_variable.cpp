@@ -19,8 +19,8 @@ S foo() {
   // CHECK: call void @{{.+}}bar{{.+}}(ptr {{.*}}[[S_REF:%.+]])
   bar(s);
   // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}[[RETVAL]], ptr {{.*}}[[S_REF]], i64 4, i1 false)
-  // CHECK: [[VAL:%.+]] = load %struct.S, ptr [[RETVAL]],
-  // CHECK: ret %struct.S [[VAL]]
+  // CHECK: [[VAL:%.+]] = load [1 x i32], ptr
+  // CHECK: ret [1 x i32] [[VAL]]
   return s;
 }
 #pragma omp end declare target
