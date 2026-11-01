@@ -42,10 +42,10 @@ public:
     for (auto &&Sym : Symbols)
       this->Symbols.push_back(&Sym);
     if constexpr (std::is_same_v<std::decay_t<RefsRange>,
-                                 decltype(this->Refs)> &&
-                  !std::is_lvalue_reference_v<RefsRange>) {
-      // Take over a map of the right type instead of rehashing every entry.
-      this->Refs = std::move(Refs);
+                                 decltype(this->Refs)>) {
+      // A map of the right type can be taken as is instead of rehashing every
+      // entry.
+      this->Refs = std::forward<RefsRange>(Refs);
     } else {
       for (auto &&Ref : Refs)
         this->Refs.try_emplace(Ref.first, Ref.second);
