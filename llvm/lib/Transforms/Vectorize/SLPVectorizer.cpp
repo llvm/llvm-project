@@ -37239,17 +37239,25 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
 
     HaveVectorizedPhiNodes = tryToVectorizeSequence<Value>(
         *Opts, Incoming, PHICompare, AreCompatiblePHIs,
-        [this, &R, &PHICompare](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+        [this, &R, &PHICompare,
+         &AreCompatiblePHIs](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
           if (vectorizeSeedReductions(Candidates, R))
             return true;
           // If the whole register vectors are not built in the original order,
           // the phis from the different groups, matching in the leading values,
-          // are tried together.
+          // are tried together. Only the lists, filling a single register and
+          // having compatible phis, are reordered.
+          const unsigned NumRegElts =
+              std::max(2U, R.getMaxVecRegSize() /
+                               R.getVectorElementSize(Candidates.front()));
           SmallVector<Value *> Sorted(Candidates);
           stable_sort(Sorted, [&](Value *V1, Value *V2) {
             return PHICompare(V1, V2, /*PrefixFirst=*/true);
           });
           if (!equal(Sorted, Candidates) &&
+              Candidates.size() / NumRegElts == 1 &&
+              adjacent_find(Candidates, AreCompatiblePHIs) !=
+                  Candidates.end() &&
               (tryToVectorizeList(Candidates, R, /*MaxVFOnly=*/true) ||
                tryToVectorizeList(Sorted, R, /*MaxVFOnly=*/true)))
             return true;
