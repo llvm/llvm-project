@@ -10,6 +10,9 @@ GitHub API with a commit and the name of a machine defined in `machines.json`. I
 `llvm-test-suite-run.yml` reusable workflow, which performs the actual build + run of the
 LLVM Test Suite and uploads as an artifact.
 
+The `llvm-test-suite-lnt-cron.yml` workflow dispatches that pipeline twice a day at the tip
+of `main`, for every machine defined in `machines.json`, and submits the results to LNT.
+
 The commit associated to the run data is the monorepo commit that Clang was built from.
 Commits on `main` are given an ordinal (`git rev-list --count`) so they can be ordered
 with each other, but other commits (e.g. PR commits) are reported without an ordinal.

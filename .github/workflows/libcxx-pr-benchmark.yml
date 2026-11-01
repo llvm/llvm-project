@@ -131,10 +131,9 @@ jobs:
       artifact-name: ab-results-${{ matrix.lnt-machine }}
       lnt-artifact-name: lnt-reports-${{ matrix.lnt-machine }}
 
-  # Submit the results of each machine to LNT, which allows linking to LNT's comparison page in the report.
-  # Machines whose benchmarks didn't complete have no reports, so submitting them fails too.
+  # Submit the results of all machines to LNT, which allows linking to LNT's comparison page in the report.
+  # Nothing is submitted for machines whose benchmarks didn't complete (since they have no report).
   submit:
-    name: Submit ${{ matrix.lnt-machine }}
     needs:
       - extract-info
       - run-benchmarks
@@ -142,13 +141,9 @@ jobs:
     if: ${{ !cancelled() && needs.extract-info.result == 'success' }}
     permissions:
       contents: read
-    strategy:
-      matrix:
-        include: ${{ fromJSON(needs.extract-info.outputs.matrix) }}
-      fail-fast: false
     uses: $/.github/workflows/lnt-submit.yml
     with:
-      artifact-name: lnt-reports-${{ matrix.lnt-machine }}
+      artifacts: lnt-reports-*
       test-suite: libcxx
     secrets:
       LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}

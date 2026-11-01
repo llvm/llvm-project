@@ -28,8 +28,8 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
 }
 
 TEST(LlvmLibcLocaltimeR, NullPtr) {
-  struct tm input;
-  time_t timer = 0;
+  [[maybe_unused]] struct tm input;
+  [[maybe_unused]] time_t timer = 0;
   EXPECT_DEATH([] { LIBC_NAMESPACE::localtime_r(nullptr, nullptr); },
                WITH_SIGNAL(-1));
   EXPECT_DEATH([&] { LIBC_NAMESPACE::localtime_r(nullptr, &input); },

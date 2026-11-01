@@ -3745,12 +3745,18 @@ LegalizerHelper::lowerConstant(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFConstant(MachineInstr &MI) {
-  const MachineOperand &ConstOperand = MI.getOperand(1);
-  const Constant *ConstantVal = ConstOperand.getFPImm();
+  Register Dst = MI.getOperand(0).getReg();
+  const ConstantFP *ConstantVal = MI.getOperand(1).getFPImm();
+  const APFloat &Imm = ConstantVal->getValueAPF();
 
-  emitLoadFromConstantPool(MI.getOperand(0).getReg(), ConstantVal, MIRBuilder);
+  bool ForCodeSize = MIRBuilder.getMF().getFunction().hasOptSize();
+  if (TLI.getFPImmAction(Imm, MRI.getType(Dst), ForCodeSize) ==
+      TargetLowering::FPImmAction::Bitcast)
+    MIRBuilder.buildConstant(Dst, Imm.bitcastToAPInt());
+  else
+    emitLoadFromConstantPool(Dst, ConstantVal, MIRBuilder);
+
   MI.eraseFromParent();
-
   return Legalized;
 }
 
@@ -8253,12 +8259,16 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
 
   Register ShX, ShY;
   Register ShAmt, InvShAmt;
+  unsigned OrFlags = MachineInstr::NoFlags;
 
   // FIXME: Emit optimized urem by constant instead of letting it expand later.
   if (isNonZeroModBitWidthOrUndef(MRI, Z, BW)) {
     // fshl: X << C | Y >> (BW - C)
     // fshr: X << (BW - C) | Y >> C
     // where C = Z % BW is not zero
+    // If Z has undef elements, C may be zero so the or isn't disjoint.
+    if (isNonZeroModBitWidth(MRI, Z, BW))
+      OrFlags |= MachineInstr::Disjoint;
     auto BitWidthC = MIRBuilder.buildConstant(ShTy, BW);
     ShAmt = MIRBuilder.buildURem(ShTy, Z, BitWidthC).getReg(0);
     InvShAmt = MIRBuilder.buildSub(ShTy, BitWidthC, ShAmt).getReg(0);
@@ -8267,6 +8277,8 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
   } else {
     // fshl: X << (Z % BW) | Y >> 1 >> (BW - 1 - (Z % BW))
     // fshr: X << 1 << (BW - 1 - (Z % BW)) | Y >> (Z % BW)
+    // The extra shift by 1 guarantees the two sides don't overlap.
+    OrFlags |= MachineInstr::Disjoint;
     auto Mask = MIRBuilder.buildConstant(ShTy, BW - 1);
     if (isPowerOf2_32(BW)) {
       // Z % BW -> Z & (BW - 1)
@@ -8292,7 +8304,7 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
     }
   }
 
-  MIRBuilder.buildOr(Dst, ShX, ShY, MachineInstr::Disjoint);
+  MIRBuilder.buildOr(Dst, ShX, ShY, OrFlags);
   MI.eraseFromParent();
   return Legalized;
 }

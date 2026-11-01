@@ -2127,6 +2127,7 @@ cc_library(
     deps = [
         ":PluginProcessPOSIX",
         ":PluginProcessUtility",
+        ":PluginRegisterNative",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
@@ -2320,6 +2321,22 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginRegisterNative",
+    srcs = glob(["Register/Native/*.cpp"]),
+    hdrs = glob(["Register/Native/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
     name = "PluginProcessWindowsCommon",
     srcs = glob(["Process/Windows/Common/*.cpp"]),
     hdrs = glob([
@@ -2334,6 +2351,7 @@ cc_library(
     }),
     deps = [
         ":PluginDynamicLoaderWindowsDYLD",
+        ":PluginRegisterNative",
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Headers",

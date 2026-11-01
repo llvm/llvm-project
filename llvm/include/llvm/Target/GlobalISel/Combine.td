@@ -1736,6 +1736,25 @@ def bitfield_extract_from_shr : GICombineRule<
     [{ return Helper.matchBitfieldExtractFromShr(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
 
+// Replace a 1-bit G_UBFX of a bit that is a copy of the sign bit with a shift
+// of the sign bit into bit 0, which can fold into users such as G_ADD.
+def ubfx_sign_bit_to_lshr : GICombineRule<
+  (defs root:$root),
+  (match (G_CONSTANT $lsb, $lsbimm),
+         (G_UBFX $dst, $src, $lsb, 1):$root,
+         [{ LLT Ty = MRI.getType(${dst}.getReg());
+            unsigned BitWidth = Ty.getSizeInBits();
+            const APInt &Lsb = ${lsbimm}.getCImm()->getValue();
+            return Ty.isScalar() && Lsb.ult(BitWidth) &&
+                   VT->computeNumSignBits(${src}.getReg()) >=
+                       BitWidth - Lsb.getZExtValue(); }]),
+  (apply [{ LLT Ty = MRI.getType(${dst}.getReg());
+            LLT ShiftAmtTy =
+                Helper.getTargetLowering().getPreferredShiftAmountTy(Ty);
+            auto Amt = B.buildConstant(ShiftAmtTy, Ty.getSizeInBits() - 1);
+            B.buildLShr(${dst}.getReg(), ${src}.getReg(), Amt);
+            ${root}->eraseFromParent(); }])>;
+
 def bitfield_extract_from_shr_and : GICombineRule<
   (defs root:$dst, build_fn_matchinfo:$info),
   (match (ashr_lshr_frags $dst):$root,
