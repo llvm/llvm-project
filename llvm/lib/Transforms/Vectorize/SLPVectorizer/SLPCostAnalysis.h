@@ -43,7 +43,6 @@ class User;
 class Value;
 class VectorType;
 enum class RecurKind;
-struct VectorizeOptions;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
@@ -190,14 +189,14 @@ getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
 SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
                                            const Intrinsic::ID ID,
                                            const unsigned VF, unsigned MinBW,
-                                           const TargetTransformInfo *TTI);
+                                           const TargetTransformInfo &TTI);
 
 /// Calculates the costs of vectorized intrinsic (if possible) and vectorized
 /// function (if possible) calls. Returns invalid cost for the corresponding
 /// calls, if they cannot be vectorized/will be scalarized.
 std::pair<InstructionCost, InstructionCost>
-getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
-                   const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
+                   const TargetLibraryInfo &TLI, ArrayRef<Type *> ArgTys,
                    const TargetTransformInfo::TargetCostKind CostKind);
 
 /// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
@@ -212,7 +211,7 @@ struct PoorThroughputOpCache {
 /// Returns true if \p I is an expensive scalar op whose vector form is cheaper
 /// per lane (e.g. fdiv, frem, fsqrt). If \p MaxVecRegSize is non-zero, the
 /// widest vector fitting into it is checked too.
-bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
+bool isPoorThroughputOp(bool ReVec, Instruction *I,
                         const TargetTransformInfo &TTI,
                         const TargetLibraryInfo &TLI,
                         PoorThroughputOpCache &Cache,
@@ -227,8 +226,8 @@ bool isFusableFMulOperand(Value *Op, Instruction *I,
 
 /// \returns true if more values with the scalar type \p Ty than registers are
 /// live at some point of the block \p BB. The blocks larger than the scheduling
-/// budget are skipped to save compile time.
-bool hasHighRegisterPressure(const VectorizeOptions &Opts, const BasicBlock &BB,
+/// budget \p ScheduleBudget are skipped to save compile time.
+bool hasHighRegisterPressure(unsigned ScheduleBudget, const BasicBlock &BB,
                              Type *Ty, const TargetTransformInfo &TTI);
 
 } // namespace llvm::slpvectorizer

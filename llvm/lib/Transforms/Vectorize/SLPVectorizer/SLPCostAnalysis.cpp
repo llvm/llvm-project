@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPCostAnalysis.h"
-#include "../VectorizeOptions.h"
 #include "SLPTypeUtils.h"
 #include "SLPUtils.h"
 
@@ -577,11 +576,11 @@ InstructionCost getNarrowedLeafOpsCost(
 SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
                                            const Intrinsic::ID ID,
                                            const unsigned VF, unsigned MinBW,
-                                           const TargetTransformInfo *TTI) {
+                                           const TargetTransformInfo &TTI) {
   SmallVector<Type *> ArgTys;
   for (auto [Idx, Arg] : enumerate(CI->args())) {
     if (ID != Intrinsic::not_intrinsic) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, &TTI)) {
         ArgTys.push_back(Arg->getType());
         continue;
       }
@@ -597,8 +596,8 @@ SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
 }
 
 std::pair<InstructionCost, InstructionCost>
-getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
-                   const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
+                   const TargetLibraryInfo &TLI, ArrayRef<Type *> ArgTys,
                    const TTI::TargetCostKind CostKind) {
   auto Shape = VFShape::get(CI->getFunctionType(),
                             ElementCount::getFixed(getNumElements(VecTy)),
@@ -608,9 +607,9 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
   if (!CI->isNoBuiltin() && VecFunc) {
     // Calculate the cost of the vector library call.
     // If the corresponding vector call is cheaper, return its cost.
-    LibCost = TTI->getCallInstrCost(nullptr, VecTy, ArgTys, CostKind);
+    LibCost = TTI.getCallInstrCost(nullptr, VecTy, ArgTys, CostKind);
   }
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
 
   // Calculate the cost of the vector intrinsic call.
   FastMathFlags FMF;
@@ -620,7 +619,7 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
   IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF,
                                     dyn_cast<IntrinsicInst>(CI),
                                     LibCost.isValid() ? LibCost : ScalarLimit);
-  auto IntrinsicCost = TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+  auto IntrinsicCost = TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
   if (LibCost.isValid()) {
     if (IntrinsicCost > LibCost)
       IntrinsicCost = InstructionCost::getInvalid();
@@ -632,7 +631,7 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
     SmallVector<const Value *> Args(CI->args());
     IntrinsicCostAttributes ArgAwareAttrs(
         ID, VecTy, Args, ArgTys, FMF, dyn_cast<IntrinsicInst>(CI), ScalarLimit);
-    IntrinsicCost = TTI->getIntrinsicInstrCost(ArgAwareAttrs, CostKind);
+    IntrinsicCost = TTI.getIntrinsicInstrCost(ArgAwareAttrs, CostKind);
     if (IntrinsicCost > ScalarLimit)
       IntrinsicCost = InstructionCost::getInvalid();
   }
@@ -651,9 +650,9 @@ static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
   Type *VecTy = getWidenedType(I->getType(), VF);
   if (auto *CI = dyn_cast<CallInst>(I)) {
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
-    SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, &TTI);
+    SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, TTI);
     auto [IntrCost, LibCost] =
-        getVectorCallCosts(CI, VecTy, &TTI, &TLI, ArgTys, CostKind);
+        getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
     return std::min(IntrCost, LibCost);
   }
   SmallVector<const Value *, 2> Args{I->getOperand(0), I->getOperand(1)};
@@ -670,7 +669,7 @@ static unsigned getPoorThroughputTypeKey(Type *Ty) {
          Ty->getScalarSizeInBits();
 }
 
-bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
+bool isPoorThroughputOp(bool ReVec, Instruction *I,
                         const TargetTransformInfo &TTI,
                         const TargetLibraryInfo &TLI,
                         PoorThroughputOpCache &Cache,
@@ -679,8 +678,8 @@ bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
   if (!isa<BinaryOperator, CallInst>(I))
     return false;
   Type *Ty = I->getType();
-  if ((Ty->isVectorTy() && !Opts.slp_revec) || Ty->isAggregateType() ||
-      !isValidElementType(Ty, Opts.slp_revec))
+  if ((Ty->isVectorTy() && !ReVec) || Ty->isAggregateType() ||
+      !isValidElementType(Ty, ReVec))
     return false;
   auto Analyze = [&]() {
     InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
@@ -706,7 +705,7 @@ bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
   };
   if (auto *CI = dyn_cast<CallInst>(I)) {
     if (any_of(CI->args(), [&](const Value *Arg) {
-          return !isValidElementType(Arg->getType(), Opts.slp_revec);
+          return !isValidElementType(Arg->getType(), ReVec);
         }))
       return false;
     // A call, used only as a select operand, may get the values rejected by the
@@ -749,9 +748,9 @@ bool isFusableFMulOperand(Value *Op, Instruction *I,
          any_of(OpsToSink, [&](const Use *U) { return U->get() == FMul; });
 }
 
-bool hasHighRegisterPressure(const VectorizeOptions &Opts, const BasicBlock &BB,
+bool hasHighRegisterPressure(unsigned ScheduleBudget, const BasicBlock &BB,
                              Type *Ty, const TargetTransformInfo &TTI) {
-  if (hasNItemsOrMore(BB, Opts.slp_schedule_budget))
+  if (hasNItemsOrMore(BB, ScheduleBudget))
     return false;
   const unsigned NumRegs = TTI.getNumberOfRegisters(
       TTI.getRegisterClassForType(/*Vector=*/false, Ty));

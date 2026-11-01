@@ -395,19 +395,6 @@ protected:
   }
 };
 
-/// Returns incoming Value *, if the requested type is Value * too, or a default
-/// value, otherwise.
-struct ValueSelect {
-  template <typename U>
-  static std::enable_if_t<std::is_same_v<Value *, U>, Value *> get(Value *V) {
-    return V;
-  }
-  template <typename U>
-  static std::enable_if_t<!std::is_same_v<Value *, U>, U> get(Value *) {
-    return U();
-  }
-};
-
 /// Does the analysis of the provided shuffle masks and performs the requested
 /// actions on the vectors with the given shuffle masks. It tries to do it in
 /// several steps.
@@ -445,9 +432,9 @@ T *performExtractsShuffleAction(
       else
         Mask[Idx] = (Res.second ? Idx : Mask[Idx]) + VF;
     }
-    [[maybe_unused]] auto *V = ValueSelect::get<T *>(Base);
-    assert((!V || GetVF(V) == Mask.size()) &&
-           "Expected base vector of VF number of elements.");
+    if constexpr (std::is_same_v<T, Value>)
+      assert(GetVF(Base) == Mask.size() &&
+             "Expected base vector of VF number of elements.");
     Prev = Action(Mask, {nullptr, Res.first});
   } else if (ShuffleMask.size() == 1) {
     // Base is poison and only 1 vector is shuffled - perform the action only

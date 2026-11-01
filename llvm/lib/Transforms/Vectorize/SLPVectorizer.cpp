@@ -9708,10 +9708,10 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       }
     }
     SmallVector<Type *> ArgTys =
-        buildIntrinsicArgTypes(CI, ID, VL.size(), 0, TTI);
+        buildIntrinsicArgTypes(CI, ID, VL.size(), 0, *TTI);
     auto *VecTy = getWidenedType(S.getMainOp()->getType(), VL.size());
     auto VecCallCosts =
-        getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
+        getVectorCallCosts(CI, VecTy, *TTI, *TLI, ArgTys, CostKind);
     if (!VecCallCosts.first.isValid() && !VecCallCosts.second.isValid())
       return TreeEntry::NeedToGather;
 
@@ -13305,7 +13305,7 @@ bool BoUpSLP::bypassesInstCountCheck(InstructionCost TreeCost) const {
     return TE.hasState() && !DeletedNodes.contains(&TE) && !TE.isGather() &&
            !TransformedToGatherNodes.contains(&TE) &&
            TE.State != TreeEntry::CombinedVectorize &&
-           isPoorThroughputOp(Opts, TE.getMainOp(), *TTI, *TLI, Cache,
+           isPoorThroughputOp(Opts.slp_revec, TE.getMainOp(), *TTI, *TLI, Cache,
                               CostKind);
   });
 }
@@ -17932,9 +17932,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
       SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(
           CI, ID, getNumElements(VecTy),
-          It != MinBWs.end() ? It->second.first : 0, TTI);
+          It != MinBWs.end() ? It->second.first : 0, *TTI);
       auto VecCallCosts =
-          getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
+          getVectorCallCosts(CI, VecTy, *TTI, *TLI, ArgTys, CostKind);
       return std::min(VecCallCosts.first, VecCallCosts.second) + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -20241,7 +20241,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           getNumVectorInsts(TreeLoop, /*CountExtracts=*/false);
       Instruction *Root = getRootNode().getMainOp();
       if (NumNoExtracts <= NumScalar &&
-          hasHighRegisterPressure(Opts, *Root->getParent(),
+          hasHighRegisterPressure(Opts.slp_schedule_budget, *Root->getParent(),
                                   getValueType(Root, Opts.slp_revec), *TTI))
         NumVector = NumNoExtracts;
     }
@@ -25306,9 +25306,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(
           CI, ID, getNumElements(VecTy),
-          It != MinBWs.end() ? It->second.first : 0, TTI);
+          It != MinBWs.end() ? It->second.first : 0, *TTI);
       auto VecCallCosts =
-          getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
+          getVectorCallCosts(CI, VecTy, *TTI, *TLI, ArgTys, CostKind);
       bool UseIntrinsic = ID != Intrinsic::not_intrinsic &&
                           VecCallCosts.first <= VecCallCosts.second;
 
@@ -29319,10 +29319,10 @@ bool BoUpSLP::collectValuesToDemote(
     auto Checker = [&](unsigned BitWidth, unsigned) {
       unsigned MinBW = PowerOf2Ceil(BitWidth);
       SmallVector<Type *> ArgTys =
-          buildIntrinsicArgTypes(IC, ID, VF, MinBW, TTI);
+          buildIntrinsicArgTypes(IC, ID, VF, MinBW, *TTI);
       auto VecCallCosts = getVectorCallCosts(
           IC, getWidenedType(IntegerType::get(IC->getContext(), MinBW), VF),
-          TTI, TLI, ArgTys, CostKind);
+          *TTI, *TLI, ArgTys, CostKind);
       InstructionCost Cost = std::min(VecCallCosts.first, VecCallCosts.second);
       if (Cost < BestCost) {
         BestCost = Cost;
@@ -29595,7 +29595,7 @@ void BoUpSLP::computeMinimumValueSizes() {
         if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
           ++BitWidth1;
         unsigned BitWidth2 = BitWidth1;
-        if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(::getRdxKind(V))) {
+        if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(getRdxKind(V))) {
           APInt Mask = DB->getDemandedBits(cast<Instruction>(V));
           BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
         }
@@ -31522,8 +31522,6 @@ public:
     return I->getOpcode() == Instruction::FAdd;
   }
 
-  static RecurKind getRdxKind(Value *V) { return slpvectorizer::getRdxKind(V); }
-
   /// Get the index of the first operand.
   static unsigned getFirstOperandIndex(Instruction *I) {
     return isCmpSelMinMax(I) ? 1 : 0;
@@ -31641,7 +31639,7 @@ public:
   HorizontalReduction(const VectorizeOptions &Opts, Instruction *I,
                       ArrayRef<Value *> Ops)
       : Opts(Opts), ReductionRoot(I), ReductionLimit(2) {
-    RdxKind = HorizontalReduction::getRdxKind(I);
+    RdxKind = getRdxKind(I);
     ReductionOps.emplace_back().push_back(I);
     ReducedVals.emplace_back().assign(Ops.begin(), Ops.end());
     for (Value *V : Ops)
@@ -31811,7 +31809,7 @@ public:
                                  const TargetTransformInfo &TTI,
                                  const TargetLibraryInfo &TLI,
                                  bool FlattenNegations = true) {
-    RdxKind = HorizontalReduction::getRdxKind(Root);
+    RdxKind = getRdxKind(Root);
     // A reassociable fsub root is a flattened link of an fadd reduction: its
     // subtracted operand enters with a flipped sign. Without the flattening
     // there is no reduction to match. (An fneg is not a reduction candidate.)
@@ -35399,7 +35397,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   // If we can find a secondary reduction root, use that instead.
   auto SelectRoot = [&]() {
     if (TryOperandsAsNewSeeds && isReductionCandidate(Root) &&
-        HorizontalReduction::getRdxKind(Root) != RecurKind::None)
+        getRdxKind(Root) != RecurKind::None)
       if (Instruction *NewRoot = tryGetSecondaryReductionRoot(P, Root))
         return NewRoot;
     return Root;
@@ -35666,7 +35664,7 @@ bool SLPVectorizerPass::tryToVectorize(
       return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT, *LI) != nullptr;
     }
     InstructionCost RedCost;
-    switch (::getRdxKind(Inst)) {
+    switch (getRdxKind(Inst)) {
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Or:
@@ -36919,8 +36917,9 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
     else if (isNonVectorizableInst(*Opts, &*It, TLI))
       PostProcessInsts.insert(&*It);
     else if (Opts->slp_vectorize_poor_throughput &&
-             isPoorThroughputOp(*Opts, &*It, *TTI, *TLI, PoorThroughputCache,
-                                R.getCostKind(), R.getMaxVecRegSize()))
+             isPoorThroughputOp(Opts->slp_revec, &*It, *TTI, *TLI,
+                                PoorThroughputCache, R.getCostKind(),
+                                R.getMaxVecRegSize()))
       PoorThroughputSeeds.insert(&*It);
   }
 
@@ -37015,8 +37014,8 @@ bool SLPVectorizerPass::vectorizeSplitStorePoorThroughputSeeds(BasicBlock *BB,
     return !R.isDeleted(&I) && !isAssumeLikeIntrinsic(&I) &&
            !isa<PseudoProbeInst>(I) && !R.isEphemeralValue(&I) &&
            !isNonVectorizableInst(*Opts, &I, TLI) &&
-           isPoorThroughputOp(*Opts, &I, *TTI, *TLI, Cache, R.getCostKind(),
-                              R.getMaxVecRegSize());
+           isPoorThroughputOp(Opts->slp_revec, &I, *TTI, *TLI, Cache,
+                              R.getCostKind(), R.getMaxVecRegSize());
   };
   // The groups without the stored scalars are rejected, so the block is
   // skipped if no stored scalar is a candidate. The stored scalars are checked
@@ -37109,7 +37108,7 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
     // The poor-throughput ops are seeded on their own, with the different
     // grouping.
     if (Opts->slp_vectorize_poor_throughput &&
-        isPoorThroughputOp(*Opts, &I, *TTI, *TLI, PoorThroughputCache,
+        isPoorThroughputOp(Opts->slp_revec, &I, *TTI, *TLI, PoorThroughputCache,
                            R.getCostKind(), R.getMaxVecRegSize()))
       continue;
     // The multiplication is contracted into the scalar FMA with its user, the
