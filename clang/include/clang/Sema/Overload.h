@@ -1154,6 +1154,7 @@ class Sema;
     CXXRecordDecl *ActingContext;
     Expr *From;
     QualType ToType;
+    bool AllowRValues;
   };
 
   static_assert(std::is_trivially_destructible_v<
@@ -1459,7 +1460,7 @@ class Sema;
         FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
         CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
         bool AllowObjCConversionOnExplicit, bool AllowExplicit,
-        bool AllowResultConversion);
+        bool AllowResultConversion, bool AllowRValues);
 
     void InjectNonDeducedTemplateCandidates(Sema &S);
 

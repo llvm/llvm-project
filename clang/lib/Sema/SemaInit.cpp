@@ -5395,7 +5395,8 @@ static OverloadingResult TryRefInitWithConversionFunction(
           S.AddTemplateConversionCandidate(
               ConvTemplate, I.getPair(), ActingDC, Initializer, DestType,
               CandidateSet,
-              /*AllowObjCConversionOnExplicit=*/false, AllowExplicitConvs);
+              /*AllowObjCConversionOnExplicit=*/false, AllowExplicitConvs,
+              /*AllowResultConversion=*/true, AllowRValues);
         else
           S.AddConversionCandidate(
               Conv, I.getPair(), ActingDC, Initializer, DestType, CandidateSet,

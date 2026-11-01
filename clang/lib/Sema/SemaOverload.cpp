@@ -8818,7 +8818,7 @@ static void AddTemplateConversionCandidateImmediately(
     FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
     CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
     bool AllowObjCConversionOnExplicit, bool AllowExplicit,
-    bool AllowResultConversion) {
+    bool AllowResultConversion, bool AllowRValues) {
 
   // If the function template has a non-dependent explicit specification,
   // exclude it now if appropriate; we are not permitted to perform deduction
@@ -8852,9 +8852,13 @@ static void AddTemplateConversionCandidateImmediately(
     return;
   }
 
+  assert(Specialization && "Missing function template specialization?");
+  // Reject invalid template specialization.
+  if (!AllowRValues &&
+      !Specialization->getConversionType()->isLValueReferenceType())
+    return;
   // Add the conversion function template specialization produced by
   // template argument deduction as a candidate.
-  assert(Specialization && "Missing function template specialization?");
   S.AddConversionCandidate(Specialization, FoundDecl, ActingContext, From,
                            ToType, CandidateSet, AllowObjCConversionOnExplicit,
                            AllowExplicit, AllowResultConversion,
@@ -8865,7 +8869,7 @@ void Sema::AddTemplateConversionCandidate(
     FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
     CXXRecordDecl *ActingDC, Expr *From, QualType ToType,
     OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
-    bool AllowExplicit, bool AllowResultConversion) {
+    bool AllowExplicit, bool AllowResultConversion, bool AllowRValues) {
   assert(isa<CXXConversionDecl>(FunctionTemplate->getTemplatedDecl()) &&
          "Only conversion function templates permitted here");
 
@@ -8879,7 +8883,7 @@ void Sema::AddTemplateConversionCandidate(
     AddTemplateConversionCandidateImmediately(
         *this, CandidateSet, FunctionTemplate, FoundDecl, ActingDC, From,
         ToType, AllowObjCConversionOnExplicit, AllowExplicit,
-        AllowResultConversion);
+        AllowResultConversion, AllowRValues);
 
     CandidateSet.DisableResolutionByPerfectCandidate();
     return;
@@ -8887,7 +8891,7 @@ void Sema::AddTemplateConversionCandidate(
 
   CandidateSet.AddDeferredConversionTemplateCandidate(
       FunctionTemplate, FoundDecl, ActingDC, From, ToType,
-      AllowObjCConversionOnExplicit, AllowExplicit, AllowResultConversion);
+      AllowObjCConversionOnExplicit, AllowExplicit, AllowResultConversion, AllowRValues);
 }
 
 void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
@@ -11593,7 +11597,7 @@ void OverloadCandidateSet::AddDeferredConversionTemplateCandidate(
     FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
     CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
     bool AllowObjCConversionOnExplicit, bool AllowExplicit,
-    bool AllowResultConversion) {
+    bool AllowResultConversion, bool AllowRValues) {
 
   auto *C =
       allocateDeferredCandidate<DeferredConversionTemplateOverloadCandidate>();
@@ -11609,7 +11613,8 @@ void OverloadCandidateSet::AddDeferredConversionTemplateCandidate(
       FoundDecl,
       ActingContext,
       From,
-      ToType};
+      ToType,
+      AllowRValues};
 }
 
 static void
@@ -11638,7 +11643,7 @@ AddTemplateOverloadCandidate(Sema &S, OverloadCandidateSet &CandidateSet,
   return AddTemplateConversionCandidateImmediately(
       S, CandidateSet, C.FunctionTemplate, C.FoundDecl, C.ActingContext, C.From,
       C.ToType, C.AllowObjCConversionOnExplicit, C.AllowExplicit,
-      C.AllowResultConversion);
+      C.AllowResultConversion, C.AllowRValues);
 }
 
 void OverloadCandidateSet::InjectNonDeducedTemplateCandidates(Sema &S) {

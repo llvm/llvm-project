@@ -10743,7 +10743,8 @@ public:
       FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
       CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
       OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
-      bool AllowExplicit, bool AllowResultConversion = true);
+      bool AllowExplicit, bool AllowResultConversion = true,
+      bool AllowRValues = true);
 
   /// AddSurrogateCandidate - Adds a "surrogate" candidate function that
   /// converts the given @c Object to a function pointer via the
