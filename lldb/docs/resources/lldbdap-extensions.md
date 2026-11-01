@@ -79,6 +79,12 @@ interface CompileUnit {
    * The path of the compile unit.
    */
   compileUnitPath: string;
+
+  /**
+   * The language of the compile unit, with its version where known, for
+   * example `c11` or `c++17`. Omitted if the language is unknown.
+   */
+  language?: string;
 }
 ```
 
@@ -267,5 +273,13 @@ interface StackFrame {
    * @since LLDB 24
    */
   compileUnitId?: number;
+
+  /**
+   * Language specific data about the frame, as returned by
+   * `SBFrame::GetLanguageSpecificData`, for example `Objective-C runtime
+   * version`. Each language runtime defines its keys and clients must ignore
+   * keys they do not know. Omitted if the runtime reports nothing.
+   */
+  $__lldb_languageSpecificData?: any;
 }
 ```

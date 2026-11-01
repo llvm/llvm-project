@@ -16161,12 +16161,12 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
   SDLoc DL(N);
   uint32_t PermMask = 0x0c0c0c0c;
   if (V0) {
-    V0 = DAG.getBitcastedAnyExtOrTrunc(V0, DL, MVT::i32);
+    V0 = getDWordFromOffset(DAG, DL, V0, /*DWordOffset=*/0);
     PermMask = (PermMask & ~0xFF) | (BP0->SrcOffset + 4);
   }
 
   if (V1) {
-    V1 = DAG.getBitcastedAnyExtOrTrunc(V1, DL, MVT::i32);
+    V1 = getDWordFromOffset(DAG, DL, V1, /*DWordOffset=*/0);
     PermMask = (PermMask & ~(0xFF << 8)) | (BP1->SrcOffset << 8);
   }
 
