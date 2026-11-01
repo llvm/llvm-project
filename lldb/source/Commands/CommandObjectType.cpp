@@ -1116,12 +1116,12 @@ protected:
           [&result, &formatter_regex,
            &any_printed](const TypeMatcher &type_matcher,
                          const FormatterSharedPointer &format_sp) -> bool {
-        if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
+        if (ShouldListItem(type_matcher.GetMatchString(),
                            formatter_regex.get())) {
           any_printed = true;
-          result.GetOutputStream().Printf(
-              "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-              format_sp->GetDescription().c_str());
+          result.GetOutputStream().Format("{0}: {1}\n",
+                                          type_matcher.GetMatchString(),
+                                          format_sp->GetDescription());
         }
         return true;
       };
@@ -1737,9 +1737,9 @@ protected:
       DataVisualization::NamedSummaryFormats::ForEach(
           [&result](const TypeMatcher &type_matcher,
                     const TypeSummaryImplSP &summary_sp) -> bool {
-            result.GetOutputStream().Printf(
-                "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-                summary_sp->GetDescription().c_str());
+            result.GetOutputStream().Format("{0}: {1}\n",
+                                            type_matcher.GetMatchString(),
+                                            summary_sp->GetDescription());
             return true;
           });
       return true;
@@ -2315,8 +2315,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(std::string type_name,
     // It's not generally possible to get a type object here. For example, this
     // command can be run before loading any binaries. Do just a best-effort
     // name-based lookup here to try to prevent conflicts.
-    FormattersMatchCandidate candidate_type(ConstString(type_name), nullptr,
-                                            TypeImpl(),
+    FormattersMatchCandidate candidate_type(type_name, nullptr, TypeImpl(),
                                             FormattersMatchCandidate::Flags());
     if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter)) {
       if (error)
@@ -2456,8 +2455,7 @@ private:
       // this command can be run before loading any binaries. Do just a
       // best-effort name-based lookup here to try to prevent conflicts.
       FormattersMatchCandidate candidate_type(
-          ConstString(type_name), nullptr, TypeImpl(),
-          FormattersMatchCandidate::Flags());
+          type_name, nullptr, TypeImpl(), FormattersMatchCandidate::Flags());
       lldb::SyntheticChildrenSP entry;
       if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth)) {
         if (error)

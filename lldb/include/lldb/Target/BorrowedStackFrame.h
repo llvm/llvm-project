@@ -128,6 +128,9 @@ public:
 
   lldb::RecognizedStackFrameSP GetRecognizedFrame() override;
 
+  llvm::Expected<lldb::ThreadPlanSP>
+  GetThreadPlanForStepType(lldb::StepType step_type) override;
+
   /// Get the underlying borrowed frame.
   lldb::StackFrameSP GetBorrowedFrame() const;
 

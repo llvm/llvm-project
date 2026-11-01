@@ -113,6 +113,9 @@ public:
 
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
+  cir::GlobalViewAttr
+  getVTableAddressPointAttr(BaseSubobject base,
+                            const CXXRecordDecl *vtableClass) override;
   mlir::Value getVTableAddressPointInStructorWithVTT(
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase);
@@ -636,178 +639,6 @@ public:
                                 cir::GlobalLinkageKind linkage,
                                 mlir::SymbolTable::Visibility visibility);
 };
-} // namespace
-
-// TODO(cir): Will be removed after sharing them with the classical codegen
-namespace {
-
-// VMI type info flags.
-enum {
-  /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
-  VMI_NonDiamondRepeat = 0x1,
-
-  /// VMI_DiamondShaped - Class is diamond shaped.
-  VMI_DiamondShaped = 0x2
-};
-
-// Base class type info flags.
-enum {
-  /// BCTI_Virtual - Base class is virtual.
-  BCTI_Virtual = 0x1,
-
-  /// BCTI_Public - Base class is public.
-  BCTI_Public = 0x2
-};
-
-/// Given a builtin type, returns whether the type
-/// info for that type is defined in the standard library.
-/// TODO(cir): this can unified with LLVM codegen
-static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
-  // Itanium C++ ABI 2.9.2:
-  //   Basic type information (e.g. for "int", "bool", etc.) will be kept in
-  //   the run-time support library. Specifically, the run-time support
-  //   library should contain type_info objects for the types X, X* and
-  //   X const*, for every X in: void, std::nullptr_t, bool, wchar_t, char,
-  //   unsigned char, signed char, short, unsigned short, int, unsigned int,
-  //   long, unsigned long, long long, unsigned long long, float, double,
-  //   long double, char16_t, char32_t, and the IEEE 754r decimal and
-  //   half-precision floating point types.
-  //
-  // GCC also emits RTTI for __int128.
-  // FIXME: We do not emit RTTI information for decimal types here.
-
-  // Types added here must also be added to emitFundamentalRTTIDescriptors.
-  switch (ty->getKind()) {
-  case BuiltinType::Void:
-  case BuiltinType::NullPtr:
-  case BuiltinType::Bool:
-  case BuiltinType::WChar_S:
-  case BuiltinType::WChar_U:
-  case BuiltinType::Char_U:
-  case BuiltinType::Char_S:
-  case BuiltinType::UChar:
-  case BuiltinType::SChar:
-  case BuiltinType::Short:
-  case BuiltinType::UShort:
-  case BuiltinType::Int:
-  case BuiltinType::UInt:
-  case BuiltinType::Long:
-  case BuiltinType::ULong:
-  case BuiltinType::LongLong:
-  case BuiltinType::ULongLong:
-  case BuiltinType::Half:
-  case BuiltinType::Float:
-  case BuiltinType::Double:
-  case BuiltinType::LongDouble:
-  case BuiltinType::Float16:
-  case BuiltinType::Float128:
-  case BuiltinType::Ibm128:
-  case BuiltinType::Char8:
-  case BuiltinType::Char16:
-  case BuiltinType::Char32:
-  case BuiltinType::Int128:
-  case BuiltinType::UInt128:
-    return true;
-
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
-  case BuiltinType::Id:
-#include "clang/Basic/OpenCLImageTypes.def"
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) case BuiltinType::Id:
-#include "clang/Basic/OpenCLExtensionTypes.def"
-  case BuiltinType::OCLSampler:
-  case BuiltinType::OCLEvent:
-  case BuiltinType::OCLClkEvent:
-  case BuiltinType::OCLQueue:
-  case BuiltinType::OCLReserveID:
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64ACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
-#include "clang/Basic/PPCTypes.def"
-#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/RISCVVTypes.def"
-#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
-#include "clang/Basic/AMDGPUTypes.def"
-#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/HLSLIntangibleTypes.def"
-#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/HLSLPackedTypes.def"
-#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/SPIRVTypes.def"
-  case BuiltinType::ShortAccum:
-  case BuiltinType::Accum:
-  case BuiltinType::LongAccum:
-  case BuiltinType::UShortAccum:
-  case BuiltinType::UAccum:
-  case BuiltinType::ULongAccum:
-  case BuiltinType::ShortFract:
-  case BuiltinType::Fract:
-  case BuiltinType::LongFract:
-  case BuiltinType::UShortFract:
-  case BuiltinType::UFract:
-  case BuiltinType::ULongFract:
-  case BuiltinType::SatShortAccum:
-  case BuiltinType::SatAccum:
-  case BuiltinType::SatLongAccum:
-  case BuiltinType::SatUShortAccum:
-  case BuiltinType::SatUAccum:
-  case BuiltinType::SatULongAccum:
-  case BuiltinType::SatShortFract:
-  case BuiltinType::SatFract:
-  case BuiltinType::SatLongFract:
-  case BuiltinType::SatUShortFract:
-  case BuiltinType::SatUFract:
-  case BuiltinType::SatULongFract:
-  case BuiltinType::BFloat16:
-  case BuiltinType::MetaInfo:
-    return false;
-
-  case BuiltinType::Dependent:
-#define BUILTIN_TYPE(Id, SingletonId)
-#define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
-#include "clang/AST/BuiltinTypes.def"
-    llvm_unreachable("asking for RRTI for a placeholder type!");
-
-  case BuiltinType::ObjCId:
-  case BuiltinType::ObjCClass:
-  case BuiltinType::ObjCSel:
-    llvm_unreachable("FIXME: Objective-C types are unsupported!");
-  }
-
-  llvm_unreachable("Invalid BuiltinType Kind!");
-}
-
-static bool typeInfoIsInStandardLibrary(const PointerType *pointerTy) {
-  QualType pointeeTy = pointerTy->getPointeeType();
-  const auto *builtinTy = dyn_cast<BuiltinType>(pointeeTy);
-  if (!builtinTy)
-    return false;
-
-  // Check the qualifiers.
-  Qualifiers quals = pointeeTy.getQualifiers();
-  quals.removeConst();
-
-  if (!quals.empty())
-    return false;
-
-  return typeInfoIsInStandardLibrary(builtinTy);
-}
-
-/// IsStandardLibraryRTTIDescriptor - Returns whether the type
-/// information for the given type exists in the standard library.
-static bool isStandardLibraryRttiDescriptor(QualType ty) {
-  // Type info for builtin types is defined in the standard library.
-  if (const auto *builtinTy = dyn_cast<BuiltinType>(ty))
-    return typeInfoIsInStandardLibrary(builtinTy);
-
-  // Type info for some pointer types to builtin types is defined in the
-  // standard library.
-  if (const auto *pointerTy = dyn_cast<PointerType>(ty))
-    return typeInfoIsInStandardLibrary(pointerTy);
-
-  return false;
-}
 
 /// ShouldUseExternalRTTIDescriptor - Returns whether the type information for
 /// the given type exists somewhere else, and that we should not emit the type
@@ -852,87 +683,6 @@ static bool shouldUseExternalRttiDescriptor(CIRGenModule &cgm, QualType ty) {
   }
 
   return false;
-}
-
-/// Contains virtual and non-virtual bases seen when traversing a class
-/// hierarchy.
-struct SeenBases {
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> nonVirtualBases;
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> virtualBases;
-};
-
-/// Compute the value of the flags member in abi::__vmi_class_type_info.
-///
-static unsigned computeVmiClassTypeInfoFlags(const CXXBaseSpecifier *base,
-                                             SeenBases &bases) {
-
-  unsigned flags = 0;
-  auto *baseDecl = base->getType()->castAsCXXRecordDecl();
-
-  if (base->isVirtual()) {
-    // Mark the virtual base as seen.
-    if (!bases.virtualBases.insert(baseDecl).second) {
-      // If this virtual base has been seen before, then the class is diamond
-      // shaped.
-      flags |= VMI_DiamondShaped;
-    } else {
-      if (bases.nonVirtualBases.count(baseDecl))
-        flags |= VMI_NonDiamondRepeat;
-    }
-  } else {
-    // Mark the non-virtual base as seen.
-    if (!bases.nonVirtualBases.insert(baseDecl).second) {
-      // If this non-virtual base has been seen before, then the class has non-
-      // diamond shaped repeated inheritance.
-      flags |= VMI_NonDiamondRepeat;
-    } else {
-      if (bases.virtualBases.count(baseDecl))
-        flags |= VMI_NonDiamondRepeat;
-    }
-  }
-
-  // Walk all bases.
-  for (const auto &bs : baseDecl->bases())
-    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
-
-  return flags;
-}
-
-static unsigned computeVmiClassTypeInfoFlags(const CXXRecordDecl *rd) {
-  unsigned flags = 0;
-  SeenBases bases;
-
-  // Walk all bases.
-  for (const auto &bs : rd->bases())
-    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
-
-  return flags;
-}
-
-// Return whether the given record decl has a "single,
-// public, non-virtual base at offset zero (i.e. the derived class is dynamic
-// iff the base is)", according to Itanium C++ ABI, 2.95p6b.
-// TODO(cir): this can unified with LLVM codegen
-static bool canUseSingleInheritance(const CXXRecordDecl *rd) {
-  // Check the number of bases.
-  if (rd->getNumBases() != 1)
-    return false;
-
-  // Get the base.
-  CXXRecordDecl::base_class_const_iterator base = rd->bases_begin();
-
-  // Check that the base is not virtual.
-  if (base->isVirtual())
-    return false;
-
-  // Check that the base is public.
-  if (base->getAccessSpecifier() != AS_public)
-    return false;
-
-  // Check that the class is dynamic iff the base is.
-  auto *baseDecl = base->getType()->castAsCXXRecordDecl();
-  return baseDecl->isEmpty() ||
-         baseDecl->isDynamicClass() == rd->isDynamicClass();
 }
 
 const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
@@ -1003,7 +753,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
       return classTypeInfo;
     }
 
-    if (canUseSingleInheritance(rd)) {
+    if (CodeGenUtils::canUseSingleInheritance(rd)) {
       return siClassTypeInfo;
     }
 
@@ -1217,7 +967,7 @@ void CIRGenItaniumRTTIBuilder::buildVMIClassTypeInfo(mlir::Location loc,
   //   __flags is a word with flags describing details about the class
   //   structure, which may be referenced by using the __flags_masks
   //   enumeration. These flags refer to both direct and indirect bases.
-  unsigned flags = computeVmiClassTypeInfoFlags(rd);
+  unsigned flags = CodeGenUtils::computeVMIClassTypeInfoFlags(rd);
   fields.push_back(cir::IntAttr::get(unsignedIntLTy, flags));
 
   // Itanium C++ ABI 2.9.5p6c:
@@ -1284,9 +1034,9 @@ void CIRGenItaniumRTTIBuilder::buildVMIClassTypeInfo(mlir::Location loc,
     // The low-order byte of __offset_flags contains flags, as given by the
     // masks from the enumeration __offset_flags_masks.
     if (base.isVirtual())
-      offsetFlags |= BCTI_Virtual;
+      offsetFlags |= CodeGenUtils::BCTI_Virtual;
     if (base.getAccessSpecifier() == AS_public)
-      offsetFlags |= BCTI_Public;
+      offsetFlags |= CodeGenUtils::BCTI_Public;
 
     fields.push_back(cir::IntAttr::get(offsetFlagsLTy, offsetFlags));
   }
@@ -1378,7 +1128,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
   }
 
   // Check if there is already an external RTTI descriptor for this type.
-  if (isStandardLibraryRttiDescriptor(ty) ||
+  if (CodeGenUtils::isStandardLibraryRTTIDescriptor(ty) ||
       shouldUseExternalRttiDescriptor(cgm, ty))
     return getAddrOfExternalRTTIDescriptor(loc, ty);
 
@@ -1499,7 +1249,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
       break;
     }
 
-    if (canUseSingleInheritance(rd)) {
+    if (CodeGenUtils::canUseSingleInheritance(rd)) {
       buildSIClassTypeInfo(loc, rd);
     } else {
       buildVMIClassTypeInfo(loc, rd);
@@ -1965,6 +1715,27 @@ CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject base,
       cir::AddressPointAttr::get(cgm.getBuilder().getContext(),
                                  addressPoint.VTableIndex,
                                  addressPoint.AddressPointIndex));
+}
+
+cir::GlobalViewAttr CIRGenItaniumCXXABI::getVTableAddressPointAttr(
+    BaseSubobject base, const CXXRecordDecl *vtableClass) {
+  cir::GlobalOp vtable = getAddrOfVTable(vtableClass, CharUnits());
+
+  // Find the appropriate vtable within the vtable group, and the address point
+  // within that vtable.
+  VTableLayout::AddressPointLocation addressPoint =
+      cgm.getItaniumVTableContext()
+          .getVTableLayout(vtableClass)
+          .getAddressPoint(base);
+
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::ArrayAttr indices = builder.getArrayAttr(
+      {builder.getI32IntegerAttr(addressPoint.VTableIndex),
+       builder.getI32IntegerAttr(addressPoint.AddressPointIndex)});
+  return cir::GlobalViewAttr::get(
+      cir::VPtrType::get(builder.getContext()),
+      mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr()), indices,
+      /*addressPoint=*/true);
 }
 
 mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
@@ -2510,8 +2281,10 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
-  cir::PointerType i8PtrTy = builder.getUInt8PtrTy();
-  mlir::Value v = builder.createBitcast(initialPtr.getPointer(), i8PtrTy);
+  cir::PointerType ui8DefaultASPtrTy = builder.getUInt8PtrTy();
+  mlir::Value v =
+      builder.createPtrBitcast(initialPtr.getPointer(), builder.getUInt8Ty());
+  auto i8PtrTy = mlir::cast<cir::PointerType>(v.getType());
 
   // In a base-to-derived cast, the non-virtual adjustment is applied first.
   if (nonVirtualAdjustment && !isReturnAdjustment) {
@@ -2524,11 +2297,11 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
   if (virtualAdjustment) {
     mlir::Value vtablePtr = cgf.getVTablePtr(
         loc, Address(v, clang::CharUnits::One()), unadjustedClass);
-    vtablePtr = builder.createBitcast(vtablePtr, i8PtrTy);
+    vtablePtr = builder.createBitcast(vtablePtr, ui8DefaultASPtrTy);
 
     mlir::Value offset;
     mlir::Value offsetPtr =
-        cir::PtrStrideOp::create(builder, loc, i8PtrTy, vtablePtr,
+        cir::PtrStrideOp::create(builder, loc, ui8DefaultASPtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());

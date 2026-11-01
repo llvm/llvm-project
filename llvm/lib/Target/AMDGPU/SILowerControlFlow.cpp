@@ -260,8 +260,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   // Use a copy that is a terminator to get correct spill code placement it with
   // fast regalloc.
   MachineInstr *SetExec =
-      BuildMI(MBB, I, DL, TII->get(LMC.MovTermOpc), LMC.ExecReg)
-          .addReg(Tmp, RegState::Kill);
+      BuildMI(MBB, I, DL, TII->get(LMC.MovTermOpc), LMC.ExecReg).addReg(Tmp);
 
   // Skip ahead to the unconditional branch in case there are other terminators
   // present.

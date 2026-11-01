@@ -975,34 +975,6 @@ static bool canBeCheaplyTransformed(ScalarEvolution &SE,
   return false;
 }
 
-static bool IsIncrementNSW(ScalarEvolution &SE, const SCEVAddRecExpr *AR) {
-  if (!isa<IntegerType>(AR->getType()))
-    return false;
-
-  unsigned BitWidth = cast<IntegerType>(AR->getType())->getBitWidth();
-  Type *WideTy = IntegerType::get(AR->getType()->getContext(), BitWidth * 2);
-  const SCEV *Step = AR->getStepRecurrence(SE);
-  const SCEV *OpAfterExtend = SE.getAddExpr(SE.getSignExtendExpr(Step, WideTy),
-                                            SE.getSignExtendExpr(AR, WideTy));
-  const SCEV *ExtendAfterOp =
-    SE.getSignExtendExpr(SE.getAddExpr(AR, Step), WideTy);
-  return ExtendAfterOp == OpAfterExtend;
-}
-
-static bool IsIncrementNUW(ScalarEvolution &SE, const SCEVAddRecExpr *AR) {
-  if (!isa<IntegerType>(AR->getType()))
-    return false;
-
-  unsigned BitWidth = cast<IntegerType>(AR->getType())->getBitWidth();
-  Type *WideTy = IntegerType::get(AR->getType()->getContext(), BitWidth * 2);
-  const SCEV *Step = AR->getStepRecurrence(SE);
-  const SCEV *OpAfterExtend = SE.getAddExpr(SE.getZeroExtendExpr(Step, WideTy),
-                                            SE.getZeroExtendExpr(AR, WideTy));
-  const SCEV *ExtendAfterOp =
-    SE.getZeroExtendExpr(SE.getAddExpr(AR, Step), WideTy);
-  return ExtendAfterOp == OpAfterExtend;
-}
-
 /// getAddRecExprPHILiterally - Helper for expandAddRecExprLiterally. Expand
 /// the base addrec, which is the addrec without any non-loop-dominating
 /// values, and return the PHI.
@@ -1137,11 +1109,15 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   // Expand the step somewhere that dominates the loop header.
   Value *StepV = expand(Step, L->getHeader()->getFirstInsertionPt());
 
-  // The no-wrap behavior proved by IsIncrement(NUW|NSW) is only applicable if
-  // we actually do emit an addition.  It does not apply if we emit a
-  // subtraction.
-  bool IncrementIsNUW = !useSubtract && IsIncrementNUW(SE, Normalized);
-  bool IncrementIsNSW = !useSubtract && IsIncrementNSW(SE, Normalized);
+  // The no-wrap behavior proved here is only applicable if we actually do emit
+  // an addition.  It does not apply if we emit a subtraction.
+  bool CanHaveNoWrap = !useSubtract && ExpandTy->isIntegerTy();
+  bool IncrementIsNUW =
+      CanHaveNoWrap &&
+      SE.willNotOverflow(Instruction::Add, /*Signed=*/false, Normalized, Step);
+  bool IncrementIsNSW =
+      CanHaveNoWrap &&
+      SE.willNotOverflow(Instruction::Add, /*Signed=*/true, Normalized, Step);
 
   // Create the PHI.
   BasicBlock *Header = L->getHeader();
@@ -1278,13 +1254,15 @@ SCEVExpander::expandAddRecExprLiterally(SCEVUseT<const SCEVAddRecExpr *> S) {
   return Result;
 }
 
-Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
+std::pair<PHINode *, const SCEV *>
+SCEVExpander::findReusableLCSSAPhi(ScalarEvolution &SE,
+                                   SCEVUseT<const SCEVAddRecExpr *> S,
+                                   const BasicBlock *InsertBB) {
   Type *STy = S->getType();
   const Loop *L = S->getLoop();
   BasicBlock *EB = L->getExitBlock();
-  if (!EB || !EB->getSinglePredecessor() ||
-      !SE.DT.dominates(EB, Builder.GetInsertBlock()))
-    return nullptr;
+  if (!EB || !EB->getSinglePredecessor() || !SE.DT.dominates(EB, InsertBB))
+    return {nullptr, nullptr};
 
   // Helper to check if the diff between S and ExitSCEV is simple enough to
   // allow reusing the LCSSA phi.
@@ -1310,7 +1288,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
     Type *PhiTy = PN.getType();
     const SCEV *Diff = nullptr;
     if (STy->isIntegerTy() && PhiTy->isPointerTy() &&
-        DL.getAddressType(PhiTy) == STy) {
+        SE.getDataLayout().getAddressType(PhiTy) == STy) {
       const SCEV *AddrSCEV = SE.getPtrToAddrExpr(ExitSCEV);
       Diff = CanReuse(AddrSCEV);
     } else if (STy == PhiTy) {
@@ -1321,27 +1299,33 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
 
     assert(Diff->getType()->isIntegerTy() &&
            "difference must be of integer type");
-    Value *DiffV = expand(Diff);
-    Value *BaseV = fixupLCSSAFormFor(&PN);
-    if (PhiTy->isPointerTy()) {
-      if (STy->isPointerTy())
-        return Builder.CreatePtrAdd(BaseV, DiffV);
-      BaseV = Builder.CreatePtrToAddr(BaseV);
-    }
-    return Builder.CreateAdd(BaseV, DiffV);
+    return {&PN, Diff};
   }
 
-  return nullptr;
+  return {nullptr, nullptr};
+}
+
+Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
+  auto [PN, Diff] = findReusableLCSSAPhi(SE, S, Builder.GetInsertBlock());
+  if (!PN)
+    return nullptr;
+  Value *DiffV = expand(Diff);
+  Value *BaseV = fixupLCSSAFormFor(PN);
+  if (PN->getType()->isPointerTy()) {
+    if (S->getType()->isPointerTy())
+      return Builder.CreatePtrAdd(BaseV, DiffV);
+    BaseV = Builder.CreatePtrToAddr(BaseV);
+  }
+  return Builder.CreateAdd(BaseV, DiffV);
 }
 
 Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   // In canonical mode we compute the addrec as an expression of a canonical IV
-  // using evaluateAtIteration and expand the resulting SCEV expression. This
-  // way we avoid introducing new IVs to carry on the computation of the addrec
-  // throughout the loop.
+  // and expand the resulting SCEV expression. This way we avoid introducing
+  // new IVs to carry on the computation of the addrec throughout the loop.
   //
-  // For nested addrecs evaluateAtIteration might need a canonical IV of a
-  // type wider than the addrec itself. Emitting a canonical IV of the
+  // Nested addrecs would need a canonical IV of a type wider than the addrec
+  // itself to be evaluated in terms of it. Emitting a canonical IV of the
   // proper type might produce non-legal types, for example expanding an i64
   // {0,+,2,+,1} addrec would need an i65 canonical IV. To avoid this just fall
   // back to non-canonical mode for nested addrecs.
@@ -1380,18 +1364,17 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   if (Value *V = tryToReuseLCSSAPhi(S))
     return V;
 
+  // Expand a pointer AddRec as its pointer base plus its integer offset.
+  if (isa<PointerType>(S->getType())) {
+    Value *StartV = expand(SE.getPointerBase(S));
+    return expandAddToGEP(SE.removePointerBase(S), StartV,
+                          S.getNoWrapFlags(SCEV::FlagNUW));
+  }
+
   // {X,+,F} --> X + {0,+,F}
   if (!S->getStart()->isZero()) {
-    if (isa<PointerType>(S->getType())) {
-      Value *StartV = expand(SE.getPointerBase(S));
-      return expandAddToGEP(SE.removePointerBase(S), StartV,
-                            S.getNoWrapFlags(SCEV::FlagNUW));
-    }
-
-    SmallVector<SCEVUse, 4> NewOps(S->operands());
-    NewOps[0] = SE.getConstant(Ty, 0);
-    const SCEV *Rest =
-        SE.getAddRecExpr(NewOps, L, S.getNoWrapFlags(SCEV::FlagNW));
+    const SCEV *Rest = SE.getAddRecExpr(SE.getZero(Ty), S->getOperand(1), L,
+                                        S.getNoWrapFlags(SCEV::FlagNW));
 
     // Just do a normal add. Pre-expand the operands to suppress folding.
     //
@@ -1438,42 +1421,8 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
     }
   }
 
-  // {0,+,1} --> Insert a canonical induction variable into the loop!
-  if (S->isAffine() && S->getOperand(1)->isOne()) {
-    assert(Ty == SE.getEffectiveSCEVType(CanonicalIV->getType()) &&
-           "IVs with types different from the canonical IV should "
-           "already have been handled!");
-    return CanonicalIV;
-  }
-
   // {0,+,F} --> {0,+,1} * F
-
-  // If this is a simple linear addrec, emit it now as a special case.
-  if (S->isAffine())    // {0,+,F} --> i*F
-    return
-      expand(SE.getTruncateOrNoop(
-        SE.getMulExpr(SE.getUnknown(CanonicalIV),
-                      SE.getNoopOrAnyExtend(S->getOperand(1),
-                                            CanonicalIV->getType())),
-        Ty));
-
-  // If this is a chain of recurrences, turn it into a closed form, using the
-  // folders, then expandCodeFor the closed form.  This allows the folders to
-  // simplify the expression without having to build a bunch of special code
-  // into this folder.
-  const SCEV *IH = SE.getUnknown(CanonicalIV);   // Get I as a "symbolic" SCEV.
-
-  // Promote S up to the canonical IV type, if the cast is foldable.
-  const SCEV *NewS = S;
-  const SCEV *Ext = SE.getNoopOrAnyExtend(S, CanonicalIV->getType());
-  if (isa<SCEVAddRecExpr>(Ext))
-    NewS = Ext;
-
-  const SCEV *V = cast<SCEVAddRecExpr>(NewS)->evaluateAtIteration(IH, SE);
-
-  // Truncate the result down to the original type, if needed.
-  const SCEV *T = SE.getTruncateOrNoop(V, Ty);
-  return expand(T);
+  return expand(SE.getMulExpr(SE.getUnknown(CanonicalIV), S->getOperand(1)));
 }
 
 /// Return true if \p CI computes the same value as a `ptrtoaddr` of its

@@ -3,7 +3,7 @@ if(NOT (TARGET libc.src.__support.threads.thread AND
   return()
 endif()
 
-add_libc_integration_test_suite(libc-support-threads-integration-tests)
+add_libc_testsuite(libc-support-threads-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   thread_detach_test
@@ -33,7 +33,7 @@ add_integration_test(
   SRCS
     main_exit_test.cpp
   DEPENDS
-    libc.src.__support.threads.thread
+    libc.src.stdlib.__cxa_thread_atexit_impl
 )
 
 add_integration_test(
@@ -43,8 +43,8 @@ add_integration_test(
   SRCS
     double_exit_test.cpp
   DEPENDS
-    libc.src.__support.threads.thread
     libc.src.stdlib.exit
+    libc.src.stdlib.__cxa_thread_atexit_impl
 )
 
 add_integration_test(

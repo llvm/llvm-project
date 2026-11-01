@@ -1,4 +1,4 @@
-# RUN: llc -x mir -run-pass=twoaddressinstruction < %s | FileCheck %s
+# RUN: llc -x mir -run-pass=two-address-instruction < %s | FileCheck %s
 # RUN: llc -x mir --passes=two-address-instruction < %s | FileCheck %s
 
 # This test checks that TwoAddressInstruction pass does not create redundate COPY
@@ -55,16 +55,16 @@ body:             |
     ; CHECK-LABEL: name: test_relocate
     ; CHECK: [[VREG1:%[0-9]+]]:gr64 = COPY killed $rdi
     ; CHECK-NOT: [[VREG2:%[0-9]+]]:gr64 = COPY [[VREG1]]
-    ; CHECK: [[VREG1]]:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, killed [[VREG1]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
-    ; CHECK: $rdi = COPY killed [[VREG1]]
+    ; CHECK: [[VREG1]]:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, [[VREG1]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
+    ; CHECK: $rdi = COPY [[VREG1]]
     ; CHECK: CALL64pcrel32 target-flags(x86-plt) @consume, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp
 
     %0:gr64 = COPY killed $rdi
-    %1:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, killed %0(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
+    %1:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, %0(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
     %2:gr8 = COPY killed $al
-    $rdi = COPY killed %1
+    $rdi = COPY %1
     CALL64pcrel32 target-flags(x86-plt) @consume, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp
-    $al = COPY killed %2
+    $al = COPY %2
     RET 0, killed $al
 
 ...
@@ -82,14 +82,14 @@ body:             |
     ; CHECK:   %1:gr64 = COPY %0
     ; CHECK:   %2:gr64 = COPY %0
     ; CHECK:   %1:gr64, %2:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 2, %1(tied-def 0), %2(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64
-    ; CHECK:   $rdi = COPY killed %1
-    ; CHECK:   $rsi = COPY killed %2
+    ; CHECK:   $rdi = COPY %1
+    ; CHECK:   $rsi = COPY %2
     ; CHECK:   CALL64pcrel32 target-flags(x86-plt) @consume1, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
     ; CHECK:   RET 0
     %0:gr64 = COPY killed $rdi
-    %1:gr64, %2:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 2, killed %0(tied-def 0), killed %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $al
-    $rdi = COPY killed %1
-    $rsi = COPY killed %2
+    %1:gr64, %2:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 2, %0(tied-def 0), %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $al
+    $rdi = COPY %1
+    $rsi = COPY %2
     CALL64pcrel32 target-flags(x86-plt) @consume1, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
     RET 0
 ...

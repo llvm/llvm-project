@@ -30,7 +30,7 @@ class L0DeviceTy;
 // Forward declarations.
 struct L0OptionsTy;
 class L0DeviceTy;
-class L0ContextTy;
+class L0DriverTy;
 
 constexpr static int32_t MaxMemKind = TARGET_ALLOC_LAST + 1;
 
@@ -210,7 +210,7 @@ class MemAllocatorTy {
     /// Map from allocated pointer to allocation information.
     std::map<void *, MemAllocInfoTy> Map;
     /// Map from target alloc kind to number of implicit arguments.
-    std::array<uint32_t, MaxMemKind> NumImplicitArgs;
+    std::array<uint32_t, MaxMemKind> NumImplicitArgs{};
 
   public:
     /// Add allocation information to the map.
@@ -262,10 +262,10 @@ class MemAllocatorTy {
     }
   }; // MemAllocInfoMapTy
 
-  /// L0 context to use.
-  const L0ContextTy *L0Context = nullptr;
+  /// L0 driver to use.
+  const L0DriverTy *L0Driver = nullptr;
   /// ze_context used for allocations. Normally matches
-  /// L0Context->getZeContext(), but for pools owned by a user-created
+  /// L0Driver->getZeContext(), but for pools owned by a user-created
   /// plugin context this holds that context's ze_context so memory ends
   /// up in the ze_context the caller's queues use.
   ze_context_handle_t ZeContext = nullptr;
@@ -361,7 +361,7 @@ public:
 
   Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option,
                         ze_context_handle_t ZeCtx);
-  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option,
+  Error initHostPool(L0DriverTy &Driver, const L0OptionsTy &Option,
                      ze_context_handle_t ZeCtx);
   ze_context_handle_t getZeContext() const { return ZeContext; }
   void updateMaxAllocSize(L0DeviceTy &L0Device);

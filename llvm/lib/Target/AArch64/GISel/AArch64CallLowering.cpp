@@ -57,8 +57,6 @@
 using namespace llvm;
 using namespace AArch64GISelUtils;
 
-extern cl::opt<bool> EnableSVEGISel;
-
 static bool isSimpleGPRCallValue(const CallLowering::ArgInfo &Arg) {
   if (Arg.Regs.size() != 1 || any_of(Arg.Flags, [](ISD::ArgFlagsTy Flags) {
         auto FlagVals = Flags.getFlags();
@@ -635,10 +633,11 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
   const auto &TM = static_cast<const AArch64TargetMachine &>(MF.getTarget());
 
-  if (!EnableSVEGISel && (F.getReturnType()->isScalableTy() ||
-                          llvm::any_of(F.args(), [](const Argument &A) {
-                            return A.getType()->isScalableTy();
-                          })))
+  if (!TM.getCLOpts().enable_gisel_sve &&
+      (F.getReturnType()->isScalableTy() ||
+       llvm::any_of(F.args(), [](const Argument &A) {
+         return A.getType()->isScalableTy();
+       })))
     return true;
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (!ST.hasNEON() || !ST.hasFPARMv8()) {
@@ -654,7 +653,7 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
 
   auto OptLevel = MF.getTarget().getOptLevel();
   bool IsGlobalISelPreferred =
-      getCGPassBuilderOption().EnableGlobalISelOption ==
+      getCGPassBuilderOption(TM).EnableGlobalISelOption ==
           cl::boolOrDefault::BOU_TRUE ||
       static_cast<unsigned>(OptLevel) <= TM.getEnableGlobalISelAtO() ||
       F.hasOptNone();
@@ -1100,7 +1099,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     const GlobalValue *GV = Info.Callee.getGlobal();
     const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
-        (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
+        (!TT.isOSWindowsOrUEFI() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {
       LLVM_DEBUG(dbgs() << "... Cannot tail call externally-defined function "
                            "with weak linkage for this OS.\n");
@@ -1223,6 +1222,8 @@ bool AArch64CallLowering::lowerTailCall(
   unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), true, Info.PAI, MRI);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.add(Info.Callee);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   // Tell the call which registers are clobbered.
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
@@ -1474,6 +1475,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
   unsigned CalleeOpNo = 0;
 
   if (Opc == AArch64::BLR_RVMARKER || Opc == AArch64::BLRA_RVMARKER) {
@@ -1551,6 +1554,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                              MF.getTarget().Options.GuaranteedTailCallOpt)
           ? alignTo(Assigner.StackSize, 16)
           : 0;
+
+  // See AArch64FunctionInfo::HasWinCallToCalleePopFunction.
+  if (Subtarget.isTargetWindows() && CalleePopBytes != 0)
+    MF.getInfo<AArch64FunctionInfo>()->setHasWinCallToCalleePopFunction(true);
 
   CallSeqStart.addImm(Assigner.StackSize).addImm(0);
   MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)

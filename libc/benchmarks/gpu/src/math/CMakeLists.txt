@@ -1,4 +1,4 @@
-add_custom_target(libc-gpu-math-benchmarks)
+add_libc_testsuite(libc-gpu-math-benchmarks PARENT gpu-benchmark)
 
 set(math_benchmark_flags "")
 if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)

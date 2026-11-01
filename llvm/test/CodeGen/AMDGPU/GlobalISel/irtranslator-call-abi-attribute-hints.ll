@@ -18,7 +18,7 @@ define amdgpu_kernel void @kernel_call_no_workitem_ids() {
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @extern
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY4]]
@@ -41,7 +41,7 @@ define amdgpu_kernel void @kernel_call_no_workitem_ids() {
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @extern, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @extern() "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
   ret void
@@ -59,7 +59,7 @@ define amdgpu_kernel void @kernel_call_no_workgroup_ids() {
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @extern
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY4]]
@@ -86,7 +86,7 @@ define amdgpu_kernel void @kernel_call_no_workgroup_ids() {
   ; CHECK-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[OR1]](i32)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @extern, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr15, implicit $vgpr31
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @extern() "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z"
   ret void
@@ -101,7 +101,7 @@ define amdgpu_kernel void @kernel_call_no_other_sgprs() {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @extern
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p4) = COPY [[COPY3]](p4)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
@@ -122,7 +122,7 @@ define amdgpu_kernel void @kernel_call_no_other_sgprs() {
   ; CHECK-NEXT:   $sgpr15 = COPY [[DEF]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[OR1]](i32)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @extern, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr8_sgpr9, implicit $sgpr15, implicit $vgpr31
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @extern() "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z"
   ret void
@@ -141,7 +141,7 @@ define void @func_call_no_workitem_ids() {
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @extern
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -162,7 +162,7 @@ define void @func_call_no_workitem_ids() {
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY14]](s32)
   ; CHECK-NEXT:   $sgpr15 = COPY [[COPY15]](s32)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @extern, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   SI_RETURN
   call void @extern() "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z"
   ret void
@@ -179,7 +179,7 @@ define void @func_call_no_workgroup_ids() {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @extern
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(p4) = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(p4) = COPY [[COPY4]]
@@ -196,7 +196,7 @@ define void @func_call_no_workgroup_ids() {
   ; CHECK-NEXT:   $sgpr15 = COPY [[COPY10]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY11]](i32)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @extern, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr15, implicit $vgpr31
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   SI_RETURN
   call void @extern() "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z"
   ret void
@@ -210,7 +210,7 @@ define void @func_call_no_other_sgprs() {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr31
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @extern
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p4) = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY1]]
@@ -221,7 +221,7 @@ define void @func_call_no_other_sgprs() {
   ; CHECK-NEXT:   $sgpr15 = COPY [[COPY4]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[COPY5]](i32)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @extern, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr8_sgpr9, implicit $sgpr15, implicit $vgpr31
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc
   ; CHECK-NEXT:   SI_RETURN
   call void @extern() "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z"
   ret void

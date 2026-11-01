@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // last processed element in the input range.
 
 template <class _SegmentedIterator, class _Size, class _Functor>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __for_each_n_segment(_SegmentedIterator __first, _Size __orig_n, _Functor __func) {
   static_assert(__is_segmented_iterator_v<_SegmentedIterator> &&
                     __has_random_access_iterator_category<

@@ -908,7 +908,7 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
         PermittedRHS ? PoisonValue::get(PermittedRHS->getType()) : V, nullptr);
   }
 
-  if (isa<ConstantAggregateZero>(V)) {
+  if (match(V, m_ZeroForbidPoison())) {
     Mask.assign(NumElts, 0);
     return std::make_pair(V, nullptr);
   }
@@ -2660,7 +2660,9 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
                                           InstCombiner::BuilderTy &Builder) {
   auto *S0 = dyn_cast<Instruction>(Shuf.getOperand(0));
   Value *X;
-  if (!S0 || !match(S0, m_CombineOr(m_FNeg(m_Value(X)), m_FAbs(m_Value(X)))))
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (!S0 || !match(S0, m_CombineOr(m_FNegOrFSubNegZero(m_Value(X)),
+                                    m_FAbs(m_Value(X)))))
     return nullptr;
 
   bool IsFNeg = S0->getOpcode() == Instruction::FNeg;
@@ -2668,7 +2670,10 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
   // Match 2-input (binary) shuffle.
   auto *S1 = dyn_cast<Instruction>(Shuf.getOperand(1));
   Value *Y;
-  if (!S1 || !match(S1, m_CombineOr(m_FNeg(m_Value(Y)), m_FAbs(m_Value(Y)))) ||
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (!S1 ||
+      !match(S1, m_CombineOr(m_FNegOrFSubNegZero(m_Value(Y)),
+                             m_FAbs(m_Value(Y)))) ||
       S0->getOpcode() != S1->getOpcode() ||
       (!S0->hasOneUse() && !S1->hasOneUse()))
     return nullptr;

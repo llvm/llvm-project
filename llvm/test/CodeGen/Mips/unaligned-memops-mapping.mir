@@ -28,8 +28,8 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$a0', virtual-reg: '%0' }
-  - { reg: '$a1', virtual-reg: '%1' }
+  - { reg: '$r4', virtual-reg: '%0' }
+  - { reg: '$r5', virtual-reg: '%1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -52,10 +52,10 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
-    %1:gpr32 = COPY $a1
-    %0:gpr32 = COPY $a0
+    %1:gpr32 = COPY $r5
+    %0:gpr32 = COPY $r4
     %3:gpr32 = IMPLICIT_DEF
     %2:gpr32 = LWL %0, 0, %3 :: (load (s32) from %ir.a, align 1)
     %4:gpr32 = LWR %0, 3, %2 :: (load (s32) from %ir.a, align 1)
@@ -74,8 +74,8 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 liveins:
-  - { reg: '$a0', virtual-reg: '%0' }
-  - { reg: '$a1', virtual-reg: '%1' }
+  - { reg: '$r4', virtual-reg: '%0' }
+  - { reg: '$r5', virtual-reg: '%1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -98,10 +98,10 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
-    %1:gpr32 = COPY $a1
-    %0:gpr32 = COPY $a0
+    %1:gpr32 = COPY $r5
+    %0:gpr32 = COPY $r4
     %3:gpr32 = IMPLICIT_DEF
     %2:gpr32 = LWLE %0, 0, %3 :: (load (s32) from %ir.a, align 1)
     %4:gpr32 = LWRE %0, 3, %2 :: (load (s32) from %ir.a, align 1)

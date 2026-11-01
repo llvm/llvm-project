@@ -16,6 +16,7 @@
 #include "orc-rt/bedrock/sps/GDBJITRegistrarSPSCI.h"
 #include "orc-rt/bedrock/sps/MemoryAccessSPSCI.h"
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
+#include "orc-rt/bedrock/sps/SessionSPSCI.h"
 #include "orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h"
 #include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
 
@@ -28,6 +29,7 @@ Error addAll(SimpleSymbolTable &ST) {
       addGDBJITRegistrar,
       addMemoryAccess,
       addNativeDylibManager,
+      addSession,
       addSimpleNativeMemoryMap,
 #if defined(__APPLE__)
       // DWARFEHFrameRegistrar is also built on Darwin, but

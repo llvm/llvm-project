@@ -2,8 +2,6 @@ add_header_library(
   file_io_result
   HDRS
     file_io_result.h
-  DEPENDS
-    libc.src.__support.macros.config
 )
 
 if(NOT (TARGET libc.src.__support.threads.mutex)
@@ -21,24 +19,26 @@ add_object_library(
     file.h
   DEPENDS
     .file_io_result
-    libc.hdr.stdio_macros
-    libc.hdr.stdint_proxy
+    libc.hdr.errno_macros
     libc.hdr.func.realloc
+    libc.hdr.stdint_proxy
+    libc.hdr.stdio_macros
+    libc.hdr.types.char32_t
+    libc.hdr.types.char8_t
     libc.hdr.types.off_t
     libc.hdr.types.wchar_t
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
+    libc.src.__support.alloc_checker
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
-    libc.src.__support.threads.mutex
     libc.src.__support.error_or
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.attributes
+    libc.src.__support.threads.mutex
+    libc.src.__support.wchar.character_converter
     libc.src.__support.wchar.mbstate
     libc.src.__support.wchar.wcrtomb
-    libc.src.__support.wchar.character_converter
     libc.src.string.memory_utils.inline_memcpy
-    libc.hdr.errno_macros
 )
 
 add_header_library(
@@ -67,7 +67,6 @@ add_object_library(
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
     libc.src.__support.error_or
-    libc.src.__support.macros.config
     libc.src.__support.alloc_checker
     libc.hdr.errno_macros
     libc.hdr.types.struct_dirent

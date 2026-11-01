@@ -3952,7 +3952,10 @@ static DecodeStatus DecodeThumb2BCCInstruction(MCInst &Inst, unsigned Insn,
     }
 
     unsigned imm = fieldFromInstruction(Insn, 0, 4);
-    return DecodeMemBarrierOption(Inst, imm, Address, Decoder);
+    if (!Check(S, DecodeMemBarrierOption(Inst, imm, Address, Decoder)))
+      return MCDisassembler::Fail;
+    DecodePredicateOperand(Inst, Decoder);
+    return S;
   }
 
   unsigned brtarget = fieldFromInstruction(Insn, 0, 11) << 1;

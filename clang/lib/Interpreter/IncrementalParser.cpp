@@ -65,7 +65,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   C.addTranslationUnitDecl();
 
   // Skip previous eof due to last incremental input.
-  if (P->getCurToken().is(tok::annot_repl_input_end)) {
+  if (P->getCurToken().is(tok::eof)) {
     P->ConsumeAnyToken();
     // FIXME: Clang does not call ExitScope on finalizing the regular TU, we
     // might want to do that around HandleEndOfTranslationUnit.
@@ -165,11 +165,11 @@ IncrementalParser::Parse(llvm::StringRef input) {
     Token Tok;
     do {
       PP.Lex(Tok);
-    } while (Tok.isNot(tok::annot_repl_input_end));
+    } while (Tok.isNot(tok::eof));
   } else {
     Token AssertTok;
     PP.Lex(AssertTok);
-    assert(AssertTok.is(tok::annot_repl_input_end) &&
+    assert(AssertTok.is(tok::eof) &&
            "Lexer must be EOF when starting incremental parse!");
   }
 

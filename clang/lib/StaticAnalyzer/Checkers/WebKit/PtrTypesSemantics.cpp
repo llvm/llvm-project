@@ -537,6 +537,56 @@ bool isGetterOfUniquePtr(const CXXMethodDecl *M) {
   return false;
 }
 
+// The object lives until the program exits but a pointer stored in it doesn't
+// keep its pointee alive. A smart pointer keeps its pointee alive only if it
+// can't be reassigned or swapped.
+static bool isImmortalStorageType(QualType T) {
+  if (T.isNull() || T->isPointerType() || T->isReferenceType() ||
+      T->isObjCObjectPointerType())
+    return false;
+  auto Name = safeGetName(T->getAsCXXRecordDecl());
+  if (isSmartPtrClass(Name) || isOwnerPtr(Name))
+    return T.isConstQualified();
+  return true;
+}
+
+/// \returns true if \p R is NeverDestroyed or LazyNeverDestroyed which stores
+/// a non-pointer type.
+static bool isNeverDestroyedOfObject(const CXXRecordDecl *R) {
+  auto *Spec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(R);
+  if (!Spec)
+    return false;
+  auto Name = safeGetName(Spec);
+  if (Name != "NeverDestroyed" && Name != "LazyNeverDestroyed")
+    return false;
+  const auto &Args = Spec->getTemplateArgs();
+  return Args.size() && Args[0].getKind() == TemplateArgument::Type &&
+         isImmortalStorageType(Args[0].getAsType());
+}
+
+bool isAccessorOfNeverDestroyed(const CXXMethodDecl *M) {
+  assert(M);
+  if (!isNeverDestroyedOfObject(M->getParent()))
+    return false;
+  if (safeGetName(M) == "get" || M->getOverloadedOperator() == OO_Arrow)
+    return true;
+  if (auto *Conversion = dyn_cast<CXXConversionDecl>(M)) {
+    const Type *T = Conversion->getConversionType().getTypePtrOrNull();
+    return T && (T->isPointerType() || T->isReferenceType());
+  }
+  return false;
+}
+
+bool isImmortalVar(const VarDecl *V) {
+  assert(V);
+  if (!V->hasGlobalStorage())
+    return false;
+  QualType T = V->getType();
+  if (V->hasAttr<NoDestroyAttr>() && isImmortalStorageType(T))
+    return true;
+  return isNeverDestroyedOfObject(T->getAsCXXRecordDecl());
+}
+
 bool isRefCounted(const CXXRecordDecl *R) {
   assert(R);
   if (auto *TmplR = R->getTemplateInstantiationPattern()) {
@@ -1272,7 +1322,67 @@ public:
   }
 
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *VMT) {
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(VMT->getSubExpr());
+        ICE && ICE->getCastKind() == CK_NoOp &&
+        ICE->getType().isConstQualified()) {
+      if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(ICE->getSubExpr());
+          BTE && isNullSmartPtr(BTE->getSubExpr()))
+        return Visit(BTE->getSubExpr());
+    }
     return Visit(VMT->getSubExpr());
+  }
+
+  // Returns true if E is known to evaluate to a smart pointer which holds
+  // nullptr, e.g. RefPtr<T>(), RefPtr<T>(nullptr), Ref<T>(HashTableEmptyValue),
+  // or a call to a function which simply returns one such as
+  // HashTraits<Ref<T>>::emptyValue(). Destructing such a smart pointer can't
+  // delete anything.
+  bool isNullSmartPtr(const Expr *E, unsigned Depth = 0) {
+    if (!E || Depth > 4)
+      return false;
+    while (true) {
+      E = E->IgnoreParenCasts();
+      if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
+        E = EWC->getSubExpr();
+      else if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+        E = MTE->getSubExpr();
+      else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+        E = BTE->getSubExpr();
+      else
+        break;
+    }
+    if (auto *CE = dyn_cast<CXXConstructExpr>(E)) {
+      auto *Ctor = CE->getConstructor();
+      if (!Ctor || !isOwnerPtr(safeGetName(Ctor->getParent())))
+        return false;
+      if (Ctor->isDefaultConstructor())
+        return true;
+      if (CE->getNumArgs() != 1)
+        return false;
+      auto *Arg = CE->getArg(0)->IgnoreParenImpCasts();
+      auto ArgType = Arg->getType();
+      if (ArgType->isNullPtrType())
+        return true;
+      if (auto *TD = ArgType->getAsTagDecl();
+          TD && safeGetName(TD) == "HashTableEmptyValueType")
+        return true;
+      if (Ctor->isCopyOrMoveConstructor())
+        return isNullSmartPtr(Arg, Depth + 1);
+      return false;
+    }
+    if (auto *CE = dyn_cast<CallExpr>(E)) {
+      auto *Callee = CE->getDirectCallee();
+      if (!Callee)
+        return false;
+      if (auto *MD = dyn_cast<CXXMethodDecl>(Callee); MD && MD->isVirtual())
+        return false;
+      auto *Body = dyn_cast_or_null<CompoundStmt>(Callee->getBody());
+      if (!Body || Body->size() != 1)
+        return false;
+      auto *RS = dyn_cast<ReturnStmt>(Body->body_front());
+      return RS && isNullSmartPtr(RS->getRetValue(), Depth + 1);
+    }
+    return false;
   }
 
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
@@ -1356,6 +1466,11 @@ public:
 
   bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *IVIE) {
     // An implicit value initialization is trvial.
+    return true;
+  }
+
+  bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E) {
+    // A value initialization of a scalar type such as int() is trivial.
     return true;
   }
 

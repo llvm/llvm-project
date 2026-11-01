@@ -197,6 +197,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
@@ -232,10 +233,15 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 class ACCImplicitData : public acc::impl::ACCImplicitDataBase<ACCImplicitData> {
 public:
   using acc::impl::ACCImplicitDataBase<ACCImplicitData>::ACCImplicitDataBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCImplicitDataBase<ACCImplicitData>::getDependentDialects(
+        registry);
+    acc::registerAllExtensions(registry);
+  }
 
   void runOnOperation() override;
 
@@ -277,12 +283,21 @@ private:
   void generateRecipes(ModuleOp &module, OpBuilder &builder,
                        Operation *computeConstructOp,
                        const SmallVector<Value> &newOperands);
+
+  /// Caches the symbol tables used to resolve the globals referenced by the
+  /// candidate variables. Resolving each reference without it scans every
+  /// top-level op of the module. The globals are not changed by this pass, so
+  /// the cached tables stay valid. It points to a collection local to
+  /// `runOnOperation` (the collection itself is not copyable, and passes
+  /// must be) and is only set while that runs.
+  SymbolTableCollection *symbolTables = nullptr;
 };
 
 /// Determines if a variable is a candidate for implicit data mapping.
 /// Returns true if the variable is a candidate, false otherwise.
 static bool isCandidateForImplicitData(Value val, Region &accRegion,
-                                       acc::OpenACCSupport &accSupport) {
+                                       acc::OpenACCSupport &accSupport,
+                                       SymbolTableCollection *symbolTables) {
   // Ensure the variable is an allowed type for data clause.
   if (!acc::isPointerLikeType(val.getType()) &&
       !acc::isMappableType(val.getType()))
@@ -294,11 +309,11 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion,
     return false;
 
   // Device data is a candidate - it will get a deviceptr clause.
-  if (acc::isDeviceAccessibleValue(val))
+  if (acc::isDeviceAccessibleValue(val, symbolTables))
     return true;
 
   // If it is otherwise valid, skip it.
-  if (accSupport.isValidValueUse(val, accRegion))
+  if (accSupport.isValidValueUse(val, accRegion, symbolTables))
     return false;
 
   return true;
@@ -464,7 +479,7 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
   // but physically shared with the host may migrate on demand, so it is not
   // guaranteed to be in device memory and must still be mapped rather than
   // treated as deviceptr.
-  if (acc::isInDeviceMemoryValue(var)) {
+  if (acc::isInDeviceMemoryValue(var, symbolTables)) {
     // If the variable is in device memory, use deviceptr clause.
     LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
                                "in device memory\n");
@@ -725,7 +740,7 @@ void ACCImplicitData::generateImplicitDataOps(
 
   // 2) Run the filtering to find relevant pointers that need copied.
   auto isCandidate{[&](Value val) -> bool {
-    return isCandidateForImplicitData(val, accRegion, accSupport);
+    return isCandidateForImplicitData(val, accRegion, accSupport, symbolTables);
   }};
   auto candidateVars(llvm::filter_to_vector(liveInValues, isCandidate));
   if (candidateVars.empty())
@@ -788,6 +803,8 @@ void ACCImplicitData::runOnOperation() {
   ModuleOp module = this->getOperation();
 
   acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
+  SymbolTableCollection localSymbolTables;
+  symbolTables = &localSymbolTables;
 
   module.walk([&](Operation *op) {
     if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op)) {
@@ -801,6 +818,6 @@ void ACCImplicitData::runOnOperation() {
           .Default([&](Operation *) {});
     }
   });
+  symbolTables = nullptr;
 }
-
 } // namespace

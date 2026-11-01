@@ -855,12 +855,12 @@ bool VETargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-/// isFPImmLegal - Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool VETargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                    bool ForCodeSize) const {
-  return VT == MVT::f32 || VT == MVT::f64;
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+VETargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                 bool ForCodeSize) const {
+  return VT == MVT::f32 || VT == MVT::f64 ? FPImmAction::Legal
+                                          : FPImmAction::ConstantPool;
 }
 
 /// Determine if the target supports unaligned memory accesses.
@@ -1603,10 +1603,6 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
   MaybeAlign Alignment(Op.getConstantOperandVal(2));
   EVT VT = Node->getValueType(0);
 
-  // Chain the dynamic stack allocation so that it doesn't modify the stack
-  // pointer when other instructions are using the stack.
-  Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
-
   const TargetFrameLowering &TFI = *Subtarget->getFrameLowering();
   Align StackAlign = TFI.getStackAlign();
   bool NeedsAlign = Alignment.valueOrOne() > StackAlign;
@@ -1643,9 +1639,6 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
     Result = DAG.getNode(ISD::AND, DL, VT, Result,
                          DAG.getConstant(~(Alignment->value() - 1ULL), DL, VT));
   }
-  //  Chain = Result.getValue(1);
-  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), DL);
-
   SDValue Ops[2] = {Result, Chain};
   return DAG.getMergeValues(Ops, DL);
 }
@@ -2222,7 +2215,7 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
       .addImm(0)
       .addImm(0);
   BuildMI(MainMBB, DL, TII->get(TargetOpcode::COPY), MainDestReg32)
-      .addReg(MainDestReg, RegState::Kill, VE::sub_i32);
+      .addReg(MainDestReg, {}, VE::sub_i32);
   MainMBB->addSuccessor(SinkMBB);
 
   // SinkMBB:
@@ -2249,7 +2242,7 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
       .addImm(0)
       .addImm(1);
   BuildMI(RestoreMBB, DL, TII->get(TargetOpcode::COPY), RestoreDestReg32)
-      .addReg(RestoreDestReg, RegState::Kill, VE::sub_i32);
+      .addReg(RestoreDestReg, {}, VE::sub_i32);
   BuildMI(RestoreMBB, DL, TII->get(VE::BRCFLa_t)).addMBB(SinkMBB);
   RestoreMBB->addSuccessor(SinkMBB);
 
@@ -2449,9 +2442,14 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
 
   // IReg is used as an index in a memory operand and therefore can't be SP
   const TargetRegisterClass *RC = &VE::I64RegClass;
-  Register IReg = MRI.createVirtualRegister(RC);
-  addFrameReference(BuildMI(DispatchBB, DL, TII->get(VE::LDLZXrii), IReg), FI,
+
+  Register IReg32 = MRI.createVirtualRegister(&VE::I32RegClass);
+  addFrameReference(BuildMI(DispatchBB, DL, TII->get(VE::LDLZXrii), IReg32), FI,
                     OffsetCS);
+  Register IReg = MRI.createVirtualRegister(RC);
+  BuildMI(DispatchBB, DL, TII->get(VE::SUBREG_TO_REG), IReg)
+      .addReg(IReg32)
+      .addImm(VE::sub_i32);
   if (LPadList.size() < 64) {
     BuildMI(DispatchBB, DL, TII->get(VE::BRCFLir_t))
         .addImm(VECC::CC_ILE)
@@ -2542,17 +2540,21 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
     //     bcfla %TReg
 
     assert(isPositionIndependent());
-    Register OReg = MRI.createVirtualRegister(RC);
+    Register OReg32 = MRI.createVirtualRegister(&VE::I32RegClass);
     Register TReg = MRI.createVirtualRegister(RC);
     Register Tmp1 = MRI.createVirtualRegister(RC);
 
     BuildMI(DispContBB, DL, TII->get(VE::SLLri), Tmp1)
         .addReg(IReg)
         .addImm(2);
-    BuildMI(DispContBB, DL, TII->get(VE::LDLZXrri), OReg)
+    BuildMI(DispContBB, DL, TII->get(VE::LDLZXrri), OReg32)
         .addReg(BReg)
         .addReg(Tmp1)
         .addImm(0);
+    Register OReg = MRI.createVirtualRegister(RC);
+    BuildMI(DispContBB, DL, TII->get(VE::SUBREG_TO_REG), OReg)
+        .addReg(OReg32)
+        .addImm(VE::sub_i32);
     Register BReg2 =
         prepareSymbol(*DispContBB, DispContBB->end(),
                       DispContBB->getParent()->getName(), DL, /* Local */ true);

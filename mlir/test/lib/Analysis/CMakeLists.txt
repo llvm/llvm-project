@@ -10,7 +10,7 @@ add_mlir_library(MLIRTestAliasAnalysis
   PARTIAL_SOURCES_INTENDED
   )
 mlir_target_link_libraries(MLIRTestAliasAnalysis PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRFunctionInterfaces
   MLIRIR
   MLIRPass
@@ -46,7 +46,8 @@ add_mlir_library(MLIRTestAnalysis
   )
 mlir_target_link_libraries(MLIRTestAnalysis PUBLIC
   MLIRAffineDialect
-  MLIRAnalysis
+  MLIRAnalysisBase
+  MLIRAnalysisDataFlow
   MLIRArithDialect
   MLIRFunctionInterfaces
   MLIRMemRefDialect

@@ -645,6 +645,10 @@ defm : DemangledNativeBuiltin<"s_atomic_fetch_min_explicit", OpenCL_std, Atomic,
 defm : DemangledNativeBuiltin<"s_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicSMax>;
 defm : DemangledNativeBuiltin<"u_atomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMin>;
 defm : DemangledNativeBuiltin<"u_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMax>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_min", OpenCL_std, Atomic, 2, 4, OpAtomicFMinEXT>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_max", OpenCL_std, Atomic, 2, 4, OpAtomicFMaxEXT>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicFMinEXT>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicFMaxEXT>;
 defm : DemangledNativeBuiltin<"s_atom_min", OpenCL_std, Atomic, 2, 2, OpAtomicSMin>;
 defm : DemangledNativeBuiltin<"s_atom_max", OpenCL_std, Atomic, 2, 2, OpAtomicSMax>;
 defm : DemangledNativeBuiltin<"u_atom_min", OpenCL_std, Atomic, 2, 2, OpAtomicUMin>;
@@ -761,6 +765,9 @@ defm : DemangledNativeBuiltin<"to_global", OpenCL_std, CastToPtr, 1, 1, OpGeneri
 defm : DemangledNativeBuiltin<"to_local", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
 defm : DemangledNativeBuiltin<"to_private", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
 defm : DemangledNativeBuiltin<"get_fence", OpenCL_std, CastToPtr, 1, 1, OpGenericPtrMemSemantics>;
+defm : DemangledNativeBuiltin<"__to_global", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"__to_local", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"__to_private", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;

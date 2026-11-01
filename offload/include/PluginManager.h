@@ -18,6 +18,7 @@
 
 #include "DeviceImage.h"
 #include "ExclusiveAccess.h"
+#include "OmpAccError.h"
 #include "Shared/APITypes.h"
 #include "Shared/Requirements.h"
 
@@ -35,8 +36,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-
-#include "OpenMP/InteropAPI.h"
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
@@ -91,9 +90,6 @@ struct PluginManager {
   HostPtrToTableMapTy HostPtrToTableMap;
   std::mutex TblMapMtx; ///< For HostPtrToTableMap
 
-  /// Table of cached implicit interop objects
-  InteropTblTy InteropTbl;
-
   // Work around for plugins that call dlopen on shared libraries that call
   // tgt_register_lib during their initialisation. Stash the pointers in a
   // vector until the plugins are all initialised and then register them.
@@ -140,17 +136,18 @@ struct PluginManager {
   void addRequirements(int64_t Flags) { Requirements.addRequirements(Flags); }
 
   /// Returns the number of plugins that are active.
-  int getNumActivePlugins() const {
-    int count = 0;
-    for (auto &R : plugins())
-      if (R.is_initialized())
-        ++count;
+  int getNumActivePlugins() const;
 
-    return count;
-  }
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
+
+  /// Return true if liboffload was initialized by init().
+  bool isLibOffloadInitialized() const { return LibOffloadInitialized; }
 
 private:
   bool RTLsLoaded = false;
+  // Whether init() called olInit, so deinit() must call olShutDown.
+  bool LibOffloadInitialized = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // List of all plugins, in use or not.
@@ -180,6 +177,9 @@ private:
   llvm::DenseMap<__tgt_bin_desc *, __tgt_bin_desc> UpgradedDescriptors;
   __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
 
+  /// Map global data and execute pending ctors.
+  int loadImagesOntoDevice(DeviceTy &Device);
+
   /// Register the image \p Img from \p Desc on the compatible device
   /// \p DeviceHandle, unless the device is already in \p UsedDevices. Returns
   /// true if the image was registered.
@@ -189,28 +189,66 @@ private:
                         llvm::SmallVectorImpl<ol_device_handle_t> &UsedDevices);
 };
 
-/// Initialize the plugin manager and OpenMP runtime.
-void initRuntime();
-
-/// Deinitialize the plugin and delete it.
-void deinitRuntime();
-
-extern PluginManager *PM;
-extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
-extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
-
-// Helper function to iterate over all devices and invoke the provided callback.
-template <typename CallbackTy> llvm::Error iterateDevices(CallbackTy Callback) {
-  ol_device_iterate_cb_t Wrapper = [](ol_device_handle_t Device,
-                                      void *UserData) -> bool {
-    CallbackTy *Unwrapped = static_cast<CallbackTy *>(UserData);
-    (*Unwrapped)(Device);
+namespace llvm::omp::target::helpers {
+// Helper functions to iterate over different elements provided by liboffload.
+template <typename ElemTy, typename IterateFn, typename CallbackTy>
+ol_result_t iterate(IterateFn Func, CallbackTy Callback, void *UserData) {
+  struct {
+    CallbackTy *Callback;
+    void *UserData;
+  } WrapperData = {&Callback, UserData};
+  auto Wrapper = [](ElemTy Elem, void *UserData) -> bool {
+    auto *Unwrapped = static_cast<decltype(WrapperData) *>(UserData);
+    (*Unwrapped->Callback)(Elem, Unwrapped->UserData);
     return true;
   };
-  if (auto Res = olIterateDevices(Wrapper, &Callback))
-    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                     "Failed to iterate devices: %d",
-                                     Res->Details);
+  return Func(Wrapper, &WrapperData);
+}
+
+template <typename ElemTy, typename IterateFn, typename CallbackTy>
+ol_result_t iterate(IterateFn Func, CallbackTy Callback) {
+  auto Wrapper = [](ElemTy Elem, void *UserData) -> bool {
+    auto *Unwrapped = static_cast<CallbackTy *>(UserData);
+    (*Unwrapped)(Elem);
+    return true;
+  };
+  return Func(Wrapper, reinterpret_cast<void *>(&Callback));
+}
+
+inline llvm::Error iterateCheck(ol_result_t Result, llvm::StringRef Message) {
+  if (Result)
+    return llvm::omp::target::error::createError(
+        llvm::omp::target::error::ErrorCode::BackendFailure, "%s : %s",
+        Message.str().c_str(), Result->Details);
   return llvm::Error::success();
 }
+
+// Iterate platforms
+template <typename CallbackTy>
+llvm::Error iteratePlatforms(CallbackTy Callback, void *UserData) {
+  return iterateCheck(
+      iterate<ol_platform_handle_t>(olIteratePlatforms, Callback, UserData),
+      "Failed to iterate platforms");
+}
+template <typename CallbackTy>
+llvm::Error iteratePlatforms(CallbackTy Callback) {
+  return iterateCheck(
+      iterate<ol_platform_handle_t>(olIteratePlatforms, Callback),
+      "Failed to iterate platforms");
+}
+
+// Iterate devices
+template <typename CallbackTy>
+llvm::Error iterateDevices(CallbackTy Callback, void *UserData) {
+  return iterateCheck(
+      iterate<ol_device_handle_t>(olIterateDevices, Callback, UserData),
+      "Failed to iterate devices");
+}
+template <typename CallbackTy> llvm::Error iterateDevices(CallbackTy Callback) {
+  return iterateCheck(iterate<ol_device_handle_t>(olIterateDevices, Callback),
+                      "Failed to iterate devices");
+}
+
+} // namespace llvm::omp::target::helpers
+
 #endif // OMPTARGET_PLUGIN_MANAGER_H

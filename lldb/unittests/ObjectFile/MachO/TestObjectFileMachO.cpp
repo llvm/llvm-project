@@ -91,6 +91,18 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
   check_symbol("OBJC_IVAR_$_NSObject.isa");
 }
 
+TEST_F(ObjectFileMachOTest, SharedCacheImageExtractorIsShared) {
+  auto get_extractor = [] {
+    return HostInfo::GetSharedCacheImageInfo(
+               "/usr/lib/libobjc.A.dylib",
+               lldb::eSymbolSharedCacheUseHostSharedCache)
+        .GetExtractor();
+  };
+  lldb::DataExtractorSP extractor_sp = get_extractor();
+  ASSERT_TRUE(extractor_sp);
+  EXPECT_EQ(extractor_sp, get_extractor());
+}
+
 TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
   SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
       "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",

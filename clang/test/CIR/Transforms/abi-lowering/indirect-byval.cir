@@ -447,7 +447,7 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @takes_big_uses_arg(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
-  // CHECK:        %[[LOADED:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        %[[LOADED:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK-NEXT:   cir.return %[[LOADED]] : !rec_Big
 
   // Two byval arguments: an operand that names no storage gets its own
@@ -465,7 +465,7 @@ module attributes {
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
   // The entry holds one load and the return, so the unused first parameter
   // got nothing.
-  // CHECK-NEXT:   %[[LOADED:.*]] = cir.load %[[B]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK-NEXT:   %[[LOADED:.*]] = cir.load align(8) %[[B]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK-NEXT:   cir.return %[[LOADED]] : !rec_Big
 
   cir.func @caller_two(%s: !rec_Big, %t: !rec_Big) -> !rec_Big
@@ -537,7 +537,7 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @takes_big_non_byval(%[[PTR:.*]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK:        %[[L:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK-NEXT:   cir.return %[[L]] : !rec_Big
@@ -553,7 +553,7 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @takes_big_non_byval_field(%[[PTR:.*]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK:        %[[M:.*]] = cir.get_member %[[PTR]][0] {name = "a"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
   // CHECK-NEXT:   %[[V:.*]] = cir.load %[[M]] : !cir.ptr<!s64i>, !s64i
@@ -586,7 +586,7 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @takes_big_non_byval_unused(%{{.*}}: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK-NOT:    cir.load
   // CHECK:        %[[R:.*]] = cir.const #cir.int<0> : !s32i
@@ -597,7 +597,7 @@ module attributes {
       attributes { test_classify = #non_byval_arg }
 
   // CHECK:      cir.func{{.*}} @takes_big_non_byval_decl(!cir.ptr<!rec_Big>
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
 
   // The call site forwards the caller's temporary instead of copying it.
   cir.func @caller_non_byval(%s: !rec_Big) -> !rec_Big
@@ -614,7 +614,7 @@ module attributes {
   // CHECK-NEXT:   cir.store %[[S]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK-NOT:    cir.load
   // CHECK:        %{{.*}} = cir.call @takes_big_non_byval(%[[TMP]]) :
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
 
   // The whole-record load survives when a reader other than the call needs it.
   cir.func @caller_non_byval_load_reused(%s: !rec_Big) -> !rec_Big
@@ -630,7 +630,7 @@ module attributes {
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
   // CHECK:        %[[V:.*]] = cir.load %[[TMP]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK:        %{{.*}} = cir.call @takes_big_non_byval(%[[TMP]]) :
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK:        cir.return %[[V]] : !rec_Big
 
   // CIRGen emits the load immediately before the call, so nothing can write
@@ -653,7 +653,7 @@ module attributes {
   // CHECK-NEXT:   cir.store %[[T]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK-NOT:    cir.load
   // CHECK:        %{{.*}} = cir.call @takes_big_non_byval(%[[TMP]]) :
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
 
   // A non-byval argument between two Direct ones keeps its operand slot.
   cir.func private @takes_mixed_non_byval(%a: !s32i, %b: !rec_Big, %c: !s32i)
@@ -671,7 +671,7 @@ module attributes {
   // CHECK:      cir.func{{.*}} @caller_mixed_non_byval(%[[X:.*]]: !s32i
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
   // CHECK:        cir.call @takes_mixed_non_byval(%[[X]], %[[TMP]], %[[X]]) :
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef},
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef},
 
   // One load feeding two non-byval operands is erased once, not twice.
   cir.func private @takes_two_non_byval(%a: !rec_Big, %b: !rec_Big)
@@ -691,7 +691,7 @@ module attributes {
   // CHECK-NEXT:   cir.store %{{.*}}, %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK-NOT:    cir.load
   // CHECK:        cir.call @takes_two_non_byval(%[[TMP]], %[[TMP]]) :
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
 
   // The Direct operand keeps reading the load, so the load survives the rewrite.
   cir.func private @takes_non_byval_then_direct(%a: !rec_Big, %b: !rec_Big)
@@ -710,7 +710,7 @@ module attributes {
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
   // CHECK:        %[[V:.*]] = cir.load %[[TMP]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK:        cir.call @takes_non_byval_then_direct(%[[TMP]], %[[V]]) :
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef},
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef},
 
   // The dead load is erased on the sret early-return path too.
   cir.func @non_byval_and_sret(%arg0: !rec_Big) -> !rec_Big
@@ -740,7 +740,7 @@ module attributes {
   // CHECK:        %[[RET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_Big>
   // CHECK:        cir.call @non_byval_and_sret(%[[RET]], %[[TMP]]) :
   // CHECK-SAME:     llvm.sret = !rec_Big
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
 
   // A slot aligned above the record's own alignment, matching an
   // indirect_align that also exceeds it, is still forwarded.
@@ -760,7 +760,7 @@ module attributes {
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(16) : !cir.ptr<!rec_Big>
   // CHECK-NOT:    cir.load
   // CHECK:        cir.call @takes_big_non_byval16(%[[TMP]]) :
-  // CHECK-SAME:     {llvm.align = 16 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 16 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
 
   // A non-byval parameter's slot stands in for the incoming pointer until
   // finalizeParameterSlots, so the call ends up naming that pointer.
@@ -774,7 +774,7 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @fwd_non_byval_param(%[[P:[a-z0-9]+]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK-NOT:    cir.copy
   // CHECK:        %{{.*}} = cir.call @takes_big_decl(%[[P]]) : (!cir.ptr<!rec_Big>

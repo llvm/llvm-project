@@ -4,7 +4,7 @@
 # GFX12-LABEL: name: image_sample_l_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_l_merged_v1v3
 body:             |
@@ -22,7 +22,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_l_merged_v1v3_reversed
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub3
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub0_sub1_sub2
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub0_sub1_sub2
 
 name: image_sample_l_merged_v1v3_reversed
 body:             |
@@ -41,7 +41,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_l_merged_v2v2
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 # GFX12: %{{[0-9]+}}:vreg_64 = COPY %8.sub0_sub1
-# GFX12: %{{[0-9]+}}:vreg_64 = COPY killed %8.sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_64 = COPY %8.sub2_sub3
 
 name: image_sample_l_merged_v2v2
 body:             |
@@ -60,7 +60,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_l_merged_v2v2_reversed
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 # GFX12: %{{[0-9]+}}:vreg_64 = COPY %8.sub2_sub3
-# GFX12: %{{[0-9]+}}:vreg_64 = COPY killed %8.sub0_sub1
+# GFX12: %{{[0-9]+}}:vreg_64 = COPY %8.sub0_sub1
 
 name: image_sample_l_merged_v2v2_reversed
 body:             |
@@ -79,7 +79,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_l_merged_v3v1
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub0_sub1_sub2
-# GFX12: %{{[0-9]+}}:vgpr_32 = COPY killed %8.sub3
+# GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub3
 
 name: image_sample_l_merged_v3v1
 body:             |
@@ -98,7 +98,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_l_merged_v3v1_reversed
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
-# GFX12: %{{[0-9]+}}:vgpr_32 = COPY killed %8.sub0
+# GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
 
 name: image_sample_l_merged_v3v1_reversed
 body:             |
@@ -394,7 +394,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_V4_V2_gfx12 %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_merged_v1v3
 body:             |
@@ -413,7 +413,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_b_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_B_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_b_merged_v1v3
 body:             |
@@ -432,7 +432,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_b_cl_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_B_CL_V4_V4_gfx12 %5, %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_b_cl_merged_v1v3
 body:             |
@@ -451,7 +451,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_b_cl_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_B_CL_O_V4_V5_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_b_cl_o_merged_v1v3
 body:             |
@@ -471,7 +471,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_b_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_B_O_V4_V4_gfx12 %5, %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_b_o_merged_v1v3
 body:             |
@@ -490,7 +490,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_merged_v1v3
 body:             |
@@ -509,7 +509,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_cl_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_CL_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_cl_merged_v1v3
 body:             |
@@ -528,7 +528,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_cl_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_CL_O_V4_V4_gfx12 %5, %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_cl_o_merged_v1v3
 body:             |
@@ -547,7 +547,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_b_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_B_V4_V4_gfx12 %5, %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_b_merged_v1v3
 body:             |
@@ -566,7 +566,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_b_cl_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_B_CL_V4_V5_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_b_cl_merged_v1v3
 body:             |
@@ -586,7 +586,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_b_cl_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_B_CL_O_V4_V6_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_b_cl_o_merged_v1v3
 body:             |
@@ -606,7 +606,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_b_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_B_O_V4_V5_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_b_o_merged_v1v3
 body:             |
@@ -626,7 +626,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_cl_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_CL_V4_V4_gfx12 %5, %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_cl_merged_v1v3
 body:             |
@@ -645,7 +645,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_cl_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_CL_O_V4_V5_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_cl_o_merged_v1v3
 body:             |
@@ -665,7 +665,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_d_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_D_V4_V7_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_d_merged_v1v3
 body:             |
@@ -685,7 +685,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_d_cl_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_D_CL_V4_V8_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_d_cl_merged_v1v3
 body:             |
@@ -705,7 +705,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_d_cl_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_D_CL_O_V4_V9_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_d_cl_o_merged_v1v3
 body:             |
@@ -725,7 +725,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_d_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_D_O_V4_V8_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_d_o_merged_v1v3
 body:             |
@@ -745,7 +745,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_l_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_L_V4_V4_gfx12 %5, %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_l_merged_v1v3
 body:             |
@@ -764,7 +764,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_lz_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_LZ_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_lz_merged_v1v3
 body:             |
@@ -783,7 +783,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_lz_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_LZ_O_V4_V4_gfx12 %5, %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_lz_o_merged_v1v3
 body:             |
@@ -802,7 +802,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_l_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_L_O_V4_V5_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_l_o_merged_v1v3
 body:             |
@@ -822,7 +822,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_c_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_O_V4_V4_gfx12 %5, %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_o_merged_v1v3
 body:             |
@@ -841,7 +841,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_d_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_D_V4_V6_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_d_merged_v1v3
 body:             |
@@ -861,7 +861,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_d_cl_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_D_CL_V4_V7_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_d_cl_merged_v1v3
 body:             |
@@ -881,7 +881,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_d_cl_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_D_CL_O_V4_V8_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_d_cl_o_merged_v1v3
 body:             |
@@ -901,7 +901,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_d_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_D_O_V4_V7_gfx12 %5, %5, %5, %6, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %9.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %9.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_d_o_merged_v1v3
 body:             |
@@ -921,7 +921,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_lz_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2_gfx12 %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_lz_merged_v1v3
 body:             |
@@ -940,7 +940,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_lz_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_LZ_O_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_lz_o_merged_v1v3
 body:             |
@@ -959,7 +959,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_l_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_O_V4_V4_gfx12 %5, %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_l_o_merged_v1v3
 body:             |
@@ -978,7 +978,7 @@ body:             |
 # GFX12-LABEL: name: image_sample_o_merged_v1v3
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_O_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX12: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_o_merged_v1v3
 body:             |
