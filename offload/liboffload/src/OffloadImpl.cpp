@@ -282,12 +282,12 @@ struct ol_context_impl_t {
 
   /// Drain outstanding queues and tear down the plugin-side context.
   llvm::Error destroy() {
-    if (auto Err = drainOutstandingQueues())
-      return Err;
-    if (PluginCtx)
-      if (auto Err = PluginCtx->deinit())
-        return Err;
-    return llvm::Error::success();
+    llvm::Error Result = drainOutstandingQueues();
+    if (PluginCtx) {
+      PluginCtx->releaseMemoryManagers();
+      Result = llvm::joinErrors(std::move(Result), PluginCtx->deinit());
+    }
+    return Result;
   }
 
   ~ol_context_impl_t() {
@@ -588,6 +588,9 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
   case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
     return Info.write<uint64_t>(Device->Device->getMaxGridSize());
+
+  case OL_DEVICE_INFO_PREFERRED_LOCATION_HOST:
+    return Info.write<bool>(Device->Device->useAutoZeroCopy());
 
   default:
     break;
@@ -1525,6 +1528,16 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
     if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
       return Err;
     return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
+  case OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_KERNEL))
+      return Err;
+    return Info.write<uint32_t>(std::get<GenericKernelTy *>(Symbol->PluginImpl)
+                                    ->getStaticBlockMemSize());
+  case OL_SYMBOL_INFO_KERNEL_MAX_THREADS:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_KERNEL))
+      return Err;
+    return Info.write<uint32_t>(
+        std::get<GenericKernelTy *>(Symbol->PluginImpl)->getMaxThreads());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetSymbolInfo enum '%i' is invalid", PropName);
@@ -1630,8 +1643,9 @@ __tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
   return Queue ? Queue->AsyncInfo : nullptr;
 }
 
-GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol) {
-  return std::get<GenericKernelTy *>(Symbol->PluginImpl);
+plugin::PluginContextTy *
+__ol_tgt_GetPluginContext(ol_context_handle_t Context) {
+  return Context ? Context->PluginCtx.get() : nullptr;
 }
 
 DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {

@@ -745,6 +745,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_eventfd_macros
+    .llvm-libc-types.eventfd_t
 )
 
 add_header_macro(
@@ -939,6 +940,21 @@ add_header_macro(
     .llvm-libc-types.off_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
+  sys_shm
+  ../libc/include/sys/shm.yaml
+  sys/shm.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_shm_macros
+    .llvm-libc-types.pid_t
+    .llvm-libc-types.shmatt_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.time_t
+    .stdint
+    .sys_ipc
 )
 
 add_header_macro(

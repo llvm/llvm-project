@@ -8425,7 +8425,6 @@ bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
 bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   MCAsmParser &Parser = getParser();
   MCContext &Ctx = getContext();
-  AsmToken Tok = Parser.getTok();
 
   // At this point, we encountered "<id>@AUTH". There is no fallback anymore.
   if (parseToken(AsmToken::LParen, "expected '('"))
