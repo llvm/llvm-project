@@ -1,7 +1,8 @@
 // NOTE: Do not autogenerate. Check runtime counts and application output.
 // Exercise the installed GPU profiling helper with zero or one from each
-// active lane. Also check partial/sparse masks and both counter channels
-// across multiple waves. Uniform counters record contributions
+// active lane. Also check partial/sparse masks and all three counter channels
+// across multiple waves. Wave counters count nonempty masks even when all
+// steps are zero. Uniform counters record contributions
 // made with a full active mask; they do not classify the step's uniformity.
 // REQUIRES: hip, amdgpu
 // RUN: rm -rf %t.dir && mkdir -p %t.dir
@@ -19,13 +20,13 @@
 #include <hip/hip_runtime.h>
 
 extern "C" __device__ void __llvm_profile_instrument_gpu(uint64_t *, uint64_t *,
-                                                         uint64_t);
+                                                         uint64_t, uint64_t *);
 
 __global__ void accumulate(uint64_t *counts, const uint64_t *steps,
                            const unsigned char *active) {
   unsigned i = threadIdx.x;
   if (active[i])
-    __llvm_profile_instrument_gpu(counts, counts + 1, steps[i]);
+    __llvm_profile_instrument_gpu(counts, counts + 1, steps[i], counts + 2);
 }
 
 static void check(hipError_t error) {
@@ -73,14 +74,14 @@ int main() {
     return 2;
   uint64_t *counts, *steps;
   unsigned char *active;
-  check(hipMalloc(&counts, 2 * sizeof(uint64_t)));
+  check(hipMalloc(&counts, 3 * sizeof(uint64_t)));
   check(hipMalloc(&steps, n * sizeof(uint64_t)));
   check(hipMalloc(&active, n));
   uint64_t values[256];
   unsigned char mask[256];
   unsigned errors = 0;
   for (unsigned test = 0; test < 11; ++test) {
-    uint64_t expected[2] = {};
+    uint64_t expected[3] = {};
     for (unsigned wave = 0; wave < 4; ++wave) {
       uint64_t sum = 0;
       unsigned population = 0;
@@ -97,18 +98,20 @@ int main() {
         }
       }
       expected[0] += sum;
+      if (population != 0)
+        ++expected[2];
       if (population == width)
         expected[1] += sum;
     }
     check(
         hipMemcpy(steps, values, n * sizeof(uint64_t), hipMemcpyHostToDevice));
     check(hipMemcpy(active, mask, n, hipMemcpyHostToDevice));
-    check(hipMemset(counts, 0, 2 * sizeof(uint64_t)));
+    check(hipMemset(counts, 0, 3 * sizeof(uint64_t)));
     accumulate<<<1, n>>>(counts, steps, active);
     check(hipGetLastError());
-    uint64_t actual[2];
+    uint64_t actual[3];
     check(hipMemcpy(actual, counts, sizeof(actual), hipMemcpyDeviceToHost));
-    for (unsigned channel = 0; channel < 2; ++channel) {
+    for (unsigned channel = 0; channel < 3; ++channel) {
       if (actual[channel] != expected[channel]) {
         ++errors;
         std::printf("case=%u channel=%u actual=%llu expected=%llu\n", test,
