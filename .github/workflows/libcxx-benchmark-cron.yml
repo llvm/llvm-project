@@ -91,6 +91,7 @@ jobs:
   refine:
     permissions:
       contents: read
+      actions: write # to delete superseded cache entries
     needs:
       - select-machines
     if: ${{ needs.select-machines.outputs.refine-matrix != '[]' }}

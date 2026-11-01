@@ -4367,6 +4367,14 @@ public:
     return false;
   }
 
+  /// Return true if a function used as an inline asm address operand (e.g.
+  /// "p", or a call target that isInlineAsmTargetBranch() recognizes) can be
+  /// the bare function symbol, in an operand of kind InlineAsm::Kind::Func.
+  /// The target then has to select the symbol as an address and print it with
+  /// AsmPrinter::PrintAsmOperand(). Otherwise the function's address is
+  /// computed like that of any other global.
+  virtual bool supportsInlineAsmFuncOperands() const { return false; }
+
   bool isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
                             SDValue &Chain) const;
 
