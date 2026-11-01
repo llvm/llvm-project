@@ -262,17 +262,15 @@ define <64 x i8> @negative_masked_load_wrapping_sequence(ptr %p, i8 signext %n, 
 ; CHECK-LABEL: negative_masked_load_wrapping_sequence:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 64
-; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    li a3, 200
+; CHECK-NEXT:    vadd.vx v8, v8, a3
+; CHECK-NEXT:    andi a2, a2, 248
+; CHECK-NEXT:    vor.vx v8, v8, a2
+; CHECK-NEXT:    vmsltu.vx v0, v8, a1
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    andi a2, a2, 248
-; CHECK-NEXT:    addi a2, a2, -56
-; CHECK-NEXT:    zext.b a1, a1
-; CHECK-NEXT:    andi a2, a2, 248
-; CHECK-NEXT:    maxu a1, a1, a2
-; CHECK-NEXT:    sub a1, a1, a2
-; CHECK-NEXT:    minu a1, a1, a3
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, tu, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %1 = and i8 %base, -8
   %splat.splatinsert = insertelement <64 x i8> poison, i8 %1, i64 0

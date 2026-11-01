@@ -21306,6 +21306,31 @@ static SDValue canonicalizeMaskForVLPredicate(
     return SDValue();
   const APInt &Start = StepVector->first;
 
+  const unsigned NumElts = LHS.getValueType().getVectorNumElements();
+
+  bool Overflow = false;
+
+  // isArithmeticSequence matches modulo 2^EltBits so if Start + (NumElts - 1)
+  // overflows the transformation cannot be applied as the assumption that Start
+  // + i is exact breaks. We also check that (NumElts - 1) doesn't overflow
+  // otherwise it will be truncated and the check against start will be .
+  if (IsSigned) {
+    if (!isIntN(ElementSize, NumElts - 1)) {
+      return SDValue();
+    }
+
+    (void)Start.sadd_ov(APInt(ElementSize, NumElts - 1), Overflow);
+  } else {
+    if (!isUIntN(ElementSize, NumElts - 1)) {
+      return SDValue();
+    }
+
+    (void)Start.uadd_ov(APInt(ElementSize, NumElts - 1), Overflow);
+  }
+
+  if (Overflow)
+    return SDValue();
+
   Boundary = DAG.getExtOrTrunc(IsSigned, Boundary, DL, ElementVT);
   BaseIndex = DAG.getExtOrTrunc(IsSigned, BaseIndex, DL, ElementVT);
   SDValue Offset = DAG.getConstant(IsSigned ? Start.sextOrTrunc(ElementSize)
