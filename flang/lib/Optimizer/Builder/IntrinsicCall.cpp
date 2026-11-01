@@ -534,6 +534,9 @@ static constexpr IntrinsicHandler handlers[]{
        {"team", asAddr},
        {"team_number", asValue}}},
      /*isElemental*/ false},
+    {"image_status",
+     &I::genImageStatus,
+     {{{"image", asValue}, {"team", asAddr, handleDynamicOptional}}}},
     {"index",
      &I::genIndex,
      {{{"string", asAddr},
@@ -6598,6 +6601,14 @@ IntrinsicLibrary::genImageIndex(mlir::Type resultType,
   }
   return mif::genImageIndex(builder, loc, fir::getBase(args[0]),
                             fir::getBase(args[1]), team);
+}
+
+// IMAGE_STATUS
+mlir::Value IntrinsicLibrary::genImageStatus(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  checkCoarrayEnabled(loc, options);
+  assert(args.size() == 2);
+  return mif::ImageStatusOp::create(builder, loc, resultType, args[0], args[1]);
 }
 
 // INDEX

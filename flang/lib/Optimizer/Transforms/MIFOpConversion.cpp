@@ -1597,6 +1597,46 @@ struct MIFImageIndexOpConversion
   }
 };
 
+/// Convert mif.image_status operation to runtime call of 'prif_image_status'
+struct MIFImageStatusOpConversion
+    : public mlir::OpRewritePattern<mif::ImageStatusOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::ImageStatusOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+    mlir::Type i32Ty = builder.getI32Type();
+    mlir::Type refTy = builder.getRefType(builder.getNoneType());
+    mlir::Value result = builder.createTemporary(loc, i32Ty);
+
+    mlir::FunctionType ftype = mlir::FunctionType::get(
+        builder.getContext(),
+        /*inputs*/
+        {builder.getRefType(i32Ty), refTy, builder.getRefType(i32Ty)},
+        /*results*/ {});
+    mlir::func::FuncOp funcOp =
+        builder.createFunction(loc, getPRIFProcName("image_status"), ftype);
+
+    mlir::Value image = builder.createTemporary(loc, i32Ty);
+    mlir::Value imageArg = builder.createConvert(loc, i32Ty, op.getImage());
+    fir::StoreOp::create(builder, loc, imageArg, image);
+
+    mlir::Value team = op.getTeam();
+    if (!team)
+      team = fir::AbsentOp::create(builder, loc, refTy);
+
+    llvm::SmallVector<mlir::Value> args =
+        fir::runtime::createArguments(builder, loc, ftype, image, team, result);
+
+    fir::CallOp::create(builder, loc, funcOp, args);
+    rewriter.replaceOpWithNewOp<fir::LoadOp>(op, result);
+    return mlir::success();
+  }
+};
+
 /// Convert mif.event_wait operation to runtime call of 'prif_event_wait*'
 struct MIFEventWaitOpConversion
     : public mlir::OpRewritePattern<mif::EventWaitOp> {
@@ -1825,16 +1865,17 @@ void mif::populateMIFOpConversionPatterns(
     mlir::RewritePatternSet &patterns) {
   patterns.insert<MIFAllocCoarrayOpConversion>(patterns.getContext(), &dl,
                                                &converter);
-  patterns.insert<
-      MIFInitOpConversion, MIFThisImageOpConversion, MIFNumImagesOpConversion,
-      MIFSyncAllOpConversion, MIFSyncImagesOpConversion,
-      MIFSyncMemoryOpConversion, MIFSyncTeamOpConversion,
-      MIFCoBroadcastOpConversion, MIFCoMaxOpConversion, MIFCoMinOpConversion,
-      MIFCoSumOpConversion, MIFFormTeamOpConversion, MIFChangeTeamOpConversion,
-      MIFGetTeamOpConversion, MIFTeamNumberOpConversion,
-      MIFDeallocCoarrayOpConversion, MIFCoshapeOpConversion,
-      MIFLcoboundOpConversion, MIFUcoboundOpConversion,
-      MIFImageIndexOpConversion, MIFEventPostOpConversion,
-      MIFEventWaitOpConversion, MIFEventQueryOpConversion>(
+  patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
+                  MIFNumImagesOpConversion, MIFSyncAllOpConversion,
+                  MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,
+                  MIFSyncTeamOpConversion, MIFCoBroadcastOpConversion,
+                  MIFCoMaxOpConversion, MIFCoMinOpConversion,
+                  MIFCoSumOpConversion, MIFFormTeamOpConversion,
+                  MIFChangeTeamOpConversion, MIFGetTeamOpConversion,
+                  MIFTeamNumberOpConversion, MIFDeallocCoarrayOpConversion,
+                  MIFCoshapeOpConversion, MIFLcoboundOpConversion,
+                  MIFUcoboundOpConversion, MIFImageIndexOpConversion,
+                  MIFEventPostOpConversion, MIFEventWaitOpConversion,
+                  MIFEventQueryOpConversion, MIFImageStatusOpConversion>(
       patterns.getContext());
 }
