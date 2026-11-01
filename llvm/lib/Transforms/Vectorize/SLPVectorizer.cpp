@@ -17536,9 +17536,25 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     VecTy = getWidenedType(ScalarTy, VL.size());
     [[fallthrough]];
   case Instruction::Select: {
+    const CmpInst *CondCmp = [&]() -> const CmpInst * {
+      if (ShuffleOrOp != Instruction::Select)
+        return nullptr;
+      ArrayRef<Value *> Cond = E->getOperand(0);
+      auto *Ext = dyn_cast<ExtractElementInst>(Cond.front());
+      auto *Cmp = Ext ? dyn_cast<CmpInst>(Ext->getVectorOperand()) : nullptr;
+      if (!Cmp || getNumElements(Cmp->getType()) != Cond.size() ||
+          any_of(enumerate(Cond), [&](const auto &P) {
+            return !match(P.value(), m_ExtractElt(m_Specific(Cmp),
+                                                  m_SpecificInt(P.index())));
+          }))
+        return nullptr;
+      return Cmp;
+    }();
     CmpPredicate VecPred, SwappedVecPred;
     auto MatchCmp = m_Cmp(VecPred, m_Value(), m_Value());
-    if (match(VL0, m_Select(MatchCmp, m_Value(), m_Value())) ||
+    if (CondCmp)
+      VecPred = CondCmp->getPredicate();
+    if (CondCmp || match(VL0, m_Select(MatchCmp, m_Value(), m_Value())) ||
         match(VL0, MatchCmp))
       SwappedVecPred = CmpInst::getSwappedPredicate(VecPred);
     else
@@ -17562,7 +17578,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
 
       auto *VI = cast<Instruction>(UniqueValues[Idx]);
-      CmpPredicate CurrentPred = ScalarTy->isFloatingPointTy()
+      CmpPredicate CurrentPred = CondCmp ? CondCmp->getPredicate()
+                                 : ScalarTy->isFloatingPointTy()
                                      ? CmpInst::BAD_FCMP_PREDICATE
                                      : CmpInst::BAD_ICMP_PREDICATE;
       Value *LHS = nullptr, *RHS = nullptr;
@@ -36035,6 +36052,53 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   return Res;
 }
 
+bool SLPVectorizerPass::vectorizeSeedReductions(ArrayRef<Value *> Vals,
+                                                BoUpSLP &R) {
+  if (!Opts->slp_vectorize_hor)
+    return false;
+  SmallVector<Instruction *> Roots;
+  for (Value *V : Vals) {
+    auto *P = dyn_cast<PHINode>(V);
+    if (!P) {
+      if (auto *I = dyn_cast<Instruction>(V))
+        Roots.push_back(I);
+      continue;
+    }
+    if (LI->isLoopHeader(P->getParent()))
+      return false;
+    for (Value *In : P->incoming_values())
+      if (auto *I = dyn_cast<Instruction>(In))
+        Roots.push_back(I);
+  }
+  if (Roots.size() < 2)
+    return false;
+  RecurKind Kind = getRdxKind(Roots.front());
+  SmallVector<unsigned> Shape;
+  SmallPtrSet<PHINode *, 16> Accs;
+  if (Kind == RecurKind::None || any_of(Roots, [&](Instruction *I) {
+        return R.isDeleted(I) || !isReductionCandidate(I) ||
+               getRdxKind(I) != Kind ||
+               !isReductionOfConsecutiveAccumulators(
+                   I, *LI, *DL, *SE, Opts->slp_recursion_max_depth, Shape,
+                   Accs);
+      }))
+    return false;
+  // The other accumulators of the loop, vectorized across the reductions, mix
+  // with the vectorized reductions.
+  if (any_of((*Accs.begin())->getParent()->phis(),
+             [&](PHINode &P) { return P.hasOneUse() && !Accs.contains(&P); }))
+    return false;
+  bool Res = false;
+  for (Instruction *I : Roots) {
+    if (R.isDeleted(I))
+      continue;
+    HorizontalReduction HorRdx(*Opts);
+    if (HorRdx.matchAssociativeReduction(R, I, *SE, *DT, *DL, *TTI, *TLI))
+      Res |= HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT, *LI) != nullptr;
+  }
+  return Res;
+}
+
 bool SLPVectorizerPass::tryToVectorize(
     Instruction *I, BoUpSLP &R, SmallSetVector<Instruction *, 8> &FMACandidates,
     bool AllowFMACandidates) {
@@ -37176,6 +37240,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
     HaveVectorizedPhiNodes = tryToVectorizeSequence<Value>(
         *Opts, Incoming, PHICompare, AreCompatiblePHIs,
         [this, &R, &PHICompare](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+          if (vectorizeSeedReductions(Candidates, R))
+            return true;
           // If the whole register vectors are not built in the original order,
           // the phis from the different groups, matching in the leading values,
           // are tried together.
@@ -37880,7 +37946,10 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     return tryToVectorizeSequence<StoreInst>(
         *Opts, ReversedStores, StoreSorter, AreCompatibleStores,
         [&](ArrayRef<StoreInst *> Candidates, bool) {
-          return vectorizeStores(Candidates, R, Attempted, AllowMaskedStores);
+          SmallVector<Value *> Vals(map_range(
+              Candidates, [](StoreInst *SI) { return SI->getValueOperand(); }));
+          return vectorizeSeedReductions(Vals, R) ||
+                 vectorizeStores(Candidates, R, Attempted, AllowMaskedStores);
         },
         /*MaxVFOnly=*/false, R);
   };
