@@ -45,6 +45,6 @@ ProgramHeaders:
 # CHECK:      --- !ifs-v1
 # CHECK-NEXT: IfsVersion: {{[1-9]\d*\.(0|([1-9]\d*))}}
 # CHECK-NEXT: SoName: best.so{{$}}
-# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: aarch64, Endianness: little, BitWidth: 64 }
 # CHECK-NEXT: Symbols: []
 # CHECK-NEXT: ...

@@ -645,6 +645,10 @@ defm : DemangledNativeBuiltin<"s_atomic_fetch_min_explicit", OpenCL_std, Atomic,
 defm : DemangledNativeBuiltin<"s_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicSMax>;
 defm : DemangledNativeBuiltin<"u_atomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMin>;
 defm : DemangledNativeBuiltin<"u_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMax>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_min", OpenCL_std, Atomic, 2, 4, OpAtomicFMinEXT>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_max", OpenCL_std, Atomic, 2, 4, OpAtomicFMaxEXT>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicFMinEXT>;
+defm : DemangledNativeBuiltin<"fatomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicFMaxEXT>;
 defm : DemangledNativeBuiltin<"s_atom_min", OpenCL_std, Atomic, 2, 2, OpAtomicSMin>;
 defm : DemangledNativeBuiltin<"s_atom_max", OpenCL_std, Atomic, 2, 2, OpAtomicSMax>;
 defm : DemangledNativeBuiltin<"u_atom_min", OpenCL_std, Atomic, 2, 2, OpAtomicUMin>;

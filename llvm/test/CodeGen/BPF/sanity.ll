@@ -7,8 +7,8 @@
 define i32 @foo_int(i32 %a, i32 %b) #0 {
 ; CHECK-LABEL: foo_int:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    r0 = r2
-; CHECK-NEXT:    r0 += r1
+; CHECK-NEXT:    r0 = r1
+; CHECK-NEXT:    r0 += r2
 ; CHECK-NEXT:    exit
   %1 = add nsw i32 %b, %a
   ret i32 %1
@@ -18,8 +18,8 @@ define i32 @foo_int(i32 %a, i32 %b) #0 {
 define signext i8 @foo_char(i8 signext %a, i8 signext %b) #0 {
 ; CHECK-LABEL: foo_char:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    r0 = r2
-; CHECK-NEXT:    r0 += r1
+; CHECK-NEXT:    r0 = r1
+; CHECK-NEXT:    r0 += r2
 ; CHECK-NEXT:    r0 <<= 56
 ; CHECK-NEXT:    r0 s>>= 56
 ; CHECK-NEXT:    exit
@@ -31,8 +31,8 @@ define signext i8 @foo_char(i8 signext %a, i8 signext %b) #0 {
 define i64 @foo_ll(i64 %a, i64 %b, i64 %c) #0 {
 ; CHECK-LABEL: foo_ll:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    r0 = r2
-; CHECK-NEXT:    r0 += r1
+; CHECK-NEXT:    r0 = r1
+; CHECK-NEXT:    r0 += r2
 ; CHECK-NEXT:    r0 -= r3
 ; CHECK-NEXT:    exit
   %1 = add nsw i64 %b, %a

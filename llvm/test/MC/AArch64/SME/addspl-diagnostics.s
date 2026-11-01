@@ -2,7 +2,7 @@
 
 // Immediate out of upper bound [-32, 31].
 addspl x19, x14, #32
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-32, 31].
 // CHECK-NEXT: addspl x19, x14, #32
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

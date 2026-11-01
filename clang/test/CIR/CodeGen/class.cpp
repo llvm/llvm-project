@@ -181,7 +181,7 @@ void fam_3() {
 // CIR: cir.func{{.*}}@_Z5fam_3v
 // CIR: %[[A:.*]] = cir.alloca "a" align(8) init : !cir.ptr<!cir.ptr<!rec_JustFam>>
 // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
-// CIR: %[[NEW:.*]] = cir.call @_Znwm(%[[ZERO]]) {allocsize = array<i32: 0>, builtin}
+// CIR: %[[NEW:.*]] = cir.call @_Znwm(%[[ZERO]]) {allocsize = array<i32: 0>, builtin, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = readwrite, errno_mem = write, target_mem0 = none, target_mem1 = none>}
 // CIR: %[[NEW_TO_A:.*]] = cir.cast bitcast %[[NEW]] : !cir.ptr<!void> -> !cir.ptr<!rec_JustFam>
 // CIR: cir.store align(8) %[[NEW_TO_A]], %[[A]] : !cir.ptr<!rec_JustFam>, !cir.ptr<!cir.ptr<!rec_JustFam>>
 // CIR: %[[LOAD_A:.*]] = cir.load align(8) %[[A]] : !cir.ptr<!cir.ptr<!rec_JustFam>>, !cir.ptr<!rec_JustFam>
@@ -189,7 +189,7 @@ void fam_3() {
 
 // LLVM: define{{.*}}@_Z5fam_3v
 // LLVM: %[[A:.*]] = alloca ptr, align 8
-// LLVM: %[[NEW:.*]] = call noundef nonnull ptr @_Znwm(i64 noundef 0)
+// LLVM: %[[NEW:.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 0)
 // LLVM: store ptr %[[NEW]], ptr %[[A]], align 8
 // LLVM: %[[LOAD_A:.*]] = load ptr, ptr %[[A]], align 8
 // LLVM: getelementptr inbounds nuw %struct.JustFam, ptr %[[LOAD_A]], i32 0, i32 0

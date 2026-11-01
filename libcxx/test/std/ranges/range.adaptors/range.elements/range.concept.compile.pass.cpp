@@ -12,7 +12,10 @@
 //
 // template<class T, size_t N>
 // concept has-tuple-element =
-//   tuple-like<T> && N < tuple_size_v<T>;
+//   tuple-like<T> && N < tuple_size_v<T> &&
+//   requires(T t) {
+//     { std::get<N>(t) } -> convertible_to<const tuple_element_t<N, T>&>;
+//   };
 //
 // template<class T, size_t N>
 // concept returnable-element =
@@ -72,3 +75,11 @@ using NonMovableGenerator =
 
 static_assert(!HasElementsView<NonMovableGenerator, 0>);
 static_assert(HasElementsView<NonMovableGenerator, 1>);
+
+// LWG3797: subrange's get<0> requires copyable<I>, so std::get<0>(t) is invalid for a move-only iterator.
+using MoveOnlySubrange = Range<cpp20_input_iterator<int*>>;
+
+static_assert(!std::copyable<cpp20_input_iterator<int*>>);
+static_assert(!HasElementsView<Range<MoveOnlySubrange*>, 0>);
+static_assert(HasElementsView<Range<MoveOnlySubrange*>, 1>);
+static_assert(!HasElementsView<Range<const MoveOnlySubrange*>, 0>);

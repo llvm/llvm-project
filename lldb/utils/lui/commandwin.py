@@ -31,7 +31,7 @@ class History(object):
             self.pos -= 1
             return self.data[self.pos]
 
-    def next(self):
+    def __next__(self):
         if self.pos < len(self.data):
             self.pos += 1
 

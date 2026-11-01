@@ -1,4 +1,5 @@
-; RUN: not llc -mtriple=armv8-eabi -mattr=+neon %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=armv8-eabi -mattr=+neon -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -O0 -mtriple=armv8-eabi -mattr=+neon -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
 
 ; CHECK: inline assembly requires more registers than available
 define <4 x float> @t-constraint-float-vectors-too-few-regs(<4 x float> %a, <4 x float> %b) {

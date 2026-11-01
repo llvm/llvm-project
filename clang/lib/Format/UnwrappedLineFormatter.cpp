@@ -215,13 +215,29 @@ public:
       return nullptr;
     const AnnotatedLine *Current = *Next;
     IndentTracker.nextLine(*Current);
-    unsigned MergedLines = tryFitMultipleLinesInOne(IndentTracker, Next, End);
+    unsigned MergedLines =
+        Current->InMacroExpansion
+            ? 0
+            : tryFitMultipleLinesInOne(IndentTracker, Next, End);
     if (MergedLines > 0 && Style.ColumnLimit == 0) {
       // Disallow line merging if there is a break at the start of one of the
       // input lines.
       for (unsigned i = 0; i < MergedLines; ++i)
         if (Next[i + 1]->First->NewlinesBefore > 0)
           MergedLines = 0;
+    }
+    if (MergedLines > 0) {
+      bool MergingEmptyBlock = MergedLines == 1 &&
+                               Next[0]->endsWith(tok::l_brace) &&
+                               Next[1]->startsWith(tok::r_brace);
+      for (unsigned i = 0; i <= MergedLines; ++i) {
+        if (cannotMergeMacroLine(Next[i],
+                                 /*AllowMultiLine=*/i == 0 &&
+                                     MergingEmptyBlock)) {
+          MergedLines = 0;
+          break;
+        }
+      }
     }
     if (!DryRun)
       for (unsigned i = 0; i < MergedLines; ++i)
@@ -279,6 +295,20 @@ private:
                                 TT_UnionLBrace)) {
       if (unsigned MergedLines = tryMergeRecord(I, E, Limit))
         return MergedLines;
+    }
+
+    // Optionally merge preceding `break` or `[[fallthrough]]` with case label
+    // when at compatible levels, preserving label's indent.
+    if (Style.CompactCaseLabels &&
+        NextLine.First->isOneOf(tok::kw_case, tok::kw_default) &&
+        TheLine->Level <= NextLine.Level + 1 &&
+        canJoinWithCaseLabel(TheLine, *NextLine.First)) {
+      IndentTracker.nextLine(NextLine);
+      unsigned MergedLinesInCaseBody =
+          Style.AllowShortCaseLabelsOnASingleLine
+              ? tryMergeShortCaseLabels(I + 1, E, Limit)
+              : 0;
+      return 1 + MergedLinesInCaseBody;
     }
 
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
@@ -663,6 +693,19 @@ private:
     return 0;
   }
 
+  bool canJoinWithCaseLabel(const AnnotatedLine *Line,
+                            const FormatToken &LabelTok) {
+    if (Line->endsWith(tok::semi, tok::kw_break))
+      return true;
+
+    if (Line->startsWith(TT_AttributeLSquare) &&
+        Line->endsWith(tok::semi, TT_AttributeRSquare)) {
+      return !LabelTok.mustBreakAfterAttributes(Style);
+    }
+
+    return false;
+  }
+
   unsigned
   tryMergeSimplePPDirective(ArrayRef<AnnotatedLine *>::const_iterator I,
                             ArrayRef<AnnotatedLine *>::const_iterator E,
@@ -832,10 +875,16 @@ private:
           EndsWithComment) {
         return 0;
       }
+      const auto *J = I + 2 + NumStmts;
+      if (Style.CompactCaseLabels && J != E &&
+          (*J)->First->isOneOf(tok::kw_case, tok::kw_default) &&
+          canJoinWithCaseLabel(Line, *(*J)->First)) {
+        break;
+      }
+
       if (Line->First->is(tok::comment)) {
         if (Level != Line->Level)
           return 0;
-        const auto *J = I + 2 + NumStmts;
         for (; J != E; ++J) {
           Line = *J;
           if (Line->InPPDirective != InPPDirective)
@@ -1010,9 +1059,10 @@ private:
           Tok = Tok->Next;
         } while (Tok);
 
-        // Last, check that the third line starts with a closing brace.
+        // Last, check that the third line starts with a closing brace at the
+        // same level as the opening line.
         Tok = I[2]->First;
-        if (Tok->isNot(tok::r_brace))
+        if (Tok->isNot(tok::r_brace) || I[2]->Level != Line.Level)
           return 0;
 
         // Don't merge "if (a) { .. } else {".
@@ -1109,6 +1159,21 @@ private:
     return false;
   }
 
+  bool cannotMergeMacroLine(const AnnotatedLine *Line, bool AllowMultiLine) {
+    assert(Line->First);
+    if (Line->Last->MacroParent)
+      return true;
+    if (AllowMultiLine)
+      return false;
+    for (const FormatToken *Tok = Line->First; Tok; Tok = Tok->Next) {
+      if (Tok->MacroParent && !Tok->Children.empty())
+        return true;
+      if (Tok != Line->First && Tok->getDecision() == FD_Break)
+        return true;
+    }
+    return false;
+  }
+
   void join(AnnotatedLine &A, const AnnotatedLine &B) {
     assert(!A.Last->Next);
     assert(!B.First->Previous);
@@ -1134,14 +1199,15 @@ private:
   const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines;
 };
 
-static void markFinalized(FormatToken *Tok) {
+static void markFinalized(FormatToken *Tok, bool SkipFirst = false) {
   if (Tok->is(tok::hash) && !Tok->Previous && Tok->Next &&
       Tok->Next->isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef,
                          tok::pp_elif, tok::pp_elifdef, tok::pp_elifndef,
                          tok::pp_else, tok::pp_endif)) {
     Tok = Tok->Next;
+    SkipFirst = false;
   }
-  for (; Tok; Tok = Tok->Next) {
+  for (bool First = true; Tok; Tok = Tok->Next, First = false) {
     if (Tok->MacroCtx && Tok->MacroCtx->Role == MR_ExpandedArg) {
       // In the first pass we format all macro arguments in the expanded token
       // stream. Instead of finalizing the macro arguments, we mark that they
@@ -1157,7 +1223,7 @@ static void markFinalized(FormatToken *Tok) {
       Tok->SpacesRequiredBefore = 0;
       if (!Tok->MustBreakBeforeFinalized)
         Tok->MustBreakBefore = 0;
-    } else {
+    } else if (!First || !SkipFirst) {
       Tok->Finalized = true;
     }
   }
@@ -1223,13 +1289,15 @@ protected:
     }
 
     if (NewLine || Previous.MacroParent) {
-      const ParenState &P = State.Stack.back();
+      ParenState &P = State.Stack.back();
 
       int AdditionalIndent =
           P.Indent.Total - Previous.Children[0]->Level * Style.IndentWidth;
       Penalty +=
           BlockFormatter->format(Previous.Children, DryRun, AdditionalIndent,
                                  /*FixBadIndentation=*/true);
+      if (Previous.MacroParent)
+        P.NestedBlockIndent = P.Indent.Total;
       return true;
     }
 
@@ -1636,7 +1704,7 @@ unsigned UnwrappedLineFormatter::format(
       RangeMinLevel = UINT_MAX;
     }
     if (!DryRun)
-      markFinalized(TheLine.First);
+      markFinalized(TheLine.First, /*SkipFirst=*/TheLine.InMacroExpansion);
   }
   PenaltyCache[CacheKey] = Penalty;
   return Penalty;
@@ -1764,8 +1832,11 @@ void UnwrappedLineFormatter::formatFirstToken(const AnnotatedLine &Line,
         RootToken.NewlinesBefore,
         Style.KeepEmptyLines.AtEndOfFile ? Style.MaxEmptyLinesToKeep + 1 : 1);
     unsigned TokenIndent = Newlines ? NewlineIndent : 0;
-    Whitespaces->replaceWhitespace(RootToken, Newlines, TokenIndent,
-                                   TokenIndent);
+    Whitespaces->replaceWhitespace(
+        RootToken, Newlines, TokenIndent, TokenIndent, /*AlignedTo=*/nullptr,
+        /*InPPDirective=*/false,
+        /*IndentedFromColumn=*/0,
+        /*CreateReplacement=*/!Line.InMacroExpansion);
     return;
   }
 
@@ -1787,10 +1858,10 @@ void UnwrappedLineFormatter::formatFirstToken(const AnnotatedLine &Line,
     Indent = 0;
   }
 
-  Whitespaces->replaceWhitespace(RootToken, RootToken.Newlines, Indent, Indent,
-                                 /*AlignedTo=*/nullptr,
-                                 Line.InPPDirective &&
-                                     !RootToken.HasUnescapedNewline);
+  Whitespaces->replaceWhitespace(
+      RootToken, RootToken.Newlines, Indent, Indent, /*AlignedTo=*/nullptr,
+      Line.InPPDirective && !RootToken.HasUnescapedNewline,
+      /*IndentedFromColumn=*/0, /*CreateReplacement=*/!Line.InMacroExpansion);
 }
 
 unsigned

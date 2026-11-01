@@ -153,8 +153,7 @@ void insertModuleCtor(Module &M) {
 
 PreservedAnalyses ThreadSanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  ThreadSanitizer TSan(
-      F.getContext().getLibraryOptions().get<InstrumentationOptions>());
+  ThreadSanitizer TSan(getInstrumentationOptions(F));
   if (TSan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F)))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

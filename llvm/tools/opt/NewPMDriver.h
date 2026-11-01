@@ -23,6 +23,7 @@
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
+class LLVMContext;
 class PassBuilder;
 class StringRef;
 struct PassPluginLibraryInfo;
@@ -54,7 +55,7 @@ enum PGOKind {
 enum CSPGOKind { NoCSPGO, CSInstrGen, CSInstrUse };
 } // namespace opt_tool
 
-void printPasses(raw_ostream &OS);
+void printPasses(LLVMContext &Context, raw_ostream &OS);
 
 /// Driver function to run the new pass manager over a module.
 ///

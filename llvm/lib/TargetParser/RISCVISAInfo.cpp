@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
@@ -483,7 +484,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   else if (Arch.consume_front("rv64"))
     XLen = 64;
 
-  auto IsBaseISA = [](char C) { return C == 'i' || C == 'e'; };
+  auto IsBaseISA = [](char C) { return C == 'i' || C == 'e' || C == 'y'; };
   if (XLen == 0 || Arch.empty() || !IsBaseISA(Arch[0]))
     return getError("arch string must begin with valid base ISA");
   char BaseISA = Arch[0];
@@ -556,6 +557,10 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
              .second)
       return getError("duplicate extension '" + ExtName + "'");
   }
+  // Plain 'y' always implies 'i' (which is omitted in the normalized arch
+  // string). Y+E requires a long base name arch string.
+  if (BaseISA == 'y')
+    ISAInfo->Exts["i"] = *findDefaultVersion("i");
   ISAInfo->updateImpliedLengths();
   return std::move(ISAInfo);
 }
@@ -628,7 +633,11 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                     "\' should be 'e', 'i', 'g' or 'y'");
   case 'e':
   case 'i':
-    // Baseline is `i` or `e`
+  case 'y':
+    // Baseline is 'i', 'e', or 'y' (which implies 'i' in updateImplication).
+    // TODO: arch string syntax for RVE+RVY (and y in non-first position) will
+    // be included following conclusion of "long base name" syntax
+    // https://lists.riscv.org/g/tech-unprivileged/message/1134
     if (auto E = getExtensionVersion(
             StringRef(&Baseline, 1), Arch, Major, Minor, ConsumeLength,
             EnableExperimentalExtension, ExperimentalExtensionVersionCheck))
@@ -636,22 +645,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     ISAInfo->Exts[std::string(1, Baseline)] = {Major, Minor};
     break;
-  case 'y': {
-    // If the first character is 'y', this is equivalent to "iy".
-    // TODO: arch string syntax for RVE+RVY (and y in non-first position) will
-    // be included following conclusion of "long base name" syntax
-    // https://lists.riscv.org/g/tech-unprivileged/message/1134
-    if (auto E = getExtensionVersion("y", Arch, Major, Minor, ConsumeLength,
-                                     EnableExperimentalExtension,
-                                     ExperimentalExtensionVersionCheck))
-      return std::move(E);
-
-    ISAInfo->Exts["y"] = {Major, Minor};
-    auto IVersion = findDefaultVersion("i");
-    assert(IVersion && "Default 'i' extension version not found?");
-    ISAInfo->Exts["i"] = {IVersion->Major, IVersion->Minor};
-    break;
-  }
   case 'g':
     // g expands to extensions in RISCVGImplications.
     if (!Arch.empty() && isDigit(Arch.front()))
@@ -1075,9 +1068,18 @@ std::string RISCVISAInfo::toString() const {
 
   Arch << "rv" << XLen;
 
+  bool HasY = Exts.count("y") != 0;
   ListSeparator LS("_");
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
+    if (HasY) {
+      // Plain 'y' always implies 'i' (which is omitted in the normalized arch
+      // string). Y+E requires a long base name arch string.
+      if (ExtName == "i")
+        continue;
+      if (ExtName == "e")
+        reportFatalUsageError("Y+E is not supported yet");
+    }
     auto ExtInfo = Ext.second;
     Arch << LS << ExtName;
     Arch << ExtInfo.Major << "p" << ExtInfo.Minor;

@@ -134,8 +134,7 @@ define void @test2(ptr %dst) {
 ; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i32 [ [[INDVAR]], [[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i64 [ [[IV_1]], [[LOOP_2]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[IV_1_LCSSA]], 4294967295
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[INDVAR_LCSSA]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1000
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 1000, [[INDVAR_LCSSA]]
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP2]], i32 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[SMIN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64

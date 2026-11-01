@@ -154,6 +154,8 @@ omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
 mlir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);
 
+std::size_t getLoopVarSize(const semantics::Symbol &sym);
+
 semantics::Symbol *
 getIterationVariableSymbol(const lower::pft::Evaluation &eval);
 
