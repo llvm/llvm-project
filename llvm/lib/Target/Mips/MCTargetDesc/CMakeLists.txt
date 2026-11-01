@@ -17,6 +17,7 @@ add_llvm_component_library(LLVMMipsDesc
   CodeGenTypes
   MC
   MipsInfo
+  Option
   Support
   TargetParser
 

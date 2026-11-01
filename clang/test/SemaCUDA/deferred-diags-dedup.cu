@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -fsyntax-only \
 // RUN:   -verify -Wno-vla %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fsyntax-only \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -fsyntax-only \
 // RUN:   -verify -Wno-vla %s
 
 // NOTE: Do not autogenerate. Tests deferred diagnostic deduplication.

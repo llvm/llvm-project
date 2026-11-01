@@ -72,11 +72,11 @@
 ; SPLIT-NOT:  contents:
 ; SPLIT:      DW_TAG_enumerator
 ; SPLIT-NOT:  {{DW_TAG|NULL}}
-; SPLIT:      DW_AT_name [DW_FORM_strx1]    (indexed (00000000) string = "a")
+; SPLIT:      DW_AT_name [DW_FORM_strx1]    (indexed (00000001) string = "a")
 ; SPLIT-NOT:  contents:
 ; SPLIT:      DW_TAG_enumerator
 ; SPLIT-NOT:  {{DW_TAG|NULL}}
-; SPLIT:      DW_AT_name [DW_FORM_strx1]    (indexed (00000001) string = "b")
+; SPLIT:      DW_AT_name [DW_FORM_strx1]    (indexed (00000002) string = "b")
 ;
 ; Extract the string offsets referenced in the main file by the skeleton unit.
 ; SPLIT:      .debug_str contents:

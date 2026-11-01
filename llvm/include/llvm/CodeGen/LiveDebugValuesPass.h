@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class LiveDebugValuesPass : public OptionalPassInfoMixin<LiveDebugValuesPass> {
+class LiveDebugValuesPass : public RequiredPassInfoMixin<LiveDebugValuesPass> {
   const bool ShouldEmitDebugEntryValues;
 
 public:

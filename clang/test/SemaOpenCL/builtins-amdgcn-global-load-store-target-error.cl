@@ -1,10 +1,10 @@
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx602 -S -verify -o - %t/load.cl
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx705 -S -verify -o - %t/load.cl
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx810 -S -verify -o - %t/load.cl
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx602 -S -verify -o - %t/store.cl
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx705 -S -verify -o - %t/store.cl
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx810 -S -verify -o - %t/store.cl
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu6.02-unknown-unknown -S -verify -o - %t/load.cl
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu7.05-unknown-unknown -S -verify -o - %t/load.cl
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu8.10-unknown-unknown -S -verify -o - %t/load.cl
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu6.02-unknown-unknown -S -verify -o - %t/store.cl
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu7.05-unknown-unknown -S -verify -o - %t/store.cl
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu8.10-unknown-unknown -S -verify -o - %t/store.cl
 // REQUIRES: amdgpu-registered-target
 
 //--- load.cl

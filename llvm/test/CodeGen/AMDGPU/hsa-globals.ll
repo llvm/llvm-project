@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=ASM %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa | FileCheck --check-prefix=ASM %s
 
 @linkonce_odr_global_program = linkonce_odr addrspace(1) global i32 0
 @linkonce_global_program = linkonce addrspace(1) global i32 0

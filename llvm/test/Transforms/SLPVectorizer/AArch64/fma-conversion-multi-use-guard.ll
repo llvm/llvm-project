@@ -52,7 +52,7 @@ define void @mixed_use_v4(ptr %src0, ptr %src1, ptr %dst, ptr %extra) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[DST:%.*]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    store float [[TMP4]], ptr [[EXTRA:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti | FileCheck -check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgpu6.00 | FileCheck -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}select0:
 ; i64 select should be split into two i32 selects, and we shouldn't need

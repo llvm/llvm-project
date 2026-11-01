@@ -13,6 +13,7 @@ add_flang_library(FIROpenACCAnalysis
   CUFAttrs
   CUFDialect
   FIRAnalysis
+  FIRCodeGen
   FIRDialect
   FIROpenACCSupport
   HLFIRDialect

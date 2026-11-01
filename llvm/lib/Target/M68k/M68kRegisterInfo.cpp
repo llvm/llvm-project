@@ -89,14 +89,11 @@ M68kRegisterInfo::getMaximalPhysRegClass(unsigned reg, MVT VT) const {
   // Pick the most sub register class of the right type that contains
   // this physreg.
   const TargetRegisterClass *BestRC = nullptr;
-  for (regclass_iterator I = regclass_begin(), E = regclass_end(); I != E;
-       ++I) {
-    const TargetRegisterClass *RC = *I;
-    if ((VT == MVT::Other || isTypeLegalForClass(*RC, VT)) &&
-        RC->contains(reg) &&
+  for (const TargetRegisterClass &RC : regclasses()) {
+    if ((VT == MVT::Other || isTypeLegalForClass(RC, VT)) && RC.contains(reg) &&
         (!BestRC ||
-         (BestRC->hasSubClass(RC) && RC->getNumRegs() > BestRC->getNumRegs())))
-      BestRC = RC;
+         (BestRC->hasSubClass(&RC) && RC.getNumRegs() > BestRC->getNumRegs())))
+      BestRC = &RC;
   }
 
   assert(BestRC && "Couldn't find the register class");

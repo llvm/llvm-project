@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -enable-var-scope -check-prefixes=GCN,OPT %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,OPT %s
+; RUN: llc -mtriple=amdgpu8.03 -O0 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}scalar_to_vector_i16:
 ; OPT:   v_mov_b32_e32 [[V:v[0-9]+]], 42

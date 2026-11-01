@@ -10,16 +10,15 @@
 
 // constant_wrapper
 
-// static constexpr const auto & value = X.data;
+// static constexpr decltype(auto) value = (X);
 // using type = constant_wrapper;
-// using value_type = decltype(X)::type;
+// using value_type = decltype(X);
 
-#include <algorithm>
 #include <concepts>
 #include <utility>
 
 static_assert(std::constant_wrapper<42>::value == 42);
-static_assert(std::same_as<decltype(std::constant_wrapper<42>::value), const int&>);
+static_assert(std::same_as<decltype(std::constant_wrapper<42>::value), const int>);
 static_assert(std::same_as<std::constant_wrapper<42>::type, std::constant_wrapper<42>>);
 static_assert(std::same_as<std::constant_wrapper<42>::value_type, int>);
 
@@ -32,7 +31,15 @@ static_assert(std::same_as<decltype(std::constant_wrapper<S{5}>::value), const S
 static_assert(std::same_as<std::constant_wrapper<S{5}>::type, std::constant_wrapper<S{5}>>);
 static_assert(std::same_as<std::constant_wrapper<S{5}>::value_type, S>);
 
-static_assert(std::ranges::equal(std::constant_wrapper<"abcd">::value, "abcd"));
-static_assert(std::same_as<decltype(std::constant_wrapper<"abcd">::value), const char (&)[5]>);
-static_assert(std::same_as<std::constant_wrapper<"abcd">::type, std::constant_wrapper<"abcd">>);
-static_assert(std::same_as<std::constant_wrapper<"abcd">::value_type, const char[5]>);
+template <auto V>
+consteval bool value_ref_to_template_parameter_object() {
+  return &V == &std::constant_wrapper<V>::value;
+}
+
+static_assert(value_ref_to_template_parameter_object<S{5}>());
+
+constexpr int arr[] = {1, 2, 3, 4, 5};
+
+static_assert(std::constant_wrapper<arr>::value == arr);
+static_assert(std::same_as<std::constant_wrapper<arr>::type, std::constant_wrapper<arr>>);
+static_assert(std::same_as<std::constant_wrapper<arr>::value_type, const int*>);

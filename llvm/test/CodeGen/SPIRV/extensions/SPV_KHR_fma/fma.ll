@@ -1,13 +1,15 @@
 ; RUN: llc -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_fma %s -o - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=spirv64-unknown-unknown < %s | FileCheck --check-prefix=CHECK-NO-EXT %s
-; TODO: Add spirv-val validation once the extension is supported.
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_fma %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability FmaKHR
 ; CHECK: OpExtension "SPV_KHR_fma"
+; CHECK: OpDecorate %[[#FMAFAST:]] FPFastMathMode NotNaN|NotInf
 ; CHECK: %[[#TYPE_FLOAT:]] = OpTypeFloat 32
 ; CHECK: %[[#TYPE_VEC:]] = OpTypeVector %[[#TYPE_FLOAT]] 4
 ; CHECK: OpFmaKHR %[[#TYPE_FLOAT]] %[[#]]
 ; CHECK: OpFmaKHR %[[#TYPE_VEC]] %[[#]]
+; CHECK: %[[#FMAFAST]] = OpFmaKHR %[[#TYPE_FLOAT]] %[[#]]
 ; CHECK: OpFmaKHR %[[#TYPE_FLOAT]] %[[#]]
 
 ; CHECK-NO-EXT-NOT: OpCapability FmaKHR
@@ -16,6 +18,7 @@
 ; CHECK-NO-EXT: %[[#TYPE_VEC:]] = OpTypeVector %[[#TYPE_FLOAT]] 4
 ; CHECK-NO-EXT: OpExtInst %[[#TYPE_FLOAT]] %[[#]] fma
 ; CHECK-NO-EXT: OpExtInst %[[#TYPE_VEC]] %[[#]] fma
+; CHECK-NO-EXT: OpExtInst %[[#TYPE_FLOAT]] %[[#]] fma
 ; CHECK-NO-EXT: OpExtInst %[[#TYPE_FLOAT]] %[[#]] fma
 
 define spir_func float @test_fma_scalar(float %a, float %b, float %c) {
@@ -28,6 +31,13 @@ define spir_func <4 x float> @test_fma_vector(<4 x float> %a, <4 x float> %b, <4
 entry:
   %result = call <4 x float> @llvm.fma.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c)
   ret <4 x float> %result
+}
+
+; Case to test that fast-math flags are emitted as an FPFastMathMode decoration.
+define spir_func float @test_fma_fast_math(float %a, float %b, float %c) {
+entry:
+  %result = call nnan ninf float @llvm.fma.f32(float %a, float %b, float %c)
+  ret float %result
 }
 
 ; Case to test fma translation via OCL builtins.

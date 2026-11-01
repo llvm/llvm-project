@@ -89,7 +89,7 @@ add_link_flags_if(CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG --unwindlib=none)
 # MINGW_LIBRARIES is defined in config-ix.cmake
 add_library_flags_if(MINGW "${MINGW_LIBRARIES}")
 
-if (LIBUNWIND_ENABLE_SHARED AND
+if (LIBUNWIND_ENABLE_SHARED AND LIBUNWIND_SUPPORTS_SHARED_LIBRARY AND
     NOT (CXX_SUPPORTS_FNO_EXCEPTIONS_FLAG AND
          CXX_SUPPORTS_FUNWIND_TABLES_FLAG))
   message(FATAL_ERROR
@@ -125,39 +125,41 @@ set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
 include(WarningFlags)
 
 # Build the shared library.
-add_library(unwind_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
-cxx_add_warning_flags(unwind_shared_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
-if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
-  target_compile_options(unwind_shared_objects PRIVATE /GR-)
-else()
-  target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
-endif()
-target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_shared_objects
-  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
-  PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
-set_target_properties(unwind_shared_objects
-  PROPERTIES
-    CXX_EXTENSIONS OFF
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-    COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
-)
-if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
-  set_target_properties(unwind_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
-endif()
+if (LIBUNWIND_SUPPORTS_SHARED_LIBRARY)
+  add_library(unwind_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
+  cxx_add_warning_flags(unwind_shared_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
+  if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
+    target_compile_options(unwind_shared_objects PRIVATE /GR-)
+  else()
+    target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
+  endif()
+  target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
+  target_link_libraries(unwind_shared_objects
+    PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+    PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
+  set_target_properties(unwind_shared_objects
+    PROPERTIES
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD 17
+      CXX_STANDARD_REQUIRED ON
+      COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
+  )
+  if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE)
+    set_target_properties(unwind_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
+  endif()
 
-add_library(unwind_shared SHARED)
-target_link_libraries(unwind_shared PUBLIC unwind_shared_objects runtimes-libc-shared)
-set_target_properties(unwind_shared
-  PROPERTIES
-    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
-    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-    LINKER_LANGUAGE C
-    OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
-    VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
-    SOVERSION   "1"
-)
+  add_library(unwind_shared SHARED)
+  target_link_libraries(unwind_shared PUBLIC unwind_shared_objects runtimes-libc-shared)
+  set_target_properties(unwind_shared
+    PROPERTIES
+      EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
+      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+      LINKER_LANGUAGE C
+      OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
+      VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
+      SOVERSION   "1"
+  )
+endif(LIBUNWIND_SUPPORTS_SHARED_LIBRARY)
 
 # Build the static library.
 add_library(unwind_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
@@ -200,14 +202,14 @@ set_target_properties(unwind_static
 
 # Add a meta-target for both libraries.
 add_custom_target(unwind)
-if (LIBUNWIND_ENABLE_SHARED)
+if (LIBUNWIND_ENABLE_SHARED AND TARGET unwind_shared)
   add_dependencies(unwind unwind_shared)
 endif()
 if (LIBUNWIND_ENABLE_STATIC)
   add_dependencies(unwind unwind_static)
 endif()
 
-if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
+if (LIBUNWIND_INSTALL_SHARED_LIBRARY AND TARGET unwind_shared)
   install(TARGETS unwind_shared
     ARCHIVE DESTINATION ${LIBUNWIND_INSTALL_LIBRARY_DIR} COMPONENT unwind
     LIBRARY DESTINATION ${LIBUNWIND_INSTALL_LIBRARY_DIR} COMPONENT unwind

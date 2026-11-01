@@ -37,7 +37,7 @@ struct TargetToTargetFeaturesPass
     if (initializeLLVMTargets)
       LLVM::detail::initializeBackendsOnce();
 
-    auto targetAttr = op->getAttrOfType<LLVM::TargetAttr>(
+    auto targetAttr = op->getDiscardableAttrOfType<LLVM::TargetAttr>(
         LLVM::LLVMDialect::getTargetAttrName());
     if (!targetAttr) {
       op->emitError() << "no LLVM::TargetAttr attribute at key \""
@@ -56,12 +56,12 @@ struct TargetToTargetFeaturesPass
     llvm::MCSubtargetInfo const &subTargetInfo =
         (*targetMachine)->getMCSubtargetInfo();
 
-    const std::vector<llvm::SubtargetFeatureKV> enabledFeatures =
+    const std::vector<const llvm::SubtargetFeatureKV *> enabledFeatures =
         subTargetInfo.getEnabledProcessorFeatures();
 
     auto plussedFeatures = llvm::map_to_vector(
-        enabledFeatures, [](llvm::SubtargetFeatureKV feature) {
-          return std::string("+") + feature.Key;
+        enabledFeatures, [](const llvm::SubtargetFeatureKV *feature) {
+          return std::string("+") + feature->key();
         });
 
     auto plussedFeaturesRefs = llvm::map_to_vector(
@@ -70,10 +70,12 @@ struct TargetToTargetFeaturesPass
     auto fullTargetFeaturesAttr =
         LLVM::TargetFeaturesAttr::get(&getContext(), plussedFeaturesRefs);
 
-    auto updatedTargetAttr =
-        LLVM::TargetAttr::get(&getContext(), targetAttr.getTriple(),
-                              targetAttr.getChip(), fullTargetFeaturesAttr);
-
-    op->setAttr(LLVM::LLVMDialect::getTargetAttrName(), updatedTargetAttr);
+    auto queryOp = dyn_cast<DLTIQueryOpInterface>(op);
+    if (!queryOp ||
+        failed(queryOp.setDlti(StringAttr::get(&getContext(), "features"),
+                               fullTargetFeaturesAttr))) {
+      op->emitError() << "failed to update DLTI target features";
+      return signalPassFailure();
+    }
   }
 };

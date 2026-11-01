@@ -1,0 +1,8 @@
+{
+  "members": [],
+  "namespace": {
+    "kind": "MultiArchStaticLibrary",
+    "name": "otherlib"
+  },
+  "type": "MultiArchStaticLibrary"
+}

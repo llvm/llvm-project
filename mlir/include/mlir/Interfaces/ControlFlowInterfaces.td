@@ -72,11 +72,11 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
       }],
       "::std::optional<::mlir::BlockArgument>", "getSuccessorBlockArgument",
       (ins "unsigned":$operandIndex), [{
-        ::mlir::Operation *opaqueOp = $_op;
-        for (unsigned i = 0, e = opaqueOp->getNumSuccessors(); i != e; ++i) {
+        auto branch = ::mlir::cast<::mlir::BranchOpInterface>(*$_raw_op);
+        for (unsigned i = 0, e = $_raw_op->getNumSuccessors(); i != e; ++i) {
           if (::std::optional<::mlir::BlockArgument> arg = ::mlir::detail::getBranchSuccessorArgument(
-                $_op.getSuccessorOperands(i), operandIndex,
-                opaqueOp->getSuccessor(i)))
+                branch.getSuccessorOperands(i), operandIndex,
+                $_raw_op->getSuccessor(i)))
             return arg;
         }
         return ::std::nullopt;
@@ -93,6 +93,9 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
     InterfaceMethod<[{
         This method is called to compare types along control-flow edges. By
         default, the types are checked as equal.
+
+        Note: Operations that do not support a certain type for successor
+        operands at all should return "false" if `lhs` / `rhs` is that type.
       }],
       "bool", "areTypesCompatible",
       (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],

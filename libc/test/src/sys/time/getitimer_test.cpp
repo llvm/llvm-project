@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_time_macros.h"
 #include "hdr/types/struct_itimerval.h"
 #include "src/sys/time/getitimer.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -23,7 +24,7 @@ TEST_F(LlvmLibcSysTimeGetitimerTest, SmokeTest) {
   timer.it_interval.tv_sec = -1;
   timer.it_interval.tv_usec = -1;
 
-  ASSERT_THAT(LIBC_NAMESPACE::getitimer(0, &timer),
+  ASSERT_THAT(LIBC_NAMESPACE::getitimer(ITIMER_REAL, &timer),
               returns(EQ(0)).with_errno(EQ(0)));
 
   ASSERT_TRUE(timer.it_value.tv_sec == 0);

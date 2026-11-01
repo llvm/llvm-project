@@ -14,13 +14,13 @@ body:             |
     ; CHECK-LABEL: name: merge_unmerge
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:_(s64) = COPY $x0
-    %a:_(s32), %b:_(s32) = G_UNMERGE_VALUES %0
-    %merge:_(s64) = G_MERGE_VALUES %a, %b
-    $x0 = COPY %merge(s64)
+    %0:_(i64) = COPY $x0
+    %a:_(i32), %b:_(i32) = G_UNMERGE_VALUES %0
+    %merge:_(i64) = G_MERGE_VALUES %a, %b
+    $x0 = COPY %merge(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -37,15 +37,15 @@ body:             |
     ; CHECK-LABEL: name: merge_unmerge_mismatched_order
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: %b:_(s32), %a:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: %merge:_(s64) = G_MERGE_VALUES %a(s32), %b(s32)
-    ; CHECK-NEXT: $x0 = COPY %merge(s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: %b:_(i32), %a:_(i32) = G_UNMERGE_VALUES [[COPY]](i64)
+    ; CHECK-NEXT: %merge:_(i64) = G_MERGE_VALUES %a(i32), %b(i32)
+    ; CHECK-NEXT: $x0 = COPY %merge(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:_(s64) = COPY $x0
-    %b:_(s32), %a:_(s32) = G_UNMERGE_VALUES %0
-    %merge:_(s64) = G_MERGE_VALUES %a, %b
-    $x0 = COPY %merge(s64)
+    %0:_(i64) = COPY $x0
+    %b:_(i32), %a:_(i32) = G_UNMERGE_VALUES %0
+    %merge:_(i64) = G_MERGE_VALUES %a, %b
+    $x0 = COPY %merge(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -62,15 +62,15 @@ body:             |
     ; CHECK-LABEL: name: merge_unmerge_mismatched_num_defs
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $q0
-    ; CHECK-NEXT: %a:_(s32), %b:_(s32), %c:_(s32), %d:_(s32) = G_UNMERGE_VALUES [[COPY]](s128)
-    ; CHECK-NEXT: %merge:_(s64) = G_MERGE_VALUES %a(s32), %b(s32)
-    ; CHECK-NEXT: $x0 = COPY %merge(s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
+    ; CHECK-NEXT: %a:_(i32), %b:_(i32), %c:_(i32), %d:_(i32) = G_UNMERGE_VALUES [[COPY]](i128)
+    ; CHECK-NEXT: %merge:_(i64) = G_MERGE_VALUES %a(i32), %b(i32)
+    ; CHECK-NEXT: $x0 = COPY %merge(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:_(s128) = COPY $q0
-    %a:_(s32), %b:_(s32), %c:_(s32), %d:_(s32) = G_UNMERGE_VALUES %0
-    %merge:_(s64) = G_MERGE_VALUES %a, %b
-    $x0 = COPY %merge(s64)
+    %0:_(i128) = COPY $q0
+    %a:_(i32), %b:_(i32), %c:_(i32), %d:_(i32) = G_UNMERGE_VALUES %0
+    %merge:_(i64) = G_MERGE_VALUES %a, %b
+    $x0 = COPY %merge(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -87,14 +87,14 @@ body:             |
     ; CHECK-LABEL: name: merge_to_zext
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %v:_(s32) = COPY $w0
-    ; CHECK-NEXT: %merge:_(s64) = G_ZEXT %v(s32)
-    ; CHECK-NEXT: $x0 = COPY %merge(s64)
+    ; CHECK-NEXT: %v:_(i32) = COPY $w0
+    ; CHECK-NEXT: %merge:_(i64) = G_ZEXT %v(i32)
+    ; CHECK-NEXT: $x0 = COPY %merge(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %v:_(s32) = COPY $w0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %merge:_(s64) = G_MERGE_VALUES %v, %zero
-    $x0 = COPY %merge(s64)
+    %v:_(i32) = COPY $w0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %merge:_(i64) = G_MERGE_VALUES %v, %zero
+    $x0 = COPY %merge(i64)
     RET_ReallyLR implicit $x0
 
 ...

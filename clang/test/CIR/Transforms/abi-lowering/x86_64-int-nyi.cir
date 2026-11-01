@@ -1,0 +1,19 @@
+// RUN: not cir-opt %s -cir-call-conv-lowering=target=x86_64 2>&1 | FileCheck %s
+
+!i96 = !cir.int<s, 96>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<i128, dense<128>: vector<2xi64>>>
+} {
+
+  // A non-bitint integer of intermediate width (65..127) is rejected: only
+  // widths up to 64 and exactly 128 are accepted.
+  cir.func @take_i96(%arg0: !i96) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.int<s, 96>
+}

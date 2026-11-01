@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu9.0a -filetype=null %s 2>&1 | FileCheck %s
 
 ; Make sure illegal type uses are correctly diagnosed
 

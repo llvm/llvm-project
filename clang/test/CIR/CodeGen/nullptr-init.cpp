@@ -25,9 +25,9 @@ void t1() {
 // CIR-NEXT: }
 
 // LLVM:      define{{.*}} @_Z2t1v()
-// LLVM-NEXT:     %[[P1:.*]] = alloca ptr, i64 1, align 8
-// LLVM-NEXT:     %[[P2:.*]] = alloca ptr, i64 1, align 8
-// LLVM-NEXT:     %[[P3:.*]] = alloca ptr, i64 1, align 8
+// LLVM-NEXT:     %[[P1:.*]] = alloca ptr, align 8
+// LLVM-NEXT:     %[[P2:.*]] = alloca ptr, align 8
+// LLVM-NEXT:     %[[P3:.*]] = alloca ptr, align 8
 // LLVM-NEXT:     store ptr null, ptr %[[P1]], align 8
 // LLVM-NEXT:     store ptr null, ptr %[[P2]], align 8
 // LLVM-NEXT:     store ptr null, ptr %[[P3]], align 8

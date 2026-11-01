@@ -27,7 +27,9 @@ module second { header "second.h" }
 
 // RUN: clang-scan-deps -format experimental-full -o %t/result.json \
 // RUN:   -- %clang -fmodules -fmodules-cache-path=%t/cache -I %t/zeroth -I %t/first -I %t/second -c %t/tu.m -o %t/tu.o
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-modulemap-file,command-line,context-hash,file-deps,link-libraries,name,clang-context-hash,clang-module-deps,executable,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -90,6 +92,7 @@ module second { header "second.h" }
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/zeroth/module.modulemap",
 // CHECK-NEXT:       "command-line": [
 // CHECK-NOT:          "-fmodule-map-file=[[PREFIX]]/second/module.modulemap"
+// CHECK:              "-fmodule-map-file=[[PREFIX]]/second/second.modulemap"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [

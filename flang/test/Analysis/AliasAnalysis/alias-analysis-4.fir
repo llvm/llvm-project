@@ -28,9 +28,9 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
   func.func @_QMmPtest(%arg0: !fir.ref<!fir.array<42xf32>> {fir.bindc_name = "arg"}) {
     %c42 = arith.constant 42 : index
     %0 = fir.address_of(@_QMmEglbl) : !fir.ref<!fir.type<_QMmTt{array:!fir.array<42xf32>}>>
-    %1:2 = hlfir.declare %0 {uniq_name = "_QMmEglbl"} : (!fir.ref<!fir.type<_QMmTt{array:!fir.array<42xf32>}>>) -> (!fir.ref<!fir.type<_QMmTt{array:!fir.array<42xf32>}>>, !fir.ref<!fir.type<_QMmTt{array:!fir.array<42xf32>}>>)
+    %1:2 = hlfir.declare %0 uniq_name("_QMmEglbl") : (!fir.ref<!fir.type<_QMmTt{array:!fir.array<42xf32>}>>) -> (!fir.ref<!fir.type<_QMmTt{array:!fir.array<42xf32>}>>, !fir.ref<!fir.type<_QMmTt{array:!fir.array<42xf32>}>>)
     %2 = fir.shape %c42 : (index) -> !fir.shape<1>
-    %3:2 = hlfir.declare %arg0(%2) {uniq_name = "_QMmFtestEarg", test.ptr = "arg"} : (!fir.ref<!fir.array<42xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xf32>>, !fir.ref<!fir.array<42xf32>>)
+    %3:2 = hlfir.declare %arg0(%2) uniq_name("_QMmFtestEarg") {test.ptr = "arg"} : (!fir.ref<!fir.array<42xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xf32>>, !fir.ref<!fir.array<42xf32>>)
     %4 = hlfir.designate %1#0{"array"} shape %2 {test.ptr = "glbl%array"} : (!fir.ref<!fir.type<_QMmTt{array:!fir.array<42xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<42xf32>>
     hlfir.assign %3#0 to %4 : !fir.ref<!fir.array<42xf32>>, !fir.ref<!fir.array<42xf32>>
     return

@@ -3,11 +3,13 @@
 
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s -o %tmain.o
 # RUN: %clang %cflags -dwarf-5 %tmain.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections 2>&1 | FileCheck %s --check-prefix=BOLT
 # RUN: llvm-dwarfdump --debug-info -r 0 --debug-names %t.bolt > %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=CHECK %s
 
 ## This test checks that BOLT generates Entries for DW_AT_abstract_origin when it has cross cu reference.
+
+# BOLT-NOT: warning: DWARF unit from offset {{.*}} incl. to offset {{.*}} excl. tries to read DIEs at offset {{.*}}
 
 # CHECK: [[OFFSET1:0x[0-9a-f]*]]: Compile Unit
 # CHECK: [[OFFSET2:0x[0-9a-f]*]]: Compile Unit

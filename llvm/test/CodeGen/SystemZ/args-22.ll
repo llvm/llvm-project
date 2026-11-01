@@ -601,15 +601,15 @@ define %Ty4 @ret4() {
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lb %r0, 164(%r15)
 ; VECTOR-NEXT:    lh %r1, 166(%r15)
-; VECTOR-NEXT:    lb %r4, 200(%r15)
+; VECTOR-NEXT:    lb %r2, 200(%r15)
 ; VECTOR-NEXT:    lde %f0, 160(%r15)
-; VECTOR-NEXT:    l %r2, 168(%r15)
-; VECTOR-NEXT:    lg %r3, 176(%r15)
+; VECTOR-NEXT:    l %r3, 168(%r15)
+; VECTOR-NEXT:    lg %r4, 176(%r15)
 ; VECTOR-NEXT:    vl %v1, 184(%r15), 3
-; VECTOR-NEXT:    stc %r4, 40(%r13)
+; VECTOR-NEXT:    stc %r2, 40(%r13)
 ; VECTOR-NEXT:    vst %v1, 24(%r13), 3
-; VECTOR-NEXT:    stg %r3, 16(%r13)
-; VECTOR-NEXT:    st %r2, 8(%r13)
+; VECTOR-NEXT:    stg %r4, 16(%r13)
+; VECTOR-NEXT:    st %r3, 8(%r13)
 ; VECTOR-NEXT:    sth %r1, 6(%r13)
 ; VECTOR-NEXT:    stc %r0, 4(%r13)
 ; VECTOR-NEXT:    ste %f0, 0(%r13)

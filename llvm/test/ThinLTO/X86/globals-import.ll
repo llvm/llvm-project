@@ -18,11 +18,11 @@
 ; IMPORT: @baz.llvm.0 = internal constant i32 10, align 4
 
 ; PROMOTE1: @baz.llvm.0 = hidden constant i32 10, align 4
-; PROMOTE1: define weak_odr i32 @foo() {
+; PROMOTE1: define weak_odr i32 @foo()
 
 ; Second copy of IR object should not have any symbols imported/promoted.
 ; PROMOTE2: @baz = internal constant i32 10, align 4
-; PROMOTE2: define available_externally i32 @foo() {
+; PROMOTE2: define available_externally i32 @foo()
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"

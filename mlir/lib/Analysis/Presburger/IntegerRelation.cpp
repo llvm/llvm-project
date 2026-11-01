@@ -2573,6 +2573,9 @@ void IntegerRelation::compose(const IntegerRelation &rel) {
 
   // Project out B in R1.
   convertVarKind(VarKind::Range, 0, numBVars, VarKind::Local);
+
+  // Eliminate local variables
+  removeRedundantLocalVars();
 }
 
 void IntegerRelation::applyDomain(const IntegerRelation &rel) {
@@ -2741,7 +2744,9 @@ void IntegerRelation::print(raw_ostream &os) const {
   os << '\n';
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void IntegerRelation::dump() const { print(llvm::errs()); }
+#endif
 
 unsigned IntegerPolyhedron::insertVar(VarKind kind, unsigned pos,
                                       unsigned num) {

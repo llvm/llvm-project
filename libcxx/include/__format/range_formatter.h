@@ -19,10 +19,10 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/buffer.h>
-#include <__format/concepts.h>
 #include <__format/fmt_pair_like.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
+#include <__format/formattable.h>
 #include <__format/formatter.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
@@ -34,9 +34,9 @@
 #include <__type_traits/remove_cvref.h>
 #include <string_view>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _CharT = char>
   requires same_as<remove_cvref_t<_Tp>, _Tp> && formattable<_Tp, _CharT>
@@ -207,7 +207,8 @@ struct range_formatter {
     return ranges::copy(__closing_bracket_, __ctx.out()).out;
   }
 
-  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__left};
+  __format_spec::__parser<_CharT> __parser_ = {
+      __format_spec::__parser_data<_CharT>{.__alignment_ = __format_spec::__alignment::__left}};
 
 private:
   template <contiguous_iterator _Iterator>
@@ -260,8 +261,8 @@ private:
   basic_string_view<_CharT> __closing_bracket_ = _LIBCPP_STATICALLY_WIDEN(_CharT, "]");
 };
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___FORMAT_RANGE_FORMATTER_H

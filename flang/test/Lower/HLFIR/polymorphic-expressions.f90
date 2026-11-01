@@ -20,7 +20,7 @@ subroutine test1(a)
   call callee(spread(a, 1, 2))
 end subroutine test1
 ! CHECK-LABEL:   func.func @_QPtest1(
-! CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = ".tmp.intrinsic_result"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>>, !fir.shift<1>) -> (!fir.class<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>)
+! CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name(".tmp.intrinsic_result") : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>>, !fir.shift<1>) -> (!fir.class<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>)
 ! CHECK:           %[[VAL_22:.*]] = arith.constant true
 ! CHECK:           %[[VAL_23:.*]] = hlfir.as_expr %[[VAL_21]]#0 move %[[VAL_22]] : (!fir.class<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>, i1) -> !hlfir.expr<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>?>
 ! CHECK:           %[[VAL_24:.*]] = arith.constant 0 : index

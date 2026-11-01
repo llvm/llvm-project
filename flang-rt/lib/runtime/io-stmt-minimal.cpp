@@ -9,8 +9,8 @@
 // Implements the subset of the I/O statement API needed for basic
 // list-directed output (PRINT *) of intrinsic types.
 
-#include "unit.h"
 #include "flang-rt/runtime/io-stmt.h"
+#include "flang-rt/runtime/unit.h"
 #include <algorithm>
 
 namespace Fortran::runtime::io {

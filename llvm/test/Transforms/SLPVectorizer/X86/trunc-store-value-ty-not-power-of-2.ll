@@ -64,7 +64,7 @@ define void @test_8_trunc_i24_to_i8(i24 %x, ptr %A) {
 ; CHECK-LABEL: define void @test_8_trunc_i24_to_i8(
 ; CHECK-SAME: i24 [[X:%.*]], ptr [[A:%.*]]) {
 ; CHECK-NEXT:    [[T:%.*]] = trunc i24 [[X]] to i8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[T]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    store <8 x i8> [[TMP2]], ptr [[A]], align 1
 ; CHECK-NEXT:    ret void
@@ -92,7 +92,7 @@ define void @test_4_trunc_i24_to_i16(i24 %x, ptr %A) {
 ; CHECK-LABEL: define void @test_4_trunc_i24_to_i16(
 ; CHECK-SAME: i24 [[X:%.*]], ptr [[A:%.*]]) {
 ; CHECK-NEXT:    [[T:%.*]] = trunc i24 [[X]] to i16
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[T]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[A]], align 1
 ; CHECK-NEXT:    ret void

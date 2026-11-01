@@ -7,7 +7,7 @@ subroutine f00
 end
 
 subroutine f01
-  !ERROR: At most one GRAPH_ID clause can appear on the TASKGRAPH directive
+  !ERROR: At most one GRAPH_ID clause can appear on TASKGRAPH directive
   !$omp taskgraph graph_id(1) graph_id(2)
   !$omp end taskgraph
 end

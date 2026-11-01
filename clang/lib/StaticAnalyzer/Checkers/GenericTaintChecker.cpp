@@ -866,7 +866,7 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
   if (auto N = ArgcSVal.getAs<NonLoc>()) {
     ConstraintManager &CM = C.getConstraintManager();
     // The upper bound is the ARG_MAX on an arbitrary Linux
-    // to model that is is typically smaller than INT_MAX.
+    // to model that is typically smaller than INT_MAX.
     State = CM.assumeInclusiveRange(State, *N, llvm::APSInt::getUnsigned(1),
                                     llvm::APSInt::getUnsigned(2097152), true);
   }

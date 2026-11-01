@@ -19,9 +19,9 @@ int test_agg_cond(int a0, struct s6 a1, struct s6 a2) {
 // CIR:  %[[LOAD_A0:.*]] = cir.load{{.*}} %[[A0]] : !cir.ptr<!s32i>, !s32i
 // CIR:  %[[COND:.*]] = cir.cast int_to_bool %[[LOAD_A0]] : !s32i -> !cir.bool
 // CIR:  cir.if %[[COND]] {
-// CIR:    cir.copy %[[A1]] to %[[TMP]] : !cir.ptr<!rec_s6>
+// CIR:    cir.copy %[[A1]] align(4) to %[[TMP]] align(4) : !cir.ptr<!rec_s6>
 // CIR:  } else {
-// CIR:    cir.copy %[[A2]] to %[[TMP]] : !cir.ptr<!rec_s6>
+// CIR:    cir.copy %[[A2]] align(4) to %[[TMP]] align(4) : !cir.ptr<!rec_s6>
 // CIR:  }
 // CIR:  cir.get_member %[[TMP]][0] {name = "f0"} : !cir.ptr<!rec_s6> -> !cir.ptr<!s32i>
 
@@ -30,10 +30,10 @@ int test_agg_cond(int a0, struct s6 a1, struct s6 a2) {
 // LLVM:    %[[COND:.*]] = icmp ne i32 %[[LOAD_A0]], 0
 // LLVM:    br i1 %[[COND]], label %[[A1_PATH:.*]], label %[[A2_PATH:.*]]
 // LLVM:  [[A1_PATH]]:
-// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP:.*]], ptr {{.*}}, i64 4, i1 false)
+// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TMP:.*]], ptr align 4 {{.*}}, i64 4, i1 false)
 // LLVM:    br label %[[EXIT:.*]]
 // LLVM:  [[A2_PATH]]:
-// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP]], ptr {{.*}}, i64 4, i1 false)
+// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TMP]], ptr align 4 {{.*}}, i64 4, i1 false)
 // LLVM:    br label %[[EXIT]]
 // LLVM:  [[EXIT]]:
 // LLVM:    getelementptr {{.*}}, ptr %[[TMP]], i32 0, i32 0
@@ -70,12 +70,12 @@ int test_stmt_expr(int flag, struct s6 a1, struct s6 a2) {
 // CIR:    %[[STMT_TMP:.*]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_s6>
 // CIR:    cir.scope {
 // CIR:      %[[T:.*]] = cir.alloca "t" {{.*}} init : !cir.ptr<!rec_s6>
-// CIR:      cir.copy %[[A1]] to %[[T]] : !cir.ptr<!rec_s6>
+// CIR:      cir.copy %[[A1]] align(4) to %[[T]] align(4) : !cir.ptr<!rec_s6>
 // CIR:      cir.call @foo() : () -> ()
-// CIR:      cir.copy %[[T]] to %[[TMP]] : !cir.ptr<!rec_s6>
+// CIR:      cir.copy %[[T]] align(4) to %[[TMP]] align(4) : !cir.ptr<!rec_s6>
 // CIR:    }
 // CIR:  } else {
-// CIR:    cir.copy %[[A2]] to %[[TMP]] : !cir.ptr<!rec_s6>
+// CIR:    cir.copy %[[A2]] align(4) to %[[TMP]] align(4) : !cir.ptr<!rec_s6>
 // CIR:  }
 // CIR:  cir.get_member %[[TMP]][0] {name = "f0"} : !cir.ptr<!rec_s6> -> !cir.ptr<!s32i>
 
@@ -86,14 +86,14 @@ int test_stmt_expr(int flag, struct s6 a1, struct s6 a2) {
 // LLVM:  [[TRUE]]:
 // LLVM:    br label %[[STMT_BODY:.*]]
 // LLVM:  [[STMT_BODY]]:
-// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr %[[T:.*]], ptr {{.*}}, i64 4, i1 false)
+// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[T:.*]], ptr align 4 {{.*}}, i64 4, i1 false)
 // LLVM:    call void @foo()
-// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP:.*]], ptr %[[T]], i64 4, i1 false)
+// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TMP:.*]], ptr align 4 %[[T]], i64 4, i1 false)
 // LLVM:    br label %[[JOIN_FROM_TRUE:.*]]
 // LLVM:  [[JOIN_FROM_TRUE]]:
 // LLVM:    br label %[[EXIT:.*]]
 // LLVM:  [[FALSE]]:
-// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP]], ptr {{.*}}, i64 4, i1 false)
+// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TMP]], ptr align 4 {{.*}}, i64 4, i1 false)
 // LLVM:    br label %[[EXIT]]
 // LLVM:  [[EXIT]]:
 // LLVM:    getelementptr inbounds nuw %struct.s6, ptr %[[TMP]], i32 0, i32 0

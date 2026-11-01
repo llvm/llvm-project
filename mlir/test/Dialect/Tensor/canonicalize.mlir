@@ -162,6 +162,26 @@ func.func @infer_concat_return_type(%arg0: tensor<5x12xi32>, %arg1: tensor<?x12x
 
 // -----
 
+// ConcatOp genuinely merges data from multiple operands (unlike a plain
+// shape-refining cast), so `ConcatOp::inferResultType` / `InferConcatOperandTypes`
+// intentionally do NOT try to propagate an operand's encoding onto the
+// refined types
+// CHECK-LABEL: concat_drops_encoding
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<3x?xi32, "abc">
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xi32, "abc">
+//       CHECK:   %[[CAST0:.+]] = tensor.cast %[[ARG0]] : tensor<3x?xi32, "abc"> to tensor<3x?xi32>
+//       CHECK:   %[[CAST1:.+]] = tensor.cast %[[ARG1]] : tensor<?x?xi32, "abc"> to tensor<3x?xi32>
+//       CHECK:   %[[CONCAT:.+]] = tensor.concat dim(1) %[[CAST0]], %[[CAST1]] : (tensor<3x?xi32>, tensor<3x?xi32>) -> tensor<3x?xi32>
+//       CHECK:   tensor.cast %[[CONCAT]] : tensor<3x?xi32> to tensor<3x?xi32, "abc">
+func.func @concat_drops_encoding(
+    %a: tensor<3x?xi32, "abc">, %b: tensor<?x?xi32, "abc">) -> tensor<3x?xi32, "abc"> {
+  %r = tensor.concat dim(1) %a, %b
+      : (tensor<3x?xi32, "abc">, tensor<?x?xi32, "abc">) -> tensor<3x?xi32, "abc">
+  return %r : tensor<3x?xi32, "abc">
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_extract
 func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>, i32) {
   %const_0 = arith.constant 0 : index
@@ -202,6 +222,101 @@ func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>, i32
 
   // CHECK-NEXT: return [[C4]], [[CM2]], [[C0]], [[C64]], [[C5]], [[C6]]
   return %ext_1, %ext_2, %ext_3, %ext_4, %ext_5, %ext_6 : f32, f16, f16, i32, complex<f32>, i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_dynamic(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_dynamic(%value: f32, %tensor: tensor<8xf32>, %i: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_dynamic_rank2(
+// CHECK-SAME: %[[VALUE:.*]]: i32,
+// CHECK-NEXT: return %[[VALUE]] : i32
+func.func @extract_after_insert_dynamic_rank2(%value: i32, %tensor: tensor<4x8xi32>, %i: index, %j: index) -> i32 {
+  %inserted = tensor.insert %value into %tensor[%i, %j] : tensor<4x8xi32>
+  %extracted = tensor.extract %inserted[%i, %j] : tensor<4x8xi32>
+  return %extracted : i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_mixed_indices(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_mixed_indices(%value: f32, %tensor: tensor<4x8xf32>, %i: index) -> f32 {
+  %c2 = arith.constant 2 : index
+  %inserted = tensor.insert %value into %tensor[%i, %c2] : tensor<4x8xf32>
+  %extracted = tensor.extract %inserted[%i, %c2] : tensor<4x8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_dynamic_shape(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_dynamic_shape(%value: f32, %tensor: tensor<?x?xf32>, %i: index, %j: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i, %j] : tensor<?x?xf32>
+  %extracted = tensor.extract %inserted[%i, %j] : tensor<?x?xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_other_index(
+// CHECK: %[[INSERTED:.*]] = tensor.insert
+// CHECK-NEXT: %[[EXTRACTED:.*]] = tensor.extract %[[INSERTED]]
+// CHECK-NEXT: return %[[EXTRACTED]] : f32
+func.func @extract_after_insert_other_index(%value: f32, %tensor: tensor<8xf32>, %i: index, %j: index) -> f32 {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%j] : tensor<8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_other_constant(
+// CHECK: %[[INSERTED:.*]] = tensor.insert
+// CHECK-NEXT: %[[EXTRACTED:.*]] = tensor.extract %[[INSERTED]]
+// CHECK-NEXT: return %[[EXTRACTED]] : f32
+func.func @extract_after_insert_other_constant(%value: f32, %tensor: tensor<4x8xf32>, %i: index) -> f32 {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %inserted = tensor.insert %value into %tensor[%i, %c1] : tensor<4x8xf32>
+  %extracted = tensor.extract %inserted[%i, %c2] : tensor<4x8xf32>
+  return %extracted : f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_shared_tensor(
+// CHECK-SAME: %[[VALUE:.*]]: f32,
+// CHECK: %[[INSERTED:.*]] = tensor.insert %[[VALUE]]
+// CHECK-NEXT: return %[[INSERTED]], %[[VALUE]] : tensor<8xf32>, f32
+func.func @extract_after_insert_shared_tensor(%value: f32, %tensor: tensor<8xf32>, %i: index) -> (tensor<8xf32>, f32) {
+  %inserted = tensor.insert %value into %tensor[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %inserted, %extracted : tensor<8xf32>, f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_after_insert_chain(
+// CHECK-SAME: %{{.*}}: f32, %[[VALUE:.*]]: f32,
+// CHECK-NEXT: return %[[VALUE]] : f32
+func.func @extract_after_insert_chain(%first: f32, %value: f32, %tensor: tensor<8xf32>, %i: index) -> f32 {
+  %first_insert = tensor.insert %first into %tensor[%i] : tensor<8xf32>
+  %inserted = tensor.insert %value into %first_insert[%i] : tensor<8xf32>
+  %extracted = tensor.extract %inserted[%i] : tensor<8xf32>
+  return %extracted : f32
 }
 
 // -----
@@ -407,6 +522,20 @@ func.func @from_elements_with_poison() -> tensor<1xindex> {
   %0 = ub.poison : index
   %1 = tensor.from_elements %0 : tensor<1xindex>
   return %1 : tensor<1xindex>
+}
+
+// -----
+
+// Ensure tensor.extract_slice with a poison offset doesn't crash. The poison
+// value is not a constant integer, so it must not be folded into a static
+// offset.
+// CHECK-LABEL: func @extract_slice_with_poison_offset
+func.func @extract_slice_with_poison_offset(%t: tensor<8xf32>) -> tensor<4xf32> {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: %[[SLICE:.*]] = tensor.extract_slice %arg0[%[[POISON]]] [4] [1]
+  %p = ub.poison : index
+  %s = tensor.extract_slice %t[%p] [4] [1] : tensor<8xf32> to tensor<4xf32>
+  return %s : tensor<4xf32>
 }
 
 // -----
@@ -806,6 +935,56 @@ func.func @rank_reducing_insert_slice_canonicalize(%arg0 : tensor<?x?xf32>, %arg
 
 // -----
 
+// The trailing unit dimension is rank-reduced in the inserted op. When the
+// first dimension folds to unit, make sure that the rank-reduction pattern
+// is preserved.
+// CHECK-LABEL: func @rank_reducing_insert_slice_preserves_shapes
+//  CHECK-SAME:   %[[SRC:.+]]: tensor<?x2xf32>
+//  CHECK-SAME:   %[[DST:.+]]: tensor<?x2x1xf32>
+//       CHECK:   %[[CAST:.+]] = tensor.cast %[[SRC]] : tensor<?x2xf32> to tensor<1x2xf32>
+//       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[CAST]] into %[[DST]][0, 0, 0] [1, 2, 1] [1, 1, 1]
+//  CHECK-SAME:     : tensor<1x2xf32> into tensor<?x2x1xf32>
+//       CHECK:   return %[[RESULT]]
+func.func @rank_reducing_insert_slice_preserves_shapes(
+    %src: tensor<?x2xf32>, %dst: tensor<?x2x1xf32>) -> tensor<?x2x1xf32> {
+  %c1 = arith.constant 1 : index
+  %r = tensor.insert_slice %src into %dst[0, 0, 0] [%c1, 2, 1] [1, 1, 1]
+      : tensor<?x2xf32> into tensor<?x2x1xf32>
+  return %r : tensor<?x2x1xf32>
+}
+
+// -----
+
+// A non-leading unit dimension is rank-reduced in the source op being inserted.
+// Verify that constant sizes are correctly folded through consecutive insert_slice
+// ops, preserving cast compatibility between all shapes.
+// CHECK-LABEL: func @rank_reducing_insert_slice_preserves_shapes_consecutive
+//  CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x2x2xf32>
+//  CHECK-SAME:   %[[INNER:[a-zA-Z0-9_]+]]: tensor<1x?x1x?xf32>
+//  CHECK-SAME:   %[[OUTER:[a-zA-Z0-9_]+]]: tensor<1x?x1x?xf32>
+//       CHECK:   %[[FIRST:.+]] = tensor.insert_slice %[[SRC]] into %[[INNER]][0, 0, 0, 0] [1, 2, 1, 2] [1, 1, 1, 1]
+//  CHECK-SAME:     : tensor<1x2x2xf32> into tensor<1x?x1x?xf32>
+//       CHECK:   %[[CAST:.+]] = tensor.cast %[[FIRST]] : tensor<1x?x1x?xf32> to tensor<1x2x1x2xf32>
+//       CHECK:   %[[SECOND:.+]] = tensor.insert_slice %[[CAST]] into %[[OUTER]][0, 0, 0, 0] [1, 2, 1, 2] [1, 1, 1, 1]
+//  CHECK-SAME:     : tensor<1x2x1x2xf32> into tensor<1x?x1x?xf32>
+//       CHECK:   return %[[SECOND]]
+func.func @rank_reducing_insert_slice_preserves_shapes_consecutive(
+    %src: tensor<1x2x2xf32>, %inner: tensor<1x?x1x?xf32>,
+    %outer: tensor<1x?x1x?xf32>) -> tensor<1x?x1x?xf32> {
+  %c2a = arith.constant 2 : index
+  %c2b = arith.constant 2 : index
+  %cast = tensor.cast %src : tensor<1x2x2xf32> to tensor<1x?x?xf32>
+  %first = tensor.insert_slice %cast into %inner[0, 0, 0, 0]
+      [1, %c2a, 1, %c2b] [1, 1, 1, 1]
+      : tensor<1x?x?xf32> into tensor<1x?x1x?xf32>
+  %second = tensor.insert_slice %first into %outer[0, 0, 0, 0]
+      [1, %c2a, 1, %c2b] [1, 1, 1, 1]
+      : tensor<1x?x1x?xf32> into tensor<1x?x1x?xf32>
+  return %second : tensor<1x?x1x?xf32>
+}
+
+// -----
+
 func.func @rank_reducing_slice_to_insert_slice_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
     %arg2 : index, %arg3 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 {
@@ -933,6 +1112,80 @@ func.func @insert_slice_cast_no_fold(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?
   %1 = tensor.insert_slice %0 into %arg1[%arg2, %arg3] [%arg4, 5] [%arg6, %arg7] : tensor<?x5xf32> into tensor<?x?xf32>
   // CHECK: return %[[RES]] : tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
+}
+
+// -----
+
+// Verify that the constant-argument folder for insert_slice preserves the
+// source's encoding on the inserted cast, rather than silently picking up the
+// destination's encoding (which is `none` here) while deriving the folded
+// source shape.
+// CHECK-LABEL: func @preserve_source_encoding_on_insert_slice_folding
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, "abc">
+//  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
+//   CHECK-NOT:   tensor.cast %{{.*}} : tensor<{{.*}}, "abc"> to tensor<{{[0-9x?]+}}xf16>
+//       CHECK:   %[[C:.+]] = tensor.cast %[[SRC]] : tensor<1x?x?x32xf16, "abc"> to tensor<1x48x16x32xf16, "abc">
+//       CHECK:   tensor.insert_slice %[[C]] into %[[DST]]
+func.func @preserve_source_encoding_on_insert_slice_folding(
+    %src: tensor<1x?x?x32xf16, "abc">,
+    %dst: tensor<1x1280x32x32xf16>) -> tensor<1x1280x32x32xf16> {
+  %c16 = arith.constant 16 : index
+  %sz1 = arith.constant 48 : index
+  %ivC = arith.constant 0 : index
+  %ivH = arith.constant 0 : index
+  %r = tensor.insert_slice %src into %dst[0, %ivC, %ivH, 0] [1, %sz1, %c16, 32] [1, 1, 1, 1]
+      : tensor<1x?x?x32xf16, "abc"> into tensor<1x1280x32x32xf16>
+  return %r : tensor<1x1280x32x32xf16>
+}
+
+// -----
+
+// Same invariant for the parallel_insert_slice variant.
+// CHECK-LABEL: func @preserve_source_encoding_on_parallel_insert_slice_folding
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, "abc">
+//  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
+//   CHECK-NOT:   tensor.cast %{{.*}} : tensor<{{.*}}, "abc"> to tensor<{{[0-9x?]+}}xf16>
+//       CHECK:   %[[C:.+]] = tensor.cast %[[SRC]] : tensor<1x?x?x32xf16, "abc"> to tensor<1x48x16x32xf16, "abc">
+//       CHECK:   tensor.parallel_insert_slice %[[C]] into
+func.func @preserve_source_encoding_on_parallel_insert_slice_folding(
+    %src: tensor<1x?x?x32xf16, "abc">,
+    %dst: tensor<1x1280x32x32xf16>,
+    %num_threads: index) -> tensor<1x1280x32x32xf16> {
+  %c16 = arith.constant 16 : index
+  %sz1 = arith.constant 48 : index
+  %r = scf.forall (%tid) in (%num_threads) shared_outs(%o = %dst) -> (tensor<1x1280x32x32xf16>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %src into %o[0, 0, 0, 0] [1, %sz1, %c16, 32] [1, 1, 1, 1]
+          : tensor<1x?x?x32xf16, "abc"> into tensor<1x1280x32x32xf16>
+    }
+  }
+  return %r : tensor<1x1280x32x32xf16>
+}
+
+// -----
+
+// `VerifiableTensorEncoding` case: insert_slice only refines the source shape
+// (dyn -> static), the source rank is unchanged. The sparse encoding's rank
+// invariant still holds on the refined shape, so `propagateEncoding` accepts
+// it and the inserted cast carries the sparse encoding through the folded op.
+#sparse_dense4_is = #sparse_tensor.encoding<{
+    map = (d0, d1, d2, d3) -> (d0 : dense, d1 : dense, d2 : dense, d3 : dense)
+}>
+// CHECK-LABEL: func @preserve_source_sparse_encoding_on_insert_slice_folding
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, #{{[a-z_0-9]+}}>
+//  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
+//       CHECK:   %[[C:.+]] = tensor.cast %[[SRC]] : tensor<1x?x?x32xf16, #{{[a-z_0-9]+}}> to tensor<1x48x16x32xf16, #{{[a-z_0-9]+}}>
+//       CHECK:   tensor.insert_slice %[[C]] into %[[DST]]
+func.func @preserve_source_sparse_encoding_on_insert_slice_folding(
+    %src: tensor<1x?x?x32xf16, #sparse_dense4_is>,
+    %dst: tensor<1x1280x32x32xf16>) -> tensor<1x1280x32x32xf16> {
+  %c16 = arith.constant 16 : index
+  %sz1 = arith.constant 48 : index
+  %ivC = arith.constant 0 : index
+  %ivH = arith.constant 0 : index
+  %r = tensor.insert_slice %src into %dst[0, %ivC, %ivH, 0] [1, %sz1, %c16, 32] [1, 1, 1, 1]
+      : tensor<1x?x?x32xf16, #sparse_dense4_is> into tensor<1x1280x32x32xf16>
+  return %r : tensor<1x1280x32x32xf16>
 }
 
 // -----
@@ -1087,6 +1340,23 @@ func.func @collapse_of_cast(%t: tensor<8x12x32xf32>) -> tensor<?x32xf32> {
   %0 = tensor.cast %t : tensor<8x12x32xf32> to tensor<?x?x?xf32>
   %1 = tensor.collapse_shape %0 [[0, 1], [2]] : tensor<?x?x?xf32> into tensor<?x?xf32>
   %2 = tensor.cast %1 : tensor<?x?xf32> to tensor<?x32xf32>
+  return %2 : tensor<?x32xf32>
+}
+
+// -----
+
+// CollapseShapeOp::inferCollapsedType changes the tensor rank, and (like
+// concat) we can't statically verify an arbitrary encoding still holds on
+// the collapsed shape when dynamic dims are involved, so the encoding is
+// dropped 
+// CHECK-LABEL: func.func @collapse_of_cast_drops_encoding(
+//  CHECK-SAME:     %[[IN:.*]]: tensor<8x12x32xf32, "abc">
+//       CHECK:   %[[COLLAPSE:.*]] = tensor.collapse_shape %[[IN]] {{\[}}[0, 1], [2]] : tensor<8x12x32xf32, "abc"> into tensor<96x32xf32>
+//       CHECK:   tensor.cast %[[COLLAPSE]] : tensor<96x32xf32> to tensor<?x32xf32>
+func.func @collapse_of_cast_drops_encoding(%t: tensor<8x12x32xf32, "abc">) -> tensor<?x32xf32> {
+  %0 = tensor.cast %t : tensor<8x12x32xf32, "abc"> to tensor<?x?x?xf32, "abc">
+  %1 = tensor.collapse_shape %0 [[0, 1], [2]] : tensor<?x?x?xf32, "abc"> into tensor<?x?xf32, "abc">
+  %2 = tensor.cast %1 : tensor<?x?xf32, "abc"> to tensor<?x32xf32>
   return %2 : tensor<?x32xf32>
 }
 
@@ -1757,6 +2027,26 @@ func.func @pad_fold_static(%arg0: tensor<?x64x?x?xf32>) -> tensor<?x?x?x?xf32> {
 
 // -----
 
+// A negative constant is not folded into the attribute, since the verifier
+// requires the attribute to be non-negative.
+
+// CHECK-LABEL: func @pad_nofold_negative_constant(
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<4xf32>
+//       CHECK:   %[[C:.*]] = arith.constant -2 : index
+//       CHECK:   tensor.pad %[[ARG0]] low[%[[C]]] high[0]
+//       CHECK:   } : tensor<4xf32> to tensor<?xf32>
+func.func @pad_nofold_negative_constant(%arg0: tensor<4xf32>, %pad_value: f32)
+    -> tensor<?xf32> {
+  %c = arith.constant -2 : index
+  %0 = tensor.pad %arg0 low[%c] high[0] {
+  ^bb0(%arg1: index):
+    tensor.yield %pad_value : f32
+  } : tensor<4xf32> to tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @pad_nofold_same_static_shape(
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<5x6xf32>
 //       CHECK:   %[[PAD:.*]] = tensor.pad
@@ -1769,6 +2059,52 @@ func.func @pad_nofold_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
           tensor.yield %cst : f32
   } : tensor<5x6xf32> to tensor<5x6xf32>
   return %0 : tensor<5x6xf32>
+}
+
+// -----
+
+// FoldSourceTensorCast (via PadOp::inferResultType) must preserve the source
+// encoding onto the refined pad result and the inserted result cast.
+// CHECK-LABEL:   func @pad_after_cast_preserves_encoding(
+//  CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32, "abc">
+//       CHECK:     %[[PADDED:.*]] = tensor.pad %[[INPUT]]
+//       CHECK:       : tensor<?x64x?x?xf32, "abc"> to tensor<?x64x?x?xf32, "abc">
+//       CHECK:     %[[CAST:.*]] = tensor.cast %[[PADDED]] : tensor<?x64x?x?xf32, "abc"> to tensor<?x?x?x?xf32, "abc">
+//       CHECK:     return %[[CAST]]
+func.func @pad_after_cast_preserves_encoding(
+    %arg0: tensor<?x64x?x?xf32, "abc">) -> tensor<?x?x?x?xf32, "abc"> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %dynamic = tensor.cast %arg0
+      : tensor<?x64x?x?xf32, "abc"> to tensor<?x?x?x?xf32, "abc">
+  %padded = tensor.pad %dynamic low[0, 0, 1, 1] high[0, 0, 1, 1] {
+    ^bb0(%a: index, %b: index, %c: index, %d: index):
+      tensor.yield %cst: f32
+  } : tensor<?x?x?x?xf32, "abc"> to tensor<?x?x?x?xf32, "abc">
+  return %padded: tensor<?x?x?x?xf32, "abc">
+}
+
+// -----
+
+// `VerifiableTensorEncoding` case: pad preserves rank, so the sparse encoding
+// stays valid on the refined shape and PadOp::inferResultType keeps it.
+#sparse_dense4b = #sparse_tensor.encoding<{
+    map = (d0, d1, d2, d3) -> (d0 : dense, d1 : dense, d2 : dense, d3 : dense)
+}>
+// CHECK-LABEL:   func @pad_after_cast_preserves_sparse_encoding(
+//  CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32, #{{[a-z_0-9]+}}>
+//       CHECK:     %[[PADDED:.*]] = tensor.pad %[[INPUT]]
+//       CHECK:       : tensor<?x64x?x?xf32, #{{[a-z_0-9]+}}> to tensor<?x64x?x?xf32, #{{[a-z_0-9]+}}>
+//       CHECK:     tensor.cast %[[PADDED]] : tensor<?x64x?x?xf32, #{{[a-z_0-9]+}}> to tensor<?x?x?x?xf32, #{{[a-z_0-9]+}}>
+func.func @pad_after_cast_preserves_sparse_encoding(
+    %arg0: tensor<?x64x?x?xf32, #sparse_dense4b>) -> tensor<?x?x?x?xf32, #sparse_dense4b> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %dynamic = tensor.cast %arg0
+      : tensor<?x64x?x?xf32, #sparse_dense4b> to tensor<?x?x?x?xf32, #sparse_dense4b>
+  %padded = tensor.pad %dynamic low[0, 0, 1, 1] high[0, 0, 1, 1] {
+    ^bb0(%a: index, %b: index, %c: index, %d: index):
+      tensor.yield %cst: f32
+  } : tensor<?x?x?x?xf32, #sparse_dense4b> to tensor<?x?x?x?xf32, #sparse_dense4b>
+  return %padded: tensor<?x?x?x?xf32, #sparse_dense4b>
 }
 
 // -----
@@ -1917,6 +2253,26 @@ func.func @pad_static_zero_cast(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> te
     } : tensor<?x?x?xf32> to tensor<2x3x4xf32>
 
   return %0 : tensor<2x3x4xf32>
+}
+
+// -----
+
+// FoldStaticPadding must preserve the pad's result encoding on the refined
+// (more-static) pad and the inserted result cast.
+// CHECK-LABEL: func @fold_static_padding_preserves_encoding(
+//  CHECK-SAME:     %[[SRC:.*]]: tensor<8x?xf32, "abc">
+//       CHECK:   %[[PADDED:.*]] = tensor.pad %[[SRC]] low[1, 2] high[1, 2]
+//       CHECK:     : tensor<8x?xf32, "abc"> to tensor<10x?xf32, "abc">
+//       CHECK:   tensor.cast %[[PADDED]] : tensor<10x?xf32, "abc"> to tensor<?x?xf32, "abc">
+func.func @fold_static_padding_preserves_encoding(
+    %arg0: tensor<8x?xf32, "abc">, %pv: f32) -> tensor<?x?xf32, "abc"> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %r = tensor.pad %arg0 low[%c1, %c2] high[%c1, %c2] {
+    ^bb0(%a: index, %b: index):
+      tensor.yield %pv: f32
+  } : tensor<8x?xf32, "abc"> to tensor<?x?xf32, "abc">
+  return %r : tensor<?x?xf32, "abc">
 }
 
 // -----
@@ -2216,6 +2572,32 @@ func.func @canonicalize_parallel_insert_slice_indices(
     }
   }
   return %2 : tensor<?x?xf32>
+}
+
+// -----
+
+// The trailing unit dimension is rank-reduced in the inserted op. When the
+// first dimension folds to unit, make sure that the rank-reduction pattern
+// is preserved.
+// CHECK-LABEL: func @canonicalize_rank_reducing_parallel_insert_slice
+//  CHECK-SAME:   %[[SRC:.+]]: tensor<?x2xf32>
+//       CHECK:   scf.forall
+//       CHECK:     %[[CAST:.+]] = tensor.cast %[[SRC]] : tensor<?x2xf32> to tensor<1x2xf32>
+//  CHECK-NEXT:     scf.forall.in_parallel {
+//  CHECK-NEXT:       tensor.parallel_insert_slice %[[CAST]] into %{{.+}}[0, 0, 0] [1, 2, 1] [1, 1, 1]
+//  CHECK-SAME:         : tensor<1x2xf32> into tensor<?x2x1xf32>
+func.func @canonicalize_rank_reducing_parallel_insert_slice(
+    %src: tensor<?x2xf32>, %dst: tensor<?x2x1xf32>,
+    %num_threads: index) -> tensor<?x2x1xf32> {
+  %c1 = arith.constant 1 : index
+  %r = scf.forall (%tid) in (%num_threads) shared_outs(%o = %dst)
+      -> (tensor<?x2x1xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %src into %o[0, 0, 0] [%c1, 2, 1] [1, 1, 1]
+          : tensor<?x2xf32> into tensor<?x2x1xf32>
+    }
+  }
+  return %r : tensor<?x2x1xf32>
 }
 
 // -----
@@ -2641,8 +3023,247 @@ func.func @partial_sink_expand_of_cast(%arg0 : tensor<10x10xf32>, %arg1 : index,
 // CHECK-LABEL:  func.func @partial_sink_expand_of_cast
 //       CHECK:   %[[CAST:.+]] = tensor.cast
 //  CHECK-SAME:     tensor<10x10xf32> to tensor<?x10xf32>
-//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]] 
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     output_shape [%{{.*}}, %{{.*}}, 10]
 //       CHECK:   %[[RES:.+]] = tensor.cast %[[EXPAND]]
 //  CHECK-SAME:     tensor<?x?x10xf32> to tensor<?x?x?xf32>
 //       CHECK:   return %[[RES]]
+
+// -----
+
+// ConvertToStaticExpandShape must carry the source's encoding onto the refined
+// cast-target and the (source-side) encoding of the new ExpandShapeOp result.
+// CHECK-LABEL:  func.func @sink_expand_of_cast_preserves_encoding
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape
+//  CHECK-SAME:     tensor<64xf32, "abc"> into tensor<8x8xf32, "abc">
+//       CHECK:   tensor.cast %[[EXPAND]] : tensor<8x8xf32, "abc"> to tensor<?x?xf32, "abc">
+func.func @sink_expand_of_cast_preserves_encoding(%t: tensor<64xf32, "abc">) -> tensor<?x?xf32, "abc"> {
+  %c = tensor.cast %t : tensor<64xf32, "abc"> to tensor<?xf32, "abc">
+  %c8 = arith.constant 8 : index
+  %c8b = arith.constant 8 : index
+  %e = tensor.expand_shape %c [[0, 1]] output_shape [%c8, %c8b]
+      : tensor<?xf32, "abc"> into tensor<?x?xf32, "abc">
+  return %e : tensor<?x?xf32, "abc">
+}
+
+// -----
+
+// `VerifiableTensorEncoding` case: expand_shape refined shapes keep the src's
+// and result's ranks respectively, so both sparse encodings pass their
+// (rank-based) `verifyEncoding` and are preserved.
+#sparse_v = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
+#sparse_m = #sparse_tensor.encoding<{
+    map = (d0, d1) -> (d0 : compressed, d1 : compressed)
+}>
+// CHECK-LABEL:  func.func @sink_expand_of_cast_preserves_sparse_encoding
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape
+//  CHECK-SAME:     tensor<64xf32, #{{[a-z_0-9]+}}> into tensor<8x8xf32, #{{[a-z_0-9]+}}>
+//       CHECK:   tensor.cast %[[EXPAND]] : tensor<8x8xf32, #{{[a-z_0-9]+}}> to tensor<?x?xf32, #{{[a-z_0-9]+}}>
+func.func @sink_expand_of_cast_preserves_sparse_encoding(
+    %t: tensor<64xf32, #sparse_v>) -> tensor<?x?xf32, #sparse_m> {
+  %c = tensor.cast %t : tensor<64xf32, #sparse_v> to tensor<?xf32, #sparse_v>
+  %c8a = arith.constant 8 : index
+  %c8b = arith.constant 8 : index
+  %e = tensor.expand_shape %c [[0, 1]] output_shape [%c8a, %c8b]
+      : tensor<?xf32, #sparse_v> into tensor<?x?xf32, #sparse_m>
+  return %e : tensor<?x?xf32, #sparse_m>
+}
+
+// -----
+
+// A negative constant in `output_shape` proves the op has no valid execution
+// (a dimension cannot be negative). `ConvertToStaticExpandShape` must decline
+// instead of building a RankedTensorType with a negative dimension.
+// CHECK-LABEL:  func.func @expand_shape_negative_output_shape
+//  CHECK-DAG:      %[[CNEG:.*]] = arith.constant -5 : index
+//  CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CNEG]], %[[C2]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_negative_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %cneg = arith.constant -5 : index
+  %c2 = arith.constant 2 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cneg, %c2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// `-1` used to be ShapedType::kDynamic; it is now an ordinary invalid
+// dimension (kDynamic == INT64_MIN), so it must take the same path.
+// CHECK-LABEL:  func.func @expand_shape_minus_one_output_shape
+//  CHECK-DAG:      %[[CNEG1:.*]] = arith.constant -1 : index
+//  CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CNEG1]], %[[C2]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_minus_one_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %cneg1 = arith.constant -1 : index
+  %c2 = arith.constant 2 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cneg1, %c2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// INT64_MIN is the dynamic sentinel value itself; it must not be mistaken
+// for a valid static dimension either.
+// CHECK-LABEL:  func.func @expand_shape_int64_min_output_shape
+//  CHECK-DAG:      %[[CMIN:.*]] = arith.constant -9223372036854775808 : index
+//  CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CMIN]], %[[C2]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_int64_min_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %cmin = arith.constant -9223372036854775808 : index
+  %c2 = arith.constant 2 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cmin, %c2]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// The negative value is produced by canonicalization itself (arith folding),
+// which is why the verifier cannot catch it: the value only becomes a
+// constant inside the very pass that runs this pattern.
+// CHECK-LABEL:  func.func @expand_shape_folded_negative_output_shape
+//  CHECK-DAG:      %[[C1:.*]] = arith.constant 1 : index
+//  CHECK-DAG:      %[[CNEG:.*]] = arith.constant -6 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1]] output_shape [%[[CNEG]], %[[C1]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_folded_negative_output_shape(%arg0: tensor<10xf32>)
+    -> tensor<?x?xf32> {
+  %c1 = arith.constant 1 : index
+  %c7 = arith.constant 7 : index
+  %cneg = arith.subi %c1, %c7 : index
+  %cast = tensor.cast %arg0 : tensor<10xf32> to tensor<?xf32>
+  %e = tensor.expand_shape %cast [[0, 1]] output_shape [%cneg, %c1]
+      : tensor<?xf32> into tensor<?x?xf32>
+  return %e : tensor<?x?xf32>
+}
+
+// -----
+
+// Issue-shaped case: the non-negative entries (10, 7) are staticizable on
+// their own, but bail-out must happen before any mutation, so nothing is
+// staticized at all. This distinguishes "decline the rewrite" from "staticize
+// what we can and keep the negative entry dynamic".
+// CHECK-LABEL:  func.func @expand_shape_no_partial_staticization
+//  CHECK-DAG:      %[[C7:.*]] = arith.constant 7 : index
+//  CHECK-DAG:      %[[C10:.*]] = arith.constant 10 : index
+//  CHECK-DAG:      %[[CNEG:.*]] = arith.constant -5 : index
+//       CHECK:      %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]] output_shape [%[[C10]], %[[C7]], %[[CNEG]]]
+//       CHECK:      return %[[EXPAND]]
+func.func @expand_shape_no_partial_staticization(%arg0: tensor<10x10xf32>)
+    -> tensor<?x?x?xf32> {
+  %c7 = arith.constant 7 : index
+  %c10 = arith.constant 10 : index
+  %cneg = arith.constant -5 : index
+  %cast = tensor.cast %arg0 : tensor<10x10xf32> to tensor<?x?xf32>
+  %e = tensor.expand_shape %cast [[0, 1], [2]] output_shape [%c10, %c7, %cneg]
+      : tensor<?x?xf32> into tensor<?x?x?xf32>
+  return %e : tensor<?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_condition(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<4xf32>, %[[B:[^:]+]]: tensor<4xf32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<4xf32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_condition(%p: i1, %a: tensor<4xf32>, %b: tensor<4xf32>) -> tensor<4xf32> {
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %b : tensor<4xi1>, tensor<4xf32>
+  return %x : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_multidimensional(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<2x4xi32>, %[[B:[^:]+]]: tensor<2x4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<2x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_multidimensional(%p: i1, %a: tensor<2x4xi32>, %b: tensor<2x4xi32>) -> tensor<2x4xi32> {
+  %m = tensor.splat %p : tensor<2x4xi1>
+  %x = arith.select %m, %a, %b : tensor<2x4xi1>, tensor<2x4xi32>
+  return %x : tensor<2x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_dynamic(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<?x4xi32>, %[[B:[^:]+]]: tensor<?x4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<?x4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_dynamic(%p: i1, %a: tensor<?x4xi32>, %b: tensor<?x4xi32>, %n: index) -> tensor<?x4xi32> {
+  %m = tensor.splat %p[%n] : tensor<?x4xi1>
+  %x = arith.select %m, %a, %b : tensor<?x4xi1>, tensor<?x4xi32>
+  return %x : tensor<?x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_rank_zero(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<i32>, %[[B:[^:]+]]: tensor<i32>
+// CHECK-NOT: tensor.splat
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<i32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]]
+func.func @select_splat_rank_zero(%p: i1, %a: tensor<i32>, %b: tensor<i32>) -> tensor<i32> {
+  %m = tensor.splat %p : tensor<i1>
+  %x = arith.select %m, %a, %b : tensor<i1>, tensor<i32>
+  return %x : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @select_splat_shared_mask(
+// CHECK-SAME: %[[P:[^:]+]]: i1, %[[A:[^:]+]]: tensor<4xi32>, %[[B:[^:]+]]: tensor<4xi32>
+// CHECK: %[[M:.*]] = tensor.splat %[[P]]
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : tensor<4xi32>
+// CHECK-NOT: arith.select
+// CHECK: return %[[X]], %[[M]]
+func.func @select_splat_shared_mask(%p: i1, %a: tensor<4xi32>, %b: tensor<4xi32>) -> (tensor<4xi32>, tensor<4xi1>) {
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %b : tensor<4xi1>, tensor<4xi32>
+  return %x, %m : tensor<4xi32>, tensor<4xi1>
+}
+
+// -----
+
+// An arbitrary tensor mask is not known to be a splat.
+// CHECK-LABEL: func.func @select_nonuniform_tensor(
+// CHECK-SAME: %[[P:[^:]+]]: tensor<4xi1>
+// CHECK: arith.select %[[P]], %{{.*}}, %{{.*}} : tensor<4xi1>, tensor<4xi32>
+func.func @select_nonuniform_tensor(%p: tensor<4xi1>, %a: tensor<4xi32>, %b: tensor<4xi32>) -> tensor<4xi32> {
+  %x = arith.select %p, %a, %b : tensor<4xi1>, tensor<4xi32>
+  return %x : tensor<4xi32>
+}
+
+// -----
+
+// Preserve the existing refinement of a select with a fully poisoned arm.
+// CHECK-LABEL: func.func @select_uniform_unselected_poison_tensor(
+// CHECK-SAME: %[[P:[^:]+]]: i1
+// CHECK-SAME: %[[A:[^:]+]]: tensor<4xi32>
+// CHECK-NOT: tensor.splat
+// CHECK-NOT: arith.select
+// CHECK: return %[[A]] : tensor<4xi32>
+func.func @select_uniform_unselected_poison_tensor(%p: i1, %a: tensor<4xi32>) -> tensor<4xi32> {
+  %bad = ub.poison : tensor<4xi32>
+  %m = tensor.splat %p : tensor<4xi1>
+  %x = arith.select %m, %a, %bad : tensor<4xi1>, tensor<4xi32>
+  return %x : tensor<4xi32>
+}

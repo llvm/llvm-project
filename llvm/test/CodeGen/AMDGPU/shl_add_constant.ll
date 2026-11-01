@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 

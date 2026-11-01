@@ -9,7 +9,7 @@ subroutine f00(x)
 end
 
 subroutine f01
-  !ERROR: At most one GRAPH_RESET clause can appear on the TASKGRAPH directive
+  !ERROR: At most one GRAPH_RESET clause can appear on TASKGRAPH directive
   !$omp taskgraph graph_reset(.true.) graph_reset(.false.)
   !$omp end taskgraph
 end

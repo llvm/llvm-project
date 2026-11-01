@@ -45,13 +45,16 @@ cl::opt<bool> skipExternalRttiDefinition(
                    "other compilation units"),
     cl::Hidden);
 
+/// Force setting the no-alias attribute on fuction arguments when possible.
+llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
+                                 llvm::cl::init(true));
+
 OptimizationLevel defaultOptLevel{OptimizationLevel::O0};
 
 codegenoptions::DebugInfoKind noDebugInfo{codegenoptions::NoDebugInfo};
 
 /// Optimizer Passes
 DisableOption(CfgConversion, "cfg-conversion", "disable FIR to CFG pass");
-DisableOption(FirAvc, "avc", "array value copy analysis and transformation");
 DisableOption(FirMao, "memory-allocation-opt",
               "memory allocation optimization");
 
@@ -61,7 +64,20 @@ cl::opt<bool> useOldAliasTags(
     cl::desc("Use a single TBAA tree for all functions and do not use "
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
-EnableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
+DisableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
+cl::opt<unsigned> loopTripCountVersioningMaxSectionExtent(
+    "loop-tripcount-versioning-max-section-extent",
+    cl::desc("largest declared array extent to version an innermost loop on; "
+             "0 disables"),
+    cl::init(32), cl::Hidden);
+cl::opt<unsigned> loopTripCountVersioningMaxUnrolledOps(
+    "loop-tripcount-versioning-max-unrolled-ops",
+    cl::desc("do not version a loop if declared extent times body size "
+             "exceeds this; 0 removes the limit"),
+    cl::init(300), cl::Hidden);
+EnableOption(AllocationPlacement, "allocation-placement",
+             "unified array allocation placement (experimental; replaces "
+             "stack-arrays and memory-allocation-opt)");
 
 /// CodeGen Passes
 DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");

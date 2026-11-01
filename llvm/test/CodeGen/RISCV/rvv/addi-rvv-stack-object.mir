@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass prolog-epilog %s -o - | FileCheck %s
 --- |
   declare void @extern(ptr) #0
   

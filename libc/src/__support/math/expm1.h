@@ -11,6 +11,7 @@
 
 #include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 #include "exp_constants.h"
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -126,13 +127,13 @@ LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 }
 
 #ifdef DEBUGDEBUG
-std::ostream &operator<<(std::ostream &OS, const DFloat128 &r) {
+LIBC_INLINE std::ostream &operator<<(std::ostream &OS, const DFloat128 &r) {
   OS << (r.sign == Sign::NEG ? "-(" : "(") << r.mantissa.val[0] << " + "
      << r.mantissa.val[1] << " * 2^64) * 2^" << r.exponent << "\n";
   return OS;
 }
 
-std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
+LIBC_INLINE std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
   OS << std::hexfloat << "(" << r.hi << " + " << r.lo << ")"
      << std::defaultfloat << "\n";
   return OS;

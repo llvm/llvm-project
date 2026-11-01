@@ -52,14 +52,13 @@ void SuspiciousMemoryComparisonCheck::check(
     if (PointeeType->isRecordType()) {
       if (const RecordDecl *RD =
               PointeeType->getAsRecordDecl()->getDefinition()) {
-        if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
-          if (!CXXDecl->isStandardLayout()) {
-            diag(CE->getBeginLoc(),
-                 "comparing object representation of non-standard-layout type "
-                 "%0; consider using a comparison operator instead")
-                << PointeeQualifiedType;
-            break;
-          }
+        if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD);
+            CXXDecl && !CXXDecl->isStandardLayout()) {
+          diag(CE->getBeginLoc(),
+               "comparing object representation of non-standard-layout type "
+               "%0; consider using a comparison operator instead")
+              << PointeeQualifiedType;
+          break;
         }
       }
     }

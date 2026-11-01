@@ -67,12 +67,11 @@ define i32 @szext_clamp_s32(i32 %a, i32 %b) {
 define i32 @szext_clamp_s32_ii() {
 ; CHECK-LABEL: szext_clamp_s32_ii(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, 3;
-; CHECK-NEXT:    szext.clamp.s32 %r2, %r1, 4;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    szext.clamp.s32 %r1, 3, 4;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %c = call i32 @llvm.nvvm.sext.clamp(i32 3, i32 4)
   ret i32 %c

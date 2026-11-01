@@ -10,10 +10,13 @@
 #define _LIBCPP___RANDOM_GAMMA_DISTRIBUTION_H
 
 #include <__config>
+#include <__math/exponential_functions.h>
+#include <__math/gamma.h>
+#include <__math/logarithms.h>
+#include <__math/roots.h>
 #include <__random/exponential_distribution.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
-#include <cmath>
 #include <iosfwd>
 #include <limits>
 
@@ -45,8 +48,8 @@ public:
     _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __alpha = 1, result_type __beta = 1)
         : __alpha_(__alpha), __beta_(__beta) {}
 
-    _LIBCPP_HIDE_FROM_ABI result_type alpha() const { return __alpha_; }
-    _LIBCPP_HIDE_FROM_ABI result_type beta() const { return __beta_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type alpha() const { return __alpha_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type beta() const { return __beta_; }
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__alpha_ == __y.__alpha_ && __x.__beta_ == __y.__beta_;
@@ -72,21 +75,21 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI result_type alpha() const { return __p_.alpha(); }
-  _LIBCPP_HIDE_FROM_ABI result_type beta() const { return __p_.beta(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type alpha() const { return __p_.alpha(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type beta() const { return __p_.beta(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::infinity(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::infinity(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(const gamma_distribution& __x, const gamma_distribution& __y) {
     return __x.__p_ == __y.__p_;
@@ -114,13 +117,13 @@ _RealType gamma_distribution<_RealType>::operator()(_URNG& __g, const param_type
       const result_type __v = __gen(__g);
       const result_type __w = __u * (1 - __u);
       if (__w != 0) {
-        const result_type __y = std::sqrt(__c / __w) * (__u - result_type(0.5));
+        const result_type __y = __math::sqrt(__c / __w) * (__u - result_type(0.5));
         __x                   = __b + __y;
         if (__x >= 0) {
           const result_type __z = 64 * __w * __w * __w * __v * __v;
           if (__z <= 1 - 2 * __y * __y / __x)
             break;
-          if (std::log(__z) <= 2 * (__b * std::log(__x / __b) - __y))
+          if (__math::log(__z) <= 2 * (__b * __math::log(__x / __b) - __y))
             break;
         }
       }
@@ -131,12 +134,12 @@ _RealType gamma_distribution<_RealType>::operator()(_URNG& __g, const param_type
       const result_type __u  = __gen(__g);
       const result_type __es = __egen(__g);
       if (__u <= 1 - __a) {
-        __x = std::pow(__u, 1 / __a);
+        __x = __math::pow(__u, 1 / __a);
         if (__x <= __es)
           break;
       } else {
-        const result_type __e = -std::log((1 - __u) / __a);
-        __x                   = std::pow(1 - __a + __a * __e, 1 / __a);
+        const result_type __e = -__math::log((1 - __u) / __a);
+        __x                   = __math::pow(1 - __a + __a * __e, 1 / __a);
         if (__x <= __e + __es)
           break;
       }

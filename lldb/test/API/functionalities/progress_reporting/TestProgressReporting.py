@@ -4,7 +4,7 @@ Test that we are able to broadcast and receive progress events from lldb
 import lldb
 
 import lldbsuite.test.lldbutil as lldbutil
-
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
@@ -24,12 +24,9 @@ class TestProgressReporting(TestBase):
         # trying to attach, but it's not going to be the event picked
         # up by checking with fetch_next_event, so go through all emitted
         # progress events and check that the waiting to attach one was emitted at all.
-        target.AttachToProcessWithName(
-            self.listener,
-            "wait-attach-progress-report",
-            False,
-            lldb.SBError(),
-        )
+        error = lldb.SBError()
+        target.Attach(lldb.SBAttachInfo(), error)
+        self.assertTrue(error.Fail())
         event = lldb.SBEvent()
         events = []
         while self.listener.GetNextEventForBroadcaster(self.broadcaster, event):

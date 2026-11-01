@@ -13,6 +13,9 @@
 /*
    any synopsis
 
+#include <initializer_list>
+#include <typeinfo>
+
 namespace std {
 
   class bad_any_cast : public bad_cast
@@ -85,7 +88,6 @@ namespace std {
 #else
 #  include <__config>
 #  include <__memory/construct_at.h>
-#  include <__new/allocate.h>
 #  include <__type_traits/add_cv_quals.h>
 #  include <__type_traits/add_pointer.h>
 #  include <__type_traits/conditional.h>
@@ -102,15 +104,18 @@ namespace std {
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
-#  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
 #  include <__utility/in_place.h>
 #  include <__utility/move.h>
 #  include <__utility/unreachable.h>
 #  include <__verbose_abort>
+#  include <version>
+
+// standard-mandated includes
+
+// [any.synop]
 #  include <initializer_list>
 #  include <typeinfo>
-#  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -130,9 +135,9 @@ public:
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 [[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_any_cast() {
 #    if _LIBCPP_HAS_EXCEPTIONS
@@ -430,10 +435,7 @@ struct _LargeHandler {
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI static _Tp& __create(any& __dest, _Args&&... __args) {
-    _Tp* __ptr = static_cast<_Tp*>(std::__libcpp_allocate<_Tp>(__element_count(1)));
-    std::__exception_guard __guard([&] { std::__libcpp_deallocate<_Tp>(__ptr, __element_count(1)); });
-    std::__construct_at(__ptr, std::forward<_Args>(__args)...);
-    __guard.__complete();
+    _Tp* __ptr        = ::new _Tp(std::forward<_Args>(__args)...);
     __dest.__s_.__ptr = __ptr;
     __dest.__h_       = &_LargeHandler::__handle;
     return *__ptr;
@@ -441,9 +443,7 @@ struct _LargeHandler {
 
 private:
   _LIBCPP_HIDE_FROM_ABI static void __destroy(any& __this) {
-    _Tp* __p = static_cast<_Tp*>(__this.__s_.__ptr);
-    std::__destroy_at(__p);
-    std::__libcpp_deallocate<_Tp>(__p, __element_count(1));
+    ::delete static_cast<_Tp*>(__this.__s_.__ptr);
     __this.__h_ = nullptr;
   }
 
@@ -552,32 +552,12 @@ template <class _ValueType>
   return nullptr;
 }
 
-#  endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 17
-#    include <chrono>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <concepts>
-#    include <cstdlib>
-#    include <iosfwd>
-#    include <iterator>
-#    include <memory>
-#    include <stdexcept>
-#    include <type_traits>
-#    include <variant>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
-#    include <cstring>
-#    include <limits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_ANY

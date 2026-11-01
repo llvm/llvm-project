@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve -mattr=+bf16 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve < %s | FileCheck %s
 
 ; This file checks that unpredicated load/store instructions to locals
 ; use the right instructions and offsets.

@@ -3,7 +3,7 @@
 ; RUN:     -riscv-v-vector-bits-min=-1 -riscv-v-slp-max-vf=0 \
 ; RUN:     | FileCheck %s
 ; RUN: opt < %s -passes=slp-vectorizer -S -mtriple=riscv64 -mattr=+v,+f \
-; RUN:     | FileCheck %s --check-prefix=DEFAULT
+; RUN:     | FileCheck %s
 
 define void @fp_add(ptr %dst, ptr %p, ptr %q) {
 ; CHECK-LABEL: define void @fp_add
@@ -14,15 +14,6 @@ define void @fp_add(ptr %dst, ptr %p, ptr %q) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
-;
-; DEFAULT-LABEL: define void @fp_add
-; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[Q]], align 4
-; DEFAULT-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[TMP0]], [[TMP1]]
-; DEFAULT-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    ret void
 ;
 entry:
   %e0 = load float, ptr %p, align 4
@@ -66,14 +57,6 @@ define void @fp_sub(ptr %dst, ptr %p) {
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
-; DEFAULT-LABEL: define void @fp_sub
-; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[TMP0]], splat (float 3.000000e+00)
-; DEFAULT-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    ret void
-;
 entry:
   %e0 = load float, ptr %p, align 4
   %pe1 = getelementptr inbounds float, ptr %p, i64 1
@@ -108,15 +91,6 @@ define void @fp_mul(ptr %dst, ptr %p, ptr %q) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
-;
-; DEFAULT-LABEL: define void @fp_mul
-; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[Q]], align 4
-; DEFAULT-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[TMP0]], [[TMP1]]
-; DEFAULT-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    ret void
 ;
 entry:
   %e0 = load float, ptr %p, align 4
@@ -160,14 +134,6 @@ define void @fp_div(ptr %dst, ptr %p) {
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
-; DEFAULT-LABEL: define void @fp_div
-; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = fdiv <4 x float> [[TMP0]], splat (float 1.050000e+01)
-; DEFAULT-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    ret void
-;
 entry:
   %e0 = load float, ptr %p, align 4
   %pe1 = getelementptr inbounds float, ptr %p, i64 1
@@ -204,15 +170,6 @@ define void @fp_max(ptr %dst, ptr %p, ptr %q) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
-;
-; DEFAULT-LABEL: define void @fp_max
-; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[Q]], align 4
-; DEFAULT-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
-; DEFAULT-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    ret void
 ;
 entry:
   %e0 = load float, ptr %p, align 4
@@ -258,14 +215,6 @@ define void @fp_min(ptr %dst, ptr %p) {
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
-; DEFAULT-LABEL: define void @fp_min
-; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> splat (float 1.250000e+00))
-; DEFAULT-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    ret void
-;
 entry:
   %e0 = load float, ptr %p, align 4
   %pe1 = getelementptr inbounds float, ptr %p, i64 1
@@ -301,14 +250,6 @@ define void @fp_convert(ptr %dst, ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[TMP0]])
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
-;
-; DEFAULT-LABEL: define void @fp_convert
-; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[TMP0]])
-; DEFAULT-NEXT:    store <4 x i32> [[TMP1]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    ret void
 ;
 entry:
   %e0 = load float, ptr %p, align 4

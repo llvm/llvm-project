@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "big-radix-floating-point.h"
-#include "flang/Common/bit-population-count.h"
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Decimal/binary-floating-point.h"
 #include "flang/Decimal/decimal.h"

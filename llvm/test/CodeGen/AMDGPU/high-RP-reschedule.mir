@@ -1,8 +1,8 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -passes=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -run-pass=machine-scheduler -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN-GCNTRACKER %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-misched -passes=machine-scheduler -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN-GCNTRACKER %s
+# RUN: llc -mtriple=amdgpu9.08 -verify-misched -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu9.08 -verify-misched -passes=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu9.08 -verify-misched -run-pass=machine-scheduler -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN-GCNTRACKER %s
+# RUN: llc -mtriple=amdgpu9.08 -verify-misched -passes=machine-scheduler -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck -check-prefix=GCN-GCNTRACKER %s
 
 --- |
   define amdgpu_kernel void @high-RP-reschedule() { ret void }
@@ -10,10 +10,21 @@
 
 # GCN: Unclustered High Register Pressure Reschedule stage successfully increased occupancy to 4
 
-# GCN-GCNTRACKER: Occupancy before scheduling: 3, after 4.
-# GCN-GCNTRACKER-NEXT: Ending scheduling stage: Max Occupancy Initial Schedule
+# When using the GCN Trackers, the initial schedule already brings both regions
+# within the critical register limits, so occupancy stays at 4. The unclustered
+# high RP stage then tries for occupancy 5 and does not reach it.
 
-# When using the GCN Trackers, the scheduler is able to acieve desired occupancy without running high-RP-reschedule stage.
+# GCN-GCNTRACKER: Starting occupancy is 4.
+# GCN-GCNTRACKER: Starting scheduling stage: Max Occupancy Initial Schedule
+# GCN-GCNTRACKER: Pressure in desired limits, done.
+# GCN-GCNTRACKER: Pressure in desired limits, done.
+# GCN-GCNTRACKER-NOT: Occupancy lowered
+# GCN-GCNTRACKER: Ending scheduling stage: Max Occupancy Initial Schedule
+# GCN-GCNTRACKER: Starting scheduling stage: Unclustered High Register Pressure Reschedule
+# GCN-GCNTRACKER: Aggressively try to reduce register pressure to achieve occupancy 5.
+# GCN-GCNTRACKER: Occupancy before scheduling: 4, after 4.
+# GCN-GCNTRACKER-NOT: successfully increased occupancy
+# GCN-GCNTRACKER: Ending scheduling stage: Unclustered High Register Pressure Reschedule
 
 ---
 name: high-RP-reschedule

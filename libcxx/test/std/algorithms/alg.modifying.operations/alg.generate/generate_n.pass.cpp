@@ -70,6 +70,13 @@ test()
     test2<Iter, float>();
     test2<Iter, double>();  // this is PR#35498
     test2<Iter, long double>();
+
+    { // A negative count is a no-op that returns the unchanged iterator.
+      // Regression test for https://llvm.org/PR193613.
+      int ia[] = {1, 2, 3};
+      assert(std::generate_n(Iter(ia), -5, gen_test()) == Iter(ia));
+      assert(ia[0] == 1 && ia[1] == 2 && ia[2] == 3);
+    }
 }
 
 void deque_test() {

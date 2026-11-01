@@ -16,10 +16,10 @@ body:             |
     ; CHECK: %ubfx:gpr32 = UBFMWri %copy, 0, 9
     ; CHECK: $w0 = COPY %ubfx
     ; CHECK: RET_ReallyLR implicit $w0
-    %copy:gpr(s32) = COPY $w0
-    %cst1:gpr(s32) = G_CONSTANT i32 0
-    %cst2:gpr(s32) = G_CONSTANT i32 10
-    %ubfx:gpr(s32) = G_UBFX %copy, %cst1, %cst2
+    %copy:gpr(i32) = COPY $w0
+    %cst1:gpr(i32) = G_CONSTANT i32 0
+    %cst2:gpr(i32) = G_CONSTANT i32 10
+    %ubfx:gpr(i32) = G_UBFX %copy, %cst1, %cst2
     $w0 = COPY %ubfx
     RET_ReallyLR implicit $w0
 
@@ -38,10 +38,10 @@ body:             |
     ; CHECK: %ubfx:gpr64 = UBFMXri %copy, 0, 9
     ; CHECK: $x0 = COPY %ubfx
     ; CHECK: RET_ReallyLR implicit $x0
-    %copy:gpr(s64) = COPY $x0
-    %cst1:gpr(s64) = G_CONSTANT i64 0
-    %cst2:gpr(s64) = G_CONSTANT i64 10
-    %ubfx:gpr(s64) = G_UBFX %copy, %cst1, %cst2
+    %copy:gpr(i64) = COPY $x0
+    %cst1:gpr(i64) = G_CONSTANT i64 0
+    %cst2:gpr(i64) = G_CONSTANT i64 10
+    %ubfx:gpr(i64) = G_UBFX %copy, %cst1, %cst2
     $x0 = COPY %ubfx
     RET_ReallyLR implicit $x0
 
@@ -63,10 +63,10 @@ body:             |
     ; CHECK: %ubfx:gpr32 = UBFMWri %copy, 31, 31
     ; CHECK: $w0 = COPY %ubfx
     ; CHECK: RET_ReallyLR implicit $w0
-    %copy:gpr(s32) = COPY $w0
-    %cst1:gpr(s32) = G_CONSTANT i32 31
-    %cst2:gpr(s32) = G_CONSTANT i32 1
-    %ubfx:gpr(s32) = G_UBFX %copy, %cst1, %cst2
+    %copy:gpr(i32) = COPY $w0
+    %cst1:gpr(i32) = G_CONSTANT i32 31
+    %cst2:gpr(i32) = G_CONSTANT i32 1
+    %ubfx:gpr(i32) = G_UBFX %copy, %cst1, %cst2
     $w0 = COPY %ubfx
     RET_ReallyLR implicit $w0
 ---
@@ -83,10 +83,10 @@ body:             |
     ; CHECK: %ubfx:gpr32 = UBFMWri %copy, 10, 14
     ; CHECK: $w0 = COPY %ubfx
     ; CHECK: RET_ReallyLR implicit $w0
-    %copy:gpr(s32) = COPY $w0
-    %cst1:gpr(s32) = G_CONSTANT i32 10
-    %cst2:gpr(s32) = G_CONSTANT i32 5
-    %ubfx:gpr(s32) = G_UBFX %copy, %cst1, %cst2
+    %copy:gpr(i32) = COPY $w0
+    %cst1:gpr(i32) = G_CONSTANT i32 10
+    %cst2:gpr(i32) = G_CONSTANT i32 5
+    %ubfx:gpr(i32) = G_UBFX %copy, %cst1, %cst2
     $w0 = COPY %ubfx
     RET_ReallyLR implicit $w0
 
@@ -105,9 +105,9 @@ body:             |
     ; CHECK: %ubfx:gpr64 = UBFMXri %copy, 10, 14
     ; CHECK: $x0 = COPY %ubfx
     ; CHECK: RET_ReallyLR implicit $x0
-    %copy:gpr(s64) = COPY $x0
-    %cst1:gpr(s64) = G_CONSTANT i64 10
-    %cst2:gpr(s64) = G_CONSTANT i64 5
-    %ubfx:gpr(s64) = G_UBFX %copy, %cst1, %cst2
+    %copy:gpr(i64) = COPY $x0
+    %cst1:gpr(i64) = G_CONSTANT i64 10
+    %cst2:gpr(i64) = G_CONSTANT i64 5
+    %ubfx:gpr(i64) = G_UBFX %copy, %cst1, %cst2
     $x0 = COPY %ubfx
     RET_ReallyLR implicit $x0

@@ -2,13 +2,13 @@
 // REQUIRES: curl
 
 // Default instrumented build with no profile correlation.
-// RUN: %clang_profgen -o %t.default.exe -Wl,--build-id=0x12345678 -fprofile-instr-generate -fcoverage-mapping %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
+// RUN: %clang_profgen -o %t.default.exe -Wl,--build-id=0x12345678 -fprofile-instr-generate -fcoverage-mapping -fcoverage-mcdc %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
 // RUN: env LLVM_PROFILE_FILE=%t.default.profraw %run %t.default.exe
 // RUN: llvm-profdata merge -o %t.default.profdata %t.default.profraw
 // RUN: llvm-profdata show --all-functions --counts %t.default.profdata > %t.default.profdata.show
 
 // Build with profile binary correlation.
-// RUN: %clang_profgen -o %t.correlate.exe -Wl,--build-id=0x12345678 -fprofile-instr-generate -fcoverage-mapping -mllvm -profile-correlate=binary %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
+// RUN: %clang_profgen -o %t.correlate.exe -Wl,--build-id=0x12345678 -fprofile-instr-generate -fcoverage-mapping -fcoverage-mcdc -mllvm -profile-correlate=binary %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
 // Strip above binary and run
 // RUN: llvm-strip %t.correlate.exe -o %t.stripped.exe
 // RUN: env LLVM_PROFILE_FILE=%t.correlate.profraw %run %t.stripped.exe
@@ -33,7 +33,7 @@
 // MISSING-FLAG: error: Expected --debuginfod or --debug-file-directory when --correlate is provided
 
 // Test error for llvm-profdata merge profile correlation when a proper --correlate option is not provided.
-// RUN: not llvm-profdata merge -o %t.correlate-error.profdata --debug-file-directory %t --correlate="" %t.correlate.profraw 2>&1 | FileCheck %s --check-prefix=MISSING-CORRELATION-KIND
+// RUN: not llvm-profdata merge -o %t.correlate-error.profdata --debug-file-directory %t %t.correlate.profraw 2>&1 | FileCheck %s --check-prefix=MISSING-CORRELATION-KIND
 // MISSING-CORRELATION-KIND: error: Expected --correlate when --debug-file-directory is provided
 
 // Test error for llvm-profdata merge profile correlation with mixing correlation options.

@@ -88,6 +88,4 @@ PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
       .alwaysLegal();
-
-  getLegacyLegalizerInfo().computeTables();
 }

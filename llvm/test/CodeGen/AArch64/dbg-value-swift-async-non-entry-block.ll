@@ -1,4 +1,4 @@
-; RUN: llc --mtriple="aarch64-" -O0 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=AARCH
+; RUN: llc --mtriple="aarch64-" -O0 -global-isel -stop-after=ir-translator -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=AARCH
 ; RUN: llc --mtriple="aarch64-" -O0 -fast-isel=false -global-isel=false -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=AARCH
 ; RUN: llc --mtriple="aarch64-" -O0 -fast-isel -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=AARCH
 

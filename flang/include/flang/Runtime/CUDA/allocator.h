@@ -15,6 +15,10 @@
 
 #include "cuda_runtime.h"
 
+namespace Fortran::runtime {
+class Lock;
+}
+
 namespace Fortran::runtime::cuda {
 
 extern "C" {
@@ -25,16 +29,24 @@ void RTDECL(CUFRegisterAllocator)();
 
 void CUFResetStream(cudaStream_t stream);
 
-void *CUFAllocPinned(std::size_t, std::int64_t *);
+extern Lock asyncDeviceAllocationTableLock;
+
+int findAsyncDeviceAllocation(void *ptr);
+void insertAsyncDeviceAllocation(
+    void *ptr, std::size_t size, cudaStream_t stream);
+cudaStream_t getAsyncDeviceAllocationStream(int pos);
+void eraseAsyncDeviceAllocation(int pos);
+
+void *CUFAllocPinned(std::size_t, std::size_t, std::int64_t *);
 void CUFFreePinned(void *);
 
-void *CUFAllocDevice(std::size_t, std::int64_t *);
+void *CUFAllocDevice(std::size_t, std::size_t, std::int64_t *);
 void CUFFreeDevice(void *);
 
-void *CUFAllocManaged(std::size_t, std::int64_t *);
+void *CUFAllocManaged(std::size_t, std::size_t, std::int64_t *);
 void CUFFreeManaged(void *);
 
-void *CUFAllocUnified(std::size_t, std::int64_t *);
+void *CUFAllocUnified(std::size_t, std::size_t, std::int64_t *);
 void CUFFreeUnified(void *);
 
 } // namespace Fortran::runtime::cuda

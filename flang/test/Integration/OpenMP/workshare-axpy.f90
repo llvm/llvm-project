@@ -32,7 +32,7 @@ end subroutine
 ! HLFIR:      }
 ! HLFIR-NOT:  omp.barrier
 ! HLFIR:      omp.terminator
-! HLFIR:    }
+! HLFIR:    } {omp.combined}
 ! HLFIR:    return
 ! HLFIR:  }
 ! HLFIR:}
@@ -53,3 +53,4 @@ end subroutine
 ! FIR:      omp.barrier
 ! FIR:      omp.terminator
 ! FIR:    }
+! FIR-NOT:omp.combined

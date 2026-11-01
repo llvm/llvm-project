@@ -6,7 +6,7 @@ define i32 @test(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D_0:%.*]] = load i16, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 poison, i16 0, i16 0, i16 0>, i16 [[D_0]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 poison, i16 0, i16 0, i16 0>, i16 [[D_0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i16> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i16> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>

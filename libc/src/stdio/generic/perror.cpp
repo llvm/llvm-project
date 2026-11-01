@@ -78,9 +78,8 @@ LLVM_LIBC_FUNCTION(void, perror, (const char *str)) {
 
   // We need to lock the stream to ensure the newline is always appended.
   LIBC_NAMESPACE::File *file = reinterpret_cast<File *>(stderr);
-  file->lock();
+  File::FileLock lock(file);
   write_sequence(str_view, err_str);
-  file->unlock();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

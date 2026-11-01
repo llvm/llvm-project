@@ -66,3 +66,119 @@ define <2 x i8> @fold_select_trunc_vector(<2 x i8> %x, <2 x i8> %y) {
   %ret = select <2 x i1> %trunc, <2 x i8> %x, <2 x i8> %y
   ret <2 x i8> %ret
 }
+
+define i8 @fold_select_trunc_and(i8 %x, i8 range(i8 0, 2) noundef %y) {
+; CHECK-LABEL: @fold_select_trunc_and(
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = trunc i8 %x to i1
+  %ret = select i1 %cond, i8 %y, i8 0
+  ret i8 %ret
+}
+
+define i8 @fold_select_trunc_nuw_and(i8 %x, i8 range(i8 0, 2) noundef %y) {
+; CHECK-LABEL: @fold_select_trunc_nuw_and(
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = trunc nuw i8 %x to i1
+  %ret = select i1 %cond, i8 %y, i8 0
+  ret i8 %ret
+}
+
+define <2 x i8> @fold_select_trunc_nuw_and_vector(<2 x i8> %x, <2 x i8> range(i8 0, 2) noundef %y) {
+; CHECK-LABEL: @fold_select_trunc_nuw_and_vector(
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %cond = trunc nuw <2 x i8> %x to <2 x i1>
+  %ret = select <2 x i1> %cond, <2 x i8> %y, <2 x i8> <i8 0, i8 0>
+  ret <2 x i8> %ret
+}
+
+define i8 @neg_fold_select_trunc_nuw_and(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_fold_select_trunc_nuw_and(
+; CHECK-NEXT:    [[COND:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 0
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = trunc nuw i8 %x to i1
+  %ret = select i1 %cond, i8 %y, i8 0
+  ret i8 %ret
+}
+
+define i8 @fold_select_trunc_nsw_and(i8 %x, i8 range(i8 0, 2) noundef %y) {
+; CHECK-LABEL: @fold_select_trunc_nsw_and(
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = trunc nsw i8 %x to i1
+  %ret = select i1 %cond, i8 %y, i8 0
+  ret i8 %ret
+}
+
+define i8 @neg_fold_select_trunc_nuw_and_maybe_poison(i8 %x, i8 range(i8 0, 2) %y) {
+; CHECK-LABEL: @neg_fold_select_trunc_nuw_and_maybe_poison(
+; CHECK-NEXT:    [[COND:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 0
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = trunc nuw i8 %x to i1
+  %ret = select i1 %cond, i8 %y, i8 0
+  ret i8 %ret
+}
+
+define i8 @fold_select_trunc_nuw_or(i8 %x, i8 range(i8 0, 2) noundef %y) {
+; CHECK-LABEL: @fold_select_trunc_nuw_or(
+; CHECK-NEXT:    [[RET:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = trunc nuw i8 %x to i1
+  %ret = select i1 %cond, i8 1, i8 %y
+  ret i8 %ret
+}
+
+define <2 x i8> @fold_select_trunc_nuw_or_vector(<2 x i8> %x, <2 x i8> range(i8 0, 2) noundef %y) {
+; CHECK-LABEL: @fold_select_trunc_nuw_or_vector(
+; CHECK-NEXT:    [[RET:%.*]] = or <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %cond = trunc nuw <2 x i8> %x to <2 x i1>
+  %ret = select <2 x i1> %cond, <2 x i8> <i8 1, i8 1>, <2 x i8> %y
+  ret <2 x i8> %ret
+}
+
+define i8 @neg_fold_select_trunc_nsw_or(i8 %x, i8 range(i8 0, 2) noundef %y) {
+; CHECK-LABEL: @neg_fold_select_trunc_nsw_or(
+; CHECK-NEXT:    [[COND:%.*]] = trunc nsw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND]], i8 1, i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = trunc nsw i8 %x to i1
+  %ret = select i1 %cond, i8 1, i8 %y
+  ret i8 %ret
+}
+
+define i8 @neg_fold_select_trunc_nuw_or(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_fold_select_trunc_nuw_or(
+; CHECK-NEXT:    [[COND:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND]], i8 1, i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = trunc nuw i8 %x to i1
+  %ret = select i1 %cond, i8 1, i8 %y
+  ret i8 %ret
+}
+
+define i8 @neg_fold_select_trunc_nuw_or_maybe_poison(i8 %x, i8 range(i8 0, 2) %y) {
+; CHECK-LABEL: @neg_fold_select_trunc_nuw_or_maybe_poison(
+; CHECK-NEXT:    [[COND:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND]], i8 1, i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %cond = trunc nuw i8 %x to i1
+  %ret = select i1 %cond, i8 1, i8 %y
+  ret i8 %ret
+}
+

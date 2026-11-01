@@ -179,7 +179,7 @@ TEST_F(PassManagerTest, Basic) {
   if (!TM)
     GTEST_SKIP();
 
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   MachineModuleInfo MMI(TM.get());
 
@@ -188,7 +188,7 @@ TEST_F(PassManagerTest, Basic) {
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  PassBuilder PB(TM.get());
+  PassBuilder PB(Context, TM.get());
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
@@ -218,7 +218,7 @@ TEST_F(PassManagerTest, Basic) {
 
   testing::internal::CaptureStderr();
   MPM.run(*M, MAM);
-  std::string Output = testing::internal::GetCapturedStderr();
+  testing::internal::GetCapturedStderr();
 
   EXPECT_EQ((std::vector<int>{10, 16, 18, 20, 30, 36, 38, 40}), Counts);
   EXPECT_EQ(40, Count);
@@ -228,7 +228,7 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   if (!TM)
     GTEST_SKIP();
 
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   MachineModuleInfo MMI(TM.get());
 
@@ -237,7 +237,7 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  PassBuilder PB(TM.get());
+  PassBuilder PB(Context, TM.get());
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);

@@ -52,6 +52,8 @@ enum UniformityLLTOpPredicateID {
   UniS64,
   UniS128,
 
+  UniBF16,
+
   DivS1,
   DivS16,
   DivS32,
@@ -347,7 +349,9 @@ enum LoweringMethodID {
   AbsToNegMax,
   AbsToS32,
   DynStackAlloc,
-  DeletePrefetch
+  DeletePrefetch,
+  LowerSetRounding,
+  LowerGetRounding
 };
 
 enum FastRulesTypes {

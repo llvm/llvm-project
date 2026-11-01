@@ -195,10 +195,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       const mcdxbc::RootParameterInfo &Info = RS.ParametersContainer.getInfo(I);
 
       OS << "- Parameter Type: "
-         << enumToStringRef(Info.Type, dxbc::getRootParameterTypes()) << "\n"
+         << dxbc::getRootParameterTypes().toString(Info.Type) << "\n"
          << "  Shader Visibility: "
-         << enumToStringRef(Info.Visibility, dxbc::getShaderVisibility())
-         << "\n";
+         << dxbc::getShaderVisibility().toString(Info.Visibility) << "\n";
       switch (Info.Type) {
       case dxbc::RootParameterType::Constants32Bit: {
         const mcdxbc::RootConstants &Constants =

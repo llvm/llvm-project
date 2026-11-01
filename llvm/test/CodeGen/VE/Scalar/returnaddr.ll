@@ -8,8 +8,8 @@ define ptr @h() nounwind readnone optsize {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -176(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -18,7 +18,7 @@ define ptr @h() nounwind readnone optsize {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB0_2: # %entry
+; CHECK-NEXT:  .LBB0_1: # %entry
 ; CHECK-NEXT:    ld %s0, (, %s9)
 ; CHECK-NEXT:    ld %s0, (, %s0)
 ; CHECK-NEXT:    ld %s0, 8(, %s0)
@@ -40,8 +40,8 @@ define ptr @g() nounwind readnone optsize {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -176(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_2
-; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_1
+; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -50,7 +50,7 @@ define ptr @g() nounwind readnone optsize {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_2: # %entry
+; CHECK-NEXT:  .LBB1_1: # %entry
 ; CHECK-NEXT:    ld %s0, (, %s9)
 ; CHECK-NEXT:    ld %s0, 8(, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -69,8 +69,8 @@ define ptr @f() nounwind readnone optsize {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -176(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_2
-; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_1
+; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -79,7 +79,7 @@ define ptr @f() nounwind readnone optsize {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB2_2: # %entry
+; CHECK-NEXT:  .LBB2_1: # %entry
 ; CHECK-NEXT:    ld %s0, 8(, %s9)
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)

@@ -8,7 +8,6 @@
 
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
-#include "flang/Optimizer/Support/FatalError.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -17,9 +16,6 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/Import.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 
 namespace {
 template <typename ModOpTy>

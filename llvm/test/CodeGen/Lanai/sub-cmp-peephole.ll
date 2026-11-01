@@ -79,7 +79,7 @@ define i32 @j(i32 inreg %a, i32 inreg %b) nounwind {
 ; CHECK-NEXT:    sub.f %r6, %r7, %r0
 ; CHECK-NEXT:    bne .LBB4_2
 ; CHECK-NEXT:    sub %r6, %r7, %rv
-; CHECK-NEXT:  .LBB4_1: ! %if.then
+; CHECK-NEXT:  ! %bb.1: ! %if.then
 ; CHECK-NEXT:    sel.lt %rv, %r6, %rv
 ; CHECK-NEXT:  .LBB4_2: ! %if.else
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
@@ -117,7 +117,7 @@ define i32 @cmp_ult0(i32 inreg %a, i32 inreg %b, i32 inreg %x, i32 inreg %y) {
 ; CHECK-NEXT:    sub.f %r3, 0x0, %r0
 ; CHECK-NEXT:    buge .LBB5_2
 ; CHECK-NEXT:    sub %sp, 0x10, %sp
-; CHECK-NEXT:  .LBB5_1: ! %if.then
+; CHECK-NEXT:  ! %bb.1: ! %if.then
 ; CHECK-NEXT:    add %pc, 0x10, %rca
 ; CHECK-NEXT:    st %rca, [--%sp]
 ; CHECK-NEXT:    bt abort
@@ -157,7 +157,7 @@ define i32 @cmp_gt0(i32 inreg %a, i32 inreg %b, i32 inreg %x, i32 inreg %y) {
 ; CHECK-NEXT:    sub.f %r3, 0x1, %r0
 ; CHECK-NEXT:    blt .LBB6_2
 ; CHECK-NEXT:    sub %sp, 0x10, %sp
-; CHECK-NEXT:  .LBB6_1: ! %if.then
+; CHECK-NEXT:  ! %bb.1: ! %if.then
 ; CHECK-NEXT:    add %pc, 0x10, %rca
 ; CHECK-NEXT:    st %rca, [--%sp]
 ; CHECK-NEXT:    bt abort

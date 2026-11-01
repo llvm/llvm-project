@@ -4,6 +4,8 @@
 int main() {
 
   std::valarray<int> va_int(4);
+  std::valarray<int> va_empty;
+  std::valarray<int> &va_ref = va_int;
   std::cout << "break here";
 
   va_int[0] = 1;

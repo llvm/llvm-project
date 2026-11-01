@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMObjectYAML
   CodeViewYAMLTypes.cpp
   COFFEmitter.cpp
   COFFYAML.cpp
+  ContiguousBlobAccumulator.cpp
   DWARFEmitter.cpp
   DWARFYAML.cpp
   DXContainerEmitter.cpp

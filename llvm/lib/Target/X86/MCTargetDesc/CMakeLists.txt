@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMX86Desc
   X86MCTargetDesc.cpp
   X86MCAsmInfo.cpp
   X86MCCodeEmitter.cpp
+  X86MCLFIRewriter.cpp
   X86MachObjectWriter.cpp
   X86MnemonicTables.cpp
   X86ELFObjectWriter.cpp
@@ -21,6 +22,7 @@ add_llvm_component_library(LLVMX86Desc
   CodeGenTypes
   MC
   MCDisassembler
+  Option
   Support
   TargetParser
   X86Info

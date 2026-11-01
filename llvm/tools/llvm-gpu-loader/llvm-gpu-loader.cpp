@@ -36,9 +36,6 @@ using namespace llvm;
 
 static cl::OptionCategory LoaderCategory("loader options");
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
-                          cl::cat(LoaderCategory));
-
 static cl::opt<unsigned>
     ThreadsX("threads-x", cl::desc("Number of threads in the 'x' dimension"),
              cl::init(1), cl::cat(LoaderCategory));
@@ -65,6 +62,11 @@ static cl::alias Blocks("blocks", cl::aliasopt(BlocksX),
                         cl::desc("Alias for --blocks-x"),
                         cl::cat(LoaderCategory));
 
+static cl::list<std::string> Kernels(
+    "kernel", cl::value_desc("name"),
+    cl::desc("Launch '<name>(void)' instead of the 'main' entry point."),
+    cl::cat(LoaderCategory));
+
 static cl::opt<std::string> File(cl::Positional, cl::Required,
                                  cl::desc("<gpu executable>"),
                                  cl::cat(LoaderCategory));
@@ -88,6 +90,7 @@ static cl::list<std::string> Args(cl::ConsumeAfter,
     handleError(Err, __LINE__);
 
 static void *copyArgumentVector(int Argc, const char **Argv,
+                                ol_context_handle_t Context,
                                 ol_device_handle_t Device) {
   size_t ArgSize = sizeof(char *) * (Argc + 1);
   size_t StringLen = 0;
@@ -96,8 +99,7 @@ static void *copyArgumentVector(int Argc, const char **Argv,
 
   // We allocate enough space for a null terminated array and all the strings.
   void *DevArgv;
-  OFFLOAD_ERR(
-      olMemAlloc(Device, OL_ALLOC_TYPE_HOST, ArgSize + StringLen, &DevArgv));
+  OFFLOAD_ERR(olMemAllocHost(Context, Device, ArgSize + StringLen, &DevArgv));
   if (!DevArgv)
     handleError(
         createStringError("Failed to allocate memory for environment."));
@@ -116,12 +118,13 @@ static void *copyArgumentVector(int Argc, const char **Argv,
   return DevArgv;
 }
 
-void *copyEnvironment(const char **Envp, ol_device_handle_t Device) {
+void *copyEnvironment(const char **Envp, ol_context_handle_t Context,
+                      ol_device_handle_t Device) {
   int Envc = 0;
   for (const char **Env = Envp; *Env != 0; ++Env)
     ++Envc;
 
-  return copyArgumentVector(Envc, Envp, Device);
+  return copyArgumentVector(Envc, Envp, Context, Device);
 }
 
 ol_device_handle_t findDevice(MemoryBufferRef Binary) {
@@ -193,11 +196,6 @@ int main(int argc, const char **argv, const char **envp) {
       "intended to provide an interface similar to cross-compiling "
       "emulators\n");
 
-  if (Help) {
-    cl::PrintHelpMessage();
-    return EXIT_SUCCESS;
-  }
-
   if (Error Err = loadLLVMOffload())
     handleError(std::move(Err));
 
@@ -207,7 +205,7 @@ int main(int argc, const char **argv, const char **envp) {
     handleError(errorCodeToError(EC));
   MemoryBufferRef Image = **ImageOrErr;
 
-  ol_platform_backend_t Backend;
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
   ol_init_args_t InitArgs = OL_INIT_ARGS_INIT;
 
   file_magic Magic = identify_magic(Image.getBuffer());
@@ -230,6 +228,9 @@ int main(int argc, const char **argv, const char **envp) {
           ELF::convertEMachineToArchName(ElfOrErr->getHeader().e_machine)
               .data()));
     }
+  }
+
+  if (Backend != OL_PLATFORM_BACKEND_UNKNOWN) {
     InitArgs.NumPlatforms = 1;
     InitArgs.Platforms = &Backend;
   }
@@ -245,46 +246,60 @@ int main(int argc, const char **argv, const char **envp) {
   ol_device_handle_t Host = getHostDevice();
   assert(Host && "Host device should always be present");
 
+  ol_context_handle_t Context;
+  OFFLOAD_ERR(olCreateContext(1, &Device, &Context));
+
   ol_program_handle_t Program;
-  OFFLOAD_ERR(olCreateProgram(Device, Image.getBufferStart(),
+  OFFLOAD_ERR(olCreateProgram(Context, Device, Image.getBufferStart(),
                               Image.getBufferSize(), &Program));
 
   ol_queue_handle_t Queue;
-  OFFLOAD_ERR(olCreateQueue(Device, &Queue));
+  OFFLOAD_ERR(olCreateQueue(Context, Device, &Queue));
 
   int DevArgc = static_cast<int>(NewArgv.size());
-  void *DevArgv = copyArgumentVector(NewArgv.size(), NewArgv.begin(), Device);
-  void *DevEnvp = copyEnvironment(envp, Device);
+  void *DevArgv =
+      copyArgumentVector(NewArgv.size(), NewArgv.begin(), Context, Device);
+  void *DevEnvp = copyEnvironment(envp, Context, Device);
 
   void *DevRet;
   int Zero = 0;
-  OFFLOAD_ERR(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(int), &DevRet));
+  OFFLOAD_ERR(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, sizeof(int), &DevRet));
   OFFLOAD_ERR(olMemcpy(Queue, DevRet, Device, &Zero, Host, sizeof(int)));
-
-  ol_kernel_launch_size_args_t BeginLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
-  launchKernel(Queue, Device, Program, "_begin", BeginLaunch, DevArgc, DevArgv,
-               DevEnvp);
-  OFFLOAD_ERR(olSyncQueue(Queue));
 
   uint32_t Dims = (BlocksZ > 1) ? 3 : (BlocksY > 1) ? 2 : 1;
   ol_kernel_launch_size_args_t StartLaunch{Dims,
                                            {BlocksX, BlocksY, BlocksZ},
                                            {ThreadsX, ThreadsY, ThreadsZ},
                                            /*SharedMemBytes=*/0};
-  launchKernel(Queue, Device, Program, "_start", StartLaunch, DevArgc, DevArgv,
-               DevEnvp, DevRet);
+  if (!Kernels.empty()) {
+    // Launch the user-specified kernels in order. These must take no arguments.
+    for (const std::string &Kernel : Kernels)
+      launchKernel(Queue, Device, Program, Kernel.c_str(), StartLaunch);
+  } else {
+    // The '_begin' and '_end' kernels perform libc startup and teardown. Global
+    // constructors and destructors are handled automatically by the runtime.
+    ol_kernel_launch_size_args_t BeginLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
+    launchKernel(Queue, Device, Program, "_begin", BeginLaunch, DevArgc,
+                 DevArgv, DevEnvp);
+    OFFLOAD_ERR(olSyncQueue(Queue));
 
-  ol_kernel_launch_size_args_t EndLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
-  launchKernel(Queue, Device, Program, "_end", EndLaunch);
+    launchKernel(Queue, Device, Program, "_start", StartLaunch, DevArgc,
+                 DevArgv, DevEnvp, DevRet);
+
+    ol_kernel_launch_size_args_t EndLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
+    launchKernel(Queue, Device, Program, "_end", EndLaunch);
+  }
 
   int Ret;
   OFFLOAD_ERR(olMemcpy(Queue, &Ret, Host, DevRet, Device, sizeof(int)));
   OFFLOAD_ERR(olSyncQueue(Queue));
 
-  OFFLOAD_ERR(olMemFree(DevRet));
-  OFFLOAD_ERR(olMemFree(DevArgv));
-  OFFLOAD_ERR(olMemFree(DevEnvp));
+  OFFLOAD_ERR(olMemFree(Context, DevRet));
+  OFFLOAD_ERR(olMemFree(Context, DevArgv));
+  OFFLOAD_ERR(olMemFree(Context, DevEnvp));
   OFFLOAD_ERR(olDestroyQueue(Queue));
+  OFFLOAD_ERR(olDestroyContext(Context));
   OFFLOAD_ERR(olDestroyProgram(Program));
   OFFLOAD_ERR(olShutDown());
 

@@ -105,7 +105,7 @@ exit:
 ; (runtime unroll disabled to prevent the unroller from succeeding on this
 ; runtime-trip-count loop, so the hint survives to transform-warning)
 !10 = distinct !{!10, !11, !12, !13}
-!11 = !{!"llvm.loop.vectorize.enable", i1 false}
+!11 = !{!"llvm.loop.vectorize.disable"}
 !12 = !{!"llvm.loop.unroll.enable"}
 !13 = !{!"llvm.loop.unroll.runtime.disable"}
 

@@ -56,6 +56,8 @@ template<typename T> concept NullTy = Nullptr<T>;
 // expected-error@-1{{atomic constraint must be of type 'bool' (found }}
 // expected-note@+1{{while checking the satisfaction}}
 static_assert(NullTy<int>);
+// expected-error@-1{{static assertion failed}}
+// expected-note@-2{{because 'int' does not satisfy 'NullTy'}}
 
 template<typename T>
 auto Struct = S<T>{};
@@ -64,3 +66,5 @@ template<typename T> concept StructTy = Struct<T>;
 // expected-error@-1{{atomic constraint must be of type 'bool' (found 'S<int>')}}
 // expected-note@+1{{while checking the satisfaction}}
 static_assert(StructTy<int>);
+// expected-error@-1{{static assertion failed}}
+// expected-note@-2{{because 'int' does not satisfy 'StructTy'}}

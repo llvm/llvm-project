@@ -16,7 +16,6 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/provenance.h"
 #include <cstddef>
-#include <cstring>
 #include <string>
 #include <utility>
 #include <vector>

@@ -69,7 +69,7 @@ $ llvm-bolt $CPATH/clang-7 -o $CPATH/clang-7.bolt -b clang-7.yaml \
     -split-all-cold -dyno-stats -icf=1 -use-gnu-stack
 ```
 The output will look similar to the one below:
-```t
+```text
 ...
 BOLT-INFO: enabling relocation mode
 BOLT-INFO: 11415 functions out of 104526 simple functions (10.9%) have non-empty execution profile.
@@ -179,15 +179,15 @@ of GCC, or any other application suffering from a high number of instruction
 cache misses.
 
 ----
-# Appendix
+## Appendix
 
-## Bootstrapping Clang-7 with PGO and LTO
+### Bootstrapping Clang-7 with PGO and LTO
 
 Below we describe detailed steps to build Clang, and make it ready for BOLT
 optimizations. If you already have the build setup, you can skip this section,
 except for the last step that adds `-Wl,-q` linker flag to the final build.
 
-### Getting Clang-7 Sources
+#### Getting Clang-7 Sources
 
 Set `$TOPLEV` to the directory of your preference where you would like to do
 builds. E.g. `TOPLEV=~/clang-7/`. Follow with commands to clone the `release_70`
@@ -198,7 +198,7 @@ $ cd ${TOPLEV}
 $ git clone --branch=release/7.x https://github.com/llvm/llvm-project.git
 ```
 
-### Building Stage 1 Compiler
+#### Building Stage 1 Compiler
 
 Stage 1 will be the first build we are going to do, and we will be using the
 default system compiler to build Clang. If your system lacks a compiler, use
@@ -220,7 +220,7 @@ $ cmake -G Ninja ${TOPLEV}/llvm-project/llvm -DLLVM_TARGETS_TO_BUILD=X86 \
 $ ninja install
 ```
 
-### Building Stage 2 Compiler With Instrumentation
+#### Building Stage 2 Compiler With Instrumentation
 
 Using the freshly-baked stage 1 Clang compiler, we are going to build Clang with
 profile generation capabilities:
@@ -237,7 +237,7 @@ $ cmake -G Ninja ${TOPLEV}/llvm-project/llvm -DLLVM_TARGETS_TO_BUILD=X86 \
 $ ninja install
 ```
 
-### Generating Profile for PGO
+#### Generating Profile for PGO
 
 While there are many ways to obtain the profile data, we are going to use the
 source code already at our disposal, i.e. we are going to collect the profile
@@ -261,7 +261,7 @@ $ cd ${TOPLEV}/stage2-prof-gen/profiles
 $ ${TOPLEV}/stage1/install/bin/llvm-profdata merge -output=clang.profdata *
 ```
 
-### Building Clang with PGO and LTO
+#### Building Clang with PGO and LTO
 
 Now the profile can be used to guide optimizations to produce better code for
 our scenario, i.e. building Clang. We will also enable link-time optimizations

@@ -1,7 +1,7 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: x86-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -fcuda-is-device -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -fcuda-is-device -fsyntax-only -verify %s
 
 void call_amdgpu_builtins() {
   __builtin_amdgcn_fence(); // expected-error {{too few arguments to function call, expected at least 2, have 0}}

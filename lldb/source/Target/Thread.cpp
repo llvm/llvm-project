@@ -264,6 +264,7 @@ void Thread::DestroyThread() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
+  m_prev_unwinder_frames_sp.reset();
   m_unwinder_frames_sp.reset();
   m_frame_providers.clear();
   m_provider_chain_ids.clear();
@@ -944,6 +945,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
             override_stop = true;
             LLDB_LOGF(log, "Plan %s auto-continue: true.",
                       current_plan->GetName());
+            // The ShouldAutoContinue contract: subsequent plans are not asked.
+            PopPlan();
+            break;
           }
 
           // If a Controlling Plan wants to stop, we let it. Otherwise, see if
@@ -1341,12 +1345,12 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
 
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const AddressRange &range,
-    const SymbolContext &addr_context, const char *step_in_target,
+    const SymbolContext &addr_context, llvm::StringRef step_in_target,
     lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepInRange(
-      *this, range, addr_context, step_in_target, stop_other_threads,
+      *this, range, addr_context, step_in_target.str(), stop_other_threads,
       step_in_avoids_code_without_debug_info,
       step_out_avoids_code_without_debug_info));
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
@@ -1356,7 +1360,7 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
 // Call the QueueThreadPlanForStepInRange method which takes an address range.
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const LineEntry &line_entry,
-    const SymbolContext &addr_context, const char *step_in_target,
+    const SymbolContext &addr_context, llvm::StringRef step_in_target,
     lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
@@ -1469,7 +1473,7 @@ void Thread::PushProviderFrameList(StackFrameListSP frames) {
   HostThread current(Host::GetCurrentThread());
   auto &stack = m_active_frame_providers_by_thread[current];
   LLDB_LOG(GetLog(LLDBLog::Thread),
-           "Thread::PushProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           "Thread::PushProviderFrameList: tid = {0:x}, depth = {1} -> {2}",
            GetID(), stack.size(), stack.size() + 1);
   stack.push_back(std::move(frames));
 }
@@ -1481,7 +1485,7 @@ void Thread::PopProviderFrameList() {
   size_t pre_pop_depth =
       (it != m_active_frame_providers_by_thread.end()) ? it->second.size() : 0;
   LLDB_LOG(GetLog(LLDBLog::Thread),
-           "Thread::PopProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           "Thread::PopProviderFrameList: tid = {0:x}, depth = {1} -> {2}",
            GetID(), pre_pop_depth, pre_pop_depth ? pre_pop_depth - 1 : 0);
   assert(it != m_active_frame_providers_by_thread.end() && !it->second.empty());
   if (it == m_active_frame_providers_by_thread.end() || it->second.empty())
@@ -1527,18 +1531,22 @@ StackFrameListSP Thread::GetStackFrameList() {
   //       which resumed the process via RunThreadPlan; the private state
   //       thread must process the resulting stop event, but if it tries to
   //       build the synthetic frame list it will re-enter the provider ->
-  //       deadlock.
+  //       deadlock. Detected via the policy capability below rather than
+  //       thread identity, since m_current_private_state_thread_sp may
+  //       already have been reassigned to an override PST by the time this
+  //       runs.
   //     - Any other thread: would run the provider concurrently with the
   //       thread that is already mid-construction.
   //
-  //  2. Current thread is a private state thread that should see the
-  //     private reality (Policy::View::Private).
+  //  2. The current policy disallows loading frame providers (expression
+  //     evaluation on a PST), which requires the private reality.
   //
   // For case 1, if a provider is active we return its input (parent)
   // frames. For case (2), we return/create the unwinder frame list
   // without caching it in m_curr_frames_sp so that non-private-state
   // callers still get the public illusion once the process settles.
   ProcessSP process_sp = GetProcess();
+  Policy policy = PolicyStack::Get().Current();
   {
     std::lock_guard<std::mutex> pguard(m_provider_frames_mutex);
     if (!m_active_frame_providers_by_thread.empty()) {
@@ -1549,7 +1557,7 @@ StackFrameListSP Thread::GetStackFrameList() {
         return it->second.back();
 
       // Case 1b: private state thread while a provider is active elsewhere.
-      if (process_sp && process_sp->CurrentThreadIsPrivateStateThread())
+      if (!policy.capabilities.can_load_frame_providers)
         return m_active_frame_providers_by_thread.begin()->second.back();
     }
   }
@@ -1558,13 +1566,13 @@ StackFrameListSP Thread::GetStackFrameList() {
     return m_curr_frames_sp;
 
   // The private state thread must see the raw unwinder frames, not the
-  // provider-augmented public view. Policy::PrivateState is pushed by
-  // RunThreadPlan and RunPrivateStateThread.
-  Policy policy = PolicyStack::Get().Current();
-  if (policy.view == Policy::View::Private) {
+  // provider-augmented public view, while it is servicing expression
+  // evaluation. PushPrivateState(RunningExpression) is pushed by
+  // RunThreadPlan and by RunPrivateStateThread for override PSTs.
+  if (!policy.capabilities.can_load_frame_providers) {
     if (!m_unwinder_frames_sp)
       m_unwinder_frames_sp = std::make_shared<StackFrameList>(
-          *this, m_prev_frames_sp, true, /*provider_id=*/0);
+          *this, m_prev_unwinder_frames_sp, true, /*provider_id=*/0);
     return m_unwinder_frames_sp;
   }
 
@@ -1617,7 +1625,7 @@ StackFrameListSP Thread::GetStackFrameList() {
           *this, input_frames, m_prev_frames_sp, true, last_provider, last_id);
     } else {
       LLDB_LOG(GetLog(LLDBLog::Thread),
-               "Missing frame provider (id = {0}) in Thread #{1:x}}", last_id,
+               "Missing frame provider (id = {0}) in Thread #{1:x}", last_id,
                GetID());
     }
   }
@@ -1625,7 +1633,7 @@ StackFrameListSP Thread::GetStackFrameList() {
   if (!m_curr_frames_sp) {
     // No provider - use normal unwinder frames with stable ID = 0.
     m_unwinder_frames_sp = std::make_shared<StackFrameList>(
-        *this, m_prev_frames_sp, true, /*provider_id=*/0);
+        *this, m_prev_unwinder_frames_sp, true, /*provider_id=*/0);
     m_curr_frames_sp = m_unwinder_frames_sp;
   } else {
     // Register this frame list by its identifier for later lookup.
@@ -1666,9 +1674,8 @@ llvm::Error Thread::LoadScriptedFrameProvider(
   StackFrameListSP input_frames;
   if (m_frame_providers.empty()) {
     // First provider gets real unwinder frames with stable ID = 0.
-    m_unwinder_frames_sp =
-        std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true,
-                                         /*provider_id=*/0);
+    m_unwinder_frames_sp = std::make_shared<StackFrameList>(
+        *this, m_prev_unwinder_frames_sp, true, /*provider_id=*/0);
     input_frames = m_unwinder_frames_sp;
   } else {
     // Subsequent providers wrap the previous provider.
@@ -1740,6 +1747,7 @@ void Thread::ClearScriptedFrameProvider() {
   m_unwinder_frames_sp.reset();
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
+  m_prev_unwinder_frames_sp.reset();
 }
 
 std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
@@ -1763,12 +1771,14 @@ void Thread::ClearStackFrames() {
   if (RegisterContextSP reg_ctx_sp = GetRegisterContext())
     m_prev_framezero_pc = reg_ctx_sp->GetPC();
 
-  // Only store away the old "reference" StackFrameList if we got all its
+  // Only store away the old "reference" StackFrameLists if we got all their
   // frames:
   // FIXME: At some point we can try to splice in the frames we have fetched
   // into the new frame as we make it, but let's not try that now.
   if (m_curr_frames_sp && m_curr_frames_sp->WereAllFramesFetched())
     m_prev_frames_sp.swap(m_curr_frames_sp);
+  if (m_unwinder_frames_sp && m_unwinder_frames_sp->WereAllFramesFetched())
+    m_prev_unwinder_frames_sp = m_unwinder_frames_sp;
   m_curr_frames_sp.reset();
   m_unwinder_frames_sp.reset();
 
@@ -2152,21 +2162,21 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
                             bool print_json_thread, bool print_json_stopinfo) {
   const bool stop_format = false;
   DumpUsingSettingsFormat(strm, 0, stop_format);
-  strm.Printf("\n");
+  strm.PutCString("\n");
 
   StructuredData::ObjectSP thread_info = GetExtendedInfo();
 
   if (print_json_thread || print_json_stopinfo) {
     if (thread_info && print_json_thread) {
       thread_info->Dump(strm);
-      strm.Printf("\n");
+      strm.PutCString("\n");
     }
 
     if (print_json_stopinfo && m_stop_info_sp) {
       StructuredData::ObjectSP stop_info = m_stop_info_sp->GetExtendedInfo();
       if (stop_info) {
         stop_info->Dump(strm);
-        strm.Printf("\n");
+        strm.PutCString("\n");
       }
     }
 
@@ -2197,7 +2207,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     bool printed_breadcrumb = false;
     if (breadcrumb && breadcrumb->GetType() == eStructuredDataTypeDictionary) {
       if (printed_activity)
-        strm.Printf("\n");
+        strm.PutCString("\n");
       StructuredData::Dictionary *breadcrumb_dict =
           breadcrumb->GetAsDictionary();
       StructuredData::ObjectSP breadcrumb_text =
@@ -2211,7 +2221,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     }
     if (messages && messages->GetType() == eStructuredDataTypeArray) {
       if (printed_breadcrumb)
-        strm.Printf("\n");
+        strm.PutCString("\n");
       StructuredData::Array *messages_array = messages->GetAsArray();
       const size_t msg_count = messages_array->GetSize();
       if (msg_count > 0) {
@@ -2298,8 +2308,8 @@ Status Thread::StepIn(bool source_step,
     if (source_step && frame_sp && frame_sp->HasDebugInformation()) {
       SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
       new_plan_sp = QueueThreadPlanForStepInRange(
-          abort_other_plans, sc.line_entry, sc, nullptr, run_mode, error,
-          step_in_avoids_code_without_debug_info,
+          abort_other_plans, sc.line_entry, sc, llvm::StringRef(), run_mode,
+          error, step_in_avoids_code_without_debug_info,
           step_out_avoids_code_without_debug_info);
     } else {
       new_plan_sp = QueueThreadPlanForStepSingleInstruction(

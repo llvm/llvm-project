@@ -205,10 +205,11 @@ static void visitRegisterBankClasses(
     // More precisely, PossibleSubclass is a subreg-class iff Reg:SubIdx is in
     // PossibleSubclass for all registers Reg from RC using any
     // subregister-index SubReg
+    if (!PossibleSubclass.hasSuperRegClass(RC))
+      continue;
+
     for (const auto &SubIdx : RegisterClassHierarchy.getSubRegIndices()) {
-      BitVector BV(RegisterClassHierarchy.getRegClasses().size());
-      PossibleSubclass.getSuperRegClasses(&SubIdx, BV);
-      if (BV.test(RC->EnumValue)) {
+      if (PossibleSubclass.hasSuperRegClass(&SubIdx, RC)) {
         std::string TmpKind2 = (Twine(TmpKind) + " " + RC->getName() +
                                 " class-with-subregs: " + RC->getName())
                                    .str();

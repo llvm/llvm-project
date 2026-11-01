@@ -5,6 +5,8 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @sve_ext() {
 ; CHECK-LABEL: 'sve_ext'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %zext_nxv1_i8_to_i32 = zext <vscale x 1 x i8> poison to <vscale x 1 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %sext_nxv1_i8_to_i32 = sext <vscale x 1 x i8> poison to <vscale x 1 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %zext_nxv16_i8_to_i16 = zext <vscale x 16 x i8> poison to <vscale x 16 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 6 for: %zext_nxv16_i8_to_i32 = zext <vscale x 16 x i8> poison to <vscale x 16 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 14 for: %zext_nxv16_i8_to_i64 = zext <vscale x 16 x i8> poison to <vscale x 16 x i64>
@@ -27,6 +29,9 @@ define void @sve_ext() {
 ; CHECK-NEXT:  Cost Model: Found costs of 7 for: %sext_nxv8_i8_to_i64 = sext <vscale x 8 x i8> poison to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+  %zext_nxv1_i8_to_i32 = zext <vscale x 1 x i8> poison to <vscale x 1 x i32>
+  %sext_nxv1_i8_to_i32 = sext <vscale x 1 x i8> poison to <vscale x 1 x i32>
+
   %zext_nxv16_i8_to_i16 = zext <vscale x 16 x i8> poison to <vscale x 16 x i16>
   %zext_nxv16_i8_to_i32 = zext <vscale x 16 x i8> poison to <vscale x 16 x i32>
   %zext_nxv16_i8_to_i64 = zext <vscale x 16 x i8> poison to <vscale x 16 x i64>

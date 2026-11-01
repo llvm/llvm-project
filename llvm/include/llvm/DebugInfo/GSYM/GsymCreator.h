@@ -27,6 +27,10 @@
 
 namespace llvm {
 
+namespace object {
+class ObjectFile;
+}
+
 namespace gsym {
 class FileWriter;
 class OutputAggregator;
@@ -148,8 +152,6 @@ protected:
   std::optional<uint64_t> BaseAddress;
   bool IsSegment = false;
   bool Finalized = false;
-  bool Quiet;
-
 
   /// Get the first function start address.
   ///
@@ -314,10 +316,10 @@ protected:
   ///
   /// Used by createSegment() to create segment creators of the correct
   /// version type.
-  virtual std::unique_ptr<GsymCreator> createNew(bool Quiet) const = 0;
+  virtual std::unique_ptr<GsymCreator> createNew() const = 0;
 
 public:
-  LLVM_ABI GsymCreator(bool Quiet = false);
+  LLVM_ABI GsymCreator();
   virtual ~GsymCreator() = default;
 
   /// Get the size in bytes needed for encoding string offsets.
@@ -417,9 +419,17 @@ public:
   ///
   /// \param  OS Output stream to report duplicate function infos, overlapping
   ///         function infos, and function infos that were merged or removed.
+  /// \param  Obj An optional object file that the function infos were created
+  ///         from. The last function info often has no size, and its size gets
+  ///         filled in from the valid text ranges. A valid text range can span
+  ///         more than one section, so the object file is used to find the
+  ///         section that contains the function and keep the size from
+  ///         extending past the end of that section. If no object file is
+  ///         supplied the size is filled in from the valid text ranges alone.
   /// \returns An error object that indicates success or failure of the
   ///          finalize.
-  LLVM_ABI llvm::Error finalize(OutputAggregator &OS);
+  LLVM_ABI llvm::Error finalize(OutputAggregator &OS,
+                                const object::ObjectFile *Obj = nullptr);
 
   /// Set the UUID value.
   ///
@@ -491,10 +501,6 @@ public:
   void setBaseAddress(uint64_t Addr) {
     BaseAddress = Addr;
   }
-
-  /// Whether the transformation should be quiet, i.e. not output warnings.
-  bool isQuiet() const { return Quiet; }
-
 
   /// Create a segmented GSYM creator starting with function info index
   /// \a FuncIdx.

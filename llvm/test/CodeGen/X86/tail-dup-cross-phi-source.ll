@@ -53,7 +53,7 @@ define fastcc void @misscompile_early_taildup(i32 %Value415, ptr %Ptr) {
   ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:gr32 = PHI [[INC32r]], %bb.3, [[PHI1]], %bb.1
   ; CHECK-NEXT:   MOV32mr [[COPY]], 1, $noreg, 0, $noreg, [[PHI4]] :: (volatile store (s32) into %ir.Ptr)
   ; CHECK-NEXT:   [[MOV32rm2:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (volatile load (s32) from %ir.Ptr)
-  ; CHECK-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG killed [[MOV32rm2]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[MOV32rm2]], %subreg.sub_32bit
   ; CHECK-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG2]], %jump-table.0, $noreg :: (load (s64) from jump-table)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.Block312:

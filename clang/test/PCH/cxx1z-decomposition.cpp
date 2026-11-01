@@ -1,5 +1,6 @@
 // No PCH:
 // RUN: %clang_cc1 -pedantic -std=c++1z -include %s -verify %s
+// RUN: not %clang_cc1 -pedantic -std=c++1z -fsyntax-only %s 2>&1 | FileCheck %s
 //
 // With PCH:
 // RUN: %clang_cc1 -pedantic -std=c++1z -emit-pch -fallow-pch-with-compiler-errors %s -o %t
@@ -22,7 +23,8 @@ constexpr int foo(Q &&q) {
   return a * 10 + b;
 }
 
-auto [noinit]; // expected-error{{structured binding declaration '[noinit]' requires an initializer}}
+auto [noinit]; // expected-error{{structured binding declaration '[noinit]' requires an initializer; expected '=' or braced initializer list}}
+               // CHECK: :[[@LINE-1]]:14: error: structured binding declaration '[noinit]' requires an initializer; expected '=' or braced initializer list
 
 #else
 
@@ -31,7 +33,7 @@ int k = decomp(arr);
 
 static_assert(foo({1, 2}) == 12);
 
-// expected-error@15 {{cannot bind non-class, non-array type 'const int'}}
+// expected-error@16 {{cannot bind non-class, non-array type 'const int'}}
 int z = decomp(10); // expected-note {{instantiation of}}
 
 #endif

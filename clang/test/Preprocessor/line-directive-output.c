@@ -76,7 +76,19 @@ extern int z;
 # 49 "A.c"
 
 // CHECK: # 50 "a\n.c"
-# 50 "a\012.c"
+# 50 "a\n.c"
+
+// CHECK: # 1 "c:\moo\zar\haz.h"
+#line 1 "c:\moo\zar\haz.h"
+
+// CHECK: # 1 "original\x12source.c"
+# 1 "original\x12source.c"
+
+// CHECK: # 1 "original\u1234"
+# 1 "original\u1234"
+
+// CHECK: # 1 "original\u{1234}"
+# 1 "original\u{1234}"
 
 # 1 "system.h" 3
 # 2

@@ -1,6 +1,6 @@
-; RUN:  llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
-; RUN:  llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
-; RUN:  llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
+; RUN:  llc -mtriple=amdgpu6.01 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
+; RUN:  llc -mtriple=amdgpu8.02 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
+; RUN:  llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN:  llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}s_abs_i32:

@@ -11,6 +11,7 @@
 
 #include "Cuda.h"
 #include "Gnu.h"
+#include "MSVC.h"
 #include "clang/Driver/CudaInstallationDetector.h"
 #include "clang/Driver/LazyDetector.h"
 #include "clang/Driver/RocmInstallationDetector.h"
@@ -74,7 +75,7 @@ public:
   bool isPICDefaultForced() const override;
 
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
   llvm::ExceptionHandling GetExceptionModel(
@@ -85,8 +86,7 @@ public:
                             llvm::opt::ArgStringList &CC1Args) const override;
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
-                        llvm::StringRef BoundArch,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
@@ -118,6 +118,7 @@ private:
   std::string TripleDirName;
   mutable std::unique_ptr<tools::gcc::Preprocessor> Preprocessor;
   mutable std::unique_ptr<tools::gcc::Compiler> Compiler;
+  mutable std::unique_ptr<tools::ARM64XObjcopy> Objcopy;
   void findGccLibDir(const llvm::Triple &LiteralTriple);
 
   bool NativeLLVMSupport;

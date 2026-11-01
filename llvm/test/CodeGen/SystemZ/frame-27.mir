@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=s390x-linux-gnu -start-before=prologepilog %s -o - -mcpu=z14 \
-# RUN:   -debug-only=prologepilog -print-after=prologepilog -verify-machineinstrs 2>&1 \
+# RUN: llc -mtriple=s390x-linux-gnu -start-before=prolog-epilog %s -o - -mcpu=z14 \
+# RUN:   -debug-only=prolog-epilog -print-after=prolog-epilog -verify-machineinstrs 2>&1 \
 # RUN:   | FileCheck %s
 # REQUIRES: asserts
 #

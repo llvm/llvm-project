@@ -20,11 +20,11 @@ body:             |
     ; CHECK-NEXT: %bit:fpr64 = BSPv8i8 %lhs, %mhs, %rhs
     ; CHECK-NEXT: $d0 = COPY %bit
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %lhs:fpr(<2 x s32>) = COPY $d0
-    %mhs:fpr(<2 x s32>) = COPY $d1
-    %rhs:fpr(<2 x s32>) = COPY $d2
-    %bit:fpr(<2 x s32>) = G_BSP %lhs, %mhs, %rhs
-    $d0 = COPY %bit(<2 x s32>)
+    %lhs:fpr(<2 x i32>) = COPY $d0
+    %mhs:fpr(<2 x i32>) = COPY $d1
+    %rhs:fpr(<2 x i32>) = COPY $d2
+    %bit:fpr(<2 x i32>) = G_BSP %lhs, %mhs, %rhs
+    $d0 = COPY %bit(<2 x i32>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -45,11 +45,11 @@ body:             |
     ; CHECK-NEXT: %bit:fpr64 = BSPv8i8 %lhs, %mhs, %rhs
     ; CHECK-NEXT: $d0 = COPY %bit
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %lhs:fpr(<4 x s16>) = COPY $d0
-    %mhs:fpr(<4 x s16>) = COPY $d1
-    %rhs:fpr(<4 x s16>) = COPY $d2
-    %bit:fpr(<4 x s16>) = G_BSP %lhs, %mhs, %rhs
-    $d0 = COPY %bit(<4 x s16>)
+    %lhs:fpr(<4 x i16>) = COPY $d0
+    %mhs:fpr(<4 x i16>) = COPY $d1
+    %rhs:fpr(<4 x i16>) = COPY $d2
+    %bit:fpr(<4 x i16>) = G_BSP %lhs, %mhs, %rhs
+    $d0 = COPY %bit(<4 x i16>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -71,11 +71,11 @@ body:             |
     ; CHECK-NEXT: %bit:fpr128 = BSPv16i8 %lhs, %mhs, %rhs
     ; CHECK-NEXT: $q0 = COPY %bit
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<2 x s64>) = COPY $q0
-    %mhs:fpr(<2 x s64>) = COPY $q1
-    %rhs:fpr(<2 x s64>) = COPY $q2
-    %bit:fpr(<2 x s64>) = G_BSP %lhs, %mhs, %rhs
-    $q0 = COPY %bit(<2 x s64>)
+    %lhs:fpr(<2 x i64>) = COPY $q0
+    %mhs:fpr(<2 x i64>) = COPY $q1
+    %rhs:fpr(<2 x i64>) = COPY $q2
+    %bit:fpr(<2 x i64>) = G_BSP %lhs, %mhs, %rhs
+    $q0 = COPY %bit(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -97,11 +97,11 @@ body:             |
     ; CHECK-NEXT: %bit:fpr128 = BSPv16i8 %lhs, %mhs, %rhs
     ; CHECK-NEXT: $q0 = COPY %bit
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<4 x s32>) = COPY $q0
-    %mhs:fpr(<4 x s32>) = COPY $q1
-    %rhs:fpr(<4 x s32>) = COPY $q2
-    %bit:fpr(<4 x s32>) = G_BSP %lhs, %mhs, %rhs
-    $q0 = COPY %bit(<4 x s32>)
+    %lhs:fpr(<4 x i32>) = COPY $q0
+    %mhs:fpr(<4 x i32>) = COPY $q1
+    %rhs:fpr(<4 x i32>) = COPY $q2
+    %bit:fpr(<4 x i32>) = G_BSP %lhs, %mhs, %rhs
+    $q0 = COPY %bit(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -123,11 +123,11 @@ body:             |
     ; CHECK-NEXT: %bit:fpr128 = BSPv16i8 %lhs, %mhs, %rhs
     ; CHECK-NEXT: $q0 = COPY %bit
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<8 x s16>) = COPY $q0
-    %mhs:fpr(<8 x s16>) = COPY $q1
-    %rhs:fpr(<8 x s16>) = COPY $q2
-    %bit:fpr(<8 x s16>) = G_BSP %lhs, %mhs, %rhs
-    $q0 = COPY %bit(<8 x s16>)
+    %lhs:fpr(<8 x i16>) = COPY $q0
+    %mhs:fpr(<8 x i16>) = COPY $q1
+    %rhs:fpr(<8 x i16>) = COPY $q2
+    %bit:fpr(<8 x i16>) = G_BSP %lhs, %mhs, %rhs
+    $q0 = COPY %bit(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -149,9 +149,9 @@ body:             |
     ; CHECK-NEXT: %bit:fpr128 = BSPv16i8 %lhs, %mhs, %rhs
     ; CHECK-NEXT: $q0 = COPY %bit
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<16 x s8>) = COPY $q0
-    %mhs:fpr(<16 x s8>) = COPY $q1
-    %rhs:fpr(<16 x s8>) = COPY $q2
-    %bit:fpr(<16 x s8>) = G_BSP %lhs, %mhs, %rhs
-    $q0 = COPY %bit(<16 x s8>)
+    %lhs:fpr(<16 x i8>) = COPY $q0
+    %mhs:fpr(<16 x i8>) = COPY $q1
+    %rhs:fpr(<16 x i8>) = COPY $q2
+    %bit:fpr(<16 x i8>) = G_BSP %lhs, %mhs, %rhs
+    $q0 = COPY %bit(<16 x i8>)
     RET_ReallyLR implicit $q0

@@ -25,6 +25,26 @@ def int_wasm_memory_grow :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_i32_ty, LLVMMatchType<0>], []>;
 
 //===----------------------------------------------------------------------===//
+// Bulk memory intrinsics
+//===----------------------------------------------------------------------===//
+
+def int_wasm_memory_copy :
+  DefaultAttrsIntrinsic<[],
+                        [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty,
+                         llvm_anyint_ty],
+                        [IntrArgMemOnly, NoCapture<ArgIndex<2>>,
+                         NoCapture<ArgIndex<3>>, WriteOnly<ArgIndex<2>>,
+                         ReadOnly<ArgIndex<3>>, ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>]>;
+
+def int_wasm_memory_fill :
+  DefaultAttrsIntrinsic<[],
+                        [llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty,
+                         llvm_anyint_ty],
+                        [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+                         WriteOnly<ArgIndex<1>>, ImmArg<ArgIndex<0>>]>;
+
+//===----------------------------------------------------------------------===//
 // ref.null intrinsics
 //===----------------------------------------------------------------------===//
 def int_wasm_ref_null_extern :
@@ -46,6 +66,17 @@ def int_wasm_ref_is_null_exn :
 def int_wasm_ref_test_func
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_vararg_ty],
                             [IntrNoMem]>;
+
+//===----------------------------------------------------------------------===//
+// funcref <--> pointer conversion intrinsics
+//===----------------------------------------------------------------------===//
+def int_wasm_funcref_to_ptr :
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_funcref_ty],
+                        [IntrNoMem], "llvm.wasm.funcref.to_ptr">;
+
+def int_wasm_ptr_to_funcref :
+  DefaultAttrsIntrinsic<[llvm_funcref_ty], [llvm_ptr_ty],
+                        [IntrNoMem], "llvm.wasm.ptr.to_funcref">;
 
 //===----------------------------------------------------------------------===//
 // Table intrinsics

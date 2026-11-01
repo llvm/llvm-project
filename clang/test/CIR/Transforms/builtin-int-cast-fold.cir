@@ -1,0 +1,31 @@
+// RUN: cir-opt -cir-canonicalize -o %t.cir %s
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // A round-trip cast (CIR -> builtin -> CIR back to the original type)
+  // folds away, returning the original value.
+  cir.func @roundtrip(%arg0: !s32i) -> !s32i {
+    %0 = cir.builtin_int_cast %arg0 : !s32i -> i32
+    %1 = cir.builtin_int_cast %0 : i32 -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @roundtrip(%[[ARG:.+]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.return %[[ARG]] : !s32i
+  // CHECK-NEXT: }
+
+  // A round-trip that returns to a *different* CIR type must not fold.
+  cir.func @no_fold_diff_type() -> !s32i {
+    %0 = llvm.mlir.constant(42 : i32) : i32
+    %1 = cir.builtin_int_cast %0 : i32 -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @no_fold_diff_type() -> !s32i {
+  // CHECK-NEXT:   %[[VAL:.+]] = llvm.mlir.constant(42 : i32) : i32
+  // CHECK-NEXT:   %[[CAST:.+]] = cir.builtin_int_cast %[[VAL]] : i32 -> !s32i
+  // CHECK-NEXT:   cir.return %[[CAST]] : !s32i
+  // CHECK-NEXT: }
+}

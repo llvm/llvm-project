@@ -26,7 +26,6 @@
 namespace clang {
 
 class HLSLResourceBindingAttr;
-class HLSLRVkBindingAttr;
 
 namespace hlsl {
 
@@ -109,6 +108,12 @@ inline uint32_t getResourceDimensions(llvm::dxil::ResourceDimension Dim) {
   llvm_unreachable("Unhandled llvm::dxil::ResourceDimension enum.");
 }
 
+// Returns true if sampling operations on a resource of this dimension take a
+// texel-space offset operand.
+inline bool hasResourceOffset(llvm::dxil::ResourceDimension Dim) {
+  return Dim != llvm::dxil::ResourceDimension::Cube;
+}
+
 // Returns true if the second field of the record is a counter resource handle
 inline bool hasCounterHandle(const CXXRecordDecl *RD) {
   if (RD->field_empty())
@@ -153,6 +158,8 @@ public:
   IdentifierInfo *getNameAsIdentifier(ASTContext &AST) const {
     return &AST.Idents.get(Name);
   }
+
+  llvm::StringRef getName() const { return Name; }
 
 private:
   void pushName(llvm::StringRef N, llvm::StringRef Delim);

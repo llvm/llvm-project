@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IVUsers.h"
@@ -32,6 +34,8 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PrintPasses.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace ore;
@@ -66,7 +70,7 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
     errs() << "\nCurrent properties: ";
     MFProps.print(errs());
     errs() << "\n";
-    llvm_unreachable("MachineFunctionProperties check failed");
+    reportFatalUsageError("MachineFunctionProperties check failed");
   }
 #endif
   // Collect the MI count of the function before the pass.
@@ -127,7 +131,17 @@ bool MachineFunctionPass::printIRUnit(raw_ostream &OS, Function &F) {
   if (F.hasAvailableExternallyLinkage())
     return false;
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-  MMI.getOrCreateMachineFunction(F).print(OS);
+  MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
+  if (!isFunctionInPrintList(MF.getName()))
+    return false;
+  if (!SourceLocFilterEmpty && none_of(MF, [](const MachineBasicBlock &MBB) {
+        return any_of(MBB, [](const MachineInstr &MI) {
+          return isSourceLocInPrintList(MI.getDebugLoc());
+        });
+      }))
+    return false;
+  MF.print(OS);
   return true;
 }
 
@@ -151,6 +165,7 @@ void MachineFunctionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GlobalsAAWrapperPass>();
   AU.addPreserved<IVUsersWrapperPass>();
   AU.addPreserved<LoopInfoWrapperPass>();
+  AU.addPreserved<CycleInfoWrapperPass>();
   AU.addPreserved<MemoryDependenceWrapperPass>();
   AU.addPreserved<ScalarEvolutionWrapperPass>();
   AU.addPreserved<SCEVAAWrapperPass>();

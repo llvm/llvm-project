@@ -590,7 +590,7 @@ void NullabilityChecker::checkBeginFunction(CheckerContext &C) const {
 }
 
 // Whenever we see a load from a typed memory region that's been annotated as
-// 'nonnull', we want to trust the user on that and assume that it is is indeed
+// 'nonnull', we want to trust the user on that and assume that it is indeed
 // non-null.
 //
 // We do so even if the value is known to have been assigned to null.
@@ -708,7 +708,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
     if (NullReturnedFromNonnull.isEnabled() &&
         RetExprTypeLevelNullability != Nullability::Nonnull &&
         !InSuppressedMethodFamily) {
-      ExplodedNode *N = C.generateErrorNode(State);
+      ExplodedNode *N = C.addSink(State);
       if (!N)
         return;
 
@@ -805,7 +805,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
         ArgExprTypeLevelNullability != Nullability::Nonnull &&
         RequiredNullability == Nullability::Nonnull &&
         isDiagnosableCall(Call)) {
-      ExplodedNode *N = C.generateErrorNode(State);
+      ExplodedNode *N = C.addSink(State);
       if (!N)
         return;
 
@@ -1288,7 +1288,7 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
       ValNullability != Nullability::Nonnull &&
       ValueExprTypeLevelNullability != Nullability::Nonnull &&
       !isARCNilInitializedLocal(C, S)) {
-    ExplodedNode *N = C.generateErrorNode(State);
+    ExplodedNode *N = C.addSink(State);
     if (!N)
       return;
 

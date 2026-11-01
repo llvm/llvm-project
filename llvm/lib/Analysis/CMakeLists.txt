@@ -1,3 +1,20 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS AnalysisOptions.td)
+tablegen(LLVM AnalysisOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(AnalysisOptionsTableGen)
+
+include(MLGOLower)
+mlgo_lower_models(
+  "${LLVM_MLGO_MODELS}"
+  "${LLVM_MLGO_MLIR_OPT}"
+  "${LLVM_MLGO_MLIR_TRANSLATE}"
+  inliner
+  llvm/Analysis
+  InlinerModels
+  "models/inline-oz-test-model.inc"
+  "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/inline-oz-test-model-tosa.mlir"
+  MLDeps
+)
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
@@ -43,6 +60,7 @@ add_llvm_component_library(LLVMAnalysis
   AliasAnalysisEvaluator.cpp
   AliasSetTracker.cpp
   Analysis.cpp
+  AnalysisOptions.cpp
   AssumeBundleQueries.cpp
   AssumptionCache.cpp
   BasicAliasAnalysis.cpp
@@ -85,7 +103,6 @@ add_llvm_component_library(LLVMAnalysis
   HashRecognize.cpp
   HeatUtils.cpp
   IR2Vec.cpp
-  IRSimilarityIdentifier.cpp
   IVDescriptors.cpp
   IVUsers.cpp
   ImportedFunctionsInliningStatistics.cpp
@@ -103,6 +120,7 @@ add_llvm_component_library(LLVMAnalysis
   LazyBlockFrequencyInfo.cpp
   LazyCallGraph.cpp
   LazyValueInfo.cpp
+  LibcallLoweringInfo.cpp
   Lint.cpp
   Loads.cpp
   Local.cpp
@@ -137,7 +155,6 @@ add_llvm_component_library(LLVMAnalysis
   ProfileSummaryInfo.cpp
   PtrUseVisitor.cpp
   RegionInfo.cpp
-  RegionPass.cpp
   RegionPrinter.cpp
   ReplayInlineAdvisor.cpp
   RuntimeLibcallInfo.cpp
@@ -149,7 +166,6 @@ add_llvm_component_library(LLVMAnalysis
   StackLifetime.cpp
   StackSafetyAnalysis.cpp
   StructuralHash.cpp
-  SyntheticCountsUtils.cpp
   TFLiteUtils.cpp
   TargetLibraryInfo.cpp
   TargetTransformInfo.cpp
@@ -170,6 +186,7 @@ add_llvm_component_library(LLVMAnalysis
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis
 
   DEPENDS
+  AnalysisOptionsTableGen
   analysis_gen
   intrinsics_gen
   ${MLDeps}
@@ -182,6 +199,7 @@ add_llvm_component_library(LLVMAnalysis
   Core
   FrontendHLSL
   Object
+  Option
   ProfileData
   Support
   TargetParser

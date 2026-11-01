@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestThreadName(TestBase):
-    @skipUnlessWindows
+    @requireWindows
     @skipIfWindows(windows_version=["<", "10.0.14393"])
     def test_with_thread_description(self):
         """SBThread.GetName() reflects SetThreadDescription on Windows."""

@@ -580,7 +580,7 @@ define i1 @freeze_isfpclass(float %arg0) {
 ; CHECK-LABEL: define i1 @freeze_isfpclass(
 ; CHECK-SAME: float [[ARG0:%.*]]) {
 ; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0]]
-; CHECK-NEXT:    [[OP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG0_FR]], i32 27)
+; CHECK-NEXT:    [[OP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG0_FR]], /* (nan nsub nnorm) */ i32 27)
 ; CHECK-NEXT:    ret i1 [[OP]]
 ;
   %op = call i1 @llvm.is.fpclass.f32(float %arg0, i32 27)

@@ -64,8 +64,13 @@ public:
                            const MCSubtargetInfo &STI) = 0;
 
   // Called when a label is emitted. Used for optimizations that require
-  // information about jump targets, such as guard elimination.
-  virtual void onLabel(const MCSymbol *Symbol) {}
+  // information about jump targets, such as guard elimination, and to flush
+  // any rewriter state that must not cross a potential branch target.
+  virtual void onLabel(const MCSymbol *Symbol, MCStreamer &Out) {}
+
+  // Called when the stream is finalized. Used to flush any pending rewriter
+  // state before the stream ends.
+  virtual void finish(MCStreamer &Out) {}
 };
 
 } // namespace llvm

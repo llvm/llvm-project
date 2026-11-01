@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 class C<list<bits<4>> L> {
   bits<2> V0 = L[0]{1...0};

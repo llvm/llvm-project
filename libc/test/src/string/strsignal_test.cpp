@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/string/strsignal.h"
 #include "test/UnitTest/Test.h"
-
-#include <signal.h>
 
 TEST(LlvmLibcStrSignalTest, KnownSignals) {
   ASSERT_STREQ(LIBC_NAMESPACE::strsignal(1), "Hangup");

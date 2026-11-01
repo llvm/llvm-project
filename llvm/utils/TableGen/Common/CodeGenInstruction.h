@@ -297,7 +297,7 @@ public:
                                               unsigned Variant);
 
   // Is the specified operand in a generic instruction implicitly a pointer.
-  // This can be used on intructions that use typeN or ptypeN to identify
+  // This can be used on instructions that use typeN or ptypeN to identify
   // operands that should be considered as pointers even though SelectionDAG
   // didn't make a distinction between integer and pointers.
   bool isInOperandAPointer(unsigned i) const {

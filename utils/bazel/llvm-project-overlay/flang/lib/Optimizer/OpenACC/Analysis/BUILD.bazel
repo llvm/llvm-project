@@ -25,6 +25,7 @@ cc_library(
     deps = [
         "//flang/include/flang/Optimizer/Analysis:AnalysisHeaders",
         "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
+        "//flang/include/flang/Optimizer/CodeGen:CodeGenHeaders",
         "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
         "//flang/include/flang/Optimizer/Dialect/CUF:CUFHeaders",
         "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsHeaders",
@@ -38,6 +39,8 @@ cc_library(
         "//flang/lib/Optimizer/OpenACC/Support:FIROpenACCSupport",
         "//llvm:Support",
         "//mlir:IR",
+        "//mlir:LLVMDialect",
+        "//mlir:OpenACCAnalysis",
         "//mlir:OpenACCDialect",
         "//mlir:OpenACCUtils",
     ],

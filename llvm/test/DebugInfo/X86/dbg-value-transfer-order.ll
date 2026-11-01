@@ -97,13 +97,13 @@ attributes #1 = { nounwind readnone speculatable }
 !llvm.module.flags = !{!14, !15, !16, !17}
 !llvm.ident = !{!18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !2)
 !1 = !DIFile(filename: "t.c", directory: "C:\5Csrc\5Cllvm-project\5Cbuild", checksumkind: CSK_MD5, checksum: "f80d0003faf76554dfdec6c95da285cc")
 !2 = !{}
 !3 = !{!4}
 !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = distinct !DIGlobalVariable(name: "pages", scope: !6, file: !1, line: 18, type: !10, isLocal: true, isDefinition: true)
-!6 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 17, type: !7, isLocal: false, isDefinition: true, scopeLine: 17, isOptimized: true, unit: !0, retainedNodes: !2)
+!6 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 17, type: !7, isLocal: false, isDefinition: true, scopeLine: 17, isOptimized: true, unit: !0, retainedNodes: !3)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

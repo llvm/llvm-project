@@ -320,12 +320,12 @@ public:
   int adjustFromLeftSib(unsigned Size, NodeBase &Sib, unsigned SSize, int Add) {
     if (Add > 0) {
       // We want to grow, copy from sib.
-      unsigned Count = std::min(std::min(unsigned(Add), SSize), N - Size);
+      unsigned Count = std::min({unsigned(Add), SSize, N - Size});
       Sib.transferToRightSib(SSize, *this, Size, Count);
       return Count;
     } else {
       // We want to shrink, copy to sib.
-      unsigned Count = std::min(std::min(unsigned(-Add), Size), N - SSize);
+      unsigned Count = std::min({unsigned(-Add), Size, N - SSize});
       transferToLeftSib(Size, Sib, SSize, Count);
       return -Count;
     }

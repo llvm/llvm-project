@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1100 -filetype=obj %s | llvm-dwarfdump -debug-frame - | FileCheck %s
+; RUN: llvm-mc -triple=amdgpu11.00-amd-amdhsa -filetype=obj %s | llvm-dwarfdump -debug-frame - | FileCheck %s
 
 .text
 .cfi_sections .debug_frame

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=livedebugvalues -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -march=hexagon -run-pass=live-debug-values -verify-machineinstrs %s -o - | FileCheck %s
 # CHECK: BUNDLE
 --- |
 

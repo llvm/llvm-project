@@ -20,23 +20,24 @@ class ScriptedBreakpointResolverOverride
 public:
   ScriptedBreakpointResolverOverride(Target &target,
                                      const std::string &description,
+                                     uint64_t type_mask,
                                      const std::string &class_name,
                                      StructuredDataImpl &args_data)
-      : Target::BreakpointResolverOverride(target, description),
+      : Target::BreakpointResolverOverride(target, description, type_mask),
         m_args_data(args_data), m_class_name(class_name) {}
 
   Target::BreakpointResolverOverrideUP
   CopyIntoNewTarget(Target &target) override {
     return Target::BreakpointResolverOverrideUP(
-        new ScriptedBreakpointResolverOverride(target, m_desc, m_class_name,
-                                               m_args_data));
+        new ScriptedBreakpointResolverOverride(target, m_desc, m_type_mask,
+                                               m_class_name, m_args_data));
   }
 
   lldb::BreakpointResolverSP
   CheckForOverride(Target &target,
                    lldb::BreakpointResolverSP initial_sp) override;
 
-  llvm::Error Validate() override;
+  llvm::Error HasErrors() override;
 
 private:
   StructuredDataImpl m_args_data;

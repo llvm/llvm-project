@@ -25,7 +25,6 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/xxhash.h"
 
 #include <ctime>
 

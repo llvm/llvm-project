@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: name:            uniform_imin
 ; GCN: S_MIN_I32

@@ -61,9 +61,9 @@ define void @test_pr59090_interleave(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <8 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IND]], splat (i64 10000)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i64> [[STEP_ADD]], splat (i64 10000)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP0]], 6
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[B:%.*]], align 1, !llvm.access.group [[ACC_GRP0]]

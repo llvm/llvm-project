@@ -179,7 +179,6 @@ std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   case Intrinsic::x86_tdpbuud_internal:
   case Intrinsic::x86_tdpbf16ps_internal:
   case Intrinsic::x86_tdpfp16ps_internal:
-  case Intrinsic::x86_tmmultf32ps_internal:
   case Intrinsic::x86_tdpbf8ps_internal:
   case Intrinsic::x86_tdpbhf8ps_internal:
   case Intrinsic::x86_tdphbf8ps_internal:
@@ -499,9 +498,8 @@ static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
   Value *Row = II->getOperand(0);
   Value *Col = II->getOperand(1);
 
-  BasicBlock *BB = TileDef->getParent();
   BasicBlock::iterator Iter = TileDef->getIterator();
-  IRBuilder<> Builder(BB, ++Iter);
+  IRBuilder<> Builder(++Iter);
   Value *Stride = Builder.getInt64(64);
   std::array<Value *, 5> Args = {Row, Col, Ptr, Stride, TileDef};
 
@@ -647,7 +645,7 @@ void X86VolatileTileData::volatileTilePHI(PHINode *PHI) {
   for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
     Value *Op = PHI->getIncomingValue(I);
     Instruction *Inst = dyn_cast<Instruction>(Op);
-    assert(Inst && "We shouldn't fold AMX instrution!");
+    assert(Inst && "We shouldn't fold AMX instruction!");
     Incomings.push_back(Inst);
   }
 

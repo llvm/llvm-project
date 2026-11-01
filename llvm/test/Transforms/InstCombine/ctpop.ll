@@ -265,7 +265,7 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, 
 
 define i8 @ctpop_rotate_left(i8 %a, i8 %amt)  {
 ; CHECK-LABEL: @ctpop_rotate_left(
-; CHECK-NEXT:    [[RES:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[A:%.*]])
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %rotl = tail call i8 @llvm.fshl.i8(i8 %a, i8 %a, i8 %amt)
@@ -275,7 +275,7 @@ define i8 @ctpop_rotate_left(i8 %a, i8 %amt)  {
 
 define i8 @ctpop_rotate_right(i8 %a, i8 %amt)  {
 ; CHECK-LABEL: @ctpop_rotate_right(
-; CHECK-NEXT:    [[RES:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[A:%.*]])
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %rotr = tail call i8 @llvm.fshr.i8(i8 %a, i8 %a, i8 %amt)

@@ -11,7 +11,7 @@
 // template <input_range Range>
 //   requires constructible_from<View, views::all_t<Range>> &&
 //             constructible_from<Pattern, single_view<range_value_t<Range>>>
-// constexpr lazy_split_view(Range&& r, range_value_t<Range> e); // explicit since C++23
+// constexpr explicit lazy_split_view(Range&& r, range_value_t<Range> e); // explicit since C++23
 
 #include <ranges>
 
@@ -88,19 +88,9 @@ static_assert(std::is_copy_constructible_v<StrView>);
 
 // SFINAE tests.
 
-#if TEST_STD_VER >= 23
-
 static_assert(
     !test_convertible<std::ranges::lazy_split_view<StrView, StrView>, StrView, std::ranges::range_value_t<StrView>>(),
     "This constructor must be explicit");
-
-#else
-
-static_assert(
-    test_convertible<std::ranges::lazy_split_view<StrView, StrView>, StrView, std::ranges::range_value_t<StrView>>(),
-    "This constructor must not be explicit");
-
-#endif // TEST_STD_VER >= 23
 
 constexpr bool test() {
   {

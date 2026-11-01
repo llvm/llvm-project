@@ -9,6 +9,7 @@
 
   real a, b, c
   logical :: r, s
+  logical :: lx, le, ld, lo
   a = 1.0
   b = 2.0
   c = 3.0
@@ -36,11 +37,11 @@
   if (b .eq. a) b = c
   !$omp end atomic
 
-  !$omp atomic hint(1) acq_rel compare fail(release)
+  !$omp atomic hint(1) acq_rel compare fail(acquire)
   if (c .eq. a) a = b
   !$omp end atomic
 
-  !$omp atomic compare fail(release)
+  !$omp atomic compare fail(acquire)
   if (c .eq. a) a = b
   !$omp end atomic
 
@@ -58,39 +59,50 @@
   if (r) b = c
   !$omp end atomic
 
+  ! Compare-capture with a LOGICAL atom using .eqv. inside a parallel region.
+  ! Regression: the host-associated atom (from the update) must be recognized
+  ! as the same variable as the captured one, even though OpenMP resolves them
+  ! through different (but ultimately identical) symbols.
+  !$omp atomic compare capture
+  lo = lx
+  if (lx .eqv. le) then
+    lx = ld
+  end if
+  !$omp end atomic
+
   ! Check for error conditions:
-  !ERROR: At most one SEQ_CST clause can appear on the ATOMIC directive
+  !ERROR: At most one SEQ_CST clause can appear on ATOMIC directive
   !$omp atomic seq_cst seq_cst compare
   if (b .eq. c) b = a
-  !ERROR: At most one SEQ_CST clause can appear on the ATOMIC directive
+  !ERROR: At most one SEQ_CST clause can appear on ATOMIC directive
   !$omp atomic compare seq_cst seq_cst
   if (b .eq. c) b = a
-  !ERROR: At most one SEQ_CST clause can appear on the ATOMIC directive
+  !ERROR: At most one SEQ_CST clause can appear on ATOMIC directive
   !$omp atomic seq_cst compare seq_cst
   if (b .eq. c) b = a
 
-  !ERROR: At most one ACQUIRE clause can appear on the ATOMIC directive
+  !ERROR: At most one ACQUIRE clause can appear on ATOMIC directive
   !$omp atomic acquire acquire compare
   if (b .eq. c) b = a
-  !ERROR: At most one ACQUIRE clause can appear on the ATOMIC directive
+  !ERROR: At most one ACQUIRE clause can appear on ATOMIC directive
   !$omp atomic compare acquire acquire
   if (b .eq. c) b = a
-  !ERROR: At most one ACQUIRE clause can appear on the ATOMIC directive
+  !ERROR: At most one ACQUIRE clause can appear on ATOMIC directive
   !$omp atomic acquire compare acquire
   if (b .eq. c) b = a
 
-  !ERROR: At most one RELAXED clause can appear on the ATOMIC directive
+  !ERROR: At most one RELAXED clause can appear on ATOMIC directive
   !$omp atomic relaxed relaxed compare
   if (b .eq. c) b = a
-  !ERROR: At most one RELAXED clause can appear on the ATOMIC directive
+  !ERROR: At most one RELAXED clause can appear on ATOMIC directive
   !$omp atomic compare relaxed relaxed
   if (b .eq. c) b = a
-  !ERROR: At most one RELAXED clause can appear on the ATOMIC directive
+  !ERROR: At most one RELAXED clause can appear on ATOMIC directive
   !$omp atomic relaxed compare relaxed
   if (b .eq. c) b = a
 
-  !ERROR: At most one FAIL clause can appear on the ATOMIC directive
-  !$omp atomic fail(release) compare fail(release)
+  !ERROR: At most one FAIL clause can appear on ATOMIC directive
+  !$omp atomic fail(acquire) compare fail(acquire)
   if (c .eq. a) a = b
   !$omp end atomic
 

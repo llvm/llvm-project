@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -87,7 +88,6 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorMaskMaterializationPatterns(patterns,
                                               force32BitVectorIndices);
     populateVectorInsertExtractStridedSliceTransforms(patterns);
-    populateVectorStepLoweringPatterns(patterns);
     populateVectorRankReducingFMAPattern(patterns);
     populateVectorGatherLoweringPatterns(patterns);
     populateVectorFromElementsUnrollPatterns(patterns);
@@ -96,20 +96,22 @@ void ConvertVectorToLLVMPass::runOnOperation() {
       if (armNeon)
         arm_neon::populateLowerContractionToNeonI8MMPatterns(patterns);
       if (armSVE)
-        populateLowerContractionToSVEI8MMPatterns(patterns);
+        arm_sve::populateLowerContractionToSVEI8MMPatterns(patterns);
     }
     if (armBF16) {
       if (armNeon)
         arm_neon::populateLowerContractionToNeonBFMMLAPatterns(patterns);
       if (armSVE)
-        populateLowerContractionToSVEBFMMLAPatterns(patterns);
+        arm_sve::populateLowerContractionToSVEBFMMLAPatterns(patterns);
     }
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 
   // Convert to the LLVM IR dialect.
-  LowerToLLVMOptions options(&getContext());
-  LLVMTypeConverter converter(&getContext(), options);
+  const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+  LowerToLLVMOptions options(&getContext(),
+                             dataLayoutAnalysis.getAtOrAbove(getOperation()));
+  LLVMTypeConverter converter(&getContext(), options, &dataLayoutAnalysis);
   RewritePatternSet patterns(&getContext());
   populateVectorTransferLoweringPatterns(patterns);
   populateVectorToLLVMConversionPatterns(

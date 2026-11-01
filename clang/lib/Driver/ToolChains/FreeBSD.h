@@ -69,8 +69,6 @@ public:
     return ToolChain::CST_Libcxx;
   }
 
-  void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args) const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -87,7 +85,7 @@ public:
   getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
   unsigned GetDefaultDwarfVersion() const override { return 4; }
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,

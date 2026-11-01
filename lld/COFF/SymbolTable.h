@@ -109,6 +109,8 @@ public:
   // added and before the writer writes results to a file.
   void compileBitcodeFiles();
 
+  void waitForLTOCleanup();
+
   // Creates an Undefined symbol and marks it as live.
   Symbol *addGCRoot(StringRef sym, bool aliasEC = false);
 

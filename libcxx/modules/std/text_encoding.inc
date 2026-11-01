@@ -8,12 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
-#  if _LIBCPP_STD_VER >= 23
-  using std::text_encoding;
-
-  // hash support
+#if _LIBCPP_STD_VER >= 26
   using std::hash;
-#  endif // _LIBCPP_STD_VER >= 23
+  namespace ranges {
+    using std::ranges::enable_borrowed_range;
+  }
+  using std::text_encoding;
 #endif
 } // namespace std

@@ -4,6 +4,7 @@
 # RUN: not llvm-mc -triple=x86_64 --disassemble --hex decode2.s 2>&1 | FileCheck %s --check-prefix=DECODE2 --implicit-check-not=warning:
 # RUN: not llvm-mc -triple=x86_64 --disassemble --hex err1.s 2>&1 | FileCheck %s --check-prefix=ERR1 --implicit-check-not=error:
 # RUN: not llvm-mc -triple=x86_64 --disassemble --hex err2.s 2>&1 | FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
+# RUN: not llvm-mc -triple=x86_64 --disassemble err3.s 2>&1 | FileCheck %s --check-prefix=ERR3 --implicit-check-not=error:
 
 #--- a.s
 4883ec08 31  # comment
@@ -60,3 +61,15 @@ c
 # ERR2:      nop
 # ERR2-NEXT: int3
 # ERR2-EMPTY:
+
+#--- err3.s
+not-a-byte
+256
+0x100
+0x90
+
+# ERR3:      1:1: error: invalid input token
+# ERR3:      2:1: error: invalid input token
+# ERR3:      3:1: error: invalid input token
+# ERR3:      nop
+# ERR3-EMPTY:

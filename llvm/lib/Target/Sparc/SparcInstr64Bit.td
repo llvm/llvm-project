@@ -224,6 +224,11 @@ let mayLoad = 1, isAsmParserOnly = 1 in {
                            (load_gdop ADDRrr:$addr, tglobaladdr:$sym))]>;
 }
 
+def : Pat<(i64 (load_gdop ADDRrr:$addr, tconstpool:$sym)),
+          (GDOP_LDXrr ADDRrr:$addr, tconstpool:$sym)>;
+def : Pat<(i64 (load_gdop ADDRrr:$addr, tblockaddress:$sym)),
+          (GDOP_LDXrr ADDRrr:$addr, tblockaddress:$sym)>;
+
 // Sign-extending load of i32 into i64 is a new SPARC v9 instruction.
 defm LDSW   : LoadA<"ldsw", 0b001000, 0b011000, sextloadi32, I64Regs, i64>;
 
@@ -482,6 +487,14 @@ def : Pat<(SPlo tglobaladdr:$in), (ORri (i64 G0), tglobaladdr:$in)>;
 def : Pat<(SPhi tconstpool:$in), (SETHIi tconstpool:$in)>;
 def : Pat<(SPlo tconstpool:$in), (ORri (i64 G0), tconstpool:$in)>;
 
+// GOTDATA_OP hix22/lox10 pairs.
+def : Pat<(xor (SPhi tglobaladdr:$in1), (SPlo tglobaladdr:$in2)),
+          (XORri (SETHIi tglobaladdr:$in1), (tglobaladdr:$in2))>;
+def : Pat<(xor (SPhi tconstpool:$in1), (SPlo tconstpool:$in2)),
+          (XORri (SETHIi tconstpool:$in1), (tconstpool:$in2))>;
+def : Pat<(xor (SPhi tblockaddress:$in1), (SPlo tblockaddress:$in2)),
+          (XORri (SETHIi tblockaddress:$in1), (tblockaddress:$in2))>;
+
 // GlobalTLS addresses
 def : Pat<(SPhi tglobaltlsaddr:$in), (SETHIi tglobaltlsaddr:$in)>;
 def : Pat<(SPlo tglobaltlsaddr:$in), (ORri (i64 G0), tglobaltlsaddr:$in)>;
@@ -499,4 +512,21 @@ def : Pat<(add iPTR:$r, (SPlo tglobaladdr:$in)), (ADDri $r, tglobaladdr:$in)>;
 def : Pat<(add iPTR:$r, (SPlo tconstpool:$in)),  (ADDri $r, tconstpool:$in)>;
 def : Pat<(add iPTR:$r, (SPlo tblockaddress:$in)),
                         (ADDri $r, tblockaddress:$in)>;
+}
+
+// Endian adjusted memory operations.
+let Predicates = [HasV9, Is64Bit] in {
+  // LDSWA is only usable on 64-bit environment.
+  def : Pat<(sext (i32 (SPloadbig    ForceADDRrr:$src, i32))), (LDSWArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(sext (i32 (SPloadlittle ForceADDRrr:$src, i32))), (LDSWArr ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(SPloadbig    ForceADDRrr:$src, i64), (LDXArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(SPloadlittle ForceADDRrr:$src, i64), (LDXArr ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(SPstorebig    i64:$val, ForceADDRrr:$dst, i16), (STHArr ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorelittle i64:$val, ForceADDRrr:$dst, i16), (STHArr ForceADDRrr:$dst, $val, 0x88)>;
+  def : Pat<(SPstorebig    i64:$val, ForceADDRrr:$dst, i32), (STArr  ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorelittle i64:$val, ForceADDRrr:$dst, i32), (STArr  ForceADDRrr:$dst, $val, 0x88)>;
+  def : Pat<(SPstorebig    i64:$val, ForceADDRrr:$dst, i64), (STXArr ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorelittle i64:$val, ForceADDRrr:$dst, i64), (STXArr ForceADDRrr:$dst, $val, 0x88)>;
 }

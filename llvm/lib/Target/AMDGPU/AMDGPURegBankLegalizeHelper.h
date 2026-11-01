@@ -20,6 +20,7 @@ namespace llvm {
 class MachineIRBuilder;
 class SIInstrInfo;
 class SIMachineFunctionInfo;
+class GISelValueTracking;
 
 namespace AMDGPU {
 
@@ -46,6 +47,7 @@ class RegBankLegalizeHelper {
   MachineIRBuilder &B;
   MachineRegisterInfo &MRI;
   const MachineUniformityInfo &MUI;
+  GISelValueTracking *VT;
   const RegisterBankInfo &RBI;
   MachineOptimizationRemarkEmitter MORE;
   const RegBankLegalizeRules &RBLRules;
@@ -88,14 +90,19 @@ class RegBankLegalizeHelper {
   static constexpr LLT P4 = LLT::pointer(4, 64);
   static constexpr LLT P6 = LLT::pointer(6, 32);
 
-  MachineRegisterInfo::VRegAttrs SgprRB_S32 = {SgprRB, S32};
-  MachineRegisterInfo::VRegAttrs SgprRB_S16 = {SgprRB, S16};
-  MachineRegisterInfo::VRegAttrs VgprRB_S32 = {VgprRB, S32};
+  const LLT I16 = LLT::integer(16);
+  const LLT I32 = LLT::integer(32);
+  const LLT I64 = LLT::integer(64);
+
+  MachineRegisterInfo::VRegAttrs SgprRB_I32 = {SgprRB, I32};
+  MachineRegisterInfo::VRegAttrs SgprRB_I64 = {SgprRB, I64};
+  MachineRegisterInfo::VRegAttrs VgprRB_I32 = {VgprRB, I32};
+  MachineRegisterInfo::VRegAttrs VgprRB_I64 = {VgprRB, I64};
   MachineRegisterInfo::VRegAttrs VccRB_S1 = {VccRB, S1};
 
 public:
   RegBankLegalizeHelper(MachineIRBuilder &B, const MachineUniformityInfo &MUI,
-                        const RegisterBankInfo &RBI,
+                        GISelValueTracking *VT, const RegisterBankInfo &RBI,
                         const RegBankLegalizeRules &RBLRules);
 
   bool findRuleAndApplyMapping(MachineInstr &MI);
@@ -153,6 +160,8 @@ private:
   bool lowerInsVecEltTo32(MachineInstr &MI);
   bool lowerAbsToNegMax(MachineInstr &MI);
   bool lowerAbsToS32(MachineInstr &MI);
+  bool lowerSetRounding(MachineInstr &MI);
+  bool lowerGetRounding(MachineInstr &MI);
   bool applyRegisterBanksVgprWithSgprRsrc(MachineInstr &MI, unsigned RsrcIdx);
 };
 

@@ -15,6 +15,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/CommandLine.h"
+#include <cmath>
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
@@ -28,12 +29,12 @@ static cl::opt<unsigned> TopFunctionsForProfileQualityCheck(
     "top-functions-for-profile-quality-check",
     cl::desc("number of hottest functions to print aggregated "
              "profile quality stats of."),
-    cl::init(1000), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(1000), cl::Hidden, cl::cat(BoltOptCategory));
 static cl::opt<unsigned> PercentileForProfileQualityCheck(
     "percentile-for-profile-quality-check",
     cl::desc("Percentile of profile quality distributions over hottest "
              "functions to report."),
-    cl::init(95), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(95), cl::Hidden, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace {

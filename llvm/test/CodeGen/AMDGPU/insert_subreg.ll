@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s
+; RUN: llc -mtriple=amdgpu6.00 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s
+; RUN: llc -mtriple=amdgpu8.02 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s
 
 ; Test that INSERT_SUBREG instructions don't have non-register operands after
 ; instruction selection.

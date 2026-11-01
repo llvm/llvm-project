@@ -22,21 +22,47 @@
 // string vformat(string_view fmt, format_args args);
 // wstring vformat(wstring_view fmt, wformat_args args);
 
-#include <format>
 #include <cassert>
+#include <format>
+#include <thread>
 
 #include "assert_macros.h"
 #include "concat_macros.h"
-#include "format.functions.tests.h"
+#include "format.functions.common.h"
 #include "test_macros.h"
 
-auto test = []<class CharT, class... Args>(
-                std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt, Args&&... args) {
-  std::basic_string<CharT> out = std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
-  TEST_REQUIRE(out == expected,
-               TEST_WRITE_CONCATENATED(
-                   "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
-};
+template <class CharT, class ExceptionTest>
+void format_tests(ExceptionTest check_exception) {
+  // Note the output of std::thread::id is unspecified. The output text is the
+  // same as the stream operator. Since that format is already released this
+  // test follows the practice on existing systems.
+  std::thread::id input{};
+
+  /***** Test the type generic part *****/
+  check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+
+  // *** sign ***
+  check_exception("The replacement field misses a terminating '}'", SV("{:-}"), input);
+  check_exception("The replacement field misses a terminating '}'", SV("{:+}"), input);
+  check_exception("The replacement field misses a terminating '}'", SV("{: }"), input);
+
+  // *** alternate form ***
+  check_exception("The replacement field misses a terminating '}'", SV("{:#}"), input);
+
+  // *** zero-padding ***
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
+
+  // *** precision ***
+  check_exception("The replacement field misses a terminating '}'", SV("{:.}"), input);
+
+  // *** locale-specific form ***
+  check_exception("The replacement field misses a terminating '}'", SV("{:L}"), input);
+
+  // *** type ***
+  for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>(""))
+    check_exception("The replacement field misses a terminating '}'", fmt, input);
+}
 
 auto test_exception =
     []<class CharT, class... Args>(
@@ -55,10 +81,10 @@ auto test_exception =
     };
 
 int main(int, char**) {
-  format_tests<char>(test, test_exception);
+  format_tests<char>(test_exception);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  format_tests<wchar_t>(test, test_exception);
+  format_tests<wchar_t>(test_exception);
 #endif
 
   return 0;

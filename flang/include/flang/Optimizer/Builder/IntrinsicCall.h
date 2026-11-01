@@ -14,11 +14,9 @@
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include <optional>
 
 namespace fir {
@@ -174,6 +172,7 @@ struct IntrinsicLibrary {
                                          llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCmplx(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genConjg(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genCoshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -296,6 +295,8 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeUnordered(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeValue(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genImageIndex(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIparity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -310,6 +311,8 @@ struct IntrinsicLibrary {
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genLcobound(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genLeadz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -416,6 +419,8 @@ struct IntrinsicLibrary {
                                   llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genUcobound(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnlink(std::optional<mlir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -791,7 +796,8 @@ mlir::Value genLibSplitComplexArgsCall(fir::FirOpBuilder &builder,
 /// \p intrinsicName.
 std::optional<IntrinsicHandlerEntry>
 lookupIntrinsicHandler(fir::FirOpBuilder &, llvm::StringRef intrinsicName,
-                       std::optional<mlir::Type> resultType);
+                       std::optional<mlir::Type> resultType,
+                       bool isBindcCall = false);
 
 /// Generate a TODO error message for an as yet unimplemented intrinsic.
 void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name);
@@ -840,6 +846,19 @@ mlir::Value genDivC(fir::FirOpBuilder &builder, mlir::Location loc,
 /// result type.
 mlir::Value genPow(fir::FirOpBuilder &, mlir::Location, mlir::Type resultType,
                    mlir::Value x, mlir::Value y);
+
+template <std::size_t N>
+static constexpr bool isSorted(const IntrinsicHandler (&array)[N]) {
+  // Replace by std::sorted when C++20 is default (will be constexpr).
+  const IntrinsicHandler *lastSeen{nullptr};
+  bool isSorted{true};
+  for (const auto &x : array) {
+    if (lastSeen)
+      isSorted &= std::string_view{lastSeen->name} < std::string_view{x.name};
+    lastSeen = &x;
+  }
+  return isSorted;
+}
 
 } // namespace fir
 

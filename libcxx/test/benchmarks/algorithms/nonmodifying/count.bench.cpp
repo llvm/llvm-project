@@ -17,14 +17,12 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_count    = [](auto first, auto last, auto const& value) { return std::count(first, last, value); };
   auto std_count_if = [](auto first, auto last, auto const& value) {
-    return std::count_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::count_if(first, last, [&](auto element) { return element == value; });
   };
 
   // Benchmark {std,ranges}::{count,count_if} on a sequence where every other element is counted.
@@ -32,7 +30,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto count) {
       benchmark::RegisterBenchmark(
           name,
-          [count](auto& st) {
+          [count](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -71,7 +69,7 @@ int main(int argc, char** argv) {
     auto bm = [](std::string name, auto count) {
       benchmark::RegisterBenchmark(
           name,
-          [count](auto& st) {
+          [count](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             std::vector<bool> c(size, false);
 

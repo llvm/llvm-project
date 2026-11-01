@@ -34,7 +34,7 @@ define i1 @foo(ptr %p) {
 ; AARCH64: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
 ; AARCH64: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
 ; AARCH64: @f = alias [8 x i8], ptr @.cfi.jumptable
-; AARCH64: @g = internal alias [8 x i8], getelementptr inbounds ([2 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
+; AARCH64: @g = internal alias [8 x i8], getelementptr inbounds (i8, ptr @.cfi.jumptable, i64 8)
 ;.
 ; AARCH64-LABEL: @f.cfi(
 ; AARCH64-NEXT:    ret void
@@ -66,4 +66,5 @@ define i1 @foo(ptr %p) {
 ;.
 ; AARCH64: [[META0:![0-9]+]] = !{i32 4, !"branch-target-enforcement", i32 1}
 ; AARCH64: [[META1:![0-9]+]] = !{i32 0, !"typeid1"}
+; AARCH64: [[META2:![0-9]+]] = !{i64 1879002126, i64 8}
 ;.

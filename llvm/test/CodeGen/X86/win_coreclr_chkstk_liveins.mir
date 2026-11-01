@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs %s -run-pass prologepilog -mtriple=x86_64-pc-win32-coreclr -o - | FileCheck %s
+# RUN: llc -verify-machineinstrs %s -run-pass prolog-epilog -mtriple=x86_64-pc-win32-coreclr -o - | FileCheck %s
 ...
 ---
 name:            main4k

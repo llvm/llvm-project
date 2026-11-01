@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=verde | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu6.01 | FileCheck %s
 
 ; This testcase was discovered in si-annotate-cf.ll, where none of the
 ; RUN lines was actually exercising it. See that files git log for its

@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx908 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.08-amd-amdhsa \
 // RUN:   -verify -S -o - %s
 
 typedef half __attribute__((ext_vector_type(2))) half2;

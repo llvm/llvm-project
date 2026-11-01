@@ -41,14 +41,14 @@ cv.insert t0, t1, 0, 1
 # CHECK-ENCODING: [0xdb,0x02,0x13,0x80]
 # CHECK-NO-EXT: instruction requires the following: 'XCVbitmanip' (CORE-V Bit Manipulation){{$}}
 
-cv.insert a0, a1, 17, 18
-# CHECK-INSTR: cv.insert a0, a1, 17, 18
-# CHECK-ENCODING: [0x5b,0x85,0x25,0xa3]
+cv.insert a0, a1, 31, 0
+# CHECK-INSTR: cv.insert a0, a1, 31, 0
+# CHECK-ENCODING: [0x5b,0x85,0x05,0xbe]
 # CHECK-NO-EXT: instruction requires the following: 'XCVbitmanip' (CORE-V Bit Manipulation){{$}}
 
-cv.insert s0, s1, 30, 31
-# CHECK-INSTR: cv.insert s0, s1, 30, 31
-# CHECK-ENCODING: [0x5b,0x84,0xf4,0xbd]
+cv.insert s0, s1, 0, 31
+# CHECK-INSTR: cv.insert s0, s1, 0, 31
+# CHECK-ENCODING: [0x5b,0x84,0xf4,0x81]
 # CHECK-NO-EXT: instruction requires the following: 'XCVbitmanip' (CORE-V Bit Manipulation){{$}}
 
 cv.bclr t0, t1, 0, 1

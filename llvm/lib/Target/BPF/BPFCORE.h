@@ -10,13 +10,29 @@
 #define LLVM_LIB_TARGET_BPF_BPFCORE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/BTF/BTF.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 
 class BasicBlock;
 class Instruction;
 class Module;
+
+/// Return the bit offset used to order an element of a BTF structure record.
+inline uint64_t getBTFRecordElementOffset(const DINode *Element) {
+  switch (Element->getTag()) {
+  case dwarf::DW_TAG_member:
+    return cast<DIDerivedType>(Element)->getOffsetInBits();
+  case dwarf::DW_TAG_variant_part:
+    return cast<DICompositeType>(Element)->getOffsetInBits();
+  default:
+    llvm_unreachable("Unexpected DI tag of a struct element");
+  }
+}
 
 class BPFCoreSharedInfo {
 public:
@@ -46,6 +62,14 @@ public:
   static constexpr StringRef AmaAttr = "btf_ama";
   /// The attribute attached to globals representing a type id
   static constexpr StringRef TypeIdAttr = "btf_type_id";
+
+  struct AmaRelocation {
+    BTF::PatchableRelocKind Kind;
+    int64_t PatchImm;
+    StringRef AccessString;
+
+    static AmaRelocation decode(StringRef Name);
+  };
 
   /// llvm.bpf.passthrough builtin seq number
   static uint32_t SeqNum;

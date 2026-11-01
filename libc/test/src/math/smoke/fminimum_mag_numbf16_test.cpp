@@ -11,4 +11,5 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fminimum_mag_numbf16.h"
 
-LIST_FMINIMUM_MAG_NUM_TESTS(bfloat16, LIBC_NAMESPACE::fminimum_mag_numbf16)
+LIST_FMINIMUM_MAG_NUM_TESTS(FminimumMagNumbf16, bfloat16,
+                            LIBC_NAMESPACE::fminimum_mag_numbf16)

@@ -8,12 +8,12 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DFNATTRS="hidden noundef nofpclass(nan inf)" -DTARGET=dx
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 
@@ -62,3 +62,8 @@ float3 test_frac_float3(float3 p0) { return frac(p0); }
 // CHECK: %hlsl.frac = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].frac.v4f32
 // CHECK: ret <4 x float> %hlsl.frac
 float4 test_frac_float4(float4 p0) { return frac(p0); }
+
+// CHECK: define [[FNATTRS]] <5 x float> @
+// CHECK: %hlsl.frac = call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.[[TARGET]].frac.v5f32
+// CHECK: ret <5 x float> %hlsl.frac
+vector<float, 5> test_frac_float5(vector<float, 5> p0) { return frac(p0); }

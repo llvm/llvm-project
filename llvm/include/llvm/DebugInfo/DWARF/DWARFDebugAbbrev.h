@@ -14,11 +14,21 @@
 #include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <vector>
 
 namespace llvm {
 
 class raw_ostream;
+
+/// Read the next (attribute, form) specification from an abbreviation
+/// declaration at \p Offset, advancing \p Offset past it. \p ImplicitConst is
+/// set to the inline value of a DW_FORM_implicit_const attribute and to
+/// std::nullopt otherwise. Returns false on the terminating (0, 0) pair.
+LLVM_ABI bool readAbbrevAttribute(const DataExtractor &AbbrevData,
+                                  uint64_t *Offset, dwarf::Attribute &Name,
+                                  dwarf::Form &Form,
+                                  std::optional<int64_t> &ImplicitConst);
 
 class DWARFAbbreviationDeclarationSet {
   uint64_t Offset;

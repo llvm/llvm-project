@@ -5,4 +5,4 @@
 lr.d a4, a5 # CHECK: :[[@LINE]]:10: error: expected '(' or optional integer offset
 
 # lr only takes two operands
-lr.d s0, (s1), s2 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
+lr.d s0, (s1), s2 # CHECK: :[[@LINE]]:16: error: unexpected extra operand for instruction

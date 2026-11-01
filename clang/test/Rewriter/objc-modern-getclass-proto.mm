@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -E %s -o %t.mm
-// RUN: %clang_cc1 -x objective-c++ -fblocks -fms-extensions -rewrite-objc -fobjc-runtime=macosx-fragile-10.5 %t.mm -o %t-rw.cpp
+// RUN: %clang_cc1 -x objective-c++ -fblocks -fms-extensions -rewrite-objc -fobjc-runtime=macosx-10.7 %t.mm -o %t-rw.cpp
+// RUN: FileCheck --input-file=%t-rw.cpp %s
 
 @interface I @end
 @implementation I @end

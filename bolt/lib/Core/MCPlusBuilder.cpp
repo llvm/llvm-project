@@ -603,7 +603,7 @@ void MCPlusBuilder::initAliases() {
 void MCPlusBuilder::initSizeMap() {
   SizeMap.resize(RegInfo->getNumRegs());
   // Build size map
-  for (auto RC : RegInfo->regclasses())
+  for (const auto &RC : RegInfo->regclasses())
     for (MCPhysReg Reg : RC)
       SizeMap[Reg] = RC.getSizeInBits() / 8;
 }

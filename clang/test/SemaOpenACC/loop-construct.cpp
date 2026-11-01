@@ -439,3 +439,18 @@ void allowTrivialAssignStep(int N) {
   for (auto Itr = Col.begin(); Itr != Col.end(); Itr = N - Itr);
 }
 
+namespace gh210958 {
+// expected-error@+1{{overloaded 'operator-' must have at least one parameter of class or enumeration type}}
+void operator-();
+
+void foo() {
+#pragma acc loop
+  // expected-error@+5{{unknown type name 'I'}}
+  // expected-error@+4{{OpenACC 'loop' construct must have a terminating condition}}
+  // expected-note@-3{{'loop' construct is here}}
+  // expected-error@+2{{OpenACC 'loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
+  // expected-note@-5{{'loop' construct is here}}
+  for (I i = 0; i <= 2; i = -i);
+};
+
+}

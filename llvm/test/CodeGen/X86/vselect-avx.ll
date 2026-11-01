@@ -367,21 +367,21 @@ define void @vselect_concat_splat() {
 ;
 ; AVX512-LABEL: vselect_concat_splat:
 ; AVX512:       ## %bb.0: ## %entry
-; AVX512-NEXT:    vmovups (%rax), %ymm0
-; AVX512-NEXT:    vmovups (%rax), %xmm1
+; AVX512-NEXT:    vmovups (%rax), %xmm0
+; AVX512-NEXT:    vmovups (%rax), %ymm1
 ; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
 ; AVX512-NEXT:    vmovaps %ymm2, %ymm3
-; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm3
+; AVX512-NEXT:    vpermi2ps %ymm0, %ymm1, %ymm3
 ; AVX512-NEXT:    vmovups 32, %xmm4
 ; AVX512-NEXT:    vxorps %xmm5, %xmm5, %xmm5
 ; AVX512-NEXT:    vcmpneqps %xmm5, %xmm3, %k0
 ; AVX512-NEXT:    kshiftlw $4, %k0, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
-; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [8,11,14,1,9,12,15,2]
-; AVX512-NEXT:    vpermi2ps 0, %ymm4, %ymm1
-; AVX512-NEXT:    vmovaps %ymm1, %ymm0 {%k1}
-; AVX512-NEXT:    vmovups %ymm0, (%rax)
+; AVX512-NEXT:    vpermt2ps %ymm0, %ymm2, %ymm1
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,11,14,1,9,12,15,2]
+; AVX512-NEXT:    vpermi2ps 0, %ymm4, %ymm0
+; AVX512-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; AVX512-NEXT:    vmovups %ymm1, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:

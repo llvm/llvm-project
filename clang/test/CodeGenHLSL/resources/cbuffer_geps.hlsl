@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 // Capture the anonymous struct types for check lines below.
 // CHECK: [[ANON_1:%.*]] = type <{ float, target("dx.Padding", 12), <4 x i32> }>

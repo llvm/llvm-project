@@ -15,6 +15,7 @@
 #include "llvm/Object/BuildID.h"
 
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -79,7 +80,7 @@ BuildIDRef llvm::object::getBuildID(const ObjectFile *Obj) {
   return {};
 }
 
-std::optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
+Expected<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
   auto GetDebugPath = [&](StringRef Directory) {
     SmallString<128> Path{Directory};
     sys::path::append(Path, ".build-id",
@@ -108,5 +109,8 @@ std::optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
         return std::string(Path);
     }
   }
-  return std::nullopt;
+  return createStringError(
+      make_error_code(std::errc::no_such_file_or_directory),
+      "could not find debug file for build ID '" +
+          llvm::toHex(BuildID, /*LowerCase=*/true) + "'");
 }

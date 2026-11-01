@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -x hip -fcuda-is-device -emit-llvm  %s \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -x hip -fcuda-is-device -emit-llvm  %s \
 // RUN:   -o - | FileCheck %s
 
 constexpr static int OpCtrl()

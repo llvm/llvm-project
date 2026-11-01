@@ -5,7 +5,7 @@
 # CHECK-NEXT: - function:    f1
 # CHECK-NEXT: - basic block: %bb.0
 # CHECK-NEXT: - instruction: DBG_VALUE $noreg, $noreg, !"1", !DIExpression(DW_OP_LLVM_entry_value, 1)
-# CHECK-NEXT: First terminator was:   RET undef $lr, debug-location !12; /tmp/foo.ll:2:1
+# CHECK-NEXT: First terminator was:   RET undef $lr, debug-location !26; /tmp/foo.ll:2:1
 
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

@@ -1,0 +1,9 @@
+{
+  "members": [],
+  "namespace": {
+    "kind": "StaticLibrary",
+    "name": "libmulti"
+  },
+  "target_triple": "aarch64-apple-macosx",
+  "type": "StaticLibrary"
+}

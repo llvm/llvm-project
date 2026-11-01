@@ -64,8 +64,6 @@ public:
 
   uint32_t FindIndexForVariable(Variable *variable);
 
-  size_t MemorySize() const;
-
   size_t GetSize() const;
   bool Empty() const { return m_variables.empty(); }
 

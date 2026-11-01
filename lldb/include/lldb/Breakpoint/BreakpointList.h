@@ -70,7 +70,7 @@ public:
   ///   error if the input name was not a legal breakpoint name, vector
   ///   of breakpoints otherwise.
   llvm::Expected<std::vector<lldb::BreakpointSP>>
-  FindBreakpointsByName(const char *name);
+  FindBreakpointsByName(llvm::StringRef name);
 
   /// Returns the number of elements in this breakpoint list.
   ///

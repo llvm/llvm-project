@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SparcAsmPrinter.h"
 #include "MCTargetDesc/SparcInstPrinter.h"
 #include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
@@ -21,6 +22,7 @@
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -66,6 +68,7 @@ public:
                        const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
+  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
 
   void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
                                  const MCSubtargetInfo &STI);
@@ -344,8 +347,11 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SP::CASArr:
   case SP::SWAPrr:
   case SP::SWAPri:
+  case SP::LDSTUBrr:
+  case SP::LDSTUBri:
+  case SP::LDSTUBArr:
     if (MF->getSubtarget<SparcSubtarget>().fixTN0011())
-      OutStreamer->emitCodeAlignment(Align(16), &getSubtargetInfo());
+      OutStreamer->emitCodeAlignment(Align(16), getSubtargetInfo());
     break;
   case SP::GETPCX:
     LowerGETPCXAndEmitMCInsts(MI, getSubtargetInfo());
@@ -412,6 +418,17 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   default:
     llvm_unreachable("<unknown operand type>");
   }
+}
+
+void SparcAsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
+                                         raw_ostream &O) {
+  const unsigned RelType = MO.getTargetFlags();
+  StringRef Specifier = Sparc::getSpecifierName(RelType);
+  if (!Specifier.empty())
+    O << '%' << Specifier << '(';
+  AsmPrinter::PrintSymbolOperand(MO, O);
+  if (!Specifier.empty())
+    O << ')';
 }
 
 void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
@@ -521,4 +538,34 @@ LLVMInitializeSparcAsmPrinter() {
   RegisterAsmPrinter<SparcAsmPrinter> X(getTheSparcTarget());
   RegisterAsmPrinter<SparcAsmPrinter> Y(getTheSparcV9Target());
   RegisterAsmPrinter<SparcAsmPrinter> Z(getTheSparcelTarget());
+}
+
+PreservedAnalyses SparcAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  SparcAsmPrinter &AsmPrinter = static_cast<SparcAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+SparcAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  SparcAsmPrinter &AsmPrinter = static_cast<SparcAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses SparcAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  SparcAsmPrinter &AsmPrinter = static_cast<SparcAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

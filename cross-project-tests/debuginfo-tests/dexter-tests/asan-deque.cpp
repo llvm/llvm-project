@@ -8,9 +8,9 @@
 // lldb-8, even outside of dexter, will sometimes trigger an asan fault in
 // the debugged process and generally freak out.
 
-// RUN: %clang++ -std=gnu++11 -O1 -glldb -fsanitize=address -arch x86_64 %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t %dexter_lldb_args -- %s
+// RUN: %clang++ -std=gnu++11 -O1 -glldb -fsanitize=address -arch x86_64 %s \
+// RUN:   -o %t
+// RUN: %dexter -w --binary %t %dexter_lldb_args -- %s | FileCheck %s
 #include <deque>
 
 struct A {
@@ -32,16 +32,28 @@ int main() {
   deq_t deq;
   deq.push_back(1234);
   deq.push_back(56789);
-  escape(deq); // DexLabel('first')
+  escape(deq); // !dex_label first
   while (!deq.empty()) {
     auto record = deq.front();
     deq.pop_front();
-    escape(deq); // DexLabel('second')
+    escape(deq); // !dex_label second
   }
 }
 
-// DexExpectWatchValue('deq[0].a', '1234', on_line=ref('first'))
-// DexExpectWatchValue('deq[1].a', '56789', on_line=ref('first'))
+// CHECK-DAG: seen_values: 3
+// CHECK-DAG: correct_step_coverage: 100.0%
 
-// DexExpectWatchValue('deq[0].a', '56789', '0', on_line=ref('second'))
-
+/*
+---
+!where {lines: !label first}:
+  !value deq:
+    "[0]":
+      a: 1234
+    "[1]":
+      a: 56789
+!where {lines: !label second}:
+  !value deq:
+    "[0]":
+      a: 56789
+...
+*/

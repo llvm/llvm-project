@@ -9,7 +9,6 @@ declare ptr @llvm.objc.autorelease(ptr)
 declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
 declare ptr @llvm.objc.retainAutoreleaseReturnValue(ptr)
 declare void @llvm.objc.autoreleasePoolPop(ptr)
-declare void @llvm.objc.autoreleasePoolPush()
 declare ptr @llvm.objc.retainBlock(ptr)
 declare void @llvm.objc.clang.arc.noop.use(...)
 

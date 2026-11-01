@@ -1,0 +1,10 @@
+{
+  "members": [
+    "not an object"
+  ],
+  "namespace": {
+    "kind": "MultiArchStaticLibrary",
+    "name": "libfoo"
+  },
+  "type": "MultiArchStaticLibrary"
+}

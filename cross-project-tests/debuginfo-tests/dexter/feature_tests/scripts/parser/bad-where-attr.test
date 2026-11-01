@@ -1,4 +1,4 @@
-RUN: not %dexter_regression_test_run --binary %s --use-script -- %s 2>&1 | FileCheck %s
+RUN: not %dexter_regression_test_run --binary %s -- %s 2>&1 | FileCheck %s
 
 This is a test that when the script document starts part-way through a file, any syntax errors are reported with the
 correct line number.

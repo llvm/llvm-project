@@ -14,13 +14,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 
-namespace mlir {
-namespace detail {
-/// Verify that `op` conforms to the invariants of StructuredOpInterface
-LogicalResult verifyIndexingMapOpInterface(Operation *op);
-} // namespace detail
-} // namespace mlir
-
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/IndexingMapOpInterface.h.inc"
 

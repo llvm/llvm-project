@@ -25,8 +25,8 @@ bool llvm::lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
   Value *Cmp = CXI->getCompareOperand();
   Value *Val = CXI->getNewValOperand();
 
-  auto [Orig, Equal] =
-      buildCmpXchgValue(Builder, Ptr, Cmp, Val, CXI->getAlign());
+  auto [Orig, Equal] = buildCmpXchgValue(Builder, Ptr, Cmp, Val,
+                                         CXI->getAlign(), CXI->isVolatile());
 
   Value *Res =
       Builder.CreateInsertValue(PoisonValue::get(CXI->getType()), Orig, 0);
@@ -39,12 +39,17 @@ bool llvm::lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
 
 std::pair<Value *, Value *> llvm::buildCmpXchgValue(IRBuilderBase &Builder,
                                                     Value *Ptr, Value *Cmp,
-                                                    Value *Val,
-                                                    Align Alignment) {
-  LoadInst *Orig = Builder.CreateAlignedLoad(Val->getType(), Ptr, Alignment);
+                                                    Value *Val, Align Alignment,
+                                                    bool IsVolatile) {
+  LoadInst *Orig =
+      Builder.CreateAlignedLoad(Val->getType(), Ptr, Alignment, IsVolatile);
   Value *Equal = Builder.CreateICmpEQ(Orig, Cmp);
-  Value *Res = Builder.CreateSelect(Equal, Val, Orig);
-  Builder.CreateAlignedStore(Res, Ptr, Alignment);
+  // We have no idea what the probability of the value in memory being equal to
+  // the comparison value is without additional VP metadata, so explicitly mark
+  // it unknown.
+  Value *Res =
+      Builder.CreateSelectWithUnknownProfile(Equal, Val, Orig, DEBUG_TYPE);
+  Builder.CreateAlignedStore(Res, Ptr, Alignment, IsVolatile);
 
   return {Orig, Equal};
 }
@@ -134,9 +139,9 @@ bool llvm::lowerAtomicRMWInst(AtomicRMWInst *RMWI) {
   Value *Ptr = RMWI->getPointerOperand();
   Value *Val = RMWI->getValOperand();
 
-  LoadInst *Orig = Builder.CreateLoad(Val->getType(), Ptr);
+  LoadInst *Orig = Builder.CreateLoad(Val->getType(), Ptr, RMWI->isVolatile());
   Value *Res = buildAtomicRMWValue(RMWI->getOperation(), Builder, Orig, Val);
-  Builder.CreateStore(Res, Ptr);
+  Builder.CreateStore(Res, Ptr)->setVolatile(RMWI->isVolatile());
   RMWI->replaceAllUsesWith(Orig);
   RMWI->eraseFromParent();
   return true;

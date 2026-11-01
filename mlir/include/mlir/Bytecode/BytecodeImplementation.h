@@ -76,6 +76,18 @@ public:
     uint64_t size;
     if (failed(readVarInt(size)))
       return failure();
+    return readListWithKnownSize(result, size,
+                                 std::forward<CallbackFn>(callback));
+  }
+
+  /// Read out a list of elements with a known size, invoking the provided
+  /// callback for each element. Unlike readList, this does not read a length
+  /// prefix. The callback function may be in any of the following forms:
+  ///   * LogicalResult(T &)
+  ///   * FailureOr<T>()
+  template <typename T, typename CallbackFn>
+  LogicalResult readListWithKnownSize(SmallVectorImpl<T> &result, uint64_t size,
+                                      CallbackFn &&callback) {
     result.reserve(size);
 
     for (uint64_t i = 0; i < size; ++i) {
@@ -294,6 +306,14 @@ public:
       callback(element);
   }
 
+  /// Write out a list of elements without a length prefix, for cases where the
+  /// size is known from another field.
+  template <typename RangeT, typename CallbackFn>
+  void writeListWithKnownSize(RangeT &&range, CallbackFn &&callback) {
+    for (auto &element : range)
+      callback(element);
+  }
+
   /// Write a reference to the given attribute.
   virtual void writeAttribute(Attribute attr) = 0;
   virtual void writeOptionalAttribute(Attribute attr) = 0;
@@ -423,8 +443,8 @@ public:
 
 /// Helper for resource handle reading that returns LogicalResult.
 template <typename T, typename... Ts>
-static LogicalResult readResourceHandle(DialectBytecodeReader &reader,
-                                        FailureOr<T> &value, Ts &&...params) {
+LogicalResult readResourceHandle(DialectBytecodeReader &reader,
+                                 FailureOr<T> &value, Ts &&...params) {
   FailureOr<T> handle = reader.readResourceHandle<T>();
   if (failed(handle))
     return failure();

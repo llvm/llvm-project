@@ -10,10 +10,10 @@ define void @blam(ptr %arg, double %load2, i1 %fcmp3) {
 ; COUNT0-NEXT:  bb:
 ; COUNT0-NEXT:    [[GETELEMENTPTR13:%.*]] = getelementptr double, ptr [[ARG]], i64 3
 ; COUNT0-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARG]], align 8
-; COUNT0-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> poison, i1 [[FCMP3]], i32 0
+; COUNT0-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> poison, i1 [[FCMP3]], i64 0
 ; COUNT0-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; COUNT0-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[TMP0]]
-; COUNT0-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP0]], double [[LOAD2]], i32 0
+; COUNT0-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP0]], double [[LOAD2]], i64 0
 ; COUNT0-NEXT:    [[TMP5:%.*]] = fcmp olt <2 x double> [[TMP4]], zeroinitializer
 ; COUNT0-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> zeroinitializer, <2 x double> [[TMP0]]
 ; COUNT0-NEXT:    [[TMP7:%.*]] = fcmp olt <2 x double> [[TMP3]], zeroinitializer
@@ -47,15 +47,15 @@ define void @blam(ptr %arg, double %load2, i1 %fcmp3) {
 ; COUNT1-NEXT:    [[GETELEMENTPTR21:%.*]] = getelementptr double, ptr [[ARG]], i64 4
 ; COUNT1-NEXT:    [[FCMP23:%.*]] = fcmp olt double [[SELECT10]], 0.000000e+00
 ; COUNT1-NEXT:    [[SELECT24:%.*]] = select i1 [[FCMP23]], double 0.000000e+00, double 1.000000e+00
-; COUNT1-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LOAD2]], i32 1
-; COUNT1-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[SELECT4]], i32 0
+; COUNT1-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LOAD2]], i64 1
+; COUNT1-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[SELECT4]], i64 0
 ; COUNT1-NEXT:    [[TMP2:%.*]] = fcmp olt <2 x double> [[TMP1]], zeroinitializer
-; COUNT1-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[LOAD7]], i32 1
+; COUNT1-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[LOAD7]], i64 1
 ; COUNT1-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x double> <double 1.000000e+00, double 0.000000e+00>, <2 x double> [[TMP3]]
 ; COUNT1-NEXT:    [[FCMP33:%.*]] = fcmp olt double [[SELECT24]], [[SELECT3]]
 ; COUNT1-NEXT:    [[SELECT34:%.*]] = select i1 [[FCMP33]], double 0.000000e+00, double [[LOAD2]]
-; COUNT1-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; COUNT1-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; COUNT1-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
+; COUNT1-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; COUNT1-NEXT:    [[FCMP39:%.*]] = fcmp olt double [[TMP5]], [[TMP6]]
 ; COUNT1-NEXT:    [[SELECT40:%.*]] = select i1 [[FCMP39]], double [[LOAD2]], double 0.000000e+00
 ; COUNT1-NEXT:    [[FCMP62:%.*]] = fcmp olt double [[SELECT34]], 0.000000e+00
@@ -86,15 +86,15 @@ define void @blam(ptr %arg, double %load2, i1 %fcmp3) {
 ; COUNT2-NEXT:    [[SELECT128:%.*]] = select i1 [[FCMP11]], double 0.000000e+00, double [[LOAD7]]
 ; COUNT2-NEXT:    [[GETELEMENTPTR13:%.*]] = getelementptr double, ptr [[ARG]], i64 3
 ; COUNT2-NEXT:    [[GETELEMENTPTR21:%.*]] = getelementptr double, ptr [[ARG]], i64 4
-; COUNT2-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SELECT10]], i32 0
-; COUNT2-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[LOAD]], i32 1
+; COUNT2-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SELECT10]], i64 0
+; COUNT2-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[LOAD]], i64 1
 ; COUNT2-NEXT:    [[TMP2:%.*]] = fcmp olt <2 x double> [[TMP1]], zeroinitializer
 ; COUNT2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> <double 1.000000e+00, double poison>, <2 x i32> <i32 2, i32 1>
 ; COUNT2-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[TMP3]]
 ; COUNT2-NEXT:    [[FCMP29:%.*]] = fcmp olt double [[SELECT4]], 0.000000e+00
 ; COUNT2-NEXT:    [[SELECT30:%.*]] = select i1 [[FCMP29]], double 1.000000e+00, double 0.000000e+00
-; COUNT2-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; COUNT2-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; COUNT2-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
+; COUNT2-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; COUNT2-NEXT:    [[FCMP33:%.*]] = fcmp olt double [[TMP5]], [[TMP6]]
 ; COUNT2-NEXT:    [[SELECT34:%.*]] = select i1 [[FCMP33]], double 0.000000e+00, double [[LOAD2]]
 ; COUNT2-NEXT:    [[FCMP39:%.*]] = fcmp olt double [[SELECT30]], [[SELECT128]]
@@ -120,10 +120,10 @@ define void @blam(ptr %arg, double %load2, i1 %fcmp3) {
 ; COUNT-1-NEXT:  bb:
 ; COUNT-1-NEXT:    [[GETELEMENTPTR13:%.*]] = getelementptr double, ptr [[ARG]], i64 3
 ; COUNT-1-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARG]], align 8
-; COUNT-1-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> poison, i1 [[FCMP3]], i32 0
+; COUNT-1-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> poison, i1 [[FCMP3]], i64 0
 ; COUNT-1-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; COUNT-1-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[TMP0]]
-; COUNT-1-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP0]], double [[LOAD2]], i32 0
+; COUNT-1-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP0]], double [[LOAD2]], i64 0
 ; COUNT-1-NEXT:    [[TMP5:%.*]] = fcmp olt <2 x double> [[TMP4]], zeroinitializer
 ; COUNT-1-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> zeroinitializer, <2 x double> [[TMP0]]
 ; COUNT-1-NEXT:    [[TMP7:%.*]] = fcmp olt <2 x double> [[TMP3]], zeroinitializer

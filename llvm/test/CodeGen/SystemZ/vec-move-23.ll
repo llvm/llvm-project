@@ -42,20 +42,20 @@ define void @fun2(<2 x i32> %Src, ptr %Dst) {
 define void @fun3(<4 x i16> %Src, ptr %Dst) {
 ; CHECK-LABEL: fun3:
 
-; Z14:      vuphh	%v0, %v24
-; Z14-NEXT: vlgvf	%r0, %v0, 3
-; Z14-NEXT: cefbr	%f1, %r0
-; Z14-NEXT: vlgvf	%r0, %v0, 2
-; Z14-NEXT: cefbr	%f2, %r0
-; Z14-NEXT: vlgvf	%r0, %v0, 1
-; Z14-NEXT: vmrhf	%v1, %v2, %v1
-; Z14-NEXT: cefbr	%f2, %r0
-; Z14-NEXT: vlgvf	%r0, %v0, 0
-; Z14-NEXT: cefbr	%f0, %r0
-; Z14-NEXT: vmrhf	%v0, %v0, %v2
-; Z14-NEXT: vmrhg	%v0, %v0, %v1
-; Z14-NEXT: vst	%v0, 0(%r2), 3
-; Z14-NEXT: br	%r14
+; Z14:        vuphh   %v0, %v24
+; Z14-NEXT:   vlgvf   %r0, %v0, 3
+; Z14-NEXT:   vlgvf   %r1, %v0, 2
+; Z14-NEXT:   cefbr   %f1, %r1
+; Z14-NEXT:   vlgvf   %r3, %v0, 1
+; Z14-NEXT:   cefbr   %f2, %r3
+; Z14-NEXT:   vlgvf   %r4, %v0, 0
+; Z14-NEXT:   cefbr   %f0, %r0
+; Z14-NEXT:   vmrhf   %v0, %v1, %v0
+; Z14-NEXT:   cefbr   %f3, %r4
+; Z14-NEXT:   vmrhf   %v1, %v3, %v2
+; Z14-NEXT:   vmrhg   %v0, %v1, %v0
+; Z14-NEXT:   vst     %v0, 0(%r2), 3
+; Z14-NEXT:   br      %r14
 
 ; Z15:      vuphh	%v0, %v24
 ; Z15-NEXT: vcefb	%v0, %v0, 0, 0
@@ -106,20 +106,20 @@ define void @fun6(<2 x i32> %Src, ptr %Dst) {
 define void @fun7(<4 x i16> %Src, ptr %Dst) {
 ; CHECK-LABEL: fun7:
 
-; Z14:      vuplhh	%v0, %v24
-; Z14-NEXT: vlgvf	%r0, %v0, 3
-; Z14-NEXT: celfbr	%f1, 0, %r0, 0
-; Z14-NEXT: vlgvf	%r0, %v0, 2
-; Z14-NEXT: celfbr	%f2, 0, %r0, 0
-; Z14-NEXT: vlgvf	%r0, %v0, 1
-; Z14-NEXT: vmrhf	%v1, %v2, %v1
-; Z14-NEXT: celfbr	%f2, 0, %r0, 0
-; Z14-NEXT: vlgvf	%r0, %v0, 0
-; Z14-NEXT: celfbr	%f0, 0, %r0, 0
-; Z14-NEXT: vmrhf	%v0, %v0, %v2
-; Z14-NEXT: vmrhg	%v0, %v0, %v1
-; Z14-NEXT: vst	%v0, 0(%r2), 3
-; Z14-NEXT: br	%r14
+; Z14:      vuplhh  %v0, %v24
+; Z14-NEXT: vlgvf   %r0, %v0, 3
+; Z14-NEXT: vlgvf   %r1, %v0, 2
+; Z14-NEXT: celfbr  %f1, 0, %r1, 0
+; Z14-NEXT: vlgvf   %r3, %v0, 1
+; Z14-NEXT: celfbr  %f2, 0, %r3, 0
+; Z14-NEXT: vlgvf   %r4, %v0, 0
+; Z14-NEXT: celfbr  %f0, 0, %r0, 0
+; Z14-NEXT: vmrhf   %v0, %v1, %v0
+; Z14-NEXT: celfbr  %f3, 0, %r4, 0
+; Z14-NEXT: vmrhf   %v1, %v3, %v2
+; Z14-NEXT: vmrhg   %v0, %v1, %v0
+; Z14-NEXT: vst     %v0, 0(%r2), 3
+; Z14-NEXT: br      %r14
 
 ; Z15:      vuplhh	%v0, %v24
 ; Z15-NEXT: vcelfb	%v0, %v0, 0, 0

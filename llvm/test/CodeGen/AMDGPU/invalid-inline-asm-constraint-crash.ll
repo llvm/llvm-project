@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -mtriple=amdgpu6.00 < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; ERR: error: could not allocate output register for constraint 'q'
 define void @crash_use_invalid_output_constraint_block(ptr addrspace(1) %arg) {

@@ -1,0 +1,5 @@
+{
+  "type": "StaticLibrary",
+  "target_triple": "arm64-apple-macosx",
+  "members": []
+}

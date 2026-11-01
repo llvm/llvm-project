@@ -1,6 +1,6 @@
-; RUN: opt -mtriple=amdgcn-- -mcpu=gfx600 -S -lowerswitch -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
-; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize64 -S -lowerswitch -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
-; RUN: llc -mtriple=amdgcn -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
+; RUN: opt -mtriple=amdgpu6.00-- -S -lowerswitch -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
+; RUN: opt -mtriple=amdgpu11.00-- -mattr=+wavefrontsize64 -S -lowerswitch -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
+; RUN: llc -mtriple=amdgpu6.00 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; Add an extra verifier runs. There were some cases where invalid IR
 ; was produced but happened to be fixed by the later passes.
@@ -61,16 +61,15 @@
 
 ; GCN-LABEL: {{^}}multi_divergent_region_exit_ret_ret:
 
-; GCN-DAG:  s_mov_b64           [[EXIT1:s\[[0-9]+:[0-9]+\]]], 0
-; GCN-DAG:  v_cmp_lt_i32_e32    vcc, 1,
 ; GCN-DAG:  s_mov_b64           [[EXIT0:s\[[0-9]+:[0-9]+\]]], 0
+; GCN-DAG:  v_cmp_lt_i32_e32    vcc, 1,
+; GCN-DAG:  s_mov_b64           [[EXIT1:s\[[0-9]+:[0-9]+\]]], 0
 ; GCN-DAG:  s_and_saveexec_b64
 ; GCN-DAG:  s_xor_b64
 
 ; GCN: ; %LeafBlock1
 ; GCN-NEXT: s_mov_b64           [[EXIT0]], exec
-; GCN-NEXT: v_cmp_ne_u32_e32    vcc, 2,
-; GCN-NEXT: s_and_b64           [[EXIT1]], vcc, exec
+; GCN-NEXT: v_cmp_ne_u32_e64    [[EXIT1]], 2,
 
 ; GCN: ; %Flow
 ; GCN-NEXT: s_andn2_saveexec_b64
@@ -80,10 +79,8 @@
 ; GCN-DAG:  v_cmp_ne_u32_e64    [[INV:s\[[0-9]+:[0-9]+\]]], 1,
 ; GCN-DAG:  s_andn2_b64         [[EXIT0]], [[EXIT0]], exec
 ; GCN-DAG:  s_andn2_b64         [[EXIT1]], [[EXIT1]], exec
-; GCN-DAG:  s_and_b64           [[TMP0:s\[[0-9]+:[0-9]+\]]], vcc, exec
-; GCN-DAG:  s_and_b64           [[TMP1:s\[[0-9]+:[0-9]+\]]], [[INV]], exec
-; GCN-DAG:  s_or_b64            [[EXIT0]], [[EXIT0]], [[TMP0]]
-; GCN-DAG:  s_or_b64            [[EXIT1]], [[EXIT1]], [[TMP1]]
+; GCN-DAG:  s_or_b64            [[EXIT0]], [[EXIT0]], vcc
+; GCN-DAG:  s_or_b64            [[EXIT1]], [[EXIT1]], [[INV]]
 
 ; GCN: ; %Flow4
 ; GCN-NEXT: s_or_b64            exec, exec,
@@ -361,7 +358,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; GCN: s_cmp_gt_i32 s0, 1
 ; GCN: s_cbranch_scc0 [[FLOW:.LBB[0-9]+_[0-9]+]]
 
-; GCN: v_cmp_ne_u32_e32 vcc, 7, v0
+; GCN: v_cmp_ne_u32_e64 s{{\[[0-9]+:[0-9]+\]}}, 7, v0
 
 ; GCN: {{^}}[[FLOW]]:
 

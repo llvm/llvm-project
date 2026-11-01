@@ -1,4 +1,4 @@
-; RUN: not opt -S -mtriple=amdgcn-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
+; RUN: not opt -S -mtriple=amdgpu-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
 ; RUN:   %s 2>&1 | FileCheck %s
 
 @tls = hidden thread_local addrspace(1) global i32 0, align 4

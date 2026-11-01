@@ -1,7 +1,7 @@
-; RUN: opt -mtriple=amdgcn-- -O1 -S < %s | FileCheck %s --check-prefixes=FUNC,LOOP
-; RUN: opt -mtriple=amdgcn-- -passes='default<O1>' -S < %s | FileCheck %s --check-prefixes=FUNC,LOOP
-; RUN: opt -mtriple=amdgcn-- -O1 -S -disable-promote-alloca-to-vector < %s | FileCheck %s --check-prefixes=FUNC,FULL-UNROLL
-; RUN: opt -mtriple=amdgcn-- -passes='default<O1>' -S -disable-promote-alloca-to-vector < %s | FileCheck %s --check-prefixes=FUNC,FULL-UNROLL
+; RUN: opt -mtriple=amdgpu-- -O1 -S < %s | FileCheck %s --check-prefixes=FUNC,LOOP
+; RUN: opt -mtriple=amdgpu-- -passes='default<O1>' -S < %s | FileCheck %s --check-prefixes=FUNC,LOOP
+; RUN: opt -mtriple=amdgpu-- -O1 -S -disable-promote-alloca-to-vector < %s | FileCheck %s --check-prefixes=FUNC,FULL-UNROLL
+; RUN: opt -mtriple=amdgpu-- -passes='default<O1>' -S -disable-promote-alloca-to-vector < %s | FileCheck %s --check-prefixes=FUNC,FULL-UNROLL
 
 ; This test contains a simple loop that initializes an array declared in
 ; private memory. This loop would be fully unrolled if we could not SROA

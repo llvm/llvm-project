@@ -12,7 +12,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class SIWholeQuadModePass : public OptionalPassInfoMixin<SIWholeQuadModePass> {
+class SIWholeQuadModePass : public RequiredPassInfoMixin<SIWholeQuadModePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

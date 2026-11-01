@@ -212,7 +212,7 @@ public:
 
   /// Similar to \a GetDescription() but the format of the description can be
   /// configured via the \p format parameter. See
-  /// https://lldb.llvm.org/use/formatting.html for more information on format
+  /// \lldbformatting for more information on format
   /// strings.
   ///
   /// \param[in] format
@@ -256,7 +256,7 @@ private:
   friend class SBThreadPlan;
   friend class SBTrace;
 
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::python::SWIGBridge;
 
   SBThread(const lldb::ThreadSP &lldb_object_sp);

@@ -16,26 +16,26 @@ declare i32 @c(i32) local_unnamed_addr
 define dso_local i32 @push2pop2_padding(i32 %x) local_unnamed_addr {
 ; CHECK-LABEL: push2pop2_padding:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    .seh_pushreg %rax
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .seh_push2regs %r15, %r14
-; CHECK-NEXT:    push2 %r14, %r15
-; CHECK-NEXT:    .seh_push2regs %r13, %r12
-; CHECK-NEXT:    push2 %r12, %r13
-; CHECK-NEXT:    .seh_push2regs %rbp, %rbx
-; CHECK-NEXT:    push2 %rbx, %rbp
+; CHECK-NEXT:    .seh_pushreg %r15
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    .seh_push2regs %r14, %r13
+; CHECK-NEXT:    push2 %r13, %r14
+; CHECK-NEXT:    .seh_push2regs %r12, %rbp
+; CHECK-NEXT:    push2 %rbp, %r12
+; CHECK-NEXT:    .seh_pushreg %rbx
+; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    .seh_push2regs %rbx, %rbp
-; CHECK-NEXT:    pop2 %rbp, %rbx
-; CHECK-NEXT:    .seh_push2regs %r12, %r13
-; CHECK-NEXT:    pop2 %r13, %r12
-; CHECK-NEXT:    .seh_push2regs %r14, %r15
-; CHECK-NEXT:    pop2 %r15, %r14
-; CHECK-NEXT:    .seh_stackalloc 8
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .seh_pushreg %rbx
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .seh_push2regs %rbp, %r12
+; CHECK-NEXT:    pop2 %r12, %rbp
+; CHECK-NEXT:    .seh_push2regs %r13, %r14
+; CHECK-NEXT:    pop2 %r14, %r13
+; CHECK-NEXT:    .seh_pushreg %r15
+; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    jmp c # TAILCALL
 ; CHECK-NEXT:    .seh_endproc

@@ -9,13 +9,13 @@ define void @test(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[ARRAYIDX120:%.*]] = getelementptr [4 x float], ptr [[B:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[ARRAYIDX120]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP2]], float [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP2]], float [[TMP0]], i64 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x float> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <4 x float> [[TMP9]], zeroinitializer

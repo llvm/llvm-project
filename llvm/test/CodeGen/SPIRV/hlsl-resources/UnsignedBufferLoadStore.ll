@@ -2,10 +2,13 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-library %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 @.str.b0 = private unnamed_addr constant [3 x i8] c"B0\00", align 1
+@.str.b1 = private unnamed_addr constant [3 x i8] c"B1\00", align 1
 
 ; CHECK-DAG: [[uint:%[0-9]+]] = OpTypeInt 32 0
+; CHECK-DAG: [[ulong:%[0-9]+]] = OpTypeInt 64 0
 ; CHECK-DAG: [[v2int:%[0-9]+]] = OpTypeVector [[uint]] 2
 ; CHECK-DAG: [[v4int:%[0-9]+]] = OpTypeVector [[uint]] 4
+; CHECK-DAG: [[v2ulong:%[0-9]+]] = OpTypeVector [[ulong]] 2
 ; CHECK-DAG: [[zero:%[0-9]+]] = OpConstant [[uint]] 0
 ; CHECK-DAG: [[one:%[0-9]+]] = OpConstant [[uint]] 1
 ; CHECK-DAG: [[twenty:%[0-9]+]] = OpConstant [[uint]] 20
@@ -13,6 +16,9 @@
 ; CHECK-DAG: [[ImageType:%[0-9]+]] = OpTypeImage [[uint]] Buffer 2 0 0 2 Unknown 
 ; CHECK-DAG: [[ImagePtr:%[0-9]+]] = OpTypePointer UniformConstant [[ImageType]]
 ; CHECK-DAG: [[Var:%[0-9]+]] = OpVariable [[ImagePtr]] UniformConstant
+; CHECK-DAG: [[PackedImageType:%[0-9]+]] = OpTypeImage [[uint]] Buffer 2 0 0 2 Rgba32ui
+; CHECK-DAG: [[PackedImagePtr:%[0-9]+]] = OpTypePointer UniformConstant [[PackedImageType]]
+; CHECK-DAG: [[PackedVar:%[0-9]+]] = OpVariable [[PackedImagePtr]] UniformConstant
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 ; CHECK: OpFunction
@@ -130,6 +136,26 @@ bb_both:
 ; CHECK: OpImageWrite [[H]] [[twenty]] [[R]]
   %5 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_i32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) %s_h.i, i32 20)
   store <4 x i32> %4, ptr %5, align 4
+  ret void
+}
+
+; A 64-bit 2-component element has no representable image format, so it is packed into a 4-component 32-bit image.
+; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; CHECK: OpFunction
+define void @main_uint64_vector2() local_unnamed_addr #0 {
+entry:
+; CHECK: [[H:%[0-9]+]] = OpLoad [[PackedImageType]] [[PackedVar]]
+  %s_h.i = tail call target("spirv.Image", i32, 5, 2, 0, 0, 2, 30) @llvm.spv.resource.handlefrombinding.tspirv.Image_i32_5_2_0_0_2_30t(i32 4, i32 5, i32 1, i32 0, ptr nonnull @.str.b1)
+
+; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4int]] [[H]] [[one]]
+; CHECK: [[V:%[0-9]+]] = OpBitcast [[v2ulong]] [[R]]
+  %0 = tail call noundef nonnull align 16 dereferenceable(16) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_i32_5_2_0_0_2_30t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 30) %s_h.i, i32 1)
+  %1 = load <2 x i64>, ptr %0, align 16
+
+; CHECK: [[W:%[0-9]+]] = OpBitcast [[v4int]] [[V]]
+; CHECK: OpImageWrite {{%[0-9]+}} [[zero]] [[W]]
+  %2 = tail call noundef nonnull align 16 dereferenceable(16) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_i32_5_2_0_0_2_30t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 30) %s_h.i, i32 0)
+  store <2 x i64> %1, ptr %2, align 16
   ret void
 }
 

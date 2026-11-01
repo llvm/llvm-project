@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx90a -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.0a-- -verify -S -o - %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -verify -S -o - %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64:enable

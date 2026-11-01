@@ -135,7 +135,7 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
 
   // If it's known to be null.
   if (!NonNull && Null) {
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       generateBugReport(N, Msg, E->getSourceRange(), E, C);
       return;
     }
@@ -144,7 +144,7 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
   // If it might be null, assume that it cannot after this operation.
   if (Null) {
     // One needs to make sure the pointer is non-null to be used here.
-    if (ExplodedNode *N = C.generateSink(Null, C.getPredecessor())) {
+    if (ExplodedNode *N = C.addSink(Null)) {
       dispatchEvent({*Location, /*IsLoad=*/false, N, &C.getBugReporter(),
                      /*IsDirectDereference=*/false});
     }
@@ -167,7 +167,7 @@ void NilArgChecker::warnIfNilArg(CheckerContext &C,
   // an unwanted state split if two or more non-fatal errors are thrown
   // within the same checker callback. For now we don't want to, but
   // it'll need to be fixed if we ever want to.
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     SmallString<128> sbuf;
     llvm::raw_svector_ostream os(sbuf);
 
@@ -424,8 +424,7 @@ static const char* GetCFNumberTypeStr(uint64_t i) {
 #endif
 
 void CFNumberChecker::checkPreStmt(const CallExpr *CE,
-                                         CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
+                                   CheckerContext &C) const {
   const FunctionDecl *FD = C.getCalleeDecl(CE);
   if (!FD)
     return;
@@ -560,7 +559,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
   std::tie(stateNonNull, stateNull) = state->assume(*DefArgVal);
 
   if (!stateNonNull) {
-    ExplodedNode *N = C.generateErrorNode(stateNull);
+    ExplodedNode *N = C.addSink(stateNull);
     if (!N)
       return;
 
@@ -978,7 +977,7 @@ void ObjCLoopChecker::checkPostStmt(const ObjCForCollectionStmt *FCS,
   }
 
   if (!State)
-    C.generateSink(C.getState(), C.getPredecessor());
+    C.addSink();
   else if (State != C.getState())
     C.addTransition(State);
 }

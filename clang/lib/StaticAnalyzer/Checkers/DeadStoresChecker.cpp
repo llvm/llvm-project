@@ -325,7 +325,7 @@ public:
     if (const BinaryOperator* B = dyn_cast<BinaryOperator>(S)) {
       if (!B->isAssignmentOp()) return; // Skip non-assignments.
 
-      if (DeclRefExpr *DR = dyn_cast<DeclRefExpr>(B->getLHS()))
+      if (DeclRefExpr *DR = dyn_cast<DeclRefExpr>(B->getLHS()->IgnoreParens()))
         if (VarDecl *VD = dyn_cast<VarDecl>(DR->getDecl())) {
           // Special case: check for assigning null to a pointer.
           //  This is a common form of defensive programming.
@@ -430,6 +430,12 @@ public:
                   //  because it more likely represents an actual algorithmic
                   //  bug.
                   if (isa<ParmVarDecl>(VD) && VD->getType()->isScalarType())
+                    return;
+                  // Special case: check for self-initializations.
+                  //
+                  //  e.g. int x = x;
+                  //
+                  if (VD == V)
                     return;
                 }
 

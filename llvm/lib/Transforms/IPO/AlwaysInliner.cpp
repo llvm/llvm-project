@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -51,6 +52,22 @@ bool AlwaysInlineImpl(
     Function *Caller = CB.getCaller();
     DebugLoc DLoc = CB.getDebugLoc();
     BasicBlock *Block = CB.getParent();
+
+    TargetTransformInfo &CalleeTTI = GetTTI(Callee);
+    std::optional<InlineResult> CanInlineWithAttributes =
+        getAttributeBasedInliningDecision(CB, &Callee, CalleeTTI, GetTLI);
+    if (!CanInlineWithAttributes || !CanInlineWithAttributes->isSuccess()) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
+               << "'" << ore::NV("Callee", &Callee) << ", is not inlined into"
+               << ore::NV("Caller", Caller) << "': "
+               << ore::NV("Reason",
+                          CanInlineWithAttributes.has_value()
+                              ? CanInlineWithAttributes->getFailureReason()
+                              : "due to incompatible function attributes");
+      });
+      return false;
+    }
 
     InlineFunctionInfo IFI(GetAssumptionCache, &PSI);
     InlineResult Res = InlineFunction(

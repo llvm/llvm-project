@@ -28,8 +28,7 @@
 using LlvmLibcUngetwcTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcUngetwcTest, PushBackAndRead) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_push.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_push.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -60,8 +59,7 @@ TEST_F(LlvmLibcUngetwcTest, PushBackAndRead) {
 }
 
 TEST_F(LlvmLibcUngetwcTest, PushBackWEOF) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_weof.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_weof.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
@@ -77,8 +75,7 @@ TEST_F(LlvmLibcUngetwcTest, PushBackWEOF) {
 }
 
 TEST_F(LlvmLibcUngetwcTest, ByteModeFailure) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_bytemode.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_bytemode.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 
@@ -93,8 +90,7 @@ TEST_F(LlvmLibcUngetwcTest, ByteModeFailure) {
 }
 
 TEST_F(LlvmLibcUngetwcTest, OrientUnorientedStream) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_orient.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_orient.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 
@@ -112,8 +108,7 @@ TEST_F(LlvmLibcUngetwcTest, OrientUnorientedStream) {
 }
 
 TEST_F(LlvmLibcUngetwcTest, ClearEofIndicator) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_cleareof.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_cleareof.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -143,8 +138,7 @@ TEST_F(LlvmLibcUngetwcTest, ClearEofIndicator) {
 }
 
 TEST_F(LlvmLibcUngetwcTest, DiscardOnFilePositioning) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_discard.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_discard.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -174,8 +168,7 @@ TEST_F(LlvmLibcUngetwcTest, DiscardOnFilePositioning) {
 }
 
 TEST_F(LlvmLibcUngetwcTest, LifoMultiplePushbacks) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_lifo.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_lifo.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 
@@ -197,8 +190,7 @@ TEST_F(LlvmLibcUngetwcTest, LifoMultiplePushbacks) {
 }
 
 TEST_F(LlvmLibcUngetwcTest, PushbackAtStartOfFile) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_start.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_start.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -225,8 +217,7 @@ TEST_F(LlvmLibcUngetwcTest, PushbackAtStartOfFile) {
 }
 
 TEST_F(LlvmLibcUngetwcTest, PushbackMultibyteChars) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_multibyte.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_multibyte.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
@@ -260,8 +251,7 @@ TEST_F(LlvmLibcUngetwcTest, PushbackMultibyteChars) {
 
 #if WCHAR_MAX > 0xFFFF
 TEST_F(LlvmLibcUngetwcTest, PushbackInvalidWchar) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("ungetwc_invalid.test"));
+  auto FILENAME = libc_make_test_file_path("ungetwc_invalid.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 

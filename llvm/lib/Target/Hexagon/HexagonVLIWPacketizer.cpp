@@ -89,10 +89,7 @@ namespace {
       AU.setPreservesCFG();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineLoopInfoWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -478,7 +475,7 @@ bool HexagonPacketizerList::useCallersSP(MachineInstr &MI) {
   unsigned FrameSize = MF.getFrameInfo().getStackSize();
   MachineOperand &Off = MI.getOperand(1);
   int64_t NewOff = Off.getImm() - (FrameSize + HEXAGON_LRFP_SIZE);
-  if (HII->isValidOffset(Opc, NewOff, HRI)) {
+  if (HII->isValidOffset(Opc, NewOff)) {
     Off.setImm(NewOff);
     return true;
   }
@@ -529,7 +526,7 @@ bool HexagonPacketizerList::updateOffset(SUnit *SUI, SUnit *SUJ) {
     return false;
 
   int64_t Offset = MI.getOperand(OPI).getImm();
-  if (!HII->isValidOffset(MI.getOpcode(), Offset+Incr, HRI))
+  if (!HII->isValidOffset(MI.getOpcode(), Offset + Incr))
     return false;
 
   MI.getOperand(OPI).setImm(Offset + Incr);

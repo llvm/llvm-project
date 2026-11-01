@@ -3,7 +3,7 @@
 ! Test declare reduction without initializer clause for derived types
 ! with default component initialization.
 
-! CHECK-LABEL: omp.declare_reduction @add_reduction_byref_rec__QMtypesTshape
+! CHECK-LABEL: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*rec__QMtypesTshape}}"
 ! CHECK-SAME:    : !fir.ref<!fir.type<_QMtypesTshape{center:!fir.type<_QMtypesTpoint{x:f32,y:f32}>,radius:f32}>>
 ! CHECK:       init {
 ! CHECK:       ^bb0(%{{.*}}: !fir.ref<!fir.type<_QMtypesTshape{{.*}}>>, %[[PRIV:.*]]: !fir.ref<!fir.type<_QMtypesTshape{{.*}}>>):
@@ -16,7 +16,7 @@
 ! CHECK:         omp.yield(%[[PRIV]]
 ! CHECK:       } combiner {
 
-! CHECK-LABEL: omp.declare_reduction @add_reduction_byref_rec__QMtypesTpoint
+! CHECK-LABEL: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*rec__QMtypesTpoint}}"
 ! CHECK-SAME:    : !fir.ref<!fir.type<_QMtypesTpoint{x:f32,y:f32}>>
 ! CHECK:       init {
 ! CHECK:       ^bb0(%{{.*}}: !fir.ref<!fir.type<_QMtypesTpoint{{.*}}>>, %[[PRIV2:.*]]: !fir.ref<!fir.type<_QMtypesTpoint{{.*}}>>):
@@ -26,8 +26,8 @@
 ! CHECK:       } combiner {
 
 ! CHECK-LABEL: func.func @_QQmain
-! CHECK:       omp.wsloop {{.*}} reduction(byref @add_reduction_byref_rec__QMtypesTpoint
-! CHECK:       omp.wsloop {{.*}} reduction(byref @add_reduction_byref_rec__QMtypesTshape
+! CHECK:       omp.wsloop {{.*}} reduction(byref @"{{_QQ[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*rec__QMtypesTpoint}}"
+! CHECK:       omp.wsloop {{.*}} reduction(byref @"{{_QQ[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*rec__QMtypesTshape}}"
 
 module types
   implicit none

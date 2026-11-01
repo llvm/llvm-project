@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,SCRATCH256K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH256K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH1024K %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH2048K %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
+; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
+; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,SCRATCH256K %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH128K %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH256K %s
+; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH1024K %s
+; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,SCRATCH2048K %s
 
 ; GCN-LABEL: {{^}}scratch_buffer_known_high_masklo16:
 ; GCN: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}

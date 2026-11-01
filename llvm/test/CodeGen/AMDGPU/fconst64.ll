@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti | FileCheck %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu6.00 | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck %s
 
 ; CHECK: {{^}}fconst_f64:
 ; CHECK-DAG: s_mov_b32 {{s[0-9]+}}, 0x40140000

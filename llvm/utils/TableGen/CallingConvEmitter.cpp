@@ -79,17 +79,19 @@ void CallingConvEmitter::run(raw_ostream &O) {
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
   Records.getTimer().startTimer("Emit prototypes");
-  IfGuardEmitter IfGuard(O, "!defined(GET_CC_REGISTER_LISTS)");
-  for (const Record *CC : CCs) {
-    if (!CC->getValueAsBit("Custom"))
-      emitCCHeader(O, CC, ";\n");
-  }
+  {
+    IfDefEmitter IfGuard(O, "GET_CALLING_CONV_IMPL");
+    for (const Record *CC : CCs) {
+      if (!CC->getValueAsBit("Custom"))
+        emitCCHeader(O, CC, ";\n");
+    }
 
-  // Emit each non-custom calling convention description in full.
-  Records.getTimer().startTimer("Emit full descriptions");
-  for (const Record *CC : CCs) {
-    if (!CC->getValueAsBit("Custom"))
-      emitCallingConv(CC, O);
+    // Emit each non-custom calling convention description in full.
+    Records.getTimer().startTimer("Emit full descriptions");
+    for (const Record *CC : CCs) {
+      if (!CC->getValueAsBit("Custom"))
+        emitCallingConv(CC, O);
+    }
   }
 
   emitArgRegisterLists(O);
@@ -365,7 +367,7 @@ void CallingConvEmitter::emitArgRegisterLists(raw_ostream &O) {
   if (AssignedRegsMap.empty())
     return;
 
-  O << "\n#else\n\n";
+  IfDefEmitter IfGuard(O, "GET_CC_REGISTER_LISTS");
 
   for (const auto &[RegName, Registers] : AssignedRegsMap) {
     if (RegName.empty())

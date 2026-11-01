@@ -18,7 +18,7 @@ Note: there are two resolutions for CFI:
 
 ### Pointer Authentication
 
-For more information, see the [pac-ret section of the BOLT-binary-analysis document](BinaryAnalysis.md#pac-ret-analysis).
+For more information, see the [pac-ret section of the BOLT-binary-analysis document](BinaryAnalysis.md#return-address-protection-ptrauth-pac-ret).
 
 ### DW_CFA_AARCH64_negate_ra_state
 
@@ -177,7 +177,7 @@ what we have before the pass, and after it.
 | autiasp                       | negate-ra-state | signed   |
 | ret                           |                 | unsigned |
 
-##### Error handling in PointerAuthCFIAnalyzer pass:
+#### Error handling in PointerAuthCFIAnalyzer pass:
 
 Whenever the PointerAuthCFIAnalyzer pass finds inconsistencies in the current
 BinaryFunction, it marks the function as ignored using `BF.setIgnored()`. BOLT
@@ -200,7 +200,7 @@ pass:
 2. whenever the state changes, it adds a PseudoInstruction that holds an
    OpNegateRAState CFI.
 
-##### Covering newly generated instructions:
+#### Covering newly generated instructions:
 
 Some BOLT passes can add new Instructions. In PointerAuthCFIFixup, we have
 to know what RA state these have.

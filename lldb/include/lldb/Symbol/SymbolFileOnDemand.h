@@ -65,7 +65,7 @@ public:
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
 
-  lldb_private::XcodeSDK
+  lldb_private::XcodeSDKAndSysroot
   ParseXcodeSDK(lldb_private::CompileUnit &comp_unit) override;
 
   void InitializeObject() override;
@@ -253,10 +253,14 @@ public:
     return m_sym_file_impl->CopyType(other_type);
   }
 
+  lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) override {
+    return m_sym_file_impl->GetTypeEnclosingVariableUID(uid);
+  }
+
 private:
   Log *GetLog() const { return ::lldb_private::GetLog(LLDBLog::OnDemand); }
 
-  ConstString GetSymbolFileName() {
+  llvm::StringRef GetSymbolFileName() {
     return GetObjectFile()->GetFileSpec().GetFilename();
   }
 

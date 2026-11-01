@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=postrapseudos %s -o - \
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=post-ra-pseudos %s -o - \
 # RUN:   | FileCheck %s
 #
 # Check that integer load and test instructions are not emitted for unsigned

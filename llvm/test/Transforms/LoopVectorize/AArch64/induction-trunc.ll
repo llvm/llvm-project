@@ -6,7 +6,7 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-LABEL: @non_primary_iv_trunc_free(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 5
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul nuw i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i64 [[OFFSET_IDX]], 5
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDUCTION1]] to i32

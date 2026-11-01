@@ -18,6 +18,9 @@
 using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 
 TEST_F(LlvmLibcFEnvTest, UpdateEnvTest) {
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
+  // Unsupported: no fenv
+#else
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
@@ -27,4 +30,5 @@ TEST_F(LlvmLibcFEnvTest, UpdateEnvTest) {
   ASSERT_EQ(LIBC_NAMESPACE::feupdateenv(&env), 0);
   ASSERT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID | FE_INEXACT),
             FE_INVALID | FE_INEXACT);
+#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
 }

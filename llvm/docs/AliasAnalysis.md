@@ -1,8 +1,5 @@
 # LLVM Alias Analysis Infrastructure
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -499,10 +496,10 @@ information for call instructions.  This allows the optimizer to know that calls
 to a function do not clobber or read the value of the global, allowing loads and
 stores to be eliminated.
 
-```{note}
+:::{note}
 This pass is somewhat limited in its scope (only support non-address taken
 globals), but is very quick analysis.
-```
+:::
 
 #### The `-steens-aa` pass
 
@@ -516,10 +513,10 @@ version of Steensgaard's algorithm using the Data Structure Analysis framework.
 This gives it substantially more precision than the standard algorithm while
 maintaining excellent analysis scalability.
 
-```{note}
+:::{note}
 `-steens-aa` is available in the optional "poolalloc" module. It is not part
 of the LLVM core.
-```
+:::
 
 #### The `-ds-aa` pass
 
@@ -533,10 +530,10 @@ queries, and can provide context-sensitive mod/ref information as well.  The
 only major facility not implemented so far is support for must-alias
 information.
 
-```{note}
+:::{note}
 `-ds-aa` is available in the optional "poolalloc" module. It is not part of
 the LLVM core.
-```
+:::
 
 #### The `-scev-aa` pass
 
@@ -616,11 +613,11 @@ algorithm will have a lower number of may aliases).
 
 ## Memory Dependence Analysis
 
-```{note}
+:::{note}
 We are currently in the process of migrating things from
 `MemoryDependenceAnalysis` to {doc}`MemorySSA`. Please try to use
 that instead.
-```
+:::
 
 If you're just looking to be a client of alias analysis information, consider
 using the Memory Dependence Analysis interface instead.  MemDep is a lazy,

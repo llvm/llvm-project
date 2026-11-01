@@ -5,7 +5,7 @@ define void @test(i64 %d.promoted.i) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i64 [[D_PROMOTED_I:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[D_PROMOTED_I]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[D_PROMOTED_I]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i1> [[TMP3]], <2 x i1> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -amdgpu-spill-sgpr-to-vgpr=0 -stop-after prologepilog -verify-machineinstrs %s -o - | FileCheck -check-prefix=AFTER-PEI %s
+; RUN: llc -mtriple=amdgpu6.00-mesa-mesa3d -amdgpu-spill-sgpr-to-vgpr=0 -stop-after prolog-epilog -verify-machineinstrs %s -o - | FileCheck -check-prefix=AFTER-PEI %s
 
 ; Test that the ScavengeFI is serialized in the SIMachineFunctionInfo.
 
@@ -15,6 +15,7 @@
 ; AFTER-PEI-NEXT: waveLimiter:     false
 ; AFTER-PEI-NEXT: hasSpilledSGPRs: true
 ; AFTER-PEI-NEXT: hasSpilledVGPRs: false
+; AFTER-PEI-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 ; AFTER-PEI-NEXT: numWaveDispatchSGPRs: 0
 ; AFTER-PEI-NEXT: numWaveDispatchVGPRs: 0
 ; AFTER-PEI-NEXT: scratchRSrcReg:  '$sgpr68_sgpr69_sgpr70_sgpr71'

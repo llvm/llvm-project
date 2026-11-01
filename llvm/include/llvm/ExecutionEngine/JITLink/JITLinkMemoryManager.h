@@ -202,6 +202,15 @@ public:
     Allocs.push_back(std::move(Alloc));
     return deallocate(std::move(Allocs));
   }
+
+  /// Called when a JITLinkDylib that this manager previously registered
+  /// with (via JITLinkDylib::notifyOnDestruction) is being destroyed.
+  ///
+  /// May be used to free resources held on behalf of the JITLinkDylib (e.g.
+  /// reserved address ranges). The JITLinkDylib is guaranteed not to make
+  /// any further use of those resources after this call returns, so
+  /// clean-up may be deferred and completed asynchronously.
+  virtual void notifyDestroying(JITLinkDylib &JD) {}
 };
 
 /// BasicLayout simplifies the implementation of JITLinkMemoryManagers.

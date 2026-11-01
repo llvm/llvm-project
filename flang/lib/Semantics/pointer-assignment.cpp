@@ -23,9 +23,7 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <set>
 #include <string>
-#include <type_traits>
 
 // Semantic checks for pointer assignment.
 
@@ -468,7 +466,10 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
   } else if (type.IsUnlimitedPolymorphic()) {
     return true;
   } else {
-    return !IsExtensibleType(&type.GetDerivedTypeSpec());
+    // F2023 C1017 does not permit enumeration types here.
+    const DerivedTypeSpec &derived{type.GetDerivedTypeSpec()};
+    return !IsExtensibleType(&derived) &&
+        !IsEnumerationType(derived.typeSymbol());
   }
 }
 

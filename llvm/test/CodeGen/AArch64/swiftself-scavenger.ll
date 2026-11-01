@@ -3,8 +3,8 @@
 ; CSR spill for the values used by the swiftself parameter.
 ; CHECK-LABEL: func:
 ; CHECK: str [[REG:x[0-9]+]], [sp]
-; CHECK: add [[REG]], sp, #248
-; CHECK: str xzr, [{{\s*}}[[REG]], #32760]
+; CHECK: add [[REG]], sp, #8, lsl #12
+; CHECK: str xzr, [{{\s*}}[[REG]], #240]
 ; CHECK: ldr [[REG]], [sp]
 target triple = "arm64-apple-ios"
 
@@ -75,7 +75,7 @@ bb:
   store volatile i64 %v23, ptr @ptr64, align 8
   store volatile i64 %v24, ptr @ptr64, align 8
   store volatile i64 %v25, ptr @ptr64, align 8
-  
+
   ; use swiftself parameter late so it stays alive throughout the function.
   store volatile ptr %arg, ptr @ptr8
   ret void

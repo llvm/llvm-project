@@ -41,10 +41,23 @@ enum MSDemangleFlags {
   MSDF_None = 0,
   MSDF_DumpBackrefs = 1 << 0,
   MSDF_NoAccessSpecifier = 1 << 1,
+  /// Don't write the calling convention (`__cdecl`, `__stdcall`...) in function
+  /// and function pointers.
   MSDF_NoCallingConvention = 1 << 2,
+  /// Don't write the return type for functions. That flag doesn't apply to the
+  /// return type of function pointers since it is an essential part of their
+  /// type.
   MSDF_NoReturnType = 1 << 3,
   MSDF_NoMemberType = 1 << 4,
   MSDF_NoVariableType = 1 << 5,
+  MSDF_NoTagSpecifier = 1 << 6,
+  /// Don't write "(void)" for functions that take no parameters.
+  MSDF_NoVoidParameter = 1 << 7,
+  /// Don't add decoration to RTTI type descriptors:
+  ///   struct MyStruct `RTTI Type Descriptor Name'
+  /// will instead output
+  ///   struct MyStruct
+  MSDF_NoDecorativeRTTITypeDescriptor = 1 << 8,
 };
 
 /// Demangles the Microsoft symbol pointed at by mangled_name and returns it.

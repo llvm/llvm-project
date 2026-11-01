@@ -1057,13 +1057,15 @@ body:             |
     %0 = COPY $x3
     %2 = LI 33
     %3 = COPY %0.sub_32
-    %4 = ADD4 killed %3, %2
-    %5 = ADD4 killed %2, killed %4
-    ; CHECK: ADDI killed %3, 33
-    ; CHECK: ADDI killed %4, 33
+    %4 = ADD4 %3, %2
+    %5 = ADD4 %2, %4
+    ; CHECK: ADDI %3, 33
+
+    ; CHECK: ADDI %4, 33
+
     ; CHECK-LATE: addi 3, 3, 33
     ; CHECK-LATE: addi 3, 3, 33
-    %6 = EXTSW_32_64 killed %5
+    %6 = EXTSW_32_64 %5
     $x3 = COPY %6
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1112,9 +1114,11 @@ body:             |
     %1 = LI8 33
     %0 = COPY $x3
     %2 = ADD8 %0, %1
-    %3 = ADD8 killed %1, killed %2
-    ; CHECK: ADDI8 killed %0, 33
-    ; CHECK: ADDI8 killed %2, 33
+    %3 = ADD8 %1, %2
+    ; CHECK: ADDI8 %0, 33
+
+    ; CHECK: ADDI8 %2, 33
+
     ; CHECK-LATE: addi 3, 3, 33
     ; CHECK-LATE: addi 3, 3, 33
     $x3 = COPY %3
@@ -1176,7 +1180,8 @@ body:             |
     %4 = COPY %0.sub_32
     %5 = LI 55
     %6 = ADDC %5, %4, implicit-def $carry
-    ; CHECK: ADDIC killed %4, 55, implicit-def $carry
+    ; CHECK: ADDIC %4, 55, implicit-def $carry
+
     ; CHECK-LATE: addic 3, 3, 55
     %7 = ADDE8 %3, %1, implicit-def dead $carry, implicit $carry
     %8 = EXTSW_32_64 %6
@@ -1235,7 +1240,8 @@ body:             |
     %1 = COPY $x4
     %0 = LI8 777
     %4 = ADDC8 %2, %0, implicit-def $carry
-    ; CHECK: ADDIC8 killed %2, 777, implicit-def $carry
+    ; CHECK: ADDIC8 %2, 777, implicit-def $carry
+
     ; CHECK-LATE: addic 3, 5, 777
     %5 = ADDE8 %3, %1, implicit-def dead $carry, implicit $carry
     $x3 = COPY %4
@@ -1293,7 +1299,8 @@ body:             |
     %0 = COPY $x3
     %2 = COPY %0.sub_32
     %3 = ADDC_rec %1, %2, implicit-def $cr0, implicit-def $carry
-    ; CHECK: ADDIC_rec killed %2, 433, implicit-def $cr0, implicit-def dead $carry
+    ; CHECK: ADDIC_rec %2, 433, implicit-def $cr0, implicit-def $carry
+
     ; CHECK-LATE: addic. 3, 3, 433
     %4 = COPY killed $cr0
     %5 = COPY %4.sub_eq
@@ -1346,8 +1353,8 @@ body:             |
 
     %0 = COPY $x3
     %1 = LI 77
-    %2 = ADDI killed %1, 44
-    %3 = EXTSW_32_64 killed %2
+    %2 = ADDI %1, 44
+    %3 = EXTSW_32_64 %2
     ; CHECK: LI8 121
     ; CHECK-LATE: li 3, 121
     $x3 = COPY %3
@@ -1396,10 +1403,10 @@ body:             |
 
     %0 = COPY $x3
     %1 = LI8 333
-    %2 = ADDI8 killed %1, 44
+    %2 = ADDI8 %1, 44
     ; CHECK: LI8 377
     ; CHECK-LATE: li 3, 377
-    %3 = EXTSW killed %2
+    %3 = EXTSW %2
     $x3 = COPY %3
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1456,7 +1463,7 @@ body:             |
     ; CHECK-LATE: andi. 5, 3, 78
     %4 = COPY killed $cr0
     %5 = ISEL %2, %1, %4.sub_eq
-    %6 = EXTSW_32_64 killed %5
+    %6 = EXTSW_32_64 %5
     $x3 = COPY %6
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1563,7 +1570,7 @@ body:             |
     ; CHECK: CMPDI %0, -3
     ; CHECK-LATE: cmpdi 3, -3
     %4 = ISEL8 $zero8, %0, %2.sub_gt
-    %5 = ADD8 killed %4, %1
+    %5 = ADD8 %4, %1
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1615,8 +1622,9 @@ body:             |
     %0 = LI8 89
     %2 = CMPDI %0, 87
     %4 = ISEL8 $zero8, %0, %2.sub_gt
-    ; CHECK: ADDI8 killed %1, 0
-    %5 = ADD8 killed %4, %1
+    ; CHECK: ADDI8 %1, 0
+
+    %5 = ADD8 %4, %1
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1668,8 +1676,9 @@ body:             |
     %0 = LI8 87
     %2 = CMPDI %0, 87
     %4 = ISEL8 $zero8, %0, %2.sub_gt
-    ; CHECK: COPY killed %0
-    %5 = ADD8 killed %4, %1
+    ; CHECK: COPY %0
+
+    %5 = ADD8 %4, %1
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1723,7 +1732,7 @@ body:             |
     ; CHECK: CMPLDI %0, 99
     ; CHECK-LATE: cmpldi 3, 99
     %4 = ISEL8 $zero8, %0, %2.sub_gt
-    %5 = ADD8 killed %4, %1
+    %5 = ADD8 %4, %1
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1775,8 +1784,9 @@ body:             |
     %0 = LI8 65534
     %2 = CMPLDI %0, 65535
     %4 = ISEL8 $zero8, %0, %2.sub_gt
-    ; CHECK: COPY killed %0
-    %5 = ADD8 killed %4, %1
+    ; CHECK: COPY %0
+
+    %5 = ADD8 %4, %1
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1834,8 +1844,8 @@ body:             |
     %4 = CMPW %3, %2
     ; CHECK: CMPWI %3, -1
     %6 = ISEL $zero, %3, %4.sub_gt
-    %7 = ADD4 killed %6, %2
-    %8 = EXTSW_32_64 killed %7
+    %7 = ADD4 %6, %2
+    %8 = EXTSW_32_64 %7
     $x3 = COPY %8
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1892,9 +1902,10 @@ body:             |
     %3 = LI -3
     %4 = CMPWI %3, 87
     %6 = ISEL $zero, %3, %4.sub_gt
-    ; CHECK: COPY killed %3
-    %7 = ADD4 killed %6, killed %2
-    %8 = EXTSW_32_64 killed %7
+    ; CHECK: COPY %3
+
+    %7 = ADD4 %6, %2
+    %8 = EXTSW_32_64 %7
     $x3 = COPY %8
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -1955,10 +1966,10 @@ body:             |
     ; CHECK: CMPLWI %3, 32767
     ; CHECK-LATE: cmplwi 3, 32767
     %6 = ISEL $zero, %3, %4.sub_gt
-    %7 = ADD4 killed %6, %2
+    %7 = ADD4 %6, %2
     %9 = IMPLICIT_DEF
-    %8 = INSERT_SUBREG %9, killed %7, 1
-    %10 = RLDICL killed %8, 0, 32
+    %8 = INSERT_SUBREG %9, %7, %subreg.sub_32
+    %10 = RLDICL %8, 0, 32
     $x3 = COPY %10
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2017,11 +2028,12 @@ body:             |
     %3 = LI -3
     %4 = CMPLWI %3, 87
     %6 = ISEL $zero, %3, %4.sub_gt
-    ; CHECK: ADDI killed %2, 0
-    %7 = ADD4 killed %6, killed %2
+    ; CHECK: ADDI %2, 0
+
+    %7 = ADD4 %6, %2
     %9 = IMPLICIT_DEF
-    %8 = INSERT_SUBREG %9, killed %7, 1
-    %10 = RLDICL killed %8, 0, 32
+    %8 = INSERT_SUBREG %9, %7, %subreg.sub_32
+    %10 = RLDICL %8, 0, 32
     $x3 = COPY %10
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2086,20 +2098,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
-    %6 = RLDICL killed %4, 0, 32
-    %7 = LBZX %0, killed %6 :: (load (s8) from %ir.arrayidx, !tbaa !3)
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
+    %6 = RLDICL %4, 0, 32
+    %7 = LBZX %0, %6 :: (load (s8) from %ir.arrayidx, !tbaa !3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -15
-    %12,%17 = LBZUX %0, killed %11 :: (load (s8) from %ir.arrayidx3, !tbaa !3)
-    ; CHECK: LBZU -15, killed %0
+    %12,%17 = LBZUX %0, %11 :: (load (s8) from %ir.arrayidx3, !tbaa !3)
+    ; CHECK: LBZU -15, %0
+
     ; CHECK-LATE: lbzu 5, -15(3)
-    %13 = ADD4 killed %12, killed %7
+    %13 = ADD4 %12, %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
-    %16 = RLWINM8 killed %14, 0, 24, 31
+    %14 = INSERT_SUBREG %15, %13, %subreg.sub_32
+    %16 = RLWINM8 %14, 0, 24, 31
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2163,22 +2176,24 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
-    %6 = RLDICL killed %4, 0, 32
-    %7 = LBZX %0, killed %6 :: (load (s8) from %ir.arrayidx, !tbaa !3)
-    ; CHECK: LBZ 45, killed %6
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
+    %6 = RLDICL %4, 0, 32
+    %7 = LBZX %0, %6 :: (load (s8) from %ir.arrayidx, !tbaa !3)
+    ; CHECK: LBZ 45, %6
+
     ; CHECK-LATE: lbz 5, 45(5)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
-    %11 = RLDICL killed %9, 0, 32
-    %12 = LBZX %0, killed %11 :: (load (s8) from %ir.arrayidx3, !tbaa !3)
-    ; CHECK: LBZ 45, killed %11
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
+    %11 = RLDICL %9, 0, 32
+    %12 = LBZX %0, %11 :: (load (s8) from %ir.arrayidx3, !tbaa !3)
+    ; CHECK: LBZ 45, %11
+
     ; CHECK-LATE: lbz 3, 45(4)
-    %13 = ADD4 killed %12, killed %7
+    %13 = ADD4 %12, %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
-    %16 = RLWINM8 killed %14, 0, 24, 31
+    %14 = INSERT_SUBREG %15, %13, %subreg.sub_32
+    %16 = RLWINM8 %14, 0, 24, 31
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2243,20 +2258,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
-    %6 = RLDIC killed %4, 1, 31
-    %7 = LHZX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
+    %6 = RLDIC %4, 1, 31
+    %7 = LHZX %0, %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 31440
-    %12,%17 = LHZUX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
-    ; CHECK: LHZU 31440, killed %0
+    %12,%17 = LHZUX %0, %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
+    ; CHECK: LHZU 31440, %0
+
     ; CHECK-LATE: lhzu 5, 31440(3)
-    %13 = ADD4 killed %12, killed %7
+    %13 = ADD4 %12, %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
-    %16 = RLWINM8 killed %14, 0, 16, 31
+    %14 = INSERT_SUBREG %15, %13, %subreg.sub_32
+    %16 = RLWINM8 %14, 0, 16, 31
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2320,20 +2336,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
-    %6 = RLDIC killed %4, 1, 31
-    %7 = LHZX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
+    %6 = RLDIC %4, 1, 31
+    %7 = LHZX %0, %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 882
-    %12 = LHZX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
-    ; CHECK: LHZ 882, killed %0
+    %12 = LHZX %0, %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
+    ; CHECK: LHZ 882, %0
+
     ; CHECK-LATE: lhz 3, 882(3)
-    %13 = ADD4 killed %12, killed %7
+    %13 = ADD4 %12, %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
-    %16 = RLWINM8 killed %14, 0, 16, 31
+    %14 = INSERT_SUBREG %15, %13, %subreg.sub_32
+    %16 = RLWINM8 %14, 0, 16, 31
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2398,20 +2415,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = RLDIC %4, 1, 31
-    %7 = LHZX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
+    %7 = LHZX %0, %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 400
-    %12,%17 = LHAUX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
-    ; CHECK: LHAU 400, killed %0
+    %12,%17 = LHAUX %0, %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
+    ; CHECK: LHAU 400, %0
+
     ; CHECK-LATE: lhau 5, 400(3)
-    %13 = ADD4 killed %12, killed %7
+    %13 = ADD4 %12, %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
-    %16 = EXTSH8 killed %14
+    %14 = INSERT_SUBREG %15, %13, %subreg.sub_32
+    %16 = EXTSH8 %14
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2475,22 +2493,23 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = LI8 -999
-    %7 = LHAX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
+    %7 = LHAX %0, %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     ; CHECK: LHA -999, %0
     ; CHECK-LATE: lha 4, -999(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 999
-    %12 = LHAX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
-    ; CHECK: LHA 999, killed %0
+    %12 = LHAX %0, %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
+    ; CHECK: LHA 999, %0
+
     ; CHECK-LATE: lha 3, 999(3)
-    %13 = ADD4 killed %12, killed %7
+    %13 = ADD4 %12, %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
-    %16 = EXTSH8 killed %14
+    %14 = INSERT_SUBREG %15, %13, %subreg.sub_32
+    %16 = EXTSH8 %14
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2556,22 +2575,23 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = LI8 889
-    %7,%17 = LWZUX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
+    %7,%17 = LWZUX %0, %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
     ; CHECK: LWZU 889, %0
     ; CHECK-LATE: lwzu {{[0-9]+}}, 889({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -2
-    %12,%18 = LWZUX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
-    ; CHECK: LWZU -2, killed %0
+    %12,%18 = LWZUX %0, %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
+    ; CHECK: LWZU -2, %0
+
     ; CHECK-LATE: lwzu {{[0-9]+}}, -2({{[0-9]+}})
-    %13 = ADD4 killed %12, killed %7
+    %13 = ADD4 %12, %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
-    %16 = RLDICL killed %14, 0, 32
+    %14 = INSERT_SUBREG %15, %13, %subreg.sub_32
+    %16 = RLDICL %14, 0, 32
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2635,22 +2655,24 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = RLDIC %4, 2, 30
-    %7 = LWZX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
-    ; CHECK: LWZ 1000, killed %6
+    %7 = LWZX %0, %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
+    ; CHECK: LWZ 1000, %6
+
     ; CHECK-LATE: lwz 5, 1000(5)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = RLDIC %9, 2, 30
-    %12 = LWZX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
-    ; CHECK: LWZ 1000, killed %11
+    %12 = LWZX %0, %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
+    ; CHECK: LWZ 1000, %11
+
     ; CHECK-LATE: lwz 3, 1000(4)
-    %13 = ADD4 killed %12, killed %7
+    %13 = ADD4 %12, %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
-    %16 = RLDICL killed %14, 0, 32
+    %14 = INSERT_SUBREG %15, %13, %subreg.sub_32
+    %16 = RLDICL %14, 0, 32
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2711,19 +2733,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = RLDIC %4, 2, 30
-    %7 = LWAX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
-    ; CHECK: LWA 444, killed %6
+    %7 = LWAX %0, %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
+    ; CHECK: LWA 444, %6
+
     ; CHECK-LATE: lwa 5, 444(5)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = RLDIC %9, 2, 30
-    %12 = LWAX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
-    ; CHECK: LWA 444, killed %11
+    %12 = LWAX %0, %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
+    ; CHECK: LWA 444, %11
+
     ; CHECK-LATE: lwa 3, 444(4)
-    %13 = ADD8 killed %12, killed %7
+    %13 = ADD8 %12, %7
     $x3 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2786,19 +2810,20 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = LI8 100
-    %7,%14 = LDUX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !10)
+    %7,%14 = LDUX %0, %6 :: (load (s64) from %ir.arrayidx, !tbaa !10)
     ; CHECK: LDU 100, %0
     ; CHECK-LATE: ldu {{[0-9]+}}, 100({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 200
-    %12,%15 = LDUX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !10)
-    ; CHECK: LDU 200, killed %0
+    %12,%15 = LDUX %0, %11 :: (load (s64) from %ir.arrayidx3, !tbaa !10)
+    ; CHECK: LDU 200, %0
+
     ; CHECK-LATE: ldu {{[0-9]+}}, 200({{[0-9]+}})
-    %13 = ADD8 killed %12, killed %7
+    %13 = ADD8 %12, %7
     $x3 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2859,19 +2884,20 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = LI8 120
-    %7 = LDX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !10)
+    %7 = LDX %0, %6 :: (load (s64) from %ir.arrayidx, !tbaa !10)
     ; CHECK: LD 120, %0
     ; CHECK-LATE: ld 4, 120(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 280
-    %12 = LDX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !10)
-    ; CHECK: LD 280, killed %0
+    %12 = LDX %0, %11 :: (load (s64) from %ir.arrayidx3, !tbaa !10)
+    ; CHECK: LD 280, %0
+
     ; CHECK-LATE: ld 3, 280(3)
-    %13 = ADD8 killed %12, killed %7
+    %13 = ADD8 %12, %7
     $x3 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -2934,19 +2960,20 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = LI8 440
-    %7,%14 = LFDUX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !12)
+    %7,%14 = LFDUX %0, %6 :: (load (s64) from %ir.arrayidx, !tbaa !12)
     ; CHECK: LFDU 440, %0
     ; CHECK-LATE: lfdu {{[0-9]+}}, 440({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 16
-    %12,%15 = LFDUX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !12)
-    ; CHECK: LFDU 16, killed %0
+    %12,%15 = LFDUX %0, %11 :: (load (s64) from %ir.arrayidx3, !tbaa !12)
+    ; CHECK: LFDU 16, %0
+
     ; CHECK-LATE: lfdu {{[0-9]+}}, 16({{[0-9]+}})
-    %13 = FADD killed %7, killed %12, implicit $rm
+    %13 = FADD %7, %12, implicit $rm
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
 
@@ -3007,19 +3034,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = RLDIC %4, 3, 29
-    %7 = LFDX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !12)
-    ; CHECK: LFD -20, killed %6
+    %7 = LFDX %0, %6 :: (load (s64) from %ir.arrayidx, !tbaa !12)
+    ; CHECK: LFD -20, %6
+
     ; CHECK-LATE: lfd {{[0-9]+}}, -20({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = RLDIC %9, 3, 29
-    %12 = LFDX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !12)
-    ; CHECK: LFD -20, killed %11
+    %12 = LFDX %0, %11 :: (load (s64) from %ir.arrayidx3, !tbaa !12)
+    ; CHECK: LFD -20, %11
+
     ; CHECK-LATE: lfd {{[0-9]+}}, -20({{[0-9]+}})
-    %13 = FADD killed %7, killed %12, implicit $rm
+    %13 = FADD %7, %12, implicit $rm
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
 
@@ -3109,34 +3138,35 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI8 72
-    %3, %4 = LFSUX %0, killed %2 :: (load (s32) from %ir.arrayidx, !tbaa !14)
-    ; CHECK: LFSU 72, killed %0
+    %3, %4 = LFSUX %0, %2 :: (load (s32) from %ir.arrayidx, !tbaa !14)
+    ; CHECK: LFSU 72, %0
+
     ; CHECK-LATE: lfsu 0, 72(3)
-    %5 = FCTIWUZ killed %3, implicit $rm
+    %5 = FCTIWUZ %3, implicit $rm
     %6 = ADDI8 %stack.4, 0
-    STFIWX killed %5, $zero8, killed %6
+    STFIWX %5, $zero8, %6
     %7 = LWZ 0, %stack.4 :: (load (s32) from %stack.4)
     %8 = LFS 4, %4 :: (load (s32) from %ir.3, !tbaa !14)
     %10 = FCTIWUZ %8, implicit $rm
     %11 = ADDI8 %stack.1, 0
-    STFIWX killed %10, $zero8, killed %11
+    STFIWX %10, $zero8, %11
     %12 = LWZ 0, %stack.1 :: (load (s32) from %stack.1)
     %13 = LFS 8, %4 :: (load (s32) from %ir.5, !tbaa !14)
     %15 = FCTIWUZ %13, implicit $rm
     %16 = ADDI8 %stack.2, 0
-    STFIWX killed %15, $zero8, killed %16
+    STFIWX %15, $zero8, %16
     %17 = LWZ 0, %stack.2 :: (load (s32) from %stack.2)
     %18 = LFS 12, %4 :: (load (s32) from %ir.7, !tbaa !14)
     %20 = FCTIWUZ %18, implicit $rm
     %21 = ADDI8 %stack.3, 0
-    STFIWX killed %20, $zero8, killed %21
+    STFIWX %20, $zero8, %21
     %22 = LWZ 0, %stack.3 :: (load (s32) from %stack.3)
-    STW killed %7, 0, %stack.0 :: (store (s32) into %stack.0, align 16)
-    STW killed %22, 12, %stack.0 :: (store (s32) into %stack.0 + 12)
-    STW killed %17, 8, %stack.0 :: (store (s32) into %stack.0 + 8, align 8)
-    STW killed %12, 4, %stack.0 :: (store (s32) into %stack.0 + 4)
+    STW %7, 0, %stack.0 :: (store (s32) into %stack.0, align 16)
+    STW %22, 12, %stack.0 :: (store (s32) into %stack.0 + 12)
+    STW %17, 8, %stack.0 :: (store (s32) into %stack.0 + 8, align 8)
+    STW %12, 4, %stack.0 :: (store (s32) into %stack.0 + 4)
     %23 = ADDI8 %stack.0, 0
-    %24 = LVX $zero8, killed %23 :: (load (s128) from %stack.0)
+    %24 = LVX $zero8, %23 :: (load (s128) from %stack.0)
     $v2 = COPY %24
     BLR8 implicit $lr8, implicit $rm, implicit $v2
 
@@ -3197,19 +3227,20 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = LI8 88
-    %7 = LFSX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !14)
+    %7 = LFSX %0, %6 :: (load (s32) from %ir.arrayidx, !tbaa !14)
     ; CHECK: LFS 88, %0
     ; CHECK-LATE: lfs 0, 88(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -88
-    %12 = LFSX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !14)
-    ; CHECK: LFS -88, killed %0
+    %12 = LFSX %0, %11 :: (load (s32) from %ir.arrayidx3, !tbaa !14)
+    ; CHECK: LFS -88, %0
+
     ; CHECK-LATE: lfs 1, -88(3)
-    %13 = FADDS killed %7, killed %12, implicit $rm
+    %13 = FADDS %7, %12, implicit $rm
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
 
@@ -3270,19 +3301,20 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = LI8 100
-    %7 = LXSDX %0, killed %6, implicit $rm :: (load (s64) from %ir.arrayidx, !tbaa !12)
+    %7 = LXSDX %0, %6, implicit $rm :: (load (s64) from %ir.arrayidx, !tbaa !12)
     ; CHECK: DFLOADf64 100, %0
     ; CHECK-LATE: lfd 0, 100(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -120
-    %12 = LXSDX %0, killed %11, implicit $rm :: (load (s64) from %ir.arrayidx3, !tbaa !12)
-    ; CHECK: DFLOADf64 -120, killed %0
+    %12 = LXSDX %0, %11, implicit $rm :: (load (s64) from %ir.arrayidx3, !tbaa !12)
+    ; CHECK: DFLOADf64 -120, %0, implicit $rm
+
     ; CHECK-LATE: lfd 1, -120(3)
-    %13 = XSADDDP killed %7, killed %12, implicit $rm
+    %13 = XSADDDP %7, %12, implicit $rm
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
 
@@ -3343,19 +3375,20 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = LI8 96
-    %7 = LXSSPX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !14)
+    %7 = LXSSPX %0, %6 :: (load (s32) from %ir.arrayidx, !tbaa !14)
     ; CHECK: DFLOADf32 96, %0
     ; CHECK-LATE: lfs 0, 96(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -92
-    %12 = LXSSPX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !14)
-    ; CHECK: DFLOADf32 -92, killed %0
+    %12 = LXSSPX %0, %11 :: (load (s32) from %ir.arrayidx3, !tbaa !14)
+    ; CHECK: DFLOADf32 -92, %0
+
     ; CHECK-LATE: lfs 1, -92(3)
-    %13 = XSADDSP killed %7, killed %12
+    %13 = XSADDSP %7, %12
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
 
@@ -3416,19 +3449,20 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
     %6 = LI8 32
-    %7 = LXVX %0, killed %6 :: (load (s128) from %ir.arrayidx, !tbaa !3)
+    %7 = LXVX %0, %6 :: (load (s128) from %ir.arrayidx, !tbaa !3)
     ; CHECK: LXV 32, %0
     ; CHECK-LATE: lxv 34, 32(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -16
-    %12 = LXVX %0, killed %11 :: (load (s128) from %ir.arrayidx3, !tbaa !3)
-    ; CHECK: LXV -16, killed %0
+    %12 = LXVX %0, %11 :: (load (s128) from %ir.arrayidx3, !tbaa !3)
+    ; CHECK: LXV -16, %0
+
     ; CHECK-LATE: lxv 35, -16(3)
-    %13 = VADDUWM killed %12, killed %7
+    %13 = VADDUWM %12, %7
     $v2 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $v2
 
@@ -3478,7 +3512,8 @@ body:             |
     %0 = LI 99
     %3 = COPY %1.sub_32
     %2 = OR %0, %3
-    ; CHECK: ORI killed %3, 99
+    ; CHECK: ORI %3, 99
+
     ; CHECK-LATE: ori 3, 4, 99
     $x3 = EXTSW_32_64 %2
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -3527,7 +3562,8 @@ body:             |
     %1 = COPY $x4
     %0 = LI8 777
     %2 = OR8 %1, %0
-    ; CHECK: ORI8 killed %1, 777
+    ; CHECK: ORI8 %1, 777
+
     ; CHECK-LATE: ori 3, 4, 777
     $x3 = COPY %2
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -3671,8 +3707,9 @@ body:             |
     %0 = COPY $x3
     %2 = COPY %1.sub_32
     %3 = LI 14
-    %4 = RLDCL %0, killed %3, 0
-    ; CHECK: RLDICL killed %0, 14, 0
+    %4 = RLDCL %0, %3, 0
+    ; CHECK: RLDICL %0, 14, 0
+
     ; CHECK-LATE: rotldi 3, 3, 14
     $x3 = COPY %4
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -3726,7 +3763,7 @@ body:             |
     %0 = COPY $x3
     %2 = RLDICL %1, 0, 58
     %3 = LI 37
-    %4 = RLDCL_rec %0, killed %3, 0, implicit-def $cr0
+    %4 = RLDCL_rec %0, %3, 0, implicit-def $cr0
     ; CHECK: RLDICL_rec %0, 37, 0, implicit-def $cr0
     ; CHECK-LATE: rotldi. 5, 3, 37
     %5 = COPY killed $cr0
@@ -3781,8 +3818,9 @@ body:             |
     %0 = COPY $x3
     %2 = COPY %1.sub_32
     %3 = LI 0
-    %4 = RLDCR %0, killed %3, 0
-    ; CHECK: RLDICR killed %0, 0, 0
+    %4 = RLDCR %0, %3, 0
+    ; CHECK: RLDICR %0, 0, 0
+
     ; CHECK-LATE: rldicr 3, 3, 0, 0
     $x3 = COPY %4
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -3836,7 +3874,7 @@ body:             |
     %0 = COPY $x3
     %2 = RLDICL %1, 0, 58
     %3 = LI 18
-    %4 = RLDCR_rec %0, killed %3, 0, implicit-def $cr0
+    %4 = RLDCR_rec %0, %3, 0, implicit-def $cr0
     ; CHECK: RLDICR_rec %0, 18, 0, implicit-def $cr0
     ; CHECK-LATE: rldicr. 5, 3, 18, 0
     %5 = COPY killed $cr0
@@ -3982,7 +4020,8 @@ body:             |
     %1 = COPY $x4
     %0 = LI8 -1
     %2 = RLDICL_rec %0, 53, 48, implicit-def $cr0
-    ; CHECK: ANDI8_rec killed %0, 65535
+    ; CHECK: ANDI8_rec %0, 65535, implicit-def $cr0
+
     ; CHECK-LATE: li 3, -1
     ; CHECK-LATE: andi. 3, 3, 65535
     %3 = COPY killed $cr0
@@ -4037,7 +4076,8 @@ body:             |
     %0 = LI8 200
     %2 = RLDICL_rec %0, 61, 3, implicit-def $cr0
     ; CHECK: LI8 25
-    ; CHECK: ANDI8_rec killed %0, 25
+    ; CHECK: ANDI8_rec %0, 25, implicit-def $cr0
+
     ; CHECK-LATE-NOT: andi.
     %3 = COPY killed $cr0
     %4 = ISEL8 %1, %2, %3.sub_eq
@@ -4090,7 +4130,8 @@ body:             |
     %1 = COPY $x4
     %0 = LI8 2
     %2 = RLDICL_rec %0, 32, 32, implicit-def $cr0
-    ; CHECK: ANDI8_rec killed %0, 0
+    ; CHECK: ANDI8_rec %0, 0, implicit-def $cr0
+
     ; CHECK-LATE: li 3, 2
     ; CHECK-LATE: andi. 3, 3, 0
     %3 = COPY killed $cr0
@@ -4144,7 +4185,7 @@ body:             |
     %1 = COPY %0.sub_32
     %3 = IMPLICIT_DEF
     %2 = LI 17
-    %4 = RLWINM killed %2, 4, 20, 27
+    %4 = RLWINM %2, 4, 20, 27
     ; CHECK: LI8 272
     ; CHECK-LATE: li 3, 272
     $x3 = EXTSW_32_64 %4
@@ -4196,7 +4237,7 @@ body:             |
     %1 = COPY %0.sub_32
     %3 = IMPLICIT_DEF
     %2 = LI 2
-    %4 = RLWINM killed %2, 31, 0, 31
+    %4 = RLWINM %2, 31, 0, 31
     ; CHECK: LI 1
     ; CHECK-LATE: li 3, 1
     $x3 = EXTSW_32_64 %4
@@ -4248,8 +4289,8 @@ body:             |
     %1 = COPY %0.sub_32
     %3 = IMPLICIT_DEF
     %2 = LI 1
-    %4 = RLWINM killed %2, 31, 0, 31
-    ; CHECK: RLWINM killed %2, 31, 0, 31
+    %4 = RLWINM %2, 31, 0, 31
+    ; CHECK: RLWINM %2, 31, 0, 31
     ; CHECK-LATE: rotlwi 3, 3, 31
     $x3 = EXTSW_32_64 %4
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4360,8 +4401,8 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
-    %9 = RLDICL killed %7, 0, 32
+    %7 = INSERT_SUBREG %8, %6, %subreg.sub_32
+    %9 = RLDICL %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -4424,8 +4465,8 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
-    %9 = RLDICL killed %7, 0, 32
+    %7 = INSERT_SUBREG %8, %6, %subreg.sub_32
+    %9 = RLDICL %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -4480,11 +4521,12 @@ body:             |
     %0 = COPY $x3
     %2 = LI8 -18
     %3 = RLWINM8_rec %2, 4, 20, 27, implicit-def $cr0
-    ; CHECK: ANDI8_rec killed %2, 3808
+    ; CHECK: ANDI8_rec %2, 3808, implicit-def $cr0
+
     ; CHECK-LATE: li 3, -18
     ; CHECK-LATE: andi. 3, 3, 3808
     %7 = COPY killed $cr0
-    %6 = RLDICL killed %3, 0, 32
+    %6 = RLDICL %3, 0, 32
     %8 = ISEL8 %1, %6, %7.sub_eq
     $x3 = COPY %8
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4534,8 +4576,9 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 13
-    %3 = SLD %0, killed %2
-    ; CHECK: RLDICR killed %0, 13, 50
+    %3 = SLD %0, %2
+    ; CHECK: RLDICR %0, 13, 50
+
     ; CHECK-LATE: sldi 3, 3, 13
     $x3 = COPY %3
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4587,7 +4630,7 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 17
-    %3 = SLD_rec %0, killed %2, implicit-def $cr0
+    %3 = SLD_rec %0, %2, implicit-def $cr0
     ; CHECK: RLDICR_rec %0, 17, 46, implicit-def $cr0
     ; CHECK-LATE: rldicr. 5, 3, 17, 46
     %4 = COPY killed $cr0
@@ -4640,8 +4683,9 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 4
-    %3 = SRD %0, killed %2
-    ; CHECK: RLDICL killed %0, 60, 4
+    %3 = SRD %0, %2
+    ; CHECK: RLDICL %0, 60, 4
+
     ; CHECK-LATE: rldicl 3, 3, 60, 4
     $x3 = COPY %3
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4693,7 +4737,7 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 17
-    %3 = SRD_rec %0, killed %2, implicit-def $cr0
+    %3 = SRD_rec %0, %2, implicit-def $cr0
     ; CHECK: RLDICL_rec %0, 47, 17, implicit-def $cr0
     ; CHECK-LATE: rldicl. 5, 3, 47, 17
     %4 = COPY killed $cr0
@@ -4752,8 +4796,9 @@ body:             |
     %0 = COPY $x3
     %2 = COPY %1.sub_32
     %5 = LI 21
-    %8 = SLW killed %2, killed %5
-    ; CHECK: RLWINM killed %2, 21, 0, 10
+    %8 = SLW %2, %5
+    ; CHECK: RLWINM %2, 21, 0, 10
+
     ; CHECK-LATE: slwi 3, 4, 21
     $x3 = EXTSW_32_64 %8
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4816,8 +4861,8 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
-    %9 = RLDICL killed %7, 0, 32
+    %7 = INSERT_SUBREG %8, %6, %subreg.sub_32
+    %9 = RLDICL %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -4872,8 +4917,9 @@ body:             |
     %0 = COPY $x3
     %2 = LI 8
     %5 = COPY %0.sub_32
-    %8 = SRW killed %5, killed %2
-    ; CHECK: RLWINM killed %5, 24, 8, 31
+    %8 = SRW %5, %2
+    ; CHECK: RLWINM %5, 24, 8, 31
+
     ; CHECK-LATE: srwi 3, 3, 8
     $x3 = EXTSW_32_64 %8
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4936,8 +4982,8 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
-    %9 = RLDICL killed %7, 0, 32
+    %7 = INSERT_SUBREG %8, %6, %subreg.sub_32
+    %9 = RLDICL %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -4989,13 +5035,13 @@ body:             |
     %0 = COPY $x3
     %2 = LI 15
     %3 = COPY %0.sub_32
-    %4 = SRAW killed %3, killed %2, implicit-def dead $carry
+    %4 = SRAW %3, %2, implicit-def dead $carry
     ; CHECK:      %6:g8rc = IMPLICIT_DEF
-    ; CHECK-NEXT: %7:g8rc = INSERT_SUBREG %6, killed %3, %subreg.sub_32
-    ; CHECK-NEXT: %8:g8rc = SRAWI8 killed %7, 15, implicit-def $carry, implicit-def dead $carry
-    ; CHECK-NEXT: %4:gprc = COPY killed %8.sub_32
+    ; CHECK-NEXT: %7:g8rc = INSERT_SUBREG %6, %3, %subreg.sub_32
+    ; CHECK-NEXT: %8:g8rc = SRAWI8 %7, 15, implicit-def dead $carry
+    ; CHECK-NEXT: %4:gprc = COPY %8.sub_32
     ; CHECK-LATE: srawi 3, 3, 15
-    %5 = EXTSW_32_64 killed %4
+    %5 = EXTSW_32_64 %4
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -5049,12 +5095,12 @@ body:             |
     %0 = COPY $x3
     %2 = LI 8
     %3 = COPY %0.sub_32
-    %4 = SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK:  %11:g8rc = SRAWI8_rec killed %10, 8, implicit-def $carry, implicit-def $cr0, implicit-def dead $carry, implicit-def $cr0
+    %4 = SRAW_rec %3, %2, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK:  %11:g8rc = SRAWI8_rec %10, 8, implicit-def dead $carry, implicit-def $cr0
     ; CHECK-LATE: srawi. 3, 3, 8
     %5 = COPY killed $cr0
     %6 = ISEL %2, %4, %5.sub_eq
-    %7 = EXTSW_32_64 killed %6
+    %7 = EXTSW_32_64 %6
     $x3 = COPY %7
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -5103,8 +5149,9 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 44
-    %3 = SRAD %0, killed %2, implicit-def dead $carry
-    ; CHECK: SRADI killed %0, 44, implicit-def dead $carry
+    %3 = SRAD %0, %2, implicit-def dead $carry
+    ; CHECK: SRADI %0, 44, implicit-def dead $carry
+
     ; CHECK-LATE: sradi 3, 3, 44
     $x3 = COPY %3
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -5156,8 +5203,9 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 61
-    %3 = SRAD_rec %0, killed %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK: SRADI_rec killed %0, 61, implicit-def dead $carry, implicit-def $cr0
+    %3 = SRAD_rec %0, %2, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK: SRADI_rec %0, 61, implicit-def dead $carry, implicit-def $cr0
+
     ; CHECK-LATE: sradi. 3, 3, 61
     %4 = COPY killed $cr0
     %5 = ISEL8 %1, %3, %4.sub_eq
@@ -5225,17 +5273,18 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, %5, %subreg.sub_32
     %8 = LI8 966
-    %13 = STBUX %3, %0, killed %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
+    %13 = STBUX %3, %0, %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
     ; CHECK: STBU %3, 966, %0
     ; CHECK-LATE: {{[0-9]+}}, 966({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, %9, %subreg.sub_32
     %12 = LI8 777
-    %14 = STBUX %3, %0, killed %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
-    ; CHECK: STBU killed %3, 777, killed %0
+    %14 = STBUX %3, %0, %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
+    ; CHECK: STBU %3, 777, %0
+
     ; CHECK-LATE: {{[0-9]+}}, 777({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
@@ -5298,17 +5347,19 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
-    %8 = RLDICL killed %6, 0, 32
-    STBX %3, %0, killed %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
-    ; CHECK: STB %3, 975, killed %8
+    %6 = INSERT_SUBREG %7, %5, %subreg.sub_32
+    %8 = RLDICL %6, 0, 32
+    STBX %3, %0, %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
+    ; CHECK: STB %3, 975, %8
+
     ; CHECK-LATE: stb 4, 975(6)
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
-    %12 = RLDICL killed %10, 0, 32
-    STBX %3, %0, killed %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
-    ; CHECK: STB killed %3, 975, killed %12
+    %10 = INSERT_SUBREG %11, %9, %subreg.sub_32
+    %12 = RLDICL %10, 0, 32
+    STBX %3, %0, %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
+    ; CHECK: STB %3, 975, %12
+
     ; CHECK-LATE: stb 4, 975(5)
     BLR8 implicit $lr8, implicit $rm
 
@@ -5373,17 +5424,18 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, %5, %subreg.sub_32
     %8 = LI8 32000
-    %13 = STHUX %3, %0, killed %8 :: (store (s16) into %ir.arrayidx, !tbaa !6)
+    %13 = STHUX %3, %0, %8 :: (store (s16) into %ir.arrayidx, !tbaa !6)
     ; CHECK: STHU %3, 32000, %0
     ; CHECK-LATE: sthu {{[0-9]+}}, 32000({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, %9, %subreg.sub_32
     %12 = LI8 -761
-    %14 = STHUX %3, %0, killed %12 :: (store (s16) into %ir.arrayidx3, !tbaa !6)
-    ; CHECK: STHU killed %3, -761, killed %0
+    %14 = STHUX %3, %0, %12 :: (store (s16) into %ir.arrayidx3, !tbaa !6)
+    ; CHECK: STHU %3, -761, %0
+
     ; CHECK-LATE: sthu {{[0-9]+}}, -761({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
@@ -5446,17 +5498,18 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, %5, %subreg.sub_32
     %8 = LI8 900
-    STHX %3, %0, killed %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
+    STHX %3, %0, %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
     ; CHECK: STH %3, 900, %0
     ; CHECK-LATE: sth {{[0-9]+}}, 900({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, %9, %subreg.sub_32
     %12 = LI8 -900
-    STHX %3, %0, killed %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
-    ; CHECK: STH killed %3, -900, killed %0
+    STHX %3, %0, %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
+    ; CHECK: STH %3, -900, %0
+
     ; CHECK-LATE: sth {{[0-9]+}}, -900({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
@@ -5521,17 +5574,18 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, %5, %subreg.sub_32
     %8 = LI8 111
-    %13 = STWUX %3, %0, killed %8 :: (store (s32) into %ir.arrayidx, !tbaa !8)
+    %13 = STWUX %3, %0, %8 :: (store (s32) into %ir.arrayidx, !tbaa !8)
     ; CHECK: STWU %3, 111, %0
     ; CHECK-LATE: stwu {{[0-9]+}}, 111({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, %9, %subreg.sub_32
     %12 = LI8 0
-    %14 = STWUX %3, %0, killed %12 :: (store (s32) into %ir.arrayidx3, !tbaa !8)
-    ; CHECK: STWU killed %3, 0, killed %0
+    %14 = STWUX %3, %0, %12 :: (store (s32) into %ir.arrayidx3, !tbaa !8)
+    ; CHECK: STWU %3, 0, %0
+
     ; CHECK-LATE: stwu {{[0-9]+}}, 0({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
@@ -5594,17 +5648,18 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, %5, %subreg.sub_32
     %8 = LI8 2
-    STWX %3, %0, killed %8 :: (store (s32) into %ir.arrayidx, !tbaa !8)
+    STWX %3, %0, %8 :: (store (s32) into %ir.arrayidx, !tbaa !8)
     ; CHECK: STW %3, 2, %0
     ; CHECK-LATE: stw 4, 2(3)
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, %9, %subreg.sub_32
     %12 = LI8 99
-    STWX %3, %0, killed %12 :: (store (s32) into %ir.arrayidx3, !tbaa !8)
-    ; CHECK: STW killed %3, 99, killed %0
+    STWX %3, %0, %12 :: (store (s32) into %ir.arrayidx3, !tbaa !8)
+    ; CHECK: STW %3, 99, %0
+
     ; CHECK-LATE: stw 4, 99(3)
     BLR8 implicit $lr8, implicit $rm
 
@@ -5667,17 +5722,18 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, %4, %subreg.sub_32
     %7 = LI8 444
-    %12 = STDUX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !10)
+    %12 = STDUX %1, %0, %7 :: (store (s64) into %ir.arrayidx, !tbaa !10)
     ; CHECK: STDU %1, 444, %0
     ; CHECK-LATE: stdu {{[0-9]+}}, 444({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -8
-    %13 = STDUX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !10)
-    ; CHECK: STDU killed %1, -8, killed %0
+    %13 = STDUX %1, %0, %11 :: (store (s64) into %ir.arrayidx3, !tbaa !10)
+    ; CHECK: STDU %1, -8, %0
+
     ; CHECK-LATE: stdu {{[0-9]+}}, -8({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
@@ -5738,17 +5794,19 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, %4, %subreg.sub_32
     %7 = LI8 900
-    STDX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !10)
-    ; CHECK: STD %1, 1000, killed %7
+    STDX %1, %0, %7 :: (store (s64) into %ir.arrayidx, !tbaa !10)
+    ; CHECK: STD %1, 1000, %7
+
     ; CHECK-LATE: {{[0-9]+}}, 1000({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -900
-    STDX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !10)
-    ; CHECK: STD killed %1, 1000, killed %11
+    STDX %1, %0, %11 :: (store (s64) into %ir.arrayidx3, !tbaa !10)
+    ; CHECK: STD %1, 1000, %11
+
     ; CHECK-LATE: {{[0-9]+}}, 1000({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
@@ -5809,17 +5867,18 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, %4, %subreg.sub_32
     %7 = LI8 400
-    STFSX %1, %0, killed %7 :: (store (s32) into %ir.arrayidx, !tbaa !14)
+    STFSX %1, %0, %7 :: (store (s32) into %ir.arrayidx, !tbaa !14)
     ; CHECK: STFS %1, 400, %0
     ; CHECK-LATE: stfs 1, 400(3)
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -401
-    STFSX %1, %0, killed %11 :: (store (s32) into %ir.arrayidx3, !tbaa !14)
-    ; CHECK: STFS killed %1, -401, killed %0
+    STFSX %1, %0, %11 :: (store (s32) into %ir.arrayidx3, !tbaa !14)
+    ; CHECK: STFS %1, -401, %0
+
     ; CHECK-LATE: stfs 1, -401(3)
     BLR8 implicit $lr8, implicit $rm
 
@@ -5882,17 +5941,18 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, %4, %subreg.sub_32
     %7 = LI8 111
-    %12 = STFSUX %1, %0, killed %7 :: (store (s32) into %ir.arrayidx, !tbaa !14)
+    %12 = STFSUX %1, %0, %7 :: (store (s32) into %ir.arrayidx, !tbaa !14)
     ; CHECK: STFSU %1, 111, %0
     ; CHECK-LATE: stfsu {{[0-9]+}}, 111({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 987
-    %13 = STFSUX %1, %0, killed %11 :: (store (s32) into %ir.arrayidx3, !tbaa !14)
-    ; CHECK: STFSU killed %1, 987, killed %0
+    %13 = STFSUX %1, %0, %11 :: (store (s32) into %ir.arrayidx3, !tbaa !14)
+    ; CHECK: STFSU %1, 987, %0
+
     ; CHECK-LATE: stfsu {{[0-9]+}}, 987({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
@@ -5953,17 +6013,18 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, %4, %subreg.sub_32
     %7 = LI8 876
-    STFDX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !12)
+    STFDX %1, %0, %7 :: (store (s64) into %ir.arrayidx, !tbaa !12)
     ; CHECK: STFD %1, 876, %0
     ; CHECK-LATE: stfd 1, 876(3)
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 -873
-    STFDX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !12)
-    ; CHECK: STFD killed %1, -873, killed %0
+    STFDX %1, %0, %11 :: (store (s64) into %ir.arrayidx3, !tbaa !12)
+    ; CHECK: STFD %1, -873, %0
+
     ; CHECK-LATE: stfd 1, -873(3)
     BLR8 implicit $lr8, implicit $rm
 
@@ -6026,17 +6087,18 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, %4, %subreg.sub_32
     %7 = LI8 -9038
-    %12 = STFDUX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !12)
+    %12 = STFDUX %1, %0, %7 :: (store (s64) into %ir.arrayidx, !tbaa !12)
     ; CHECK: STFDU %1, -9038, %0
     ; CHECK-LATE: stfdu {{[0-9]+}}, -9038({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
     %11 = LI8 6477
-    %13 = STFDUX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !12)
-    ; CHECK: STFDU killed %1, 6477, killed %0
+    %13 = STFDUX %1, %0, %11 :: (store (s64) into %ir.arrayidx3, !tbaa !12)
+    ; CHECK: STFDU %1, 6477, %0
+
     ; CHECK-LATE: stfdu {{[0-9]+}}, 6477({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
 
@@ -6087,8 +6149,9 @@ body:             |
     %1 = COPY $f1
     %0 = COPY $x3
     %3 = LI8 444
-    STXSSPX %1, %0, killed %3 :: (store (s32) into %ir.arrayidx, !tbaa !14)
-    ; CHECK: DFSTOREf32 killed %1, 444, killed %0
+    STXSSPX %1, %0, %3 :: (store (s32) into %ir.arrayidx, !tbaa !14)
+    ; CHECK: DFSTOREf32 %1, 444, %0
+
     ; CHECK-LATE: stfs 1, 444(3)
     BLR8 implicit $lr8, implicit $rm
 
@@ -6139,8 +6202,9 @@ body:             |
     %1 = COPY $f1
     %0 = COPY $x3
     %3 = LI8 4
-    STXSDX %1, %0, killed %3, implicit $rm :: (store (s64) into %ir.arrayidx, !tbaa !12)
-    ; CHECK: DFSTOREf64 killed %1, 4, killed %0
+    STXSDX %1, %0, %3, implicit $rm :: (store (s64) into %ir.arrayidx, !tbaa !12)
+    ; CHECK: DFSTOREf64 %1, 4, %0, implicit $rm
+
     ; CHECK-LATE: stfd 1, 4(3)
     BLR8 implicit $lr8, implicit $rm
 
@@ -6191,8 +6255,9 @@ body:             |
     %1 = COPY $v2
     %0 = LI8 16
     %3 = RLDICR %2, 4, 59
-    STXVX %1, %0, killed %3 :: (store (s128) into %ir.arrayidx, !tbaa !3)
-    ; CHECK: STXV killed %1, 16, killed %3
+    STXVX %1, %0, %3 :: (store (s128) into %ir.arrayidx, !tbaa !3)
+    ; CHECK: STXV %1, 16, %3
+
     ; CHECK-LATE: stxv 34, 16(4)
     BLR8 implicit $lr8, implicit $rm
 
@@ -6253,7 +6318,8 @@ body:             |
     %8 = COPY %1.sub_32
     %0 = LI 55
     %4 = SUBFC %7, %0, implicit-def $carry
-    ; CHECK: SUBFIC killed %7, 55
+    ; CHECK: SUBFIC %7, 55, implicit-def $carry
+
     ; CHECK-LATE: subfic 3, 5, 55
     %5 = SUBFE %6, %8, implicit-def dead $carry, implicit $carry
     $x3 = EXTSW_32_64 %4
@@ -6311,7 +6377,8 @@ body:             |
     %1 = COPY $x4
     %0 = LI8 7635
     %4 = SUBFC8 %2, %0, implicit-def $carry
-    ; CHECK: SUBFIC8 killed %2, 7635
+    ; CHECK: SUBFIC8 %2, 7635, implicit-def $carry
+
     ; CHECK-LATE: subfic 3, 5, 7635
     %5 = SUBFE8 %3, %1, implicit-def dead $carry, implicit $carry
     $x3 = COPY %4
@@ -6364,7 +6431,8 @@ body:             |
     %0 = COPY $x3
     %3 = COPY %0.sub_32
     %2 = XOR %1, %3
-    ; CHECK: XORI killed %3, 10101
+    ; CHECK: XORI %3, 10101
+
     ; CHECK-LATE: 3, 3, 10101
     $x3 = EXTSW_32_64 %2
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -6413,7 +6481,8 @@ body:             |
     %1 = COPY $x4
     %0 = LI8 5535
     %2 = XOR8 %1, %0
-    ; CHECK: XORI8 killed %1, 5535
+    ; CHECK: XORI8 %1, 5535
+
     ; CHECK-LATE: xori 3, 4, 5535
     $x3 = COPY %2
     BLR8 implicit $lr8, implicit $rm, implicit $x3

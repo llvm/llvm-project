@@ -41,7 +41,7 @@
 # NOPIE-NEXT: }
 
 # RUN: ld.lld -pie -z pack-relative-relocs main.o a.so -o main.pie
-# RUN: llvm-readelf -S -d -r -x .test main.pie | FileCheck --check-prefixes=RELR,HEX %s
+# RUN: llvm-readelf -S -d -r -x .dynamic -x .test main.pie | FileCheck --check-prefixes=RELR,HEX %s
 
 # RELR:      Section Headers:
 # RELR-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
@@ -49,9 +49,14 @@
 # RELR:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR2:.+]] {{0*}}[[ADDR2]] 000018 08 A 0 0 8
 
 # RELR:      Dynamic section at offset {{.+}} contains 16 entries
-# RELR:      0x0000000070000012 (AARCH64_AUTH_RELR) 0x[[ADDR2]]
-# RELR-NEXT: 0x0000000070000011 (AARCH64_AUTH_RELRSZ) 24 (bytes)
+# RELR:      0x0000000000000007 (RELA)                 0x[[ADDR1]]
+# RELR-NEXT: 0x0000000000000008 (RELASZ)               144 (bytes)
+# RELR-NEXT: 0x0000000000000009 (RELAENT)              24 (bytes)
+# RELR-NEXT: 0x0000000070000012 (AARCH64_AUTH_RELR)    0x[[ADDR2]]
+# RELR-NEXT: 0x0000000070000011 (AARCH64_AUTH_RELRSZ)  24 (bytes)
 # RELR-NEXT: 0x0000000070000013 (AARCH64_AUTH_RELRENT) 8 (bytes)
+# RELR:      0x0000000000000000 (NULL)                 0x0
+# RELR-EMPTY:
 
 ## Decoded SHT_RELR section is same as UNPACKED,
 ## but contains only the relative relocations.
@@ -73,6 +78,10 @@
 # RELR-NEXT:  0000000000030450 $d + 0x10
 # RELR-NEXT:  0000000000030458 $d + 0x18
 # RELR-NEXT: 0002: 0000000000030492 0000000000030492 $d + 0x52
+
+# HEX:      Hex dump of section '.dynamic':
+# HEX:      0x00020430 00000000 00000000 00000000 00000000
+# HEX-EMPTY:
 
 # HEX:      Hex dump of section '.test':
 # HEX-NEXT: 0x00030440 01000000 2a000020 42040300 2b000000
@@ -137,40 +146,6 @@
 .byte 0x77
 .quad (.test + 5)@AUTH(da,52)
 
-#--- empty-relr.s
-
-## .relr.auth.dyn relocations that do not fit 32 bits are moved to .rela.dyn.
-## In this case .relr.auth.dyn will be made empty, but
-## removeUnusedSyntheticSections fails to remove the section.
-
-# RUN: llvm-mc -filetype=obj -triple=aarch64 empty-relr.s -o empty-relr.o
-# RUN: ld.lld -pie -z pack-relative-relocs empty-relr.o -o empty-relr
-# RUN: llvm-readelf -S -d -r empty-relr | FileCheck --check-prefixes=EMPTY-RELR %s
-
-# EMPTY-RELR:      Section Headers:
-# EMPTY-RELR-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
-# EMPTY-RELR:      .rela.dyn RELA {{0*}}[[ADDR1:.+]] {{0*}}[[ADDR1]] 000018 18 A 0 0 8
-# EMPTY-RELR:      .relr.auth.dyn AARCH64_AUTH_RELR {{0*}}[[ADDR2:.+]] {{0*}}[[ADDR2]] 000000 08 A 0 0 8
-
-# EMPTY-RELR:      Dynamic section at offset {{.+}} contains 12 entries
-# EMPTY-RELR-NOT:  (AARCH64_AUTH_RELR)
-# EMPTY-RELR-NOT:  (AARCH64_AUTH_RELRSZ)
-# EMPTY-RELR-NOT:  (AARCH64_AUTH_RELRENT)
-# EMPTY-RELR:      0x0000000000000007 (RELA) 0x[[ADDR1]]
-# EMPTY-RELR-NEXT: 0x0000000000000008 (RELASZ) 24 (bytes)
-# EMPTY-RELR-NEXT: 0x0000000000000009 (RELAENT) 24 (bytes)
-
-# EMPTY-RELR:      Relocation section '.rela.dyn' at offset {{.+}} contains 1 entries:
-# EMPTY-RELR-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-# EMPTY-RELR-NEXT: 0000000000030320  0000000000000411 R_AARCH64_AUTH_RELATIVE           8003031f
-# EMPTY-RELR-EMPTY:
-# EMPTY-RELR-NEXT: Relocation section '.relr.auth.dyn' at offset {{.+}} contains 0 entries:
-# EMPTY-RELR-NEXT: Index: Entry Address Symbolic Address
-
-.section .test, "aw"
-.p2align 3
-.quad (.test + 0x7FFFFFFF)@AUTH(da,42)
-
 #--- empty-rela.s
 
 ## .relr.auth.dyn relocations that do not fit 32 bits are moved to .rela.dyn.
@@ -179,7 +154,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 empty-rela.s -o empty-rela.o
 # RUN: ld.lld -pie -z pack-relative-relocs empty-rela.o -o empty-rela
-# RUN: llvm-readelf -S -d -r empty-rela | FileCheck --check-prefixes=EMPTY-RELA %s
+# RUN: llvm-readelf -S -d -r -x.dynamic empty-rela | FileCheck --check-prefixes=EMPTY-RELA %s
 # RUN: ld.lld -r -z pack-relative-relocs empty-rela.o -o empty-rela.ro
 # RUN: llvm-readelf -S empty-rela.ro | FileCheck --check-prefixes=EMPTY-RELA-RO %s
 
@@ -192,9 +167,14 @@
 # EMPTY-RELA-NOT:  (RELR)
 # EMPTY-RELA-NOT:  (RELRSZ)
 # EMPTY-RELA-NOT:  (RELRENT)
+# EMPTY-RELA-NOT:  (RELA)
+# EMPTY-RELA-NOT:  (RELASZ)
+# EMPTY-RELA-NOT:  (RELAENT)
 # EMPTY-RELA:      0x0000000070000012 (AARCH64_AUTH_RELR) 0x[[ADDR2]]
 # EMPTY-RELA-NEXT: 0x0000000070000011 (AARCH64_AUTH_RELRSZ) 8 (bytes)
 # EMPTY-RELA-NEXT: 0x0000000070000013 (AARCH64_AUTH_RELRENT) 8 (bytes)
+# EMPTY-RELA:      0x0000000000000000 (NULL) 0x0
+# EMPTY-RELA-EMPTY:
 
 # EMPTY-RELA:      Relocation section '.rela.dyn' at offset {{.+}} contains 0 entries:
 # EMPTY-RELA-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
@@ -203,8 +183,138 @@
 # EMPTY-RELA-NEXT: Index: Entry Address Symbolic Address
 # EMPTY-RELA-NEXT: 0000: 0000000000030310 0000000000030310 $d
 
+## The last 16 bytes are the terminating NULL entry; no stale padding follows.
+# EMPTY-RELA:      Hex dump of section '.dynamic':
+# EMPTY-RELA:      0x00020300 00000000 00000000 00000000 00000000
+# EMPTY-RELA-EMPTY:
+
 # EMPTY-RELA-RO-NOT: .rela.dyn
 
 .section .test, "aw"
 .p2align 3
 .quad (.test + 0x12345678)@AUTH(da,42)
+
+#--- dynamic-section-growth.s
+
+## .relr.auth.dyn relocations that do not fit 32 bits are moved to .rela.dyn.
+## If some relocations are moved to the previously empty .rela.dyn and some stay
+## in .relr.auth.dyn, the dynamic section needs to contain tags for both these
+## sections and have enough space for storing these tags.
+
+# RUN: llvm-mc -filetype=obj -triple=aarch64 dynamic-section-growth.s -o dynamic-section-growth.o
+# RUN: ld.lld -shared -z pack-relative-relocs dynamic-section-growth.o -o dynamic-section-growth.so
+# RUN: llvm-readelf -S -d -r -x.dynamic dynamic-section-growth.so | FileCheck --check-prefix=DYN-GROW %s
+
+# DYN-GROW:     .rela.dyn         RELA            0000000000000248 000248 000018 18   A  0   0  8
+# DYN-GROW:     .relr.auth.dyn    AARCH64_AUTH_RELR 0000000000000260 000260 000008 08   A  0   0  8
+# DYN-GROW:     .dynamic          DYNAMIC         0000000000020268 000268 0000d0 10  WA  4   0  8
+
+# DYN-GROW:      Dynamic section at offset {{.+}} contains 13 entries:
+# DYN-GROW:      0x0000000000000007 (RELA)                 0x248
+# DYN-GROW-NEXT: 0x0000000000000008 (RELASZ)               24 (bytes)
+# DYN-GROW-NEXT: 0x0000000000000009 (RELAENT)              24 (bytes)
+# DYN-GROW-NEXT: 0x0000000070000012 (AARCH64_AUTH_RELR)    0x260
+# DYN-GROW-NEXT: 0x0000000070000011 (AARCH64_AUTH_RELRSZ)  8 (bytes)
+# DYN-GROW-NEXT: 0x0000000070000013 (AARCH64_AUTH_RELRENT) 8 (bytes)
+# DYN-GROW:      0x0000000000000000 (NULL)                 0x0
+# DYN-GROW-EMPTY:
+
+# DYN-GROW:      Relocation section '.rela.dyn' at offset 0x248 contains 1 entries:
+# DYN-GROW-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# DYN-GROW-NEXT: 0000000000030340  0000000000000411 R_AARCH64_AUTH_RELATIVE           100030338
+# DYN-GROW-EMPTY:
+
+# DYN-GROW:      Relocation section '.relr.auth.dyn' at offset 0x260 contains 1 entries:
+# DYN-GROW-NEXT: Index: Entry            Address           Symbolic Address
+# DYN-GROW-NEXT: 0000:  0000000000030338 0000000000030338  foo
+# DYN-GROW-EMPTY:
+
+# DYN-GROW:      Hex dump of section '.dynamic':
+# DYN-GROW:      0x00020328 00000000 00000000 00000000 00000000
+# DYN-GROW-EMPTY:
+
+.data
+.balign 8
+foo:
+## Can stay in .relr.auth.dyn
+.quad foo@AUTH(da,42)
+## Will be moved to .rela.dyn
+.quad foo+0x100000000@AUTH(da,42)
+
+#--- dynamic-section-shrink.s
+## If all .relr.auth.dyn entries are moved to a non-empty .rela.dyn, the
+## AARCH64_AUTH_RELR* tags are dropped and .dynamic shrinks. Check the section
+## header size: -d output stops at the first NULL tag and hides stale padding.
+## The emptied .relr.auth.dyn is retained (removeUnusedSyntheticSections runs
+## before the move).
+
+# RUN: llvm-mc -filetype=obj -triple=aarch64 dynamic-section-shrink.s -o dynamic-section-shrink.o
+# RUN: ld.lld -shared -z pack-relative-relocs dynamic-section-shrink.o -o dynamic-section-shrink.so
+# RUN: llvm-readelf -S -d -r dynamic-section-shrink.so | FileCheck --check-prefix=DYN-SHRINK %s
+
+# DYN-SHRINK:     .rela.dyn         RELA            0000000000000248 000248 000030 18   A  1   0  8
+# DYN-SHRINK:     .relr.auth.dyn    AARCH64_AUTH_RELR 0000000000000278 000278 000000 08   A  0   0  8
+# DYN-SHRINK:     .dynamic          DYNAMIC         0000000000020280 000280 0000a0 10  WA  4   0  8
+
+# DYN-SHRINK:      Dynamic section at offset {{.+}} contains 10 entries:
+# DYN-SHRINK:      0x0000000000000007 (RELA)    0x248
+# DYN-SHRINK-NEXT: 0x0000000000000008 (RELASZ)  48 (bytes)
+# DYN-SHRINK-NEXT: 0x0000000000000009 (RELAENT) 24 (bytes)
+# DYN-SHRINK-NOT:  (AARCH64_AUTH_RELR
+# DYN-SHRINK:      0x0000000000000000 (NULL)    0x0
+# DYN-SHRINK-EMPTY:
+
+# DYN-SHRINK:      Relocation section '.rela.dyn' at offset 0x248 contains 2 entries:
+# DYN-SHRINK:      Relocation section '.relr.auth.dyn' at offset 0x278 contains 0 entries:
+
+.data
+.balign 8
+foo:
+## Will be moved to .rela.dyn
+.quad foo+0x100000000@AUTH(da,42)
+
+## Alignment 1 forces this into .rela.dyn up-front.
+.section .data.rel.ro, "aw"
+.quad foo@AUTH(da,42)
+
+#--- rela-iplt-end.s
+# RUN: llvm-mc -filetype=obj -triple=aarch64 rela-iplt-end.s -o rela-iplt-end.o
+# RUN: ld.lld -z pack-relative-relocs rela-iplt-end.o -o rela-iplt-end
+# RUN: llvm-readelf -S -s rela-iplt-end | FileCheck --check-prefix=IPLT-END %s
+
+## Ensure that the end address covers 0x30 bytes for both relocations.
+# IPLT-END:      .rela.dyn         RELA            00000000002001c8 0001c8 000030 18   A  0   0  8
+# IPLT-END:      00000000002001c8     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_start
+# IPLT-END-NEXT: 00000000002001f8     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_end
+
+adrp x0, __rela_iplt_start
+adrp x0, __rela_iplt_end
+
+.data
+.balign 8
+foo:
+## Will be moved to .rela.dyn
+.quad foo+0x100000000@AUTH(da,42)
+
+## Extra relocation in a section with alignment 1 to force it into .rela.dyn up-front.
+.section .data.rel.ro, "aw"
+.quad foo@AUTH(da,42)
+
+#--- rela-iplt-start.s
+# RUN: llvm-mc -filetype=obj -triple=aarch64 rela-iplt-start.s -o rela-iplt-start.o
+# RUN: ld.lld -z pack-relative-relocs rela-iplt-start.o -o rela-iplt-start
+# RUN: llvm-readelf -S -s rela-iplt-start | FileCheck --check-prefix=IPLT-START %s
+
+## Ensure that the __rela_iplt* addresses are properly set given that initially .rela.dyn is empty (before moving relocs from .relr.auth.dyn).
+# IPLT-START:      .rela.dyn         RELA            0000000000200158 000158 000018 18   A  0   0  8
+# IPLT-START:      0000000000200158     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_start
+# IPLT-START-NEXT: 0000000000200170     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_end
+
+adrp x0, __rela_iplt_start
+adrp x0, __rela_iplt_end
+
+.data
+.balign 8
+foo:
+## Will be moved to .rela.dyn
+.quad foo+0x100000000@AUTH(da,42)

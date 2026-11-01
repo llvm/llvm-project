@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=cfi-icall -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=cfi-icall -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 #define CFI_UNCHECKED_CALLEE __attribute__((cfi_unchecked_callee))
 

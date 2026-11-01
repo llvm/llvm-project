@@ -183,7 +183,12 @@ static void printParseConditional(mlir::raw_indented_ostream &ios,
             parser = "succeeded($_reader.readAttributes($_var))";
           else if (!composite && def->isSubClassOf("TypeKind"))
             parser = "succeeded($_reader.readTypes($_var))";
-          else
+          else if (attr->isSubClassOf("ArrayWithKnownSize")) {
+            std::string sizeRef = attr->getValueAsString("knownSizeRef").str();
+            parser = ("succeeded($_reader.readListWithKnownSize($_var, " +
+                      sizeRef + ", " + listHelperName(std::get<1>(it)) + "))")
+                         .str();
+          } else
             parser = ("succeeded($_reader.readList($_var, " +
                       listHelperName(std::get<1>(it)) + "))")
                          .str();
@@ -385,8 +390,11 @@ void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
     }
     std::string returnType = getCType(def);
     std::string nestedName = kind.str();
-    ios << "writer.writeList(" << getter << ", [&](" << returnType << " "
-        << nestedName << ") ";
+    StringRef writeMethod = memberRec->isSubClassOf("ArrayWithKnownSize")
+                                ? "writer.writeListWithKnownSize("
+                                : "writer.writeList(";
+    ios << writeMethod << getter << ", [&](" << returnType << " " << nestedName
+        << ") ";
     auto lambdaScope = ios.scope("{\n", "});\n");
     return emitPrintHelper(def, kind, nestedName, nestedName, ios);
   }

@@ -154,6 +154,7 @@ static void EnumerateConstantFPRanges(Fn TestFn, SparseLevel Level,
                                 /*MayBeSNaN=*/true);
 }
 
+#if defined(EXPENSIVE_CHECKS)
 template <typename Fn>
 static void EnumerateTwoInterestingConstantFPRanges(Fn TestFn,
                                                     SparseLevel Level) {
@@ -165,6 +166,7 @@ static void EnumerateTwoInterestingConstantFPRanges(Fn TestFn,
       },
       Level, /*IgnoreSNaNs=*/true);
 }
+#endif
 
 template <typename Fn>
 static void EnumerateValuesInConstantFPRange(const ConstantFPRange &CR,
@@ -203,6 +205,7 @@ static void EnumerateValuesInConstantFPRange(const ConstantFPRange &CR,
   }
 }
 
+#if defined(EXPENSIVE_CHECKS)
 template <typename Fn>
 static bool AnyOfValueInConstantFPRange(const ConstantFPRange &CR, Fn TestFn,
                                         bool IgnoreNaNPayload) {
@@ -245,6 +248,7 @@ static bool AnyOfValueInConstantFPRange(const ConstantFPRange &CR, Fn TestFn,
   }
   return false;
 }
+#endif
 
 TEST_F(ConstantFPRangeTest, Basics) {
   EXPECT_TRUE(Full.isFullSet());

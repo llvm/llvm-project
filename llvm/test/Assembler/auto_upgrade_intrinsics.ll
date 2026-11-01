@@ -266,3 +266,6 @@ define <8 x double> @preserve_fmf_on_x86_intrin(<8 x double> %x0, <8 x double> %
 
 ; CHECK: declare void @llvm.lifetime.start.p0(ptr captures(none))
 ; CHECK: declare void @llvm.lifetime.end.p0(ptr captures(none))
+
+; CHECK: declare ptr @llvm.experimental.gc.get.pointer.base.p0(ptr readnone captures(none))
+declare ptr @llvm.experimental.gc.get.pointer.base.p0.p0(ptr)

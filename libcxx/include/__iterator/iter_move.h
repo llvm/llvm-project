@@ -27,9 +27,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [iterator.cust.move]
 
@@ -95,9 +95,9 @@ template <__dereferenceable _Tp>
   }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(std::declval<_Tp&>()));
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

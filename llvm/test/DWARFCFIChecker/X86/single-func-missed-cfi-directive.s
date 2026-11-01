@@ -7,8 +7,8 @@
 f:
         .cfi_startproc
         
-        .cfi_undefined %rax
-        
+        .cfi_same_value %rbp
+
         pushq   %rbp
         .cfi_def_cfa_offset 16
         

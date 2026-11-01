@@ -11,10 +11,10 @@
 define void @llvm_mips_ldr_d_test(ptr %val, ptr %ptr) nounwind {
 ; MIPS32R5-EB-LABEL: llvm_mips_ldr_d_test:
 ; MIPS32R5-EB:       # %bb.0: # %entry
-; MIPS32R5-EB-NEXT:    # implicit-def: $v0
+; MIPS32R5-EB-NEXT:    # implicit-def: $r2
 ; MIPS32R5-EB-NEXT:    lwr $2, 23($5)
 ; MIPS32R5-EB-NEXT:    lwl $2, 20($5)
-; MIPS32R5-EB-NEXT:    # implicit-def: $at
+; MIPS32R5-EB-NEXT:    # implicit-def: $r1
 ; MIPS32R5-EB-NEXT:    lwr $1, 19($5)
 ; MIPS32R5-EB-NEXT:    lwl $1, 16($5)
 ; MIPS32R5-EB-NEXT:    fill.w $w0, $2
@@ -25,10 +25,10 @@ define void @llvm_mips_ldr_d_test(ptr %val, ptr %ptr) nounwind {
 ;
 ; MIPS32R5-EL-LABEL: llvm_mips_ldr_d_test:
 ; MIPS32R5-EL:       # %bb.0: # %entry
-; MIPS32R5-EL-NEXT:    # implicit-def: $v0
+; MIPS32R5-EL-NEXT:    # implicit-def: $r2
 ; MIPS32R5-EL-NEXT:    lwr $2, 16($5)
 ; MIPS32R5-EL-NEXT:    lwl $2, 19($5)
-; MIPS32R5-EL-NEXT:    # implicit-def: $at
+; MIPS32R5-EL-NEXT:    # implicit-def: $r1
 ; MIPS32R5-EL-NEXT:    lwr $1, 20($5)
 ; MIPS32R5-EL-NEXT:    lwl $1, 23($5)
 ; MIPS32R5-EL-NEXT:    fill.w $w0, $2
@@ -72,7 +72,7 @@ declare <2 x i64> @llvm.mips.ldr.d(ptr, i32) nounwind
 define void @llvm_mips_ldr_w_test(ptr %val, ptr %ptr) nounwind {
 ; MIPS32R5-EB-LABEL: llvm_mips_ldr_w_test:
 ; MIPS32R5-EB:       # %bb.0: # %entry
-; MIPS32R5-EB-NEXT:    # implicit-def: $at
+; MIPS32R5-EB-NEXT:    # implicit-def: $r1
 ; MIPS32R5-EB-NEXT:    lwr $1, 19($5)
 ; MIPS32R5-EB-NEXT:    lwl $1, 16($5)
 ; MIPS32R5-EB-NEXT:    fill.w $w0, $1
@@ -82,7 +82,7 @@ define void @llvm_mips_ldr_w_test(ptr %val, ptr %ptr) nounwind {
 ;
 ; MIPS32R5-EL-LABEL: llvm_mips_ldr_w_test:
 ; MIPS32R5-EL:       # %bb.0: # %entry
-; MIPS32R5-EL-NEXT:    # implicit-def: $at
+; MIPS32R5-EL-NEXT:    # implicit-def: $r1
 ; MIPS32R5-EL-NEXT:    lwr $1, 16($5)
 ; MIPS32R5-EL-NEXT:    lwl $1, 19($5)
 ; MIPS32R5-EL-NEXT:    fill.w $w0, $1

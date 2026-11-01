@@ -3,7 +3,17 @@
 # RUN: not llvm-mc -triple riscv32 < %s 2>&1 \
 # RUN:     | FileCheck %s -check-prefixes=CHECK,CHECK-OFFSET
 
+hfence.gvma zero, zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
+
+hfence.gvma zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
+
+hfence.gvma # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
+
 hfence.vvma zero, zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
+
+hfence.vvma zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
+
+hfence.vvma # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
 
 hlv.h   a0, 0(a1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
 

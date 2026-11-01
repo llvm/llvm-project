@@ -21,11 +21,14 @@
 // TODO: use a builtin version of printf
 UNSUPPORTED: system-windows, system-zos
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\12\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
@@ -54,7 +57,7 @@ RUN: printf '\02\0\0\0\0\0\0\0' >> %t.profraw
 // the profile reader should error out.
 RUN: printf '\11\0\6\0\1\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
-
+RUN: printf '\0\0\6\0\2\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t.profraw

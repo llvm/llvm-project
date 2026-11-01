@@ -30,6 +30,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/Unicode.h"
@@ -217,6 +218,18 @@ DiagnosticsEngine::DiagStateMap::File::lookup(unsigned Offset) const {
 DiagnosticsEngine::DiagStateMap::File *
 DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
                                          FileID ID) const {
+  assert(ID != FileID::getSentinel());
+  if (LastLookupFileID != ID) {
+    // getFileUncached() can recurse into getFile(), so update the cache after.
+    LastLookupFile = getFileUncached(SrcMgr, ID);
+    LastLookupFileID = ID;
+  }
+  return LastLookupFile;
+}
+
+DiagnosticsEngine::DiagStateMap::File *
+DiagnosticsEngine::DiagStateMap::getFileUncached(SourceManager &SrcMgr,
+                                                 FileID ID) const {
   // Get or insert the File for this ID.
   auto Range = Files.equal_range(ID);
   if (Range.first != Range.second)
@@ -578,11 +591,11 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
                                                SourceLocation DiagLoc,
                                                const SourceManager &SM) const {
-  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
-  if (!PLoc.isValid())
-    return false;
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
+    return false;
+  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
+  if (!PLoc.isValid())
     return false;
 
   StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
@@ -593,6 +606,17 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
 
   unsigned LastEmit = DiagSection->getLastMatch("src", F, "emit");
   return LastSup > LastEmit;
+}
+
+DiagStateSystemClass
+DiagnosticsEngine::getDiagStateSystemClassForLoc(SourceLocation Loc) const {
+  const SourceManager &SM = getSourceManager();
+  unsigned Class = 0;
+  if (SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
+    Class |= static_cast<unsigned>(DiagStateSystemClass::SystemHeader);
+  if (SM.isInSystemMacro(Loc))
+    Class |= static_cast<unsigned>(DiagStateSystemClass::SystemMacro);
+  return static_cast<DiagStateSystemClass>(Class);
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
@@ -1042,18 +1066,32 @@ void Diagnostic::FormatDiagnostic(SmallVectorImpl<char> &OutStr) const {
 
 /// EscapeStringForDiagnostic - Append Str to the diagnostic buffer,
 /// escaping non-printable characters and ill-formed code unit sequences.
-void clang::EscapeStringForDiagnostic(StringRef Str,
-                                      SmallVectorImpl<char> &OutStr) {
+static void EscapeStringForDiagnostic(StringRef Str,
+                                      SmallVectorImpl<char> &OutStr,
+                                      bool ForCodepoint) {
   OutStr.reserve(OutStr.size() + Str.size());
   auto *Begin = reinterpret_cast<const unsigned char *>(Str.data());
   llvm::raw_svector_ostream OutStream(OutStr);
-  const unsigned char *End = Begin + Str.size();
+  unsigned Size = Str.size();
+  const unsigned char *End = Begin + Size;
+  if (ForCodepoint) {
+    unsigned Size = llvm::getUTF8SequenceSize(Begin, End);
+    if (Size == 0)
+      Size = llvm::findMaximalSubpartOfIllFormedUTF8Sequence(Begin, End);
+    End = Begin + Size;
+  }
   while (Begin != End) {
-    // ASCII case
-    if (isPrintable(*Begin) || isWhitespace(*Begin)) {
+    if (!ForCodepoint && (isPrintable(*Begin) || isWhitespace(*Begin))) {
       OutStream << *Begin;
       ++Begin;
       continue;
+    }
+    if (ForCodepoint && *Begin < 0x80) {
+      if (isPrintable(*Begin)) {
+        OutStream << "'" << *Begin << "'";
+        ++Begin;
+        continue;
+      }
     }
     if (llvm::isLegalUTF8Sequence(Begin, End)) {
       llvm::UTF32 CodepointValue;
@@ -1069,20 +1107,50 @@ void clang::EscapeStringForDiagnostic(StringRef Str,
           "the sequence is legal UTF-8 but we couldn't convert it to UTF-32");
       assert(Begin == CodepointEnd &&
              "we must be further along in the string now");
+
       if (llvm::sys::unicode::isPrintable(CodepointValue) ||
-          llvm::sys::unicode::isFormatting(CodepointValue)) {
-        OutStr.append(CodepointBegin, CodepointEnd);
-        continue;
+          (!ForCodepoint && llvm::sys::unicode::isFormatting(CodepointValue))) {
+        OutStream << (ForCodepoint ? "'" : "")
+                  << StringRef(reinterpret_cast<const char *>(CodepointBegin),
+                               std::distance(CodepointBegin, CodepointEnd))
+                  << (ForCodepoint ? "' " : "");
+        if (!ForCodepoint)
+          continue;
       }
       // Unprintable code point.
-      OutStream << "<U+" << llvm::format_hex_no_prefix(CodepointValue, 4, true)
-                << ">";
+      OutStream << (ForCodepoint ? "" : "<") << "U+"
+                << llvm::format_hex_no_prefix(CodepointValue, 4, true)
+                << (ForCodepoint ? "" : ">");
       continue;
     }
     // Invalid code unit.
-    OutStream << "<" << llvm::format_hex_no_prefix(*Begin, 2, true) << ">";
+    OutStream << "<0x" << llvm::format_hex_no_prefix(*Begin, 2, true) << ">";
     ++Begin;
   }
+}
+
+/// EscapeStringForDiagnostic - Append Str to the diagnostic buffer,
+/// escaping non-printable characters and ill-formed code unit sequences.
+void clang::EscapeStringForDiagnostic(StringRef Str,
+                                      SmallVectorImpl<char> &OutStr) {
+  ::EscapeStringForDiagnostic(Str, OutStr, /*ForCodepoint=*/false);
+}
+
+/// Displays a single Unicode codepoint in U+NNNN notation, optionally
+/// prepending the quoted codepoint itself if printable.
+SmallString<16> clang::EscapeSingleCodepointForDiagnostic(StringRef Str) {
+  SmallString<16> CP;
+  ::EscapeStringForDiagnostic(Str, CP, /*ForCodepoint=*/true);
+  return CP;
+}
+
+SmallString<16> clang::EscapeSingleCodepointForDiagnostic(llvm::UTF32 CP) {
+  char ResultBuf[UNI_MAX_UTF8_BYTES_PER_CODE_POINT];
+  char *ResultPtr = ResultBuf;
+  if (!llvm::ConvertCodePointToUTF8(CP, ResultPtr))
+    return SmallString<16>(llvm::formatv("<{0:X+}>", CP).str());
+  return EscapeSingleCodepointForDiagnostic(
+      StringRef(ResultBuf, ResultPtr - ResultBuf));
 }
 
 void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,

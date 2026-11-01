@@ -14,7 +14,6 @@
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Analysis/SliceWalk.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -281,13 +280,11 @@ static void createNewAliasScopesFromNoAliasParameter(
   SetVector<LLVM::SSACopyOp> ssaCopies;
   SetVector<LLVM::SSACopyOp> noAliasParams;
   for (Value argument : cast<LLVM::CallOp>(call).getArgOperands()) {
-    for (Operation *user : argument.getUsers()) {
-      auto ssaCopy = llvm::dyn_cast<LLVM::SSACopyOp>(user);
-      if (!ssaCopy)
-        continue;
+    for (auto ssaCopy :
+         llvm::make_isa_range<LLVM::SSACopyOp>(argument.getUsers())) {
       ssaCopies.insert(ssaCopy);
 
-      if (!ssaCopy->hasAttr(LLVM::LLVMDialect::getNoAliasAttrName()))
+      if (!ssaCopy->hasDiscardableAttr(LLVM::LLVMDialect::getNoAliasAttrName()))
         continue;
       noAliasParams.insert(ssaCopy);
     }
@@ -517,13 +514,14 @@ handleLoopAnnotations(Operation *call,
     if (!newStartLoc && !newEndLoc)
       return {loopAnnotation, WalkResult::advance()};
     auto newLoopAnnotation = LLVM::LoopAnnotationAttr::get(
-        loopAnnotation.getContext(), loopAnnotation.getDisableNonforced(),
-        loopAnnotation.getVectorize(), loopAnnotation.getInterleave(),
-        loopAnnotation.getUnroll(), loopAnnotation.getUnrollAndJam(),
-        loopAnnotation.getLicm(), loopAnnotation.getDistribute(),
-        loopAnnotation.getPipeline(), loopAnnotation.getPeeled(),
-        loopAnnotation.getUnswitch(), loopAnnotation.getMustProgress(),
-        loopAnnotation.getIsVectorized(), newStartLoc, newEndLoc,
+        loopAnnotation.getContext(), loopAnnotation.getId(),
+        loopAnnotation.getDisableNonforced(), loopAnnotation.getVectorize(),
+        loopAnnotation.getInterleave(), loopAnnotation.getUnroll(),
+        loopAnnotation.getUnrollAndJam(), loopAnnotation.getLicm(),
+        loopAnnotation.getDistribute(), loopAnnotation.getPipeline(),
+        loopAnnotation.getPeeled(), loopAnnotation.getUnswitch(),
+        loopAnnotation.getMustProgress(), loopAnnotation.getIsVectorized(),
+        loopAnnotation.getAlign(), newStartLoc, newEndLoc,
         loopAnnotation.getParallelAccesses());
     // Needs to advance, as loop annotations can be nested.
     return {newLoopAnnotation, WalkResult::advance()};
@@ -858,12 +856,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
 void mlir::LLVM::registerInlinerInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
-    dialect->addInterfaces<LLVMInlinerInterface>();
-  });
-}
-
-void mlir::NVVM::registerInlinerInterface(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
     dialect->addInterfaces<LLVMInlinerInterface>();
   });
 }

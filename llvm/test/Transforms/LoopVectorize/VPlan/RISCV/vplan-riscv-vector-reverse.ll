@@ -14,38 +14,36 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK:  VPlan 'Initial VPlan for VF={vscale x 4},UF={1}' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
+; CHECK-NEXT:  vp<[[VP2:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 + (-1 * (1 umin %n))<nuw><nsw> + %n)
+; CHECK-NEXT:    EMIT vp<[[VP2]]> = EXPAND SCEV (1 + (-1 * (1 umin %n))<nuw><nsw> + %n)
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      CURRENT-ITERATION-PHI vp<[[VP5:%[0-9]+]]> = phi ir<0>, vp<%current.iteration.next>
-; CHECK-NEXT:      EMIT-SCALAR vp<%avl> = phi [ vp<[[VP3]]>, vector.ph ], [ vp<%avl.next>, vector.body ]
+; CHECK-NEXT:      EMIT-SCALAR vp<%avl> = phi [ vp<[[VP2]]>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:      EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<%n> + vp<[[VP5]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<-1>, vp<%evl>
 ; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[VP7]]>, ir<-1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%idxprom> = zext ir<%i.0> to i64
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer ir<%arrayidx>, vp<%evl>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer i32, ir<%arrayidx>, vp<%evl>
 ; CHECK-NEXT:      WIDEN ir<%0> = vp.load vp<[[VP8]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP9:%[0-9]+]]> = call llvm.experimental.vp.reverse(ir<%0>, ir<true>, vp<%evl>)
-; CHECK-NEXT:      WIDEN ir<%add9> = add vp<[[VP9]]>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%add9> = add ir<%0>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-end-pointer ir<%arrayidx3>, vp<%evl>
-; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP11:%[0-9]+]]> = call llvm.experimental.vp.reverse(ir<%add9>, ir<true>, vp<%evl>)
-; CHECK-NEXT:      WIDEN vp.store vp<[[VP10]]>, vp<[[VP11]]>, vp<%evl>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-end-pointer i32, ir<%arrayidx3>, vp<%evl>
+; CHECK-NEXT:      WIDEN vp.store vp<[[VP9]]>, ir<%add9>, vp<%evl>
 ; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<%evl>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<%evl>
-; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP3]]>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP1]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }

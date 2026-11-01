@@ -125,10 +125,6 @@ public:
 
   bool VisitObjCCategoryDecl(const ObjCCategoryDecl *Decl);
 
-  bool shouldDeclBeIncluded(const Decl *Decl) const;
-
-  const RawComment *fetchRawCommentForDecl(const Decl *Decl) const;
-
 protected:
   /// Collect API information for the enum constants and associate with the
   /// parent enum.
@@ -602,16 +598,20 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
 
+  AvailabilityInfo Availability = AvailabilityInfo::createFromDecl(Decl);
+  if (const auto *TypedefDecl = Decl->getTypedefNameForAnonDecl())
+    Availability.mergeWith(AvailabilityInfo::createFromDecl(TypedefDecl));
+
   if (Decl->isUnion())
     API.createRecord<UnionRecord>(
-        USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
-        AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
-        SubHeading, isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
+        USR, Name, createHierarchyInformationForDecl(*Decl), Loc, Availability,
+        Comment, Declaration, SubHeading, isInSystemHeader(Decl),
+        isEmbeddedInVarDeclarator(*Decl));
   else
     API.createRecord<StructRecord>(
-        USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
-        AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
-        SubHeading, isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
+        USR, Name, createHierarchyInformationForDecl(*Decl), Loc, Availability,
+        Comment, Declaration, SubHeading, isInSystemHeader(Decl),
+        isEmbeddedInVarDeclarator(*Decl));
 
   return true;
 }

@@ -16,7 +16,7 @@ class AArch64LinuxFPMR(TestBase):
     EXPECTED_FPMR_FIELDS = ["LSCALE2 = 42", "F8S1 = FP8_E4M3 | 0x4"]
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_fpmr_register_live(self):
         if not self.isAArch64FPMR():
             self.skipTest("FPMR must be present.")

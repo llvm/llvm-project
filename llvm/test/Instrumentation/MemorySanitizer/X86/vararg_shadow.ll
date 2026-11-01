@@ -119,7 +119,8 @@ define linkonce_odr dso_local void @_Z4testIfEvT_(float noundef %arg) sanitize_m
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i64 [[TMP8]], 87960930222080
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[_MSLD]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[_MSLD]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i1 [[TMP12]] to i64
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[TMP7]] to double
 ; CHECK-NEXT:    store i32 [[_MSLD]], ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
@@ -550,7 +551,7 @@ define linkonce_odr dso_local void @_Z5test2IcEvT_iz(i8 noundef signext %t, i32 
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -609,7 +610,7 @@ define linkonce_odr dso_local void @_Z5test2IiEvT_iz(i32 noundef %t, i32 noundef
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -660,7 +661,7 @@ define linkonce_odr dso_local void @_Z5test2IfEvT_iz(float noundef %t, i32 nound
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -711,7 +712,7 @@ define linkonce_odr dso_local void @_Z5test2IdEvT_iz(double noundef %t, i32 noun
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -762,7 +763,7 @@ define linkonce_odr dso_local void @_Z5test2IeEvT_iz(x86_fp80 noundef %t, i32 no
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -813,7 +814,7 @@ define linkonce_odr dso_local void @_Z5test2I6IntIntEvT_iz(i64 %t.coerce, i32 no
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -864,7 +865,7 @@ define linkonce_odr dso_local void @_Z5test2I10Int64Int64EvT_iz(i64 %t.coerce0, 
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -915,7 +916,7 @@ define linkonce_odr dso_local void @_Z5test2I12DoubleDoubleEvT_iz(double %t.coer
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -966,7 +967,7 @@ define linkonce_odr dso_local void @_Z5test2I7Double4EvT_iz(ptr noundef byval(%s
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -1017,7 +1018,7 @@ define linkonce_odr dso_local void @_Z5test2I11DoubleFloatEvT_iz(double %t.coerc
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -1068,7 +1069,7 @@ define linkonce_odr dso_local void @_Z5test2I11LongDouble2EvT_iz(ptr noundef byv
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -1119,7 +1120,7 @@ define linkonce_odr dso_local void @_Z5test2I11LongDouble4EvT_iz(ptr noundef byv
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARGS]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[ARGS]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080

@@ -26,19 +26,18 @@ struct Matches {
 
 static void TestPathMappings(const PathMappingList &map,
                              llvm::ArrayRef<Matches> matches,
-                             llvm::ArrayRef<ConstString> fails) {
-  ConstString actual_remapped;
+                             llvm::ArrayRef<std::string> fails) {
+  std::string actual_remapped;
   for (const auto &fail : fails) {
-    SCOPED_TRACE(fail.GetCString());
+    SCOPED_TRACE(fail.c_str());
     EXPECT_FALSE(map.RemapPath(fail, actual_remapped))
-        << "actual_remapped: " << actual_remapped.GetCString();
+        << "actual_remapped: " << actual_remapped.c_str();
   }
   for (const auto &match : matches) {
     SCOPED_TRACE(match.original.GetPath() + " -> " + match.remapped.GetPath());
     std::string orig_normalized = match.original.GetPath();
-    EXPECT_TRUE(
-        map.RemapPath(ConstString(match.original.GetPath()), actual_remapped));
-    EXPECT_EQ(FileSpec(actual_remapped.GetStringRef()), match.remapped);
+    EXPECT_TRUE(map.RemapPath(match.original.GetPath(), actual_remapped));
+    EXPECT_EQ(FileSpec(actual_remapped), match.remapped);
     FileSpec unmapped_spec;
     EXPECT_TRUE(
         map.ReverseRemapPath(match.remapped, unmapped_spec).has_value());
@@ -57,13 +56,13 @@ TEST(PathMappingListTest, RelativeTests) {
     {"./bar/foo.c", "/tmp/bar/foo.c"},
     {"bar/foo.c", "/tmp/bar/foo.c"},
   };
-  ConstString fails[] = {
+  std::string fails[] = {
 #ifdef _WIN32
-      ConstString("C:\\"),
-      ConstString("C:\\a"),
+      "C:\\",
+      "C:\\a",
 #else
-      ConstString("/a"),
-      ConstString("/"),
+      "/a",
+      "/",
 #endif
   };
   PathMappingList map;
@@ -85,13 +84,8 @@ TEST(PathMappingListTest, AbsoluteTests) {
     {"/old/foo.c/.", "/new/foo.c"},
     {"/old/./foo.c", "/new/foo.c"},
   };
-  ConstString fails[] = {
-    ConstString("/foo"),
-    ConstString("/"),
-    ConstString("foo.c"),
-    ConstString("./foo.c"),
-    ConstString("../foo.c"),
-    ConstString("../bar/foo.c"),
+  std::string fails[] = {
+      "/foo", "/", "foo.c", "./foo.c", "../foo.c", "../bar/foo.c",
   };
   TestPathMappings(map, matches, fails);
 }
@@ -107,11 +101,11 @@ TEST(PathMappingListTest, RemapRoot) {
     {"/old/foo.c/.", "/new/old/foo.c"},
     {"/old/./foo.c", "/new/old/foo.c"},
   };
-  ConstString fails[] = {
-    ConstString("foo.c"),
-    ConstString("./foo.c"),
-    ConstString("../foo.c"),
-    ConstString("../bar/foo.c"),
+  std::string fails[] = {
+      "foo.c",
+      "./foo.c",
+      "../foo.c",
+      "../bar/foo.c",
   };
   TestPathMappings(map, matches, fails);
 }
@@ -128,13 +122,8 @@ TEST(PathMappingListTest, CrossPlatformTests) {
     {R"(C:\old\foo.c\.)", llvm::sys::path::Style::windows, "/new/foo.c"},
     {R"(C:\old\.\foo.c)", llvm::sys::path::Style::windows, "/new/foo.c"},
   };
-  ConstString fails[] = {
-    ConstString("/foo"),
-    ConstString("/"),
-    ConstString("foo.c"),
-    ConstString("./foo.c"),
-    ConstString("../foo.c"),
-    ConstString("../bar/foo.c"),
+  std::string fails[] = {
+      "/foo", "/", "foo.c", "./foo.c", "../foo.c", "../bar/foo.c",
   };
   TestPathMappings(map, matches, fails);
 }

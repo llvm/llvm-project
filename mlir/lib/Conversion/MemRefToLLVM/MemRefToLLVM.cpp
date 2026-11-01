@@ -100,8 +100,9 @@ getAlignedAllocFn(OpBuilder &b, const LLVMTypeConverter *typeConverter,
 ///   aligned = bumped - bumped % alignment
 static Value createAligned(ConversionPatternRewriter &rewriter, Location loc,
                            Value input, Value alignment) {
-  Value one = LLVM::ConstantOp::create(rewriter, loc, alignment.getType(),
-                                       rewriter.getIndexAttr(1));
+  Value one =
+      LLVM::ConstantOp::create(rewriter, loc, alignment.getType(),
+                               rewriter.getIntegerAttr(alignment.getType(), 1));
   Value bump = LLVM::SubOp::create(rewriter, loc, alignment, one);
   Value bumped = LLVM::AddOp::create(rewriter, loc, input, bump);
   Value mod = LLVM::URemOp::create(rewriter, loc, bumped, alignment);
@@ -981,7 +982,8 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
         adaptor.getIndices(), getLoadStoreNoWrapFlags(type));
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
-        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal(),
+        /*isInvariant=*/loadOp.getInvariant());
     return success();
   }
 };
@@ -1102,8 +1104,8 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
           loc, adaptor.getSource(), rewriter);
 
       // rank = ConstantOp srcRank
-      auto rankVal = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                              rewriter.getIndexAttr(rank));
+      auto rankVal =
+          createIndexAttrConstant(rewriter, loc, getIndexType(), rank);
       // poison = PoisonOp
       UnrankedMemRefDescriptor memRefDesc =
           UnrankedMemRefDescriptor::poison(rewriter, loc, targetStructType);
@@ -1156,8 +1158,8 @@ public:
     MemRefDescriptor srcDesc(adaptor.getSource());
 
     // Compute number of elements.
-    Value numElements = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                                 rewriter.getIndexAttr(1));
+    Value numElements =
+        createIndexAttrConstant(rewriter, loc, getIndexType(), 1);
     for (int pos = 0; pos < srcType.getRank(); ++pos) {
       auto size = srcDesc.size(rewriter, loc, pos);
       numElements = LLVM::MulOp::create(rewriter, loc, numElements, size);
@@ -1222,8 +1224,7 @@ public:
                          : adaptor.getTarget();
 
     // Now promote the unranked descriptors to the stack.
-    auto one = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                        rewriter.getIndexAttr(1));
+    auto one = createIndexAttrConstant(rewriter, loc, getIndexType(), 1);
     auto promote = [&](Value desc) {
       auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
       auto allocated =
@@ -1372,8 +1373,8 @@ struct MemorySpaceCastOpLowering
       int64_t bytesToSkip =
           2 * llvm::divideCeil(
                   getTypeConverter()->getPointerBitwidth(resultAddrSpace), 8);
-      Value bytesToSkipConst = LLVM::ConstantOp::create(
-          rewriter, loc, getIndexType(), rewriter.getIndexAttr(bytesToSkip));
+      Value bytesToSkipConst =
+          createIndexAttrConstant(rewriter, loc, getIndexType(), bytesToSkip);
       Value copySize =
           LLVM::SubOp::create(rewriter, loc, getIndexType(),
                               resultUnderlyingSize, bytesToSkipConst);

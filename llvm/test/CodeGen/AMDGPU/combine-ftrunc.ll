@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}combine_ftrunc_frint_f64:
 ; GCN: v_rndne_f64_e32 [[RND:v\[[0-9:]+\]]],

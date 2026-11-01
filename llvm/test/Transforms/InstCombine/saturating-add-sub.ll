@@ -1367,13 +1367,63 @@ define i8 @test_scalar_uadd_sub_commuted_wrong(i8 %a, i8 %b) {
 
 define i8 @test_scalar_uadd_sub_const(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_sub_const(
-; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
-; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -42
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 -43)
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
   %res = sub i8 %sat, 42
   ret i8 %res
+}
+
+define <2 x i8> @test_vector_uadd_sub_const(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_sub_const(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> splat (i8 -43))
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> splat (i8 42))
+  %res = sub <2 x i8> %sat, splat (i8 42)
+  ret <2 x i8> %res
+}
+
+; negative test - the constants do not cancel
+
+define i8 @test_scalar_uadd_sub_const_mismatch(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_const_mismatch(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -43
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
+  %res = sub i8 %sat, 43
+  ret i8 %res
+}
+
+; negative test - extra use of the saturating add
+
+define i8 @test_scalar_uadd_sub_const_multiuse(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_const_multiuse(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -42
+; CHECK-NEXT:    call void @usei8(i8 [[SAT]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
+  %res = sub i8 %sat, 42
+  call void @usei8(i8 %sat)
+  ret i8 %res
+}
+
+; negative test - non-splat vector
+
+define <2 x i8> @test_vector_uadd_sub_const_nonsplat(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_sub_const_nonsplat(
+; CHECK-NEXT:    [[SAT:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 42, i8 3>)
+; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[SAT]], <i8 -42, i8 -3>
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 42, i8 3>)
+  %res = sub <2 x i8> %sat, <i8 42, i8 3>
+  ret <2 x i8> %res
 }
 
 define i1 @scalar_uadd_eq_zero(i8 %a, i8 %b) {
@@ -2386,6 +2436,59 @@ define i8 @fold_add_umax_to_usub_multiuse(i8 %a) {
   ret i8 %sel
 }
 
+define i32 @uadd_with_zext(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_with_zext(
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %conv = zext i32 %x to i64
+  %conv1 = zext i32 %y to i64
+  %add = add i64 %conv, %conv1
+  %cmp = icmp ugt i64 %add, 4294967295
+  %conv4 = trunc i64 %add to i32
+  %cond = select i1 %cmp, i32 -1, i32 %conv4
+  ret i32 %cond
+}
+
+define i32 @uadd_with_zext_multi_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_with_zext_multi_use(
+; CHECK-NEXT:    [[TRUNCADD:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @usei32(i32 [[TRUNCADD]])
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %conv = zext i32 %x to i64
+  %conv1 = zext i32 %y to i64
+  %add = add i64 %conv, %conv1
+  %truncAdd = trunc i64 %add to i32
+  call void @usei32(i32 %truncAdd)
+  %cmp = icmp ugt i64 %add, 4294967295
+  %cond = select i1 %cmp, i32 -1, i32 %truncAdd
+  ret i32 %cond
+}
+
+define i32 @uadd_with_zext_neg_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_with_zext_neg_use(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV]], [[CONV1]]
+; CHECK-NEXT:    call void @usei64(i64 [[ADD]])
+; CHECK-NEXT:    [[COND1:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 4294967295)
+; CHECK-NEXT:    [[COND:%.*]] = trunc nuw i64 [[COND1]] to i32
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %conv = zext i32 %x to i64
+  %conv1 = zext i32 %y to i64
+  %add = add i64 %conv, %conv1
+  call void @usei64(i64 %add)
+  %cmp = icmp ugt i64 %add, 4294967295
+  %conv4 = trunc i64 %add to i32
+  %cond = select i1 %cmp, i32 -1, i32 %conv4
+  ret i32 %cond
+}
+
+declare void @usei64(i64)
+declare void @usei32(i32)
 declare void @usei8(i8)
 
 define i8 @sadd_sat_uge_int_max(i8 %x, i8 %y) {

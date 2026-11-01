@@ -29,6 +29,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include <functional>
+#include <iterator>
 #include <memory>
 
 namespace clang {
@@ -246,6 +247,53 @@ public:
 
   /// It might return null.
   const StackFrame *getParent() const { return Parent; }
+
+  /// Forward iterator over a chain of \c StackFrame parents. Advancing follows
+  /// \c getParent(); the past-the-end iterator holds a null frame.
+  class parent_iterator {
+    const StackFrame *Current = nullptr;
+
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = const StackFrame;
+    using difference_type = std::ptrdiff_t;
+    using pointer = const StackFrame *;
+    using reference = const StackFrame &;
+
+    parent_iterator() = default;
+    explicit parent_iterator(const StackFrame *SF) : Current(SF) {}
+
+    reference operator*() const { return *Current; }
+    pointer operator->() const { return Current; }
+    parent_iterator &operator++() {
+      assert(Current && "Cannot call ++ on the end iterator");
+      Current = Current->getParent();
+      return *this;
+    }
+    parent_iterator operator++(int) {
+      parent_iterator Tmp = *this;
+      ++*this;
+      return Tmp;
+    }
+    bool operator==(const parent_iterator &Other) const {
+      return Current == Other.Current;
+    }
+    bool operator!=(const parent_iterator &Other) const {
+      return !(*this == Other);
+    }
+  };
+
+  /// Iterates over the strict ancestors of this frame, i.e. \c getParent(),
+  /// \c getParent()->getParent(), ... up to (but excluding) the null frame.
+  /// Does not include \c *this.
+  llvm::iterator_range<parent_iterator> parents() const {
+    return {parent_iterator(getParent()), parent_iterator()};
+  }
+
+  /// Iterates over this frame followed by all of its ancestors.
+  llvm::iterator_range<parent_iterator> parentsIncludingSelf() const {
+    return {parent_iterator(this), parent_iterator()};
+  }
 
   int64_t getID() const { return ID; }
 

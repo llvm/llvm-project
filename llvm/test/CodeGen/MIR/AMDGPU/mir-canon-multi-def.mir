@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00 -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs %s -o - | FileCheck %s
 
 ---
 name: multi_def_renaming

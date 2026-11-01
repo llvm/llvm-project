@@ -10,11 +10,11 @@ define i16 @test(i40 %0) {
 ; CHECK-NEXT:    [[CONV6:%.*]] = trunc i32 [[ADD63_I]] to i16
 ; CHECK-NEXT:    tail call void null(i16 0, i16 [[CONV6]], i16 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i40 asm "copy $1, $0", "=a,a"(i40 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i40> <i40 0, i40 0, i40 0, i40 poison, i40 poison, i40 -1, i40 0, i40 0>, i40 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i40> [[TMP2]], i40 [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i40> <i40 0, i40 0, i40 0, i40 poison, i40 poison, i40 -1, i40 0, i40 0>, i40 [[TMP0]], i64 3
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i40> [[TMP2]], i40 [[TMP1]], i64 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <8 x i40> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <8 x i40> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i40> <i40 0, i40 0, i40 0, i40 0, i40 0, i40 0, i40 poison, i40 0>, i40 [[TMP1]], i32 6
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i40> <i40 0, i40 0, i40 0, i40 0, i40 0, i40 0, i40 poison, i40 0>, i40 [[TMP1]], i64 6
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <8 x i40> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <8 x i40> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <8 x i40> [[TMP8]], zeroinitializer

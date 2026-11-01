@@ -353,7 +353,7 @@ define i32 @pow2_umin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_umin_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $23, %xmm0
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -557,7 +557,7 @@ define i32 @pow2_smin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_smin_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $23, %xmm0
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -816,7 +816,7 @@ define <4 x i1> @pow2_vselect_eq(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pslld $23, %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
@@ -854,7 +854,7 @@ define <4 x i1> @pow2_vselect_ne(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pslld $23, %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
@@ -893,7 +893,7 @@ define <4 x i1> @pow2_vselect_fail0_ne(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, 
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pslld $23, %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [1073741824,1073741824,1073741824,1073741824]
@@ -933,7 +933,7 @@ define <4 x i1> @pow2_vselect_fail2_ne(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, 
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pslld $23, %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [4,4,4,4]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
@@ -997,7 +997,7 @@ define <4 x i32> @pow2_and_vector(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: pow2_and_vector:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $23, %xmm1
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm1, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,2,4,u]
@@ -1086,7 +1086,6 @@ define i1 @pow2_though_zext(i32 %x, i16 %y) {
 define i32 @pow2_though_zext_vec(<8 x i16> %a0, ptr %p1, i32 %a2) {
 ; CHECK-LABEL: pow2_though_zext_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    pcmpgtw %xmm0, %xmm2
@@ -1096,13 +1095,12 @@ define i32 @pow2_though_zext_vec(<8 x i16> %a0, ptr %p1, i32 %a2) {
 ; CHECK-NEXT:    por %xmm0, %xmm2
 ; CHECK-NEXT:    movdqa %xmm2, %xmm0
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK-NEXT:    pextrw $0, %xmm2, %ecx
+; CHECK-NEXT:    pextrw $0, %xmm2, %eax
 ; CHECK-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
 ; CHECK-NEXT:    movdqa %xmm2, 16(%rdi)
 ; CHECK-NEXT:    movdqa %xmm0, (%rdi)
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt <8 x i16> zeroinitializer, %a0
   %sel = select <8 x i1> %cmp, <8 x i16> <i16 4, i16 5, i16 6, i16 7, i16 9, i16 10, i16 11, i16 12>, <8 x i16> splat (i16 2)
@@ -1418,7 +1416,7 @@ define i32 @pow2_rotl_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x, ptr 
 ; CHECK-NEXT:    por %xmm0, %xmm2
 ; CHECK-NEXT:    pslld $23, %xmm1
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm1, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm2
@@ -1460,7 +1458,7 @@ define i32 @pow2_rotr_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x, ptr 
 ; CHECK-NEXT:    psubd %xmm1, %xmm2
 ; CHECK-NEXT:    pslld $23, %xmm2
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm3

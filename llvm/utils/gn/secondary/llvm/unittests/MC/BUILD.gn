@@ -9,6 +9,7 @@ unittest("MCTests") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "DXContainerWriterTest.cpp",
     "Disassembler.cpp",
     "DwarfDebugFrameCIE.cpp",
     "DwarfLineTableHeaders.cpp",

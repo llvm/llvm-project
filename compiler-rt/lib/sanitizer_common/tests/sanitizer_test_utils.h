@@ -72,9 +72,8 @@ inline void break_optimization(void *arg) {
 
 // This function returns its parameter but in such a way that compiler
 // can not prove it.
-template<class T>
-NOINLINE
-static T Ident(T t) {
+template <class T>
+NOINLINE T Ident(T t) {
   T ret = t;
   break_optimization(&ret);
   return ret;

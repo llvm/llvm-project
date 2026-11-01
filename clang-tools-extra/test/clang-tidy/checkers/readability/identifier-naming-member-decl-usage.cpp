@@ -216,3 +216,18 @@ struct Derived : DependentBase<T> {
 };
 
 } // namespace unresolved_dependance
+
+namespace dependent_base_cycle {
+template <typename T>
+struct CycleBase;
+
+template <typename T>
+struct CycleBase<const T> {
+  int Value;
+};
+
+template <typename T>
+struct CycleBase : CycleBase<const T> {
+  CycleBase() { this->Value; }
+};
+} // namespace dependent_base_cycle

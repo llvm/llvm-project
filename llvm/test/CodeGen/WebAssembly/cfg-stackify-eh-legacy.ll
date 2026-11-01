@@ -1,9 +1,9 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,bulk-memory | FileCheck %s
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,bulk-memory
-; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt | FileCheck %s --check-prefix=NOOPT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,bulk-memory | FileCheck %s
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,bulk-memory
+; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt | FileCheck %s --check-prefix=NOOPT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
 
 target triple = "wasm32-unknown-unknown"
 
@@ -1911,7 +1911,7 @@ declare ptr @_ZN7MyClassD2Ev(ptr returned) #0
 ; Function Attrs: nounwind
 declare ptr @_ZN7MyClassC2ERKS_(ptr returned, ptr dereferenceable(4)) #0
 
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: nounwind
 declare ptr @llvm.wasm.get.exception(token) #0
 ; Function Attrs: nounwind

@@ -30,6 +30,10 @@
 // ... add new file formats here ...
 #endif
 
+#if defined(__MVS__)
+#  include <features.h> // for __NATIVE_ASCII_F
+#endif
+
 // Need to detect which libc we're using if we're on Linux.
 #if (defined(__linux__) || defined(__AMDGPU__) || defined(__NVPTX__)) && __has_include(<features.h>)
 #  include <features.h>

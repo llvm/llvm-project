@@ -150,7 +150,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 
   llvm::StringMap<llvm::StringRef> DescMap;
   for (const llvm::SubtargetFeatureKV &feature : Features)
-    DescMap.insert({feature.Key, feature.Desc});
+    DescMap.insert({feature.key(), feature.desc()});
 
   if (MachineTriple.isRISCV())
     llvm::RISCVISAInfo::printSupportedExtensions(DescMap);
@@ -192,18 +192,18 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   // Extract the feature names that are enabled for the given target.
   // We do that by capturing the key from the set of SubtargetFeatureKV entries
   // provided by MCSubtargetInfo, which match the '-target-feature' values.
-  const std::vector<llvm::SubtargetFeatureKV> Features =
+  const std::vector<const llvm::SubtargetFeatureKV *> Features =
       MCInfo.getEnabledProcessorFeatures();
   std::set<llvm::StringRef> EnabledFeatureNames;
-  for (const llvm::SubtargetFeatureKV &feature : Features)
-    EnabledFeatureNames.insert(feature.Key);
+  for (const llvm::SubtargetFeatureKV *feature : Features)
+    EnabledFeatureNames.insert(feature->key());
 
   if (MachineTriple.isAArch64())
     llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
   else if (MachineTriple.isRISCV()) {
     llvm::StringMap<llvm::StringRef> DescMap;
-    for (const llvm::SubtargetFeatureKV &feature : Features)
-      DescMap.insert({feature.Key, feature.Desc});
+    for (const llvm::SubtargetFeatureKV *feature : Features)
+      DescMap.insert({feature->key(), feature->desc()});
     llvm::RISCVISAInfo::printEnabledExtensions(MachineTriple.isArch64Bit(),
                                                EnabledFeatureNames, DescMap);
   } else {
@@ -251,9 +251,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                                   std::move(PCHOps));
 
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
+    llvm::TimeTraceCompression Compress =
+        Clang->getFrontendOpts().TimeTraceCompress;
+    if (Compress == llvm::TimeTraceCompression::Infer)
+      Compress = llvm::inferTimeTraceCompressionFromPath(
+          Clang->getFrontendOpts().TimeTracePath);
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
-        Clang->getFrontendOpts().TimeTraceVerbose);
+        Clang->getFrontendOpts().TimeTraceVerbose, Compress);
   }
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
@@ -312,8 +317,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   }
 
   if (llvm::timeTraceProfilerEnabled()) {
+    llvm::TimeTraceCompression Compress =
+        Clang->getFrontendOpts().TimeTraceCompress;
+    if (Compress == llvm::TimeTraceCompression::Infer)
+      Compress = llvm::inferTimeTraceCompressionFromPath(
+          Clang->getFrontendOpts().TimeTracePath);
+    bool Binary = Compress == llvm::TimeTraceCompression::Zstd;
     if (auto profilerOutput = Clang->createOutputFile(
-            Clang->getFrontendOpts().TimeTracePath, /*Binary=*/false,
+            Clang->getFrontendOpts().TimeTracePath, Binary,
             /*RemoveFileOnSignal=*/false,
             /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);

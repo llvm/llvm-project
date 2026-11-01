@@ -161,22 +161,22 @@ define void @extendStoresFromLoads8xi32(ptr addrspace(1) %in, ptr addrspace(1) %
 ; CHECK-LABEL: define void @extendStoresFromLoads8xi32(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 [[IN]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>, <8 x i32> poison)
-; CHECK-NEXT:    [[LOAD05:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD16:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[LOAD27:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD38:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[LOAD49:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
-; CHECK-NEXT:    [[EXTENDLOAD10:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
-; CHECK-NEXT:    [[EXTENDLOAD211:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTENDLOAD412:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[LOAD05]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[LOAD16]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[LOAD27]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[LOAD38]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[LOAD49]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 poison, i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 poison, i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 poison, i32 7
+; CHECK-NEXT:    [[LOAD05:%.*]] = extractelement <8 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LOAD16:%.*]] = extractelement <8 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[LOAD27:%.*]] = extractelement <8 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[LOAD38:%.*]] = extractelement <8 x i32> [[TMP1]], i64 3
+; CHECK-NEXT:    [[LOAD49:%.*]] = extractelement <8 x i32> [[TMP1]], i64 4
+; CHECK-NEXT:    [[EXTEND10:%.*]] = extractelement <8 x i32> [[TMP1]], i64 5
+; CHECK-NEXT:    [[EXTEND211:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
+; CHECK-NEXT:    [[EXTEND412:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[LOAD05]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[LOAD16]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[LOAD27]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[LOAD38]], i64 3
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[LOAD49]], i64 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 poison, i64 5
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 poison, i64 6
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 poison, i64 7
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p1(<8 x i32> [[TMP9]], ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
@@ -207,22 +207,22 @@ define void @extendAndGapFillStoresFromLoads8xi32(ptr addrspace(1) %in, ptr addr
 ; CHECK-LABEL: define void @extendAndGapFillStoresFromLoads8xi32(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 [[IN]], <8 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false>, <8 x i32> poison)
-; CHECK-NEXT:    [[LOAD05:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD16:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[LOAD27:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD38:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[LOAD49:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
-; CHECK-NEXT:    [[EXTENDLOAD10:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
-; CHECK-NEXT:    [[EXTENDLOAD211:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTENDLOAD412:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[LOAD05]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[LOAD16]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 poison, i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[LOAD38]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[LOAD49]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 poison, i32 5
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 poison, i32 6
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 poison, i32 7
+; CHECK-NEXT:    [[LOAD05:%.*]] = extractelement <8 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LOAD16:%.*]] = extractelement <8 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[GAPFILL7:%.*]] = extractelement <8 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[LOAD38:%.*]] = extractelement <8 x i32> [[TMP1]], i64 3
+; CHECK-NEXT:    [[LOAD49:%.*]] = extractelement <8 x i32> [[TMP1]], i64 4
+; CHECK-NEXT:    [[EXTEND10:%.*]] = extractelement <8 x i32> [[TMP1]], i64 5
+; CHECK-NEXT:    [[EXTEND211:%.*]] = extractelement <8 x i32> [[TMP1]], i64 6
+; CHECK-NEXT:    [[EXTEND412:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[LOAD05]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[LOAD16]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 poison, i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[LOAD38]], i64 3
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[LOAD49]], i64 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 poison, i64 5
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 poison, i64 6
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[TMP8]], i32 poison, i64 7
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p1(<8 x i32> [[TMP9]], ptr addrspace(1) align 32 [[OUT]], <8 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
@@ -333,38 +333,38 @@ define void @cantMaski8(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @cantMaski8(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.masked.load.v32i8.p1(ptr addrspace(1) align 32 [[IN]], <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true>, <32 x i8> poison)
-; CHECK-NEXT:    [[LOAD031:%.*]] = extractelement <32 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL32:%.*]] = extractelement <32 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[GAPFILL233:%.*]] = extractelement <32 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD334:%.*]] = extractelement <32 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[LOAD435:%.*]] = extractelement <32 x i8> [[TMP1]], i32 4
-; CHECK-NEXT:    [[GAPFILL436:%.*]] = extractelement <32 x i8> [[TMP1]], i32 5
-; CHECK-NEXT:    [[GAPFILL637:%.*]] = extractelement <32 x i8> [[TMP1]], i32 6
-; CHECK-NEXT:    [[LOAD738:%.*]] = extractelement <32 x i8> [[TMP1]], i32 7
-; CHECK-NEXT:    [[LOAD839:%.*]] = extractelement <32 x i8> [[TMP1]], i32 8
-; CHECK-NEXT:    [[GAPFILL840:%.*]] = extractelement <32 x i8> [[TMP1]], i32 9
-; CHECK-NEXT:    [[GAPFILL1041:%.*]] = extractelement <32 x i8> [[TMP1]], i32 10
-; CHECK-NEXT:    [[LOAD1142:%.*]] = extractelement <32 x i8> [[TMP1]], i32 11
-; CHECK-NEXT:    [[LOAD1243:%.*]] = extractelement <32 x i8> [[TMP1]], i32 12
-; CHECK-NEXT:    [[GAPFILL1244:%.*]] = extractelement <32 x i8> [[TMP1]], i32 13
-; CHECK-NEXT:    [[GAPFILL1445:%.*]] = extractelement <32 x i8> [[TMP1]], i32 14
-; CHECK-NEXT:    [[LOAD1546:%.*]] = extractelement <32 x i8> [[TMP1]], i32 15
-; CHECK-NEXT:    [[LOAD1647:%.*]] = extractelement <32 x i8> [[TMP1]], i32 16
-; CHECK-NEXT:    [[GAPFILL1648:%.*]] = extractelement <32 x i8> [[TMP1]], i32 17
-; CHECK-NEXT:    [[GAPFILL1849:%.*]] = extractelement <32 x i8> [[TMP1]], i32 18
-; CHECK-NEXT:    [[LOAD1950:%.*]] = extractelement <32 x i8> [[TMP1]], i32 19
-; CHECK-NEXT:    [[LOAD2051:%.*]] = extractelement <32 x i8> [[TMP1]], i32 20
-; CHECK-NEXT:    [[GAPFILL2052:%.*]] = extractelement <32 x i8> [[TMP1]], i32 21
-; CHECK-NEXT:    [[GAPFILL2253:%.*]] = extractelement <32 x i8> [[TMP1]], i32 22
-; CHECK-NEXT:    [[LOAD2354:%.*]] = extractelement <32 x i8> [[TMP1]], i32 23
-; CHECK-NEXT:    [[LOAD2455:%.*]] = extractelement <32 x i8> [[TMP1]], i32 24
-; CHECK-NEXT:    [[GAPFILL2456:%.*]] = extractelement <32 x i8> [[TMP1]], i32 25
-; CHECK-NEXT:    [[GAPFILL2657:%.*]] = extractelement <32 x i8> [[TMP1]], i32 26
-; CHECK-NEXT:    [[LOAD2758:%.*]] = extractelement <32 x i8> [[TMP1]], i32 27
-; CHECK-NEXT:    [[LOAD2859:%.*]] = extractelement <32 x i8> [[TMP1]], i32 28
-; CHECK-NEXT:    [[GAPFILL2860:%.*]] = extractelement <32 x i8> [[TMP1]], i32 29
-; CHECK-NEXT:    [[GAPFILL3061:%.*]] = extractelement <32 x i8> [[TMP1]], i32 30
-; CHECK-NEXT:    [[LOAD3162:%.*]] = extractelement <32 x i8> [[TMP1]], i32 31
+; CHECK-NEXT:    [[LOAD031:%.*]] = extractelement <32 x i8> [[TMP1]], i64 0
+; CHECK-NEXT:    [[GAPFILL32:%.*]] = extractelement <32 x i8> [[TMP1]], i64 1
+; CHECK-NEXT:    [[GAPFILL233:%.*]] = extractelement <32 x i8> [[TMP1]], i64 2
+; CHECK-NEXT:    [[LOAD334:%.*]] = extractelement <32 x i8> [[TMP1]], i64 3
+; CHECK-NEXT:    [[LOAD435:%.*]] = extractelement <32 x i8> [[TMP1]], i64 4
+; CHECK-NEXT:    [[GAPFILL436:%.*]] = extractelement <32 x i8> [[TMP1]], i64 5
+; CHECK-NEXT:    [[GAPFILL637:%.*]] = extractelement <32 x i8> [[TMP1]], i64 6
+; CHECK-NEXT:    [[LOAD738:%.*]] = extractelement <32 x i8> [[TMP1]], i64 7
+; CHECK-NEXT:    [[LOAD839:%.*]] = extractelement <32 x i8> [[TMP1]], i64 8
+; CHECK-NEXT:    [[GAPFILL840:%.*]] = extractelement <32 x i8> [[TMP1]], i64 9
+; CHECK-NEXT:    [[GAPFILL1041:%.*]] = extractelement <32 x i8> [[TMP1]], i64 10
+; CHECK-NEXT:    [[LOAD1142:%.*]] = extractelement <32 x i8> [[TMP1]], i64 11
+; CHECK-NEXT:    [[LOAD1243:%.*]] = extractelement <32 x i8> [[TMP1]], i64 12
+; CHECK-NEXT:    [[GAPFILL1244:%.*]] = extractelement <32 x i8> [[TMP1]], i64 13
+; CHECK-NEXT:    [[GAPFILL1445:%.*]] = extractelement <32 x i8> [[TMP1]], i64 14
+; CHECK-NEXT:    [[LOAD1546:%.*]] = extractelement <32 x i8> [[TMP1]], i64 15
+; CHECK-NEXT:    [[LOAD1647:%.*]] = extractelement <32 x i8> [[TMP1]], i64 16
+; CHECK-NEXT:    [[GAPFILL1648:%.*]] = extractelement <32 x i8> [[TMP1]], i64 17
+; CHECK-NEXT:    [[GAPFILL1849:%.*]] = extractelement <32 x i8> [[TMP1]], i64 18
+; CHECK-NEXT:    [[LOAD1950:%.*]] = extractelement <32 x i8> [[TMP1]], i64 19
+; CHECK-NEXT:    [[LOAD2051:%.*]] = extractelement <32 x i8> [[TMP1]], i64 20
+; CHECK-NEXT:    [[GAPFILL2052:%.*]] = extractelement <32 x i8> [[TMP1]], i64 21
+; CHECK-NEXT:    [[GAPFILL2253:%.*]] = extractelement <32 x i8> [[TMP1]], i64 22
+; CHECK-NEXT:    [[LOAD2354:%.*]] = extractelement <32 x i8> [[TMP1]], i64 23
+; CHECK-NEXT:    [[LOAD2455:%.*]] = extractelement <32 x i8> [[TMP1]], i64 24
+; CHECK-NEXT:    [[GAPFILL2456:%.*]] = extractelement <32 x i8> [[TMP1]], i64 25
+; CHECK-NEXT:    [[GAPFILL2657:%.*]] = extractelement <32 x i8> [[TMP1]], i64 26
+; CHECK-NEXT:    [[LOAD2758:%.*]] = extractelement <32 x i8> [[TMP1]], i64 27
+; CHECK-NEXT:    [[LOAD2859:%.*]] = extractelement <32 x i8> [[TMP1]], i64 28
+; CHECK-NEXT:    [[GAPFILL2860:%.*]] = extractelement <32 x i8> [[TMP1]], i64 29
+; CHECK-NEXT:    [[GAPFILL3061:%.*]] = extractelement <32 x i8> [[TMP1]], i64 30
+; CHECK-NEXT:    [[LOAD3162:%.*]] = extractelement <32 x i8> [[TMP1]], i64 31
 ; CHECK-NEXT:    store i8 [[LOAD031]], ptr addrspace(1) [[OUT]], align 32
 ; CHECK-NEXT:    [[OUTELEM3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 3
 ; CHECK-NEXT:    store i8 [[LOAD334]], ptr addrspace(1) [[OUTELEM3]], align 1
@@ -472,22 +472,22 @@ define void @cantMaski16(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @cantMaski16(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.masked.load.v16i16.p1(ptr addrspace(1) align 32 [[IN]], <16 x i1> <i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true>, <16 x i16> poison)
-; CHECK-NEXT:    [[LOAD015:%.*]] = extractelement <16 x i16> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL16:%.*]] = extractelement <16 x i16> [[TMP1]], i32 1
-; CHECK-NEXT:    [[GAPFILL217:%.*]] = extractelement <16 x i16> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD318:%.*]] = extractelement <16 x i16> [[TMP1]], i32 3
-; CHECK-NEXT:    [[LOAD419:%.*]] = extractelement <16 x i16> [[TMP1]], i32 4
-; CHECK-NEXT:    [[GAPFILL420:%.*]] = extractelement <16 x i16> [[TMP1]], i32 5
-; CHECK-NEXT:    [[GAPFILL621:%.*]] = extractelement <16 x i16> [[TMP1]], i32 6
-; CHECK-NEXT:    [[LOAD722:%.*]] = extractelement <16 x i16> [[TMP1]], i32 7
-; CHECK-NEXT:    [[LOAD823:%.*]] = extractelement <16 x i16> [[TMP1]], i32 8
-; CHECK-NEXT:    [[GAPFILL824:%.*]] = extractelement <16 x i16> [[TMP1]], i32 9
-; CHECK-NEXT:    [[GAPFILL1025:%.*]] = extractelement <16 x i16> [[TMP1]], i32 10
-; CHECK-NEXT:    [[LOAD1126:%.*]] = extractelement <16 x i16> [[TMP1]], i32 11
-; CHECK-NEXT:    [[LOAD1227:%.*]] = extractelement <16 x i16> [[TMP1]], i32 12
-; CHECK-NEXT:    [[GAPFILL1228:%.*]] = extractelement <16 x i16> [[TMP1]], i32 13
-; CHECK-NEXT:    [[GAPFILL1429:%.*]] = extractelement <16 x i16> [[TMP1]], i32 14
-; CHECK-NEXT:    [[LOAD1530:%.*]] = extractelement <16 x i16> [[TMP1]], i32 15
+; CHECK-NEXT:    [[LOAD015:%.*]] = extractelement <16 x i16> [[TMP1]], i64 0
+; CHECK-NEXT:    [[GAPFILL16:%.*]] = extractelement <16 x i16> [[TMP1]], i64 1
+; CHECK-NEXT:    [[GAPFILL217:%.*]] = extractelement <16 x i16> [[TMP1]], i64 2
+; CHECK-NEXT:    [[LOAD318:%.*]] = extractelement <16 x i16> [[TMP1]], i64 3
+; CHECK-NEXT:    [[LOAD419:%.*]] = extractelement <16 x i16> [[TMP1]], i64 4
+; CHECK-NEXT:    [[GAPFILL420:%.*]] = extractelement <16 x i16> [[TMP1]], i64 5
+; CHECK-NEXT:    [[GAPFILL621:%.*]] = extractelement <16 x i16> [[TMP1]], i64 6
+; CHECK-NEXT:    [[LOAD722:%.*]] = extractelement <16 x i16> [[TMP1]], i64 7
+; CHECK-NEXT:    [[LOAD823:%.*]] = extractelement <16 x i16> [[TMP1]], i64 8
+; CHECK-NEXT:    [[GAPFILL824:%.*]] = extractelement <16 x i16> [[TMP1]], i64 9
+; CHECK-NEXT:    [[GAPFILL1025:%.*]] = extractelement <16 x i16> [[TMP1]], i64 10
+; CHECK-NEXT:    [[LOAD1126:%.*]] = extractelement <16 x i16> [[TMP1]], i64 11
+; CHECK-NEXT:    [[LOAD1227:%.*]] = extractelement <16 x i16> [[TMP1]], i64 12
+; CHECK-NEXT:    [[GAPFILL1228:%.*]] = extractelement <16 x i16> [[TMP1]], i64 13
+; CHECK-NEXT:    [[GAPFILL1429:%.*]] = extractelement <16 x i16> [[TMP1]], i64 14
+; CHECK-NEXT:    [[LOAD1530:%.*]] = extractelement <16 x i16> [[TMP1]], i64 15
 ; CHECK-NEXT:    store i16 [[LOAD015]], ptr addrspace(1) [[OUT]], align 32
 ; CHECK-NEXT:    [[OUTELEM6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i32 6
 ; CHECK-NEXT:    store i16 [[LOAD318]], ptr addrspace(1) [[OUTELEM6]], align 2

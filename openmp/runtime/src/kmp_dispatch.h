@@ -291,8 +291,8 @@ template <typename T> kmp_uint32 __kmp_eq(T value, T checker) {
     TODO: make inline function (move to header file for icl)
 */
 template <typename UT>
-static UT __kmp_wait(volatile UT *spinner, UT checker,
-                     kmp_uint32 (*pred)(UT, UT) USE_ITT_BUILD_ARG(void *obj)) {
+UT __kmp_wait(volatile UT *spinner, UT checker,
+              kmp_uint32 (*pred)(UT, UT) USE_ITT_BUILD_ARG(void *obj)) {
   // note: we may not belong to a team at this point
   volatile UT *spin = spinner;
   UT check = checker;

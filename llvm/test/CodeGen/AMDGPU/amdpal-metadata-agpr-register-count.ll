@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=CHECK,GFX90A %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx908 < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
+; RUN: llc -mtriple=amdgpu9.0a--amdpal < %s | FileCheck -check-prefixes=CHECK,GFX90A %s
+; RUN: llc -mtriple=amdgpu9.08--amdpal < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
 
 ; COM: Adapted from agpr-register-count.ll
 ; COM: GFX900 and below should not have .agpr_count present in the metadata
@@ -54,6 +54,17 @@ bb:
 define amdgpu_kernel void @kernel_call_func_32_agprs() #0 {
 bb:
   call void @func_32_agprs() #0
+  ret void
+}
+
+; CHECK:      .type          cs_wave_dispatch_agprs
+; CHECK:      NumVgprs: 4
+; CHECK:      NumAgprs: 8
+; GFX90A:     TotalNumVgprs: 12
+; GFX908:     TotalNumVgprs: 8
+define amdgpu_cs void @cs_wave_dispatch_agprs(<4 x float> %vgpr) {
+  call void asm sideeffect "; use $0", "a"(<8 x i32> zeroinitializer)
+  call void asm sideeffect "; use $0", "v"(<4 x float> %vgpr)
   ret void
 }
 

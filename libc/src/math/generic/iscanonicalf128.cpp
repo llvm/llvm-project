@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/iscanonicalf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/iscanonicalf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(int, iscanonicalf128, (float128 x)) {
-  return math::iscanonicalf128(x);
+  return math::iscanonicalf128(cpp::bit_cast<Float128>(x));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

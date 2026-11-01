@@ -115,3 +115,20 @@ void test_minmax_postop(float *f32, _Float16 *f16, __bf16 *bf16, double *f64) {
   *f16  = __atomic_min_fetch(f16,  42.1, memory_order_release);
   *bf16 = __atomic_min_fetch(bf16, 42.1, memory_order_release);
 }
+
+// CHECK-LABEL: define dso_local void @test_fetch_variants(
+// CHECK-SAME: ptr noundef [[F64:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK:    [[TMP0:%.*]] = atomicrmw fminimum ptr {{%.*}}, double {{%.*}} release, align 8
+// CHECK:    [[TMP1:%.*]] = atomicrmw fmaximum ptr {{%.*}}, double {{%.*}} release, align 8
+// CHECK:    [[TMP2:%.*]] = atomicrmw fminimumnum ptr {{%.*}}, double {{%.*}} release, align 8
+// CHECK:    [[TMP3:%.*]] = atomicrmw fmaximumnum ptr {{%.*}}, double {{%.*}} release, align 8
+// CHECK-NOT: call {{.*}} @llvm.minimum
+// CHECK-NOT: call {{.*}} @llvm.maximum
+// CHECK-NOT: call {{.*}} @llvm.minimumnum
+// CHECK-NOT: call {{.*}} @llvm.maximumnum
+void test_fetch_variants(double *f64) {
+  double old1 = __atomic_fetch_fminimum(f64, 42.1, memory_order_release);
+  double old2 = __atomic_fetch_fmaximum(f64, 42.1, memory_order_release);
+  double old3 = __atomic_fetch_fminimum_num(f64, 42.1, memory_order_release);
+  double old4 = __atomic_fetch_fmaximum_num(f64, 42.1, memory_order_release);
+}

@@ -21,6 +21,9 @@ enum Enum {
   Enum_value, // expected-warning {{commas at the end of enumerator lists are incompatible with C++98}}
 };
 
+enum EnumFixed : int { // expected-warning {{enumeration types with a fixed underlying type are incompatible with C++98}}
+};
+
 void *dlsym();
 void (*FnPtr)() = (void(*)())dlsym(); // expected-warning {{cast between pointer-to-function and pointer-to-object is incompatible with C++98}}
 void *FnVoidPtr = (void*)&dlsym; // expected-warning {{cast between pointer-to-function and pointer-to-object is incompatible with C++98}}
@@ -74,3 +77,5 @@ namespace CopyCtorIssues {
 #endif
   const Deleted &d = Deleted(); // expected-warning {{copying variable of type 'Deleted' when binding a reference to a temporary would invoke a deleted constructor in C++98}}
 }
+
+int with_attribute [[ ]]; // expected-warning {{[[]] attributes are incompatible with C++98}}

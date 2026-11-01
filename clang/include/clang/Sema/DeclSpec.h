@@ -40,6 +40,7 @@
 
 namespace clang {
   class ASTContext;
+  class BoundsAttributedType;
   class CXXRecordDecl;
   class TypeLoc;
   class LangOptions;
@@ -287,7 +288,7 @@ public:
       clang::TST_typename_pack_indexing;
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   static const TST TST_##Trait = clang::TST_##Trait;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   static const TST TST_auto = clang::TST_auto;
   static const TST TST_auto_type = clang::TST_auto_type;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
@@ -298,6 +299,9 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   static const TST TST_##Name = clang::TST_##Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  static const TST TST_##Name = clang::TST_##Name;
+#include "clang/Basic/HLSLPackedTypes.def"
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
@@ -458,7 +462,7 @@ public:
   static bool isTransformTypeTrait(TST T) {
     constexpr std::array<TST, 16> Traits = {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     };
 
     return T >= Traits.front() && T <= Traits.back();
@@ -1278,6 +1282,27 @@ private:
   bool ParseSoon; // Are we planning to parse these shortly after creation?
   bool LateAttrParseExperimentalExtOnly;
   bool LateAttrParseTypeAttrOnly;
+};
+
+/// The part of a late-parsed type attribute that Sema reads and fills in during
+/// type construction. The parser owns the attribute and its cached tokens and
+/// embeds this, so Sema never needs to see the parser's type.
+struct LateParsedTypeAttrInfo {
+  ParsedAttr::Kind Kind;
+  SourceLocation NameLoc;
+
+  /// The type built for this attribute during type construction, still missing
+  /// the argument that hasn't been parsed yet. Filled in by
+  /// `Sema::ProcessLateParsedTypeAttr` and completed once the enclosing scope
+  /// makes the argument parseable. Null if type construction rejected the
+  /// attribute.
+  ///
+  /// Held as the base class so the parser stays agnostic about which bounds
+  /// attribute this is; Sema dispatches on the concrete kind when completing.
+  BoundsAttributedType *TypeToComplete = nullptr;
+
+  LateParsedTypeAttrInfo(ParsedAttr::Kind Kind, SourceLocation NameLoc)
+      : Kind(Kind), NameLoc(NameLoc) {}
 };
 
 /// One instance of this struct is used for each type in a

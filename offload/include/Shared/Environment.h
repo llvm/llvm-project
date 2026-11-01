@@ -58,7 +58,6 @@ struct ConfigurationEnvironmentTy {
   int32_t MinTeams = -1;
   int32_t MaxTeams = -1;
   int32_t ReductionDataSize = 0;
-  int32_t ReductionBufferLength = 0;
   //}
 };
 
@@ -85,8 +84,7 @@ enum class DynCGroupMemFallbackType : uint8_t {
 struct KernelLaunchEnvironmentTy {
   void *ReductionBuffer = nullptr;
   void *DynCGroupMemFbPtr = nullptr;
-  uint32_t ReductionCnt = 0;
-  uint32_t ReductionIterCnt = 0;
+  uint32_t ReductionTeamsDone = 0;
   uint32_t DynCGroupMemSize = 0;
   DynCGroupMemFallbackType DynCGroupMemFb = DynCGroupMemFallbackType::None;
 };

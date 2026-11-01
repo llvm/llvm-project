@@ -14,6 +14,7 @@
 
 #include "AVR.h"
 #include "AVRInstrInfo.h"
+#include "AVRMachineFunctionInfo.h"
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
@@ -291,6 +292,38 @@ bool AVRExpandPseudo::expand<AVR::ADDWRdRr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool AVRExpandPseudo::expand<AVR::ADCWRdRr>(Block &MBB, BlockIt MBBI) {
   return expandArith(AVR::ADCRdRr, AVR::ADCRdRr, MBB, MBBI);
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ADIWRdKP>(Block &MBB, BlockIt MBBI) {
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+  MachineInstr &MI = *MBBI;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  int64_t Imm = MI.getOperand(2).getImm();
+  unsigned Opcode;
+
+  if (SrcReg != DstReg) {
+    TII->copyPhysReg(MBB, MI, MI.getDebugLoc(), DstReg, SrcReg, false, false,
+                     false);
+  }
+
+  if (isUInt<6>(Imm) && STI.hasADDSUBIW() &&
+      AVR::IWREGSRegClass.contains(DstReg)) {
+    Opcode = AVR::ADIWRdK;
+  } else {
+    Opcode = AVR::SUBIWRdK;
+    Imm = -Imm;
+  }
+
+  buildMI(MBB, MI, Opcode)
+      .addReg(DstReg, RegState::Define)
+      .addReg(DstReg, RegState::Kill)
+      .addImm(Imm)
+      .setOperandDead(3); // implicit-def $sreg
+
+  MI.eraseFromParent();
+  return true;
 }
 
 template <>
@@ -764,6 +797,44 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtrPd>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
+bool AVRExpandPseudo::expand<AVR::LDDRdPtrQ>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+
+  // LDDRdPtrQ is a real instruction on ordinary AVR devices, but we treat it
+  // as a pseudo instruction on AVR tiny devices.
+  if (!STI.hasTinyEncoding())
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  bool DstIsDead = MI.getOperand(0).isDead();
+  Register SrcReg = MI.getOperand(1).getReg();
+  bool SrcIsKill = MI.getOperand(1).isKill();
+  unsigned Imm = MI.getOperand(2).getImm();
+
+  assert((Imm == 0 || SrcIsKill || !TRI->regsOverlap(DstReg, SrcReg)) &&
+         "Cannot restore a pointer that the load overwrites");
+
+  if (Imm != 0)
+    buildMI(MBB, MBBI, AVR::SUBIWRdK, SrcReg)
+        .addReg(SrcReg, RegState::Kill)
+        .addImm(0x10000 - Imm);
+
+  buildMI(MBB, MBBI, AVR::LDRdPtr)
+      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .setMemRefs(MI.memoperands());
+
+  if (Imm != 0 && !SrcIsKill)
+    buildMI(MBB, MBBI, AVR::SUBIWRdK, SrcReg)
+        .addReg(SrcReg, RegState::Kill)
+        .addImm(Imm);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
 bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
@@ -1151,8 +1222,6 @@ bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
   bool SrcIsKill = MI.getOperand(1).isKill();
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
-  //: TODO: need to reverse this order like inw and stsw?
-
   if (STI.hasTinyEncoding()) {
     // Handle this case in the expansion of STDWPtrQRr because it is very
     // similar.
@@ -1264,6 +1333,44 @@ bool AVRExpandPseudo::expand<AVR::STWPtrPdRr>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
+bool AVRExpandPseudo::expand<AVR::STDPtrQRr>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+
+  // STDPtrQRr is a real instruction on ordinary AVR devices, but we treat it
+  // as a pseudo instruction on AVR tiny devices.
+  if (!STI.hasTinyEncoding())
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  bool DstIsKill = MI.getOperand(0).isKill();
+  unsigned Imm = MI.getOperand(1).getImm();
+  Register SrcReg = MI.getOperand(2).getReg();
+  bool SrcIsKill = MI.getOperand(2).isKill();
+
+  assert((Imm == 0 || !TRI->regsOverlap(DstReg, SrcReg)) &&
+         "Cannot adjust a pointer that holds the value to store");
+
+  if (Imm != 0)
+    buildMI(MBB, MBBI, AVR::SUBIWRdK, DstReg)
+        .addReg(DstReg, RegState::Kill)
+        .addImm(0x10000 - Imm);
+
+  buildMI(MBB, MBBI, AVR::STPtrRr)
+      .addReg(DstReg, getKillRegState(DstIsKill))
+      .addReg(SrcReg, getKillRegState(SrcIsKill))
+      .setMemRefs(MI.memoperands());
+
+  if (Imm != 0 && !DstIsKill)
+    buildMI(MBB, MBBI, AVR::SUBIWRdK, DstReg)
+        .addReg(DstReg, RegState::Kill)
+        .addImm(Imm);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
 bool AVRExpandPseudo::expand<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
@@ -1346,10 +1453,34 @@ bool AVRExpandPseudo::expand<AVR::STDSPQRr>(Block &MBB, BlockIt MBBI) {
 
   assert(STI.getFrameLowering()->hasReservedCallFrame(MF) &&
          "unexpected STDSPQRr pseudo instruction");
-  (void)STI;
 
-  MI.setDesc(TII->get(AVR::STDPtrQRr));
-  MI.getOperand(0).setReg(AVR::R29R28);
+  if (STI.hasTinyEncoding()) {
+    // Reduced tiny cores don't support std, so emulate it with a plain store
+    // and pointer adjustments.
+    unsigned Imm = MI.getOperand(1).getImm();
+    Register SrcReg = MI.getOperand(2).getReg();
+    bool SrcIsKill = MI.getOperand(2).isKill();
+
+    if (Imm != 0)
+      buildMI(MBB, MBBI, AVR::SUBIWRdK, AVR::R29R28)
+          .addReg(AVR::R29R28, RegState::Kill)
+          .addImm(0x10000 - Imm);
+
+    buildMI(MBB, MBBI, AVR::STPtrRr)
+        .addReg(AVR::R29R28, RegState::Kill)
+        .addReg(SrcReg, getKillRegState(SrcIsKill))
+        .setMemRefs(MI.memoperands());
+
+    if (Imm != 0)
+      buildMI(MBB, std::next(MBBI), AVR::SUBIWRdK, AVR::R29R28)
+          .addReg(AVR::R29R28, RegState::Kill)
+          .addImm(Imm);
+
+    MI.eraseFromParent();
+  } else {
+    MI.setDesc(TII->get(AVR::STDPtrQRr));
+    MI.getOperand(0).setReg(AVR::R29R28);
+  }
 
   return true;
 }
@@ -2521,8 +2652,9 @@ bool AVRExpandPseudo::expand<AVR::SPREAD>(Block &MBB, BlockIt MBBI) {
     auto MI0 =
         buildMI(MBB, MBBI, AVR::EORRdRr)
             .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
-            .addReg(DstHiReg, RegState::Kill)
-            .addReg(DstHiReg);
+            .addReg(DstHiReg, RegState::Kill | RegState::Undef)
+            .addReg(DstHiReg, RegState::Kill | RegState::Undef);
+
     // SREG is implicitly dead.
     MI0->getOperand(3).setIsDead();
   }
@@ -2586,6 +2718,42 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
+template <> bool AVRExpandPseudo::expand<AVR::FRMSP>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  MachineFunction &MF = *MI.getMF();
+  AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  DebugLoc DL;
+  Register ASOPointer = MI.getOperand(0).getReg();
+  int64_t ASOAlignment = MI.getOperand(1).getImm();
+
+  // Note: `FrameReg` is an out-param here - passing `ASOPointer` instead would
+  // overwrite the register we are supposed to write the aligned stack address
+  // into.
+  Register FrameReg;
+
+  StackOffset ASOOffset =
+      MF.getSubtarget<AVRSubtarget>()
+          .getFrameLowering()
+          ->getFrameIndexReference(MF, AFI->AlignedStackObjectIdx, FrameReg);
+
+  TII->copyPhysReg(MBB, MI, DL, ASOPointer, AVR::R29R28, false, false, false);
+
+  buildMI(MBB, MI, AVR::ADIWRdKP)
+      .addReg(ASOPointer, RegState::Define)
+      .addReg(ASOPointer, RegState::Kill)
+      .addImm(ASOOffset.getFixed() + ASOAlignment - 1)
+      .setOperandDead(3); // implicit-def $sreg
+
+  buildMI(MBB, MI, AVR::ANDIWRdK)
+      .addReg(ASOPointer, RegState::Define)
+      .addReg(ASOPointer, RegState::Kill)
+      .addImm(-ASOAlignment)
+      .setOperandDead(3); // implicit-def $sreg
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   int Opcode = MBBI->getOpcode();
@@ -2597,6 +2765,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   switch (Opcode) {
     EXPAND(AVR::ADDWRdRr);
     EXPAND(AVR::ADCWRdRr);
+    EXPAND(AVR::ADIWRdKP);
     EXPAND(AVR::SUBWRdRr);
     EXPAND(AVR::SUBIWRdK);
     EXPAND(AVR::SBCWRdRr);
@@ -2615,7 +2784,8 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::LDWRdPtr);
     EXPAND(AVR::LDWRdPtrPi);
     EXPAND(AVR::LDWRdPtrPd);
-  case AVR::LDDWRdYQ: //: FIXME: remove this once PR13375 gets fixed
+    EXPAND(AVR::LDDRdPtrQ);
+  case AVR::LDDWRdYQ: // FIXME: Remove this once PR13375 gets fixed.
     EXPAND(AVR::LDDWRdPtrQ);
     EXPAND(AVR::LPMBRdZ);
     EXPAND(AVR::LPMWRdZ);
@@ -2633,6 +2803,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::STWPtrRr);
     EXPAND(AVR::STWPtrPiRr);
     EXPAND(AVR::STWPtrPdRr);
+    EXPAND(AVR::STDPtrQRr);
     EXPAND(AVR::STDWPtrQRr);
     EXPAND(AVR::STDSPQRr);
     EXPAND(AVR::STDWSPQRr);
@@ -2661,6 +2832,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::ZEXT);
     EXPAND(AVR::SPREAD);
     EXPAND(AVR::SPWRITE);
+    EXPAND(AVR::FRMSP);
   }
 #undef EXPAND
   return false;

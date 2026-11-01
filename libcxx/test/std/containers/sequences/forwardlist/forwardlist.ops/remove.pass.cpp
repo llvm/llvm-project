@@ -9,7 +9,7 @@
 // <forward_list>
 
 // void remove(const value_type& v);      // C++17 and before
-// size_type remove(const value_type& v); // C++20 and after; // constexpr since C++26
+// size_type remove(const value_type& v); // C++20 and after, constexpr since C++26
 
 #include <forward_list>
 #include <iterator>

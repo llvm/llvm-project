@@ -30,11 +30,13 @@ struct DistinctAttributesPass
     /// Walk all operations and create a distinct output attribute given a
     /// distinct input attribute.
     funcOp->walk([](Operation *op) {
-      auto distinctAttr = op->getAttrOfType<DistinctAttr>("distinct.input");
+      auto distinctAttr =
+          op->getDiscardableAttrOfType<DistinctAttr>("distinct.input");
       if (!distinctAttr)
         return;
-      op->setAttr("distinct.output",
-                  DistinctAttr::create(distinctAttr.getReferencedAttr()));
+      op->setDiscardableAttr(
+          "distinct.output",
+          DistinctAttr::create(distinctAttr.getReferencedAttr()));
     });
   }
 };

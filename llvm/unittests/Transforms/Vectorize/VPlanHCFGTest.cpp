@@ -197,6 +197,9 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildVPlan(LoopHeader);
 
+  Loop *L = LI->getLoopFor(LoopHeader);
+  PredicatedScalarEvolution PSE(*SE, *L);
+
   TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   // Current VPlan construction doesn't add a terminator for top-level loop
@@ -205,7 +208,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
       ->appendRecipe(new VPInstruction(
           VPInstruction::BranchOnCond,
           {Plan->getOrAddLiveIn(ConstantInt::getTrue(F->getContext()))}));
-  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, TLI);
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, TLI, PSE, L);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_EQ(0u, Entry->getNumPredecessors());

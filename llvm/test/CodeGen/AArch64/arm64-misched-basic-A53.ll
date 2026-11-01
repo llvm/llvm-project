@@ -6,7 +6,7 @@
 ; much higher than the ADD instructions in order to hide latency. When not
 ; specifying a subtarget, the MADD will remain near the end of the block.
 ;
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: main
 ; CHECK: *** Final schedule for %bb.2 ***
 ; CHECK: MADDWrrr
@@ -82,7 +82,7 @@ for.end:                                          ; preds = %for.cond
 ; hide latency. Whereas normally there would only be a single FADDvvv_4s
 ; after it, this test checks to make sure there are more than one.
 ;
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: neon4xfloat:%bb.0
 ; CHECK: *** Final schedule for %bb.0 ***
 ; CHECK: FDIVv4f32
@@ -128,7 +128,7 @@ declare { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0(ptr)
 ;
 ; Cortex-A53 machine model stalls on A53UnitFPMDS contention. Instructions that
 ; are otherwise ready are jammed in the pending queue.
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: testResourceConflict
 ; CHECK: *** Final schedule for %bb.0 ***
 ; CHECK: BRK
@@ -176,7 +176,7 @@ declare void @llvm.trap()
 
 ; Regression test for PR20057: "permanent hazard"'
 ; Resource contention on LDST.
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: testLdStConflict
 ; CHECK: *** Final schedule for %bb.1 ***
 ; CHECK: LD4Fourv2d

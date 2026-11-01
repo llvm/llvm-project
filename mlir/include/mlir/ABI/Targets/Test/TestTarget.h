@@ -27,6 +27,7 @@
 #include "mlir/ABI/ABIRewriteContext.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "llvm/Support/Error.h"
 
@@ -44,7 +45,7 @@ namespace test {
 /// \param argTypes   Argument types of the function.
 /// \param returnType Return type of the function.
 /// \param dl         DataLayout used for size and alignment queries.
-FunctionClassification classify(ArrayRef<Type> argTypes, Type returnType,
+FunctionClassification classify(TypeRange argTypes, Type returnType,
                                 const DataLayout &dl);
 
 /// Parse a `FunctionClassification` from a plain MLIR DictionaryAttr.
@@ -69,17 +70,20 @@ FunctionClassification classify(ArrayRef<Type> argTypes, Type returnType,
 ///   coerced_type:  TypeAttr.  Required; the extended integer type.
 ///   sign_extend:   BoolAttr.  Defaults to false (zero-extend).
 ///
-/// For kind = "indirect" (indirect_align required, byval optional):
-///   indirect_align: IntegerAttr.  Required; alignment of the pointed-to
-///                   object in bytes.
-///   byval:          BoolAttr.  Defaults to true.
+/// For kind = "indirect" (indirect_align required, byval and
+/// indirect_addr_space optional):
+///   indirect_align:      IntegerAttr.  Required; alignment of the
+///                        pointed-to object in bytes.
+///   byval:               BoolAttr.  Defaults to true.
+///   indirect_addr_space: IntegerAttr.  Target address space of the
+///                        pointer.  Defaults to 0.
 ///
 /// For kind = "ignore" / "expand": no extra keys.
 ///
 /// Future schema additions tracked in projects/daily_log.md (Step 0c
 /// field-mapping table).  When we add new fields to ArgClassification
-/// (e.g. direct_offset, extend_kind tristate, indirect_addr_space,
-/// indirect_realign), the corresponding optional keys go here.
+/// (e.g. direct_offset, extend_kind tristate, indirect_realign), the
+/// corresponding optional keys go here.
 ///
 /// Unknown keys cause a parse error (no silent ignore — keeps schema
 /// honest as it grows).

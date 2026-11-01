@@ -1,6 +1,5 @@
 // Make sure !cond gets propagated across multiple layers of inheritance.
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 class getInt<int c> {
   int ret = !cond(c: 0, 1 : 1);
