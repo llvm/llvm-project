@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Format.h"
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "gmock/gmock.h"
 
 using ::testing::StrEq;
@@ -275,14 +276,16 @@ TEST(FormatTest, ErrorLogIncludesFailureAndAvailability) {
   ASSERT_FALSE(static_cast<bool>(result));
   std::string log = llvm::toString(addFmtOrigin(
       result.takeError(), FmtOrigin::describe("predicate").withUse({}, "op")));
-  EXPECT_THAT(log, ::testing::HasSubstr("'$_self' at template byte offset 0"));
+  EXPECT_THAT(log, ::testing::HasSubstr("cannot substitute '$_self'"));
+  EXPECT_THAT(log, ::testing::HasSubstr("template byte offset 0"));
   EXPECT_THAT(log, ::testing::HasSubstr("missing named binding"));
   EXPECT_THAT(log, ::testing::HasSubstr("'$2' at template byte offset 7"));
   EXPECT_THAT(log, ::testing::HasSubstr("positional argument out of range"));
   EXPECT_THAT(log, ::testing::HasSubstr("template: $_self $2"));
   EXPECT_THAT(log,
               ::testing::HasSubstr("available named substitutions: (none)"));
-  EXPECT_THAT(log, ::testing::HasSubstr("positional arguments supplied: 1"));
+  EXPECT_THAT(log,
+              ::testing::HasSubstr("positional substitutions supplied: 1"));
   EXPECT_THAT(log, ::testing::HasSubstr("while formatting predicate"));
   EXPECT_THAT(log, ::testing::HasSubstr("while expanding op"));
 }
@@ -374,3 +377,126 @@ TEST(FormatTest, LegacyRemainsLazy) {
   EXPECT_EQ(legacy.str(), "after");
   EXPECT_EQ(*eager, "before");
 }
+
+TEST(FormatTest, DiagnosticsPreserveSourceContextsAndOwnMessages) {
+  const char source[] = "definition multiclass use outer";
+  llvm::SMLoc def = llvm::SMLoc::getFromPointer(source);
+  llvm::SMLoc instantiation = llvm::SMLoc::getFromPointer(source + 11);
+  llvm::SMLoc use = llvm::SMLoc::getFromPointer(source + 22);
+  llvm::SMLoc outer = llvm::SMLoc::getFromPointer(source + 26);
+  auto result =
+      tgfmtChecked("$missing $3", FmtContext({{"_self", "self"}}), "one");
+  ASSERT_FALSE(static_cast<bool>(result));
+  llvm::Error error = addFmtOrigin(
+      result.takeError(), FmtOrigin::at({def, instantiation}, "predicate")
+                              .withUse({use}, "operation"));
+  error =
+      addFmtOrigin(std::move(error), FmtOrigin::at({outer}, "outer helper"));
+  llvm::SmallVector<FmtDiagnostic> messages;
+  llvm::handleAllErrors(std::move(error), [&](const FmtError &e) {
+    messages = getFmtDiagnostics(e);
+  });
+  // The error is already destroyed; messages own text and location arrays.
+  ASSERT_EQ(messages.size(), 8u);
+  EXPECT_TRUE(messages[0].isError);
+  ASSERT_EQ(messages[0].locations.size(), 2u);
+  EXPECT_EQ(messages[0].locations[0], def);
+  EXPECT_EQ(messages[0].locations[1], instantiation);
+  EXPECT_THAT(messages[0].message,
+              ::testing::HasSubstr("while formatting predicate"));
+  EXPECT_THAT(messages[1].message,
+              ::testing::HasSubstr("'$3' at template byte offset 9"));
+  EXPECT_EQ(messages[2].message, "template: $missing $3");
+  EXPECT_EQ(messages[3].message,
+            "failed occurrence starts at template byte offset 0");
+  EXPECT_EQ(messages[4].locations[0], use);
+  EXPECT_EQ(messages[4].message, "while expanding operation");
+  EXPECT_EQ(messages[5].locations[0], outer);
+  EXPECT_EQ(messages[5].message, "while formatting outer helper");
+  EXPECT_EQ(messages[6].message, "available named substitutions: $_self");
+  EXPECT_EQ(messages[7].message, "positional substitutions supplied: 1 "
+                                 "(available indices: $0 through $0)");
+}
+
+TEST(FormatTest, DiagnosticsFallBackToAnOuterLocation) {
+  const char source[] = "outer";
+  llvm::SMLoc outer = llvm::SMLoc::getFromPointer(source);
+  auto result = tgfmtChecked("$_self", FmtContext{});
+  ASSERT_FALSE(static_cast<bool>(result));
+  auto error = addFmtOrigin(result.takeError(), FmtOrigin::describe("inner"));
+  error = addFmtOrigin(std::move(error), FmtOrigin::at({outer}, "outer"));
+  llvm::handleAllErrors(std::move(error), [&](const FmtError &e) {
+    auto messages = getFmtDiagnostics(e);
+    ASSERT_EQ(messages.front().locations.size(), 1u);
+    EXPECT_EQ(messages.front().locations[0], outer);
+    EXPECT_THAT(messages.front().message,
+                ::testing::HasSubstr("formatting inner"));
+    EXPECT_TRUE(llvm::any_of(messages, [](const FmtDiagnostic &message) {
+      return message.message == "while formatting outer";
+    }));
+    EXPECT_EQ(messages.back().message,
+              "no positional substitutions were supplied");
+  });
+}
+
+TEST(FormatTest, FatalArrayFormattingSuccess) {
+  std::string values[] = {"zero", "one"};
+  FmtContext ctx({{"_self", "self"}});
+  EXPECT_EQ(tgfmtvOrFatal(FmtOrigin::describe("array template"), "$1 $0 $_self",
+                          ctx, values),
+            "one zero self");
+}
+
+TEST(FormatTest, DiagnosticsWithoutOrigins) {
+  auto error = takeFormatError(tgfmtChecked("$missing", FmtContext{}));
+  ASSERT_TRUE(error);
+  auto messages = getFmtDiagnostics(*error);
+  EXPECT_THAT(messages.front().message,
+              ::testing::HasSubstr("while formatting template"));
+  EXPECT_TRUE(messages.front().locations.empty());
+  EXPECT_EQ(messages[messages.size() - 2].message,
+            "available named substitutions: (none)");
+}
+
+TEST(FormatTest, ArrayDiagnosticsForInvalidIndicesAndRanges) {
+  auto error = takeFormatError(tgfmtvChecked(
+      "$99999999999999999999999999999999999999999999 $2...", FmtContext{}, {}));
+  ASSERT_TRUE(error);
+  auto messages = getFmtDiagnostics(*error);
+  EXPECT_THAT(messages[0].message,
+              ::testing::HasSubstr("invalid positional index"));
+  EXPECT_THAT(messages[1].message,
+              ::testing::HasSubstr("positional range starts out of range"));
+}
+
+#if GTEST_HAS_DEATH_TEST
+TEST(FormatTest, FatalFormattingRejectsSuccessErrors) {
+  EXPECT_EXIT(
+      reportFatalFmtError(llvm::Error::success(), FmtOrigin::describe("test")),
+      ::testing::ExitedWithCode(1), "expected a non-success error");
+}
+
+TEST(FormatTest, FatalFormattingPrintsEveryErrorBeforeExit) {
+  EXPECT_EXIT(
+      {
+        auto first = tgfmtChecked("$first", FmtContext{});
+        auto second = tgfmtChecked("$second", FmtContext{});
+        reportFatalFmtError(
+            llvm::joinErrors(first.takeError(), second.takeError()),
+            FmtOrigin::describe("test"));
+      },
+      ::testing::ExitedWithCode(1), "cannot substitute '\\$second'");
+}
+
+TEST(FormatTest, FatalFormattingPreservesUnrelatedErrors) {
+  EXPECT_EXIT(
+      {
+        auto result = tgfmtChecked("$missing", FmtContext{});
+        reportFatalFmtError(
+            llvm::joinErrors(result.takeError(),
+                             llvm::createStringError("unrelated failure")),
+            FmtOrigin::describe("test"));
+      },
+      ::testing::ExitedWithCode(1), "unrelated failure");
+}
+#endif

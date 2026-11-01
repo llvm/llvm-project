@@ -37,6 +37,48 @@ using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
 
+void mlir::tblgen::reportFatalFmtError(llvm::Error error,
+                                       const FmtOrigin &callerOrigin) {
+  if (!error)
+    PrintFatalError("internal formatting error: expected a non-success error");
+  SmallVector<FmtDiagnostic> messages;
+  llvm::handleAllErrors(
+      addFmtOrigin(std::move(error), callerOrigin),
+      [&](const FmtError &failure) {
+        llvm::append_range(messages, getFmtDiagnostics(failure));
+      },
+      [&](const llvm::ErrorInfoBase &failure) {
+        const FmtSite &site = callerOrigin.getDefinition();
+        messages.push_back({true, site.locations, failure.message()});
+      });
+  if (messages.empty())
+    PrintFatalError("internal formatting error: no diagnostic messages");
+  // Use location-free overloads for explanatory messages, avoiding an
+  // artificial <unknown>:0 prefix on template and availability notes.
+  for (const FmtDiagnostic &message : llvm::drop_end(messages)) {
+    if (message.isError) {
+      if (message.locations.empty())
+        PrintError(message.message);
+      else
+        PrintError(message.locations, message.message);
+    } else {
+      if (message.locations.empty())
+        PrintNote(message.message);
+      else
+        PrintNote(message.locations, message.message);
+    }
+  }
+  const FmtDiagnostic &last = messages.back();
+  if (last.isError) {
+    if (last.locations.empty())
+      PrintFatalError(last.message);
+    PrintFatalError(last.locations, last.message);
+  }
+  if (last.locations.empty())
+    PrintFatalNote(last.message);
+  PrintFatalNote(last.locations, last.message);
+}
+
 /// Generate a unique label based on the current file name to prevent name
 /// collisions if multiple generated files are included at once.
 static std::string getUniqueOutputLabel(const RecordKeeper &records,
