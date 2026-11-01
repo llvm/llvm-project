@@ -11,6 +11,7 @@
 // RUN: fir-opt --target-rewrite="target=powerpc-ibm-aix7.2.0.0" %s | FileCheck %s --check-prefix=PPC
 // RUN: fir-opt --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=LOONGARCH64
 // RUN: fir-opt --target-rewrite="target=s390x-unknown-linux-gnu" %s | FileCheck %s --check-prefix=SYSTEMZ
+// RUN: fir-opt --target-rewrite="target=nvptx64-nvidia-cuda" %s | FileCheck %s --check-prefix=NVPTX
 
 // Test that we rewrite the signature and body of a function that returns a
 // complex<4>.
@@ -27,6 +28,7 @@
 // LOONGARCH64-LABEL: func @returncomplex4() -> tuple<f32, f32>
 // SYSTEMZ-LABEL: func @returncomplex4
 // SYSTEMZ-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>>  {llvm.align = 8 : i32, llvm.sret = tuple<f32, f32>})
+// NVPTX-LABEL: func @returncomplex4() -> tuple<f32, f32>
 func.func @returncomplex4() -> complex<f32> {
   // I32: fir.insert_value
   // I32: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value
@@ -52,6 +54,8 @@ func.func @returncomplex4() -> complex<f32> {
   // LOONGARCH64: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value
   // SYSTEMZ: fir.insert_value
   // SYSTEMZ: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value
+  // NVPTX: fir.insert_value
+  // NVPTX: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value
   %1 = fir.undefined complex<f32>
   %2 = arith.constant 2.0 : f32
   %3 = fir.convert %2 : (f32) -> f32
@@ -113,6 +117,11 @@ func.func @returncomplex4() -> complex<f32> {
   // SYSTEMZ: [[ADDR:%[0-9A-Za-z]+]] = fir.convert [[ARG0]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // SYSTEMZ: fir.store [[VAL]] to [[ADDR]] : !fir.ref<complex<f32>>
   // SYSTEMZ: return
+  // NVPTX: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
+  // NVPTX: [[ADDRC:%[0-9A-Za-z]+]] = fir.convert [[ADDRT]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX: fir.store [[VAL]] to [[ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX: [[RES:%[0-9A-Za-z]+]] = fir.load [[ADDRT]] : !fir.ref<tuple<f32, f32>>
+  // NVPTX: return [[RES]] : tuple<f32, f32>
   return %6 : complex<f32>
 }
 
@@ -134,6 +143,7 @@ func.func @returncomplex4() -> complex<f32> {
 // LOONGARCH64-LABEL: func @returncomplex8() -> tuple<f64, f64>
 // SYSTEMZ-LABEL: func @returncomplex8
 // SYSTEMZ-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<tuple<f64, f64>>  {llvm.align = 8 : i32, llvm.sret = tuple<f64, f64>})
+// NVPTX-LABEL: func @returncomplex8() -> tuple<f64, f64>
 func.func @returncomplex8() -> complex<f64> {
   // I32: fir.insert_value
   // I32: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value {{.*}}
@@ -159,6 +169,8 @@ func.func @returncomplex8() -> complex<f64> {
   // LOONGARCH64: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value {{.*}}
   // SYSTEMZ: fir.insert_value
   // SYSTEMZ: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value {{.*}}
+  // NVPTX: fir.insert_value
+  // NVPTX: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value {{.*}}
   %1 = fir.undefined complex<f64>
   %2 = arith.constant 1.0 : f64
   %3 = arith.constant -4.0 : f64
@@ -219,6 +231,11 @@ func.func @returncomplex8() -> complex<f64> {
   // SYSTEMZ: [[ADDRC:%[0-9A-Za-z]+]] = fir.convert [[ARG0]] : (!fir.ref<tuple<f64, f64>>) -> !fir.ref<complex<f64>>
   // SYSTEMZ: fir.store [[VAL]] to [[ADDRC]] : !fir.ref<complex<f64>>
   // SYSTEMZ: return
+  // NVPTX: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
+  // NVPTX: [[ADDRC:%[0-9A-Za-z]+]] = fir.convert [[ADDRT]] : (!fir.ref<tuple<f64, f64>>) -> !fir.ref<complex<f64>>
+  // NVPTX: fir.store [[VAL]] to [[ADDRC]] : !fir.ref<complex<f64>>
+  // NVPTX: [[RES:%[0-9A-Za-z]+]] = fir.load [[ADDRT]] : !fir.ref<tuple<f64, f64>>
+  // NVPTX: return [[RES]] : tuple<f64, f64>
   return %5 : complex<f64>
 }
 
@@ -235,6 +252,7 @@ func.func @returncomplex8() -> complex<f64> {
 // PPC-LABEL: func private @paramcomplex4(f32, f32)
 // LOONGARCH64-LABEL: func private @paramcomplex4(f32, f32)
 // SYSTEMZ-LABEL: func private @paramcomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
+// NVPTX-LABEL: func private @paramcomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>})
 func.func private @paramcomplex4(complex<f32>) -> ()
 
 // Test that we rewrite calls to functions that return or accept complex<4>.
@@ -250,6 +268,7 @@ func.func private @paramcomplex4(complex<f32>) -> ()
 // PPC-LABEL: func @callcomplex4
 // LOONGARCH64-LABEL: func @callcomplex4
 // SYSTEMZ-LABEL: func @callcomplex4
+// NVPTX-LABEL: func @callcomplex4
 func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {
 
   // I32: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex4() : () -> i64
@@ -266,6 +285,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // SYSTEMZ: [[STCK:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
   // SYSTEMZ: [[RES:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
   // SYSTEMZ: fir.call @returncomplex4([[RES]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.sret = tuple<f32, f32>}) -> ()
+  // NVPTX: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex4() : () -> tuple<f32, f32>
   %1 = fir.call @returncomplex4() : () -> complex<f32>
 
   // I32: [[ADDRI64:%[0-9A-Za-z]+]] = fir.alloca i64
@@ -370,6 +390,20 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // SYSTEMZ: fir.store [[C]] to [[TMP]] : !fir.ref<complex<f32>>
   // SYSTEMZ: [[T:%[0-9A-Za-z]+]] = fir.convert [[TMP]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
   // SYSTEMZ: fir.call @paramcomplex4([[T]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}) -> ()
+
+  // NVPTX: [[STCK:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // NVPTX: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
+  // NVPTX: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f32, f32>>
+  // NVPTX: [[RESC:%[0-9A-Za-z]+]] = fir.convert [[ADDRT]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX: [[C:%[0-9A-Za-z]+]] = fir.load [[RESC]] : !fir.ref<complex<f32>>
+  // NVPTX: llvm.intr.stackrestore [[STCK]] : !llvm.ptr
+  // NVPTX: [[STCK2:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // NVPTX: [[ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // NVPTX: fir.store [[C]] to [[ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX: [[T:%[0-9A-Za-z]+]] = fir.convert [[ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // NVPTX: fir.call @paramcomplex4([[T]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> ()
+  // NVPTX: llvm.intr.stackrestore [[STCK2]] : !llvm.ptr
+
   fir.call @paramcomplex4(%1) : (complex<f32>) -> ()
 
   // I32: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> i64 pass_arg_pos(0)
@@ -387,6 +421,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // SYSTEMZ: [[RESC2:%[0-9A-Za-z]+]] = fir.convert [[RES2]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // SYSTEMZ: [[C2:%[0-9A-Za-z]+]] = fir.load [[RESC2]] : !fir.ref<complex<f32>>
   // SYSTEMZ: llvm.intr.stackrestore [[STCK2]] : !llvm.ptr
+  // NVPTX: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> pass_arg_pos(0)
   %2 = fir.dispatch "ret_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> complex<f32> pass_arg_pos(0)
 
   // I32: [[ADDRI64:%[0-9A-Za-z]+]] = fir.alloca i64
@@ -466,6 +501,17 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // SYSTEMZ: [[T3:%[0-9A-Za-z]+]] = fir.convert [[TMP3]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
   // SYSTEMZ: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T3]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) pass_arg_pos(0)
   // SYSTEMZ: llvm.intr.stackrestore [[STCK3]] : !llvm.ptr
+  // NVPTX: [[STCK:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // NVPTX: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
+  // NVPTX: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f32, f32>>
+  // NVPTX: [[RESC:%[0-9A-Za-z]+]] = fir.convert [[ADDRT]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX: [[C:%[0-9A-Za-z]+]] = fir.load [[RESC]] : !fir.ref<complex<f32>>
+  // NVPTX: llvm.intr.stackrestore [[STCK]] : !llvm.ptr
+  // NVPTX: [[STCK2:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // NVPTX: [[ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // NVPTX: fir.store [[C]] to [[ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX: [[T:%[0-9A-Za-z]+]] = fir.convert [[ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // NVPTX: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) pass_arg_pos(0)
   fir.dispatch "with_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0, %2 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, complex<f32>) pass_arg_pos(0)
 
   // PPC: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
@@ -481,6 +527,12 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // SYSTEMZ: [[T4:%[0-9A-Za-z]+]] = fir.convert [[TMP4]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
   // SYSTEMZ: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T4]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) pass_arg_pos(0)
   // SYSTEMZ: llvm.intr.stackrestore [[STCK4]] : !llvm.ptr
+  // NVPTX: [[STCK:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // NVPTX: [[ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // NVPTX: fir.store [[C]] to [[ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX: [[T:%[0-9A-Za-z]+]] = fir.convert [[ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // NVPTX: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) pass_arg_pos(0)
+  // NVPTX: llvm.intr.stackrestore [[STCK]] : !llvm.ptr
 
   fir.dispatch "with_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0, %2 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, complex<f32>) pass_arg_pos(0)
 
@@ -501,6 +553,12 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // SYSTEMZ: [[T5:%[0-9A-Za-z]+]] = fir.convert [[TMP5]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
   // SYSTEMZ: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) ([[T5]], %{{.*}} : !fir.ref<tuple<f32, f32>>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
   // SYSTEMZ: llvm.intr.stackrestore [[STCK5]] : !llvm.ptr
+  // NVPTX: [[STCK:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // NVPTX: [[ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // NVPTX: fir.store [[C]] to [[ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX: [[T:%[0-9A-Za-z]+]] = fir.convert [[ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // NVPTX: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) ([[T]], %{{.*}} : !fir.ref<tuple<f32, f32>>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
+  // NVPTX: llvm.intr.stackrestore [[STCK]] : !llvm.ptr
   fir.dispatch "with_complex2"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%2, %arg0 : complex<f32>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
 
   return
@@ -519,6 +577,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
 // PPC-LABEL: func private @paramcomplex8(f64, f64)
 // LOONGARCH64-LABEL: func private @paramcomplex8(f64, f64)
 // SYSTEMZ-LABEL: func private @paramcomplex8(!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32})
+// NVPTX-LABEL: func private @paramcomplex8(!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32, llvm.byval = tuple<f64, f64>})
 func.func private @paramcomplex8(complex<f64>) -> ()
 
 // Test that we rewrite calls to functions that return or accept complex<8>.
@@ -552,6 +611,7 @@ func.func @callcomplex8() {
   // SYSTEMZ: [[STCK:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
   // SYSTEMZ: [[RES:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
   // SYSTEMZ: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32, llvm.sret = tuple<f64, f64>}) -> ()
+  // NVPTX: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex8() : () -> tuple<f64, f64>
   %1 = fir.call @returncomplex8() : () -> complex<f64>
 
   // I32: [[RESC:%[0-9A-Za-z]+]] = fir.convert [[RES]] : (!fir.ref<tuple<f64, f64>>) -> !fir.ref<complex<f64>>
@@ -647,7 +707,18 @@ func.func @callcomplex8() {
   // SYSTEMZ: fir.store [[C]] to [[TMP]] : !fir.ref<complex<f64>>
   // SYSTEMZ: [[T:%[0-9A-Za-z]+]] = fir.convert [[TMP]] : (!fir.ref<complex<f64>>) -> !fir.ref<tuple<f64, f64>>
   // SYSTEMZ: fir.call @paramcomplex8([[T]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32}) -> ()
-  
+  // NVPTX: [[STCK:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // NVPTX: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
+  // NVPTX: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f64, f64>>
+  // NVPTX: [[RESC:%[0-9A-Za-z]+]] = fir.convert [[ADDRT]] : (!fir.ref<tuple<f64, f64>>) -> !fir.ref<complex<f64>>
+  // NVPTX: [[C:%[0-9A-Za-z]+]] = fir.load [[RESC]] : !fir.ref<complex<f64>>
+  // NVPTX: llvm.intr.stackrestore [[STCK]] : !llvm.ptr
+  // NVPTX: [[STCK2:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // NVPTX: [[ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f64>
+  // NVPTX: fir.store [[C]] to [[ADDRC]] : !fir.ref<complex<f64>>
+  // NVPTX: [[T:%[0-9A-Za-z]+]] = fir.convert [[ADDRC]] : (!fir.ref<complex<f64>>) -> !fir.ref<tuple<f64, f64>>
+  // NVPTX: fir.call @paramcomplex8([[T]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32, llvm.byval = tuple<f64, f64>}) -> ()
+
   fir.call @paramcomplex8(%1) : (complex<f64>) -> ()
   return
 }
@@ -665,6 +736,7 @@ func.func @callcomplex8() {
 // PPC-LABEL: func private @calleemultipleparamscomplex4(f32, f32, f32, f32, f32, f32)
 // LOONGARCH64-LABEL: func private @calleemultipleparamscomplex4(f32, f32, f32, f32, f32, f32)
 // SYSTEMZ-LABEL: func private @calleemultipleparamscomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
+// NVPTX: func private @calleemultipleparamscomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>})
 func.func private @calleemultipleparamscomplex4(complex<f32>, complex<f32>, complex<f32>) -> ()
 
 // I32-LABEL: func @multipleparamscomplex4
@@ -691,6 +763,8 @@ func.func private @calleemultipleparamscomplex4(complex<f32>, complex<f32>, comp
 // LOONGARCH64-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32, [[A3:%[0-9A-Za-z]+]]: f32, [[B3:%[0-9A-Za-z]+]]: f32)
 // SYSTEMZ-LABEL: func @multipleparamscomplex4
 // SYSTEMZ-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, [[Z3:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
+// NVPTX-LABEL: func @multipleparamscomplex4
+// NVPTX-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, [[Z3:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>})
 func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : complex<f32>) {
   // I32-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // I32-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
@@ -943,6 +1017,24 @@ func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : 
   // SYSTEMZ-DAG: fir.store [[Z3_VAL]] to [[Z3_ADDRC]] : !fir.ref<complex<f32>>
   // SYSTEMZ-DAG: [[Z3_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z3_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
   // SYSTEMZ: fir.call @calleemultipleparamscomplex4([[Z1_ADDRT]], [[Z2_ADDRT]], [[Z3_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}) -> ()
+
+  // NVPTX-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z2_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z2]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z2_VAL:%[0-9A-Za-z]+]] = fir.load [[Z2_ADDR]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z3_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z3]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z3_VAL:%[0-9A-Za-z]+]] = fir.load [[Z3_ADDR]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z1_ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // NVPTX-DAG: fir.store [[Z1_VAL]] to [[Z1_ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z1_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z1_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // NVPTX-DAG: [[Z2_ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // NVPTX-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z2_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z2_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // NVPTX-DAG: [[Z3_ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // NVPTX-DAG: fir.store [[Z3_VAL]] to [[Z3_ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z3_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z3_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // NVPTX: fir.call @calleemultipleparamscomplex4([[Z1_ADDRT]], [[Z2_ADDRT]], [[Z3_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> ()
+
   fir.call @calleemultipleparamscomplex4(%z1, %z2, %z3) : (complex<f32>, complex<f32>, complex<f32>) -> ()
   return
 }
@@ -983,6 +1075,8 @@ func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : 
 // LOONGARCH64-LABEL: func private @mlircomplexf32
 // LOONGARCH64-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32)
 // LOONGARCH64-SAME: -> tuple<f32, f32>
+// NVPTX-LABEL: func private @mlircomplexf32
+// NVPTX-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> tuple<f32, f32>
 func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> complex<f32> {
 
   // I32-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
@@ -1156,6 +1250,18 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // LOONGARCH64-DAG: [[B2_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z2]], [1 : i32] : (complex<f32>) -> f32
 
   // LOONGARCH64: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]]) : (f32, f32, f32, f32) -> tuple<f32, f32>
+  // NVPTX-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z2_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z2]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z2_VAL:%[0-9A-Za-z]+]] = fir.load [[Z2_ADDR]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z1_ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // NVPTX-DAG: fir.store [[Z1_VAL]] to [[Z1_ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z1_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z1_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // NVPTX-DAG: [[Z2_ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // NVPTX-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX-DAG: [[Z2_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z2_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // NVPTX: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_ADDRT]], [[Z2_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> tuple<f32, f32>
+
   %0 = fir.call @mlircomplexf32(%z1, %z2) : (complex<f32>, complex<f32>) -> complex<f32>
 
   // I32: [[ADDRI64:%[0-9A-Za-z]+]] = fir.alloca i64
@@ -1267,6 +1373,17 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // LOONGARCH64: fir.store [[V]] to [[ADDRC_2]] : !fir.ref<complex<f32>>
   // LOONGARCH64: [[RES:%[0-9A-Za-z]+]] = fir.load [[ADDRT_2]] : !fir.ref<tuple<f32, f32>>
   // LOONGARCH64: return [[RES]] : tuple<f32, f32>
+
+  // NVPTX: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
+  // NVPTX: fir.store [[VAL]] to [[ADDRT]] : !fir.ref<tuple<f32, f32>>
+  // NVPTX: [[ADDRC:%[0-9A-Za-z]+]] = fir.convert [[ADDRT]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX: [[VAL_2:%[0-9A-Za-z]+]] = fir.load [[ADDRC]] : !fir.ref<complex<f32>>
+  // NVPTX: [[ADDRT_2:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
+  // NVPTX: [[ADDRC_2:%[0-9A-Za-z]+]] = fir.convert [[ADDRT_2]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // NVPTX: fir.store [[VAL_2]] to [[ADDRC_2]] : !fir.ref<complex<f32>>
+  // NVPTX: [[RES:%[0-9A-Za-z]+]] = fir.load [[ADDRT_2]] : !fir.ref<tuple<f32, f32>>
+  // NVPTX: return [[RES]] : tuple<f32, f32>
+
   return %0 : complex<f32>
 }
 
@@ -1282,6 +1399,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
 // PPC64-LABEL: func @addrof()
 // PPC-LABEL: func @addrof()
 // LOONGARCH64-LABEL: func @addrof()
+// NVPTX-LABEL: func @addrof()
 func.func @addrof() {
   // I32: {{%.*}} = fir.address_of(@returncomplex4) : () -> i64
   // I32_MINGW: {{%.*}} = fir.address_of(@returncomplex4) : () -> i64
@@ -1293,6 +1411,7 @@ func.func @addrof() {
   // PPC64: {{%.*}} = fir.address_of(@returncomplex4) : () -> tuple<f32, f32>
   // PPC: {{%.*}} = fir.address_of(@returncomplex4) : () -> tuple<f32, f32>
   // LOONGARCH64: {{%.*}} = fir.address_of(@returncomplex4) : () -> tuple<f32, f32>
+  // NVPTX: {{%.*}} = fir.address_of(@returncomplex4) : () -> tuple<f32, f32>
   %r = fir.address_of(@returncomplex4) : () -> complex<f32>
 
   // I32: {{%.*}} = fir.address_of(@paramcomplex4) : (!fir.ref<tuple<f32, f32>>) -> ()
@@ -1306,6 +1425,7 @@ func.func @addrof() {
   // PPC64: {{%.*}} = fir.address_of(@paramcomplex4) : (f32, f32) -> ()
   // PPC: {{%.*}} = fir.address_of(@paramcomplex4) : (f32, f32) -> ()
   // LOONGARCH64: {{%.*}} = fir.address_of(@paramcomplex4) : (f32, f32) -> ()
+  // NVPTX: {{%.*}} = fir.address_of(@paramcomplex4) : (!fir.ref<tuple<f32, f32>>) -> ()
   %p = fir.address_of(@paramcomplex4) : (complex<f32>) -> ()
   return
 }
