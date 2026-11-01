@@ -28,27 +28,28 @@
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
 using namespace llvm;
 
-#define DEBUG_TYPE "riscv-copyelim"
+#define DEBUG_TYPE "riscv-redundant-copy-elimination"
 
 STATISTIC(NumCopiesRemoved, "Number of copies removed.");
 
 namespace {
-class RISCVRedundantCopyElimination : public MachineFunctionPass {
-  const MachineRegisterInfo *MRI;
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
-
+class RISCVRedundantCopyEliminationLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  RISCVRedundantCopyElimination() : MachineFunctionPass(ID) {}
+  RISCVRedundantCopyEliminationLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
@@ -60,19 +61,17 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  bool optimizeBlock(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
 
-char RISCVRedundantCopyElimination::ID = 0;
+char RISCVRedundantCopyEliminationLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVRedundantCopyElimination, "riscv-copyelim",
+INITIALIZE_PASS(RISCVRedundantCopyEliminationLegacy, "riscv-copyelim",
                 "RISC-V Redundant Copy Elimination", false, false)
 
 static bool
@@ -145,7 +144,10 @@ getRegImmediateBeforeTerminator(MachineBasicBlock &MBB, Register Reg,
   return std::nullopt;
 }
 
-bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
+static bool optimizeBlockForRedundantCopies(MachineBasicBlock &MBB,
+                                            const MachineRegisterInfo *MRI,
+                                            const TargetRegisterInfo *TRI,
+                                            const TargetInstrInfo *TII) {
   // Check if the current basic block has a single predecessor.
   if (MBB.pred_size() != 1)
     return false;
@@ -257,21 +259,37 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
   return true;
 }
 
-bool RISCVRedundantCopyElimination::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
-  TII = MF.getSubtarget().getInstrInfo();
-  TRI = MF.getSubtarget().getRegisterInfo();
-  MRI = &MF.getRegInfo();
+static bool runRedundantCopyElimination(MachineFunction &MF) {
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const MachineRegisterInfo *MRI = &MF.getRegInfo();
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
-    Changed |= optimizeBlock(MBB);
+    Changed |= optimizeBlockForRedundantCopies(MBB, MRI, TRI, TII);
 
   return Changed;
 }
 
-FunctionPass *llvm::createRISCVRedundantCopyEliminationPass() {
-  return new RISCVRedundantCopyElimination();
+FunctionPass *llvm::createRISCVRedundantCopyEliminationLegacyPass() {
+  return new RISCVRedundantCopyEliminationLegacy();
+}
+
+bool RISCVRedundantCopyEliminationLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runRedundantCopyElimination(MF);
+}
+
+PreservedAnalyses
+RISCVRedundantCopyEliminationPass::run(MachineFunction &MF,
+                                       MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  bool Changed = runRedundantCopyElimination(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<MachineRegisterClassAnalysis>();
 }

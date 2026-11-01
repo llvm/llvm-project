@@ -982,7 +982,7 @@ def LCMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$ptr),
 // the base pointer. Indeed, in such situation RBX is a reserved
 // register and the register allocator will ignore any use/def of
 // it. In other words, the register will not fix the clobbering of
-// RBX that will happen when setting the arguments for the instrucion.
+// RBX that will happen when setting the arguments for the instruction.
 //
 // Unlike the actual related instruction, we mark that this one
 // defines RBX (instead of using RBX).

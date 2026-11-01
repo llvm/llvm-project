@@ -101,6 +101,12 @@ add_header(
 )
 
 add_header(
+  sys_shm_macros
+  HDR
+    sys-shm-macros.h
+)
+
+add_header(
   sys_socket_macros
   HDR
     sys-socket-macros.h
@@ -110,6 +116,12 @@ add_header(
   net_if_macros
   HDR
     net-if-macros.h
+)
+
+add_header(
+  netinet_tcp_macros
+  HDR
+    netinet-tcp-macros.h
 )
 
 add_header(

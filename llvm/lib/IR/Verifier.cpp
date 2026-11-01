@@ -312,6 +312,7 @@ public:
     visitModuleIdents();
     visitModuleCommandLines();
     visitModuleErrnoTBAA();
+    visitModuleRawSections();
 
     verifyCompileUnits();
 
@@ -350,6 +351,7 @@ private:
   void visitModuleIdents();
   void visitModuleCommandLines();
   void visitModuleErrnoTBAA();
+  void visitModuleRawSections();
   void visitModuleFlags();
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
@@ -1968,6 +1970,49 @@ void Verifier::visitModuleErrnoTBAA() {
     TBAAVerifyHelper.visitTBAAMetadata(nullptr, N);
 }
 
+void Verifier::visitModuleRawSections() {
+  const NamedMDNode *RawSections = M.getNamedMetadata("llvm.raw.sections");
+  if (!RawSections)
+    return;
+
+  for (const MDNode *N : RawSections->operands()) {
+    if (N->getNumOperands() != 4) {
+      CheckFailed("llvm.raw.sections entry must have four operands", N);
+      continue;
+    }
+    Check(dyn_cast_or_null<MDString>(N->getOperand(0)),
+          "llvm.raw.sections entry operand 0 must be a string "
+          "(section name)",
+          N);
+    auto *AlignCI = mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(1));
+    Check(AlignCI,
+          "llvm.raw.sections entry operand 1 must be an integer "
+          "(alignment)",
+          N);
+    if (!isPowerOf2_64(AlignCI->getZExtValue())) {
+      CheckFailed("llvm.raw.sections entry operand 1 must be a power of two "
+                  "(alignment)",
+                  N);
+      continue;
+    }
+    auto *FlagsCI = mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(2));
+    Check(FlagsCI,
+          "llvm.raw.sections entry operand 2 must be an integer "
+          "(flags)",
+          N);
+    if (FlagsCI->getZExtValue() != 0) {
+      CheckFailed("llvm.raw.sections entry operand 2 must be zero (flags are "
+                  "reserved for future use)",
+                  N);
+      continue;
+    }
+    Check(dyn_cast_or_null<MDString>(N->getOperand(3)),
+          "llvm.raw.sections entry operand 3 must be a string "
+          "(section data)",
+          N);
+  }
+}
+
 void Verifier::visitModuleFlags() {
   const NamedMDNode *Flags = M.getModuleFlagsMetadata();
   if (!Flags) return;
@@ -2182,6 +2227,13 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(parseExceptionModel(Value->getString()).has_value(),
             "invalid exception-model metadata value", Op);
+    return;
+  }
+
+  if (Name == "debugger-tuning") {
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value && !Value->getString().empty(),
+          "debugger-tuning metadata requires a non-empty string argument", Op);
     return;
   }
 
@@ -4693,12 +4745,13 @@ void Verifier::checkGEPOperator(const GEPOperator &GEP) {
         "GEP base pointer is not a vector or a vector of pointers", &GEP);
   Check(GEP.getSourceElementType()->isSized(), "GEP into unsized type!", &GEP);
 
-  if (auto *STy = dyn_cast<StructType>(GEP.getSourceElementType())) {
-    Check(!STy->isScalableTy(),
-          "getelementptr cannot target structure that contains scalable vector"
-          "type",
-          &GEP);
-  }
+  Type *SrcTy = GEP.getSourceElementType();
+  while (auto *ATy = dyn_cast<ArrayType>(SrcTy))
+    SrcTy = ATy->getElementType();
+  Check(!isa<StructType>(SrcTy) || !SrcTy->isScalableTy(),
+        "getelementptr cannot target structure that contains scalable vector "
+        "type",
+        &GEP);
 
   SmallVector<Value *, 16> Idxs(GEP.indices());
   Check(
@@ -6363,6 +6416,23 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         Check(OBU.Inputs.size() == 1,
               "noundef assumptions should have 1 argument", Call);
         break;
+      case BundleAttr::Range: {
+        Check(OBU.Inputs.size() == 3,
+              "range assumptions should have 3 arguments", Call);
+        Check(GetTypeAt(0)->isIntegerTy(),
+              "first argument should be an integer", Call);
+        auto *LowerBound = dyn_cast<ConstantInt>(OBU.Inputs[1]);
+        Check(LowerBound, "second argument should be a constant integer", Call);
+        auto *UpperBound = dyn_cast<ConstantInt>(OBU.Inputs[2]);
+        Check(UpperBound, "third argument should be a constant integer", Call);
+        Check(LowerBound != UpperBound || LowerBound->isZero(),
+              "an empty range has to be represented as `0, 0`");
+        Check(GetTypeAt(0)->getIntegerBitWidth() ==
+                      GetTypeAt(1)->getIntegerBitWidth() &&
+                  GetTypeAt(1)->getIntegerBitWidth() ==
+                      GetTypeAt(2)->getIntegerBitWidth(),
+              "all arguments should have the same bit width", Call);
+      } break;
       case BundleAttr::SeparateStorage:
         Check(OBU.Inputs.size() == 2,
               "separate_storage assumptions should have 2 arguments", Call);
@@ -6828,12 +6898,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "gc.relocate: statepoint derived index out of bounds", Call);
     }
 
-    // Relocated value must be either a pointer type or vector-of-pointer type,
-    // but gc_relocate does not need to return the same pointer type as the
-    // relocated pointer. It can be casted to the correct type later if it's
-    // desired. However, they must have the same address space and 'vectorness'
     GCRelocateInst &Relocate = cast<GCRelocateInst>(Call);
-    auto *ResultType = Call.getType();
     auto *DerivedType = Relocate.getDerivedPtr()->getType();
     auto *BaseType = Relocate.getBasePtr()->getType();
 
@@ -6841,15 +6906,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "gc.relocate: relocated value must be a pointer", Call);
     Check(DerivedType->isPtrOrPtrVectorTy(),
           "gc.relocate: relocated value must be a pointer", Call);
-
-    Check(ResultType->isVectorTy() == DerivedType->isVectorTy(),
-          "gc.relocate: vector relocates to vector and pointer to pointer",
-          Call);
-    Check(
-        ResultType->getPointerAddressSpace() ==
-            DerivedType->getPointerAddressSpace(),
-        "gc.relocate: relocating a pointer shouldn't change its address space",
-        Call);
+    Check(Call.getType() == DerivedType,
+          "gc.relocate: must return the type of the relocated value", Call);
 
     auto GC = llvm::getGCStrategy(Relocate.getFunction()->getGC());
     Check(GC, "gc.relocate: calling function must have GCStrategy",
@@ -6858,7 +6916,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       auto isGCPtr = [&GC](Type *PTy) {
         return GC->isGCManagedPointer(PTy->getScalarType()).value_or(true);
       };
-      Check(isGCPtr(ResultType), "gc.relocate: must return gc pointer", Call);
       Check(isGCPtr(BaseType),
             "gc.relocate: relocated value must be a gc pointer", Call);
       Check(isGCPtr(DerivedType),
@@ -8379,13 +8436,29 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(const Instruction *I,
   return cast<MDNode>(BaseNode->getOperand(LastIdx));
 }
 
-static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
+static bool isNewFormatTBAATypeNode(const MDNode *Type) {
   if (!Type || Type->getNumOperands() < 3)
     return false;
 
   // In the new format type nodes shall have a reference to the parent type as
   // its first operand.
   return isa_and_nonnull<MDNode>(Type->getOperand(0));
+}
+
+/// Returns true if the parent chain of the TBAA type node \p MD is acyclic.
+static bool hasAcyclicTBAAParentChain(const MDNode *MD) {
+  SmallPtrSet<const MDNode *, 4> Visited;
+  for (const MDNode *N = MD; N;) {
+    if (!Visited.insert(N).second)
+      return false;
+    if (isNewFormatTBAATypeNode(N)) {
+      N = cast<MDNode>(N->getOperand(0));
+    } else {
+      N = IsRootTBAANode(N) ? nullptr
+                            : dyn_cast_or_null<MDNode>(N->getOperand(1));
+    }
+  }
+  return true;
 }
 
 bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
@@ -8448,6 +8521,9 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
     CheckTBAA(isValidScalarTBAANode(AccessType),
               "Access type node must be a valid scalar type", I, MD,
               AccessType);
+  } else {
+    CheckTBAA(hasAcyclicTBAAParentChain(AccessType),
+              "Cycle detected in access type parent chain", I, MD, AccessType);
   }
 
   auto *OffsetCI = mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(2));

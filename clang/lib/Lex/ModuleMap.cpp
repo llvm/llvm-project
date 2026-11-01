@@ -2446,6 +2446,18 @@ bool ModuleMapLoader::parseAndLoadModuleMapFile(
   return HadError;
 }
 
+OptionalFileEntryRef ModuleMap::getModuleMapFileForName(StringRef Name) const {
+  // Check loaded modules first, inferred modules are only found here.
+  if (Module *M = Modules.lookup(Name))
+    return getModuleMapFileForUniquing(M);
+
+  // Then check only parsed modules.
+  auto ParsedMod = ParsedModules.find(Name);
+  if (ParsedMod == ParsedModules.end())
+    return std::nullopt;
+  return SourceMgr.getFileEntryRefForID(ParsedMod->second.front().first->ID);
+}
+
 Module *ModuleMap::findOrLoadModule(StringRef Name) {
   llvm::StringMap<Module *>::const_iterator Known = Modules.find(Name);
   if (Known != Modules.end())

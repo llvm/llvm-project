@@ -76,7 +76,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setStackPointerRegisterToSaveRestore(BPF::R11);
 
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
-  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+  setOperationAction(ISD::BR_JT, MVT::Other, STI.hasGotox() ? Custom : Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
 
   if (!STI.hasGotox())
@@ -177,6 +177,10 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setMaxAtomicSizeInBitsSupported(64);
+  // AtomicExpand turns operations on 8 and 16 bits into cmpxchg of the word
+  // that they are in. Its loops start with a relaxed atomic load.
+  if (STI.hasLoadAcqStoreRel())
+    setMinCmpXchgSizeInBits(32);
   setMinimumJumpTableEntries(BPFMinimumJumpTableEntries);
 
   // Function alignments
@@ -215,6 +219,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   HasJmp32 = STI.getHasJmp32();
   HasJmpExt = STI.getHasJmpExt();
   HasMovsx = STI.hasMovsx();
+  HasLoadAcqStoreRel = STI.hasLoadAcqStoreRel();
 
   AllowsMisalignedMemAccess = STI.getAllowsMisalignedMemAccess();
 }
@@ -361,6 +366,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBR_CC(Op, DAG);
   case ISD::JumpTable:
     return LowerJumpTable(Op, DAG);
+  case ISD::BR_JT:
+    return LowerBR_JT(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::ConstantPool:
@@ -803,13 +810,46 @@ SDValue BPFTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
   SDNode *N = Op.getNode();
   SDLoc DL(N);
 
+  // A seq_cst store is xchg by now, see shouldExpandAtomicStoreInIR(), which
+  // makes load acquire enough for a seq_cst load.
   if (cast<AtomicSDNode>(N)->getMergedOrdering() ==
-      AtomicOrdering::SequentiallyConsistent)
+          AtomicOrdering::SequentiallyConsistent &&
+      (N->getOpcode() == ISD::ATOMIC_STORE || !HasLoadAcqStoreRel))
     fail(DL, DAG,
          "sequentially consistent (seq_cst) "
          "atomic load/store is not supported");
 
   return Op;
+}
+
+TargetLowering::AtomicExpansionKind
+BPFTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  if (!HasLoadAcqStoreRel)
+    return TargetLowering::shouldExpandAtomicRMWInIR(AI);
+
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::And:
+  case AtomicRMWInst::Or:
+  case AtomicRMWInst::Xor:
+  case AtomicRMWInst::Xchg:
+    // There are insns for 32 and 64 bits.
+    if (AI->getDataLayout().getTypeSizeInBits(AI->getType()) >= 32)
+      return AtomicExpansionKind::None;
+    [[fallthrough]];
+  default:
+    return AtomicExpansionKind::CmpXChg;
+  }
+}
+
+TargetLowering::AtomicExpansionKind
+BPFTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  // Store release is not ordered with a later load. xchg is fully ordered.
+  if (HasLoadAcqStoreRel &&
+      SI->getOrdering() == AtomicOrdering::SequentiallyConsistent)
+    return AtomicExpansionKind::Expand;
+  return AtomicExpansionKind::None;
 }
 
 SDValue BPFTargetLowering::LowerATOMIC_FENCE(SDValue Op,
@@ -822,7 +862,25 @@ SDValue BPFTargetLowering::LowerATOMIC_FENCE(SDValue Op,
     // MEMBARRIER is a compiler barrier; it codegens to a no-op.
     return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 
-  report_fatal_error("Runtime fence is not supported at the moment");
+  // There is no insn for that. An atomic insn that returns the old value is
+  // fully ordered: add zero to a slot in the stack. Without alu32 that is
+  // 'lock *(u64 *)(r10 - 8) += r1', which is not ordered.
+  if (!HasAlu32)
+    report_fatal_error("Runtime fence is not supported at the moment");
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SDValue Slot = DAG.CreateStackTemporary(MVT::i64);
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(
+      MF, cast<FrameIndexSDNode>(Slot)->getIndex());
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue Chain = DAG.getStore(Op.getOperand(0), DL, Zero, Slot, PtrInfo);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad | MachineMemOperand::MOStore,
+      LLT::scalar(64), Align(8), MMOMetadata(), SyncScope::System,
+      AtomicOrdering::SequentiallyConsistent);
+  return DAG
+      .getAtomic(ISD::ATOMIC_LOAD_ADD, DL, MVT::i64, Chain, Slot, Zero, MMO)
+      .getValue(1);
 }
 
 static Function *createBPFUnreachable(Module *M) {
@@ -869,6 +927,39 @@ SDValue BPFTargetLowering::LowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   CLI.NoMerge = false;
   CLI.DoesNotReturn = true;
   return LowerCall(CLI, InVals);
+}
+
+/// The verifier wants to see that the load from the table is within it. The
+/// range check in front of it doesn't always show that: it can be done on
+/// another copy of the value, e.g. 'w1 = w7; w1 &= 255; if w1 > 24 goto' and
+/// then 'r1 = r7; r1 &= 255' for the index. Make the size of the table a power
+/// of two and mask the index.
+SDValue BPFTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  unsigned JTI = cast<JumpTableSDNode>(Op.getOperand(1))->getIndex();
+  SDValue Index = Op.getOperand(2);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+  std::vector<MachineBasicBlock *> MBBs = MJTI->getJumpTables()[JTI].MBBs;
+  uint64_t Size = PowerOf2Ceil(MBBs.size());
+
+  if (Size != MBBs.size()) {
+    // An index that gets there is out of range: any block of the table will do.
+    MBBs.resize(Size, MBBs.back());
+    MJTI->RemoveJumpTable(JTI);
+    JTI = MJTI->createJumpTableIndex(MBBs);
+  }
+
+  Index = DAG.getNode(ISD::AND, DL, MVT::i64, Index,
+                      DAG.getConstant(Size - 1, DL, MVT::i64));
+  Index = DAG.getNode(ISD::SHL, DL, MVT::i64, Index,
+                      DAG.getConstant(3, DL, MVT::i64));
+  SDValue Addr = DAG.getNode(ISD::ADD, DL, MVT::i64,
+                             DAG.getJumpTable(JTI, MVT::i64), Index);
+  SDValue Load = DAG.getLoad(MVT::i64, DL, Chain, Addr,
+                             MachinePointerInfo::getJumpTable(MF));
+  return DAG.getNode(ISD::BRIND, DL, MVT::Other, Load.getValue(1), Load);
 }
 
 SDValue BPFTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
@@ -1130,6 +1221,12 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   F->insert(I, Copy0MBB);
   F->insert(I, Copy1MBB);
+
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII.getCallFrameSizeAt(MI);
+  Copy0MBB->setCallFrameSize(CallFrameSize);
+  Copy1MBB->setCallFrameSize(CallFrameSize);
+
   // Update machine-CFG edges by transferring all successors of the current
   // block to the new block which will contain the Phi node for the select.
   Copy1MBB->splice(Copy1MBB->begin(), BB,

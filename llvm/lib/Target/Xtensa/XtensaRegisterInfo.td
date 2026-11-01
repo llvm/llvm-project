@@ -111,7 +111,7 @@ def LITBASE : SRReg<5, "litbase", ["LITBASE", "5"]>;
 def WINDOWBASE : SRReg<72, "windowbase", ["WINDOWBASE", "72"]>;
 def WINDOWSTART : SRReg<73, "windowstart", ["WINDOWSTART", "73"]>;
 
-// Instuction breakpoint enable register
+// Instruction breakpoint enable register
 def IBREAKENABLE : SRReg<96, "ibreakenable", ["IBREAKENABLE", "96"]>;
 
 // Memory Control Register
@@ -122,10 +122,10 @@ def ATOMCTL : SRReg<99, "atomctl", ["ATOMCTL", "99"]>;
 
 def DDR : SRReg<104, "ddr", ["DDR", "104"]>;
 
-// Instuction break address register 0
+// Instruction break address register 0
 def IBREAKA0 : SRReg<128, "ibreaka0", ["IBREAKA0", "128"]>;
 
-// Instuction break address register 1
+// Instruction break address register 1
 def IBREAKA1 : SRReg<129, "ibreaka1", ["IBREAKA1", "129"]>;
 
 // Data break address register 0
