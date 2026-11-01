@@ -1,9 +1,9 @@
-add_custom_target(libc_spawn_unittests)
+add_libc_testsuite(libc-spawn-tests)
 
 add_libc_test(
   posix_spawn_file_actions_test
   SUITE
-    libc_spawn_unittests
+    libc-spawn-tests
   SRCS
     posix_spawn_file_actions_test.cpp
   DEPENDS

@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -534,6 +535,11 @@ CmpSamePredicateHelper::getConstantLaneOperands(const Value *V,
         ICmpInst::compare(APInt(BW, LHS), APInt(BW, RHS), Pred) == CI->isOne())
       return {ConstantInt::get(Ty, LHS), ConstantInt::get(Ty, RHS)};
   llvm_unreachable("Expected the comparison of constants for the lane.");
+}
+
+bool isFMAOrFMulAdd(const Instruction *I) {
+  return match(I, m_CombineOr(m_Intrinsic<Intrinsic::fma>(),
+                              m_Intrinsic<Intrinsic::fmuladd>()));
 }
 
 bool InstructionsState::isSameOperation(const Instruction *I,

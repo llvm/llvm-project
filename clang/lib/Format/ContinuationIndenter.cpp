@@ -1115,7 +1115,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.LastSpace = State.Column;
   } else if (Previous.isOneOf(TT_ConditionalExpr, TT_CtorInitializerColon)) {
     CurrentState.LastSpace = State.Column;
-  } else if (Previous.is(TT_BinaryOperator) &&
+  } else if (Previous.isOneOf(TT_BinaryOperator, TT_EnumEqual) &&
              ((Previous.getPrecedence() != prec::Assignment &&
                (Previous.isNot(tok::lessless) || Previous.OperatorIndex != 0 ||
                 Previous.NextOperator)) ||

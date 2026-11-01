@@ -61,7 +61,7 @@ public:
     }
   }
 
-  void testInvalidNumbers(IdivFxFunc func) {
+  void testInvalidNumbers([[maybe_unused]] IdivFxFunc func) {
     constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
 
     EXPECT_DEATH([func] { func(0.5, 0.0); }, WITH_SIGNAL(-1));

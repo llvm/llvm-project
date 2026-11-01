@@ -404,3 +404,188 @@ TEST(DependencyScanner, InvalidatedPathAfterModuleBuilt) {
 
   llvm::sys::fs::remove_directories(Root);
 }
+
+/// Test fixture for module map resolution without module loading.
+class GetModuleMapsForModulesTest : public ::testing::Test {
+protected:
+  GetModuleMapsForModulesTest()
+      : VFS(llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
+        Service(makeServiceOptions(VFS)), ScanTool(Service) {
+    VFS->setCurrentWorkingDirectory(CWD);
+  }
+
+  void addFile(StringRef Path, StringRef Contents) {
+    VFS->addFile(Path, 0, llvm::MemoryBuffer::getMemBufferCopy(Contents));
+  }
+
+  /// Wrapper to get the defined modulemaps for /p ModuleNames, without loading.
+  std::optional<llvm::StringMap<std::string>>
+  getModuleMaps(ArrayRef<std::string> CommandLine,
+                ArrayRef<StringRef> ModuleNames,
+                DiagnosticConsumer &DiagConsumer) {
+    CallbackActionController Controller(
+        CallbackActionController::lookupUnreachableModuleOutput);
+    return ScanTool.getModuleMapsForModules(CWD, CommandLine, DiagConsumer,
+                                            Controller, ModuleNames);
+  }
+
+  /// Get the modulemap that defines the module \p Name by doing a full module
+  /// load. If not found, return an empty string.
+  std::string scanModuleMapFile(ArrayRef<std::string> CommandLine,
+                                StringRef Name,
+                                DiagnosticConsumer &DiagConsumer) {
+    llvm::DenseSet<ModuleID> AlreadySeen;
+    FullDependencyConsumer Consumer(AlreadySeen);
+    auto LookupModuleOutput = [](const ModuleDeps &MD, ModuleOutputKind) {
+      return "/root/out/" + MD.ID.ModuleName + ".pcm";
+    };
+    CallbackActionController Controller(LookupModuleOutput);
+    bool Queried = false;
+    auto GetNextName = [&Queried, Name]() -> std::optional<std::string> {
+      if (Queried)
+        return std::nullopt;
+      Queried = true;
+      return Name.str();
+    };
+    if (!ScanTool.getByNameDependencies(CWD, CommandLine, DiagConsumer,
+                                        Controller, GetNextName, Consumer))
+      return "";
+    TranslationUnitDeps Deps = Consumer.takeTranslationUnitDeps();
+    for (const ModuleDeps &MD : Deps.ModuleGraph)
+      if (MD.ID.ModuleName == Name)
+        return MD.ClangModuleMapFile;
+    return "";
+  }
+
+  static constexpr StringRef CWD = "/root";
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
+  DependencyScanningService Service;
+  DependencyScanningTool ScanTool;
+
+private:
+  static DependencyScanningServiceOptions
+  makeServiceOptions(IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS) {
+    DependencyScanningServiceOptions Opts;
+    Opts.MakeVFS = [VFS] { return VFS; };
+    return Opts;
+  }
+};
+
+TEST_F(GetModuleMapsForModulesTest, Found) {
+  std::vector<std::string> CommandLine = {
+      "clang",     "-target",  "x86_64-apple-macosx10.7",
+      "-c",        "test.m",   "-fmodules",
+      "-I/root/a", "-I/root/b"};
+  addFile("/root/test.m", "\n");
+  addFile("/root/a/module.modulemap", "module A { header \"a.h\" }\n");
+  addFile("/root/a/a.h", "\n");
+  addFile("/root/b/module.modulemap", "module B { header \"b.h\" }\n");
+  addFile("/root/b/b.h", "\n");
+
+  TextDiagnosticBuffer DiagConsumer;
+  std::optional<llvm::StringMap<std::string>> ModuleMaps =
+      getModuleMaps(CommandLine, {"A", "B"}, DiagConsumer);
+  ASSERT_TRUE(ModuleMaps);
+  using llvm::sys::path::convert_to_slash;
+  EXPECT_EQ(ModuleMaps->size(), 2u);
+  EXPECT_EQ(convert_to_slash(ModuleMaps->lookup("A")),
+            "/root/a/module.modulemap");
+  EXPECT_EQ(convert_to_slash(ModuleMaps->lookup("B")),
+            "/root/b/module.modulemap");
+}
+
+// Verify a module provided by a prebuilt module file is omitted, even though
+// it's resolvable through search paths.
+TEST_F(GetModuleMapsForModulesTest, PrebuiltModule) {
+  // Set up a scenario where 'A' is a prebuilt module but its modulemap is
+  // resolved during the lookup for a different module 'B'.
+  std::vector<std::string> CommandLine = {
+      "clang",  "-target",   "x86_64-apple-macosx10.7",     "-c",
+      "test.m", "-fmodules", "-fmodule-file=A=/root/a.pcm", "-I/root/a"};
+  addFile("/root/test.m", "\n");
+  addFile("/root/a.pcm", "");
+  addFile("/root/a/module.modulemap", "module A { header \"a.h\" }\n"
+                                      "module B { header \"b.h\" }\n");
+  addFile("/root/a/a.h", "\n");
+  addFile("/root/a/b.h", "\n");
+
+  TextDiagnosticBuffer DiagConsumer;
+  std::optional<llvm::StringMap<std::string>> ModuleMaps =
+      getModuleMaps(CommandLine, {"A", "B"}, DiagConsumer);
+  ASSERT_TRUE(ModuleMaps);
+  EXPECT_EQ(ModuleMaps->size(), 1u);
+  EXPECT_EQ(llvm::sys::path::convert_to_slash(ModuleMaps->lookup("B")),
+            "/root/a/module.modulemap");
+  EXPECT_FALSE(ModuleMaps->contains("A"));
+}
+
+// Verify a module that is not found is omitted, leaving an empty result.
+TEST_F(GetModuleMapsForModulesTest, NotFound) {
+  std::vector<std::string> CommandLine = {
+      "clang",     "-target",  "x86_64-apple-macosx10.7", "-c", "test.m",
+      "-fmodules", "-I/root/a"};
+  addFile("/root/test.m", "\n");
+  addFile("/root/a/a.h", "\n");
+
+  TextDiagnosticBuffer DiagConsumer;
+  std::optional<llvm::StringMap<std::string>> ModuleMaps =
+      getModuleMaps(CommandLine, {"Missing"}, DiagConsumer);
+  ASSERT_TRUE(ModuleMaps);
+  EXPECT_TRUE(ModuleMaps->empty());
+}
+
+// Verify a command line that cannot be set up reports
+// an error.
+TEST_F(GetModuleMapsForModulesTest, IllFormedCommandLine) {
+  std::vector<std::string> CommandLine = {"clang", "-cc1", "-not-a-real-flag"};
+
+  TextDiagnosticBuffer DiagConsumer;
+  std::optional<llvm::StringMap<std::string>> ModuleMaps =
+      getModuleMaps(CommandLine, {"A"}, DiagConsumer);
+  EXPECT_FALSE(ModuleMaps);
+  ASSERT_NE(DiagConsumer.err_begin(), DiagConsumer.err_end());
+  EXPECT_EQ(DiagConsumer.err_begin()->second,
+            "unknown argument: '-not-a-real-flag'");
+}
+
+// Verify a resolution error isn't diagnosed by the lookup, but is by a
+// later scan.
+TEST_F(GetModuleMapsForModulesTest, SkipsRedefinition) {
+  // Set up module redefinition error scenario.
+  // Both search paths define a module named 'A', and the compiler
+  // instance encounters both.
+  std::vector<std::string> CommandLine = {
+      "clang",     "-target",  "x86_64-apple-macosx10.7",
+      "-c",        "test.m",   "-fmodules",
+      "-I/root/a", "-I/root/b"};
+  addFile("/root/test.m", "\n");
+  addFile("/root/a/module.modulemap", "module A { header \"a.h\" }\n");
+  addFile("/root/a/a.h", "\n");
+  addFile("/root/b/module.modulemap", "module A { header \"a.h\" }\n"
+                                      "module B { header \"b.h\" }\n");
+  addFile("/root/b/a.h", "\n");
+  addFile("/root/b/b.h", "\n");
+
+  auto getErrors = [](TextDiagnosticBuffer &DiagConsumer) {
+    std::vector<std::string> Errors;
+    for (auto It = DiagConsumer.err_begin(); It != DiagConsumer.err_end(); ++It)
+      Errors.push_back(It->second);
+    return Errors;
+  };
+
+  TextDiagnosticBuffer LookupDiags;
+  std::optional<llvm::StringMap<std::string>> ModuleMaps =
+      getModuleMaps(CommandLine, {"A", "B"}, LookupDiags);
+  ASSERT_TRUE(ModuleMaps);
+  using llvm::sys::path::convert_to_slash;
+  EXPECT_EQ(convert_to_slash(ModuleMaps->lookup("A")),
+            "/root/a/module.modulemap");
+  EXPECT_EQ(convert_to_slash(ModuleMaps->lookup("B")),
+            "/root/b/module.modulemap");
+  EXPECT_EQ(getErrors(LookupDiags), std::vector<std::string>{});
+
+  TextDiagnosticBuffer ScanDiags;
+  EXPECT_EQ(scanModuleMapFile(CommandLine, "B", ScanDiags), "");
+  EXPECT_TRUE(
+      llvm::is_contained(getErrors(ScanDiags), "redefinition of module 'A'"));
+}

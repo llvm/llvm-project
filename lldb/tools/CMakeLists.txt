@@ -22,6 +22,10 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   endif()
 endif()
 
+if (LLDB_BUILD_SWIFT_DEBUGSERVER AND NOT LLDB_USE_SYSTEM_DEBUGSERVER)
+  add_lldb_tool_subdirectory(swift-debugserver)
+endif()
+
 if (LLDB_CAN_USE_LLDB_SERVER)
   add_lldb_tool_subdirectory(lldb-server)
 endif()

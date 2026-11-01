@@ -33,7 +33,7 @@ define i1 @test_cmpxchg_seq_cst(ptr %addr, i128 %desire, i128 %new) {
 ; PWR7-NEXT:    [[TMP0:%.*]] = alloca i128, align 16
 ; PWR7-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP0]])
 ; PWR7-NEXT:    store i128 [[DESIRE:%.*]], ptr [[TMP0]], align 16
-; PWR7-NEXT:    [[TMP1:%.*]] = call zeroext i1 @__atomic_compare_exchange_16(ptr [[ADDR:%.*]], ptr [[TMP0]], i128 [[NEW:%.*]], i32 5, i32 5)
+; PWR7-NEXT:    [[TMP1:%.*]] = call zeroext i1 @__atomic_compare_exchange_16(ptr [[ADDR:%.*]], ptr [[TMP0]], i128 [[NEW:%.*]], i32 signext 5, i32 signext 5)
 ; PWR7-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP0]], align 16
 ; PWR7-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP0]])
 ; PWR7-NEXT:    [[TMP3:%.*]] = insertvalue { i128, i1 } poison, i128 [[TMP2]], 0

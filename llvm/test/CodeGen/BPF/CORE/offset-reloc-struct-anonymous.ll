@@ -114,9 +114,9 @@ define dso_local i32 @bpf_prog(ptr) local_unnamed_addr !dbg !15 {
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  ".text"                 # string offset=66
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "/tmp/home/yhs/work/tests/llvm/test.c" # string offset=72
+; CHECK-NEXT:        .ascii  "0:1:5:0"               # string offset=72
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "0:1:5:0"               # string offset=109
+; CHECK-NEXT:        .ascii  "/tmp/home/yhs/work/tests/llvm/test.c" # string offset=80
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .section        .BTF.ext,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
@@ -136,7 +136,7 @@ define dso_local i32 @bpf_prog(ptr) local_unnamed_addr !dbg !15 {
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   109
+; CHECK-NEXT:        .long   72
 ; CHECK-NEXT:        .long   0
 
 ; Function Attrs: argmemonly nounwind

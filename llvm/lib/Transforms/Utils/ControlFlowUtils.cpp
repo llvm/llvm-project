@@ -244,6 +244,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
         PHINode::Create(Phi->getType(), Incoming.size(),
                         Phi->getName() + ".moved", FirstGuardBlock->begin());
     bool AllUndef = true;
+    bool AllPoison = true;
     for (auto [BB, Succ0, Succ1] : Incoming) {
       Value *V = PoisonValue::get(Phi->getType());
       if  (Phi->getBasicBlockIndex(BB) != -1) {
@@ -257,15 +258,20 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
           V = NewPhi;
         }
         AllUndef &= isa<UndefValue>(V);
+        AllPoison &= isa<PoisonValue>(V);
       }
 
       NewPhi->addIncoming(V, BB);
     }
     assert(NewPhi->getNumIncomingValues() == Incoming.size());
     Value *NewV = NewPhi;
+    // If all moved values are undef or poison, use that instead of a PHI. Only
+    // use poison if they are all poison: replacing undef with poison would make
+    // the program less defined.
     if (AllUndef) {
       NewPhi->eraseFromParent();
-      NewV = PoisonValue::get(Phi->getType());
+      NewV = AllPoison ? PoisonValue::get(Phi->getType())
+                       : UndefValue::get(Phi->getType());
     }
     if (Phi->getNumOperands() == 0) {
       Phi->replaceAllUsesWith(NewV);

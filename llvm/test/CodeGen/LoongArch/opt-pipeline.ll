@@ -54,13 +54,10 @@
 ; LAXX-NEXT:       Shadow Stack GC Lowering
 ; LAXX-NEXT:       Remove unreachable blocks from the CFG
 ; LAXX-NEXT:       Cycle Info Analysis
-; LAXX-NEXT:       Post-Dominator Tree Construction
-; LAXX-NEXT:       Branch Probability Analysis
-; LAXX-NEXT:       Block Frequency Analysis
-; LAXX-NEXT:       Constant Hoisting
-; LAXX-NEXT:       Replace intrinsics with calls to vector library
 ; LAXX-NEXT:       Lazy Branch Probability Analysis
 ; LAXX-NEXT:       Lazy Block Frequency Analysis
+; LAXX-NEXT:       Constant Hoisting
+; LAXX-NEXT:       Replace intrinsics with calls to vector library
 ; LAXX-NEXT:       Optimization Remark Emitter
 ; LAXX-NEXT:       Partially inline calls to library functions
 ; LAXX-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
@@ -73,6 +70,7 @@
 ; LAXX-NEXT:       Branch Probability Analysis
 ; LAXX-NEXT:       Block Frequency Analysis
 ; LAXX-NEXT:       CodeGen Prepare
+; LAXX-NEXT:       SJLJ Exception Handling preparation
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
 ; LAXX-NEXT:       Prepare inline asm insts
@@ -102,8 +100,6 @@
 ; LAXX-NEXT:       Machine Trace Metrics
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Machine InstCombiner
-; LAXX-NEXT:       Machine Cycle Info Analysis
-; LAXX-NEXT:       Machine Block Frequency Analysis
 ; LAXX-NEXT:       Early Machine Loop Invariant Code Motion
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Machine Cycle Info Analysis

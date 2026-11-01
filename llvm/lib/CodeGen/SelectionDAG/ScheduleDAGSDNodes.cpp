@@ -465,11 +465,18 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
     for (SDNode *N = SU.getNode(); N; N = N->getGluedNode()) {
       if (N->isMachineOpcode() &&
           !TII->get(N->getMachineOpcode()).implicit_defs().empty()) {
+        const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
         SU.hasPhysRegClobbers = true;
+        // Results beyond the explicit defs are physical register defs, unless
+        // the target models variadic results as virtual registers. This must
+        // match InstrEmitter::EmitMachineNode.
+        bool HasVRegVariadicDefs = !MF.getTarget().usesPhysRegsForValues() &&
+                                   MCID.isVariadic() &&
+                                   MCID.variadicOpsAreDefs();
         unsigned NumUsed = InstrEmitter::CountResults(N);
         while (NumUsed != 0 && !N->hasAnyUseOfValue(NumUsed - 1))
           --NumUsed;    // Skip over unused values at the end.
-        if (NumUsed > TII->get(N->getMachineOpcode()).getNumDefs())
+        if (!HasVRegVariadicDefs && NumUsed > MCID.getNumDefs())
           SU.hasPhysRegDefs = true;
       }
 

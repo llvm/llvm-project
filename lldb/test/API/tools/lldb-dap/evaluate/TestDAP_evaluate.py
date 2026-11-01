@@ -248,6 +248,16 @@ class TestDAP_evaluate(DAPTestCaseBase):
                     after=event_before_help_eval,
                 )
 
+                # `script print(...)` output goes to the console only, not the
+                # evaluate response.
+                marker = "lldb_dap_test_script_print_marker"
+                event_before_script_eval = session.last_event()
+                eval_body = session.evaluate(
+                    f"script print('{marker}')", context=context
+                )
+                session.verify_evaluate(eval_body, result="")
+                session.collect_console(until=marker, after=event_before_script_eval)
+
                 # A valid frame should add local lookup without preventing the same
                 # global from taking precedence over the LLDB command.
                 eval_body = a_frame.evaluate("help", context=context)

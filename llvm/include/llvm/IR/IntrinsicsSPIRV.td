@@ -527,8 +527,10 @@ let TargetPrefix = "spv" in {
                               [IntrNoMem, IntrTriviallyScalarizable]>;
 
   def int_spv_resource_updatecounter
-      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
-                              [IntrInaccessibleMemOrArgMemOnly]>;
+      : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                              [llvm_any_ty, llvm_i8_ty /*Increment*/],
+                              [IntrInaccessibleMemOrArgMemOnly,
+                               ImmArg<ArgIndex<1>>]>;
 
   def int_spv_resource_getdimensions_x
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty], [IntrReadMem]>;

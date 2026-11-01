@@ -990,6 +990,21 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     This is intended for cross-compiling: if the user sets this variable, no
     native TableGen will be created.
 
+**LLVM_TABLEGEN_LAUNCHER**:STRING
+
+:   Semicolon-separated command prefix to run every TableGen invocation
+    under, analogous to `CMAKE_<LANG>_COMPILER_LAUNCHER`. The TableGen
+    executable remains a dependency of each command. Empty by default.
+
+    This allows TableGen commands to use a caching or remote execution
+    launcher independently of C and C++ compilation. For example,
+    `-DLLVM_TABLEGEN_LAUNCHER="/path/to/launcher;--config=/path/to/config"`
+    runs each command as `/path/to/launcher --config=/path/to/config <tablegen> ...`.
+    The launcher must support the generator being invoked and is responsible
+    for any input discovery and execution environment it requires. This also
+    applies to other generators invoked through the `tablegen()` CMake
+    function, such as MLIR source sharding.
+
 **LLVM_TARGET_ARCH**:STRING
 
 :   LLVM target to use for native code generation. This is required for JIT

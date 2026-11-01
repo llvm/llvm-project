@@ -919,8 +919,8 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   bool IsAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
   if (IsAmdHsaOrMesa && !ST.hasFlatScratchEnabled())
     PrivateSegmentBuffer = true;
-  else if (ST.isMesaGfxShader(F))
-    ImplicitBufferPtr = true;
+  else if (!ST.hasArchitectedFlatScratch() && ST.isMesaGfxShader(F))
+    ImplicitBufferPtr = true; // Only needed to set up scratch.
 
   if (!AMDGPU::isGraphics(CC)) {
     if (!F.hasFnAttribute("amdgpu-no-dispatch-ptr"))
