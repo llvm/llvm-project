@@ -626,8 +626,7 @@ static void FactorNodes(MatcherList &ML) {
             dyn_cast<ScopeMatcher>(Cases[Entry - 1].second.front());
         // Create a new scope if we don't have one.
         if (!SM) {
-          SmallVector<MatcherList, 1> Entries;
-          Entries.push_back(std::move(Cases[Entry - 1].second));
+          SmallVector<MatcherList, 1> Entries = { std::move(Cases[Entry - 1].second) };
           Cases[Entry - 1].second.push_front(
               new ScopeMatcher(std::move(Entries)));
           SM = cast<ScopeMatcher>(Cases[Entry - 1].second.front());
