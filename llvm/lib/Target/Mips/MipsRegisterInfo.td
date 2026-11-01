@@ -19,6 +19,14 @@ def sub_dsp20    : SubRegIndex<1, 20>;
 def sub_dsp21    : SubRegIndex<1, 21>;
 def sub_dsp22    : SubRegIndex<1, 22>;
 def sub_dsp23    : SubRegIndex<1, 23>;
+
+let FallbackRegAltNameIndex = NoRegAltName in {
+def OABIRegAltName : RegAltNameIndex;
+def NABIRegAltName : RegAltNameIndex;
+def PABIRegAltName : RegAltNameIndex;
+// Assembler and named-register aliases.
+def RegAliasName : RegAltNameIndex;
+}
 }
 
 class Unallocatable {
@@ -31,6 +39,11 @@ class MipsReg<bits<16> Enc, string n> : Register<n> {
   let Namespace = "Mips";
 }
 
+class MipsRegAlias<string alias> {
+  list<RegAltNameIndex> RegAltNameIndices = [RegAliasName];
+  list<string> AltNames = [alias];
+}
+
 class MipsRegWithSubRegs<bits<16> Enc, string n, list<Register> subregs>
   : RegisterWithSubRegs<n, subregs> {
   let HWEncoding = Enc;
@@ -38,12 +51,18 @@ class MipsRegWithSubRegs<bits<16> Enc, string n, list<Register> subregs>
 }
 
 // Mips CPU Registers.
-class MipsGPRReg<bits<16> Enc, string n> : MipsReg<Enc, n>;
+class MipsGPRReg<bits<16> Enc, string n, string oabi,
+                 string nabi = oabi, string pabi = nabi> : MipsReg<Enc, n> {
+  let RegAltNameIndices = [OABIRegAltName, NABIRegAltName, PABIRegAltName];
+  let AltNames = [oabi, nabi, pabi];
+}
 
 // Mips 64-bit CPU Registers
-class Mips64GPRReg<bits<16> Enc, string n, list<Register> subregs>
-  : MipsRegWithSubRegs<Enc, n, subregs> {
+class Mips64GPRReg<MipsGPRReg subreg>
+  : MipsRegWithSubRegs<subreg.HWEncoding, subreg.AsmName, [subreg]> {
   let SubRegIndices = [sub_32];
+  let RegAltNameIndices = subreg.RegAltNameIndices;
+  let AltNames = subreg.AltNames;
 }
 
 // Mips 32-bit FPU Registers
@@ -84,74 +103,76 @@ class HWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
 let Namespace = "Mips" in {
   // General Purpose Registers
+  // TODO: Use R0-R31/R0_64-R31_64 record names without changing MIR names.
+  // Use MipsABIInfo accessors for ABI roles.
   let isConstant = true in
-  def ZERO : MipsGPRReg< 0, "zero">, DwarfRegNum<[0]>;
-  def AT   : MipsGPRReg< 1, "1">,    DwarfRegNum<[1]>;
-  def V0   : MipsGPRReg< 2, "2">,    DwarfRegNum<[2]>;
-  def V1   : MipsGPRReg< 3, "3">,    DwarfRegNum<[3]>;
-  def A0   : MipsGPRReg< 4, "4">,    DwarfRegNum<[4]>;
-  def A1   : MipsGPRReg< 5, "5">,    DwarfRegNum<[5]>;
-  def A2   : MipsGPRReg< 6, "6">,    DwarfRegNum<[6]>;
-  def A3   : MipsGPRReg< 7, "7">,    DwarfRegNum<[7]>;
-  def T0   : MipsGPRReg< 8, "8">,    DwarfRegNum<[8]>;
-  def T1   : MipsGPRReg< 9, "9">,    DwarfRegNum<[9]>;
-  def T2   : MipsGPRReg< 10, "10">,  DwarfRegNum<[10]>;
-  def T3   : MipsGPRReg< 11, "11">,  DwarfRegNum<[11]>;
-  def T4   : MipsGPRReg< 12, "12">,  DwarfRegNum<[12]>;
-  def T5   : MipsGPRReg< 13, "13">,  DwarfRegNum<[13]>;
-  def T6   : MipsGPRReg< 14, "14">,  DwarfRegNum<[14]>;
-  def T7   : MipsGPRReg< 15, "15">,  DwarfRegNum<[15]>;
-  def S0   : MipsGPRReg< 16, "16">,  DwarfRegNum<[16]>;
-  def S1   : MipsGPRReg< 17, "17">,  DwarfRegNum<[17]>;
-  def S2   : MipsGPRReg< 18, "18">,  DwarfRegNum<[18]>;
-  def S3   : MipsGPRReg< 19, "19">,  DwarfRegNum<[19]>;
-  def S4   : MipsGPRReg< 20, "20">,  DwarfRegNum<[20]>;
-  def S5   : MipsGPRReg< 21, "21">,  DwarfRegNum<[21]>;
-  def S6   : MipsGPRReg< 22, "22">,  DwarfRegNum<[22]>;
-  def S7   : MipsGPRReg< 23, "23">,  DwarfRegNum<[23]>;
-  def T8   : MipsGPRReg< 24, "24">,  DwarfRegNum<[24]>;
-  def T9   : MipsGPRReg< 25, "25">,  DwarfRegNum<[25]>;
-  def K0   : MipsGPRReg< 26, "26">,  DwarfRegNum<[26]>;
-  def K1   : MipsGPRReg< 27, "27">,  DwarfRegNum<[27]>;
-  def GP   : MipsGPRReg< 28, "gp">,  DwarfRegNum<[28]>;
-  def SP   : MipsGPRReg< 29, "sp">,  DwarfRegNum<[29]>;
-  def FP   : MipsGPRReg< 30, "fp">,  DwarfRegNum<[30]>;
-  def RA   : MipsGPRReg< 31, "ra">,  DwarfRegNum<[31]>;
+  def ZERO : MipsGPRReg< 0, "zero", "zero">,              DwarfRegNum<[0]>;
+  def AT   : MipsGPRReg< 1, "1", "at">,                   DwarfRegNum<[1]>;
+  def V0   : MipsGPRReg< 2, "2", "v0", "v0", "t4">,       DwarfRegNum<[2]>;
+  def V1   : MipsGPRReg< 3, "3", "v1", "v1", "t5">,       DwarfRegNum<[3]>;
+  def A0   : MipsGPRReg< 4, "4", "a0">,                   DwarfRegNum<[4]>;
+  def A1   : MipsGPRReg< 5, "5", "a1">,                   DwarfRegNum<[5]>;
+  def A2   : MipsGPRReg< 6, "6", "a2">,                   DwarfRegNum<[6]>;
+  def A3   : MipsGPRReg< 7, "7", "a3">,                   DwarfRegNum<[7]>;
+  def T0   : MipsGPRReg< 8, "8", "t0", "a4">,             DwarfRegNum<[8]>;
+  def T1   : MipsGPRReg< 9, "9", "t1", "a5">,             DwarfRegNum<[9]>;
+  def T2   : MipsGPRReg<10, "10", "t2", "a6">,            DwarfRegNum<[10]>;
+  def T3   : MipsGPRReg<11, "11", "t3", "a7">,            DwarfRegNum<[11]>;
+  def T4   : MipsGPRReg<12, "12", "t4", "t0">,            DwarfRegNum<[12]>;
+  def T5   : MipsGPRReg<13, "13", "t5", "t1">,            DwarfRegNum<[13]>;
+  def T6   : MipsGPRReg<14, "14", "t6", "t2">,            DwarfRegNum<[14]>;
+  def T7   : MipsGPRReg<15, "15", "t7", "t3">,            DwarfRegNum<[15]>;
+  def S0   : MipsGPRReg<16, "16", "s0">,                  DwarfRegNum<[16]>;
+  def S1   : MipsGPRReg<17, "17", "s1">,                  DwarfRegNum<[17]>;
+  def S2   : MipsGPRReg<18, "18", "s2">,                  DwarfRegNum<[18]>;
+  def S3   : MipsGPRReg<19, "19", "s3">,                  DwarfRegNum<[19]>;
+  def S4   : MipsGPRReg<20, "20", "s4">,                  DwarfRegNum<[20]>;
+  def S5   : MipsGPRReg<21, "21", "s5">,                  DwarfRegNum<[21]>;
+  def S6   : MipsGPRReg<22, "22", "s6">,                  DwarfRegNum<[22]>;
+  def S7   : MipsGPRReg<23, "23", "s7">,                  DwarfRegNum<[23]>;
+  def T8   : MipsGPRReg<24, "24", "t8">,                  DwarfRegNum<[24]>;
+  def T9   : MipsGPRReg<25, "25", "t9">,                  DwarfRegNum<[25]>;
+  def K0   : MipsGPRReg<26, "26", "k0">,                  DwarfRegNum<[26]>;
+  def K1   : MipsGPRReg<27, "27", "k1">,                  DwarfRegNum<[27]>;
+  def GP   : MipsGPRReg<28, "gp", "gp">,                  DwarfRegNum<[28]>;
+  def SP   : MipsGPRReg<29, "sp", "sp">,                  DwarfRegNum<[29]>;
+  def FP   : MipsGPRReg<30, "fp", "fp">,                  DwarfRegNum<[30]>;
+  def RA   : MipsGPRReg<31, "ra", "ra">,                  DwarfRegNum<[31]>;
 
   // General Purpose 64-bit Registers
   let isConstant = true in
-  def ZERO_64 : Mips64GPRReg< 0, "zero", [ZERO]>, DwarfRegNum<[0]>;
-  def AT_64   : Mips64GPRReg< 1, "1",    [AT]>, DwarfRegNum<[1]>;
-  def V0_64   : Mips64GPRReg< 2, "2",    [V0]>, DwarfRegNum<[2]>;
-  def V1_64   : Mips64GPRReg< 3, "3",    [V1]>, DwarfRegNum<[3]>;
-  def A0_64   : Mips64GPRReg< 4, "4",    [A0]>, DwarfRegNum<[4]>;
-  def A1_64   : Mips64GPRReg< 5, "5",    [A1]>, DwarfRegNum<[5]>;
-  def A2_64   : Mips64GPRReg< 6, "6",    [A2]>, DwarfRegNum<[6]>;
-  def A3_64   : Mips64GPRReg< 7, "7",    [A3]>, DwarfRegNum<[7]>;
-  def T0_64   : Mips64GPRReg< 8, "8",    [T0]>, DwarfRegNum<[8]>;
-  def T1_64   : Mips64GPRReg< 9, "9",    [T1]>, DwarfRegNum<[9]>;
-  def T2_64   : Mips64GPRReg< 10, "10",  [T2]>, DwarfRegNum<[10]>;
-  def T3_64   : Mips64GPRReg< 11, "11",  [T3]>, DwarfRegNum<[11]>;
-  def T4_64   : Mips64GPRReg< 12, "12",  [T4]>, DwarfRegNum<[12]>;
-  def T5_64   : Mips64GPRReg< 13, "13",  [T5]>, DwarfRegNum<[13]>;
-  def T6_64   : Mips64GPRReg< 14, "14",  [T6]>, DwarfRegNum<[14]>;
-  def T7_64   : Mips64GPRReg< 15, "15",  [T7]>, DwarfRegNum<[15]>;
-  def S0_64   : Mips64GPRReg< 16, "16",  [S0]>, DwarfRegNum<[16]>;
-  def S1_64   : Mips64GPRReg< 17, "17",  [S1]>, DwarfRegNum<[17]>;
-  def S2_64   : Mips64GPRReg< 18, "18",  [S2]>, DwarfRegNum<[18]>;
-  def S3_64   : Mips64GPRReg< 19, "19",  [S3]>, DwarfRegNum<[19]>;
-  def S4_64   : Mips64GPRReg< 20, "20",  [S4]>, DwarfRegNum<[20]>;
-  def S5_64   : Mips64GPRReg< 21, "21",  [S5]>, DwarfRegNum<[21]>;
-  def S6_64   : Mips64GPRReg< 22, "22",  [S6]>, DwarfRegNum<[22]>;
-  def S7_64   : Mips64GPRReg< 23, "23",  [S7]>, DwarfRegNum<[23]>;
-  def T8_64   : Mips64GPRReg< 24, "24",  [T8]>, DwarfRegNum<[24]>;
-  def T9_64   : Mips64GPRReg< 25, "25",  [T9]>, DwarfRegNum<[25]>;
-  def K0_64   : Mips64GPRReg< 26, "26",  [K0]>, DwarfRegNum<[26]>;
-  def K1_64   : Mips64GPRReg< 27, "27",  [K1]>, DwarfRegNum<[27]>;
-  def GP_64   : Mips64GPRReg< 28, "gp",  [GP]>, DwarfRegNum<[28]>;
-  def SP_64   : Mips64GPRReg< 29, "sp",  [SP]>, DwarfRegNum<[29]>;
-  def FP_64   : Mips64GPRReg< 30, "fp",  [FP]>, DwarfRegNum<[30]>;
-  def RA_64   : Mips64GPRReg< 31, "ra",  [RA]>, DwarfRegNum<[31]>;
+  def ZERO_64 : Mips64GPRReg<ZERO>, DwarfRegNum<[0]>;
+  def AT_64   : Mips64GPRReg<AT>, DwarfRegNum<[1]>;
+  def V0_64   : Mips64GPRReg<V0>, DwarfRegNum<[2]>;
+  def V1_64   : Mips64GPRReg<V1>, DwarfRegNum<[3]>;
+  def A0_64   : Mips64GPRReg<A0>, DwarfRegNum<[4]>;
+  def A1_64   : Mips64GPRReg<A1>, DwarfRegNum<[5]>;
+  def A2_64   : Mips64GPRReg<A2>, DwarfRegNum<[6]>;
+  def A3_64   : Mips64GPRReg<A3>, DwarfRegNum<[7]>;
+  def T0_64   : Mips64GPRReg<T0>, DwarfRegNum<[8]>;
+  def T1_64   : Mips64GPRReg<T1>, DwarfRegNum<[9]>;
+  def T2_64   : Mips64GPRReg<T2>, DwarfRegNum<[10]>;
+  def T3_64   : Mips64GPRReg<T3>, DwarfRegNum<[11]>;
+  def T4_64   : Mips64GPRReg<T4>, DwarfRegNum<[12]>;
+  def T5_64   : Mips64GPRReg<T5>, DwarfRegNum<[13]>;
+  def T6_64   : Mips64GPRReg<T6>, DwarfRegNum<[14]>;
+  def T7_64   : Mips64GPRReg<T7>, DwarfRegNum<[15]>;
+  def S0_64   : Mips64GPRReg<S0>, DwarfRegNum<[16]>;
+  def S1_64   : Mips64GPRReg<S1>, DwarfRegNum<[17]>;
+  def S2_64   : Mips64GPRReg<S2>, DwarfRegNum<[18]>;
+  def S3_64   : Mips64GPRReg<S3>, DwarfRegNum<[19]>;
+  def S4_64   : Mips64GPRReg<S4>, DwarfRegNum<[20]>;
+  def S5_64   : Mips64GPRReg<S5>, DwarfRegNum<[21]>;
+  def S6_64   : Mips64GPRReg<S6>, DwarfRegNum<[22]>;
+  def S7_64   : Mips64GPRReg<S7>, DwarfRegNum<[23]>;
+  def T8_64   : Mips64GPRReg<T8>, DwarfRegNum<[24]>;
+  def T9_64   : Mips64GPRReg<T9>, DwarfRegNum<[25]>;
+  def K0_64   : Mips64GPRReg<K0>, DwarfRegNum<[26]>;
+  def K1_64   : Mips64GPRReg<K1>, DwarfRegNum<[27]>;
+  def GP_64   : Mips64GPRReg<GP>, DwarfRegNum<[28]>;
+  def SP_64   : Mips64GPRReg<SP>, DwarfRegNum<[29]>;
+  def FP_64   : Mips64GPRReg<FP>, DwarfRegNum<[30]>;
+  def RA_64   : Mips64GPRReg<RA>, DwarfRegNum<[31]>;
 
   /// Mips Single point precision FPU Registers
   foreach I = 0-31 in
@@ -180,11 +201,11 @@ let Namespace = "Mips" in {
             DwarfRegNum<[!add(I, 32)]>;
 
   // Hi/Lo registers
-  def HI0 : MipsReg<0, "ac0">, DwarfRegNum<[64]>;
+  def HI0 : MipsReg<0, "ac0">, MipsRegAlias<"hi">, DwarfRegNum<[64]>;
   def HI1 : MipsReg<1, "ac1">, DwarfRegNum<[176]>;
   def HI2 : MipsReg<2, "ac2">, DwarfRegNum<[178]>;
   def HI3 : MipsReg<3, "ac3">, DwarfRegNum<[180]>;
-  def LO0 : MipsReg<0, "ac0">, DwarfRegNum<[65]>;
+  def LO0 : MipsReg<0, "ac0">, MipsRegAlias<"lo">, DwarfRegNum<[65]>;
   def LO1 : MipsReg<1, "ac1">, DwarfRegNum<[177]>;
   def LO2 : MipsReg<2, "ac2">, DwarfRegNum<[179]>;
   def LO3 : MipsReg<3, "ac3">, DwarfRegNum<[181]>;
@@ -222,8 +243,10 @@ let Namespace = "Mips" in {
   def HWR1 : MipsReg<1, "hwr_synci_step">;
   def HWR2 : MipsReg<2, "hwr_cc">;
   def HWR3 : MipsReg<3, "hwr_ccres">;
+  // GAS does not accept $hwr_ulr, so use the numeric name.
+  def HWR29 : MipsReg<29, "29">, MipsRegAlias<"hwr_ulr">;
 
-  foreach I = 4-31 in
+  foreach I = {4-28, 30-31} in
   def HWR#I : MipsReg<I, ""#I>;
 
   // Accum registers
@@ -252,14 +275,14 @@ let Namespace = "Mips" in {
                                             DSPOutFlag23]>;
 
   // MSA-ASE control registers.
-  def MSAIR      : MipsReg<0, "0">;
-  def MSACSR     : MipsReg<1, "1">;
-  def MSAAccess  : MipsReg<2, "2">;
-  def MSASave    : MipsReg<3, "3">;
-  def MSAModify  : MipsReg<4, "4">;
-  def MSARequest : MipsReg<5, "5">;
-  def MSAMap     : MipsReg<6, "6">;
-  def MSAUnmap   : MipsReg<7, "7">;
+  def MSAIR      : MipsReg<0, "0">, MipsRegAlias<"msair">;
+  def MSACSR     : MipsReg<1, "1">, MipsRegAlias<"msacsr">;
+  def MSAAccess  : MipsReg<2, "2">, MipsRegAlias<"msaaccess">;
+  def MSASave    : MipsReg<3, "3">, MipsRegAlias<"msasave">;
+  def MSAModify  : MipsReg<4, "4">, MipsRegAlias<"msamodify">;
+  def MSARequest : MipsReg<5, "5">, MipsRegAlias<"msarequest">;
+  def MSAMap     : MipsReg<6, "6">, MipsRegAlias<"msamap">;
+  def MSAUnmap   : MipsReg<7, "7">, MipsRegAlias<"msaunmap">;
   // MSA-ASE fake control registers.
   // These registers do not exist, but instructions like `cfcmsa`
   // and `ctcmsa` allows to specify them.

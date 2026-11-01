@@ -250,6 +250,41 @@ exit:
   ret i32 %reduce
 }
 
+define i32 @saba_v2i32_accumulation(ptr %ptr1, ptr %ptr2) {
+; CHECK-LABEL: saba_v2i32_accumulation:
+; CHECK:    sabd.2s v0, v0, v2
+; CHECK:    sabd.2s v1, v1, v3
+; CHECK:    sabd.2s v2, v2, v5
+; CHECK:    saba.2s v0, v4, v6
+; CHECK:    saba.2s v1, v7, v17
+; CHECK:    saba.2s v2, v16, v18
+; CHECK:    saba.2s v0, v19, v21
+; CHECK:    saba.2s v1, v20, v22
+; CHECK:    add.2s v0, v2, v0
+; CHECK:    add.2s v0, v0, v1
+; CHECK:    addp.2s v0, v0, v0
+entry:
+  br label %loop
+
+loop:
+
+  %i = phi i32 [ 0, %entry ], [ %next_i, %loop ]
+  %acc_phi = phi <2 x i32> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
+  %ptr1_i = getelementptr i32, ptr %ptr1, i32 %i
+  %ptr2_i = getelementptr i32, ptr %ptr2, i32 %i
+  %a = load <2 x i32>, ptr %ptr1_i, align 1
+  %b = load <2 x i32>, ptr %ptr2_i, align 1
+  %vabd = tail call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(<2 x i32> %a, <2 x i32> %b)
+  %acc_next = add <2 x i32> %acc_phi, %vabd
+  %next_i = add i32 %i, 2
+  %cmp = icmp slt i32 %next_i, 16
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %reduce = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %acc_next)
+  ret i32 %reduce
+}
+
 define i8 @uaba_v8i8_accumulation(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: uaba_v8i8_accumulation:
 ; CHECK:    uabd.8b v0, v0, v2

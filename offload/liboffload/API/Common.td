@@ -167,8 +167,9 @@ def olInit : Function {
   let desc = "Perform initialization of the Offload library";
   let details = [
     "This must be the first API call made by a user of the Offload library",
+    "The underlying platforms are lazily initialized on their first use",
     "Each call will increment an internal reference count that is decremented by `olShutDown`",
-    "If InitArgs is NULL, default configuration is used which initializes all available platforms"
+    "If InitArgs is NULL, default configuration is used which makes all available platforms usable"
   ];
   let params = [
     Param<"const ol_init_args_t*", "InitArgs", "Optional pointer to initialization configuration. NULL uses defaults.", PARAM_IN_OPTIONAL>
@@ -180,7 +181,8 @@ def olShutDown : Function {
   let desc = "Release the resources in use by Offload";
   let details = [
     "This decrements an internal reference count. When this reaches 0, all resources will be released",
-    "Subsequent API calls to methods other than `olInit` made after resources are released will return OL_ERRC_UNINITIALIZED"
+    "Subsequent API calls to methods other than `olInit` made after resources are released will return OL_ERRC_UNINITIALIZED",
+    "Resources still held at process exit are released before the vendor runtimes are torn down, as if the reference count reached 0. Calls balancing an earlier `olInit` still succeed afterwards"
   ];
   let params = [];
   let returns = [];

@@ -546,7 +546,7 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
 }
 
 void MemProfiler::initializeCallbacks(Module &M) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
@@ -577,7 +577,7 @@ bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {
   if (F.getName().contains(" load]")) {
     FunctionCallee MemProfInitFunction =
         declareSanitizerInitFunction(*F.getParent(), MemProfInitName, {});
-    IRBuilder<> IRB(&F.front(), F.front().begin());
+    IRBuilder<> IRB(F.front().begin());
     IRB.CreateCall(MemProfInitFunction, {});
     return true;
   }

@@ -148,8 +148,15 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
   // Try to fetch the load address of the file from the process, since there
   // could be randomization of the load address.
   lldb::addr_t load_addr = GetLoadAddress(executable);
-  if (load_addr == LLDB_INVALID_ADDRESS)
+  if (load_addr == LLDB_INVALID_ADDRESS) {
+    // The process does not know the executable under the target's path: it
+    // was started through another path to the same file, or runs a different
+    // one. Take the modules it reports as loaded, which replaces the target's
+    // executable with the process's.
+    auto error = m_process->LoadModules();
+    LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
     return;
+  }
 
   // Request the process base address.
   lldb::addr_t image_base = m_process->GetImageInfoAddress();

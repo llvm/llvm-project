@@ -31,8 +31,6 @@
 using namespace llvm;
 using clang::tooling::Replacements;
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
 static cl::OptionCategory ClangFormatCategory("Clang-format options");
@@ -177,7 +175,7 @@ namespace {
 enum class WNoError { Unknown };
 }
 
-static cl::bits<WNoError> WNoErrorList(
+static cl::list<WNoError> WNoErrorList(
     "Wno-error",
     cl::desc("If set, don't error out on the specified warning type."),
     cl::values(
@@ -445,7 +443,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
 
   Expected<FormatStyle> FormatStyle =
       getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer(),
-               nullptr, WNoErrorList.isSet(WNoError::Unknown));
+               nullptr, is_contained(WNoErrorList, WNoError::Unknown));
   if (!FormatStyle) {
     llvm::errs() << toString(FormatStyle.takeError()) << "\n";
     return true;
@@ -681,11 +679,6 @@ int main(int argc, const char **argv) {
       "If <file>s are given, it reformats the files. If -i is specified\n"
       "together with <file>s, the files are edited in-place. Otherwise, the\n"
       "result is written to the standard output.\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
 
   if (DumpConfig)
     return dumpConfig();

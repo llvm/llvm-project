@@ -60,7 +60,7 @@ func.func @test_aggressive_invariant_load(%arg0: !fir.ref<!fir.array<10xf32>>, %
   %c10 = arith.constant 10 : index
   %cst = arith.constant 1.000000e+00 : f32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtestEn") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   scf.for %i = %c0 to %c10 step %c1 {
     %cond = arith.cmpi slt, %i, %c5 : index
     scf.if %cond {
@@ -169,7 +169,7 @@ func.func @test_aggressive_conditional_optional_load(%arg0: !fir.ref<!fir.array<
   %c10 = arith.constant 10 : index
   %cst = arith.constant 1.000000e+00 : f32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg1 dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtestEn") fortran_attrs<optional> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   scf.for %i = %c0 to %c10 step %c1 {
     %cond = arith.cmpi slt, %i, %c5 : index
     scf.if %cond {

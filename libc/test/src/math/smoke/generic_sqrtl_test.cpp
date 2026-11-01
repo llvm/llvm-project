@@ -10,4 +10,5 @@
 
 #include "src/__support/FPUtil/generic/sqrt.h"
 
-LIST_SQRT_TESTS(long double, LIBC_NAMESPACE::fputil::sqrt<long double>);
+LIST_SQRT_TESTS(GenericSqrtl, long double,
+                LIBC_NAMESPACE::fputil::sqrt<long double>);

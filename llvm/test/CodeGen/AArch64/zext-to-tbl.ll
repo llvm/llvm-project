@@ -1965,22 +1965,22 @@ define void @zext_v16i8_to_v16i32_in_loop_scalable_vectors(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB19_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
 ; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x9, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z2.s }, p0/z, [x9, #3, mul vl]
 ; CHECK-NEXT:    ld1b { z3.s }, p0/z, [x9, #1, mul vl]
-; CHECK-NEXT:    add x9, x1, x8, lsl #2
+; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
 ; CHECK-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-NEXT:    add z2.s, z2.s, z2.s
 ; CHECK-NEXT:    add z3.s, z3.s, z3.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    str z1, [x9, #2, mul vl]
-; CHECK-NEXT:    str z2, [x9, #3, mul vl]
-; CHECK-NEXT:    str z3, [x9, #1, mul vl]
+; CHECK-NEXT:    str z0, [x1]
+; CHECK-NEXT:    str z1, [x1, #2, mul vl]
+; CHECK-NEXT:    str z2, [x1, #3, mul vl]
+; CHECK-NEXT:    str z3, [x1, #1, mul vl]
+; CHECK-NEXT:    add x1, x1, #64
 ; CHECK-NEXT:    b.ne LBB19_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -1991,22 +1991,22 @@ define void @zext_v16i8_to_v16i32_in_loop_scalable_vectors(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    mov x8, xzr
 ; CHECK-BE-NEXT:  .LBB19_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
 ; CHECK-BE-NEXT:    add x9, x0, x8
+; CHECK-BE-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
+; CHECK-BE-NEXT:    add x8, x8, #16
 ; CHECK-BE-NEXT:    ld1b { z1.s }, p0/z, [x9, #2, mul vl]
 ; CHECK-BE-NEXT:    ld1b { z2.s }, p0/z, [x9, #3, mul vl]
 ; CHECK-BE-NEXT:    ld1b { z3.s }, p0/z, [x9, #1, mul vl]
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #2
+; CHECK-BE-NEXT:    cmp x8, #128
 ; CHECK-BE-NEXT:    add z0.s, z0.s, z0.s
 ; CHECK-BE-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-BE-NEXT:    add z2.s, z2.s, z2.s
 ; CHECK-BE-NEXT:    add z3.s, z3.s, z3.s
-; CHECK-BE-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; CHECK-BE-NEXT:    add x8, x8, #16
-; CHECK-BE-NEXT:    cmp x8, #128
-; CHECK-BE-NEXT:    st1w { z1.s }, p0, [x9, #2, mul vl]
-; CHECK-BE-NEXT:    st1w { z2.s }, p0, [x9, #3, mul vl]
-; CHECK-BE-NEXT:    st1w { z3.s }, p0, [x9, #1, mul vl]
+; CHECK-BE-NEXT:    st1w { z0.s }, p0, [x1]
+; CHECK-BE-NEXT:    st1w { z1.s }, p0, [x1, #2, mul vl]
+; CHECK-BE-NEXT:    st1w { z2.s }, p0, [x1, #3, mul vl]
+; CHECK-BE-NEXT:    st1w { z3.s }, p0, [x1, #1, mul vl]
+; CHECK-BE-NEXT:    add x1, x1, #64
 ; CHECK-BE-NEXT:    b.ne .LBB19_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
@@ -3318,4 +3318,157 @@ loop:
 
 exit:
   ret i32 0
+}
+
+; The zext of %wide.load/%wide.load55 is used by two subs (sub1/sub2, swapped
+; operand order) that are then multiplied. Each sub individually absorbs the
+; zext into a usubl, so the casts should not be converted to a tbl shuffle.
+define <16 x i32> @test_multi_user_widening_instr_sub_mul(ptr %src, ptr %ref, i64 %n) local_unnamed_addr #0 {
+; CHECK-LABEL: test_multi_user_widening_instr_sub_mul:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  LBB29_1: ; %loop.header
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q0, [x0], #16
+; CHECK-NEXT:    subs x2, x2, #16
+; CHECK-NEXT:    ldr q1, [x1], #16
+; CHECK-NEXT:    b.ne LBB29_1
+; CHECK-NEXT:  ; %bb.2: ; %exit
+; CHECK-NEXT:    usubl.8h v4, v0, v1
+; CHECK-NEXT:    usubl.8h v5, v1, v0
+; CHECK-NEXT:    usubl2.8h v2, v0, v1
+; CHECK-NEXT:    usubl2.8h v1, v1, v0
+; CHECK-NEXT:    smull.4s v0, v4, v5
+; CHECK-NEXT:    smull2.4s v3, v2, v1
+; CHECK-NEXT:    smull.4s v2, v2, v1
+; CHECK-NEXT:    smull2.4s v1, v4, v5
+; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_multi_user_widening_instr_sub_mul:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:  .LBB29_1: // %loop.header
+; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x0], #16
+; CHECK-BE-NEXT:    subs x2, x2, #16
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x1], #16
+; CHECK-BE-NEXT:    b.ne .LBB29_1
+; CHECK-BE-NEXT:  // %bb.2: // %exit
+; CHECK-BE-NEXT:    usubl v2.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    usubl v3.8h, v1.8b, v0.8b
+; CHECK-BE-NEXT:    usubl2 v4.8h, v0.16b, v1.16b
+; CHECK-BE-NEXT:    usubl2 v0.8h, v1.16b, v0.16b
+; CHECK-BE-NEXT:    smull v1.4s, v2.4h, v3.4h
+; CHECK-BE-NEXT:    smull2 v2.4s, v2.8h, v3.8h
+; CHECK-BE-NEXT:    smull2 v5.4s, v4.8h, v0.8h
+; CHECK-BE-NEXT:    smull v0.4s, v4.4h, v0.4h
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    rev64 v3.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v4.4s, v5.4s
+; CHECK-BE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v4.16b, v4.16b, #8
+; CHECK-BE-NEXT:    ret
+entry:
+  br label %loop.header
+
+loop.header:
+  %index = phi i64 [0, %entry], [%index.next, %loop.header]
+  %acc = phi <16 x i32> [zeroinitializer, %entry], [%mul, %loop.header]
+
+  %gep1 = getelementptr i8, ptr %src, i64 %index
+  %wide.load = load <16 x i8>, ptr %gep1, align 1
+  %zext1 = zext <16 x i8> %wide.load to <16 x i32>
+
+  %gep2 = getelementptr i8, ptr %ref, i64 %index
+  %wide.load55 = load <16 x i8>, ptr %gep2, align 1
+  %zext2 = zext <16 x i8> %wide.load55 to <16 x i32>
+
+  %sub1 = sub nsw <16 x i32> %zext1, %zext2
+  %sub2 = sub nsw <16 x i32> %zext2, %zext1
+  %mul = mul <16 x i32> %sub1, %sub2
+
+  %index.next = add nuw i64 %index, 16
+  %cond = icmp eq i64 %index.next, %n
+  br i1 %cond, label %exit, label %loop.header
+
+exit:
+  ret <16 x i32> %mul
+}
+
+; The zext of %wide.load/%wide.load55 is used by an add and a mul (each with
+; swapped operand order), then combined via sub. Each of add/mul individually
+; absorbs the zext into a widening instruction, so the casts should not be
+; converted to a tbl shuffle.
+define <16 x i32> @test_multi_user_widening_instr_add_mul(ptr %src, ptr %ref, i64 %n) local_unnamed_addr #0 {
+; CHECK-LABEL: test_multi_user_widening_instr_add_mul:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  LBB30_1: ; %loop.header
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q0, [x0], #16
+; CHECK-NEXT:    subs x2, x2, #16
+; CHECK-NEXT:    ldr q1, [x1], #16
+; CHECK-NEXT:    b.ne LBB30_1
+; CHECK-NEXT:  ; %bb.2: ; %exit
+; CHECK-NEXT:    umull.8h v4, v1, v0
+; CHECK-NEXT:    umull2.8h v2, v1, v0
+; CHECK-NEXT:    uaddl.8h v5, v0, v1
+; CHECK-NEXT:    uaddl2.8h v1, v0, v1
+; CHECK-NEXT:    usubl.4s v0, v5, v4
+; CHECK-NEXT:    usubl2.4s v3, v1, v2
+; CHECK-NEXT:    usubl.4s v2, v1, v2
+; CHECK-NEXT:    usubl2.4s v1, v5, v4
+; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_multi_user_widening_instr_add_mul:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:  .LBB30_1: // %loop.header
+; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x0], #16
+; CHECK-BE-NEXT:    subs x2, x2, #16
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x1], #16
+; CHECK-BE-NEXT:    b.ne .LBB30_1
+; CHECK-BE-NEXT:  // %bb.2: // %exit
+; CHECK-BE-NEXT:    umull v2.8h, v1.8b, v0.8b
+; CHECK-BE-NEXT:    umull2 v4.8h, v1.16b, v0.16b
+; CHECK-BE-NEXT:    uaddl v3.8h, v0.8b, v1.8b
+; CHECK-BE-NEXT:    uaddl2 v0.8h, v0.16b, v1.16b
+; CHECK-BE-NEXT:    usubl v1.4s, v3.4h, v2.4h
+; CHECK-BE-NEXT:    usubl2 v5.4s, v0.8h, v4.8h
+; CHECK-BE-NEXT:    usubl v0.4s, v0.4h, v4.4h
+; CHECK-BE-NEXT:    usubl2 v2.4s, v3.8h, v2.8h
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v3.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v4.4s, v5.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v4.16b, v4.16b, #8
+; CHECK-BE-NEXT:    ret
+entry:
+  br label %loop.header
+
+loop.header:
+  %index = phi i64 [0, %entry], [%index.next, %loop.header]
+  %acc = phi <16 x i32> [zeroinitializer, %entry], [%sub, %loop.header]
+
+  %gep1 = getelementptr i8, ptr %src, i64 %index
+  %wide.load = load <16 x i8>, ptr %gep1, align 1
+  %zext1 = zext <16 x i8> %wide.load to <16 x i32>
+
+  %gep2 = getelementptr i8, ptr %ref, i64 %index
+  %wide.load55 = load <16 x i8>, ptr %gep2, align 1
+  %zext2 = zext <16 x i8> %wide.load55 to <16 x i32>
+
+  %add = add nsw <16 x i32> %zext1, %zext2
+  %mul = mul nsw <16 x i32> %zext2, %zext1
+  %sub = sub <16 x i32> %add, %mul
+
+  %index.next = add nuw i64 %index, 16
+  %cond = icmp eq i64 %index.next, %n
+  br i1 %cond, label %exit, label %loop.header
+
+exit:
+  ret <16 x i32> %sub
 }

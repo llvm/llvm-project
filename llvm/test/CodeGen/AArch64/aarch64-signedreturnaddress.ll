@@ -34,8 +34,9 @@ entry:
 ; CHECK-NEXT:     ret
 ; CHECKV83:       paciasp
 ; CHECKV83-NEXT:  mov     x0, x30
+; CHECKV83-NEXT:  autiasp
 ; CHECKV83-NEXT:  xpaci   x0
-; CHECKV83-NEXT:  retaa
+; CHECKV83-NEXT:  ret
   %0 = tail call ptr @llvm.returnaddress(i32 0)
   ret ptr %0
 }

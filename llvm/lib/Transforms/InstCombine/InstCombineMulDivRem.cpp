@@ -41,15 +41,11 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 /// The specific integer value is used in a context where it is known to be
 /// non-zero.  If this allows us to simplify the computation, do so and return
 /// the new operand, otherwise return null.
 static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
-                                        Instruction &CxtI) {
+                                        Instruction &CtxI) {
   // If V has multiple uses, then we would have to do more analysis to determine
   // if this is safe.  For example, the use could be in dynamically unreached
   // code.
@@ -70,13 +66,13 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
   // inexact.  Similarly for <<.
   BinaryOperator *I = dyn_cast<BinaryOperator>(V);
   if (I && I->isLogicalShift() &&
-      IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, &CxtI)) {
+      IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, &CtxI)) {
     // We know that this is an exact/nuw shift and that the input is a
     // non-zero context as well.
     {
       IRBuilderBase::InsertPointGuard Guard(IC.Builder);
       IC.Builder.SetInsertPoint(I);
-      if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
+      if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CtxI)) {
         IC.replaceOperand(*I, 0, V2);
         MadeChange = true;
       }
@@ -1721,9 +1717,7 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
       if (Value *LogY =
               takeLog2(SI->getOperand(2), Depth, AssumeNonZero, DoFold))
         return IfFold([&]() {
-          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY, "",
-                                      ProfcheckDisableMetadataFixes ? nullptr
-                                                                    : SI);
+          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY, "", SI);
         });
 
   // log2(umin(X, Y)) -> umin(log2(X), log2(Y))
@@ -1968,8 +1962,21 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     }
   }
 
-  // -X / Y --> -(X / Y)
   Value *Y;
+  // -X / -Y --> X / Y, unless X == INT_MIN and Y == -1.
+  if (Value *NegOp0 = dyn_castNegVal(Op0))
+    if (Value *NegOp1 = dyn_castNegVal(Op1))
+      if (!computeKnownBits(NegOp0, &I)
+               .getSignedMinValue()
+               .isMinSignedValue() ||
+          (match(Op0, m_NSWNeg(m_Value())) &&
+           !computeKnownBits(NegOp1, &I).Zero.isZero())) {
+        auto *BO = BinaryOperator::CreateSDiv(NegOp0, NegOp1);
+        BO->setIsExact(I.isExact());
+        return BO;
+      }
+
+  // -X / Y --> -(X / Y)
   if (match(&I, m_SDiv(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNSWNeg(
         Builder.CreateSDiv(X, Y, I.getName(), I.isExact()));
@@ -2113,17 +2120,31 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
 /// Negate the exponent of pow/exp to fold division-by-pow() into multiply.
 static Instruction *foldFDivPowDivisor(BinaryOperator &I,
                                        InstCombiner::BuilderTy &Builder) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  auto *II = dyn_cast<IntrinsicInst>(Op1);
-  if (!II || !II->hasOneUse() || !I.hasAllowReassoc() ||
-      !I.hasAllowReciprocal())
-    return nullptr;
-
   // Z / pow(X, Y) --> Z * pow(X, -Y)
   // Z / exp{2}(Y) --> Z * exp{2}(-Y)
+  // Z / splat(pow(X, Y)) --> Z * splat(pow(X, -Y))
   // In the general case, this creates an extra instruction, but fmul allows
   // for better canonicalization and optimization than fdiv.
+  if (!I.hasAllowReassoc() || !I.hasAllowReciprocal())
+    return nullptr;
+
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+
+  Value *Divisor = Op1;
+  Value *Splat = nullptr;
+  if (match(Op1,
+            m_OneUse(m_Shuffle(
+                m_OneUse(m_InsertElt(m_Value(), m_Value(Splat), m_ZeroInt())),
+                m_Value(), m_ZeroMask()))))
+    Divisor = Splat;
+
+  auto *II = dyn_cast<IntrinsicInst>(Divisor);
+  if (!II || !II->hasOneUse())
+    return nullptr;
+
   Intrinsic::ID IID = II->getIntrinsicID();
+  SmallVector<Type *, 2> Tys = {II->getType()};
   SmallVector<Value *> Args;
   switch (IID) {
   case Intrinsic::pow:
@@ -2140,9 +2161,8 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
       return nullptr;
     Args.push_back(II->getArgOperand(0));
     Args.push_back(Builder.CreateNeg(II->getArgOperand(1)));
-    Type *Tys[] = {I.getType(), II->getArgOperand(1)->getType()};
-    Value *Pow = Builder.CreateIntrinsic(IID, Tys, Args, &I);
-    return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+    Tys.push_back(II->getArgOperand(1)->getType());
+    break;
   }
   case Intrinsic::exp:
   case Intrinsic::exp2:
@@ -2151,7 +2171,12 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
   default:
     return nullptr;
   }
-  Value *Pow = Builder.CreateIntrinsic(IID, I.getType(), Args, &I);
+
+  Value *Pow = Builder.CreateIntrinsic(IID, Tys, Args, &I);
+  if (Pow->getType() != I.getType())
+    Pow = Builder.CreateVectorSplat(
+        cast<VectorType>(I.getType())->getElementCount(), Pow);
+
   return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
 }
 

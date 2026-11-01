@@ -110,6 +110,8 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FROUNDEVEN, ISD::FFLOOR},
                      MVT::f64, Custom);
 
+  setOperationAction(ISD::FPOW, MVT::f32, Legal);
+
   setOperationAction(ISD::SELECT_CC, {MVT::f32, MVT::i32}, Custom);
 
   setOperationAction(ISD::SETCC, {MVT::i32, MVT::f32}, Expand);
@@ -810,7 +812,8 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
 
   if (VT == MVT::f32) {
     DAGCombinerInfo DCI(DAG, AfterLegalizeVectorOps, true, nullptr);
-    SDValue MinMax = combineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC, DCI);
+    SDValue MinMax = combineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC,
+                                          SDNodeFlags(), DCI);
     if (MinMax)
       return MinMax;
   }
@@ -951,33 +954,6 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
     return DAG.getSignedConstant(AMDGPU::getNullPointerValue(DestAS), SL, VT);
 
   return Op;
-}
-
-/// LLVM generates byte-addressed pointers.  For indirect addressing, we need to
-/// convert these pointers to a register index.  Each register holds
-/// 16 bytes, (4 x 32bit sub-register), but we need to take into account the
-/// \p StackWidth, which tells us how many of the 4 sub-registers will be used
-/// for indirect addressing.
-SDValue R600TargetLowering::stackPtrToRegIndex(SDValue Ptr,
-                                               unsigned StackWidth,
-                                               SelectionDAG &DAG) const {
-  unsigned SRLPad;
-  switch(StackWidth) {
-  case 1:
-    SRLPad = 2;
-    break;
-  case 2:
-    SRLPad = 3;
-    break;
-  case 4:
-    SRLPad = 4;
-    break;
-  default: llvm_unreachable("Invalid stack width");
-  }
-
-  SDLoc DL(Ptr);
-  return DAG.getNode(ISD::SRL, DL, Ptr.getValueType(), Ptr,
-                     DAG.getConstant(SRLPad, DL, MVT::i32));
 }
 
 void R600TargetLowering::getStackAddress(unsigned StackWidth,

@@ -38,7 +38,7 @@ define double @test_NaN_addend()  {
 ; CHECK-LABEL: @test_NaN_addend(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %1 = call double @llvm.fma.f64(double 7.0, double 8.0, double 0x7FF8000000000000)
+  %1 = call double @llvm.fma.f64(double 7.0, double 8.0, double +qnan)
   ret double %1
 }
 
@@ -46,7 +46,7 @@ define double @test_NaN_addend_2()  {
 ; CHECK-LABEL: @test_NaN_addend_2(
 ; CHECK-NEXT:    ret double -qnan
 ;
-  %1 = call double @llvm.fma.f64(double 7.0, double 8.0, double 0xFFF8000000000000)
+  %1 = call double @llvm.fma.f64(double 7.0, double 8.0, double -qnan)
   ret double %1
 }
 
@@ -72,7 +72,7 @@ define double @test_NaN_1()  {
 ; CHECK-LABEL: @test_NaN_1(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %1 = call double @llvm.fma.f64(double 0x7FF8000000000000, double 8.0, double 0.0)
+  %1 = call double @llvm.fma.f64(double +qnan, double 8.0, double 0.0)
   ret double %1
 }
 
@@ -80,7 +80,7 @@ define double @test_NaN_2()  {
 ; CHECK-LABEL: @test_NaN_2(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %1 = call double @llvm.fma.f64(double 7.0, double 0x7FF8000000000000, double 0.0)
+  %1 = call double @llvm.fma.f64(double 7.0, double +qnan, double 0.0)
   ret double %1
 }
 
@@ -88,7 +88,7 @@ define double @test_NaN_3()  {
 ; CHECK-LABEL: @test_NaN_3(
 ; CHECK-NEXT:    ret double -qnan
 ;
-  %1 = call double @llvm.fma.f64(double 0xFFF8000000000000, double 8.0, double 0.0)
+  %1 = call double @llvm.fma.f64(double -qnan, double 8.0, double 0.0)
   ret double %1
 }
 
@@ -96,7 +96,7 @@ define double @test_NaN_4()  {
 ; CHECK-LABEL: @test_NaN_4(
 ; CHECK-NEXT:    ret double -qnan
 ;
-  %1 = call double @llvm.fma.f64(double 7.0, double 0xFFF8000000000000, double 0.0)
+  %1 = call double @llvm.fma.f64(double 7.0, double -qnan, double 0.0)
   ret double %1
 }
 

@@ -81,7 +81,7 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY $x3
     ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], [[COPY2]], implicit-def $nzcv
-    ; CHECK-NEXT: [[SBCSXr:%[0-9]+]]:gpr64 = SBCSXr [[COPY1]], [[COPY3]], implicit-def $nzcv, implicit $nzcv
+    ; CHECK-NEXT: [[SBCSXr:%[0-9]+]]:gpr64 = SBCSXr [[COPY1]], [[COPY3]], implicit-def dead $nzcv, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[SUBSXrr]]
     ; CHECK-NEXT: $x1 = COPY [[SBCSXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
@@ -116,7 +116,7 @@ body:             |
     ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
     ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr $wzr, [[MOVi32imm]], implicit-def $nzcv
     ; CHECK-NEXT: [[SBCSXr:%[0-9]+]]:gpr64 = SBCSXr [[COPY]], [[COPY2]], implicit-def $nzcv, implicit $nzcv
-    ; CHECK-NEXT: [[SBCSXr1:%[0-9]+]]:gpr64 = SBCSXr [[COPY1]], [[COPY3]], implicit-def $nzcv, implicit $nzcv
+    ; CHECK-NEXT: [[SBCSXr1:%[0-9]+]]:gpr64 = SBCSXr [[COPY1]], [[COPY3]], implicit-def dead $nzcv, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[SBCSXr]]
     ; CHECK-NEXT: $x1 = COPY [[SBCSXr1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
@@ -153,9 +153,9 @@ body:             |
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gpr64 = COPY $x6
     ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[COPY]], [[COPY3]], implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 2, implicit $nzcv
-    ; CHECK-NEXT: [[SBCSXr:%[0-9]+]]:gpr64 = SBCSXr [[COPY1]], [[COPY4]], implicit-def $nzcv, implicit $nzcv
+    ; CHECK-NEXT: [[SBCSXr:%[0-9]+]]:gpr64 = SBCSXr [[COPY1]], [[COPY4]], implicit-def dead $nzcv, implicit $nzcv
     ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr $wzr, [[CSINCWr]], implicit-def $nzcv
-    ; CHECK-NEXT: [[SBCSXr1:%[0-9]+]]:gpr64 = SBCSXr [[COPY2]], [[COPY5]], implicit-def $nzcv, implicit $nzcv
+    ; CHECK-NEXT: [[SBCSXr1:%[0-9]+]]:gpr64 = SBCSXr [[COPY2]], [[COPY5]], implicit-def dead $nzcv, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[SUBSXrr]]
     ; CHECK-NEXT: $x1 = COPY [[SBCSXr]]
     ; CHECK-NEXT: $x2 = COPY [[SBCSXr1]]

@@ -27,12 +27,15 @@ entry:
 define arm_aapcs_vfpcc <4 x double> @complex_add_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: complex_add_v4f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vadd.f64 d5, d5, d0
-; CHECK-NEXT:    vsub.f64 d4, d4, d1
-; CHECK-NEXT:    vadd.f64 d7, d7, d2
-; CHECK-NEXT:    vmov q0, q2
-; CHECK-NEXT:    vsub.f64 d6, d6, d3
-; CHECK-NEXT:    vmov q1, q3
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vadd.f64 d1, d5, d8
+; CHECK-NEXT:    vsub.f64 d0, d4, d9
+; CHECK-NEXT:    vadd.f64 d5, d7, d2
+; CHECK-NEXT:    vsub.f64 d4, d6, d3
+; CHECK-NEXT:    vmov q1, q2
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %a.real = shufflevector <4 x double> %a, <4 x double> zeroinitializer, <2 x i32> <i32 0, i32 2>
@@ -49,29 +52,29 @@ entry:
 define arm_aapcs_vfpcc <8 x double> @complex_add_v8f64(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: complex_add_v8f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    add r0, sp, #32
-; CHECK-NEXT:    vmov q4, q1
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov q4, q2
+; CHECK-NEXT:    vmov q2, q1
 ; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    add r0, sp, #48
+; CHECK-NEXT:    add r0, sp, #32
 ; CHECK-NEXT:    vadd.f64 d1, d1, d2
 ; CHECK-NEXT:    vsub.f64 d0, d0, d3
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    add r0, sp, #64
-; CHECK-NEXT:    vadd.f64 d3, d3, d8
-; CHECK-NEXT:    vsub.f64 d2, d2, d9
-; CHECK-NEXT:    vldrw.u32 q4, [r0]
-; CHECK-NEXT:    add r0, sp, #80
-; CHECK-NEXT:    vadd.f64 d9, d9, d4
-; CHECK-NEXT:    vsub.f64 d8, d8, d5
+; CHECK-NEXT:    add r0, sp, #48
+; CHECK-NEXT:    vadd.f64 d3, d3, d4
+; CHECK-NEXT:    vsub.f64 d2, d2, d5
 ; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vadd.f64 d11, d5, d6
-; CHECK-NEXT:    vsub.f64 d10, d4, d7
-; CHECK-NEXT:    vmov q2, q4
-; CHECK-NEXT:    vmov q3, q5
-; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    add r0, sp, #64
+; CHECK-NEXT:    vadd.f64 d5, d5, d8
+; CHECK-NEXT:    vsub.f64 d4, d4, d9
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vadd.f64 d9, d9, d6
+; CHECK-NEXT:    vsub.f64 d8, d8, d7
+; CHECK-NEXT:    vmov q3, q4
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %a.real = shufflevector <8 x double> %a, <8 x double> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 4, i32 6>

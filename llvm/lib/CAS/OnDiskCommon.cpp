@@ -12,6 +12,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include <chrono>
 #include <mutex>
 #include <thread>
 
@@ -36,6 +37,10 @@
 #if __has_include(<sys/sysctl.h>)
 #include <sys/sysctl.h>
 #endif
+#endif
+
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
 using namespace llvm;
@@ -220,6 +225,14 @@ Expected<uint64_t> cas::ondisk::getBootTime() {
   if (std::error_code EC = sys::fs::status("/proc", Status))
     return createFileError("/proc", EC);
   return Status.getLastModificationTime().time_since_epoch().count();
+#elif defined(_WIN32)
+  // Compute it from the current time and the time since boot, which includes
+  // time spent asleep.
+  auto Uptime = std::chrono::milliseconds(GetTickCount64());
+  auto Boot = std::chrono::system_clock::now() - Uptime;
+  return std::chrono::duration_cast<std::chrono::seconds>(
+             Boot.time_since_epoch())
+      .count();
 #else
   return 0;
 #endif

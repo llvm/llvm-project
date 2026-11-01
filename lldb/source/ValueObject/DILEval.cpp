@@ -459,6 +459,22 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
   m_allow_globals = !disallow_globals;
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateTree(const ASTNodeUP &tree) {
+  assert(tree && "ASTNodeUP must not contain a nullptr");
+
+  auto value_or_error = Interpreter::Evaluate(*tree);
+  if (!value_or_error) {
+    auto error = value_or_error.takeError();
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "[Interpreter::Evaluate] DIL interpreter failed:\n{0}",
+             llvm::toStringWithoutConsuming(error));
+    return error;
+  }
+
+  return value_or_error;
+}
+
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
   // Evaluate an AST.
   auto value_or_error = node.Accept(this);
@@ -2057,11 +2073,9 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                         ? operand->GetLoadAddress()
                         : (op_type.IsSigned() ? operand->GetValueAsSigned(0)
                                               : operand->GetValueAsUnsigned(0));
-    llvm::StringRef name = "result";
-    ExecutionContext exe_ctx(m_target.get(), false);
-    result = ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
-                                                       target_type,
-                                                       /* do_deref */ false);
+    result = ValueObject::CreateValueObjectFromAddress(
+        "result", addr, m_stack_frame, target_type,
+        /* do_deref */ false);
     break;
   }
   case CastKind::eNone: {

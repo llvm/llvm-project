@@ -1,5 +1,5 @@
 # RUN: llc -mcpu=pwr10 -O3 -enable-subreg-liveness -verify-machineinstrs \
-# RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virtregrewriter \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virt-reg-rewriter \
 # RUN:   -o - %s | FileCheck %s
 
 # This test case checks that the 'killed' flag is properly added when using

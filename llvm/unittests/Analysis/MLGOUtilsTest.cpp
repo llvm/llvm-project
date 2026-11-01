@@ -46,6 +46,9 @@ public:
       return nullptr;
     }
   }
+  int arg_size(int Index) {
+    return (Index == 0 || Index == 1) ? sizeof(int64_t) : 0;
+  }
 };
 
 class MockEmitCModel1 final {

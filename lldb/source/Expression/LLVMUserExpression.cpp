@@ -319,67 +319,87 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
     return false;
   }
 
-  if (m_jit_start_addr != LLDB_INVALID_ADDRESS || m_can_interpret) {
-    if (m_materialized_address == LLDB_INVALID_ADDRESS) {
-      IRMemoryMap::AllocationPolicy policy =
-          m_can_interpret ? IRMemoryMap::eAllocationPolicyHostOnly
-                          : IRMemoryMap::eAllocationPolicyMirror;
+  // Early out if no JIT'd expr and can't interpret.
+  if (m_jit_start_addr == LLDB_INVALID_ADDRESS && !m_can_interpret)
+    return true;
 
-      const bool zero_memory = false;
-      if (auto address_or_error = m_execution_unit_sp->Malloc(
-              m_materializer_up->GetStructByteSize(),
-              m_materializer_up->GetStructAlignment(),
-              lldb::ePermissionsReadable | lldb::ePermissionsWritable, policy,
-              zero_memory)) {
-        m_materialized_address = *address_or_error;
-      } else {
-        diagnostic_manager.Printf(
-            lldb::eSeverityError,
-            "Couldn't allocate space for materialized struct: %s",
-            toString(address_or_error.takeError()).c_str());
-        return false;
-      }
-    }
+  if (!PrepareArgumentStruct(diagnostic_manager, frame, struct_address))
+    return false;
 
-    struct_address = m_materialized_address;
+  if (m_can_interpret && !AllocateInterpreterStackFrame(diagnostic_manager,
+                                                        *target, process.get()))
+    return false;
 
-    if (m_can_interpret && m_stack_frame_bottom == LLDB_INVALID_ADDRESS) {
-      size_t stack_frame_size = target->GetExprAllocSize();
-      if (stack_frame_size == 0) {
-        ABISP abi_sp;
-        if (process && (abi_sp = process->GetABI()))
-          stack_frame_size = abi_sp->GetStackFrameSize();
-        else
-          stack_frame_size = 512 * 1024;
-      }
+  return true;
+}
 
-      const bool zero_memory = false;
-      if (auto address_or_error = m_execution_unit_sp->Malloc(
-              stack_frame_size, 8,
-              lldb::ePermissionsReadable | lldb::ePermissionsWritable,
-              IRMemoryMap::eAllocationPolicyHostOnly, zero_memory)) {
-        m_stack_frame_bottom = *address_or_error;
-        m_stack_frame_top = m_stack_frame_bottom + stack_frame_size;
-      } else {
-        diagnostic_manager.Printf(
-            lldb::eSeverityError,
-            "Couldn't allocate space for the stack frame: %s",
-            toString(address_or_error.takeError()).c_str());
-        return false;
-      }
-    }
+bool LLVMUserExpression::AllocateInterpreterStackFrame(
+    DiagnosticManager &diagnostic_manager, Target &target, Process *process) {
+  if (m_stack_frame_bottom != LLDB_INVALID_ADDRESS)
+    return true;
 
-    Status materialize_error;
+  size_t stack_frame_size = target.GetExprAllocSize();
+  if (stack_frame_size == 0) {
+    ABISP abi_sp;
+    if (process && (abi_sp = process->GetABI()))
+      stack_frame_size = abi_sp->GetStackFrameSize();
+    else
+      stack_frame_size = 512 * 1024;
+  }
 
-    m_dematerializer_sp = m_materializer_up->Materialize(
-        frame, *m_execution_unit_sp, struct_address, materialize_error);
+  const bool zero_memory = false;
+  if (auto address_or_error = m_execution_unit_sp->Malloc(
+          stack_frame_size, 8,
+          lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+          IRMemoryMap::eAllocationPolicyHostOnly, zero_memory)) {
+    m_stack_frame_bottom = *address_or_error;
+    m_stack_frame_top = m_stack_frame_bottom + stack_frame_size;
+    return true;
+  } else {
+    diagnostic_manager.Printf(lldb::eSeverityError,
+                              "Couldn't allocate space for the stack frame: %s",
+                              toString(address_or_error.takeError()).c_str());
+    return false;
+  }
+}
 
-    if (!materialize_error.Success()) {
-      diagnostic_manager.Printf(lldb::eSeverityError,
-                                "Couldn't materialize: %s",
-                                materialize_error.AsCString());
+bool LLVMUserExpression::PrepareArgumentStruct(
+    DiagnosticManager &diagnostic_manager, lldb::StackFrameSP &frame,
+    lldb::addr_t &struct_address) {
+
+  if (m_materialized_address == LLDB_INVALID_ADDRESS) {
+    IRMemoryMap::AllocationPolicy policy =
+        m_can_interpret ? IRMemoryMap::eAllocationPolicyHostOnly
+                        : IRMemoryMap::eAllocationPolicyMirror;
+
+    const bool zero_memory = false;
+    if (auto address_or_error = m_execution_unit_sp->Malloc(
+            m_materializer_up->GetStructByteSize(),
+            m_materializer_up->GetStructAlignment(),
+            lldb::ePermissionsReadable | lldb::ePermissionsWritable, policy,
+            zero_memory)) {
+      m_materialized_address = *address_or_error;
+    } else {
+      diagnostic_manager.Printf(
+          lldb::eSeverityError,
+          "Couldn't allocate space for materialized struct: %s",
+          toString(address_or_error.takeError()).c_str());
       return false;
     }
   }
+
+  struct_address = m_materialized_address;
+
+  Status materialize_error;
+
+  m_dematerializer_sp = m_materializer_up->Materialize(
+      frame, *m_execution_unit_sp, struct_address, materialize_error);
+
+  if (!materialize_error.Success()) {
+    diagnostic_manager.Printf(lldb::eSeverityError, "Couldn't materialize: %s",
+                              materialize_error.AsCString());
+    return false;
+  }
+
   return true;
 }

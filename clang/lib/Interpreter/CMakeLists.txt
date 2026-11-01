@@ -3,35 +3,39 @@ set(LLVM_LINK_COMPONENTS
    native
    MC
    Option
-   OrcJit
-   OrcDebugging
-   OrcShared
-   OrcTargetProcess
    Support
    Target
    TargetParser
    TransformUtils
    )
 
-if (EMSCRIPTEN AND "lld" IN_LIST LLVM_ENABLE_PROJECTS)
-  set(WASM_SRC Wasm.cpp)
-  set(WASM_LINK lldWasm)
-  set(COMMON_LINK lldCommon)
+if (EMSCRIPTEN)
+  if (NOT "lld" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Building clangInterpreter for Emscripten requires lld")
+  endif()
+  set(EXECUTOR_SOURCES Wasm.cpp)
+  set(EXECUTOR_LIBS lldWasm lldCommon)
+else()
+  list(APPEND LLVM_LINK_COMPONENTS
+    OrcJit
+    OrcDebugging
+    OrcShared
+    OrcTargetProcess
+    )
+  set(EXECUTOR_SOURCES IncrementalExecutor.cpp OrcIncrementalExecutor.cpp)
 endif()
 
 add_clang_library(clangInterpreter
   DeviceOffload.cpp
   CodeCompletion.cpp
   IncrementalAction.cpp
-  IncrementalExecutor.cpp
-  OrcIncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp
   InterpreterValuePrinter.cpp
   InterpreterUtils.cpp
   Value.cpp
   InterpreterValuePrinter.cpp
-  ${WASM_SRC}
+  ${EXECUTOR_SOURCES}
   PARTIAL_SOURCES_INTENDED
 
   DEPENDS
@@ -51,8 +55,7 @@ add_clang_library(clangInterpreter
   clangParse
   clangSema
   clangSerialization
-  ${WASM_LINK}
-  ${COMMON_LINK}
+  ${EXECUTOR_LIBS}
   )
 
 if ((MINGW OR CYGWIN) AND BUILD_SHARED_LIBS)

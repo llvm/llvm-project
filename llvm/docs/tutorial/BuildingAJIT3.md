@@ -93,7 +93,8 @@ function.
 
 ```c++
 KaleidoscopeJIT()
-    : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+    : TM(EngineBuilder().selectTarget()),
+      DL(TM->getTargetTriple().computeDataLayout()),
       ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
       CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
       OptimizeLayer(CompileLayer,

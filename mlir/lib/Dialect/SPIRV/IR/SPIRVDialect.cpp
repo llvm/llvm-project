@@ -127,11 +127,7 @@ void SPIRVDialect::initialize() {
   registerAttributes();
   registerTypes();
 
-  // Add SPIR-V ops.
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.cpp.inc"
-      >();
+  registerSPIRVDialectOperations(this);
 
   addInterfaces<SPIRVInlinerInterface>();
 

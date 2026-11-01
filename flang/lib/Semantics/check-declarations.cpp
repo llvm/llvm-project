@@ -1179,14 +1179,17 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
             symbol.name());
+      } else if (!isComponent && progUnit.kind() == Scope::Kind::MainProgram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a main program"_err_en_US,
+            symbol.name());
       } else if (IsAllocatableOrPointer(symbol) ||
           symbol.attrs().test(Attr::TARGET)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
       } else if (auto shape{evaluate::GetShape(foldingContext_, symbol)};
-                 !shape ||
-                 !evaluate::AsConstantExtents(foldingContext_, *shape)) {
+          !shape || !evaluate::AsConstantExtents(foldingContext_, *shape)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) must have constant array bounds"_err_en_US,
             symbol.name());
@@ -1733,6 +1736,29 @@ void CheckHelper::CheckSubprogram(
             symbol.name() == "logical")) { // F'2023 C1503
       messages_.Say(
           "An ABSTRACT interface may not have the same name as an intrinsic type"_err_en_US);
+    }
+    if (IsBindCProcedure(symbol) &&
+        context_.ShouldWarn(common::UsageWarning::BindCArrayDescriptor)) {
+      // A BIND(C) binding name that starts with '_' identifies an
+      // implementation-internal interface (e.g. one of the compiler's own
+      // runtime library wrappers, which choose such names deliberately)
+      // rather than a genuine external C/C++ interoperability interface,
+      // so it is excluded here: those internal wrappers are written to
+      // receive the CFI descriptor this warning is about, and warning on
+      // every one of them would drown out the cases that matter.
+      const std::string *bindName{symbol.GetBindName()};
+      bool isImplementationInternal{
+          bindName && !bindName->empty() && bindName->front() == '_'};
+      if (!isImplementationInternal) {
+        for (const Symbol *dummy : details.dummyArgs()) {
+          if (dummy && (IsAssumedShape(*dummy) || IsAssumedRank(*dummy))) {
+            Warn(common::UsageWarning::BindCArrayDescriptor, dummy->name(),
+                "Dummy argument '%s' of BIND(C) interface '%s' is %s; the C/C++ side must accept a Fortran 2018 CFI descriptor (CFI_cdesc_t), not a bare address, which may not match an external interface written for an older calling convention"_port_en_US,
+                dummy->name(), symbol.name(),
+                IsAssumedRank(*dummy) ? "assumed-rank" : "assumed-shape");
+          }
+        }
+      }
     }
   }
   CheckExternal(symbol);

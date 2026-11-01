@@ -141,13 +141,13 @@ public:
   }
 };
 
-#define LIST_REMQUO_TESTS(T, func)                                             \
-  using LlvmLibcRemQuoTest = RemQuoTestTemplate<T>;                            \
-  TEST_F(LlvmLibcRemQuoTest, SpecialNumbers) { testSpecialNumbers(&func); }    \
-  TEST_F(LlvmLibcRemQuoTest, EqualNumeratorAndDenominator) {                   \
+#define LIST_REMQUO_TESTS(Name, T, func)                                       \
+  using LlvmLibc##Name##Test = RemQuoTestTemplate<T>;                          \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, EqualNumeratorAndDenominator) {                 \
     testEqualNumeratorAndDenominator(&func);                                   \
   }                                                                            \
-  TEST_F(LlvmLibcRemQuoTest, SubnormalRange) { testSubnormalRange(&func); }    \
-  TEST_F(LlvmLibcRemQuoTest, NormalRange) { testNormalRange(&func); }
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) { testSubnormalRange(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H

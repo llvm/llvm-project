@@ -20,7 +20,8 @@ using namespace llvm;
 MCSection *AMDGPUTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   if (Kind.isReadOnly() && AMDGPU::isReadOnlySegment(GO) &&
-      AMDGPU::shouldEmitConstantsToTextSection(TM.getTargetTriple()))
+      AMDGPU::shouldEmitConstantsToTextSection(
+          GO->getParent()->getTargetTriple()))
     return TextSection;
 
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);

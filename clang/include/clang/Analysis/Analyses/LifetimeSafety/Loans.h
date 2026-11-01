@@ -138,19 +138,19 @@ public:
   }
 
   const clang::ValueDecl *getAsValueDecl() const {
-    return Base.dyn_cast<const clang::ValueDecl *>();
+    return dyn_cast<const clang::ValueDecl *>(Base);
   }
 
   const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
-    return Base.dyn_cast<const clang::MaterializeTemporaryExpr *>();
+    return dyn_cast<const clang::MaterializeTemporaryExpr *>(Base);
   }
 
   const PlaceholderBase *getAsPlaceholderBase() const {
-    return Base.dyn_cast<const PlaceholderBase *>();
+    return dyn_cast<const PlaceholderBase *>(Base);
   }
 
   const clang::CXXNewExpr *getAsNewAllocation() const {
-    return Base.dyn_cast<const clang::CXXNewExpr *>();
+    return dyn_cast<const clang::CXXNewExpr *>(Base);
   }
 
   bool operator==(const AccessPath &RHS) const {

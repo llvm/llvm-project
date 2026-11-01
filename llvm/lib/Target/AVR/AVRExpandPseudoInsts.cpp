@@ -1184,7 +1184,7 @@ bool AVRExpandPseudo::expand<AVR::STWPtrRr>(Block &MBB, BlockIt MBBI) {
   bool SrcIsKill = MI.getOperand(1).isKill();
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
 
-  //: TODO: need to reverse this order like inw and stsw?
+  // TODO: Need to reverse this order like inw and stsw?
 
   if (STI.hasTinyEncoding()) {
     // Handle this case in the expansion of STDWPtrQRr because it is very
@@ -2680,7 +2680,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::LDWRdPtr);
     EXPAND(AVR::LDWRdPtrPi);
     EXPAND(AVR::LDWRdPtrPd);
-  case AVR::LDDWRdYQ: //: FIXME: remove this once PR13375 gets fixed
+  case AVR::LDDWRdYQ: // FIXME: Remove this once PR13375 gets fixed.
     EXPAND(AVR::LDDWRdPtrQ);
     EXPAND(AVR::LPMBRdZ);
     EXPAND(AVR::LPMWRdZ);

@@ -154,6 +154,7 @@ private:
   PPCallbacks *CollectorPPPtr = nullptr;
 
   void handleImport(const Module *Imported);
+  void addRequiredStdCXXModule(StringRef ModuleName);
 
   /// Returns the ID or nothing if the dependency is spurious and is ignored.
   std::optional<ModuleID> handleTopLevelModule(serialization::ModuleFile *MF);

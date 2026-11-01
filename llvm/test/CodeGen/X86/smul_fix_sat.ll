@@ -294,7 +294,7 @@ define i32 @func4(i32 %x, i32 %y) nounwind {
 ; X64-NEXT:    sets %al
 ; X64-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X64-NEXT:    imull %esi, %edi
-; X64-NEXT:    cmovnol %edi, %eax
+; X64-NEXT:    cmovael %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func4:
@@ -308,7 +308,7 @@ define i32 @func4(i32 %x, i32 %y) nounwind {
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; X86-NEXT:    imull %edx, %eax
-; X86-NEXT:    cmovol %ecx, %eax
+; X86-NEXT:    cmovbl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
   %tmp = call i32 @llvm.smul.fix.sat.i32(i32 %x, i32 %y, i32 0)
@@ -325,7 +325,7 @@ define i64 @func5(i64 %x, i64 %y) {
 ; X64-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
 ; X64-NEXT:    addq %rcx, %rax
 ; X64-NEXT:    imulq %rsi, %rdi
-; X64-NEXT:    cmovnoq %rdi, %rax
+; X64-NEXT:    cmovaeq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func5:
@@ -424,7 +424,7 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    imulb %sil
 ; X64-NEXT:    movzbl %al, %eax
-; X64-NEXT:    cmovol %ecx, %eax
+; X64-NEXT:    cmovbl %ecx, %eax
 ; X64-NEXT:    sarb $4, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -443,7 +443,7 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ; X86-NEXT:    addl $127, %edx
 ; X86-NEXT:    imulb %cl
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    cmovol %edx, %eax
+; X86-NEXT:    cmovbl %edx, %eax
 ; X86-NEXT:    sarb $4, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
@@ -503,7 +503,7 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    sets %al
 ; X86-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X86-NEXT:    imull %edi, %ecx
-; X86-NEXT:    cmovol %eax, %ecx
+; X86-NEXT:    cmovbl %eax, %ecx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    movl %edx, %edi
 ; X86-NEXT:    xorl %ebx, %edi
@@ -511,7 +511,7 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    sets %al
 ; X86-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X86-NEXT:    imull %ebx, %edx
-; X86-NEXT:    cmovol %eax, %edx
+; X86-NEXT:    cmovbl %eax, %edx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    movl %edi, %ebx
 ; X86-NEXT:    xorl %esi, %ebx
@@ -519,14 +519,14 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    sets %al
 ; X86-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X86-NEXT:    imull %esi, %edi
-; X86-NEXT:    cmovol %eax, %edi
+; X86-NEXT:    cmovbl %eax, %edi
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    movl %ebx, %esi
 ; X86-NEXT:    xorl %ebp, %esi
 ; X86-NEXT:    sets %al
 ; X86-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
 ; X86-NEXT:    imull %ebp, %ebx
-; X86-NEXT:    cmovol %eax, %ebx
+; X86-NEXT:    cmovbl %eax, %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %ebx, 12(%eax)
 ; X86-NEXT:    movl %edi, 8(%eax)

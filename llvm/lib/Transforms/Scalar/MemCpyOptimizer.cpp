@@ -64,10 +64,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "memcpyopt"
 
-static cl::opt<bool> EnableMemCpyOptWithoutLibcalls(
-    "enable-memcpyopt-without-libcalls", cl::Hidden,
-    cl::desc("Enable memcpyopt even when libcalls are disabled"));
-
 STATISTIC(NumMemCpyInstr, "Number of memcpy instructions deleted");
 STATISTIC(NumMemMoveInstr, "Number of memmove instructions deleted");
 STATISTIC(NumMemSetInfer, "Number of memsets inferred");
@@ -636,13 +632,7 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
 
   BatchAAResults BAA(*AA, EEA);
   auto *T = LI->getType();
-  // Don't introduce calls to memcpy/memmove intrinsics out of thin air if
-  // the corresponding libcalls are not available.
-  // TODO: We should really distinguish between libcall availability and
-  // our ability to introduce intrinsics.
-  if (T->isAggregateType() &&
-      (EnableMemCpyOptWithoutLibcalls ||
-       (TLI->has(LibFunc_memcpy) && TLI->has(LibFunc_memmove)))) {
+  if (T->isAggregateType()) {
     MemoryLocation LoadLoc = MemoryLocation::get(LI);
 
     // We use alias analysis to check if an instruction may store to
@@ -767,13 +757,6 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   // Load to store forwarding can be interpreted as memcpy.
   if (auto *LI = dyn_cast<LoadInst>(StoredVal))
     return processStoreOfLoad(SI, LI, DL, BBI);
-
-  // The following code creates memset intrinsics out of thin air. Don't do
-  // this if the corresponding libfunc is not available.
-  // TODO: We should really distinguish between libcall availability and
-  // our ability to introduce intrinsics.
-  if (!(TLI->has(LibFunc_memset) || EnableMemCpyOptWithoutLibcalls))
-    return false;
 
   // There are two cases that are interesting for this code to handle: memcpy
   // and memset.  Right now we only handle memset.
@@ -1126,7 +1109,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     return false;
 
   int64_t MForwardOffset = 0;
-  const DataLayout &DL = M->getModule()->getDataLayout();
+  const DataLayout &DL = M->getDataLayout();
   // We can only transforms memcpy's where the dest of one is the source of the
   // other, or they have an offset in a range.
   if (M->getSource() != MDep->getDest()) {
@@ -1446,7 +1429,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   Value *CopySize = MemCpy->getLength();
 
   int64_t MOffset = 0;
-  const DataLayout &DL = MemCpy->getModule()->getDataLayout();
+  const DataLayout &DL = MemCpy->getDataLayout();
   // We can only transforms memcpy's where the dest of one is the source of the
   // other, or they have a known offset.
   if (MemCpy->getSource() != MemSet->getDest()) {

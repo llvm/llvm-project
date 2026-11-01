@@ -1399,6 +1399,7 @@ define i32 @monotonic_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM60-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") monotonic acquire
@@ -1417,6 +1418,7 @@ define i32 @monotonic_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM60-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") monotonic seq_cst
@@ -1434,6 +1436,7 @@ define i32 @acquire_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM60-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") acquire monotonic
@@ -1451,6 +1454,7 @@ define i32 @acquire_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") acquire acquire
@@ -1469,6 +1473,7 @@ define i32 @acquire_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") acquire seq_cst
@@ -1483,6 +1488,7 @@ define i32 @release_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_global_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
@@ -1500,9 +1506,11 @@ define i32 @release_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_global_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b32 %r1, [release_acquire_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [release_acquire_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") release acquire
@@ -1521,6 +1529,7 @@ define i32 @release_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") release seq_cst
@@ -1535,9 +1544,11 @@ define i32 @acq_rel_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_global_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") acq_rel monotonic
@@ -1552,9 +1563,11 @@ define i32 @acq_rel_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_global_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") acq_rel acquire
@@ -1573,6 +1586,7 @@ define i32 @acq_rel_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") acq_rel seq_cst
@@ -1591,6 +1605,7 @@ define i32 @seq_cst_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM60-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") seq_cst monotonic
@@ -1609,6 +1624,7 @@ define i32 @seq_cst_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") seq_cst acquire
@@ -1627,6 +1643,7 @@ define i32 @seq_cst_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("block") seq_cst seq_cst
@@ -1659,6 +1676,7 @@ define i64 @monotonic_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") monotonic acquire
@@ -1676,6 +1694,7 @@ define i64 @monotonic_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") monotonic seq_cst
@@ -1692,6 +1711,7 @@ define i64 @acquire_monotonic_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") acquire monotonic
@@ -1708,6 +1728,7 @@ define i64 @acquire_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") acquire acquire
@@ -1725,6 +1746,7 @@ define i64 @acquire_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") acquire seq_cst
@@ -1738,6 +1760,7 @@ define i64 @release_monotonic_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_global_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
@@ -1754,9 +1777,11 @@ define i64 @release_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_global_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") release acquire
@@ -1774,6 +1799,7 @@ define i64 @release_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") release seq_cst
@@ -1787,9 +1813,11 @@ define i64 @acq_rel_monotonic_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_global_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") acq_rel monotonic
@@ -1803,9 +1831,11 @@ define i64 @acq_rel_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_global_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") acq_rel acquire
@@ -1823,6 +1853,7 @@ define i64 @acq_rel_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") acq_rel seq_cst
@@ -1840,6 +1871,7 @@ define i64 @seq_cst_monotonic_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") seq_cst monotonic
@@ -1857,6 +1889,7 @@ define i64 @seq_cst_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") seq_cst acquire
@@ -1874,6 +1907,7 @@ define i64 @seq_cst_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_global_cta_param_2];
 ; SM60-NEXT:    atom.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("block") seq_cst seq_cst
@@ -1934,9 +1968,11 @@ define i32 @acq_rel_acquire_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %ne
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_global_param_0];
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_global_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_global_param_2];
 ; SM60-NEXT:    atom.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new acq_rel acquire
@@ -1951,9 +1987,11 @@ define i32 @acq_rel_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_global_sys_param_0];
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_global_sys_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_global_sys_param_2];
 ; SM60-NEXT:    atom.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("") acq_rel acquire
@@ -1968,9 +2006,11 @@ define i32 @acq_rel_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_global_gpu_param_0];
+; SM60-NEXT:    membar.gl;
 ; SM60-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_global_gpu_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_global_gpu_param_2];
 ; SM60-NEXT:    atom.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.gl;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("device") acq_rel acquire
@@ -2077,9 +2117,11 @@ define i32 @acq_rel_acquire_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_generic_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_generic_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_generic_cta_param_2];
 ; SM60-NEXT:    atom.cta.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new syncscope("block") acq_rel acquire
@@ -2094,9 +2136,11 @@ define i32 @acq_rel_acquire_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_shared_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_shared_cta_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_shared_cta_param_2];
 ; SM60-NEXT:    atom.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("block") acq_rel acquire

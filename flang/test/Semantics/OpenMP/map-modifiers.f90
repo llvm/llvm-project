@@ -104,3 +104,43 @@ subroutine f24(x)
   x = x + 1
   !$omp end target
 end
+
+subroutine f25()
+  type t
+    integer :: x, y
+  end type
+  type(t) :: s
+
+!WARNING: OpenMP CLOSE map modifier ignored for structure component; map the base object with CLOSE to apply the modifier
+  !$omp target map(close, tofrom: s%x, s%y)
+  s%x = s%y
+  !$omp end target
+end
+
+subroutine f26()
+  type t
+    integer :: x, y
+  end type
+  type(t) :: s
+
+!WARNING: OpenMP CLOSE map modifier ignored for structure component; map the base object with CLOSE to apply the modifier
+  !$omp target map(tofrom: s) map(close, tofrom: s%x)
+  s%x = s%y
+  !$omp end target
+end
+
+subroutine f27()
+  type t
+    integer :: x, y
+  end type
+  type(t) :: s
+
+  !$omp target map(close, tofrom: s) map(close, tofrom: s%x)
+  s%x = s%y
+  !$omp end target
+
+!WARNING: OpenMP CLOSE map modifier ignored for structure component; map the base object with CLOSE to apply the modifier
+  !$omp target map(close, tofrom: s%x)
+  s%x = s%y
+  !$omp end target
+end

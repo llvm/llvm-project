@@ -2001,9 +2001,10 @@ struct TypeSystemInstance : public PluginInstance<TypeSystemCreateInstance> {
   TypeSystemInstance(llvm::StringRef name, llvm::StringRef description,
                      CallbackType create_callback,
                      LanguageSet supported_languages_for_types,
-                     LanguageSet supported_languages_for_expressions)
-      : PluginInstance<TypeSystemCreateInstance>(name, description,
-                                                 create_callback),
+                     LanguageSet supported_languages_for_expressions,
+                     DebuggerInitializeCallback debugger_init_callback)
+      : PluginInstance<TypeSystemCreateInstance>(
+            name, description, create_callback, debugger_init_callback),
         supported_languages_for_types(supported_languages_for_types),
         supported_languages_for_expressions(
             supported_languages_for_expressions) {}
@@ -2023,10 +2024,11 @@ bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     TypeSystemCreateInstance create_callback,
     LanguageSet supported_languages_for_types,
-    LanguageSet supported_languages_for_expressions) {
+    LanguageSet supported_languages_for_expressions,
+    DebuggerInitializeCallback debugger_init_callback) {
   return GetTypeSystemInstances().RegisterPlugin(
       name, description, create_callback, supported_languages_for_types,
-      supported_languages_for_expressions);
+      supported_languages_for_expressions, debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(TypeSystemCreateInstance create_callback) {
@@ -2245,6 +2247,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
   GetScriptedInterfaceInstances().PerformDebuggerCallback(debugger);
+  GetTypeSystemInstances().PerformDebuggerCallback(debugger);
   GetLanguageInstances().PerformDebuggerCallback(debugger);
 }
 

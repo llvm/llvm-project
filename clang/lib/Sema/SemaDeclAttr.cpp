@@ -1377,6 +1377,16 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     NonNullArgs.push_back(Idx);
   }
 
+  // If an argument was specified and there was an attribute ignored warning
+  // issued for it, do not apply the nonnull attribute without any arguments as
+  // that has incorrect semantics in a function like:
+  //   __attribute__((nonnull(1))) void f(int val, int *ptr);
+  // because that will signal that 'ptr' is nonnull when it's not intended to
+  // be marked as such. However, continue on if there is at least one valid
+  // parameter index.
+  if (AL.getNumArgs() != 0 && NonNullArgs.empty())
+    return;
+
   // If no arguments were specified to __attribute__((nonnull)) then all pointer
   // arguments have a nonnull attribute; warn if there aren't any. Skip this
   // check if the attribute came from a macro expansion or a template
@@ -2101,9 +2111,9 @@ static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 // ExprWithCleanups). We could expand this to perform control-flow analysis for
 // more complex patterns.
 static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
-  if (!FD->hasBody())
-    return false;
   const Stmt *Body = FD->getBody();
+  if (!Body)
+    return false;
   const Stmt *OnlyStmt = nullptr;
 
   if (const auto *Compound = dyn_cast<CompoundStmt>(Body)) {
@@ -3699,13 +3709,18 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Unsupported << None << CurFeature << Target;
   }
 
+  if (ParsedAttrs.BranchProtection.empty()) {
+    if (!ParsedAttrs.SignReturnAddrHardening.empty())
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+    return false;
+  }
+
   TargetInfo::BranchProtectionInfo BPI{};
   StringRef DiagMsg;
-  if (ParsedAttrs.BranchProtection.empty())
-    return false;
+
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI,
-          Context.getLangOpts(), DiagMsg)) {
+          ParsedAttrs, BPI, Context.getLangOpts(), DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;
@@ -3714,6 +3729,19 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   }
   if (!DiagMsg.empty())
     Diag(LiteralLoc, diag::warn_unsupported_branch_protection_spec) << DiagMsg;
+
+  if (!ParsedAttrs.SignReturnAddrHardening.empty()) {
+    auto SignReturnAddrHardenOpt =
+        Context.getTargetInfo().parseSignReturnAddressHardening(
+            ParsedAttrs.SignReturnAddrHardening);
+    if (!SignReturnAddrHardenOpt)
+      return Diag(LiteralLoc, diag::err_invalid_harden_pac_ret_spec)
+             << ParsedAttrs.SignReturnAddrHardening;
+
+    if (BPI.SignReturnAddr == LangOptions::SignReturnAddressScopeKind::None)
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+  }
 
   return false;
 }
@@ -5450,15 +5478,23 @@ static void handleGlobalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (FD->isInlineSpecified() && !S.getLangOpts().CUDAIsDevice)
     S.Diag(FD->getBeginLoc(), diag::warn_kern_is_inline) << FD;
 
-  if (AL.getKind() == ParsedAttr::AT_DeviceKernel)
-    D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
-  else
-    D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_DeviceKernel:
+    if (!D->hasAttr<DeviceKernelAttr>())
+      D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
+    break;
+  case ParsedAttr::AT_CUDAGlobal:
+    if (!D->hasAttr<CUDAGlobalAttr>())
+      D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+    break;
+  default:
+    llvm_unreachable("Unexpected attribute kind");
+  }
   // In host compilation the kernel is emitted as a stub function, which is
   // a helper function for launching the kernel. The instructions in the helper
   // function has nothing to do with the source code of the kernel. Do not emit
   // debug info for the stub function to avoid confusing the debugger.
-  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice)
+  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice && !D->hasAttr<NoDebugAttr>())
     D->addAttr(NoDebugAttr::CreateImplicit(S.Context));
 }
 
@@ -7218,9 +7254,22 @@ static void handleHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(Attr::Create(S.Context, Argument, AL));
 }
 
-template<typename Attr>
 static void handleUnsafeBufferUsage(Sema &S, Decl *D, const ParsedAttr &AL) {
-  D->addAttr(Attr::Create(S.Context, AL));
+  StringRef Category;
+  if (AL.getAttrName()->getName() == "unsafe_buffer_usage_in_container") {
+    if (!AL.checkExactlyNumArgs(S, 0))
+      return;
+    Category = "container";
+  } else if (AL.getNumArgs() != 0) {
+    SourceLocation Loc;
+    if (!S.checkStringLiteralArgumentAttr(AL, 0, Category, &Loc))
+      return;
+    if (Category != "container") {
+      S.Diag(Loc, diag::warn_attribute_type_not_supported) << AL << Category;
+      return;
+    }
+  }
+  D->addAttr(UnsafeBufferUsageAttr::Create(S.Context, Category, AL));
 }
 
 static void handleCFGuardAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8264,6 +8313,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLInterpolationModifier:
+    S.HLSL().handleInterpolationModifierAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
     break;
@@ -8446,7 +8498,7 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_UnsafeBufferUsage:
-    handleUnsafeBufferUsage<UnsafeBufferUsageAttr>(S, D, AL);
+    handleUnsafeBufferUsage(S, D, AL);
     break;
 
   case ParsedAttr::AT_UseHandle:

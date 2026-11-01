@@ -97,6 +97,9 @@ class CGDebugInfo {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/SPIRVTypes.def"
 

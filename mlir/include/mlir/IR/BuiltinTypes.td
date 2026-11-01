@@ -894,7 +894,8 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     form which is converted to a semi-affine map automatically.
 
     The memory space of a memref is specified by a target-specific attribute.
-    It might be an integer value, string, dictionary or custom dialect attribute.
+    It might be an integer value, string, dictionary or custom dialect
+    attribute; no restriction is placed on the kind of attribute used.
     The empty memory space (attribute is None) is target specific.
 
     The notionally dynamic value of a memref value includes the address of the

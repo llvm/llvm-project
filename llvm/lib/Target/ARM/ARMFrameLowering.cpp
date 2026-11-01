@@ -149,7 +149,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -342,7 +341,7 @@ bool ARMFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return true;
 
   // ABI-required frame pointer.
-  if (MF.getTarget().Options.DisableFramePointerElim(MF))
+  if (MF.disableFramePointerElim())
     return true;
 
   // Frame pointer required for use within this function.
@@ -353,7 +352,7 @@ bool ARMFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 /// isFPReserved - Return true if the frame pointer register should be
 /// considered a reserved register on the scope of the specified function.
 bool ARMFrameLowering::isFPReserved(const MachineFunction &MF) const {
-  return hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF);
+  return hasFP(MF) || MF.framePointerIsReserved();
 }
 
 /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
@@ -2756,7 +2755,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // is spilled in the order specified by getCalleeSavedRegs() to make it easier
   // to combine multiple loads / stores.
   bool CanEliminateFrame = !(requiresAAPCSFrameRecord(MF) && hasFP(MF)) &&
-                           !MF.getTarget().Options.DisableFramePointerElim(MF);
+                           !MF.disableFramePointerElim();
   bool CS1Spilled = false;
   bool LRSpilled = false;
   unsigned NumGPRSpills = 0;
@@ -3032,8 +3031,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.
-      if ((requiresAAPCSFrameRecord(MF) ||
-           MF.getTarget().Options.DisableFramePointerElim(MF)) &&
+      if ((requiresAAPCSFrameRecord(MF) || MF.disableFramePointerElim()) &&
           !LRSpilled) {
         SavedRegs.set(ARM::LR);
         LRSpilled = true;
@@ -3376,7 +3374,7 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
       CSI.insert(CSI.begin(), CalleeSavedInfo(ARM::R12));
       break;
     case ARMSubtarget::NoSplit:
-      assert(!MF.getTarget().Options.DisableFramePointerElim(MF) &&
+      assert(!MF.disableFramePointerElim() &&
              "ABI-required frame pointers need a CSR split when signing return "
              "address.");
       CSI.insert(find_if(CSI,

@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
 using namespace llvm;
@@ -28,16 +29,13 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   RegisterTargetMachine<SparcV8TargetMachine> X(getTheSparcTarget());
   RegisterTargetMachine<SparcV9TargetMachine> Y(getTheSparcV9Target());
   RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
+  static opt::RegisterLibraryOptions<SparcOptions> O;
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeSparcAsmPrinterPass(PR);
   initializeSparcDAGToDAGISelLegacyPass(PR);
   initializeErrataWorkaroundPass(PR);
 }
-
-static cl::opt<bool>
-    BranchRelaxation("sparc-enable-branch-relax", cl::Hidden, cl::init(true),
-                     cl::desc("Relax out of range conditional branches"));
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
@@ -79,11 +77,11 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(), TT, CPU, FS, Options,
-          getEffectiveRelocModel(RM),
+          T, TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM),
                                      TT.isSPARC64(), JIT),
           OL),
+      CLOpts(SparcOptions::Global),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()) {
   initAsmInfo();
 }
@@ -162,7 +160,7 @@ bool SparcPassConfig::addInstSelector() {
 }
 
 void SparcPassConfig::addPreEmitPass(){
-  if (BranchRelaxation)
+  if (getSparcTargetMachine().getCLOpts().enable_branch_relax)
     addPass(&BranchRelaxationPassID);
 
   addPass(createSparcDelaySlotFillerPass());

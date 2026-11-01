@@ -29,7 +29,7 @@ jobs:
     runs-on: ${{ inputs.SKU }}
     steps:
       - name: Checkout DXC
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           repository: Microsoft/DirectXShaderCompiler
@@ -37,20 +37,20 @@ jobs:
           path: DXC
           submodules: true
       - name: Checkout LLVM
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ inputs.LLVM-branch }}
           path: llvm-project
       - name: Checkout OffloadTest
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           repository: llvm/offload-test-suite
           ref: main
           path: OffloadTest
       - name: Checkout Golden Images
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           repository: llvm/offload-golden-images

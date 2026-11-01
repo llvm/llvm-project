@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fdimbf16.h"
 
-LIST_FDIM_TESTS(bfloat16, LIBC_NAMESPACE::fdimbf16);
+LIST_FDIM_TESTS(Fdimbf16, bfloat16, LIBC_NAMESPACE::fdimbf16);

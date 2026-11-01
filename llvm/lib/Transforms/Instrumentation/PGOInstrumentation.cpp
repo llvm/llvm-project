@@ -66,6 +66,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -675,7 +676,7 @@ public:
       NumOfCSPGOBB += MST.bbInfoSize();
     }
 
-    FuncName = getIRPGOFuncName(F);
+    FuncName = getIRPGOObjectName(F);
     DeprecatedFuncName = getPGOFuncName(F);
     computeCFGHash();
     if (!ComdatMembers.empty())
@@ -955,7 +956,7 @@ void FunctionInstrumenter::instrument() {
       Name, PointerType::get(M.getContext(), 0));
   if (PGOFunctionEntryCoverage) {
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
     Builder.CreateIntrinsic(
@@ -1013,7 +1014,7 @@ void FunctionInstrumenter::instrument() {
   if (PGOTemporalInstrumentation) {
     NumCounters += PGOBlockCoverage ? 8 : 1;
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
     Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp,
@@ -1024,7 +1025,7 @@ void FunctionInstrumenter::instrument() {
   }
 
   for (auto *InstrBB : InstrumentBBs) {
-    IRBuilder<> Builder(InstrBB, InstrBB->getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(InstrBB->getFirstNonPHIOrDbgOrAlloca());
     assert(Builder.GetInsertPoint() != InstrBB->end() &&
            "Cannot get the Instrumentation point");
     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
@@ -1824,7 +1825,12 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   Module *M = F.getParent();
   IRBuilder<> Builder(&SI);
   Type *Int64Ty = Builder.getInt64Ty();
-  auto *Step = Builder.CreateZExt(SI.getCondition(), Int64Ty);
+  Value *Cond = SI.getCondition();
+  // Freeze the condition so that a poison condition can only increment by
+  // 0 or 1, but not some other value.
+  if (!isGuaranteedNotToBePoison(Cond))
+    Cond = Builder.CreateFreeze(Cond);
+  auto *Step = Builder.CreateZExt(Cond, Int64Ty);
   auto *NormalizedFuncNameVarPtr =
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(
           FuncNameVar, PointerType::get(M->getContext(), 0));
@@ -1892,9 +1898,6 @@ static uint32_t getMaxNumAnnotations(InstrProfValueKind ValueProfKind) {
 void PGOUseFunc::annotateValueSites() {
   if (DisableValueProfiling)
     return;
-
-  // Create the PGOFuncName meta data.
-  createPGOFuncNameMetadata(F, FuncInfo.FuncName);
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     annotateValueSites(Kind);
@@ -2246,16 +2249,6 @@ static bool annotateAllFunctions(
         ProfileFileName.data(),
         "Function entry profiles are not yet supported for optimization"));
     return false;
-  }
-
-  if (EnableVTableProfileUse) {
-    for (GlobalVariable &G : M.globals()) {
-      if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
-        continue;
-
-      // Create the PGOFuncName meta data.
-      createPGONameMetadata(G, getPGOName(G, false /* InLTO*/));
-    }
   }
 
   // Add the profile summary (read from the header of the indexed summary) here

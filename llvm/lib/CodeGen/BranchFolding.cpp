@@ -2262,8 +2262,3 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   ++NumHoist;
   return true;
 }
-
-FunctionPass *llvm::createBranchFolder(bool EnableCommonHoist,
-                                       bool EnableBasicBlockReordering) {
-  return new BranchFolderLegacy(EnableCommonHoist, EnableBasicBlockReordering);
-}

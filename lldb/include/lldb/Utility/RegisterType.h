@@ -30,6 +30,7 @@ public:
     eRegisterTypeKindEnum,
     eRegisterTypeKindBuiltin,
     eRegisterTypeKindVector,
+    eRegisterTypeKindUnion,
   };
 
   RegisterTypeKind getKind() const { return m_kind; }
@@ -130,6 +131,41 @@ public:
 private:
   const RegisterType *m_element_type;
   const uint32_t m_count;
+};
+
+/// A GDB target-description union type. Each field is an alternative view of
+/// the same register data. Referenced field types must outlive the union.
+class RegisterTypeUnion : public RegisterType {
+public:
+  class Field {
+  public:
+    Field(std::string name, const RegisterType *type);
+
+    const std::string &GetName() const { return m_name; }
+    const RegisterType *GetType() const { return m_type; }
+
+  private:
+    const std::string m_name;
+    const RegisterType *m_type;
+  };
+
+  RegisterTypeUnion(std::string id, std::vector<Field> fields);
+
+  const std::vector<Field> &GetFields() const { return m_fields; }
+  std::optional<uint64_t> GetByteSize() const override;
+  bool IsByteSizeCompatible(uint64_t byte_size) const;
+
+  void DumpToLog(Log *log) const;
+
+  void ToXMLElement(Stream &strm,
+                    const RegisterType *user = nullptr) const override;
+
+  static bool classof(const RegisterType *type) {
+    return type->getKind() == eRegisterTypeKindUnion;
+  }
+
+private:
+  const std::vector<Field> m_fields;
 };
 
 } // namespace lldb_private

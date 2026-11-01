@@ -30,8 +30,9 @@ using namespace llvm;
 
 TEST(Local, RecursivelyDeleteDeadPHINodes) {
   LLVMContext C;
+  Module M("", C);
 
-  IRBuilder<> builder(C);
+  IRBuilder<> builder(M);
 
   // Make blocks
   BasicBlock *bb0 = BasicBlock::Create(C);
@@ -73,7 +74,8 @@ TEST(Local, RecursivelyDeleteDeadPHINodes) {
 
 TEST(Local, RemoveDuplicatePHINodes) {
   LLVMContext C;
-  IRBuilder<> B(C);
+  Module M("", C);
+  IRBuilder<> B(M);
 
   std::unique_ptr<Function> F(
       Function::Create(FunctionType::get(B.getVoidTy(), false),
@@ -1125,8 +1127,8 @@ TEST(Local, SimplifyCFGWithNullAC) {
 
 TEST(LocalTest, TargetTypeInfoHasNoReplacementProperty) {
   LLVMContext Ctx;
-  SmallVector<unsigned, 3> Ints = {};
-  auto *TT = llvm::TargetExtType::get(Ctx, "dx.RawBuffer", {}, Ints);
+  SmallVector<unsigned, 1> Ints = {};
+  auto *TT = llvm::TargetExtType::get(Ctx, "amdgpu.stridemark", {}, Ints);
 
   EXPECT_TRUE(TT->hasProperty(TargetExtType::Property::IsTokenLike));
 }
@@ -1134,7 +1136,7 @@ TEST(LocalTest, TargetTypeInfoHasNoReplacementProperty) {
 TEST(Local, CanReplaceOperandWithVariable) {
   LLVMContext Ctx;
   Module M("test_module", Ctx);
-  IRBuilder<> B(Ctx);
+  IRBuilder<> B(M);
 
   FunctionType *FnType =
     FunctionType::get(Type::getVoidTy(Ctx), {}, false);
@@ -1253,7 +1255,7 @@ TEST(Local, ExpressionForConstant) {
   EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFFU);
 
   GlobalVariable *String =
-      IRBuilder<>(Context).CreateGlobalString("hello", "hello", 0, &M);
+      IRBuilder<>(M).CreateGlobalString("hello", "hello", 0, &M);
   Expr = createExpression(ConstantExpr::getPtrToInt(String, Int32Ty), Int32Ty);
   EXPECT_EQ(Expr, nullptr);
 
@@ -1367,5 +1369,5 @@ TEST(Local, ReplaceDbgVariableRecord) {
   EXPECT_EQ(DVR->getVariableLocationOp(0), FooInst);
 
   // Teardown.
-  RetInst->DebugMarker->eraseFromParent();
+  RetInst->getDbgMarker()->eraseFromParent();
 }

@@ -24,6 +24,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  renameat
+  SRCS
+    renameat.cpp
+  HDRS
+    ../renameat.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.renameat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fdopen
   SRCS
     fdopen.cpp
@@ -81,4 +95,22 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
+)
+
+add_entrypoint_object(
+  tmpnam
+  SRCS
+    tmpnam.cpp
+  HDRS
+    ../tmpnam.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdio_macros
+    libc.hdr.unistd_macros
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.access
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
 )

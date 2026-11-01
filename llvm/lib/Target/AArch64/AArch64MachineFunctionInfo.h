@@ -190,6 +190,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
   MCSymbol *SignInstrLabel = nullptr;
 
+  /// SignReturnAddressHardening specifies the PAC-RET hardening scheme.
+  enum class SignReturnAddressHardeningKind { None, LoadReturnAddress };
+
+  SignReturnAddressHardeningKind SignReturnAddressHardening =
+      SignReturnAddressHardeningKind::None;
+
   /// BranchTargetEnforcement enables placing BTI instructions at potential
   /// indirect branch destinations.
   bool BranchTargetEnforcement = false;
@@ -227,7 +233,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   // Holds a register containing pstate.sm. This is set
   // on function entry to record the initial pstate of a function.
-  Register PStateSMReg = MCRegister::NoRegister;
+  Register PStateSMReg = Register();
 
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
@@ -238,7 +244,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   // Holds the TPIDR2 block if allocated early (for Windows/stack probes
   // support).
-  Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
+  Register EarlyAllocSMESaveBuffer = Register();
 
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
@@ -580,6 +586,10 @@ public:
   void setSigningInstrLabel(MCSymbol *Label) { SignInstrLabel = Label; }
 
   bool isMTETagged() const { return IsMTETagged; }
+
+  bool shouldHardenSignReturnAddress() const {
+    return SignReturnAddressHardening != SignReturnAddressHardeningKind::None;
+  }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 

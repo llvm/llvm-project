@@ -362,7 +362,8 @@ def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  FeatureStorePairSuppress,
                                  FeaturePredictableSelectIsExpensive,
                                  FeatureDisableUnpredicatedLdStLower,
-                                 FeatureMaxInterleaveFactor4]>;
+                                 FeatureMaxInterleaveFactor4,
+                                 FeatureUseReciprocalFDivCombineThreshold2]>;
 
 def TuneMONAKA : SubtargetFeature<"fujitsu-monaka", "ARMProcFamily", "MONAKA",
                                  "Fujitsu FUJITSU-MONAKA processors", [
@@ -574,7 +575,8 @@ def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1
                                       FeatureEnableSelectOptimize,
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureDisableMaximizeScalableBandwidth,
-                                      FeatureNoSVEFPLD1R]>;
+                                      FeatureNoSVEFPLD1R,
+                                      FeatureDontPreferPredicatedLD1R]>;
 
 def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2",
                                       "Neoverse V2 ARM processors", [
@@ -590,7 +592,8 @@ def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureDisableLatencySchedHeuristic,
-                                      FeatureMaxInterleaveFactor4]>;
+                                      FeatureMaxInterleaveFactor4,
+                                      FeatureDontPreferPredicatedLD1R]>;
 
 def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3",
                                       "Neoverse V3 ARM processors", [

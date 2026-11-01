@@ -122,34 +122,33 @@ define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
 define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_v2f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
 ; SSE2-NEXT:    movapd %xmm0, %xmm1
-; SSE2-NEXT:    subsd %xmm2, %xmm1
-; SSE2-NEXT:    cvttsd2si %xmm1, %rax
-; SSE2-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
+; SSE2-NEXT:    subsd %xmm2, %xmm0
+; SSE2-NEXT:    cvttsd2si %xmm0, %rax
+; SSE2-NEXT:    cvttsd2si %xmm1, %rcx
 ; SSE2-NEXT:    movq %rcx, %rdx
 ; SSE2-NEXT:    sarq $63, %rdx
 ; SSE2-NEXT:    andq %rax, %rdx
 ; SSE2-NEXT:    orq %rcx, %rdx
-; SSE2-NEXT:    movq %rdx, %xmm1
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    cvttsd2si %xmm0, %rax
-; SSE2-NEXT:    subsd %xmm2, %xmm0
-; SSE2-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE2-NEXT:    movq %rdx, %xmm0
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
+; SSE2-NEXT:    cvttsd2si %xmm1, %rax
+; SSE2-NEXT:    subsd %xmm2, %xmm1
+; SSE2-NEXT:    cvttsd2si %xmm1, %rcx
 ; SSE2-NEXT:    movq %rax, %rdx
 ; SSE2-NEXT:    sarq $63, %rdx
 ; SSE2-NEXT:    andq %rcx, %rdx
 ; SSE2-NEXT:    orq %rax, %rdx
-; SSE2-NEXT:    movq %rdx, %xmm0
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [4294967295,4294967295]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    psrlq $32, %xmm1
+; SSE2-NEXT:    movq %rdx, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [4294967295,4294967295]
+; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    addpd %xmm0, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    psrlq $32, %xmm0
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    addpd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_unsigned_v2f64:

@@ -2068,7 +2068,7 @@ define i8 @blsi8(i8 %x) {
 ;
 ; EGPR-LABEL: blsi8:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    blsil %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
 ; EGPR-NEXT:    # kill: def $al killed $al killed $eax
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %neg = sub i8 0, %x
@@ -2115,7 +2115,7 @@ define i8 @blsi8_trunc(i32 %x) {
 ;
 ; EGPR-LABEL: blsi8_trunc:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    blsil %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
 ; EGPR-NEXT:    # kill: def $al killed $al killed $eax
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t = trunc i32 %x to i8
@@ -2298,7 +2298,7 @@ define i8 @blsmsk8(i8 %x) nounwind {
 ;
 ; EGPR-LABEL: blsmsk8:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    blsmskl %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    blsmskl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
 ; EGPR-NEXT:    # kill: def $al killed $al killed $eax
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %y = add i8 %x, -1
@@ -2322,7 +2322,7 @@ define i8 @blsmsk8_trunc(i32 %x) nounwind {
 ;
 ; EGPR-LABEL: blsmsk8_trunc:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    blsmskl %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    blsmskl %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
 ; EGPR-NEXT:    # kill: def $al killed $al killed $eax
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %t = trunc i32 %x to i8

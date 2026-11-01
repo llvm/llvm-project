@@ -262,9 +262,9 @@ void func4() {
 // CIR: %[[INIT:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[CONST:.*]] = cir.get_global @[[FUNC4_ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
 // CIR: cir.copy %[[CONST]] to %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
-// CIR: %[[IDX:.*]] = cir.const #cir.int<0> : !s64i
 // CIR: %[[IDX_1:.*]] = cir.const #cir.int<1> : !s64i
 // CIR: %[[ARR_1:.*]] = cir.get_element %[[ARR]][%[[IDX_1]] : !s64i] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>> -> !cir.ptr<!cir.array<!s32i x 1>>
+// CIR: %[[IDX:.*]] = cir.const #cir.int<0> : !s64i
 // CIR: %[[ELE_0:.*]] = cir.get_element %[[ARR_1]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 1>> -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_0]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
@@ -361,13 +361,13 @@ void func8(int arr[10]) {
 // CIR:  %[[INIT:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
 // CIR:  %[[INIT_2:.*]] = cir.alloca "e2" {{.*}} init : !cir.ptr<!s32i>
 // CIR:  cir.store{{.*}} %[[ARG]], %[[ARR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
-// CIR:  %[[IDX:.*]] = cir.const #cir.int<0> : !s64i
 // CIR:  %[[TMP_1:.*]] = cir.load{{.*}} %[[ARR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:  %[[IDX:.*]] = cir.const #cir.int<0> : !s64i
 // CIR:  %[[ELE_0:.*]] = cir.ptr_stride %[[TMP_1]], %[[IDX]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR:  %[[TMP_2:.*]] = cir.load{{.*}} %[[ELE_0]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
-// CIR:  %[[IDX_1:.*]] = cir.const #cir.int<1> : !s64i
 // CIR:  %[[TMP_3:.*]] = cir.load{{.*}} %[[ARR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:  %[[IDX_1:.*]] = cir.const #cir.int<1> : !s64i
 // CIR:  %[[ELE_1:.*]] = cir.ptr_stride %[[TMP_3]], %[[IDX_1]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR:  %[[TMP_4:.*]] = cir.load{{.*}} %[[ELE_1]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_4]], %[[INIT_2]] : !s32i, !cir.ptr<!s32i>
@@ -407,10 +407,10 @@ void func9(int arr[10][5]) {
 // CIR:  %[[ARR:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>
 // CIR:  %[[INIT:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
 // CIR:  cir.store{{.*}} %[[ARG]], %[[ARR]] : !cir.ptr<!cir.array<!s32i x 5>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>
-// CIR:  %[[IDX:.*]] = cir.const #cir.int<2> : !s64i
-// CIR:  %[[IDX_1:.*]] = cir.const #cir.int<1> : !s64i
 // CIR:  %[[TMP_1:.*]] = cir.load{{.*}} %[[ARR]] : !cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>, !cir.ptr<!cir.array<!s32i x 5>>
+// CIR:  %[[IDX_1:.*]] = cir.const #cir.int<1> : !s64i
 // CIR:  %[[ARR_1:.*]] = cir.ptr_stride %[[TMP_1]], %[[IDX_1]] : (!cir.ptr<!cir.array<!s32i x 5>>, !s64i) -> !cir.ptr<!cir.array<!s32i x 5>>
+// CIR:  %[[IDX:.*]] = cir.const #cir.int<2> : !s64i
 // CIR: %[[ARR_1_2:.*]] = cir.get_element %[[ARR_1]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
 // CIR:  %[[TMP_2:.*]] = cir.load{{.*}} %[[ARR_1_2]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
@@ -442,8 +442,8 @@ void func10(int *a) {
 // CIR: %[[ARR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[INIT:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[ARG]], %[[ARR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
-// CIR: %[[IDX:.*]] = cir.const #cir.int<5> : !s64i
 // CIR: %[[TMP_1:.*]] = cir.load{{.*}} %[[ARR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR: %[[IDX:.*]] = cir.const #cir.int<5> : !s64i
 // CIR: %[[ELE:.*]] = cir.ptr_stride %[[TMP_1]], %[[IDX]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR: %[[TMP_2:.*]] = cir.load{{.*}} %[[ELE]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
@@ -494,10 +494,10 @@ void array_with_complex_elements() {
 
 // CIR: %[[ARR_ADDR:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
 // CIR: %[[CONST:.*]] = cir.get_global @[[COMPLEX_ARR]] : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
-// CIR: cir.copy %[[CONST]] to %[[ARR_ADDR]] : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
+// CIR: cir.copy %[[CONST]] align(16) to %[[ARR_ADDR]] align(16) : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
 
 // LLVM: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], align 16
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR_ADDR]], ptr align 4 @[[COMPLEX_ARR:.*]], i64 16, i1 false)
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR_ADDR]], ptr align 16 @[[COMPLEX_ARR:.*]], i64 16, i1 false)
 
 // OGCG: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], align 16
 // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR_ADDR]], ptr align 16 @__const._Z27array_with_complex_elementsv.arr, i64 16, i1 false)
@@ -583,8 +583,8 @@ char access_last_element_of_huge_array() {
 }
 
 // CIR: cir.func{{.*}} @_Z33access_last_element_of_huge_arrayv
-// CIR:   %[[IDX:.*]] = cir.const #cir.int<2305843009213693950> : !u64i
 // CIR:   %[[HUGE:.*]] = cir.get_global @huge : !cir.ptr<!cir.array<!s8i x 2305843009213693951>>
+// CIR:   %[[IDX:.*]] = cir.const #cir.int<2305843009213693950> : !u64i
 // CIR:   %[[ELE:.*]] = cir.get_element %[[HUGE]][%[[IDX]] : !u64i] : !cir.ptr<!cir.array<!s8i x 2305843009213693951>> -> !cir.ptr<!s8i>
 // CIR:   cir.load{{.*}} %[[ELE]] : !cir.ptr<!s8i>, !s8i
 

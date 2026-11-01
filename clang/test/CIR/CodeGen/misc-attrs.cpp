@@ -11,12 +11,12 @@ extern "C" {
   // LLVM-NEXT: define{{.*}}@returns_twice() #[[RT_ATTR:.*]] {
   __attribute__((returns_twice))
   void returns_twice() {}
-  // CIR: cir.func{{.*}}@cold() attributes {{{.*}}cold, nothrow} {
+  // CIR: cir.func{{.*}}@cold() attributes {{{.*}}cold,{{.*}}nothrow} {
   // LLVM: Function Attrs:{{.*}}cold
   // LLVM-NEXT: define{{.*}}@cold() #[[COLD_ATTR:.*]] {
   __attribute__((cold))
   void cold() {}
-  // CIR: cir.func{{.*}}@hot() attributes {{{.*}}hot, nothrow} {
+  // CIR: cir.func{{.*}}@hot() attributes {{{.*}}hot, {{.*}}nothrow} {
   // LLVM: Function Attrs:{{.*}}hot
   // LLVM-NEXT: define{{.*}}@hot() #[[HOT_ATTR:.*]] {
   __attribute__((hot))
@@ -26,7 +26,7 @@ extern "C" {
   // LLVM-NEXT: define{{.*}}@nodupes() #[[ND_ATTR:.*]] {
   __attribute__((noduplicate))
   void nodupes() {}
-  // CIR: cir.func{{.*}}@convergent() attributes {{{.*}}convergent, nothrow} {
+  // CIR: cir.func{{.*}}@convergent() attributes {{{.*}}convergent, {{.*}}nothrow} {
   // LLVM: Function Attrs:{{.*}}convergent
   // LLVM-NEXT: define{{.*}}@convergent() #[[CONV_ATTR:.*]] {
   __attribute__((convergent))
@@ -46,7 +46,7 @@ extern "C" {
   __attribute__((leaf))
   void leaf() {}
 
-  // CIR: cir.func{{.*}}@modular_format({{.*}}) attributes {{{.*}}modular_format = "kprintf,1,2,someIdent,someStr,aspect,aspect2", nothrow} {
+  // CIR: cir.func{{.*}}@modular_format({{.*}}) attributes {{{.*}}modular_format = "kprintf,1,2,someIdent,someStr,aspect,aspect2", {{.*}}nothrow} {
   // LLVM: Function Attrs:
   // LLVM-NOT:modular_format
   // LLVM-NEXT: define{{.*}}@modular_format({{.*}}) #[[MOD_FORMAT_ATTR:.*]] {

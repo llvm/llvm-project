@@ -81,6 +81,9 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
     if (llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
       stack_frame.moduleId = uuid.str();
   }
+  if (const uint32_t cu_id = frame.GetCompileUnit().GetIDInModule();
+      cu_id != LLDB_INVALID_INDEX32)
+    stack_frame.compileUnitId = cu_id;
 
   return stack_frame;
 }

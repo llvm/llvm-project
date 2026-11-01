@@ -94,6 +94,7 @@ DEFAULT_PLUGINS = [
     "SystemRuntimeMacOSX",
     "TraceExporterCTF",
     "TypeSystemClang",
+    "TypeSystemFortran",
     "UnwindAssemblyInstEmulation",
     "UnwindAssemblyX86",
 ]

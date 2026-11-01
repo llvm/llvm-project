@@ -5,7 +5,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i16 = dense<16> : vector<2xi64>,
     %0 = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
     %c0 = arith.constant 0 : index
     %1 = fir.shape %c0 : (index) -> !fir.shape<1>
-    %2 = fir.embox %0(%1) {allocator_idx = 2 : i32} : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+    %2 = fir.embox %0(%1) allocator_idx(2) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
     fir.has_value %2 : !fir.box<!fir.ptr<!fir.array<?xf32>>>
   }
   func.func @_QQmain() {

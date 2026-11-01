@@ -1,0 +1,15 @@
+// -print-preamble treats ClangIR input like LLVM IR input: it has no
+// preamble to print, and the action is rejected before it runs.
+
+// RUN: not %clang_cc1 -print-preamble -x cir %s 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
+// RUN: not %clang_cc1 -print-preamble %s 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
+
+// CHECK-NOT: !s32i
+// CHECK: fatal error: cannot apply AST actions to ClangIR file '{{.*}}cir-input-preamble.cir'
+// CHECK-NOT: !s32i
+
+!s32i = !cir.int<s, 32>
+module {
+}

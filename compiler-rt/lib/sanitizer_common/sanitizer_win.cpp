@@ -759,7 +759,9 @@ static int RunAtexit() {
   return ret;
 }
 
-#pragma section(".CRT$XID", long, read)
+#    if !defined(__GNUC__) || defined(__clang__)
+#      pragma section(".CRT$XID", long, read)
+#    endif
 IN_SECTION(".CRT$XID") int (*__run_atexit)() = RunAtexit;
 #  endif
 

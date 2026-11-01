@@ -444,8 +444,12 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     Record.Counts.push_back(Count);
   }
 
-  // Bitmap byte information is indicated with special character.
-  if (Line->starts_with("$")) {
+  // Bitmap byte information is indicated by '$' followed by an integer. Only
+  // treat numeric-looking lines as bitmap records so function names such as
+  // Swift manglings beginning with "$s" remain unambiguous.
+  StringRef BitmapSize =
+      Line->starts_with("$") ? Line->drop_front(1).trim() : StringRef();
+  if (!BitmapSize.empty() && isDigit(BitmapSize.front())) {
     Record.BitmapBytes.clear();
     // Read the number of bitmap bytes.
     uint64_t NumBitmapBytes;
@@ -455,7 +459,7 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     if (NumBitmapBytes != 0) {
       // Read each bitmap and fill our internal storage with the values.
       Record.BitmapBytes.reserve(NumBitmapBytes);
-      for (uint8_t I = 0; I < NumBitmapBytes; ++I) {
+      for (uint64_t I = 0; I < NumBitmapBytes; ++I) {
         if (Line.is_at_end())
           return error(instrprof_error::truncated);
         uint8_t BitmapByte;

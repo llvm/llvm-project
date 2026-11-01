@@ -219,6 +219,8 @@ bool ConstraintSystem::mayHaveSolution() {
 
 std::pair<ConstraintSystem, ConstraintSystem::RowTy>
 ConstraintSystem::getSubSystem(ArrayRef<Entry> R) const {
+  assert((R.empty() || R.back().Id <= NumVariables) &&
+         "query must only use variables of the system");
   // Only constraints that share a variable (transitively) with a query R can
   // affect whether system + !R has a solution.
   //
@@ -277,11 +279,30 @@ ConstraintSystem::getSubSystem(ArrayRef<Entry> R) const {
   return {std::move(SubSystem), std::move(NewR)};
 }
 
+bool ConstraintSystem::isImpliedBySingleRow(ArrayRef<Entry> R) const {
+  int64_t C = getConstant(R);
+  if (hasConstantEntry(R))
+    R = R.drop_front();
+  return any_of(Constraints, [&](ArrayRef<Entry> Row) {
+    if (getConstant(Row) > C)
+      return false;
+    if (hasConstantEntry(Row))
+      Row = Row.drop_front();
+    return equal(Row, R, [](const Entry &A, const Entry &B) {
+      return A.Id == B.Id && A.Coefficient == B.Coefficient;
+    });
+  });
+}
+
 bool ConstraintSystem::isConditionImplied(RowTy R) const {
   // If all variable coefficients are 0, we have 'C >= 0'. If the constant is >=
   // 0, R is always true, regardless of the system.
   if (isConstantOnly(R))
     return getConstant(R) >= 0;
+
+  // R is trivially implied if a single row of the system implies it.
+  if (isImpliedBySingleRow(R))
+    return true;
 
   // If there is no solution with the negation of R added to the system, the
   // condition must hold based on the existing constraints.

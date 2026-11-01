@@ -66,7 +66,7 @@
 // CUDA-PTH: cir.call @cudaLaunchKernel_ptsz
 
 //
-// HIP-NEW: cir.global constant external @_Z6kernelif = #cir.global_view<@_Z21__device_stub__kernelif> : !cir.ptr<!cir.func<(!s32i, !cir.float)>> {alignment = 8 : i64}
+// HIP-NEW: cir.global constant external @_Z6kernelif = #cir.global_view<@_Z21__device_stub__kernelif> : !cir.ptr<!cir.func<(!s32i, !cir.float)>> align(8)
 // HIP-NEW-LABEL: cir.func {{.*}} @_Z21__device_stub__kernelif
 // HIP-NEW: cir.alloca "stream" {{.*}} : !cir.ptr<!cir.ptr<!rec_hipStream>>
 // HIP-NEW: cir.call @__hipPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_hipStream>>) -> !s32i

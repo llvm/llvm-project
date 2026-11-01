@@ -10,6 +10,8 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s -o %t.o
 # RUN: llvm-objdump -d --no-show-raw-insn --mattr=+zfinx %t.o \
 # RUN:     | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn --mattr=+f %t.o \
+# RUN:     | FileCheck %s
 
 .text
 
@@ -19,4 +21,12 @@
 .option arch, +f
 fadd.s fa0, fa1, fa2
 # CHECK: fadd.s fa0, fa1, fa2
+.option pop
+
+## fadd.s in a +zfinx region.  Passing --mattr=+f conflicts with +zfinx and
+## must not leak from the file-level SubtargetInfo into this region.
+.option push
+.option arch, +zfinx
+fadd.s a0, a1, a2
+# CHECK: fadd.s a0, a1, a2
 .option pop

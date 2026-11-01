@@ -9,7 +9,7 @@ func.func @minimal_volatile_test() {
   %1 = fir.address_of(@_QMtestEarray) : !fir.ref<!fir.array<200xf32>>
   %2 = fir.shape %c200 : (index) -> !fir.shape<1>
   %3 = fir.volatile_cast %1 : (!fir.ref<!fir.array<200xf32>>) -> !fir.ref<!fir.array<200xf32>, volatile>
-  %4:2 = hlfir.declare %3(%2) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QMtestEarray"} : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
+  %4:2 = hlfir.declare %3(%2) uniq_name("_QMtestEarray") fortran_attrs<volatile> : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
 
   // Create an elemental operation that negates each element
   %5 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<200xf32> {
@@ -34,7 +34,7 @@ fir.global @_QMtestEarray : !fir.array<200xf32>
 // CHECK:           %[[VAL_1:.*]] = fir.address_of(@_QMtestEarray) : !fir.ref<!fir.array<200xf32>>
 // CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_3:.*]] = fir.volatile_cast %[[VAL_1]] : (!fir.ref<!fir.array<200xf32>>) -> !fir.ref<!fir.array<200xf32>, volatile>
-// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_2]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QMtestEarray"} : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_2]]) uniq_name("_QMtestEarray") fortran_attrs<volatile> : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
 // CHECK:           %[[VAL_5:.*]] = hlfir.elemental %[[VAL_2]] unordered : (!fir.shape<1>) -> !hlfir.expr<200xf32> {
 // CHECK:           ^bb0(%[[VAL_6:.*]]: index):
 // CHECK:             %[[VAL_7:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_6]])  : (!fir.ref<!fir.array<200xf32>, volatile>, index) -> !fir.ref<f32, volatile>
@@ -60,8 +60,8 @@ func.func @volatile_src_nonvolatile_dst() {
   %dst = fir.address_of(@_QMtestEarray_dst) : !fir.ref<!fir.array<200xf32>>
   %2 = fir.shape %c200 : (index) -> !fir.shape<1>
   %3 = fir.volatile_cast %1 : (!fir.ref<!fir.array<200xf32>>) -> !fir.ref<!fir.array<200xf32>, volatile>
-  %4:2 = hlfir.declare %3(%2) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QMtestEarray_src"} : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
-  %dstDecl:2 = hlfir.declare %dst(%2) {uniq_name = "_QMtestEarray_dst"} : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>>, !fir.ref<!fir.array<200xf32>>)
+  %4:2 = hlfir.declare %3(%2) uniq_name("_QMtestEarray_src") fortran_attrs<volatile> : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
+  %dstDecl:2 = hlfir.declare %dst(%2) uniq_name("_QMtestEarray_dst") : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>>, !fir.ref<!fir.array<200xf32>>)
 
   %5 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<200xf32> {
   ^bb0(%arg1: index):
@@ -84,8 +84,8 @@ func.func @volatile_src_nonvolatile_dst() {
 // CHECK:           %[[ADDRESS_OF_1:.*]] = fir.address_of(@_QMtestEarray_dst) : !fir.ref<!fir.array<200xf32>>
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ADDRESS_OF_0]] : (!fir.ref<!fir.array<200xf32>>) -> !fir.ref<!fir.array<200xf32>, volatile>
-// CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QMtestEarray_src"} : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
-// CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[ADDRESS_OF_1]](%[[SHAPE_0]]) {uniq_name = "_QMtestEarray_dst"} : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>>, !fir.ref<!fir.array<200xf32>>)
+// CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) uniq_name("_QMtestEarray_src") fortran_attrs<volatile> : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
+// CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[ADDRESS_OF_1]](%[[SHAPE_0]]) uniq_name("_QMtestEarray_dst") : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>>, !fir.ref<!fir.array<200xf32>>)
 // CHECK:           fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_1]] step %[[CONSTANT_0]] unordered {
 // CHECK:             %[[DESIGNATE_0:.*]] = hlfir.designate %[[DECLARE_0]]#0 (%[[VAL_0]])  : (!fir.ref<!fir.array<200xf32>, volatile>, index) -> !fir.ref<f32, volatile>
 // CHECK:             %[[LOAD_0:.*]] = fir.load %[[DESIGNATE_0]] : !fir.ref<f32, volatile>
@@ -105,8 +105,8 @@ func.func @nonvolatile_src_volatile_dst() {
   %dst = fir.address_of(@_QMtestEarray_src) : !fir.ref<!fir.array<200xf32>>
   %2 = fir.shape %c200 : (index) -> !fir.shape<1>
   %3 = fir.volatile_cast %1 : (!fir.ref<!fir.array<200xf32>>) -> !fir.ref<!fir.array<200xf32>, volatile>
-  %4:2 = hlfir.declare %3(%2) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QMtestEarray_dst"} : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
-  %srcDecl:2 = hlfir.declare %dst(%2) {uniq_name = "_QMtestEarray_src"} : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>>, !fir.ref<!fir.array<200xf32>>)
+  %4:2 = hlfir.declare %3(%2) uniq_name("_QMtestEarray_dst") fortran_attrs<volatile> : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
+  %srcDecl:2 = hlfir.declare %dst(%2) uniq_name("_QMtestEarray_src") : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>>, !fir.ref<!fir.array<200xf32>>)
 
   %5 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<200xf32> {
   ^bb0(%arg1: index):
@@ -128,8 +128,8 @@ func.func @nonvolatile_src_volatile_dst() {
 // CHECK:           %[[ADDRESS_OF_1:.*]] = fir.address_of(@_QMtestEarray_src) : !fir.ref<!fir.array<200xf32>>
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ADDRESS_OF_0]] : (!fir.ref<!fir.array<200xf32>>) -> !fir.ref<!fir.array<200xf32>, volatile>
-// CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QMtestEarray_dst"} : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
-// CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[ADDRESS_OF_1]](%[[SHAPE_0]]) {uniq_name = "_QMtestEarray_src"} : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>>, !fir.ref<!fir.array<200xf32>>)
+// CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) uniq_name("_QMtestEarray_dst") fortran_attrs<volatile> : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
+// CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[ADDRESS_OF_1]](%[[SHAPE_0]]) uniq_name("_QMtestEarray_src") : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>>, !fir.ref<!fir.array<200xf32>>)
 // CHECK:           fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_1]] step %[[CONSTANT_0]] unordered {
 // CHECK:             %[[DESIGNATE_0:.*]] = hlfir.designate %[[DECLARE_1]]#0 (%[[VAL_0]])  : (!fir.ref<!fir.array<200xf32>>, index) -> !fir.ref<f32>
 // CHECK:             %[[LOAD_0:.*]] = fir.load %[[DESIGNATE_0]] : !fir.ref<f32>

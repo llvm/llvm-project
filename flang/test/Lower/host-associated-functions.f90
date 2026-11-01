@@ -8,7 +8,7 @@
 ! CHECK-SAME:  %[[VAL_1_arg:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 subroutine capture_char_func_dummy(char_func_dummy, n)
   character(n),external :: char_func_dummy
-  ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_1_arg]] {{.*}}uniq_name = "_QFcapture_char_func_dummyEn"
+  ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_1_arg]] {{.*}}uniq_name("_QFcapture_char_func_dummyEn")
   ! CHECK:  %[[VAL_2:.*]] = fir.alloca tuple<tuple<!fir.boxproc<() -> ()>, i64>, !fir.ref<i32>>
   ! CHECK:  %[[VAL_3:.*]] = arith.constant 0 : i32
   ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>, !fir.ref<i32>>>, i32) -> !fir.ref<tuple<!fir.boxproc<() -> ()>, i64>>
@@ -28,7 +28,7 @@ contains
   ! CHECK:  %[[VAL_4:.*]] = arith.constant 1 : i32
   ! CHECK:  %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_4]] : (!fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>, !fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
   ! CHECK:  %[[VAL_6_ref:.*]] = fir.load %[[VAL_5]] : !fir.llvm_ptr<!fir.ref<i32>>
-  ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_6_ref]] {{.*}}uniq_name = "_QFcapture_char_func_dummyEn"
+  ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_6_ref]] {{.*}}uniq_name("_QFcapture_char_func_dummyEn")
   ! CHECK:  %[[VAL_12:.*]] = fir.extract_value %[[VAL_3]], [0 : index] : (tuple<!fir.boxproc<() -> ()>, i64>) -> !fir.boxproc<() -> ()>
   ! CHECK:  %[[VAL_13:.*]] = fir.box_addr %[[VAL_12]] : (!fir.boxproc<() -> ()>) -> (() -> ())
   ! CHECK:  %[[VAL_14:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
@@ -63,7 +63,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0_arg:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 subroutine capture_char_func(n)
   character(n), external :: char_func
-! CHECK:  %[[VAL_0:.*]]:2 = hlfir.declare %[[VAL_0_arg]] {{.*}}uniq_name = "_QFcapture_char_funcEn"
+! CHECK:  %[[VAL_0:.*]]:2 = hlfir.declare %[[VAL_0_arg]] {{.*}}uniq_name("_QFcapture_char_funcEn")
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca tuple<!fir.ref<i32>>
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
@@ -77,7 +77,7 @@ contains
    ! CHECK: %[[VAL_1:.*]] = arith.constant 0 : i32
    ! CHECK: %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
    ! CHECK: %[[VAL_3_ref:.*]] = fir.load %[[VAL_2]] : !fir.llvm_ptr<!fir.ref<i32>>
-   ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_3_ref]] {{.*}}uniq_name = "_QFcapture_char_funcEn"
+   ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_3_ref]] {{.*}}uniq_name("_QFcapture_char_funcEn")
    print *, char_func()
   end subroutine
 end subroutine
@@ -92,7 +92,7 @@ subroutine capture_array_func(n)
     integer :: array_func(n)
   end function
   end interface
-! CHECK:  %[[VAL_0:.*]]:2 = hlfir.declare %[[VAL_0_arg]] {{.*}}uniq_name = "_QFcapture_array_funcEn"
+! CHECK:  %[[VAL_0:.*]]:2 = hlfir.declare %[[VAL_0_arg]] {{.*}}uniq_name("_QFcapture_array_funcEn")
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca tuple<!fir.ref<i32>>
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
@@ -106,7 +106,7 @@ contains
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
 ! CHECK:  %[[VAL_3_ref:.*]] = fir.load %[[VAL_2]] : !fir.llvm_ptr<!fir.ref<i32>>
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_3_ref]] {{.*}}uniq_name = "_QFcapture_array_funcEn"
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_3_ref]] {{.*}}uniq_name("_QFcapture_array_funcEn")
 ! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
    print *, array_func()
   end subroutine

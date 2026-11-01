@@ -120,6 +120,13 @@ protected: // Can only create subclasses.
 
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
+  unsigned EnableTiedFastRegAlloc : 1;
+
+  /// Set if the target supports default outlining behaviour.
+  unsigned SupportsDefaultOutlining : 1;
+
+  /// Set if the target supports the debug entry values by default.
+  unsigned SupportsDebugEntryValues : 1;
 
   // PGO related tunables.
   std::optional<PGOOptions> PGOOption;
@@ -258,17 +265,31 @@ public:
   /// assembly.
   const MCSubtargetInfo &getMCSubtargetInfo(StringRef CPU, StringRef FS);
 
-  /// Return the ExceptionHandling to use, considering TargetOptions and the
-  /// Triple's default.
+  /// Return the ExceptionHandling to use. A Default model resolves to the
+  /// triple's default; None means exceptions are disabled.
   ExceptionHandling getExceptionModel() const {
-    // FIXME: This interface fails to distinguish default from not supported.
-    return Options.ExceptionModel == ExceptionHandling::None
+    return Options.ExceptionModel == ExceptionHandling::Default
                ? TargetTriple.getDefaultExceptionHandling()
                : Options.ExceptionModel;
   }
 
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }
+
+  bool supportsDefaultOutlining() const { return SupportsDefaultOutlining; }
+  void setSupportsDefaultOutlining(bool Enable) {
+    SupportsDefaultOutlining = Enable;
+  }
+
+  /// NOTE: There are targets that still do not support the debug entry values
+  /// production.
+  bool shouldEmitDebugEntryValues() const;
+
+  /// Whether the fast register allocator lowers tied operands itself instead
+  /// of running TwoAddressInstructionPass. AMDGPU anchors passes on
+  /// TwoAddressInstructionPassID and cannot enable it.
+  bool enableTiedFastRegAlloc() const { return EnableTiedFastRegAlloc; }
+  void setEnableTiedFastRegAlloc(bool Value) { EnableTiedFastRegAlloc = Value; }
 
   /// Returns the code generation relocation model. The choices are static, PIC,
   /// and dynamic-no-pic, and target default.
@@ -317,21 +338,14 @@ public:
   void setMachineOutliner(bool Enable) {
     Options.EnableMachineOutliner = Enable;
   }
-  void setSupportsDefaultOutlining(bool Enable) {
-    Options.SupportsDefaultOutlining = Enable;
-  }
   void setSupportsDebugEntryValues(bool Enable) {
-    Options.SupportsDebugEntryValues = Enable;
+    SupportsDebugEntryValues = Enable;
   }
   void setEnableDefaultMachineVerifier(bool Enable) {
     Options.EnableDefaultMachineVerifier = Enable;
   }
 
   void setCFIFixup(bool Enable) { Options.EnableCFIFixup = Enable; }
-
-  bool getAIXExtendedAltivecABI() const {
-    return Options.EnableAIXExtendedAltivecABI;
-  }
 
   bool getUniqueSectionNames() const { return Options.UniqueSectionNames; }
 
@@ -382,7 +396,8 @@ public:
   }
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  virtual bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
+  virtual bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                                   unsigned DestAS) const {
     return false;
   }
 
@@ -474,8 +489,6 @@ public:
   /// The integer bit size to use for SjLj based exception handling.
   static constexpr unsigned DefaultSjLjDataSize = 32;
   virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
-
-  static std::pair<int, int> parseBinutilsVersion(StringRef Version);
 
   /// getAddressSpaceForPseudoSourceKind - Given the kind of memory
   /// (e.g. stack) the target returns the corresponding address space.

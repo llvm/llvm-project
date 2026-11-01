@@ -1190,6 +1190,32 @@ def Arith_MaxNumFOp : Arith_FloatBinaryOp<"maxnumf", [Commutative]> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// MaximumNumFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MaximumNumFOp : Arith_FloatBinaryOp<"maximumnumf", [Commutative]> {
+  let summary = "floating-point maximumNumber operation";
+  let description = [{
+    Returns the maximum of the two arguments, not propagating NaNs and treating
+    -0.0 as less than +0.0.
+
+    If both operands are NaNs, returns a NaN. If one operand is NaN and the
+    other operand is a number, returns the number. Otherwise, returns the
+    greater of the two arguments. -0.0 is considered to be less than +0.0 for
+    this operation.
+
+    If the `nsz` flag is specified, `arith.maximumnumf` with one +0.0 and one
+    -0.0 operand may non-deterministically return either operand. Unlike the
+    usual `nsz` semantics, if both zero operands have the same sign, the result
+    must retain that sign. For example, `maximumnumf(+0.0, +0.0)` with `nsz`
+    must return +0.0, while `maximumnumf(-0.0, +0.0)` may return either zero.
+
+    This operation follows the semantics of `maximumNumber` in IEEE 754-2019.
+  }];
+  let hasFolder = 1;
+}
+
 
 //===----------------------------------------------------------------------===//
 // MaxSIOp
@@ -1248,6 +1274,32 @@ def Arith_MinNumFOp : Arith_FloatBinaryOp<"minnumf", [Commutative]> {
     // Scalar floating-point minimum.
     %a = arith.minnumf %b, %c : f64
     ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MinimumNumFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MinimumNumFOp : Arith_FloatBinaryOp<"minimumnumf", [Commutative]> {
+  let summary = "floating-point minimumNumber operation";
+  let description = [{
+    Returns the minimum of the two arguments, not propagating NaNs and treating
+    -0.0 as less than +0.0.
+
+    If both operands are NaNs, returns a NaN. If one operand is NaN and the
+    other operand is a number, returns the number. Otherwise, returns the
+    lesser of the two arguments. -0.0 is considered to be less than +0.0 for
+    this operation.
+
+    If the `nsz` flag is specified, `arith.minimumnumf` with one +0.0 and one
+    -0.0 operand may non-deterministically return either operand. Unlike the
+    usual `nsz` semantics, if both zero operands have the same sign, the result
+    must retain that sign. For example, `minimumnumf(-0.0, -0.0)` with `nsz`
+    must return -0.0, while `minimumnumf(-0.0, +0.0)` may return either zero.
+
+    This operation follows the semantics of `minimumNumber` in IEEE 754-2019.
   }];
   let hasFolder = 1;
 }

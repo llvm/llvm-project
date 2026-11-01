@@ -130,9 +130,18 @@ def ConvertAMDGPUToROCDLPass : Pass<"convert-amdgpu-to-rocdl"> {
     "LLVM::LLVMDialect",
     "ROCDL::ROCDLDialect",
   ];
-  let options = [Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"gfx000\"",
-                        "Chipset that these operations will run on">];
+  let options = [
+    Option<"arch", "arch", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
+    Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
+           "Deprecated alias for 'arch'.">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -150,9 +159,16 @@ def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
   let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
 
   let options = [
-    Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"gfx000\"",
-                        "Chipset that these operations will run on">,
+    Option<"arch", "arch", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
+    Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
+           "Deprecated alias for 'arch'.">,
     Option<"saturateFP8Truncf", "saturate-fp8-truncf", "bool",
            /*default=*/"false",
            "Use saturating truncation for 8-bit float types">,
@@ -414,19 +430,13 @@ def LiftControlFlowToSCFPass : Pass<"lift-cf-to-scf"> {
     Otherwise a single ControlFlow switch branching to one block per return-like
     operation kind remains.
 
-    This pass may need to create unreachable terminators in case of infinite
-    loops, which is only supported for 'func.func' for now. If you potentially
-    have infinite loops inside CFG regions not belonging to 'func.func',
-    consider using `transformCFGToSCF` function directly with corresponding
-    `CFGToSCFInterface::createUnreachableTerminator` implementation.
+    This pass may need to create `ub.unreachable` terminators in case of
+    statically known infinite loops.
   }];
 
   let dependentDialects = ["scf::SCFDialect",
                            "arith::ArithDialect",
-                           "ub::UBDialect",
-                           // TODO: This is only necessary until we have a
-                           //       ub.unreachable op.
-                           "func::FuncDialect"];
+                           "ub::UBDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -690,9 +700,19 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
     "memref::MemRefDialect",
   ];
   let options = [
-    Option<"chipset", "chipset", "std::string",
-           /*default=*/"\"gfx000\"",
-           "Chipset that these operations will run on">,
+    Option<"arch", "arch", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
+    Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
+           "Deprecated alias for 'arch'.">,
+    Option<"waveSize", "wavesize", "unsigned", /*default=*/"0",
+           "Wavefront size (32 or 64) for targets that run at either, or 0 to "
+           "use the architecture's default">,
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/ "0",
            "Bitwidth of the index type, 0 to use size of machine word">,
@@ -857,9 +877,9 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   let description = [{
     This pass converts supported Math ops to ROCDL library calls.
 
-    The chipset option specifies the target AMDGPU architecture. If the chipset
-    is empty, none of the chipset-dependent patterns are added, and the pass
-    will not attempt to parse the chipset.
+    The `arch` option specifies the target AMDGPU architecture. If it is empty,
+    none of the target-dependent patterns are added and the pass does not
+    resolve a target.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
@@ -867,9 +887,14 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
     "ROCDL::ROCDLDialect",
     "vector::VectorDialect",
   ];
-  let options = [Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"\"",
-                        "Chipset that these operations will run on">];
+  let options = [
+    Option<"arch", "arch", "std::string", /*default=*/"\"\"",
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers (e.g. amdgpu9.42-amd-amdhsa, gfx942, gfx942:xnack-). "
+           "If empty, no target-dependent patterns are added">,
+    Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
+           "Deprecated alias for 'arch'.">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -901,21 +926,32 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 
 def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   let summary =
-      "Convert (fast) math operations to native XeVM/SPIRV equivalents";
+      "Convert math operations to their XeVM/SPIRV OpenCL equivalents";
   let description = [{
-    This pass converts supported math ops marked with the `afn` fastmath flag
-    to function calls for OpenCL `native_` math intrinsics: These intrinsics
-    are typically mapped directly to native device instructions, often resulting
-    in better performance. However, the precision/error of these intrinsics
-    are implementation-defined, and thus math ops are only converted when they
-    have the `afn` fastmath flag enabled. However, if the `convertToOCL` flag is
-    set then all supported math ops would be lowered to OpenCL math intrinsics.
+    This pass lowers supported math ops to OpenCL math intrinsic calls. The
+    fastmath flag on each op picks which intrinsic is used:
+
+    *   Ops marked `afn` or `fast` become calls to OpenCL `native_` intrinsics.
+        Both work because `fast` is a group flag that expands to every fastmath
+        bit, `afn` included. These intrinsics are typically mapped directly to
+        native device instructions, often resulting in better performance. Their
+        precision/error is implementation-defined, so `afn` is what opts in.
+        Other flags on their own (`nnan`, `ninf`, ...) do not.
+    *   Every other op becomes a call to the precise OpenCL intrinsic from the
+        `__spirv_ocl_` extended instruction set. Set the `convertToOCL` flag to
+        `false` to leave these ops alone instead.
+
+    Algebraic simplifications run ahead of the lowering, so the cheaper form is
+    what reaches the intrinsics: `math.powf %x, 2.0` becomes a multiply instead
+    of a call to `__spirv_ocl_native_powr`, and `exp(a) / exp(b)` becomes a
+    single `exp(a - b)` when the division may be reassociated (`arcp` or
+    `reassoc`). Ops these simplifications cannot rewrite are left as they are.
   }];
   let options = [
     Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
       "Convert supported Arith ops (e.g. arith.divf) as well.">,
-    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"false",
-      "Convert supported Math ops to OCL intrinsics.">
+    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"true",
+      "Convert Math ops without `afn` fastmath to precise OCL intrinsics.">
   ];
   let dependentDialects = [
     "arith::ArithDialect",
@@ -1421,7 +1457,14 @@ def TosaToLinalg
            "Disable tosa decompositions pass">,
     Option<"aggressiveReduceConstant", "aggressive-reduce-constant",
            "bool", /*default=*/"false",
-           "Always perform the reduce constant optimization">
+           "Always perform the reduce constant optimization">,
+    Option<"allowNonFinites", "allow-non-finites", "bool",
+           /*default=*/"false",
+           "When enabled, float min/max reductions are seeded with the "
+           "infinite identity mandated by the TOSA specification. When "
+           "disabled (default), the largest finite value is used instead. "
+           "This controls only compiler-generated identity values; NaN "
+           "results required by nan_mode are unaffected.">
   ];
 }
 

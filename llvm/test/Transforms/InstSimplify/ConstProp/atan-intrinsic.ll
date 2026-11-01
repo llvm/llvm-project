@@ -64,7 +64,7 @@ define double @test_atan_qnan() {
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.atan.f64(double +qnan)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.atan.f64(double 0x7ff8000000000000)
+  %res = call double @llvm.atan.f64(double +qnan)
   ret double %res
 }
 

@@ -16,7 +16,6 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
-#include "hdr/types/off_t.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/linux/syscall.h" // syscall_checked
@@ -29,26 +28,25 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE ErrorOr<int> posix_fadvise(int fd, off_t offset, off_t len,
+LIBC_INLINE ErrorOr<int> posix_fadvise(int fd, int64_t offset, int64_t len,
                                        int advice) {
-  if constexpr (sizeof(long) == sizeof(uint32_t) &&
-                sizeof(off_t) == sizeof(uint64_t)) {
+  if constexpr (sizeof(long) == sizeof(uint32_t)) {
     uint64_t offset_bits = cpp::bit_cast<uint64_t>(offset);
     long offset_low = static_cast<long>(offset_bits & UINT32_MAX);
     long offset_high = static_cast<long>(offset_bits >> 32);
 
-#if defined(SYS_fadvise64_64) || defined(SYS_arm_fadvise64_64)
+#if defined(SYS_arm_fadvise64_64) || defined(SYS_fadvise64_64)
     uint64_t len_bits = cpp::bit_cast<uint64_t>(len);
     long len_low = static_cast<long>(len_bits & UINT32_MAX);
     long len_high = static_cast<long>(len_bits >> 32);
 #endif
 
-#if defined(SYS_fadvise64_64)
-    return syscall_checked<int>(SYS_fadvise64_64, fd, offset_low, offset_high,
-                                len_low, len_high, advice);
-#elif defined(SYS_arm_fadvise64_64)
+#if defined(SYS_arm_fadvise64_64)
     return syscall_checked<int>(SYS_arm_fadvise64_64, fd, advice, offset_low,
                                 offset_high, len_low, len_high);
+#elif defined(SYS_fadvise64_64)
+    return syscall_checked<int>(SYS_fadvise64_64, fd, offset_low, offset_high,
+                                len_low, len_high, advice);
 #elif defined(SYS_fadvise64)
     if (len < 0 ||
         static_cast<uint64_t>(len) > cpp::numeric_limits<size_t>::max())

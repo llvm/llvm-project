@@ -385,8 +385,17 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     }
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
+    $_qualCppClassName::Properties properties{};
+    $_qualCppClassName::populateDefaultProperties(
+      OperationName($_qualCppClassName::getOperationName(),
+                    $_builder.getContext()), properties);
+    if (failed($_qualCppClassName::setPropertiesFromAttr(
+          properties, $_builder.getDictionaryAttr(mlirAttrs),
+          [&]() { return emitError($_location); }))) {
+      return failure();
+    }
     auto op = $_qualCppClassName::create($_builder,
-      $_location, resultTypes, mlirOperands, mlirAttrs);
+      $_location, resultTypes, mlirOperands, properties, {});
     }];
   string baseMlirBuilderArgAndResultAttrs = [{
     moduleImport.convertArgAndResultAttrs(
@@ -473,12 +482,14 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
 class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
                            list<Trait> traits = [],
+                           bit requiresAccessGroup = 0,
+                           bit requiresAliasAnalysis = 0,
                            bit requiresFastmath = 0,
                            bit requiresArgAndResultAttrs = 0,
                            list<int> immArgPositions = [],
                            list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
-                  /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+                  requiresAccessGroup, requiresAliasAnalysis,
                   requiresFastmath, requiresArgAndResultAttrs,
                   /*requiresOpBundles=*/0, immArgPositions,
                   immArgAttrNames>;

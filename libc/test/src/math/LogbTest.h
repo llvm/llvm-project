@@ -88,9 +88,9 @@ public:
   }
 };
 
-#define LIST_LOGB_TESTS(T, func)                                               \
-  using LlvmLibcLogbTest = LogbTest<T>;                                        \
-  TEST_F(LlvmLibcLogbTest, SpecialNumbers) { testSpecialNumbers(&func); }      \
-  TEST_F(LlvmLibcLogbTest, PowersOfTwo) { testPowersOfTwo(&func); }            \
-  TEST_F(LlvmLibcLogbTest, SomeIntegers) { testSomeIntegers(&func); }          \
-  TEST_F(LlvmLibcLogbTest, InRange) { testRange(&func); }
+#define LIST_LOGB_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = LogbTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, PowersOfTwo) { testPowersOfTwo(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, SomeIntegers) { testSomeIntegers(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, InRange) { testRange(&func); }

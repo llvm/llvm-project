@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
@@ -25,7 +26,8 @@ class OpenACCOpsInterfacesTest : public ::testing::Test {
 protected:
   OpenACCOpsInterfacesTest()
       : context(), builder(&context), loc(UnknownLoc::get(&context)) {
-    context.loadDialect<acc::OpenACCDialect, memref::MemRefDialect>();
+    context.loadDialect<acc::OpenACCDialect, memref::MemRefDialect,
+                        LLVM::LLVMDialect>();
   }
 
   MLIRContext context;
@@ -112,6 +114,22 @@ TEST_F(OpenACCOpsInterfacesTest, AddressOfGlobalOpInterfaceGetSymbol) {
 
   auto addrOfGlobalIface =
       dyn_cast<AddressOfGlobalOpInterface>(getGlobalOp->getOperation());
+  ASSERT_TRUE(addrOfGlobalIface != nullptr);
+  EXPECT_EQ(addrOfGlobalIface.getSymbol().getLeafReference(), symbolName);
+}
+
+TEST_F(OpenACCOpsInterfacesTest, AddressOfGlobalOpInterfaceLLVMGetSymbol) {
+  // Test that getSymbol() returns the correct symbol reference for the LLVM
+  // dialect address-of operation.
+
+  const auto *symbolName = "test_llvm_global_symbol";
+
+  OwningOpRef<LLVM::AddressOfOp> addressOfOp = LLVM::AddressOfOp::create(
+      builder, loc, LLVM::LLVMPointerType::get(&context),
+      FlatSymbolRefAttr::get(&context, symbolName));
+
+  auto addrOfGlobalIface =
+      dyn_cast<AddressOfGlobalOpInterface>(addressOfOp->getOperation());
   ASSERT_TRUE(addrOfGlobalIface != nullptr);
   EXPECT_EQ(addrOfGlobalIface.getSymbol().getLeafReference(), symbolName);
 }

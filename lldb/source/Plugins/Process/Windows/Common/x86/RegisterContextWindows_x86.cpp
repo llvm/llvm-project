@@ -25,7 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#define DEFINE_GPR(reg, alt) #reg, alt, 4, 0, eEncodingUint, eFormatHexUppercase
+#define DEFINE_GPR(reg, alt) #reg, alt, 4, 0, eEncodingUint, eFormatHex
 #define DEFINE_GPR_BIN(reg, alt) #reg, alt, 4, 0, eEncodingUint, eFormatBinary
 
 namespace {

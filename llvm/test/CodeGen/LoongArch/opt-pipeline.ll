@@ -119,10 +119,10 @@
 ; LAXX-NEXT:       Remove unreachable machine basic blocks
 ; LAXX-NEXT:       Live Variable Analysis
 ; LAXX-NEXT:       Eliminate PHI nodes for register allocation
-; LAXX-NEXT:       Two-Address instruction pass
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Slot index numbering
 ; LAXX-NEXT:       Live Interval Analysis
+; LAXX-NEXT:       Two-Address instruction pass
 ; LAXX-NEXT:       Register Coalescer
 ; LAXX-NEXT:       Rename Disconnected Subregister Components
 ; LAXX-NEXT:       Machine Instruction Scheduler
@@ -184,6 +184,9 @@
 ; LAXX-NEXT:       Stack Frame Layout Analysis
 ; LAXX-NEXT:       LoongArch pseudo instruction expansion pass
 ; LAXX-NEXT:       LoongArch atomic pseudo instruction expansion pass
+; LAXX-NEXT:       MachineDominator Tree Construction
+; LAXX-NEXT:       MachinePostDominator Tree Construction
+; LAXX-NEXT:       LoongArch Memory Barrier Optimisation pass
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Machine Optimization Remark Emitter
 ; LAXX-NEXT:       LoongArch Assembly Printer

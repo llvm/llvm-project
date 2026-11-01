@@ -235,9 +235,10 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     kmp_sch_dynamic_chunked, // ==> kmp_sched_dynamic           = 2
     kmp_sch_guided_chunked, // ==> kmp_sched_guided            = 3
     kmp_sch_auto, // ==> kmp_sched_auto              = 4
-    kmp_sch_trapezoidal // ==> kmp_sched_trapezoidal       = 101
-    // will likely not be used, introduced here just to debug the code
-    // of public intel extension schedules
+    kmp_sch_trapezoidal, // ==> kmp_sched_trapezoidal       = 101
+#if KMP_STATIC_STEAL_ENABLED
+    kmp_sch_static_steal // ==> kmp_sched_static_steal      = 102
+#endif
 };
 
 #if KMP_MIC_SUPPORTED

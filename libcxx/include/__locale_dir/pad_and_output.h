@@ -32,9 +32,14 @@ _LIBCPP_HIDE_FROM_ABI _OutputIterator __pad_and_output(
     __ns -= __sz;
   else
     __ns = 0;
-  __s = std::copy(__ob, __op, __s);
-  __s = std::fill_n(__s, __ns, __fl);
-  __s = std::copy(__op, __oe, __s);
+  // Explicitly guard against empty outputs (which are expected to be common here) to avoid unconditionally calling
+  // `memmove`/`memset`. See https://llvm.org/PR178685.
+  if (__ob != __op)
+    __s = std::copy(__ob, __op, __s);
+  if (__ns != 0)
+    __s = std::fill_n(__s, __ns, __fl);
+  if (__op != __oe)
+    __s = std::copy(__op, __oe, __s);
   __iob.width(0);
   return __s;
 }

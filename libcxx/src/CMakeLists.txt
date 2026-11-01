@@ -6,9 +6,15 @@ set(LIBCXX_SOURCES
   call_once.cpp
   charconv.cpp
   chrono.cpp
+  debugging.cpp
   error_category.cpp
   exception.cpp
   expected.cpp
+  debugging/aix.ipp
+  debugging/bsd_like.ipp
+  debugging/default.ipp
+  debugging/linux.ipp
+  debugging/windows.ipp
   filesystem/filesystem_clock.cpp
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h

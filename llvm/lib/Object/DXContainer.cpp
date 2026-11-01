@@ -775,7 +775,8 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
       return Err;
     Current += sizeof(uint32_t);
 
-    size_t BindingDataSize = Resources.Stride * ResourceCount;
+    size_t BindingDataSize =
+        static_cast<size_t>(Resources.Stride) * ResourceCount;
     Resources.Data = Data.substr(Current - Data.begin(), BindingDataSize);
 
     if (Resources.Data.size() < BindingDataSize)

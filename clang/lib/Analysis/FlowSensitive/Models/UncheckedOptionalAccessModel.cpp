@@ -35,6 +35,8 @@
 #include <cassert>
 #include <optional>
 
+#include "GtestModelHelpers.h"
+
 namespace clang {
 namespace dataflow {
 
@@ -1199,6 +1201,13 @@ auto buildTransferMatchSwitch() {
       // gtest
       .CaseOfCFGStmt<CXXMemberCallExpr>(isAssertionResultOperatorBoolCall(),
                                         transferAssertionResultOperatorBoolCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          gtest::isAssertionResultExpectationOperatorBoolCall(),
+          [](const CXXMemberCallExpr *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            return gtest::transferAssertionResultExpectationOperatorBoolCall(
+                Expr, State.Env, locForAssertResultSuccess);
+          })
       .CaseOfCFGStmt<CXXConstructExpr>(
           isAssertionResultConstructFromBoolCall(),
           transferAssertionResultConstructFromBoolCall)

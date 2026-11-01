@@ -353,6 +353,14 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       if (containsConstantPtrAuth(C))
         return SectionKind::getReadOnlyWithRel();
 
+      // GOFF: data in the code section is shared by all instances of the
+      // program, while function descriptors and other data live in the WSA
+      // of each instance. The binder rejects a relocation in the code section
+      // that refers to the WSA, even a local one, so every initializer that
+      // needs a relocation goes to the WSA.
+      if (TM.getTargetTriple().isOSBinFormatGOFF())
+        return SectionKind::getReadOnlyWithRel();
+
       // In static, ROPI and RWPI relocation models, the linker will resolve
       // all addresses, so the relocation entries will actually be constants by
       // the time the app starts up.  However, we can't put this into a

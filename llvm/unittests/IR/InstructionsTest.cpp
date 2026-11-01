@@ -543,7 +543,8 @@ TEST(InstructionsTest, VectorGep) {
 
 TEST(InstructionsTest, FPMathOperator) {
   LLVMContext Context;
-  IRBuilder<> Builder(Context);
+  Module M("", Context);
+  IRBuilder<> Builder(M);
   MDBuilder MDHelper(Context);
   Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
   MDNode *MD1 = MDHelper.createFPMath(1.0);
@@ -565,8 +566,7 @@ TEST(InstructionTest, ConstrainedTrans) {
                         false);
   auto *F = Function::Create(FTy, Function::ExternalLinkage, "", M.get());
   auto *BB = BasicBlock::Create(Context, "bb", F);
-  IRBuilder<> Builder(Context);
-  Builder.SetInsertPoint(BB);
+  IRBuilder<> Builder(BB);
   auto *Arg0 = F->arg_begin();
   auto *Arg1 = F->arg_begin() + 1;
 
@@ -880,7 +880,7 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
   auto *OnlyBB = BasicBlock::Create(Ctx, "bb", F);
   auto *Arg0 = &*F->arg_begin();
 
-  IRBuilder<NoFolder> B(Ctx);
+  IRBuilder<NoFolder> B(*M);
   B.SetInsertPoint(OnlyBB);
 
   {
@@ -960,19 +960,15 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
 
 TEST(InstructionsTest, GEPIndices) {
   LLVMContext Context;
-  IRBuilder<NoFolder> Builder(Context);
-  Type *ElementTy = Builder.getInt8Ty();
+  Type *ElementTy = Type::getInt8Ty(Context);
+  Type *IdxTy = Type::getInt32Ty(Context);
   Type *ArrTy = ArrayType::get(ArrayType::get(ElementTy, 64), 64);
-  Value *Indices[] = {
-    Builder.getInt32(0),
-    Builder.getInt32(13),
-    Builder.getInt32(42) };
+  Value *Indices[] = {ConstantInt::get(IdxTy, 0), ConstantInt::get(IdxTy, 13),
+                      ConstantInt::get(IdxTy, 42)};
 
-  Value *V = Builder.CreateGEP(
+  auto *GEPI = GetElementPtrInst::Create(
       ArrTy, UndefValue::get(PointerType::getUnqual(Context)), Indices);
-  ASSERT_TRUE(isa<GetElementPtrInst>(V));
 
-  auto *GEPI = cast<GetElementPtrInst>(V);
   ASSERT_NE(GEPI->idx_begin(), GEPI->idx_end());
   ASSERT_EQ(GEPI->idx_end(), std::next(GEPI->idx_begin(), 3));
   EXPECT_EQ(Indices[0], GEPI->idx_begin()[0]);
@@ -1633,7 +1629,8 @@ TEST(InstructionsTest, SkipDebug) {
 
 TEST(InstructionsTest, PhiMightNotBeFPMathOperator) {
   LLVMContext Context;
-  IRBuilder<> Builder(Context);
+  Module M("", Context);
+  IRBuilder<> Builder(M);
   MDBuilder MDHelper(Context);
   Instruction *I = Builder.CreatePHI(Builder.getInt32Ty(), 0);
   EXPECT_FALSE(isa<FPMathOperator>(I));
@@ -1804,7 +1801,8 @@ if.end:
 
 TEST(InstructionsTest, UnaryOperator) {
   LLVMContext Context;
-  IRBuilder<> Builder(Context);
+  Module M("", Context);
+  IRBuilder<> Builder(M);
   Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
   Value *F = Builder.CreateFNeg(I);
 

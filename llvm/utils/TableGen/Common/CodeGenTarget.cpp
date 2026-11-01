@@ -91,6 +91,19 @@ CodeGenTarget::~CodeGenTarget() = default;
 
 StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
 
+ArrayRef<const Record *> CodeGenTarget::getAllRegClassByHwMode() const {
+  if (!RegClassByHwModeList) {
+    RegClassByHwModeList.emplace();
+    for (const Record *R :
+         Records.getAllDerivedDefinitions("RegClassByHwMode")) {
+      if (!R->getValueAsListOfDefs("Objects").empty())
+        RegClassByHwModeList->push_back(R);
+    }
+  }
+
+  return *RegClassByHwModeList;
+}
+
 /// getInstNamespace - Find and return the target machine's instruction
 /// namespace. The namespace is cached because it is requested multiple times.
 StringRef CodeGenTarget::getInstNamespace() const {

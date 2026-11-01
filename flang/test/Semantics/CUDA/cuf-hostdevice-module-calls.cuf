@@ -1,0 +1,52 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! Separate module procedure implementations inherit CUDA attributes from
+! their module interfaces, for both function references and CALL statements.
+module module_calls
+  use cudadevice, only: on_device
+  interface
+    attributes(host,device) module integer function both(n)
+      integer, intent(in) :: n
+    end function
+    module integer function host_only(n)
+      integer, intent(in) :: n
+    end function
+    attributes(device) module integer function device_only(n)
+      integer, intent(in) :: n
+    end function
+    attributes(host,device) module subroutine both_subroutine(n)
+      integer, intent(inout) :: n
+    end subroutine
+    attributes(host,device) module integer function caller(n)
+      integer, intent(inout) :: n
+    end function
+  end interface
+end module
+
+submodule(module_calls) implementations
+contains
+  module procedure both
+    both = n
+  end procedure
+  module procedure host_only
+    host_only = n
+  end procedure
+  module procedure device_only
+    device_only = n
+  end procedure
+  module procedure both_subroutine
+    n = n + 1
+  end procedure
+  module procedure caller
+    caller = both(n)
+    call both_subroutine(n)
+    !ERROR: 'host_only' may not be called in device code
+    caller = host_only(n)
+    !ERROR: 'device_only' may not be called in host code
+    caller = device_only(n)
+    if (on_device()) then
+      caller = device_only(n)
+    else
+      caller = host_only(n)
+    end if
+  end procedure
+end submodule

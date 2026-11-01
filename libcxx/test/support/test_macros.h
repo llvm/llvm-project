@@ -231,11 +231,7 @@
 #  define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
-#if defined(_LIBCPP_VERSION) && defined(_LIBCPP_HAS_ALIGNED_ALLOCATION) && !_LIBCPP_HAS_ALIGNED_ALLOCATION
-#  define TEST_HAS_NO_ALIGNED_ALLOCATION
-#elif defined(_LIBCPP_VERSION) && defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) /* old libc++ version */
-#  define TEST_HAS_NO_ALIGNED_ALLOCATION
-#elif TEST_STD_VER < 17 && (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L)
+#if (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L)
 #  define TEST_HAS_NO_ALIGNED_ALLOCATION
 #endif
 

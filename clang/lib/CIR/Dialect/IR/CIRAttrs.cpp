@@ -411,6 +411,93 @@ static ParseResult parseFloatLiteral(AsmParser &parser,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// MemoryEffectsAttr definitions
+//===----------------------------------------------------------------------===//
+
+MemoryEffectsAttr MemoryEffectsAttr::none(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::readOnly(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::Ref);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::writeOnly(MLIRContext *ctx) {
+  return get(ctx, ModRefInfo::Mod);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::argMemOnly(MLIRContext *ctx,
+                                                ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleMemOnly(MLIRContext *ctx,
+                                                         ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef, /*inaccessible_mem=*/mr,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::errnoMemOnly(MLIRContext *ctx,
+                                                  ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/mr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::otherMemOnly(MLIRContext *ctx,
+                                                  ModRefInfo mr) {
+  return get(ctx, /*other=*/mr, /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgMemOnly(MLIRContext *ctx,
+                                                              ModRefInfo mr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/mr, /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
+    MLIRContext *ctx, ModRefInfo inaccessibleMr, ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/inaccessibleMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgOrErrnoMemOnly(
+    MLIRContext *ctx, ModRefInfo inaccessibleOrArgMr, ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/inaccessibleOrArgMr,
+             /*inaccessible_mem=*/inaccessibleOrArgMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
+MemoryEffectsAttr
+MemoryEffectsAttr::argumentOrErrnoMemOnly(MLIRContext *ctx, ModRefInfo argMr,
+                                          ModRefInfo errnoMr) {
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/argMr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
+}
+
 FPAttr FPAttr::getZero(Type type) {
   return get(type,
              APFloat::getZero(
@@ -893,29 +980,45 @@ std::string DynamicCastInfoAttr::getAlias() const {
   return alias;
 }
 
+// TODO: Give type_info a distinct CIR type so we can verify that a
+// FlatSymbolRefAttr actually names a type_info global.
+static bool isRttiPtr(mlir::Type ty) {
+  auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
+  if (!ptrTy)
+    return false;
+
+  auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
+  if (!pointeeIntTy)
+    return false;
+
+  return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
+}
+
 LogicalResult DynamicCastInfoAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, cir::GlobalViewAttr srcRtti,
     cir::GlobalViewAttr destRtti, mlir::FlatSymbolRefAttr runtimeFunc,
     mlir::FlatSymbolRefAttr badCastFunc, cir::IntAttr offsetHint) {
-  auto isRttiPtr = [](mlir::Type ty) {
-    // RTTI pointers are !cir.ptr<!u8i>.
-
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
-    if (!ptrTy)
-      return false;
-
-    auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
-    if (!pointeeIntTy)
-      return false;
-
-    return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
-  };
-
   if (!isRttiPtr(srcRtti.getType()))
     return emitError() << "srcRtti must be an RTTI pointer";
 
   if (!isRttiPtr(destRtti.getType()))
     return emitError() << "destRtti must be an RTTI pointer";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// EhFilterAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult EhFilterAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                   mlir::ArrayAttr permittedTypes) {
+  for (mlir::Attribute typeAttr : permittedTypes) {
+    auto rtti = mlir::dyn_cast<cir::GlobalViewAttr>(typeAttr);
+    if (!rtti || !isRttiPtr(rtti.getType()))
+      return emitError() << "permitted type list must contain only type info "
+                            "symbols";
+  }
 
   return success();
 }

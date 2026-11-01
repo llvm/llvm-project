@@ -166,3 +166,6 @@ f77bbc0b34f98a6e866a72ccd8ff18bee9fa4dc8
 7ce5edf1eaa3eec541f53d11c01e495ee539989e
 f208f6311b6ea3468b35deab208e307f8a59781b
 7a6b9825cea828916c9f23293f167473b6a61d4e
+
+# [llvm][llvm-readobj][NFC] clang-format COFFDumper.cpp
+34c0dc0bbf96ed16f47115b1c9033a450ad2bcf4

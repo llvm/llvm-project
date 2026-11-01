@@ -298,6 +298,29 @@ const char *SBBreakpoint::GetCondition() {
   return ConstString(cond.GetText()).GetCString();
 }
 
+void SBBreakpoint::SetConditionMode(lldb::BreakpointConditionMode mode) {
+  LLDB_INSTRUMENT_VA(this, mode);
+
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp) {
+    TargetAPIMutex api_lock = bkpt_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
+    bkpt_sp->GetCondition().SetMode(mode);
+  }
+}
+
+lldb::BreakpointConditionMode SBBreakpoint::GetConditionMode() {
+  LLDB_INSTRUMENT_VA(this);
+
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp) {
+    TargetAPIMutex api_lock = bkpt_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
+    return bkpt_sp->GetCondition().GetMode();
+  }
+  return BreakpointConditionMode::eBreakpointConditionModeDefault;
+}
+
 void SBBreakpoint::SetAutoContinue(bool auto_continue) {
   LLDB_INSTRUMENT_VA(this, auto_continue);
 

@@ -1,8 +1,5 @@
 # Offloading Design & Internals
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

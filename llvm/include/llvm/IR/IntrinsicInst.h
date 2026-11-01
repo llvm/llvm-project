@@ -93,6 +93,8 @@ public:
     case Intrinsic::umul_fix:
     case Intrinsic::smul_fix_sat:
     case Intrinsic::umul_fix_sat:
+    case Intrinsic::smulh:
+    case Intrinsic::umulh:
     case Intrinsic::fma:
     case Intrinsic::fmuladd:
       return true;

@@ -1,4 +1,4 @@
-# RUN: llc -emit-call-site-info %s -mtriple=mips -start-before=register-coalescer -stop-after=virtregrewriter -o - | FileCheck %s
+# RUN: llc -emit-call-site-info %s -mtriple=mips -start-before=register-coalescer -stop-after=virt-reg-rewriter -o - | FileCheck %s
 
 # Verify that LiveDebugVariables does not reorder the stack location DBG_VALUE
 # and the fragmented DBG_VALUEs for aaa, as the latter may represent a stale

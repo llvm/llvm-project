@@ -103,6 +103,36 @@ define void @two_fdiv_double(double %D, double %a, double %b) {
   ret void
 }
 
+; Following test cases check we combine two FDIVs if
+; the target cpu sets the threshold to 2.
+define void @two_fdiv_float_combine(float %D, float %a, float %b) #1 {
+; CHECK-LABEL: two_fdiv_float_combine:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s3, #1.00000000
+; CHECK-NEXT:    fdiv s3, s3, s0
+; CHECK-NEXT:    fmul s0, s1, s3
+; CHECK-NEXT:    fmul s1, s2, s3
+; CHECK-NEXT:    b foo_2f
+  %div = fdiv arcp float %a, %D
+  %div1 = fdiv arcp float %b, %D
+  tail call void @foo_2f(float %div, float %div1)
+  ret void
+}
+
+define void @two_fdiv_double_combine(double %D, double %a, double %b) #1 {
+; CHECK-LABEL: two_fdiv_double_combine:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d3, #1.00000000
+; CHECK-NEXT:    fdiv d3, d3, d0
+; CHECK-NEXT:    fmul d0, d1, d3
+; CHECK-NEXT:    fmul d1, d2, d3
+; CHECK-NEXT:    b foo_2d
+  %div = fdiv arcp double %a, %D
+  %div1 = fdiv arcp double %b, %D
+  tail call void @foo_2d(double %div, double %div1)
+  ret void
+}
+
 define void @four_fdiv_multi_float(float %D, float %a, float %b, float %c) #0 {
 ; CHECK-SD-LABEL: four_fdiv_multi_float:
 ; CHECK-SD:       // %bb.0:
@@ -255,3 +285,4 @@ declare void @foo_3_nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale 
 declare void @foo_2_nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
 
 attributes #0 = { "target-features"="+sve" }
+attributes #1 = { "target-cpu"="a64fx" }

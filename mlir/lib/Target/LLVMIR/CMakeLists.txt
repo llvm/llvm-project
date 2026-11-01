@@ -29,6 +29,7 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
 
   DEPENDS
   intrinsics_gen
+  MLIRLLVMTranslationDialectInterfaceIncGen
 
   LINK_COMPONENTS
   Analysis

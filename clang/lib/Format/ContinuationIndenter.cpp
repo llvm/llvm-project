@@ -1309,8 +1309,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !Current.MatchingParen->Children.empty()) {
       // lambdas and arrow functions are expressions, thus their r_brace is not
       // on its own line, and thus not covered by UnwrappedLineFormatter's logic
-      // about removing empty lines on closing blocks. Special case them here.
-      MaxEmptyLinesToKeep = 1;
+      // about removing empty lines on closing blocks. Special case them here
+      // with an exception if the KeepEmptyLines.AtEndOfBlock is used.
+      if (!Style.KeepEmptyLines.AtEndOfBlock)
+        MaxEmptyLinesToKeep = 1;
     }
     const unsigned Newlines =
         std::max(1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));
@@ -1387,8 +1389,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !PreviousNonComment->ClosesRequiresClause) ||
        Current.NestingLevel != 0) &&
       PreviousNonComment->isNoneOf(
-          TT_BinaryOperator, TT_FunctionAnnotationRParen, TT_JavaAnnotation,
-          TT_LeadingJavaAnnotation) &&
+          TT_BinaryOperator, TT_EnumEqual, TT_FunctionAnnotationRParen,
+          TT_JavaAnnotation, TT_LeadingJavaAnnotation) &&
       Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope() &&
       // We don't want to enforce line breaks for subsequent arguments just
       // because we have been forced to break before a lambda body.

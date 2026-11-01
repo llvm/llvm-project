@@ -7,6 +7,7 @@ add_mlir_library(MLIRTestIR
   TestClone.cpp
   TestDiagnostics.cpp
   TestDiagnosticsMetadata.cpp
+  TestDiagnosticsNext.cpp
   TestDominance.cpp
   TestFunc.cpp
   TestInterfaces.cpp

@@ -169,11 +169,37 @@ TEST(ConstraintSolverTest, IsConditionImplied) {
   }
 }
 
+TEST(ConstraintSolverTest, IsImpliedBySingleRow) {
+  ConstraintSystem CS;
+  // x - y <= 0, y <= 5
+  addVariableRow(CS, {0, 1, -1});
+  addVariableRow(CS, {5, 0, 1});
+
+  // The same row, or one with a larger constant.
+  EXPECT_TRUE(CS.isImpliedBySingleRow(toRow({0, 1, -1})));
+  EXPECT_TRUE(CS.isImpliedBySingleRow(toRow({1, 1, -1})));
+  EXPECT_TRUE(CS.isImpliedBySingleRow(toRow({5, 0, 1})));
+  EXPECT_TRUE(CS.isImpliedBySingleRow(toRow({7, 0, 1})));
+  // A smaller constant.
+  EXPECT_FALSE(CS.isImpliedBySingleRow(toRow({-1, 1, -1})));
+  EXPECT_FALSE(CS.isImpliedBySingleRow(toRow({4, 0, 1})));
+  // Different coefficients.
+  EXPECT_FALSE(CS.isImpliedBySingleRow(toRow({0, 2, -2})));
+  EXPECT_FALSE(CS.isImpliedBySingleRow(toRow({0, -1, 1})));
+  EXPECT_FALSE(CS.isImpliedBySingleRow(toRow({5, 1, 1})));
+  // x <= 5 is implied by both rows together, but not by a single one.
+  EXPECT_TRUE(isConditionImplied(CS, {5, 1, 0}));
+  EXPECT_FALSE(CS.isImpliedBySingleRow(toRow({5, 1, 0})));
+}
+
 TEST(ConstraintSolverTest, IsConditionImpliedOverflow) {
   ConstraintSystem CS;
   // Make sure isConditionImplied returns false when there is an overflow.
   int64_t Limit = std::numeric_limits<int64_t>::max();
   addVariableRow(CS, {Limit - 1, Limit - 2, Limit - 3});
-  EXPECT_FALSE(isConditionImplied(CS, {Limit - 1, Limit - 2, Limit - 3}));
+  EXPECT_FALSE(isConditionImplied(CS, {Limit - 1, Limit - 2, Limit - 4}));
+  // The same row is implied by the single row of the system, without
+  // Fourier-Motzkin elimination.
+  EXPECT_TRUE(isConditionImplied(CS, {Limit - 1, Limit - 2, Limit - 3}));
 }
 } // namespace

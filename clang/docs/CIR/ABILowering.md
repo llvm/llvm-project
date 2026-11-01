@@ -1,8 +1,5 @@
 # ClangIR ABI Lowering Design Document
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
@@ -35,12 +32,11 @@ and MLIR integration layer; FIR can adopt the same infrastructure with minimal
 dialect-specific adaptation (e.g. cdecl when calling C from Fortran). ABI
 compliance will be validated through differential testing against Classic Clang
 CodeGen, and performance overhead should remain under 5% compared to a direct,
-dialect-specific implementation. Variadic calls are lowered on x86_64 by
-classifying each call site from its own operand types, since an argument
-passed through an ellipsis competes for registers with the declared ones.
-An indirect variadic call whose operands already carry their wire form is left
-as written. One that needs an ABI rewrite is deferred, as is variadic
-lowering for other targets.
+dialect-specific implementation. Variadic calls, direct or indirect, are lowered
+on x86_64 by classifying each call site from its own operand types, since an
+argument passed through an ellipsis competes for registers with the declared
+ones. As in Classic Clang CodeGen, the call's function type keeps only the
+declared parameters. Variadic lowering for other targets is deferred.
 
 ## Background and Context
 

@@ -1,0 +1,26 @@
+// RUN: cir-translate -cir-to-llvmir --disable-cc-lowering -o %t.ll %s
+// RUN: FileCheck --input-file=%t.ll -check-prefix=LLVM %s
+// REQUIRES: target={{x86_64-linux}}
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // Ensure we don't delete the use of 'sub' if it has a use still.  We can't
+  // just replace it since it might have required casts.
+  cir.func @minus_multi_use_as_ptr_stride(%arg0: !cir.ptr<!s32i>, %arg1: !s32i,
+                                          %arg2: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {
+    %0 = cir.minus nsw %arg1 : !s32i
+    cir.store %0, %arg2 : !s32i, !cir.ptr<!s32i>
+    %1 = cir.ptr_stride %arg0, %0 : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+    cir.return %1 : !cir.ptr<!s32i>
+  }
+}
+
+// LLVM-LABEL: define ptr {{.*}}@minus_multi_use_as_ptr_stride(
+// LLVM-SAME: ptr [[PTR:%.+]], i32 [[N:%.+]], ptr [[OUT:%.+]])
+// LLVM:   [[NEG:%.+]] = sub nsw i32 0, [[N]]
+// LLVM:   store i32 [[NEG]], ptr [[OUT]]
+// LLVM:   [[EXT:%.+]] = sext i32 [[N]] to i64
+// LLVM:   [[WIDENED:%.+]] = sub i64 0, [[EXT]]
+// LLVM:   [[GEP:%.+]] = getelementptr i32, ptr [[PTR]], i64 [[WIDENED]]
+// LLVM:   ret ptr [[GEP]]

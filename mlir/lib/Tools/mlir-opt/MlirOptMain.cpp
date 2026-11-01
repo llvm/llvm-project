@@ -34,6 +34,7 @@
 #include "mlir/Tools/ParseUtilities.h"
 #include "mlir/Tools/Plugins/DialectPlugin.h"
 #include "mlir/Tools/Plugins/PassPlugin.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/CommandLine.h"
@@ -580,6 +581,12 @@ performActions(raw_ostream &os,
     break;
   }
   }
+  // Emit the remarks the policy deferred on every exit, while the caller's
+  // diagnostic handlers are still registered; ~MLIRContext would be too late.
+  llvm::scope_exit finalizeRemarks([&ctx] {
+    if (remark::detail::RemarkEngine *engine = ctx.getRemarkEngine())
+      engine->getRemarkEmittingPolicy()->finalize();
+  });
 
   // Prepare the pass manager, applying command-line and reproducer options.
   PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
@@ -629,12 +636,6 @@ performActions(raw_ostream &os,
                         config.shouldVerifyPasses() && !pm.empty()),
                     /*locationMap=*/nullptr, &fallbackResourceMap);
   os << OpWithState(op.get(), asmState) << '\n';
-
-  // This is required if the remark policy is final. Otherwise, the remarks are
-  // not emitted.
-  if (remark::detail::RemarkEngine *engine = ctx.getRemarkEngine())
-    engine->getRemarkEmittingPolicy()->finalize();
-
   return success();
 }
 
@@ -661,8 +662,10 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   MLIRContext context(registry, MLIRContext::Threading::DISABLED);
   if (threadPool)
     context.setThreadPool(*threadPool);
+  // Keep the registration within the lifetimes of the context and verifier.
+  std::unique_ptr<ScopedDiagnosticHandler> verifierRegistration;
   if (verifyHandler)
-    verifyHandler->registerInContext(&context);
+    verifierRegistration = verifyHandler->registerInContext(&context);
 
   StringRef irdlFile = config.getIrdlFile();
   if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, context)))

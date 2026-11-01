@@ -18,7 +18,7 @@ end subroutine
 ! CHECK-HLFIR-NEXT:    %[[MUL:.*]] = hlfir.matmul %[[A_VAR]]#0 %[[B_VAR]]#0
 ! CHECK-HLFIR-NEXT:    %[[SHAPE:.*]] = hlfir.shape_of %[[MUL]] : (!hlfir.expr<2x?xf32>) -> !fir.shape<2>
 ! CHECK-HLFIR-NEXT:    %[[EXT0:.*]] = arith.constant 2 : index
-! CHECK-HLFIR-NEXT:    %[[EXT1:.*]] = hlfir.get_extent %[[SHAPE]] {dim = 1 : index} : (!fir.shape<2>) -> index
+! CHECK-HLFIR-NEXT:    %[[EXT1:.*]] = hlfir.get_extent %[[SHAPE]] dim(1) : (!fir.shape<2>) -> index
 ! CHECK-HLFIR-NEXT:    %[[C1:.*]] = arith.constant 1 : index
 ! CHECK-HLFIR-NEXT:    fir.do_loop %[[ARG2:.*]] = %[[C1]] to %[[EXT1]] step %[[C1]] unordered {
 ! CHECK-HLFIR-NEXT:      fir.do_loop %[[ARG3:.*]] = %[[C1]] to %[[EXT0]] step %[[C1]] unordered {

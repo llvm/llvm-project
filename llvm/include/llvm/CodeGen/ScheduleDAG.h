@@ -39,6 +39,7 @@ class MachineFunction;
 class MachineRegisterInfo;
 class MCInstrDesc;
 struct MCSchedClassDesc;
+class raw_ostream;
 class SDNode;
 class SUnit;
 class ScheduleDAG;
@@ -491,6 +492,8 @@ class TargetRegisterInfo;
     LLVM_ABI void ComputeHeight();
   };
 
+  LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SUnit &SU);
+
   /// Returns true if the specified SDep is equivalent except for latency.
   inline bool SDep::overlaps(const SDep &Other) const {
     if (Dep != Other.Dep)
@@ -746,6 +749,9 @@ class TargetRegisterInfo;
     std::vector<int> Node2Index;
     /// a set of nodes visited during a DFS traversal.
     BitVector Visited;
+    /// A worklist for use during traversals. Retained after traversals so must
+    /// be cleared before use.
+    std::vector<const SUnit *> WorkList;
     /// Cache of reachability queries. {A, B} -> true if B is reachable from A.
     /// The keys are SUnit NodeNums.
     DenseMap<std::pair<int, int>, bool> Reachable;

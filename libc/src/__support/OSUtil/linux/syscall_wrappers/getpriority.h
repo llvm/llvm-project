@@ -14,7 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_GETPRIORITY_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_GETPRIORITY_H
 
-#include "hdr/types/pid_t.h"
+#include "hdr/types/id_t.h"
 #include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"

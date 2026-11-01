@@ -427,14 +427,10 @@ define <4 x half> @v_constained_fadd_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX11-SDAG-TRUE16-LABEL: v_constained_fadd_v4f16_fpexcept_strict:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v1.l, v1.l, v3.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v2.l
-; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.h, v6.l, v5.l
-; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v1.h, v7.l, v4.l
+; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.h, v0.h, v2.h
+; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v1.h, v1.h, v3.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: v_constained_fadd_v4f16_fpexcept_strict:
@@ -466,15 +462,10 @@ define <4 x half> @v_constained_fadd_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
 ; GFX12-SDAG-NEXT:    v_add_f16_e32 v1.l, v1.l, v3.l
 ; GFX12-SDAG-NEXT:    v_add_f16_e32 v0.l, v0.l, v2.l
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-SDAG-NEXT:    v_add_f16_e32 v0.h, v6.l, v5.l
-; GFX12-SDAG-NEXT:    v_add_f16_e32 v1.h, v7.l, v4.l
+; GFX12-SDAG-NEXT:    v_add_f16_e32 v0.h, v0.h, v2.h
+; GFX12-SDAG-NEXT:    v_add_f16_e32 v1.h, v1.h, v3.h
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: v_constained_fadd_v4f16_fpexcept_strict:
@@ -585,21 +576,10 @@ define amdgpu_ps <2 x half> @s_constained_fadd_v2f16_fpexcept_strict(<2 x half> 
 ; GFX11-NEXT:    v_pk_add_f16 v0, s2, s3
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: s_constained_fadd_v2f16_fpexcept_strict:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_pk_add_f16 v0, s2, s3
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: s_constained_fadd_v2f16_fpexcept_strict:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_lshr_b32 s0, s2, 16
-; GFX12-GISEL-NEXT:    s_lshr_b32 s1, s3, 16
-; GFX12-GISEL-NEXT:    s_add_f16 s2, s2, s3
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s0, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: s_constained_fadd_v2f16_fpexcept_strict:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_pk_add_f16 v0, s2, s3
+; GFX12-NEXT:    ; return to shader part epilog
   %val = call <2 x half> @llvm.experimental.constrained.fadd.v2f16(<2 x half> %x, <2 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x half> %val
 }

@@ -1673,6 +1673,13 @@ bool HexagonInstrInfo::isPostIncrement(const MachineInstr &MI) const {
   return getAddrMode(MI) == HexagonII::PostInc;
 }
 
+bool HexagonInstrInfo::isPostIncWithImmOffset(const MachineInstr &MI) const {
+  unsigned BasePos, OffsetPos;
+  if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
+    return false;
+  return isPostIncrement(MI) && MI.getOperand(OffsetPos).isImm();
+}
+
 // Returns true if an instruction is predicated irrespective of the predicate
 // sense. For example, all of the following will return true.
 // if (p0) R1 = add(R2, R3)
@@ -2778,7 +2785,7 @@ bool HexagonInstrInfo::isValidAutoIncImm(const EVT VT, int Offset) const {
 }
 
 bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
-      const TargetRegisterInfo *TRI, bool Extend) const {
+                                     bool Extend) const {
   // This function is to check whether the "Offset" is in the correct range of
   // the given "Opcode". If "Offset" is not in the correct range, "A2_addi" is
   // inserted to calculate the final address. Due to this reason, the function
@@ -2841,7 +2848,7 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vgathermhq_pseudo:
   case Hexagon::V6_vgathermwq_pseudo:
   case Hexagon::V6_vgathermhwq_pseudo: {
-    unsigned VectorSize = TRI->getSpillSize(Hexagon::HvxVRRegClass);
+    unsigned VectorSize = RegInfo.getSpillSize(Hexagon::HvxVRRegClass);
     assert(isPowerOf2_32(VectorSize));
     if (Offset & (VectorSize-1))
       return false;
@@ -3108,8 +3115,7 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
 /// Get the base register and byte offset of a load/store instr.
 bool HexagonInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   OffsetIsScalable = false;
   const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, Width);
   if (!BaseOp || !BaseOp->isReg())

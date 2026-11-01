@@ -250,7 +250,7 @@ if(LIBC_TARGET_OS_IS_DARWIN)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
   if(MACOSX_SDK_PATH_RESULT EQUAL 0)
-    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-I" "${MACOSX_SDK_PATH}/usr/include")
+    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-isysroot" "${MACOSX_SDK_PATH}")
   else()
     message(WARNING "Could not find macOS SDK path. `xcrun --sdk macosx --show-sdk-path` failed.")
   endif()

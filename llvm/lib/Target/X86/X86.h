@@ -75,6 +75,15 @@ public:
 
 FunctionPass *createX86FPStackifierLegacyPass();
 
+/// This pass aligns the code so that it conforms to the LFI sandboxing rules.
+class X86LFIRewritePass : public RequiredPassInfoMixin<X86LFIRewritePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86LFIRewritePass();
+
 /// This pass inserts AVX vzeroupper instructions before each call to avoid
 /// transition penalty between functions encoded with AVX and SSE.
 class X86InsertVZeroUpperPass
@@ -124,7 +133,7 @@ FunctionPass *createX86FixupInstTuningLegacyPass();
 
 /// Return a pass that reduces the size of vector constant pool loads.
 class X86FixupVectorConstantsPass
-    : public OptionalPassInfoMixin<X86FixupInstTuningPass> {
+    : public OptionalPassInfoMixin<X86FixupVectorConstantsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

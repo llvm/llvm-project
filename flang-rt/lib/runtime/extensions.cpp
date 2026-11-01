@@ -10,12 +10,12 @@
 // extensions that will eventually be implemented in Fortran.
 
 #include "flang/Runtime/extensions.h"
-#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"

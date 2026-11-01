@@ -758,6 +758,24 @@ Status PlatformDarwinKernel::GetSharedModule(
                                          old_modules, did_create_ptr);
 }
 
+std::optional<ModuleSpec>
+PlatformDarwinKernel::FindModuleFiles(const ModuleSpec &module_spec,
+                                      const FileSpecList &search_paths,
+                                      StatisticsMap &statistics) {
+  if (!module_spec.GetUUID().IsValid())
+    return std::nullopt;
+
+  ModuleSP module_sp = FindKextInIndex(module_spec);
+  if (!module_sp)
+    return std::nullopt;
+
+  // The request names a bundle ID, not a path.
+  ModuleSpec found(module_sp->GetFileSpec(), module_sp->GetUUID());
+  found.GetArchitecture() = module_sp->GetArchitecture();
+  found.GetSymbolFileSpec() = module_sp->GetSymbolFileFileSpec();
+  return found;
+}
+
 ModuleSP PlatformDarwinKernel::FindKextInIndex(const ModuleSpec &module_spec) {
   UpdateKextandKernelsLocalScan();
 
