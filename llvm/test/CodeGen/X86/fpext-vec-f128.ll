@@ -83,50 +83,37 @@ define <4 x fp128> @fpext_v4bf16_v4f128(<4 x bfloat> %v) nounwind {
 ; X86-X87-NEXT:    pushl %edi
 ; X86-X87-NEXT:    pushl %esi
 ; X86-X87-NEXT:    andl $-16, %esp
-; X86-X87-NEXT:    addl $-128, %esp
-; X86-X87-NEXT:    flds 24(%ebp)
-; X86-X87-NEXT:    fstps (%esp)
-; X86-X87-NEXT:    calll __truncsfbf2
-; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    subl $112, %esp
+; X86-X87-NEXT:    movzwl 26(%ebp), %eax
+; X86-X87-NEXT:    shll $16, %eax
 ; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-X87-NEXT:    flds 12(%ebp)
-; X86-X87-NEXT:    fstps (%esp)
-; X86-X87-NEXT:    calll __truncsfbf2
-; X86-X87-NEXT:    movl %eax, %ebx
-; X86-X87-NEXT:    flds 20(%ebp)
-; X86-X87-NEXT:    fstps (%esp)
-; X86-X87-NEXT:    calll __truncsfbf2
-; X86-X87-NEXT:    movl %eax, %edi
-; X86-X87-NEXT:    flds 16(%ebp)
-; X86-X87-NEXT:    fstps (%esp)
-; X86-X87-NEXT:    movl 8(%ebp), %esi
-; X86-X87-NEXT:    calll __truncsfbf2
-; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; X86-X87-NEXT:    movl %ecx, (%esp)
-; X86-X87-NEXT:    shll $16, %eax
-; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    calll __extendsftf2
-; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    shll $16, %edi
-; X86-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    calll __extendsftf2
-; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-X87-NEXT:    movl %eax, (%esp)
+; X86-X87-NEXT:    movzwl 14(%ebp), %ebx
 ; X86-X87-NEXT:    shll $16, %ebx
-; X86-X87-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    calll __extendsftf2
-; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movzwl 22(%ebp), %edi
+; X86-X87-NEXT:    shll $16, %edi
+; X86-X87-NEXT:    movzwl 18(%ebp), %eax
 ; X86-X87-NEXT:    shll $16, %eax
-; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl 8(%ebp), %esi
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    pushl %ecx
 ; X86-X87-NEXT:    calll __extendsftf2
-; X86-X87-NEXT:    subl $4, %esp
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    addl $4, %esp
 ; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -318,54 +305,37 @@ define <4 x fp128> @strict_fpext_v4bf16_v4f128(<4 x bfloat> %v) nounwind strictf
 ; X86-X87-NEXT:    pushl %edi
 ; X86-X87-NEXT:    pushl %esi
 ; X86-X87-NEXT:    andl $-16, %esp
-; X86-X87-NEXT:    addl $-128, %esp
-; X86-X87-NEXT:    movl 8(%ebp), %esi
-; X86-X87-NEXT:    flds 24(%ebp)
-; X86-X87-NEXT:    fstps (%esp)
-; X86-X87-NEXT:    wait
-; X86-X87-NEXT:    calll __truncsfbf2
-; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    subl $112, %esp
+; X86-X87-NEXT:    movzwl 26(%ebp), %eax
+; X86-X87-NEXT:    shll $16, %eax
 ; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-X87-NEXT:    flds 12(%ebp)
-; X86-X87-NEXT:    fstps (%esp)
-; X86-X87-NEXT:    wait
-; X86-X87-NEXT:    calll __truncsfbf2
-; X86-X87-NEXT:    movl %eax, %ebx
-; X86-X87-NEXT:    flds 20(%ebp)
-; X86-X87-NEXT:    fstps (%esp)
-; X86-X87-NEXT:    wait
-; X86-X87-NEXT:    calll __truncsfbf2
-; X86-X87-NEXT:    movl %eax, %edi
-; X86-X87-NEXT:    flds 16(%ebp)
-; X86-X87-NEXT:    fstps (%esp)
-; X86-X87-NEXT:    wait
-; X86-X87-NEXT:    calll __truncsfbf2
-; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; X86-X87-NEXT:    movl %ecx, (%esp)
-; X86-X87-NEXT:    shll $16, %eax
-; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    calll __extendsftf2
-; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    shll $16, %edi
-; X86-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    calll __extendsftf2
-; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-X87-NEXT:    movl %eax, (%esp)
+; X86-X87-NEXT:    movzwl 14(%ebp), %ebx
 ; X86-X87-NEXT:    shll $16, %ebx
-; X86-X87-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    calll __extendsftf2
-; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-X87-NEXT:    movl %eax, (%esp)
-; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movzwl 22(%ebp), %edi
+; X86-X87-NEXT:    shll $16, %edi
+; X86-X87-NEXT:    movzwl 18(%ebp), %eax
 ; X86-X87-NEXT:    shll $16, %eax
-; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl 8(%ebp), %esi
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    pushl %ecx
 ; X86-X87-NEXT:    calll __extendsftf2
-; X86-X87-NEXT:    subl $4, %esp
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    addl $4, %esp
 ; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
