@@ -994,9 +994,12 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
             [DefR](VPUser *U) { return !U->usesScalars(DefR); });
       }
       /// Users that only demand the first lane can use the definition for lane
-      /// 0.
-      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser *U) {
-        if (U->usesFirstLaneOnly(DefR))
+      /// 0. If DefR is a single scalar, all lanes are equal and all scalar
+      /// users can use lane 0.
+      bool IsSingleScalar = vputils::isSingleScalar(DefR);
+      DefR->replaceUsesWithIf(LaneDefs[0], [DefR, IsSingleScalar](VPUser *U) {
+        if (U->usesFirstLaneOnly(DefR) ||
+            (IsSingleScalar && U->usesScalars(DefR)))
           return true;
         auto *VPI = dyn_cast<VPInstruction>(U);
         return VPI && Instruction::isCast(VPI->getOpcode());

@@ -532,8 +532,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
-  // Patch original function entries
-  if (BC.HasRelocations)
+  // Patch original function entries. Skip it when the original code will
+  // be overwritten by new code, as the patches would be lost.
+  if (BC.HasRelocations && !opts::UseOldText)
     Manager.registerPass(std::make_unique<PatchEntries>());
 
   // Assign each function an output section.

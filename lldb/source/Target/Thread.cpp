@@ -264,6 +264,7 @@ void Thread::DestroyThread() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
+  m_prev_unwinder_frames_sp.reset();
   m_unwinder_frames_sp.reset();
   m_frame_providers.clear();
   m_provider_chain_ids.clear();
@@ -1571,7 +1572,7 @@ StackFrameListSP Thread::GetStackFrameList() {
   if (!policy.capabilities.can_load_frame_providers) {
     if (!m_unwinder_frames_sp)
       m_unwinder_frames_sp = std::make_shared<StackFrameList>(
-          *this, m_prev_frames_sp, true, /*provider_id=*/0);
+          *this, m_prev_unwinder_frames_sp, true, /*provider_id=*/0);
     return m_unwinder_frames_sp;
   }
 
@@ -1632,7 +1633,7 @@ StackFrameListSP Thread::GetStackFrameList() {
   if (!m_curr_frames_sp) {
     // No provider - use normal unwinder frames with stable ID = 0.
     m_unwinder_frames_sp = std::make_shared<StackFrameList>(
-        *this, m_prev_frames_sp, true, /*provider_id=*/0);
+        *this, m_prev_unwinder_frames_sp, true, /*provider_id=*/0);
     m_curr_frames_sp = m_unwinder_frames_sp;
   } else {
     // Register this frame list by its identifier for later lookup.
@@ -1673,9 +1674,8 @@ llvm::Error Thread::LoadScriptedFrameProvider(
   StackFrameListSP input_frames;
   if (m_frame_providers.empty()) {
     // First provider gets real unwinder frames with stable ID = 0.
-    m_unwinder_frames_sp =
-        std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true,
-                                         /*provider_id=*/0);
+    m_unwinder_frames_sp = std::make_shared<StackFrameList>(
+        *this, m_prev_unwinder_frames_sp, true, /*provider_id=*/0);
     input_frames = m_unwinder_frames_sp;
   } else {
     // Subsequent providers wrap the previous provider.
@@ -1747,6 +1747,7 @@ void Thread::ClearScriptedFrameProvider() {
   m_unwinder_frames_sp.reset();
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
+  m_prev_unwinder_frames_sp.reset();
 }
 
 std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
@@ -1770,12 +1771,14 @@ void Thread::ClearStackFrames() {
   if (RegisterContextSP reg_ctx_sp = GetRegisterContext())
     m_prev_framezero_pc = reg_ctx_sp->GetPC();
 
-  // Only store away the old "reference" StackFrameList if we got all its
+  // Only store away the old "reference" StackFrameLists if we got all their
   // frames:
   // FIXME: At some point we can try to splice in the frames we have fetched
   // into the new frame as we make it, but let's not try that now.
   if (m_curr_frames_sp && m_curr_frames_sp->WereAllFramesFetched())
     m_prev_frames_sp.swap(m_curr_frames_sp);
+  if (m_unwinder_frames_sp && m_unwinder_frames_sp->WereAllFramesFetched())
+    m_prev_unwinder_frames_sp = m_unwinder_frames_sp;
   m_curr_frames_sp.reset();
   m_unwinder_frames_sp.reset();
 

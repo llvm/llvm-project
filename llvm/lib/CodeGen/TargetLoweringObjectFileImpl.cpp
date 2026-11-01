@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -75,8 +76,6 @@
 
 using namespace llvm;
 using namespace dwarf;
-
-extern cl::opt<bool> PreserveHotDataSectionPrefix;
 
 static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
@@ -573,6 +572,14 @@ static unsigned getELFSectionFlags(SectionKind K, const Triple &T) {
   return Flags;
 }
 
+MCSection *
+TargetLoweringObjectFileELF::getNamedSection(StringRef Name,
+                                             SectionKind Kind) const {
+  unsigned Type = getELFSectionType(Name, Kind);
+  unsigned Flags = getELFSectionFlags(Kind, getContext().getTargetTriple());
+  return getContext().getELFSection(Name, Type, Flags);
+}
+
 static const Comdat *getELFComdat(const GlobalValue *GV) {
   const Comdat *C = GV->getComdat();
   if (!C)
@@ -679,7 +686,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
         raw_svector_ostream(SectionPrefix) << ".unlikely";
         break;
       case MachineFunctionDataHotness::Hot: {
-        if (PreserveHotDataSectionPrefix)
+        if (StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+                GO->getContext()))
           raw_svector_ostream(SectionPrefix) << ".hot";
         break;
       }
@@ -701,7 +709,9 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
         Kind.isBSS()) {
       AddSectionPrefix =
           TM.getEnableStaticDataPartitioning() &&
-          (!SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix);
+          (!SectionPrefix.starts_with(".hot") ||
+           StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+               GO->getContext()));
     }
 
     if (AddSectionPrefix) {
@@ -1389,6 +1399,13 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   Streamer.addBlankLine();
 }
 
+MCSection *
+TargetLoweringObjectFileMachO::getNamedSection(StringRef Name,
+                                               SectionKind Kind) const {
+  auto [Segment, SecName] = Name.split(',');
+  return getContext().getMachOSection(Segment, SecName, 0, Kind);
+}
+
 void TargetLoweringObjectFileMachO::emitLinkerDirectives(
     MCStreamer &Streamer, const Module &M) const {
   if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
@@ -1983,6 +2000,12 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   });
 }
 
+MCSection *
+TargetLoweringObjectFileCOFF::getNamedSection(StringRef Name,
+                                              SectionKind Kind) const {
+  return getContext().getCOFFSection(Name, getCOFFSectionFlags(Kind, *TM));
+}
+
 void TargetLoweringObjectFileCOFF::emitLinkerDirectives(MCStreamer &Streamer,
                                                         const Module &M) const {
   if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
@@ -2312,6 +2335,14 @@ void TargetLoweringObjectFileWasm::initialize(MCContext &Ctx,
   for (GlobalValue *GV : Vec)
     if (auto *GO = dyn_cast<GlobalObject>(GV))
       Used.insert(GO);
+}
+
+MCSection *
+TargetLoweringObjectFileWasm::getNamedSection(StringRef Name,
+                                              SectionKind Kind) const {
+  if (Kind.isMetadata())
+    return getContext().getWasmSection(".custom_section." + Name, Kind);
+  return getContext().getWasmSection(Name, Kind);
 }
 
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(

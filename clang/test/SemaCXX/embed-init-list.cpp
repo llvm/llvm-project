@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-c23-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-c++26-extensions %s
 
 namespace std {
 typedef decltype(sizeof(int)) size_t;
