@@ -802,8 +802,7 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
       VF = ElementCount::getFixed(4);
     }
   }
-  assert(isPowerOf2_32(VF.getKnownMinValue()) &&
-         "VF needs to be a power of two");
+  assert(VF.isPowerOf2() && "VF needs to be a power of two");
   if (VF.isScalar())
     return FixedScalableVFPair::getNone();
   LLVM_DEBUG(dbgs() << "LV: Using " << (!UserVF.isZero() ? "user " : "")

@@ -1197,7 +1197,7 @@ external incoming : llvalue -> (llvalue * llbasicblock) list = "llvm_incoming"
 external delete_instruction : llvalue -> unit = "llvm_delete_instruction"
 
 (*===-- Instruction builders ----------------------------------------------===*)
-external builder : llcontext -> llbuilder = "llvm_builder"
+external builder : llmodule -> llbuilder = "llvm_builder"
 external position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
                           = "llvm_position_builder"
 external position_builder_before_dbg_records : (llbasicblock, llvalue) llpos ->
@@ -1213,7 +1213,7 @@ let builder_at ip =
   | Before inst -> instr_parent inst in
   let f = block_parent block in
   let m = global_parent f in
-  let b = builder (module_context m) in
+  let b = builder m in
   position_builder ip b;
   b
 

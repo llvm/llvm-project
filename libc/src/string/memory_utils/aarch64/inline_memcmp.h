@@ -71,7 +71,7 @@ inline_memcmp_aarch64_with_fp(CPtr p1, CPtr p2, size_t count) {
 }
 #endif
 
-[[gnu::flatten]] LIBC_INLINE MemcmpReturnType
+LIBC_FLATTEN LIBC_INLINE MemcmpReturnType
 inline_memcmp_aarch64_dispatch(CPtr p1, CPtr p2, size_t count) {
 #if defined(__ARM_NEON)
   return inline_memcmp_aarch64_with_fp(p1, p2, count);

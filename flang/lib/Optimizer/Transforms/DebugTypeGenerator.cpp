@@ -704,6 +704,13 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     };
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
     addOp(llvm::dwarf::DW_OP_plus_uconst, {lenOffset});
+    uint64_t charBytes = kindMapping.getCharacterBitsize(charTy.getFKind()) / 8;
+    if (charBytes != 1) {
+      addOp(llvm::dwarf::DW_OP_deref, {});
+      addOp(llvm::dwarf::DW_OP_constu, {charBytes});
+      addOp(llvm::dwarf::DW_OP_div, {});
+      addOp(llvm::dwarf::DW_OP_stack_value, {});
+    }
     lenExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
     ops.clear();
 
@@ -730,12 +737,19 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     }
   }
 
-  // TODO: Populate the charType field to represent strings with non-default
-  // character types. Please see issue #95440 for more details.
+  // Set type of the underlying characters in the string
+  unsigned charBitSize = kindMapping.getCharacterBitsize(charTy.getFKind());
+  mlir::LLVM::DITypeAttr charTypeAttr = genBasicType(
+      context,
+      mlir::StringAttr::get(
+          context,
+          getBasicTypeName(context, "character", charTy.getFKind()).getValue()),
+      charBitSize, encoding);
+
   return mlir::LLVM::DIStringTypeAttr::get(
       context, llvm::dwarf::DW_TAG_string_type,
       mlir::StringAttr::get(context, ""), sizeInBits, /*alignInBits=*/0,
-      /*stringLength=*/varAttr, lenExpr, locExpr, encoding, nullptr);
+      /*stringLength=*/varAttr, lenExpr, locExpr, encoding, charTypeAttr);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(

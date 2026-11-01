@@ -69,6 +69,7 @@ build_concepts
 overlay_mode
 full_host_build
 full_cross_build
+complete_runtimes_build
 configure
 hand_in_hand
 ```

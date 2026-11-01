@@ -386,14 +386,9 @@ extern "C" int llcMain(int argc, char **argv) {
   PassRegistry *Registry = PassRegistry::getPassRegistry();
   initializeCore(*Registry);
   initializeCodeGen(*Registry);
-  initializeLoopStrengthReducePass(*Registry);
-  initializePostInlineEntryExitInstrumenterPass(*Registry);
-  initializeUnreachableBlockElimLegacyPassPass(*Registry);
-  initializeConstantHoistingLegacyPassPass(*Registry);
   initializeScalarOpts(*Registry);
   initializeIPO(*Registry);
   initializeVectorization(*Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
   initializeTransformUtils(*Registry);
 
   // Initialize debugging passes.
@@ -696,10 +691,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
 
   // Return a copy of the output filename via the output param
   OutputFilename = Out->outputFilename();
-
-  // Tell target that this tool is not necessarily used with argument ABI
-  // compliance (i.e. narrow integer argument extensions).
-  Target->Options.VerifyArgABICompliance = 0;
 
   std::unique_ptr<ToolOutputFile> DwoOut;
   if (!SplitDwarfOutputFile.empty()) {

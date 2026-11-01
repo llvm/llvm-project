@@ -230,8 +230,14 @@ bool BPFMIPeepholeImpl::eliminateZExtSeq() {
             .addReg(SubReg)
             .addImm(BPF::sub_32);
 
-        SllMI->eraseFromParent();
-        MovMI->eraseFromParent();
+        // The results of the mov and of the left shift can have other users.
+        if (MRI->hasOneNonDBGUse(ShfReg)) {
+          bool MovIsDead = MRI->hasOneNonDBGUse(MovMI->getOperand(0).getReg());
+
+          SllMI->eraseFromParent();
+          if (MovIsDead)
+            MovMI->eraseFromParent();
+        }
         // MI is the right shift, we can't erase it in it's own iteration.
         // Mark it to ToErase, and erase in the next iteration.
         ToErase = &MI;

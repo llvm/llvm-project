@@ -539,7 +539,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
       getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());
   Options.EnableTLSDESC =
       getExplicitEnableTLSDESC().value_or(TheTriple.hasDefaultTLSDESC());
-  Options.ExceptionModel = getExceptionModel();
   Options.VecLib = getVectorLibrary();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();

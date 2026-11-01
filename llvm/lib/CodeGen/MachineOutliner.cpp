@@ -1198,17 +1198,20 @@ bool MachineOutliner::outline(
       MachineBasicBlock::iterator EndIt = std::prev(C.end());
 
       // Find the first non-debug instruction with a non-zero source line, and
-      // the location of the last call in the candidate, if it has one.
-      DebugLoc FirstLoc, LastCallLoc;
+      // merge the locations of the calls in the candidate that have one.
+      DebugLoc FirstLoc, MergedCallLoc;
       for (MachineInstr &MI : C) {
         if (MI.isDebugInstr())
           continue;
         const DebugLoc &DL = MI.getDebugLoc();
-        bool HasLine = DL && DL.getLine();
-        if (!FirstLoc && HasLine)
+        if (!DL || !DL.getLine())
+          continue;
+        if (!FirstLoc)
           FirstLoc = DL;
         if (MI.isCall())
-          LastCallLoc = HasLine ? DL : DebugLoc();
+          MergedCallLoc = MergedCallLoc
+                              ? DebugLoc::getMergedLocation(MergedCallLoc, DL)
+                              : DL;
       }
 
       // Remember the instruction the call sequence will be inserted after, so
@@ -1220,19 +1223,20 @@ bool MachineOutliner::outline(
       auto CallInst = TII.insertOutlinedCall(M, MBB, StartIt, *MF, C);
 
       // Unwinding through a call in the candidate symbolizes the caller frame
-      // at the outlined call, so it should carry that call's location. Use the
-      // last call: a candidate ending in a call may be outlined as a thunk
-      // whose tail call returns directly past the outlined call. With multiple
-      // calls, only the last is attributed exactly. Nothing returns to a tail
-      // branch, so it keeps the first location.
+      // at the outlined call, so it should carry that call's location. With
+      // multiple calls, every one of them is symbolized there, so use their
+      // merged location: it may be less precise when the calls differ, but it
+      // never attributes a call to an inlined scope it was not in. Nothing
+      // returns to a tail branch, so it keeps the first location.
       DebugLoc CallLoc =
-          !CallInst->isTerminator() && LastCallLoc ? LastCallLoc : FirstLoc;
+          !CallInst->isTerminator() && MergedCallLoc ? MergedCallLoc : FirstLoc;
 
       // insertOutlinedCall may emit link register save/restore instructions
       // around the call, and leaves StartIt on the last instruction it
-      // inserted. Give the whole sequence the same location. Otherwise, a
-      // locationless save or restore can introduce a line 0 row, including at
-      // the return address immediately after the call.
+      // inserted. Give the whole sequence the same location. Otherwise, when
+      // that location has a source line, a locationless save or restore can
+      // introduce a line 0 row, including at the return address immediately
+      // after the call.
       MachineBasicBlock::iterator SeqBegin =
           PrevIt == MBB.end() ? MBB.begin() : std::next(PrevIt);
       for (MachineInstr &MI : make_range(SeqBegin, std::next(StartIt)))

@@ -25,6 +25,10 @@
 ; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new -min-existing-hot-cold-new-hint -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,MIN-ALWAYS -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7 -DMINCOLD1=2 -DMINCOLD2=5 -DMINHOT1=-56 -DMINHOT2=50
 ; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new=cold -min-existing-hot-cold-new-hint -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,MIN-COLD -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7 -DMINCOLD1=2 -DMINCOLD2=5 -DMINHOT1=-6 -DMINHOT2=50
 
+;; Check that [2 x i64] return type (e.g. on AArch64) is also recognized and
+;; preserved for __size_returning_new variants.
+; RUN: sed -e 's/{ptr, i64}/[2 x i64]/g' -e 's/call void @dummy(ptr %%p/; /g' %s | opt -passes=instcombine -optimize-hot-cold-new -optimize-existing-hot-cold-new -S | FileCheck %s --check-prefix=ARRAY-RET
+
 ;; Make sure that values not in 0..255 are flagged with an error
 ; RUN: not opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=256 -S 2>&1 | FileCheck %s --check-prefix=ERROR
 ; RUN: not opt < %s -passes=instcombine -optimize-hot-cold-new -hot-new-hint-value=5000 -S 2>&1 | FileCheck %s --check-prefix=ERROR
@@ -489,9 +493,11 @@ define void @array_new_align_nothrow_hot_cold() {
 ;; Check that operator __size_returning_new(unsigned long) converted to
 ;; __size_returning_new(unsigned long, __hot_cold_t) with a hot or cold attribute.
 ; HOTCOLD-LABEL: @size_returning_test()
+; ARRAY-RET-LABEL: @size_returning_test()
 define void @size_returning_test() {
   ;; Attribute cold converted to __hot_cold_t cold value.
   ; HOTCOLD: @__size_returning_new_hot_cold(i64 10, i8 [[COLD]])
+  ; ARRAY-RET: call [2 x i64] @__size_returning_new_hot_cold(i64 10, i8 1)
   %call = call {ptr, i64} @__size_returning_new(i64 10) #3
   %p  = extractvalue {ptr, i64} %call, 0
   call void @dummy(ptr %p)
@@ -522,9 +528,11 @@ define void @size_returning_test() {
 ;; Check that operator __size_returning_new_aligned(unsigned long, std::align_val_t) converted to
 ;; __size_returning_new_aligned(unsigned long, std::align_val_t, __hot_cold_t) with a hot or cold attribute.
 ; HOTCOLD-LABEL: @size_returning_aligned_test()
+; ARRAY-RET-LABEL: @size_returning_aligned_test()
 define void @size_returning_aligned_test() {
   ;; Attribute cold converted to __hot_cold_t cold value.
   ; HOTCOLD: @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 [[COLD]])
+  ; ARRAY-RET: call [2 x i64] @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 1)
   %call = call {ptr, i64} @__size_returning_new_aligned(i64 10, i64 8) #3
   %p  = extractvalue {ptr, i64} %call, 0
   call void @dummy(ptr %p)
@@ -555,9 +563,11 @@ define void @size_returning_aligned_test() {
 ;; Check that __size_returning_new_hot_cold(unsigned long, __hot_cold_t)
 ;; optionally has its hint updated.
 ; HOTCOLD-LABEL: @size_returning_update_test()
+; ARRAY-RET-LABEL: @size_returning_update_test()
 define void @size_returning_update_test() {
   ;; Attribute cold converted to __hot_cold_t cold value.
   ; HOTCOLD: @__size_returning_new_hot_cold(i64 10, i8 [[PREVHINTCOLD]])
+  ; ARRAY-RET: call [2 x i64] @__size_returning_new_hot_cold(i64 10, i8 1)
   %call = call {ptr, i64} @__size_returning_new_hot_cold(i64 10, i8 7) #3
   %p  = extractvalue {ptr, i64} %call, 0
   call void @dummy(ptr %p)
@@ -587,9 +597,11 @@ define void @size_returning_update_test() {
 ;; Check that __size_returning_new_aligned_hot_cold(unsigned long, __hot_cold_t)
 ;; optionally has its hint updated.
 ; HOTCOLD-LABEL: @size_returning_aligned_update_test()
+; ARRAY-RET-LABEL: @size_returning_aligned_update_test()
 define void @size_returning_aligned_update_test() {
   ;; Attribute cold converted to __hot_cold_t cold value.
   ; HOTCOLD: @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 [[PREVHINTCOLD]])
+  ; ARRAY-RET: call [2 x i64] @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 1)
   %call = call {ptr, i64} @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 7) #3
   %p  = extractvalue {ptr, i64} %call, 0
   call void @dummy(ptr %p)
