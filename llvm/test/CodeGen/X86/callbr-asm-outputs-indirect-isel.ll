@@ -388,7 +388,7 @@ define float @float_in_gpr(i32 %x) {
   ; CHECK-NEXT:   $xmm0 = COPY [[FsFLD0SS]]
   ; CHECK-NEXT:   RET 0, $xmm0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.z.split (label-must-be-emitted, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   [[MOVDI2SSrr1:%[0-9]+]]:fr32 = MOVDI2SSrr %2
   ; CHECK-NEXT:   $xmm0 = COPY [[MOVDI2SSrr1]]
   ; CHECK-NEXT:   RET 0, $xmm0
@@ -423,7 +423,7 @@ define double @double_and_i32_in_gprs(i64 %x) {
   ; CHECK-NEXT:   $xmm0 = COPY [[FsFLD0SD]]
   ; CHECK-NEXT:   RET 0, $xmm0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.z.split (label-must-be-emitted, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   [[MOV64toSDrr1:%[0-9]+]]:fr64 = MOV64toSDrr %3
   ; CHECK-NEXT:   [[CVTSI2SDrr:%[0-9]+]]:fr64 = CVTSI2SDrr %4
   ; CHECK-NEXT:   [[ADDSDrr:%[0-9]+]]:fr64 = nofpexcept ADDSDrr [[MOV64toSDrr1]], [[CVTSI2SDrr]], implicit $mxcsr
@@ -465,7 +465,7 @@ define float @float_in_eax(i32 %x) {
   ; CHECK-NEXT:   $xmm0 = COPY [[FsFLD0SS]]
   ; CHECK-NEXT:   RET 0, $xmm0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.z.split (label-must-be-emitted, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   liveins: $eax
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $eax
