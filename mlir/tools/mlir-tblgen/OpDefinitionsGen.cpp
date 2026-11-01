@@ -279,7 +279,9 @@ static std::string constBuildAttrFromParam(const tblgen::Attribute &attr,
   if (StringRef(builderTemplate).contains("\"$0\""))
     builderTemplate = replaceAllSubstrs(builderTemplate, "\"$0\"", "$0");
 
-  return tgfmt(builderTemplate, &fctx, paramName).str();
+  return tgfmtOrFatal(
+      FmtOrigin::at(attr.getDef().getLoc(), "attribute constant builder"),
+      builderTemplate, fctx, paramName);
 }
 
 namespace {
@@ -823,7 +825,8 @@ static bool canEmitAttrVerifier(Attribute attr, bool isEmittingForOp) {
 // and operand or result getters.
 // 3. Verify the constraints on all present attributes.
 static void genAttributeVerifier(
-    const OpOrAdaptorHelper &emitHelper, FmtContext &ctx, MethodBody &body,
+    const OpOrAdaptorHelper &emitHelper, const FmtContext &ctx,
+    MethodBody &body,
     const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
   if (emitHelper.getAttrMetadata().empty())
     return;
@@ -863,11 +866,25 @@ static void genAttributeVerifier(
         (constraintFn = staticVerifierEmitter.getAttrConstraintFn(attr))) {
       body << formatv(verifyAttrUnique, *constraintFn, varName, attrName);
     } else {
+      FmtContext valueCtx(ctx);
+      valueCtx.withSelf(varName);
       body << formatv(
-          verifyAttrInline, varName, tgfmt(condition, &ctx.withSelf(varName)),
+          verifyAttrInline, varName,
+          tgfmtOrFatal(
+              FmtOrigin::at(attr.getDef().getLoc(), "attribute predicate")
+                  .withUse(emitHelper.getOp().getLoc(),
+                           emitHelper.isEmittingForOp()
+                               ? "operation verifier"
+                               : "operation adaptor verifier"),
+              condition, valueCtx),
           emitHelper.emitErrorPrefix(), attrName,
-          buildErrorStreamingString(attr.getSummary(), ctx.withSelf(varName),
-                                    ErrorStreamType::InsideOpError));
+          buildErrorStreamingStringOrFatal(
+              FmtOrigin::at(attr.getDef().getLoc(), "attribute summary")
+                  .withUse(emitHelper.getOp().getLoc(),
+                           emitHelper.isEmittingForOp()
+                               ? "operation verifier"
+                               : "operation adaptor verifier"),
+              attr.getSummary(), valueCtx, ErrorStreamType::InsideOpError));
     }
   };
 
@@ -898,7 +915,8 @@ static void genAttributeVerifier(
 }
 
 static void genPropertyVerifier(
-    const OpOrAdaptorHelper &emitHelper, FmtContext &ctx, MethodBody &body,
+    const OpOrAdaptorHelper &emitHelper, const FmtContext &ctx,
+    MethodBody &body,
     const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
 
   // Code to get a reference to a property into a variable to avoid multiple
@@ -961,13 +979,28 @@ static void genPropertyVerifier(
     auto uniquedFn = staticVerifierEmitter.getPropConstraintFn(prop.prop);
     if (uniquedFn.has_value() && emitHelper.isEmittingForOp())
       body << formatv(verifyPropertyUniqued, *uniquedFn, varName, prop.name);
-    else
-      body << formatv(verifyPropertyInline,
-                      tgfmt(rawCondition, &ctx.withSelf(varName)),
-                      emitHelper.emitErrorPrefix(), prop.name,
-                      buildErrorStreamingString(
-                          prop.prop.getSummary(), ctx.withSelf(varName),
-                          ErrorStreamType::InsideOpError));
+    else {
+      FmtContext valueCtx(ctx);
+      valueCtx.withSelf(varName);
+      body << formatv(
+          verifyPropertyInline,
+          tgfmtOrFatal(
+              FmtOrigin::at(prop.prop.getDef().getLoc(), "property predicate")
+                  .withUse(emitHelper.getOp().getLoc(),
+                           emitHelper.isEmittingForOp()
+                               ? "operation verifier"
+                               : "operation adaptor verifier"),
+              rawCondition, valueCtx),
+          emitHelper.emitErrorPrefix(), prop.name,
+          buildErrorStreamingStringOrFatal(
+              FmtOrigin::at(prop.prop.getDef().getLoc(), "property summary")
+                  .withUse(emitHelper.getOp().getLoc(),
+                           emitHelper.isEmittingForOp()
+                               ? "operation verifier"
+                               : "operation adaptor verifier"),
+              prop.prop.getSummary(), valueCtx,
+              ErrorStreamType::InsideOpError));
+    }
   }
 }
 
@@ -1003,7 +1036,8 @@ static std::string formatExtraDefinitions(const Operator &op) {
   }
   extraDefinitions.push_back(op.getExtraClassDefinition());
   FmtContext ctx = FmtContext().addSubst("cppClass", op.getCppClassName());
-  return tgfmt(llvm::join(extraDefinitions, "\n"), &ctx).str();
+  return tgfmtOrFatal(FmtOrigin::at(op.getLoc(), "operation template"),
+                      llvm::join(extraDefinitions, "\n"), ctx);
 }
 
 OpEmitter::OpEmitter(const Operator &op,
@@ -1216,16 +1250,20 @@ static void emitAttrGetterWithReturnType(FmtContext &fctx,
       PrintFatalError("DefaultValuedAttr of type " + attr.getAttrDefName() +
                       " must have a constBuilder");
     }
-    std::string defaultValue =
-        std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
-                          tgfmt(attr.getDefaultValue(), &fctx)));
+    std::string defaultValue = tgfmtOrFatal(
+        getConstraintFmtOrigin(attr, op, "attribute constant builder"),
+        attr.getConstBuilderTemplate(), fctx,
+        tgfmtOrFatal(getConstraintFmtOrigin(attr, op, "default value"),
+                     attr.getDefaultValue(), fctx));
     body << "    if (!attr)\n      return "
-         << tgfmt(attr.getConvertFromStorageCall(),
-                  &fctx.withSelf(defaultValue))
+         << tgfmtOrFatal(getConstraintFmtOrigin(attr, op, "attribute template"),
+                         attr.getConvertFromStorageCall(),
+                         fctx.withSelf(defaultValue))
          << ";\n";
   }
   body << "  return "
-       << tgfmt(attr.getConvertFromStorageCall(), &fctx.withSelf("attr"))
+       << tgfmtOrFatal(getConstraintFmtOrigin(attr, op, "attribute template"),
+                       attr.getConvertFromStorageCall(), fctx.withSelf("attr"))
        << ";\n";
 }
 
@@ -1362,17 +1400,22 @@ void OpEmitter::genPropertiesSupport() {
       fctx.withBuilder(odsBuilder);
       setPropMethod << "{\n"
                     << formatv(propFromAttrFmt,
-                               tgfmt(prop.getConvertFromAttributeCall(),
-                                     &fctx.addSubst("_attr", propertyAttr)
-                                          .addSubst("_storage", propertyStorage)
-                                          .addSubst("_diag", propertyDiag)),
+                               tgfmtOrFatal(
+                                   getConstraintFmtOrigin(prop, op,
+                                                          "property template"),
+                                   prop.getConvertFromAttributeCall(),
+                                   fctx.addSubst("_attr", propertyAttr)
+                                       .addSubst("_storage", propertyStorage)
+                                       .addSubst("_diag", propertyDiag)),
                                getAttr);
       if (prop.hasStorageTypeValueOverride()) {
         setPropMethod << formatv(attrGetDefaultFmt, name,
                                  prop.getStorageTypeValueOverride());
       } else if (prop.hasDefaultValue()) {
-        setPropMethod << formatv(attrGetDefaultFmt, name,
-                                 tgfmt(prop.getDefaultValue(), &fctx));
+        setPropMethod << formatv(
+            attrGetDefaultFmt, name,
+            tgfmtOrFatal(getConstraintFmtOrigin(prop, op, "default value"),
+                         prop.getDefaultValue(), fctx));
       } else {
         setPropMethod << formatv(attrGetNoDefaultFmt, name);
       }
@@ -1429,9 +1472,10 @@ void OpEmitter::genPropertiesSupport() {
       FmtContext fctx;
       getPropMethod << formatv(
           propToAttrFmt, name,
-          tgfmt(prop.getConvertToAttributeCall(),
-                &fctx.addSubst("_ctxt", "ctx")
-                     .addSubst("_storage", propertyStorage)));
+          tgfmtOrFatal(getConstraintFmtOrigin(prop, op, "property template"),
+                       prop.getConvertToAttributeCall(),
+                       fctx.addSubst("_ctxt", "ctx")
+                           .addSubst("_storage", propertyStorage)));
       continue;
     }
     const auto *namedAttr =
@@ -1465,8 +1509,9 @@ void OpEmitter::genPropertiesSupport() {
       if (!prop.getHashPropertyCall().empty()) {
         hashMethod << formatv(
             propHashFmt, name,
-            tgfmt(prop.getHashPropertyCall(),
-                  &fctx.addSubst("_storage", propertyStorage)));
+            tgfmtOrFatal(getConstraintFmtOrigin(prop, op, "property template"),
+                         prop.getHashPropertyCall(),
+                         fctx.addSubst("_storage", propertyStorage)));
       }
     }
   }
@@ -1541,7 +1586,10 @@ void OpEmitter::genPropertiesSupport() {
                      legacyResultSegmentAttrName, resultSegmentAttrName);
     }
     getInherentAttrMethod << "[&]() -> ::mlir::Attribute { "
-                          << tgfmt(prop.getConvertToAttributeCall(), &fctx)
+                          << tgfmtOrFatal(getConstraintFmtOrigin(
+                                              prop, op, "property template"),
+                                          prop.getConvertToAttributeCall(),
+                                          fctx)
                           << " }();\n";
 
     if (name == operandSegmentAttrName) {
@@ -1563,16 +1611,18 @@ void OpEmitter::genPropertiesSupport() {
     }
 )decl",
                                      name);
-    walkInherentAttrsMethod
-        << formatv("  {{\n"
-                   "    ::mlir::Attribute value = [&]() -> ::mlir::Attribute "
-                   "{ {1} }();\n"
-                   "    ::mlir::Attribute originalValue = value;\n"
-                   "    visitor(\"{0}\", value);\n"
-                   "    if (value != originalValue)\n"
-                   "      setInherentAttr(prop, \"{0}\", value);\n"
-                   "  }\n",
-                   name, tgfmt(prop.getConvertToAttributeCall(), &fctx));
+    walkInherentAttrsMethod << formatv(
+        "  {{\n"
+        "    ::mlir::Attribute value = [&]() -> ::mlir::Attribute "
+        "{ {1} }();\n"
+        "    ::mlir::Attribute originalValue = value;\n"
+        "    visitor(\"{0}\", value);\n"
+        "    if (value != originalValue)\n"
+        "      setInherentAttr(prop, \"{0}\", value);\n"
+        "  }\n",
+        name,
+        tgfmtOrFatal(getConstraintFmtOrigin(prop, op, "property template"),
+                     prop.getConvertToAttributeCall(), fctx));
   }
   getInherentAttrMethod << "  return std::nullopt;\n";
 
@@ -1658,15 +1708,23 @@ void OpEmitter::genPropertiesSupportForBytecode(
         item.index() == emitHelper.getOperandSegmentSizesLegacyIndex()) {
       FmtContext fmtCtxt(fctx);
       fmtCtxt.addSubst("_propName", operandSegmentAttrName);
-      readPropertiesMethod << tgfmt(readBytecodeSegmentSizeLegacy, &fmtCtxt);
-      writePropertiesMethod << tgfmt(writeBytecodeSegmentSizeLegacy, &fmtCtxt);
+      readPropertiesMethod << tgfmtOrFatal(
+          FmtOrigin::at(op.getLoc(), "operation template"),
+          readBytecodeSegmentSizeLegacy, fmtCtxt);
+      writePropertiesMethod
+          << tgfmtOrFatal(FmtOrigin::at(op.getLoc(), "operation template"),
+                          writeBytecodeSegmentSizeLegacy, fmtCtxt);
     }
     if (emitHelper.getResultSegmentsSize().has_value() &&
         item.index() == emitHelper.getResultSegmentSizesLegacyIndex()) {
       FmtContext fmtCtxt(fctx);
       fmtCtxt.addSubst("_propName", resultSegmentAttrName);
-      readPropertiesMethod << tgfmt(readBytecodeSegmentSizeLegacy, &fmtCtxt);
-      writePropertiesMethod << tgfmt(writeBytecodeSegmentSizeLegacy, &fmtCtxt);
+      readPropertiesMethod << tgfmtOrFatal(
+          FmtOrigin::at(op.getLoc(), "operation template"),
+          readBytecodeSegmentSizeLegacy, fmtCtxt);
+      writePropertiesMethod
+          << tgfmtOrFatal(FmtOrigin::at(op.getLoc(), "operation template"),
+                          writeBytecodeSegmentSizeLegacy, fmtCtxt);
     }
     if (const auto *namedProperty =
             dyn_cast<const NamedProperty *>(attrOrProp)) {
@@ -1684,7 +1742,10 @@ void OpEmitter::genPropertiesSupportForBytecode(
   }
 )",
           name,
-          tgfmt(namedProperty->prop.getReadFromMlirBytecodeCall(), &fctx));
+          tgfmtOrFatal(getConstraintFmtOrigin(namedProperty->prop, op,
+                                              "property bytecode reader"),
+                       namedProperty->prop.getReadFromMlirBytecodeCall(),
+                       fctx));
       writePropertiesMethod << formatv(
           R"(
   {{
@@ -1692,7 +1753,10 @@ void OpEmitter::genPropertiesSupportForBytecode(
     {1};
   }
 )",
-          name, tgfmt(namedProperty->prop.getWriteToMlirBytecodeCall(), &fctx));
+          name,
+          tgfmtOrFatal(getConstraintFmtOrigin(namedProperty->prop, op,
+                                              "property bytecode writer"),
+                       namedProperty->prop.getWriteToMlirBytecodeCall(), fctx));
       continue;
     }
     const auto *namedAttr = dyn_cast<const AttributeMetadata *>(attrOrProp);
@@ -1837,7 +1901,10 @@ void OpEmitter::genAttrGetters() {
           auto tmpl = namedAttr.attr.getConvertFromStorageCall();
           std::string name = op.getGetterName(namedAttr.name);
           body << "    {" << name << "AttrName(),\n"
-               << tgfmt(tmpl, &fctx.withSelf(name + "()")
+               << tgfmtOrFatal(getConstraintFmtOrigin(namedAttr.attr, op,
+                                                      "attribute conversion"),
+                               tmpl,
+                               fctx.withSelf(name + "()")
                                    .withBuilder("odsBuilder")
                                    .addSubst("_ctxt", "ctx")
                                    .addSubst("_storage", "ctx"))
@@ -2714,8 +2781,11 @@ void OpEmitter::genPopulateDefaultAttributes() {
     fctx.withBuilder(odsBuilder);
     body << "if (!properties." << name << ")\n"
          << "  properties." << name << " = "
-         << std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
-                              tgfmt(attr.getDefaultValue(), &fctx)))
+         << tgfmtOrFatal(
+                getConstraintFmtOrigin(attr, op, "attribute constant builder"),
+                attr.getConstBuilderTemplate(), fctx,
+                tgfmtOrFatal(getConstraintFmtOrigin(attr, op, "default value"),
+                             attr.getDefaultValue(), fctx))
          << ";\n";
   }
 }
@@ -2900,10 +2970,10 @@ void OpEmitter::genUseAttrAsResultTypeCollectiveParamBuilder(
        << llvm::join(resultTypes, ", ") << "});\n";
 }
 
-/// Returns a signature of the builder. Updates the context `fctx` to enable
-/// replacement of $_builder and $_state in the body.
+/// Return the builder signature, formatting parameter defaults with $_builder
+/// and $_state available.
 static SmallVector<MethodParameter>
-getBuilderSignature(const Builder &builder) {
+getBuilderSignature(const Builder &builder, const FmtOrigin &origin) {
   ArrayRef<Builder::Parameter> params(builder.getParameters());
 
   // Inject builder and state arguments.
@@ -2927,7 +2997,7 @@ getBuilderSignature(const Builder &builder) {
       defaultValue = *defaultParamValue;
 
     arguments.emplace_back(params[i].getCppType(), std::move(name),
-                           tgfmt(defaultValue, &fctx));
+                           tgfmtOrFatal(origin, defaultValue, fctx));
   }
 
   return arguments;
@@ -2936,7 +3006,8 @@ getBuilderSignature(const Builder &builder) {
 void OpEmitter::genBuilder() {
   // Handle custom builders if provided.
   for (const Builder &builder : op.getBuilders()) {
-    SmallVector<MethodParameter> arguments = getBuilderSignature(builder);
+    SmallVector<MethodParameter> arguments = getBuilderSignature(
+        builder, FmtOrigin::at(op.getLoc(), "builder parameter default"));
 
     std::optional<StringRef> body = builder.getBody();
     auto properties = body ? Method::Static : Method::StaticDeclaration;
@@ -2951,7 +3022,8 @@ void OpEmitter::genBuilder() {
     fctx.withBuilder(odsBuilder);
     fctx.addSubst("_state", builderOpState);
     if (body)
-      method->body() << tgfmt(*body, &fctx);
+      method->body() << tgfmtOrFatal(
+          FmtOrigin::at(op.getLoc(), "operation template"), *body, fctx);
     genInlineCreateBody(arguments);
   }
 
@@ -3209,7 +3281,9 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
       StringRef type = prop.getInterfaceType();
       std::string defaultValue;
       if (prop.hasDefaultValue() && i >= defaultValuedAttrLikeStartIndex) {
-        defaultValue = tgfmt(prop.getDefaultValue(), &fctx);
+        defaultValue =
+            tgfmtOrFatal(getConstraintFmtOrigin(prop, op, "default value"),
+                         prop.getDefaultValue(), fctx);
       }
       bool isOptional = prop.hasDefaultValue();
       paramList.emplace_back(type, propArg->name, StringRef(defaultValue),
@@ -3241,7 +3315,9 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
     if (i >= defaultValuedAttrStartIndex) {
       if (attrParamKind == AttrParamKind::UnwrappedValue &&
           canUseUnwrappedRawValue(attr))
-        defaultValue += tgfmt(attr.getDefaultValue(), &fctx);
+        defaultValue +=
+            tgfmtOrFatal(getConstraintFmtOrigin(attr, op, "default value"),
+                         attr.getDefaultValue(), fctx);
       else
         defaultValue += "nullptr";
     }
@@ -3715,7 +3791,8 @@ void OpEmitter::genTypeInterfaceMethods() {
       } else if (std::optional<StringRef> builder =
                      op.getResult(infer.getResultIndex())
                          .constraint.getBuilderCall()) {
-        typeStr = tgfmt(*builder, &fctx).str();
+        typeStr = tgfmtOrFatal(FmtOrigin::at(op.getLoc(), "operation template"),
+                               *builder, fctx);
       } else if (int index = constructedIndices[infer.getResultIndex()];
                  index >= 0) {
         typeStr = ("odsInferredType" + Twine(index)).str();
@@ -3723,7 +3800,9 @@ void OpEmitter::genTypeInterfaceMethods() {
         continue;
       }
       body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = "
-           << tgfmt(infer.getTransformer(), &fctx.withSelf(typeStr)) << ";\n";
+           << tgfmtOrFatal(FmtOrigin::at(op.getLoc(), "operation template"),
+                           infer.getTransformer(), fctx.withSelf(typeStr))
+           << ";\n";
       constructedIndices[i] = inferredTypeIdx - 1;
     }
   }
@@ -3767,9 +3846,6 @@ void OpEmitter::genVerifier() {
   ERROR_IF_PRUNED(implMethod, "verifyInvariantsImpl", op);
   auto &implBody = implMethod->body();
   populateSubstitutions(emitHelper, verifyCtx);
-  // Value verifiers may add a temporary $_self binding. Traits refer to the
-  // whole operation and must not inherit a binding to the last checked value.
-  FmtContext traitCtx = verifyCtx;
   genPropertyVerifier(emitHelper, verifyCtx, implBody, staticVerifierEmitter);
   genAttributeVerifier(emitHelper, verifyCtx, implBody, staticVerifierEmitter);
   genOperandResultVerifier(implBody, op.getOperands(), "operand");
@@ -3782,10 +3858,12 @@ void OpEmitter::genVerifier() {
               .withUse(op.getLoc(),
                        "operation '" + op.getOperationName() + "'");
       std::string predicate =
-          tgfmtOrFatal(origin, t->getPredTemplate(), traitCtx);
-      implBody << tgfmt("  if (!($0))\n    "
-                        "return emitOpError(\"failed to verify that $1\");\n",
-                        &traitCtx, predicate, t->getSummary());
+          tgfmtOrFatal(origin, t->getPredTemplate(), verifyCtx);
+      implBody << tgfmtOrFatal(
+          FmtOrigin::at(op.getLoc(), "operation template"),
+          "  if (!($0))\n    "
+          "return emitOpError(\"failed to verify that $1\");\n",
+          verifyCtx, predicate, t->getSummary());
     }
   }
 
@@ -4229,7 +4307,9 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
         if (prop.hasStorageTypeValueOverride())
           os << " = " << prop.getStorageTypeValueOverride();
         else if (prop.hasDefaultValue())
-          os << " = " << tgfmt(prop.getDefaultValue(), &fctx);
+          os << " = "
+             << tgfmtOrFatal(getConstraintFmtOrigin(prop, op, "default value"),
+                             prop.getDefaultValue(), fctx);
         comparatorOs << "        rhs." << name << " == this->" << name
                      << " &&\n";
         // Emit accessors using the interface type.
@@ -4244,12 +4324,15 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     }
 )decl";
         FmtContext fctx;
-        os << formatv(accessorFmt, prop.getInterfaceType(), camelName, name,
-                      tgfmt(prop.getConvertFromStorageCall(),
-                            &fctx.addSubst("_storage", propertyStorage)),
-                      tgfmt(prop.getAssignToStorageCall(),
-                            &fctx.addSubst("_value", propertyValue)
-                                 .addSubst("_storage", propertyStorage)));
+        os << formatv(
+            accessorFmt, prop.getInterfaceType(), camelName, name,
+            tgfmtOrFatal(getConstraintFmtOrigin(prop, op, "property template"),
+                         prop.getConvertFromStorageCall(),
+                         fctx.addSubst("_storage", propertyStorage)),
+            tgfmtOrFatal(getConstraintFmtOrigin(prop, op, "property template"),
+                         prop.getAssignToStorageCall(),
+                         fctx.addSubst("_value", propertyValue)
+                             .addSubst("_storage", propertyStorage)));
         continue;
       }
       const auto *namedAttr =
@@ -4467,9 +4550,11 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
       // Use the default value if attribute is not set.
       // TODO: this is inefficient, we are recreating the attribute for every
       // call. This should be set instead.
-      std::string defaultValue =
-          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
-                            tgfmt(attr.getDefaultValue(), &fctx)));
+      std::string defaultValue = tgfmtOrFatal(
+          getConstraintFmtOrigin(attr, op, "attribute constant builder"),
+          attr.getConstBuilderTemplate(), fctx,
+          tgfmtOrFatal(getConstraintFmtOrigin(attr, op, "default value"),
+                       attr.getDefaultValue(), fctx));
       body << "if (!attr)\n  attr = " << defaultValue << ";\n";
     }
     body << "return attr;\n";

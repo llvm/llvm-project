@@ -12,6 +12,7 @@
 
 #include "CppGenUtilities.h"
 #include "DocGenUtilities.h"
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
@@ -399,7 +400,11 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
       emitMethodNameAndArgs(method, ("shared_" + method.getUniqueName()).str(),
                             os, valueType, /*addThisArg=*/true,
                             /*addConst=*/false);
-      os << " {\n  " << tblgen::tgfmt(body.trim(), &sharedOpMethodFmt)
+      os << " {\n  "
+         << tblgen::tgfmtOrFatal(
+                tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                                      "interface template"),
+                body.trim(), sharedOpMethodFmt)
          << "\n}\n";
       continue;
     }
@@ -417,7 +422,10 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
       if (method.isStatic())
         os << body->trim();
       else
-        os << tblgen::tgfmt(body->trim(), &nonStaticMethodFmt);
+        os << tblgen::tgfmtOrFatal(
+            tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                                  "interface template"),
+            body->trim(), nonStaticMethodFmt);
       os << "\n}\n";
       continue;
     }
@@ -426,7 +434,10 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     if (method.isStatic())
       os << "return " << valueTemplate << "::";
     else
-      os << tblgen::tgfmt("return $_self.", &nonStaticMethodFmt);
+      os << tblgen::tgfmtOrFatal(
+          tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                                "interface template"),
+          "return $_self.", nonStaticMethodFmt);
 
     // Add the arguments to the call.
     os << method.getName() << '(';
@@ -496,8 +507,12 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
 
     // Use the empty context for static methods.
     tblgen::FmtContext ctx;
-    os << tblgen::tgfmt(method.getDefaultImplementation()->trim(),
-                        method.isStatic() ? &ctx : &nonStaticMethodFmt);
+    const tblgen::FmtContext &implCtx =
+        method.isStatic() ? ctx : nonStaticMethodFmt;
+    os << tblgen::tgfmtOrFatal(
+        tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                              "interface template"),
+        method.getDefaultImplementation()->trim(), implCtx);
     os << "\n}\n";
   }
 }
@@ -533,7 +548,11 @@ void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
     emitMethodNameAndArgs(method, method.getName(), os, valueType,
                           /*addThisArg=*/false,
                           /*addConst=*/!isOpInterface && !method.isStatic());
-    os << " {\n      " << tblgen::tgfmt(defaultImpl->trim(), &traitMethodFmt)
+    os << " {\n      "
+       << tblgen::tgfmtOrFatal(
+              tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                                    "interface template"),
+              defaultImpl->trim(), traitMethodFmt)
        << "\n    }\n";
   }
 
@@ -546,13 +565,25 @@ void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
               "    static ::llvm::LogicalResult {0}(::mlir::Operation *op) ",
               (interface.verifyWithRegions() ? "verifyRegionTrait"
                                              : "verifyTrait"))
-       << "{\n      " << tblgen::tgfmt(verify->trim(), &verifyCtx)
+       << "{\n      "
+       << tblgen::tgfmtOrFatal(
+              tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                                    "interface template"),
+              verify->trim(), verifyCtx)
        << "\n    }\n";
   }
   if (auto extraTraitDecls = interface.getExtraTraitClassDeclaration())
-    os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
+    os << tblgen::tgfmtOrFatal(
+              tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                                    "interface template"),
+              *extraTraitDecls, traitMethodFmt)
+       << "\n";
   if (auto extraTraitDecls = interface.getExtraSharedClassDeclaration())
-    os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
+    os << tblgen::tgfmtOrFatal(
+              tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                                    "interface template"),
+              *extraTraitDecls, traitMethodFmt)
+       << "\n";
 
   os << "  };\n";
 }
@@ -576,7 +607,11 @@ static void emitInterfaceDeclMethods(const Interface &interface,
     os << extraDecls->rtrim() << "\n";
   if (std::optional<StringRef> extraDecls =
           interface.getExtraSharedClassDeclaration())
-    os << tblgen::tgfmt(extraDecls->rtrim(), &extraDeclsFmt) << "\n";
+    os << tblgen::tgfmtOrFatal(
+              tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                                    "interface template"),
+              extraDecls->rtrim(), extraDeclsFmt)
+       << "\n";
 }
 
 void InterfaceGenerator::forwardDeclareInterface(const Interface &interface) {
@@ -664,7 +699,11 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
           "      return false;\n"
           "    "
        << interfaceName << " odsInterfaceInstance(base, interface);\n"
-       << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
+       << "    "
+       << tblgen::tgfmtOrFatal(
+              tblgen::FmtOrigin::at(interface.getDef().getLoc(),
+                                    "interface template"),
+              extraClassOf->trim(), extraClassOfFmt)
        << "\n  }\n";
   }
 
