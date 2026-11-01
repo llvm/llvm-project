@@ -25453,7 +25453,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                 auto *CI = dyn_cast<ConstantInt>(Op);
                 return CI && CI->getValue().countr_one() >= It->second.first;
               })) {
-            V = FinalShuffle(I == 0 ? RHS : LHS, E);
+            V = I == 0 ? RHS : LHS;
+            if (V->getType() != VecTy)
+              V = Builder.CreateIntCast(V, VecTy,
+                                        GetOperandSignedness(I == 0 ? 1 : 0));
+            V = FinalShuffle(V, E);
             E->VectorizedValue = V;
             ++NumVectorInstructions;
             return V;
