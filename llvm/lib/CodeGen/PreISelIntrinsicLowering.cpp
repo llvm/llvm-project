@@ -810,6 +810,27 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::objc_sync_exit:
       Changed |= lowerObjCCall(F, RTLIB::impl_objc_sync_exit);
       break;
+    case Intrinsic::powi:
+    case Intrinsic::experimental_constrained_powi:
+      Changed |= forEachCall(F, [&](CallInst *CI) {
+        Type *Ty = CI->getArgOperand(0)->getType();
+        if (!isa<ScalableVectorType>(Ty))
+          return false;
+        bool Strict =
+            CI->getIntrinsicID() == Intrinsic::experimental_constrained_powi;
+        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        // Do not bypass targets with a native vector FPOWI lowering. Unlike
+        // other vector math operations, there is no vector powi libcall.
+        if (TL->isOperationLegalOrCustom(
+                Strict ? ISD::STRICT_FPOWI : ISD::FPOWI, EVT::getEVT(Ty)))
+          return false;
+        // Keep constant exponents for SelectionDAGBuilder::ExpandPowI, which
+        // expands them to a multiplication tree.
+        if (!Strict && isa<ConstantInt>(CI->getArgOperand(1)))
+          return false;
+        return lowerVectorIntrinsicAsLoop(M, CI);
+      });
+      break;
     case Intrinsic::acos:
     case Intrinsic::asin:
     case Intrinsic::atan:
