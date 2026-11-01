@@ -2480,7 +2480,7 @@ static void replacePhiSrc(MachineInstr &Phi, Register OrigReg, Register NewReg,
 /// Generate phis that merge values from multiple routes
 void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
                                                           Register NewReg) {
-  SmallVector<MachineOperand *> UsesAfterLoop;
+  SmallVector<MachineOperand *> UsesAfterLoop, DebugUsesAfterLoop;
   SmallVector<MachineInstr *> LoopPhis;
   for (MachineRegisterInfo::use_iterator I = MRI.use_begin(OrigReg),
                                          E = MRI.use_end();
@@ -2490,10 +2490,18 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
         O.getParent()->getParent() != Prolog &&
         O.getParent()->getParent() != NewKernel &&
         O.getParent()->getParent() != Epilog)
-      UsesAfterLoop.push_back(&O);
+      (O.isDebug() ? DebugUsesAfterLoop : UsesAfterLoop).push_back(&O);
     if (O.getParent()->getParent() == OrigKernel && O.getParent()->isPHI())
       LoopPhis.push_back(O.getParent());
   }
+
+  // Debug uses must not create the merge PHI below. Without it, neither
+  // OrigReg nor NewReg is the value after the loop on every path.
+  if (UsesAfterLoop.empty())
+    for (MachineOperand *MO : DebugUsesAfterLoop)
+      MO->setReg(Register());
+  else
+    UsesAfterLoop.append(DebugUsesAfterLoop.begin(), DebugUsesAfterLoop.end());
 
   // Merge the route that only execute the pipelined loop (when there are no
   // remaining iterations) with the route that execute the original loop.
@@ -2714,6 +2722,16 @@ void ModuloScheduleExpanderMVE::expand() {
 
   LLVM_DEBUG(Schedule.dump());
 
+  // canApply ignores debug uses of phi results outside the loop. After the
+  // expansion such a phi no longer dominates the exit, so mark them undef.
+  for (MachineInstr &Phi : OrigKernel->phis()) {
+    Register PhiReg = Phi.getOperand(0).getReg();
+    for (MachineOperand &MO :
+         llvm::make_early_inc_range(MRI.use_operands(PhiReg)))
+      if (MO.isDebug() && MO.getParent()->getParent() != OrigKernel)
+        MO.setReg(Register());
+  }
+
   generatePipelinedLoop();
 }
 
@@ -2731,11 +2749,12 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
   // transformation
   DenseSet<Register> UsedByPhi;
   for (MachineInstr &MI : BB->phis()) {
-    // Registers defined by phis must be used only inside the loop and be never
-    // used by phis.
+    // Registers defined by phis must have no non-debug use outside the loop
+    // and must never be used by phis. Debug uses outside the loop are made
+    // undef by expand().
     for (MachineOperand &MO : MI.defs())
       if (MO.isReg())
-        for (MachineInstr &Ref : MRI.use_instructions(MO.getReg()))
+        for (MachineInstr &Ref : MRI.use_nodbg_instructions(MO.getReg()))
           if (Ref.getParent() != BB || Ref.isPHI()) {
             LLVM_DEBUG(dbgs() << "Can not apply MVE expander: A phi result is "
                                  "referenced outside of the loop or by phi.\n");
