@@ -825,7 +825,7 @@ private:
 /// SwitchChildIntegerMatcher - Switch based on the value of an integer constant
 /// child of the current node, dispatching to one matcher per case.  If the
 /// child isn't a constant or its value doesn't match any case, then the match
-/// fails.  This is semantically equivalent to a Scope node where every child
+/// fails. This is semantically equivalent to a Scope node where every child
 /// does a CheckChildInteger on the same child, but is much faster.
 class SwitchChildIntegerMatcher : public Matcher {
   unsigned ChildNo;
