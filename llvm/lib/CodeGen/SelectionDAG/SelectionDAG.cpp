@@ -6856,15 +6856,53 @@ bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
   llvm_unreachable("covered opcode switch");
 }
 
+/// Return true if the standard nsz semantics may not apply for this opcode.
+/// Opcode is assumed to take float inputs.
+/// FIXME: Target min/max nodes (e.g. X86ISD::FMINC) aren't included.
+static bool hasSpecialNszSemantics(unsigned Opcode) {
+  switch (Opcode) {
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FMAXIMUM:
+  case ISD::PSEUDO_FMIN:
+  case ISD::PSEUDO_FMAX:
+  case ISD::STRICT_PSEUDO_FMIN:
+  case ISD::STRICT_PSEUDO_FMAX:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_FMAX:
+  case ISD::VP_REDUCE_FMINIMUM:
+  case ISD::VP_REDUCE_FMAXIMUM:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
   assert(Use.getValueType().isFloatingPoint());
   const SDNode *User = Use.getUser();
-  if (User->getFlags().hasNoSignedZeros())
+  unsigned Opcode = User->getOpcode();
+  if (User->getFlags().hasNoSignedZeros() && !hasSpecialNszSemantics(Opcode))
     return true;
 
   unsigned OperandNo = Use.getOperandNo();
   // Check if this use is insensitive to the sign of zero
-  switch (User->getOpcode()) {
+  switch (Opcode) {
   case ISD::SETCC:
     // Comparisons: IEEE-754 specifies +0.0 == -0.0.
   case ISD::FABS:
@@ -6884,14 +6922,33 @@ bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
   case ISD::FP_TO_UINT:
     // fp-to-int conversions normalize signed zeros.
     return true;
+  case ISD::FMINNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::PSEUDO_FMIN:
+  case ISD::PSEUDO_FMAX: {
+    // If other value always beats zero, the zero can be ignored.
+    bool IsMin = Opcode == ISD::FMINNUM || Opcode == ISD::FMINNUM_IEEE ||
+                 Opcode == ISD::FMINIMUM || Opcode == ISD::FMINIMUMNUM ||
+                 Opcode == ISD::PSEUDO_FMIN;
+    FPClassTest AlwaysBeatsZero =
+        IsMin ? fcNegNormal | fcNegInf : fcPosNormal | fcPosInf;
+    SDValue Other = User->getOperand(1 - OperandNo);
+    KnownFPClass Known = computeKnownFPClass(Other, ~AlwaysBeatsZero);
+    return Known.isKnownNever(~AlwaysBeatsZero);
+  }
   default:
     return false;
   }
 }
 
-bool SelectionDAG::canIgnoreSignBitOfZero(SDValue Op) const {
-  if (Op->getFlags().hasNoSignedZeros())
-    return true;
+bool SelectionDAG::canIgnoreSignBitOfZeroResult(SDValue Op) const {
+  assert(Op->getNumValues() == 1);
   // FIXME: Limit the amount of checked uses to not introduce a compile-time
   // regression. Ideally, this should be implemented as a demanded-bits
   // optimization that stems from the users.
