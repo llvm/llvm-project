@@ -366,8 +366,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
 
-  if (Subtarget.hasStdExtP())
+  if (Subtarget.hasStdExtP()) {
     setOperationAction({ISD::FSHL, ISD::FSHR}, XLenVT, Legal);
+    if (!Subtarget.is64Bit())
+      setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i64, Custom);
+  }
 
   setOperationAction(ISD::BSWAP, XLenVT,
                      Subtarget.hasREV8Like() ? Legal : Expand);
@@ -2860,6 +2863,29 @@ RISCVTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
   return Cost <= Subtarget.getCLOpts().lower_fpimm_cost
              ? FPImmAction::Legal
              : FPImmAction::ConstantPool;
+}
+
+static bool hasFPType(const RISCVSubtarget &Subtarget, LLT Ty) {
+  if (Ty.isBFloat16())
+    return Subtarget.hasStdExtZfbfmin();
+
+  switch (Ty.getSizeInBits()) {
+  case 16:
+    return Subtarget.hasStdExtZfhmin();
+  case 32:
+    return Subtarget.hasStdExtF();
+  case 64:
+    return Subtarget.hasStdExtD();
+  default:
+    return false;
+  }
+}
+
+TargetLowering::FPImmAction
+RISCVTargetLowering::getFPImmAction(const APFloat &Imm, LLT Ty,
+                                    bool ForCodeSize) const {
+  return hasFPType(Subtarget, Ty) ? FPImmAction::ConstantPool
+                                  : FPImmAction::Bitcast;
 }
 
 // TODO: This is very conservative.
@@ -13858,23 +13884,33 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getBitcast(ResultVT, Res);
     };
 
-    // 64-bit packed types on RV32: split into two 32-bit halves. v2i32 has no
-    // legal 32-bit vector half, so bitcast it to v4i16 (same 64 bits) first;
-    // the merge result is identical.
-    if (!Subtarget.is64Bit() &&
-        (VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32)) {
-      EVT WorkVT = VT == MVT::v2i32 ? EVT(MVT::v4i16) : VT;
-      SDValue Rs1 = DAG.getBitcast(WorkVT, Op.getOperand(1));
-      SDValue Rs2 = DAG.getBitcast(WorkVT, Op.getOperand(2));
-      SDValue Mask = DAG.getBitcast(WorkVT, Op.getOperand(3));
-      MVT HalfVT = WorkVT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
-      auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL, HalfVT, HalfVT);
-      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL, HalfVT, HalfVT);
-      auto [MaskLo, MaskHi] = DAG.SplitVector(Mask, DL, HalfVT, HalfVT);
+    // 64-bit packed types on RV32: split into two 32-bit halves.
+    if (!Subtarget.is64Bit() && (VT == MVT::v8i8 || VT == MVT::v4i16)) {
+      MVT HalfVT = VT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
+      auto [Rs1Lo, Rs1Hi] =
+          DAG.SplitVector(Op.getOperand(1), DL, HalfVT, HalfVT);
+      auto [Rs2Lo, Rs2Hi] =
+          DAG.SplitVector(Op.getOperand(2), DL, HalfVT, HalfVT);
+      auto [MaskLo, MaskHi] =
+          DAG.SplitVector(Op.getOperand(3), DL, HalfVT, HalfVT);
       SDValue ResLo = buildMerge(Rs1Lo, Rs2Lo, MaskLo, HalfVT);
       SDValue ResHi = buildMerge(Rs1Hi, Rs2Hi, MaskHi, HalfVT);
-      SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, WorkVT, ResLo, ResHi);
-      return DAG.getBitcast(VT, Res);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
+    }
+
+    // v2i32 has no legal 32-bit vector half, so merge each i32 element.
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      SDValue Elts[2];
+      for (unsigned I = 0; I != 2; ++I) {
+        SDValue Rs1 =
+            DAG.getExtractVectorElt(DL, MVT::i32, Op.getOperand(1), I);
+        SDValue Rs2 =
+            DAG.getExtractVectorElt(DL, MVT::i32, Op.getOperand(2), I);
+        SDValue Mask =
+            DAG.getExtractVectorElt(DL, MVT::i32, Op.getOperand(3), I);
+        Elts[I] = DAG.getNode(RISCVISD::MERGE, DL, MVT::i32, Mask, Rs1, Rs2);
+      }
+      return DAG.getBuildVector(VT, DL, Elts);
     }
 
     return buildMerge(Op.getOperand(1), Op.getOperand(2), Op.getOperand(3), VT);
@@ -17568,6 +17604,56 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
 
     break;
+  }
+  case ISD::FSHL:
+  case ISD::FSHR: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           N->getValueType(0) == MVT::i64 &&
+           "Unexpected custom funnel shift legalization");
+
+    // The generic expansion folds its selects for constant shifts.
+    if (isa<ConstantSDNode>(N->getOperand(2)))
+      return;
+
+    auto [XLo, XHi] = DAG.SplitScalar(N->getOperand(0), DL, MVT::i32, MVT::i32);
+    auto [YLo, YHi] = DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+    SDValue Shamt = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, N->getOperand(2));
+    unsigned Opc = N->getOpcode();
+    auto Funnel = [&](SDValue Lo, SDValue Hi) {
+      return DAG.getNode(Opc, DL, MVT::i32, Lo, Hi, Shamt);
+    };
+
+    // The i32 funnel shifts use the low 5 shift bits. Convert bit 5 into a
+    // mask and use packed merge instructions to select the adjacent results.
+    SDValue Mask = DAG.getNode(ISD::SRA, DL, MVT::i32,
+                               DAG.getNode(ISD::SHL, DL, MVT::i32, Shamt,
+                                           DAG.getConstant(26, DL, MVT::i32)),
+                               DAG.getConstant(31, DL, MVT::i32));
+    auto Merge = [&](SDValue Below32, SDValue AtLeast32) {
+      return DAG.getNode(RISCVISD::MERGE, DL, MVT::i32, Mask, Below32,
+                         AtLeast32);
+    };
+
+    // Form the three adjacent 32-bit funnel shifts. The mask then selects the
+    // two parts corresponding to shifts below or above 32 bits.
+    SDValue Cross = Funnel(XLo, YHi);
+    SDValue LoBelow32, HiBelow32, LoAtLeast32, HiAtLeast32;
+    if (Opc == ISD::FSHL) {
+      LoBelow32 = Cross;
+      HiBelow32 = Funnel(XHi, XLo);
+      LoAtLeast32 = Funnel(YHi, YLo);
+      HiAtLeast32 = Cross;
+    } else {
+      LoBelow32 = Funnel(YHi, YLo);
+      HiBelow32 = Cross;
+      LoAtLeast32 = Cross;
+      HiAtLeast32 = Funnel(XHi, XLo);
+    }
+
+    SDValue Lo = Merge(LoBelow32, LoAtLeast32);
+    SDValue Hi = Merge(HiBelow32, HiAtLeast32);
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi));
+    return;
   }
   case ISD::ROTL:
   case ISD::ROTR:
@@ -30943,6 +31029,8 @@ bool RISCVTargetLowering::shouldInsertFencesForAtomic(
 }
 
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
+  if (Subtarget.hasStdExtZfinx())
+    return true;
 
   // GISel support is in progress or complete for these opcodes.
   unsigned Op = Inst.getOpcode();

@@ -159,6 +159,20 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::inclusive_scan(
+        pol, non_fwd, non_fwd, it);                  // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(
+        pol, non_fwd, non_fwd, it, func); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(
+        pol, it, it, non_fwd, func); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(
+        pol, non_fwd, non_fwd, it, func, val); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+    (void)std::inclusive_scan(
+        pol, it, it, non_fwd, func, val); // expected-error@*:* {{static assertion failed: inclusive_scan}}
+  }
+
+  {
     (void)std::is_partitioned(
         pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_partitioned}}
   }
@@ -364,6 +378,39 @@ void f(non_forward_iterator non_fwd,
     (void)std::transform(pol, it, it, it, non_fwd, func);  // expected-error@*:* {{static assertion failed: transform}}
     (void)std::transform(
         pol, it, it, it, non_output, func); // expected-error@*:* {{static assertion failed: transform}}
+  }
+
+  {
+    (void)std::transform_inclusive_scan(
+        pol,
+        non_fwd,
+        non_fwd,
+        it,
+        func,
+        func); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+    (void)std::transform_inclusive_scan(
+        pol,
+        it,
+        it,
+        non_fwd,
+        func,
+        func); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+    (void)std::transform_inclusive_scan(
+        pol,
+        non_fwd,
+        non_fwd,
+        it,
+        func,
+        func,
+        val); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
+    (void)std::transform_inclusive_scan(
+        pol,
+        it,
+        it,
+        non_fwd,
+        func,
+        func,
+        val); // expected-error@*:* {{static assertion failed: transform_inclusive_scan}}
   }
 
   {
