@@ -10,28 +10,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "LeonPasses.h"
+#include "Sparc.h"
 #include "SparcSubtarget.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-char ErrataWorkaround::ID = 0;
+char SparcErrataWorkaroundLegacy::ID = 0;
 
-ErrataWorkaround::ErrataWorkaround() : MachineFunctionPass(ID) {
-  initializeErrataWorkaroundPass(*PassRegistry::getPassRegistry());
+SparcErrataWorkaroundLegacy::SparcErrataWorkaroundLegacy()
+    : MachineFunctionPass(ID) {
+  initializeSparcErrataWorkaroundLegacyPass(*PassRegistry::getPassRegistry());
 }
 
-INITIALIZE_PASS(ErrataWorkaround, "errata-workaround", "Errata workaround pass",
-                false, false)
+INITIALIZE_PASS(SparcErrataWorkaroundLegacy, "errata-workaround",
+                "Errata workaround pass", false, false)
 
 // Move iterator to the next instruction in the function, ignoring
 // meta instructions and inline assembly. Returns false when reaching
 // the end of the function.
-bool ErrataWorkaround::moveNext(MachineBasicBlock::iterator &I) {
+static bool moveNext(MachineBasicBlock::iterator &I) {
 
   MachineBasicBlock *MBB = I->getParent();
 
@@ -49,11 +56,12 @@ bool ErrataWorkaround::moveNext(MachineBasicBlock::iterator &I) {
   return true;
 }
 
-void ErrataWorkaround::insertNop(MachineBasicBlock::iterator I) {
+static void insertNop(MachineBasicBlock::iterator I,
+                      const TargetInstrInfo *TII) {
   BuildMI(*I->getParent(), I, I->getDebugLoc(), TII->get(SP::NOP));
 }
 
-bool ErrataWorkaround::isFloat(MachineBasicBlock::iterator I) {
+static bool isFloat(MachineBasicBlock::iterator I) {
   if (I->getNumOperands() == 0)
     return false;
 
@@ -68,7 +76,7 @@ bool ErrataWorkaround::isFloat(MachineBasicBlock::iterator I) {
   return true;
 }
 
-bool ErrataWorkaround::isDivSqrt(MachineBasicBlock::iterator I) {
+static bool isDivSqrt(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
   case SP::FDIVS:
   case SP::FDIVD:
@@ -79,7 +87,7 @@ bool ErrataWorkaround::isDivSqrt(MachineBasicBlock::iterator I) {
   return false;
 }
 
-bool ErrataWorkaround::isAtomic(MachineBasicBlock::iterator I) {
+static bool isAtomic(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
   case SP::SWAPrr:
   case SP::SWAPri:
@@ -96,7 +104,8 @@ bool ErrataWorkaround::isAtomic(MachineBasicBlock::iterator I) {
 // (stb/sth/st/stf) -> (single non-store/load instruction) -> (any store)
 // If the sequence is detected a NOP instruction is inserted after
 // the first store instruction.
-bool ErrataWorkaround::checkSeqTN0009A(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0009A(MachineBasicBlock::iterator I,
+                            const TargetInstrInfo *TII) {
   switch (I->getOpcode()) {
   case SP::STrr:
   case SP::STri:
@@ -126,7 +135,7 @@ bool ErrataWorkaround::checkSeqTN0009A(MachineBasicBlock::iterator I) {
   if (!MI->mayStore())
     return false;
 
-  insertNop(PatchHere);
+  insertNop(PatchHere, TII);
   return true;
 }
 
@@ -134,7 +143,8 @@ bool ErrataWorkaround::checkSeqTN0009A(MachineBasicBlock::iterator I) {
 // (std/stdf) -> (any store)
 // If the sequence is detected a NOP instruction is inserted after
 // the first store instruction.
-bool ErrataWorkaround::checkSeqTN0009B(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0009B(MachineBasicBlock::iterator I,
+                            const TargetInstrInfo *TII) {
 
   switch (I->getOpcode()) {
   case SP::STDrr:
@@ -154,14 +164,15 @@ bool ErrataWorkaround::checkSeqTN0009B(MachineBasicBlock::iterator I) {
   if (!MI->mayStore())
     return false;
 
-  insertNop(MI);
+  insertNop(MI, TII);
   return true;
 }
 
 // Insert a NOP at branch target if load in delay slot and atomic
 // instruction at branch target. Also insert a NOP between load
 // instruction and atomic instruction (swap or casa).
-bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0010(MachineBasicBlock::iterator I,
+                           const TargetInstrInfo *TII) {
 
   // Check for load instruction or branch bundled with load instruction
   if (!I->mayLoad())
@@ -179,7 +190,7 @@ bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
       return false;
 
     if (isAtomic(MI))
-      insertNop(MI);
+      insertNop(MI, TII);
   }
 
   // Check for load followed by atomic instruction
@@ -189,12 +200,13 @@ bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
 
   if (!isAtomic(MI))
     return false;
-  insertNop(MI);
+  insertNop(MI, TII);
   return true;
 }
 
 // Do not allow functions to begin with an atomic instruction
-bool ErrataWorkaround::checkSeqTN0010First(MachineBasicBlock &MBB) {
+static bool checkSeqTN0010First(MachineBasicBlock &MBB,
+                                const TargetInstrInfo *TII) {
   MachineBasicBlock::iterator I = MBB.begin();
   while (I != MBB.end() && I->isMetaInstruction())
     I++;
@@ -202,13 +214,14 @@ bool ErrataWorkaround::checkSeqTN0010First(MachineBasicBlock &MBB) {
     return false;
   if (!isAtomic(I))
     return false;
-  insertNop(I);
+  insertNop(I, TII);
   return true;
 }
 
 // Inserts a NOP instruction at the target of an integer branch if the
 // target is a floating-point instruction or floating-point branch.
-bool ErrataWorkaround::checkSeqTN0012(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0012(MachineBasicBlock::iterator I,
+                           const TargetInstrInfo *TII) {
 
   if (I->getOpcode() != SP::BCOND && I->getOpcode() != SP::BCONDA)
     return false;
@@ -225,7 +238,7 @@ bool ErrataWorkaround::checkSeqTN0012(MachineBasicBlock::iterator I) {
   if (!isFloat(MI) && MI->getOpcode() != SP::FBCOND)
     return false;
 
-  insertNop(MI);
+  insertNop(MI, TII);
   return true;
 }
 
@@ -238,7 +251,9 @@ bool ErrataWorkaround::checkSeqTN0012(MachineBasicBlock::iterator I) {
 //
 // The function also prevents the following code sequence from being generated,
 // (div/sqrt) -> (branch), by inserting a NOP instruction after the (div/sqrt).
-bool ErrataWorkaround::checkSeqTN0013(MachineBasicBlock::iterator I) {
+static bool checkSeqTN0013(MachineBasicBlock::iterator I,
+                           const TargetInstrInfo *TII,
+                           const TargetRegisterInfo *TRI) {
 
   if (!isDivSqrt(I))
     return false;
@@ -250,7 +265,7 @@ bool ErrataWorkaround::checkSeqTN0013(MachineBasicBlock::iterator I) {
     return false;
 
   if (MI->isBranch()) {
-    insertNop(MI);
+    insertNop(MI, TII);
     return true;
   }
 
@@ -274,9 +289,9 @@ bool ErrataWorkaround::checkSeqTN0013(MachineBasicBlock::iterator I) {
       if (fpFound < 2)
         return false;
 
-      insertNop(PatchHere);
+      insertNop(PatchHere, TII);
       if (i == 2)
-        insertNop(PatchHere);
+        insertNop(PatchHere, TII);
       return true;
     }
 
@@ -288,39 +303,49 @@ bool ErrataWorkaround::checkSeqTN0013(MachineBasicBlock::iterator I) {
   return false;
 }
 
-bool ErrataWorkaround::runOnMachineFunction(MachineFunction &MF) {
+static bool runErrataWorkaroundOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
-  ST = &MF.getSubtarget<SparcSubtarget>();
+  const SparcSubtarget *ST = &MF.getSubtarget<SparcSubtarget>();
 
   if (!(ST->fixTN0009() || ST->fixTN0010() || ST->fixTN0012() ||
         ST->fixTN0013()))
     return false;
 
-  TII = ST->getInstrInfo();
-  TRI = ST->getRegisterInfo();
+  const TargetInstrInfo *TII = ST->getInstrInfo();
+  const TargetRegisterInfo *TRI = ST->getRegisterInfo();
 
   if (ST->fixTN0010())
-    Changed |= checkSeqTN0010First(MF.front());
+    Changed |= checkSeqTN0010First(MF.front(), TII);
 
   for (auto &MBB : MF) {
     for (auto &I : MBB) {
       if (ST->fixTN0009()) {
-        Changed |= checkSeqTN0009A(I);
-        Changed |= checkSeqTN0009B(I);
+        Changed |= checkSeqTN0009A(I, TII);
+        Changed |= checkSeqTN0009B(I, TII);
       }
       if (ST->fixTN0010())
-        Changed |= checkSeqTN0010(I);
+        Changed |= checkSeqTN0010(I, TII);
       if (ST->fixTN0012())
-        Changed |= checkSeqTN0012(I);
+        Changed |= checkSeqTN0012(I, TII);
       if (ST->fixTN0013())
-        Changed |= checkSeqTN0013(I);
+        Changed |= checkSeqTN0013(I, TII, TRI);
     }
   }
   return Changed;
 }
 
-LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
-    : MachineFunctionPass(ID) {}
+bool SparcErrataWorkaroundLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runErrataWorkaroundOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+SparcErrataWorkaroundPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  return runErrataWorkaroundOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
+}
 
 //*****************************************************************************
 //**** InsertNOPLoad pass
@@ -332,12 +357,13 @@ LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
 //
 // This pass inserts a NOP after any LD or LDF instruction.
 //
-char InsertNOPLoad::ID = 0;
+char SparcInsertNOPLoadLegacy::ID = 0;
 
-InsertNOPLoad::InsertNOPLoad() : LEONMachineFunctionPass(ID) {}
+SparcInsertNOPLoadLegacy::SparcInsertNOPLoadLegacy()
+    : MachineFunctionPass(ID) {}
 
-bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+static bool insertNOPLoadInMachineFunction(MachineFunction &MF) {
+  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->insertNOPLoad())
     return false;
 
@@ -360,7 +386,18 @@ bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
+bool SparcInsertNOPLoadLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return insertNOPLoadInMachineFunction(MF);
+}
 
+PreservedAnalyses
+SparcInsertNOPLoadPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  return insertNOPLoadInMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
+}
 
 //*****************************************************************************
 //**** DetectRoundChange pass
@@ -371,12 +408,13 @@ bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
 //
 // Detects an erratum in UT699 LEON 3 processor
 
-char DetectRoundChange::ID = 0;
+char SparcDetectRoundChangeLegacy::ID = 0;
 
-DetectRoundChange::DetectRoundChange() : LEONMachineFunctionPass(ID) {}
+SparcDetectRoundChangeLegacy::SparcDetectRoundChangeLegacy()
+    : MachineFunctionPass(ID) {}
 
-bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+static bool detectRoundChangeOnMachineFunction(MachineFunction &MF) {
+  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->detectRoundChange())
     return false;
 
@@ -404,6 +442,17 @@ bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
+bool SparcDetectRoundChangeLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return detectRoundChangeOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+SparcDetectRoundChangePass::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  detectRoundChangeOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
 //*****************************************************************************
 //**** FixAllFDIVSQRT pass
 //*****************************************************************************
@@ -421,12 +470,13 @@ bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
 // with the changes that still need implementing for the "double" versions
 // of these instructions.
 //
-char FixAllFDIVSQRT::ID = 0;
+char SparcFixAllFDIVSQRTLegacy::ID = 0;
 
-FixAllFDIVSQRT::FixAllFDIVSQRT() : LEONMachineFunctionPass(ID) {}
+SparcFixAllFDIVSQRTLegacy::SparcFixAllFDIVSQRTLegacy()
+    : MachineFunctionPass(ID) {}
 
-bool FixAllFDIVSQRT::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+static bool fixAllFDIVSQRTInMachineFunction(MachineFunction &MF) {
+  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->fixAllFDIVSQRT())
     return false;
 
@@ -457,4 +507,17 @@ bool FixAllFDIVSQRT::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Modified;
+}
+
+bool SparcFixAllFDIVSQRTLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return fixAllFDIVSQRTInMachineFunction(MF);
+}
+
+PreservedAnalyses
+SparcFixAllFDIVSQRTPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  return fixAllFDIVSQRTInMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }
