@@ -711,41 +711,36 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
 /// \p BrTarget       new target block of the callbr/switch instruction
 /// \p Succ           original target block of the callbr/switch instruction
 template <typename TI, typename T>
-static bool updateCycleLoopInfo(TI *LCI, BasicBlock *MultiBrBlock,
+static void updateCycleLoopInfo(TI *LCI, BasicBlock *MultiBrBlock,
                                 BasicBlock *BrTarget, BasicBlock *Succ) {
   static_assert(std::is_same_v<TI, CycleInfo> || std::is_same_v<TI, LoopInfo>,
                 "type must be CycleInfo or LoopInfo");
   if (!LCI)
-    return false;
+    return;
 
   if constexpr (std::is_same_v<TI, CycleInfo>) {
     T LC = LCI->getSmallestCommonCycle(MultiBrBlock, Succ);
     if (!LC)
-      return false;
+      return;
     LCI->addBlockToCycle(BrTarget, LC);
   } else {
     T *LC = LCI->getSmallestCommonLoop(MultiBrBlock, Succ);
     if (!LC)
-      return false;
+      return;
     LC->addBasicBlockToLoop(BrTarget, *LCI);
   }
-
-  return true;
 }
 
 BasicBlock *llvm::SplitMultiBrEdge(BasicBlock *MultiBrBlock, BasicBlock *Succ,
                                    unsigned SuccIdx, BasicBlock *BrTarget,
                                    DomTreeUpdater *DTU, CycleInfo *CI,
-                                   LoopInfo *LI, bool *UpdatedLI) {
+                                   LoopInfo *LI) {
   Instruction *Term = MultiBrBlock->getTerminator();
   assert((isa_and_present<SwitchInst>(Term) ||
           isa_and_present<CallBrInst>(Term)) &&
          "expected callbr or switch terminator");
   assert(SuccIdx < Term->getNumSuccessors() &&
          Succ == Term->getSuccessor(SuccIdx) && "invalid successor index");
-
-  if (UpdatedLI)
-    *UpdatedLI = false;
 
   bool ReusesBrTarget = BrTarget;
 
@@ -771,10 +766,7 @@ BasicBlock *llvm::SplitMultiBrEdge(BasicBlock *MultiBrBlock, BasicBlock *Succ,
       PN.setIncomingBlock(BBIdx, BrTarget);
     }
 
-    bool Updated =
-        updateCycleLoopInfo<LoopInfo, Loop>(LI, MultiBrBlock, BrTarget, Succ);
-    if (UpdatedLI)
-      *UpdatedLI = Updated;
+    updateCycleLoopInfo<LoopInfo, Loop>(LI, MultiBrBlock, BrTarget, Succ);
     updateCycleLoopInfo<CycleInfo, CycleRef>(CI, MultiBrBlock, BrTarget, Succ);
   } else {
     for (PHINode &PN : Succ->phis())
