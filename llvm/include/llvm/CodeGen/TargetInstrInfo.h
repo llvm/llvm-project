@@ -44,7 +44,6 @@ namespace llvm {
 class DFAPacketizer;
 class InstrItineraryData;
 class LiveIntervals;
-class LiveVariables;
 class MachineCycleInfo;
 class MachineLoop;
 class MachineLoopInfo;
@@ -1021,29 +1020,38 @@ public:
     return false;
   }
 
+  /// Describes how the select will be materialized:
+  ///   CondCycles        - number of cycles for compare and branch
+  ///   TrueCycles        - number of cycles to the True register
+  ///   FalseCycles       - same for False
+  ///   NumInsts          - number of instructions required for the select, 0 if
+  ///                       this field is not supported by a given backend
+  ///   ClobberedPhysRegs - physical registers which will be defined by the
+  ///                       newly inserted select. Useful for finding a legal
+  ///                       insertion point
+  struct SelectExpansion {
+    int CondCycles = 1;
+    int TrueCycles = 1;
+    int FalseCycles = 1;
+    unsigned NumInsts = 0;
+    SmallVector<MCRegister, 2> ClobberedPhysRegs;
+  };
+
   /// Return true if it is possible to insert a select
   /// instruction that chooses between TrueReg and FalseReg based on the
-  /// condition code in Cond.
+  /// condition code in Cond. Exp provides information on how the select
+  /// will be materialized.
   ///
-  /// When successful, also return the latency in cycles from TrueReg,
-  /// FalseReg, and Cond to the destination register. In most cases, a select
-  /// instruction will be 1 cycle, so CondCycles = TrueCycles = FalseCycles = 1
-  ///
-  /// Some x86 implementations have 2-cycle cmov instructions.
-  ///
-  /// @param MBB         Block where select instruction would be inserted.
-  /// @param Cond        Condition returned by analyzeBranch.
-  /// @param DstReg      Virtual dest register that the result should write to.
-  /// @param TrueReg     Virtual register to select when Cond is true.
-  /// @param FalseReg    Virtual register to select when Cond is false.
-  /// @param CondCycles  Latency from Cond+Branch to select output.
-  /// @param TrueCycles  Latency from TrueReg to select output.
-  /// @param FalseCycles Latency from FalseReg to select output.
+  /// @param MBB      Block where select instruction would be inserted.
+  /// @param Cond     Condition returned by analyzeBranch.
+  /// @param DstReg   Virtual dest register that the result should write to.
+  /// @param TrueReg  Virtual register to select when Cond is true.
+  /// @param FalseReg Virtual register to select when Cond is false.
+  /// @param Exp      Latency and number of instructions added by the select.
   virtual bool canInsertSelect(const MachineBasicBlock &MBB,
                                ArrayRef<MachineOperand> Cond, Register DstReg,
                                Register TrueReg, Register FalseReg,
-                               int &CondCycles, int &TrueCycles,
-                               int &FalseCycles) const {
+                               SelectExpansion &Exp) const {
     return false;
   }
 
@@ -1385,47 +1393,30 @@ public:
                              DenseMap<Register, unsigned> &InstrIdxForVirtReg,
                              Register ResultReg) const;
 
-  /// Description of an FP accumulation-chain link for the machine combiner's
-  /// FP accumulation chain reassociation (MachineCombinerPattern::FMA_CHAIN).
+  /// Link of an FP accumulation chain, see MachineCombinerPattern::FMA_CHAIN.
   struct FMAChainLinkInfo {
-    /// Opcode of the add merging two sub-chains.
+    /// Add joining the two halves of the chain.
     unsigned AddOpc;
-    /// Opcode of the plain multiply starting a new sub-chain for a fused
-    /// (FMA) link, or 0 for an unfused (FADD) link, where the new sub-chain
-    /// starts at the link's increment operand.
+    /// Multiply replacing the fused link starting the upper half, or 0 for an
+    /// unfused link.
     unsigned MulOpc;
-    /// Operand index of the accumulator register for a fused link, or -1 if
-    /// the accumulator is not a register (e.g. a folded memory operand),
-    /// which ends the chain. Ignored for unfused links, where the
-    /// accumulator is whichever source operand is defined by the previous
-    /// link.
+    /// Accumulator operand of a fused link. An unfused link accumulates the
+    /// source defined by the previous link.
     int AccOpIdx;
   };
 
-  /// Describe \P MI as an FP accumulation-chain link, or return std::nullopt
-  /// if \P MI is not a supported accumulation instruction. Reassociation is
-  /// only performed when the instruction carries the reassoc and nsz flags and
-  /// cannot raise FP exceptions; the generic driver checks that separately.
+  /// Return the FP accumulation chain link description of \P MI, or
+  /// std::nullopt. The FP flags of \P MI are checked by the caller.
   virtual std::optional<FMAChainLinkInfo>
   getFMAChainLinkInfo(const MachineInstr &MI) const {
     return std::nullopt;
   }
 
-  /// Find a chain of FP accumulation instructions ending at \P Root that can
-  /// be split into two shorter chains for increased ILP. Only done at
-  /// aggressive optimization levels when not reducing register pressure and
-  /// not optimizing for size.
+  /// Add MachineCombinerPattern::FMA_CHAIN if \P Root ends an FP accumulation
+  /// chain worth splitting into two shorter chains.
   bool getFMAChainPatterns(MachineInstr &Root,
                            SmallVectorImpl<unsigned> &Patterns,
                            bool DoRegPressureReduce) const;
-
-  /// Rewrite the FP accumulation chain ending at \P Root as two shorter
-  /// chains combined by a single add.
-  void
-  reassociateFMAChain(MachineInstr &Root,
-                      SmallVectorImpl<MachineInstr *> &InsInstrs,
-                      SmallVectorImpl<MachineInstr *> &DelInstrs,
-                      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const;
 
   /// Return the inverse operation opcode if it exists for \P Opcode (e.g. add
   /// for sub and vice versa).
@@ -2283,6 +2274,14 @@ public:
   virtual void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const;
 
+  /// Return true if the target supports outlining candidates from multiple
+  /// input sections in one pass.
+  ///
+  /// A target that enables this must not independently reject functions with
+  /// a section marking in isFunctionSafeToOutlineFrom(), otherwise such
+  /// functions never reach the outliner and this hook has no effect.
+  virtual bool supportsSectionAwareOutlining() const { return false; }
+
 protected:
   /// Target-dependent implementation for getOutliningTypeImpl.
   virtual outliner::InstrType
@@ -2358,10 +2357,7 @@ public:
   /// produced from instructions in F will produce a program which produces the
   /// same output for any set of given inputs.
   virtual bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
-                                           bool OutlineFromLinkOnceODRs) const {
-    llvm_unreachable("Target didn't implement "
-                     "TargetInstrInfo::isFunctionSafeToOutlineFrom!");
-  }
+                                           bool OutlineFromLinkOnceODRs) const;
 
   /// Return true if the function should be outlined from by default.
   virtual bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const {

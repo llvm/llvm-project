@@ -70,6 +70,13 @@ public:
                                           cir::LangAddressSpace::Default);
   }
 
+  /// Get the CIR address space attribute for a global in AST address space
+  /// \p as.
+  virtual mlir::ptr::MemorySpaceAttrInterface
+  getGlobalCIRAddressSpace(clang::LangAS as) const {
+    return cir::toCIRAddressSpaceAttr(info->cgt.getMLIRContext(), as);
+  }
+
   /// Get the CIR value of a null pointer of type \p ptrTy, where \p qt is the
   /// source pointer type.
   virtual mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
@@ -179,10 +186,6 @@ public:
 
 std::unique_ptr<TargetCIRGenInfo>
 createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt);
-
-/// Check if AMDGPU protected visibility is required.
-bool requiresAMDGPUProtectedVisibility(const clang::Decl *d,
-                                       cir::VisibilityKind visibility);
 
 /// Set AMDGPU-specific function attributes for HIP kernels.
 void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,

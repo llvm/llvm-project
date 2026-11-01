@@ -77,7 +77,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
   ~MsvcStlSmartPointerSyntheticFrontEnd() override;
 
@@ -95,7 +95,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   lldb::ValueObjectSP m_value_ptr_sp;
@@ -163,7 +163,7 @@ lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "pointer")
     return 0;
 
@@ -263,7 +263,7 @@ lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "pointer")
     return 0;
   if (name == "deleter")

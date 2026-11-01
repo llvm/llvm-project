@@ -6,11 +6,11 @@ define void @fp_paired_splat(ptr %out, ptr %in, double %a, double %b, double %c)
 ; CHECK-SAME: ptr [[OUT:%.*]], ptr [[IN:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr double, ptr [[IN]], i64 2
-; CHECK-NEXT:    [[S0:%.*]] = fadd double [[A]], [[B]]
 ; CHECK-NEXT:    [[EP0:%.*]] = getelementptr double, ptr [[OUT]], i64 32
 ; CHECK-NEXT:    [[EP1:%.*]] = getelementptr double, ptr [[OUT]], i64 34
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[IN]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P2]], align 8
+; CHECK-NEXT:    [[S0:%.*]] = fadd double [[A]], [[B]]
 ; CHECK-NEXT:    [[S1:%.*]] = fsub double [[S0]], [[C]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[S1]], i64 0

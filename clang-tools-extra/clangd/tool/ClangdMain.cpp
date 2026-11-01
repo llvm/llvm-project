@@ -38,6 +38,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
@@ -518,12 +519,18 @@ opt<bool> PreambleParseForwardingFunctions{
     init(ParseOptions().PreambleParseForwardingFunctions),
 };
 
-opt<bool> SkipPreambleBuild{
+opt<ClangdServer::SkipPreambleBuildPolicy> SkipPreambleBuild{
     "skip-preamble-build",
     cat(Misc),
-    desc("If ture, skip preamble build"),
+    desc("Skip building the preamble"),
     Hidden,
-    init(ParseOptions().SkipPreambleBuild),
+    values(clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Never, "never",
+                      "never skip"),
+           clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Modules, "modules",
+                      "only if module use is encountered (default)"),
+           clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Always, "always",
+                      "always skip")),
+    init(ClangdServer::Options().SkipPreambleBuild),
 };
 
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
@@ -788,6 +795,11 @@ It should be used via an editor plugin rather than invoked directly. For more in
 
 clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment variable.
 )";
+  // Enable help for -load option, if plugins are enabled.
+  if (llvm::cl::Option *LoadOpt =
+          llvm::cl::getRegisteredOptions().lookup("load"))
+    LoadOpt->addCategory(Features);
+
   llvm::cl::HideUnrelatedOptions(ClangdCategories);
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview, /*Errs=*/nullptr,
                                     /*VFS=*/nullptr, FlagsEnvVar);
@@ -907,6 +919,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   for (int I = 0; I < argc; ++I)
     log("argv[{0}]: {1}", I, argv[I]);
+  for (unsigned I = 0, E = llvm::PluginLoader::getNumPlugins(); I < E; ++I)
+    log("Loaded plugin: {0}", llvm::PluginLoader::getPlugin(I));
   if (auto EnvFlags = llvm::sys::Process::GetEnv(FlagsEnvVar))
     log("{0}: {1}", FlagsEnvVar, *EnvFlags);
   // Log environment variables that influence how clangd finds system headers.
@@ -1028,6 +1042,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
     Opts.Encoding = ForceOffsetEncoding;
 
+  FeatureModuleSet ModuleSet = FeatureModuleSet::fromRegistry();
+  if (ModuleSet.begin() != ModuleSet.end())
+    Opts.FeatureModules = &ModuleSet;
+
   if (CheckFile.getNumOccurrences()) {
     llvm::SmallString<256> Path;
     if (auto Error =
@@ -1040,10 +1058,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);
   }
-
-  FeatureModuleSet ModuleSet = FeatureModuleSet::fromRegistry();
-  if (ModuleSet.begin() != ModuleSet.end())
-    Opts.FeatureModules = &ModuleSet;
 
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.

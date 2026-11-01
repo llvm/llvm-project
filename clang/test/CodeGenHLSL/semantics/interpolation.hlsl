@@ -53,17 +53,39 @@ sample float4 defaults(int a : INT, uint2 b : UINT, bool c : BOOL,
 //                                                                   ^ Interpolation mode.
 
 [shader("pixel")]
-float4 positions(float4 a : SV_Position0,
-                 centroid float4 b : SV_Position1,
-                 sample float4 c : SV_Position2,
-                 noperspective sample float4 d : SV_Position3) : SV_Target {
-  return a + b + c + d;
+float4 position_default(float4 a : SV_Position) : SV_Target {
+  return a;
 }
-// CHECK-DAG: !{i32 0, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 4, i32 1, i8 4,
-// CHECK-DAG: !{i32 1, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 5, i32 1, i8 4,
-// CHECK-DAG: !{i32 2, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 7, i32 1, i8 4,
-// CHECK-DAG: !{i32 3, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 7, i32 1, i8 4,
-//                                                                    ^ Interpolation mode.
+// CHECK-DAG: !{ptr @position_default, ![[DEFSIG:[0-9]+]], !{{[0-9]+}}}
+// CHECK-DAG: ![[DEFSIG]] = !{![[DEFPOS:[0-9]+]]}
+// CHECK-DAG: ![[DEFPOS]] = !{i32 0, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 4, i32 1, i8 4,
+
+[shader("pixel")]
+float4 position_centroid(centroid float4 a : SV_Position) : SV_Target {
+  return a;
+}
+// CHECK-DAG: !{ptr @position_centroid, ![[CENTSIG:[0-9]+]], !{{[0-9]+}}}
+// CHECK-DAG: ![[CENTSIG]] = !{![[CENTPOS:[0-9]+]]}
+// CHECK-DAG: ![[CENTPOS]] = !{i32 0, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 5, i32 1, i8 4,
+
+// 'sample' and 'noperspective sample' produce the same signature, since
+// SV_Position is always noperspective.
+
+[shader("pixel")]
+float4 position_sample(sample float4 a : SV_Position) : SV_Target {
+  return a;
+}
+
+[shader("pixel")]
+float4 position_noperspective_sample(noperspective sample float4 a
+                                     : SV_Position) : SV_Target {
+  return a;
+}
+// CHECK-DAG: !{ptr @position_sample, ![[SMPSIG:[0-9]+]], !{{[0-9]+}}}
+// CHECK-DAG: !{ptr @position_noperspective_sample, ![[SMPSIG]], !{{[0-9]+}}}
+// CHECK-DAG: ![[SMPSIG]] = !{![[SMPPOS:[0-9]+]]}
+// CHECK-DAG: ![[SMPPOS]] = !{i32 0, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 7, i32 1, i8 4,
+//                                                                      ^ Interpolation mode.
 
 [shader("pixel")]
 float4 precedence(center centroid float a : CENTER_CENTROID,
@@ -95,5 +117,5 @@ centroid float4 vertex(sample float4 a : VERTEX,
 // used to pack against pixel inputs. SV_Position is noperspective.
 // CHECK-DAG: !{i32 0, !"VERTEX",      i32 9, i32 0, !{{[0-9]+}}, i32 0, i32 1, i8 4,
 // CHECK-DAG: !{i32 1, !"SV_VertexID", i32 5, i32 1, !{{[0-9]+}}, i32 0, i32 1, i8 1,
-// CHECK-DAG: !{i32 0, !"SV_Position", i32 9, i32 3, !{{[0-9]+}}, i32 5, i32 1, i8 4,
-//                                                                    ^ Interpolation mode.
+// The vertex output signature is the centroid SV_Position signature above.
+// CHECK-DAG: !{ptr @vertex, !{{[0-9]+}}, ![[CENTSIG]]}

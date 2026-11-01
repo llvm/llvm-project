@@ -206,9 +206,11 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
         mlir::cast<cir::PointerType>(thisAddr.getType()).getAddrSpace());
     if (realPtrTy != thisAddr.getType())
       thisAddr = builder.createBitcast(thisAddr.getLoc(), thisAddr, realPtrTy);
-    builder.createCallOp(cgf.getLoc(vd->getSourceRange()),
-                         mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
-                         mlir::ValueRange{thisAddr});
+    // Make sure the call and the callee agree on calling convention.
+    builder.createCallOp(cgf.getLoc(vd->getSourceRange()), fnOp,
+                         mlir::ValueRange{thisAddr}, /*attrs=*/{},
+                         /*argAttrs=*/{}, /*resAttrs=*/{},
+                         fnOp.getCallingConv());
     assert(fnOp && "expected cir.func");
     // TODO(cir): This doesn't do anything but check for unhandled conditions.
     // What it is meant to do should really be happening in LoweringPrepare.
@@ -308,11 +310,6 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
   QualType ty = varDecl->getType();
   assert(curCGF && "Special var init only available inside of a function");
   CIRGenFunction &cgf = *curCGF;
-
-  // A temporary whose lifetime this initializer extends is destroyed alongside
-  // the variable itself, so pushTemporaryCleanup needs to know where that is.
-  llvm::SaveAndRestore<mlir::Region *> savedDtorRegion(
-      cgf.curStaticVarDtorRegion, &dtorRegion);
 
   // TODO: handle address space
   // The address space of a static local variable (addr) may be different

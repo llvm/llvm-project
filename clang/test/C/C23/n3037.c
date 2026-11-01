@@ -948,3 +948,18 @@ struct GH199417_3 {
     // it would be better to print the original type.
   } a;                                 // c23-note {{field 'a' has type 'int' here}}
 };
+
+constexpr int n = 1; // c17-error {{unknown type name 'constexpr'}}
+constexpr int o = 1; // c17-error {{unknown type name 'constexpr'}}
+constexpr int m = 2; // c17-error {{unknown type name 'constexpr'}}
+struct GH232748 {
+  struct S { int i : n; } s1; // c23-note {{bit-field 'i' has bit-width 1 here}}
+                              // c17-note@-1 {{previous definition is here}}
+  struct S { int i : m; } s2; // c23-error {{type 'struct S' has incompatible definitions}}
+                              // c23-note@-1 {{bit-field 'i' has bit-width 2 here}}
+                              // c17-error@-2 {{redefinition of 'S'}}
+  struct M { int i : n; } m2; // c17-note {{previous definition is here}}
+  struct M { int i : n; } m1; // c17-error {{redefinition of 'M'}}
+  struct N { int i : o; } n1; // c17-note {{previous definition is here}}
+  struct N { int i : n; } n2; // c17-error {{redefinition of 'N}}
+};

@@ -273,9 +273,6 @@ void BottomUpPtrState::HandlePotentialUse(BasicBlock *BB, Instruction *Inst,
       InsertAfter = std::next(Inst->getIterator());
     }
 
-    if (InsertAfter != BB->end())
-      InsertAfter = skipDebugIntrinsics(InsertAfter);
-
     InsertReverseInsertPt(&*InsertAfter);
 
     // Don't insert anything between a call/invoke with operand bundle

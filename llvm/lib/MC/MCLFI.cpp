@@ -39,7 +39,7 @@ void llvm::initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
 
   // Create the target-specific MCLFIRewriter.
   assert(TheTarget != nullptr);
-  if (MCCLOptions::Global.lfi_enable_rewriter) {
+  if (getMCCLOptions(Ctx.getTargetOptions()).lfi_enable_rewriter) {
     auto MRI =
         std::unique_ptr<MCRegisterInfo>(TheTarget->createMCRegInfo(TheTriple));
     auto MII = std::unique_ptr<MCInstrInfo>(TheTarget->createMCInstrInfo());
@@ -76,9 +76,10 @@ void llvm::emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
 
   // Emit an ELF Note section in its own COMDAT group which identifies LFI
   // object files.
-  MCSectionELF *Note = Ctx.getELFSection(NoteName, ELF::SHT_NOTE,
-                                         ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
-                                         NoteName, /*IsComdat=*/true);
+  MCSectionELF *Note = Ctx.getELFSection(
+      NoteName, ELF::SHT_NOTE,
+      ELF::SHF_ALLOC | ELF::SHF_GROUP | ELF::SHF_GNU_RETAIN, 0, NoteName,
+      /*IsComdat=*/true);
 
   Streamer.switchSection(Note);
   Streamer.emitIntValue(strlen(NoteNamespace) + 1, 4);

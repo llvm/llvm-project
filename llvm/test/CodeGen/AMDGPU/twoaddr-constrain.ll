@@ -19,7 +19,7 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(ptr addrspace(4) inreg 
   ; CHECK-NEXT:   $sgpr1 = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORD_IMM]]
   ; CHECK-NEXT:   $sgpr2 = COPY [[COPY5]]
-  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1, implicit killed $sgpr2
+  ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1, implicit $sgpr2
   %load = load <3 x i32>, ptr addrspace(4) %ptr, align 4
   ret <3 x i32> %load
 }

@@ -31,7 +31,7 @@ body:             |
     MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, %0
     MOVAPSmr %stack.0, 1, $noreg, 16, $noreg, %0
     MOVAPSmr %stack.0, 1, $noreg, 32, $noreg, %0
-    MOVAPSmr %stack.0, 1, $noreg, 48, $noreg, killed %0
+    MOVAPSmr %stack.0, 1, $noreg, 48, $noreg, %0
     RET 0
 
 ...

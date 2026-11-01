@@ -163,9 +163,9 @@ int rethrow_from_block(int a, int b) {
   return a / b;
 }
 
+// CIR:  %[[RES_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:  %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR:  %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
-// CIR:  %[[RES_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:  cir.store %{{.*}}, %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  cir.store %{{.*}}, %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  cir.scope {
@@ -184,9 +184,9 @@ int rethrow_from_block(int a, int b) {
 // CIR:  %[[RESULT:.*]] = cir.load %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.return %[[RESULT]] : !s32i
 
+// LLVM: %[[RES_ADDR:.*]] = alloca i32, align 4
 // LLVM: %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
-// LLVM: %[[RES_ADDR:.*]] = alloca i32, align 4
 // LLVM: store i32 %{{.*}}, ptr %[[A_ADDR]], align 4
 // LLVM: store i32 %{{.*}}, ptr %[[B_ADDR]], align 4
 // LLVM: br label %[[CHECK_COND:.*]]

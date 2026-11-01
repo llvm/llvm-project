@@ -480,8 +480,18 @@ if __name__ == "__main__":
     #        partition's allocated memory, and can lead to an out of memory
     #        IO error. We are setting the pool size to 8 to avoid such
     #        errors at the moment, and will look for a graceful solution later.
-    pool = multiprocessing.Pool(8) if platform.system() == "AIX" \
-                                   else multiprocessing.Pool()
+    # On Windows, WaitForMultipleObjects is limited to 63 handles (61 workers +
+    # 2 internal pipe handles in multiprocessing.Pool), so cap at 60 workers.
+    # Also cap at len(libs) to avoid spawning idle worker processes.
+    max_workers = (
+        8
+        if platform.system() == "AIX"
+        else min(60, os.cpu_count() or 1)
+        if os.name == "nt"
+        else (os.cpu_count() or 1)
+    )
+    num_workers = max(1, min(max_workers, len(libs)))
+    pool = multiprocessing.Pool(num_workers)
     try:
         # Only one argument can be passed to the mapping function, and we can't
         # use a lambda or local function definition as that doesn't work on
@@ -497,6 +507,7 @@ if __name__ == "__main__":
         result = pool.map_async(extract_symbols, vals)
         pool.close()
         libs_symbols = result.get(3600)
+        pool.join()
     except KeyboardInterrupt:
         # On Ctrl-C terminate everything and exit
         pool.terminate()

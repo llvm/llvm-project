@@ -44,6 +44,8 @@ static_library("Orc") {
     "InProcessEPC.cpp",
     "InProcessMemoryAccess.cpp",
     "IndirectionUtils.cpp",
+    "InstanceSymbolGenerator.cpp",
+    "InstanceSymbolGeneratorSPS.cpp",
     "JITLinkRedirectableSymbolManager.cpp",
     "JITLinkReentryTrampolines.cpp",
     "JITTargetMachineBuilder.cpp",

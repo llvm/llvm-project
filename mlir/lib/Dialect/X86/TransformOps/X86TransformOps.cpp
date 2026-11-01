@@ -8,7 +8,11 @@
 
 #include "mlir/Dialect/X86/TransformOps/X86TransformOps.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -57,6 +61,21 @@ void mlir::transform::ApplyMoveAccumulatorForContractLoopPatternsOp::
   x86::populateMoveAccumulatorForContractLoopPatterns(patterns);
 }
 
+void mlir::transform::ApplyPrepareVectorContractLoopsPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  x86::populatePrepareVectorContractLoopsPatterns(patterns);
+}
+
+void mlir::transform::ApplyVectorContractMultiLevelUnrollForAMXPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  x86::populateVectorContractMultiLevelUnrollForAMXPatterns(patterns);
+}
+
+void mlir::transform::ApplyMathRsqrtApproximationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  x86::populateMathRsqrtApproximationPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
@@ -69,6 +88,11 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(X86TransformDialectExtension)
 
   X86TransformDialectExtension() {
+    declareGeneratedDialect<affine::AffineDialect>();
+    declareGeneratedDialect<arith::ArithDialect>();
+    declareGeneratedDialect<math::MathDialect>();
+    declareGeneratedDialect<memref::MemRefDialect>();
+    declareGeneratedDialect<vector::VectorDialect>();
     declareGeneratedDialect<x86::X86Dialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();
     registerTransformOps<

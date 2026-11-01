@@ -510,7 +510,7 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
 }
 
 void PlatformPOSIX::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
+  m_trap_handlers.push_back("_sigtramp");
 }
 
 Status PlatformPOSIX::EvaluateLibdlExpression(

@@ -147,11 +147,14 @@ void GenerateABILoweringPattern(llvm::StringRef OpName,
   CXXABILoweringPatterns.push_back(std::move(CodeBuffer));
 }
 
-void GenerateLLVMLoweringPattern(
-    llvm::StringRef OpName, llvm::StringRef PatternName, bool IsRecursive,
-    llvm::StringRef ExtraDecl, const Record *CustomCtorRec,
-    llvm::StringRef LLVMOp, llvm::StringRef ConstrainedLLVMIntrinsic,
-    bool ConstrainedHasRoundingMode, bool HasZeroResult) {
+void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
+                                 llvm::StringRef PatternName, bool IsRecursive,
+                                 llvm::StringRef ExtraDecl,
+                                 const Record *CustomCtorRec,
+                                 llvm::StringRef LLVMOp,
+                                 llvm::StringRef ConstrainedLLVMIntrinsic,
+                                 bool ConstrainedHasRoundingMode,
+                                 bool HasFastMathFlags, bool HasZeroResult) {
   std::optional<CustomLoweringCtor> CustomCtor =
       parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
@@ -211,6 +214,10 @@ void GenerateLLVMLoweringPattern(
     Code << "    return lowerConstrainableFPOp<mlir::LLVM::" << LLVMOp
          << ">(\n";
     Code << "        op, adaptor.getOperands(), op.getFenvAttr(),\n";
+    Code << "        "
+         << (HasFastMathFlags ? "op.getFastmathFlagsAttr()"
+                              : "cir::FastMathFlagsAttr{}")
+         << ",\n";
     Code << "        *getTypeConverter(), rewriter, \""
          << ConstrainedLLVMIntrinsic << "\",\n";
     Code << "        /*hasRoundingMode=*/"
@@ -232,6 +239,9 @@ void GenerateLLVMLoweringPattern(
     } else {
       Code << "    mlir::Type resTy = "
               "typeConverter->convertType(op.getType());\n";
+      Code << "    if (!resTy)\n";
+      Code << "      return op.emitError() << \"ClangIR lowering NYI: cannot "
+              "convert \" << op.getType();\n";
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
            << ">(op, mlir::TypeRange{resTy}, adaptor.getOperands(), "
            << Properties << ");\n";
@@ -277,6 +287,11 @@ void Generate(const Record *OpRecord) {
         OpRecord->getValueAsString("constrainedLLVMIntrinsic");
     bool ConstrainedHasRoundingMode =
         OpRecord->getValueAsBit("constrainedLLVMIntrinsicHasRoundingMode");
+    const DagInit *ArgsDag = OpRecord->getValueAsDag("arguments");
+    bool HasFastMathFlags =
+        llvm::any_of(ArgsDag->getArgNames(), [](const StringInit *Name) {
+          return Name && Name->getValue() == "fastmath_flags";
+        });
 
     if (!LLVMOp.empty() && CustomCtor)
       PrintFatalError(OpRecord->getLoc(),
@@ -294,7 +309,8 @@ void Generate(const Record *OpRecord) {
     bool IsZeroResult = ResultsDag->getNumArgs() == 0;
     GenerateLLVMLoweringPattern(OpName, PatternName, IsRecursive, ExtraDecl,
                                 CustomCtor, LLVMOp, ConstrainedLLVMIntrinsic,
-                                ConstrainedHasRoundingMode, IsZeroResult);
+                                ConstrainedHasRoundingMode, HasFastMathFlags,
+                                IsZeroResult);
     // Only automatically register patterns that use the default constructor.
     // Patterns with a custom constructor must be manually registered by the
     // lowering pass.

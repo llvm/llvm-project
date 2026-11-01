@@ -1515,5 +1515,360 @@ define nofpclass(nan inf nzero sub nnorm) float @ret_positivezero_result_demands
   ret float %result
 }
 
+; A single infinity and qnan are demanded of the result, and the source is
+; either inf/qNaN or a normal. Without the multi-unit widening the normal
+; operand is not demanded, so it is dropped and the rounding call folds away.
+; That is invalid for ppc_fp128, where rounding a finite value may overflow to
+; an infinity:
+; * fcPosNormal may become fcPosInf when rounding towards +inf
+; * fcNegNormal may become fcNegInf when rounding towards -inf
+;
+; qNaN is demanded alongside the infinity to keep the result from being a single
+; class (which would constant fold instead, exercising a different path).
+
+define nofpclass(snan zero sub norm ninf) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__trunc__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan ninf zero sub norm) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__trunc__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    ret ppc_fp128 [[INF_OR_QNAN]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm pinf) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__trunc__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan pinf zero sub norm) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__trunc__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    ret ppc_fp128 [[INF_OR_QNAN]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm ninf) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__floor__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan ninf zero sub norm) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__floor__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    ret ppc_fp128 [[INF_OR_QNAN]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm pinf) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__floor__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan pinf zero sub norm) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__floor__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm ninf) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__ceil__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan ninf zero sub norm) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__ceil__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm pinf) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__ceil__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan pinf zero sub norm) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__ceil__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    ret ppc_fp128 [[INF_OR_QNAN]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm ninf) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__round__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan ninf zero sub norm) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__round__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm pinf) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__round__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan pinf zero sub norm) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__round__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm ninf) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__roundeven__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan ninf zero sub norm) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__roundeven__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm pinf) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__roundeven__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan pinf zero sub norm) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__roundeven__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm ninf) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__nearbyint__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan ninf zero sub norm) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__nearbyint__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm pinf) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__nearbyint__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan pinf zero sub norm) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__nearbyint__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm ninf) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__rint__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan ninf zero sub norm) ppc_fp128 @ret_pinf_qnan_result__lhs_inf_or_qnan__rhs_normal__rint__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(snan zero sub norm pinf) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__rint__ppcf128(i1 %cond, ppc_fp128 nofpclass(snan zero sub norm) %inf.or.qnan, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(snan pinf zero sub norm) ppc_fp128 @ret_ninf_qnan_result__lhs_inf_or_qnan__rhs_normal__rint__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(snan zero sub norm) [[INF_OR_QNAN:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_OR_QNAN]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.or.qnan, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+; Both infinities demanded. Every intrinsic other than trunc demands a normal of
+; one sign or the other, so only trunc still folds.
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__trunc__ppcf128(i1 %cond, ppc_fp128 nofpclass(nan zero sub norm) %inf.only, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__trunc__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(nan zero sub norm) [[INF_ONLY:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    ret ppc_fp128 [[INF_ONLY]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.only, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__floor__ppcf128(i1 %cond, ppc_fp128 nofpclass(nan zero sub norm) %inf.only, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__floor__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(nan zero sub norm) [[INF_ONLY:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_ONLY]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.only, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__ceil__ppcf128(i1 %cond, ppc_fp128 nofpclass(nan zero sub norm) %inf.only, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__ceil__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(nan zero sub norm) [[INF_ONLY:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_ONLY]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.only, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__round__ppcf128(i1 %cond, ppc_fp128 nofpclass(nan zero sub norm) %inf.only, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__round__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(nan zero sub norm) [[INF_ONLY:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_ONLY]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.round.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.only, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__roundeven__ppcf128(i1 %cond, ppc_fp128 nofpclass(nan zero sub norm) %inf.only, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__roundeven__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(nan zero sub norm) [[INF_ONLY:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_ONLY]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.only, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__nearbyint__ppcf128(i1 %cond, ppc_fp128 nofpclass(nan zero sub norm) %inf.only, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__nearbyint__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(nan zero sub norm) [[INF_ONLY:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_ONLY]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.only, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__rint__ppcf128(i1 %cond, ppc_fp128 nofpclass(nan zero sub norm) %inf.only, ppc_fp128 nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__lhs_inf__rhs_normal__rint__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 nofpclass(nan zero sub norm) [[INF_ONLY:%.*]], ppc_fp128 nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[INF_ONLY]], ppc_fp128 [[NORM_ONLY]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %inf.only, ppc_fp128 %norm.only
+  %result = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+; This should always fold if we are not dealing with a multi-unit type.
+define nofpclass(nan zero sub norm) float @ret_inf_result__lhs_inf__rhs_normal__rint__f32(i1 %cond, float nofpclass(nan zero sub norm) %inf.only, float nofpclass(nan inf zero sub) %norm.only) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_inf_result__lhs_inf__rhs_normal__rint__f32(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan zero sub norm) [[INF_ONLY:%.*]], float nofpclass(nan inf zero sub) [[NORM_ONLY:%.*]]) {
+; CHECK-NEXT:    ret float [[INF_ONLY]]
+;
+  %select = select i1 %cond, float %inf.only, float %norm.only
+  %result = call float @llvm.rint.f32(float %select)
+  ret float %result
+}
+
+; The same, with an unconstrained source. No operand is dropped here, the source
+; is simply assumed never to be a normal because normals are not demanded, and
+; the rounding call is folded away due to the identity of
+; roundToIntegral(zero|inf|nan) == zero|inf|nan.
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__trunc__ppcf128(i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__trunc__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 [[UNKNOWN0:%.*]], ppc_fp128 [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[UNKNOWN0]], ppc_fp128 [[UNKNOWN1]]
+; CHECK-NEXT:    ret ppc_fp128 [[SELECT]]
+;
+  %select = select i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1
+  %result = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__floor__ppcf128(i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__floor__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 [[UNKNOWN0:%.*]], ppc_fp128 [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[UNKNOWN0]], ppc_fp128 [[UNKNOWN1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1
+  %result = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__ceil__ppcf128(i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__ceil__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 [[UNKNOWN0:%.*]], ppc_fp128 [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[UNKNOWN0]], ppc_fp128 [[UNKNOWN1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1
+  %result = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__round__ppcf128(i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__round__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 [[UNKNOWN0:%.*]], ppc_fp128 [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[UNKNOWN0]], ppc_fp128 [[UNKNOWN1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.round.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1
+  %result = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__roundeven__ppcf128(i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__roundeven__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 [[UNKNOWN0:%.*]], ppc_fp128 [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[UNKNOWN0]], ppc_fp128 [[UNKNOWN1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1
+  %result = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__nearbyint__ppcf128(i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__nearbyint__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 [[UNKNOWN0:%.*]], ppc_fp128 [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[UNKNOWN0]], ppc_fp128 [[UNKNOWN1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1
+  %result = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
+define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__rint__ppcf128(i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1) {
+; CHECK-LABEL: define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__rint__ppcf128(
+; CHECK-SAME: i1 [[COND:%.*]], ppc_fp128 [[UNKNOWN0:%.*]], ppc_fp128 [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[UNKNOWN0]], ppc_fp128 [[UNKNOWN1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %select = select i1 %cond, ppc_fp128 %unknown0, ppc_fp128 %unknown1
+  %result = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %result
+}
+
 attributes #0 = { denormal_fpenv(dynamic|ieee) }
 attributes #1 = { denormal_fpenv(dynamic|positivezero) }

@@ -13,19 +13,19 @@ define i32 @test() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov x9, #0 ; =0x0
 ; CHECK-NEXT:    mov x8, #0 ; =0x0
-; CHECK-NEXT:    ldr s0, [x8]
+; CHECK-NEXT:    mov w10, #0 ; =0x0
+; CHECK-NEXT:    str w10, [sp, #60] ; 4-byte Spill
+; CHECK-NEXT:    ldr s0, [x9]
 ; CHECK-NEXT:    ; kill: def $d0 killed $s0
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w9, #0 ; =0x0
-; CHECK-NEXT:    str w9, [sp, #60] ; 4-byte Spill
-; CHECK-NEXT:    str xzr, [x8]
-; CHECK-NEXT:    str xzr, [x8, #8]
-; CHECK-NEXT:    str xzr, [x8, #16]
-; CHECK-NEXT:    str xzr, [x8, #24]
-; CHECK-NEXT:    str d0, [x8, #32]
-; CHECK-NEXT:    str xzr, [x8, #40]
-; CHECK-NEXT:    mov x8, #0 ; =0x0
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str xzr, [x9]
+; CHECK-NEXT:    str xzr, [x9, #8]
+; CHECK-NEXT:    str xzr, [x9, #16]
+; CHECK-NEXT:    str xzr, [x9, #24]
+; CHECK-NEXT:    str d0, [x9, #32]
+; CHECK-NEXT:    str xzr, [x9, #40]
 ; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    blr x8
 ; CHECK-NEXT:    ldr w0, [sp, #60] ; 4-byte Reload

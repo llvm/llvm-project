@@ -24,8 +24,8 @@ define void @f() nounwind {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $80, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movzbl (%eax), %eax
 ; X86-NEXT:    movzbl (%eax), %ecx
 ; X86-NEXT:    movzbl %al, %eax
@@ -37,18 +37,18 @@ define void @f() nounwind {
 ; X86-NEXT:    sarl $30, %ecx
 ; X86-NEXT:    sarl $31, %eax
 ; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    xorl %eax, %esi
+; X86-NEXT:    xorl %eax, %ebx
 ; X86-NEXT:    shrdl $1, %eax, %ecx
-; X86-NEXT:    xorl %ecx, %ebx
-; X86-NEXT:    subl %ecx, %ebx
-; X86-NEXT:    sbbl %eax, %esi
+; X86-NEXT:    xorl %ecx, %esi
+; X86-NEXT:    subl %ecx, %esi
+; X86-NEXT:    sbbl %eax, %ebx
 ; X86-NEXT:    sbbl %eax, %edx
 ; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shldl $30, %esi, %eax
-; X86-NEXT:    movl %ebx, %edi
-; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    shrdl $2, %esi, %ecx
+; X86-NEXT:    shldl $30, %ebx, %eax
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    movl %esi, %ecx
+; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    shrdl $2, %ebx, %ecx
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    jne .LBB0_1

@@ -608,8 +608,8 @@ define void @test_unnatural_cfg_backwards_inner_loop(i1 %arg) {
 ;
 ; CHECK-LABEL: test_unnatural_cfg_backwards_inner_loop
 ; CHECK: %entry
-; CHECK: %loop2b
 ; CHECK: %loop3
+; CHECK: %loop2b
 
 entry:
   br i1 %arg, label %loop2a, label %body

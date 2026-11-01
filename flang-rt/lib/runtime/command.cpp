@@ -49,7 +49,7 @@ pid_t RTNAME(GetPID)() { return getpid(); }
 // Returns the length of the \p string. Assumes \p string is valid.
 static std::int64_t StringLength(const char *string) {
   std::size_t length{std::strlen(string)};
-  if (length <= std::numeric_limits<std::int64_t>::max())
+  if (length <= common::numeric_limits<std::int64_t>::max())
     return static_cast<std::int64_t>(length);
   return 0;
 }
@@ -87,7 +87,7 @@ template <int KIND> struct FitsInIntegerKind {
     if constexpr (KIND >= 8) {
       return true;
     } else {
-      return value <= std::numeric_limits<Fortran::runtime::CppTypeFor<
+      return value <= common::numeric_limits<Fortran::runtime::CppTypeFor<
                           Fortran::common::TypeCategory::Integer, KIND>>::max();
     }
   }

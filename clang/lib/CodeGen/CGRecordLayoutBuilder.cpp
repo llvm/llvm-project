@@ -21,8 +21,8 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -223,6 +223,11 @@ void CGRecordLowering::setBitFieldInfo(
   Info.StorageOffset = StartOffset;
   if (Info.Size > Info.StorageSize)
     Info.Size = Info.StorageSize;
+  // CGBitFieldInfo::MakeInfo does the same clamp
+  llvm::Type *FieldType = Types.ConvertTypeForMem(FD->getType());
+  unsigned FieldTypeSize = DataLayout.getTypeAllocSizeInBits(FieldType);
+  if (Info.Size > FieldTypeSize)
+    Info.Size = FieldTypeSize;
   // Reverse the bit offsets for big endian machines. Because we represent
   // a bitfield as a single large integer load, we can imagine the bits
   // counting from the most-significant-bit instead of the
@@ -834,14 +839,12 @@ void CGRecordLowering::computeVolatileBitfields() {
 }
 
 void CGRecordLowering::accumulateVPtrs() {
+  llvm::Type *VPtrTy = Types.getCGM().GlobalsInt8PtrTy;
   if (Layout.hasOwnVFPtr())
-    Members.push_back(
-        MemberInfo(CharUnits::Zero(), MemberInfo::VFPtr,
-                   llvm::PointerType::getUnqual(Types.getLLVMContext())));
+    Members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::VFPtr, VPtrTy));
   if (Layout.hasOwnVBPtr())
     Members.push_back(
-        MemberInfo(Layout.getVBPtrOffset(), MemberInfo::VBPtr,
-                   llvm::PointerType::getUnqual(Types.getLLVMContext())));
+        MemberInfo(Layout.getVBPtrOffset(), MemberInfo::VBPtr, VPtrTy));
 }
 
 CharUnits

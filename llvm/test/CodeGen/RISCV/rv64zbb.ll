@@ -113,13 +113,13 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
 define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: log2_ceil_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a1, a0, -1
+; RV64I-NEXT:    addiw a2, a0, -1
 ; RV64I-NEXT:    li a0, 32
-; RV64I-NEXT:    li a2, 32
-; RV64I-NEXT:    beqz a1, .LBB2_2
+; RV64I-NEXT:    li a1, 32
+; RV64I-NEXT:    beqz a2, .LBB2_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
-; RV64I-NEXT:    srliw a2, a1, 1
-; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    srliw a1, a2, 1
+; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    srliw a2, a1, 2
 ; RV64I-NEXT:    or a1, a1, a2
 ; RV64I-NEXT:    srliw a2, a1, 4
@@ -149,9 +149,9 @@ define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    slli a2, a1, 16
 ; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    srliw a2, a1, 24
+; RV64I-NEXT:    srliw a1, a1, 24
 ; RV64I-NEXT:  .LBB2_2: # %cond.end
-; RV64I-NEXT:    sub a0, a0, a2
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: log2_ceil_i32:

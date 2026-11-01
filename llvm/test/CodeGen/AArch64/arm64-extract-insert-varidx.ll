@@ -165,12 +165,11 @@ define <2 x i16> @test_varidx_extract_v4s16(<4 x i16> %x, i32 %idx) {
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    mov w9, w0
-; CHECK-GI-NEXT:    mov w8, #2 // =0x2
-; CHECK-GI-NEXT:    add x10, sp, #8
-; CHECK-GI-NEXT:    and x9, x9, #0x3
+; CHECK-GI-NEXT:    add x8, sp, #8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
-; CHECK-GI-NEXT:    umaddl x8, w9, w8, x10
+; CHECK-GI-NEXT:    and x9, x9, #0x3
+; CHECK-GI-NEXT:    add x8, x8, x9, lsl #1
 ; CHECK-GI-NEXT:    umov w9, v0.h[1]
 ; CHECK-GI-NEXT:    ld1 { v0.h }[0], [x8]
 ; CHECK-GI-NEXT:    mov v0.s[1], w9

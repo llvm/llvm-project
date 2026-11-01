@@ -79,7 +79,7 @@ target variable
 frame variable
 quit
 
-# CHECK: (int) ::C::abc = 123
+# CHECK: (int) C::abc = 123
 
 # CHECK:      (List[16]) ls = {
 # CHECK:        [15] = {

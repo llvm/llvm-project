@@ -30,7 +30,7 @@
 ; RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
 ; SIMPLE-FO:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}.spv
-; SIMPLE-FO-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+; SIMPLE-FO-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
 ; SIMPLE-FO-NOT:  {{.+}}
 ;
 ; Test the dry run of a simple case with device library archive specified using --whole-archive.
@@ -42,7 +42,7 @@
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
 ; DEVLIBS:      link: inputs: {{.*}}.bc, {{.*}}.bc, {{.*}}libdevice.a(lib1.bc), {{.*}}libdevice.a(lib2.bc) output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}.spv
-; DEVLIBS-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+; DEVLIBS-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
 ; DEVLIBS-NOT:  {{.+}}
 ;
 ; Test -L short form (joined) and -l with archive using --whole-archive.
@@ -109,20 +109,20 @@
 ;
 ; Test AOT compilation for an Intel GPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel GPU).
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-bmg-g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
 ; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPVSTEM:.*]].spv
-; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output [[SPVSTEM]].out -file [[SPVSTEM]].spv
-; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: bmg_g21
+; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-bmg-g21 -a -b {{.*}}-output [[SPVSTEM]].out -file [[SPVSTEM]].spv
+; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: xe-bmg-g21
 ; AOT-INTEL-GPU-NOT:  {{.+}}
 ;
 ; Test that all --ocloc-options are passed to ocloc, even if they contain spaces or quotes.
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=bmg_g21 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-bmg-g21 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" --ocloc-options=-c --ocloc-options="d" --ocloc-options='"-e -f"' \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-OCLOC-OPTIONS
-; AOT-INTEL-OCLOC-OPTIONS: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b -c d "-e -f"
+; AOT-INTEL-OCLOC-OPTIONS: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-bmg-g21 -a -b -c d "-e -f"
 ;
 ; Test AOT compilation for an Intel CPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel CPU).
@@ -132,7 +132,7 @@
 ; AOT-INTEL-CPU:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-CPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPVSTEM:.*]].spv
 ; AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o [[SPVSTEM]].out [[SPVSTEM]].spv
-; AOT-INTEL-CPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: graniterapids
+; AOT-INTEL-CPU-NEXT: sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: graniterapids
 ; AOT-INTEL-CPU-NOT:  {{.+}}
 ;
 ; Test that AOT temp file names ("<stem>-<unique>.spv"/"<stem>-<unique>.out")
@@ -140,7 +140,7 @@
 ; current directory (with a unique suffix to avoid collisions between
 ; concurrent invocations sharing an output basename).
 ; RUN: rm -rf %t/outdir && mkdir -p %t/outdir
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=bmg_g21 %t/input1.bc -o %t/outdir/nested.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-bmg-g21 %t/input1.bc -o %t/outdir/nested.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=AOT-STEM-BASENAME
 ; AOT-STEM-BASENAME:      LLVM backend: input: {{.*}}.bc, output: [[SPVSTEM:nested.*]].spv
 ; AOT-STEM-BASENAME-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-output [[SPVSTEM]].out -file [[SPVSTEM]].spv
@@ -169,10 +169,10 @@
 ; RUN: llvm-objdump --offloading %t/srcsplit.out | FileCheck %s --check-prefix=SRCSPLIT
 ; SRCSPLIT:      OFFLOADING IMAGE [0]:
 ; SRCSPLIT:      kind            spir-v
-; SRCSPLIT:      triple          spirv64
+; SRCSPLIT:      triple          spirv64-unknown-unknown
 ; SRCSPLIT:      OFFLOADING IMAGE [1]:
 ; SRCSPLIT:      kind            spir-v
-; SRCSPLIT:      triple          spirv64
+; SRCSPLIT:      triple          spirv64-unknown-unknown
 
 ;--- input1.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"

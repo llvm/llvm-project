@@ -59,8 +59,6 @@ defm : ValueField<"x86-br-merging-unlikely-bias", "int", "-1",
 defm : ValueField<"x86-experimental-pref-innermost-loop-alignment", "std::optional<int>", "std::nullopt",
   "Sets the preferable loop alignment for experiments (as log2 bytes) for innermost loops only. "
   "If specified, this option overrides alignment set by x86-experimental-pref-loop-alignment">;
-defm : BoolField<"mul-constant-optimization", "true",
-  "Replace 'mul x, Const' with more effective instructions like SHIFT, LEA, etc">;
 
 // X86IndirectBranchTracking.cpp
 defm : BoolField<"x86-indirect-branch-tracking", "false",

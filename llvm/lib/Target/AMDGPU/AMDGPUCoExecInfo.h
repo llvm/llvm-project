@@ -92,7 +92,7 @@ enum class InstructionFlavor : uint8_t {
   NUM_FLAVORS
 };
 
-constexpr StringRef getFlavorName(InstructionFlavor F) {
+inline StringRef getFlavorName(InstructionFlavor F) {
   switch (F) {
   case InstructionFlavor::WMMA:
     return "WMMA";
@@ -128,7 +128,7 @@ InstructionFlavor classifyFlavor(const MachineInstr &MI,
                                  const SIInstrInfo &SII);
 
 /// Map a flavor to the co-execution class it occupies in a window slot.
-constexpr CoExecMaskT getCoExecMask(InstructionFlavor F) {
+inline CoExecMaskT getCoExecMask(InstructionFlavor F) {
   switch (F) {
   case InstructionFlavor::WMMA:
     return CoExecMask::WMMA;

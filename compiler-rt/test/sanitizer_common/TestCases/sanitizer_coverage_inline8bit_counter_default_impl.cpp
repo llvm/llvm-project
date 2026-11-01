@@ -2,6 +2,8 @@
 // -fsanitize-coverage=inline-8bit-counters,pc-table
 
 // REQUIRES: has_sancovcc,stable-runtime,linux,x86_64-target-arch
+// android_run.py does not copy files created on the device back to the host.
+// UNSUPPORTED: android
 
 /// In glibc 2.39+, fprintf has a nonnull attribute. Disable nonnull-attribute,
 /// which would increase counters for ubsan.

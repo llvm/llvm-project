@@ -371,7 +371,11 @@ public:
   void addIRPasses() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
+  void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
+  bool isMachinePipelinerEnabled() const override {
+    return getOptLevel() >= CodeGenOptLevel::Default;
+  }
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -475,27 +479,30 @@ bool HexagonPassConfig::addILPOpts() {
   return true;
 }
 
+void HexagonPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
+
+  if (EnableCExtOpt)
+    addPass(createHexagonConstExtenders());
+  if (!DisableStoreWidening)
+    addPass(createHexagonStoreWidening());
+  if (!DisableLoadWidening)
+    addPass(createHexagonLoadWidening());
+  if (EnableGenMemAbs)
+    addPass(createHexagonGenMemAbsolute());
+  if (!DisableHardwareLoops)
+    addPass(createHexagonHardwareLoops());
+}
+
 void HexagonPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (EnableCExtOpt)
-      addPass(createHexagonConstExtenders());
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
     if (EnableCopyHoist)
       insertPass(&RegisterCoalescerID, &HexagonCopyHoistingID);
     if (EnableTfrCleanup)
       insertPass(&VirtRegRewriterID, &HexagonTfrCleanupID);
-    if (!DisableStoreWidening)
-      addPass(createHexagonStoreWidening());
-    if (!DisableLoadWidening)
-      addPass(createHexagonLoadWidening());
-    if (EnableGenMemAbs)
-      addPass(createHexagonGenMemAbsolute());
-    if (!DisableHardwareLoops)
-      addPass(createHexagonHardwareLoops());
   }
-  if (TM->getOptLevel() >= CodeGenOptLevel::Default)
-    addPass(&MachinePipelinerID);
   addPass(createHexagonHVXSaveRemark());
 }
 

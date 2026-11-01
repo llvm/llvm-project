@@ -321,6 +321,7 @@ public:
 
   void print(Context &Ctx, raw_ostream &OS) const;
 
+  /// Use getPoisonValue unless you know the scalar type is integer/fp/ptr!
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
   static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
   static AnyValue getPoisonValue(Context &Ctx, Type *Ty);

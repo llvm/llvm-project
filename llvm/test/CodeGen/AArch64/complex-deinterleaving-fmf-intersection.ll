@@ -68,8 +68,8 @@ define <4 x double> @fcmla_symmetric_scale_mixed_fmf(<4 x double> %a, <4 x doubl
 ; CHECK-LABEL: fcmla_symmetric_scale_mixed_fmf:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d6 killed $d6 def $q6
-; CHECK-NEXT:    fmul v1.2d, v1.2d, v6.d[0]
 ; CHECK-NEXT:    fmul v0.2d, v0.2d, v6.d[0]
+; CHECK-NEXT:    fmul v1.2d, v1.2d, v6.d[0]
 ; CHECK-NEXT:    fcmla v4.2d, v0.2d, v2.2d, #0
 ; CHECK-NEXT:    fcmla v5.2d, v1.2d, v3.2d, #0
 ; CHECK-NEXT:    fcmla v4.2d, v0.2d, v2.2d, #90

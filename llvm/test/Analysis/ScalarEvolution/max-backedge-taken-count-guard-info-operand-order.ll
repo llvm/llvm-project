@@ -216,7 +216,7 @@ define void @const_max_btc_32_or_order_1(i64 %n) {
 ; CHECK-LABEL: 'const_max_btc_32_or_order_1'
 ; CHECK-NEXT:  Classifying expressions for: @const_max_btc_32_or_order_1
 ; CHECK-NEXT:    %and.pre = and i1 %pre.1, %pre.0
-; CHECK-NEXT:    --> (%pre.1 umin %pre.0) U: full-set S: full-set
+; CHECK-NEXT:    --> (%pre.0 umin %pre.1) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %ph ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
@@ -253,7 +253,7 @@ define void @const_max_btc_32_or_order_2(i64 %n) {
 ; CHECK-LABEL: 'const_max_btc_32_or_order_2'
 ; CHECK-NEXT:  Classifying expressions for: @const_max_btc_32_or_order_2
 ; CHECK-NEXT:    %and.pre = and i1 %pre.0, %pre.1
-; CHECK-NEXT:    --> (%pre.0 umin %pre.1) U: full-set S: full-set
+; CHECK-NEXT:    --> (%pre.1 umin %pre.0) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ 0, %ph ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,33) S: [0,33) Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1

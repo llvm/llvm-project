@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -38,7 +39,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
@@ -57,14 +57,6 @@ using namespace SCEVPatternMatch;
 STATISTIC(NumCondsRemoved, "Number of instructions removed");
 DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
-
-static cl::opt<unsigned>
-    MaxRows("constraint-elimination-max-rows", cl::init(500), cl::Hidden,
-            cl::desc("Maximum number of rows to keep in constraint system"));
-
-static cl::opt<bool> DumpReproducers(
-    "constraint-elimination-dump-reproducers", cl::init(false), cl::Hidden,
-    cl::desc("Dump IR to reproduce successful transformations."));
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
@@ -501,8 +493,16 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
       // More than 1 variable index, use outer result.
       return Result;
     }
+    // The GEPs' wrap flags do not prevent the sum of the offsets from
+    // sign-wrapping.
+    bool Overflow = false;
+    APInt CombinedOffset =
+        Result.ConstantOffset.sadd_ov(ConstantOffset2, Overflow);
+    if (Overflow)
+      return Result;
+
     Result.BasePtr = InnerGEP->getPointerOperand();
-    Result.ConstantOffset += ConstantOffset2;
+    Result.ConstantOffset = CombinedOffset;
     if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
       Result.VariableOffsets = std::move(VariableOffsets2);
     Result.NW &= InnerGEP->getNoWrapFlags();
@@ -516,6 +516,46 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
 static bool canUseSExt(ConstantInt *CI) {
   const APInt &Val = CI->getValue();
   return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
+}
+
+/// Returns true if `Op <= MaxVal - Slack` holds in the system for \p Signed, by
+/// scanning it for a row of the form `Op - W <= -Slack`, where W is an integer
+/// variable no wider than \p Op. If \p Upper is false, returns true if
+/// `Op >= MinVal + Slack` holds, using rows of the form `W - Op <= -Slack`.
+static bool hasLimitWitness(const ConstraintInfo &Info, Value *Op,
+                            const APInt &Slack, bool Signed, bool Upper) {
+  if (!Slack.isIntN(63))
+    return false;
+  int64_t RequiredOffset = -static_cast<int64_t>(Slack.getZExtValue());
+
+  const auto &Value2Index = Info.getValue2Index(Signed);
+  unsigned OpIdx = Value2Index.lookup(Op);
+  if (!OpIdx)
+    return false;
+
+  int64_t OpCoefficient = Upper ? 1 : -1;
+  unsigned OpSize = Op->getType()->getScalarSizeInBits();
+
+  for (ArrayRef<Entry> Row : Info.getCS(Signed).getConstraints()) {
+    // Match `OpCoefficient * (Op - W) <= C` with C <= -Slack.
+    if (Row.size() != 3 || Row[0].Id != 0 ||
+        Row[0].Coefficient > RequiredOffset)
+      continue;
+    bool OpFirst = Row[1].Id == OpIdx;
+    const Entry &OpE = Row[OpFirst ? 1 : 2];
+    const Entry &WitnessE = Row[OpFirst ? 2 : 1];
+    if (OpE.Id != OpIdx || OpE.Coefficient != OpCoefficient ||
+        WitnessE.Coefficient != -OpCoefficient)
+      continue;
+
+    auto Witness = find_if(
+        Value2Index, [&](const auto &KV) { return KV.second == WitnessE.Id; });
+    assert(Witness != Value2Index.end() && "row variables must be mapped");
+    Type *WitnessTy = Witness->first->getType();
+    if (WitnessTy->isIntegerTy() && WitnessTy->getIntegerBitWidth() <= OpSize)
+      return true;
+  }
+  return false;
 }
 
 /// Returns true if \p Info implies that \p Op is in \p R, interpreting \p R as
@@ -535,6 +575,8 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
                         : APInt::getMinValue(BitWidth);
   APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
                         : APInt::getMaxValue(BitWidth);
+  // What a witness has to bridge; computed before Max is clamped below.
+  APInt UpperSlack = MaxVal - Max;
   // Replace bound too large to be decomposed by the largest usable one.
   if (!Signed && Max.uge(MaxConstraintValue))
     Max = APInt(BitWidth, MaxConstraintValue - 1);
@@ -542,11 +584,13 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   Type *Ty = Op->getType();
   if (Min != MinVal &&
       !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
-                     ConstantInt::get(Ty, Min)))
+                     ConstantInt::get(Ty, Min)) &&
+      !hasLimitWitness(Info, Op, Min - MinVal, Signed, /*Upper=*/false))
     return false;
   if (Max != MaxVal &&
       !Info.doesHold(Signed ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, Op,
-                     ConstantInt::get(Ty, Max)))
+                     ConstantInt::get(Ty, Max)) &&
+      !hasLimitWitness(Info, Op, UpperSlack, Signed, /*Upper=*/true))
     return false;
   return true;
 }
@@ -641,11 +685,20 @@ static Decomposition decomposeGEP(GEPOperator &GEP, ConstraintInfo &Info,
 
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
   for (auto [Index, Scale] : VariableOffsets) {
+    // Indices narrower or wider than the index type are implicitly
+    // sign-extended or truncated. Don't reason about them.
+    if (Index->getType()->getScalarSizeInBits() != Scale.getBitWidth())
+      return &GEP;
     if (!NW.hasNoUnsignedWrap()) {
       // Try to prove nuw from nusw and nneg. If the index cannot be proven
       // non-negative, keep the GEP as-is instead of decomposing it.
       assert(NW.hasNoUnsignedSignedWrap() && "Must have nusw flag");
       if (!Info.isKnownNonNegative(Index))
+        return &GEP;
+    } else if (!NW.hasNoUnsignedSignedWrap()) {
+      // For a nuw-only GEP, the scale is unsigned and must fit in the signed
+      // coefficient.
+      if (Scale.isNegative())
         return &GEP;
     }
 
@@ -678,6 +731,8 @@ static bool mayLookThrough(Value *V) {
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
   case Instruction::ZExt:
   case Instruction::SExt:
   case Instruction::Trunc:
@@ -806,6 +861,25 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
       auto Result = decompose(Op0, Info, IsSigned, DL);
       if (!Result.mul(CI->getSExtValue()))
         return Result;
+    }
+    return V;
+  }
+
+  if (match(V, m_Exact(m_Shr(m_Value(Op0), m_ConstantInt(CI))))) {
+    bool IsAShr = cast<Operator>(V)->getOpcode() == Instruction::AShr;
+    if (CI->getValue().ult(std::min(63u, CI->getBitWidth())) &&
+        (IsSigned == IsAShr || Info.isKnownNonNegative(Op0))) {
+      int64_t Factor = int64_t(1) << CI->getZExtValue();
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (Result.Offset % Factor == 0 &&
+          all_of(Result.Vars, [Factor](const DecompEntry &E) {
+            return E.Coefficient % Factor == 0;
+          })) {
+        Result.Offset /= Factor;
+        for (auto &E : Result.Vars)
+          E.Coefficient /= Factor;
+        return Result;
+      }
     }
     return V;
   }
@@ -1242,15 +1316,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
       !SE->isSCEVable(PN->getType()))
     return;
 
-  // For latch conditions, we need to inject the condition that holds for the
-  // next iteration into the header. We limit to post-inc conditions, for which
-  // an original PN + Step != B condition results in a PN < B constraint in the
-  // header, which also holds for the next loop iteration. This would no longer
-  // be correct if the post-inc handling would inject a more precise PN + Step <
-  // B constraint instead.
-  if (&BB == Latch && !IncStep)
-    return;
-
   bool ContinueOnTrue =
       Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
   CmpInst::Predicate ContinuePred =
@@ -1271,16 +1336,42 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
   auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
+  DomTreeNode *HeaderDTN = DT.getNode(Header);
+
+  // BB is the header or the latch, so every iteration taking the backedge
+  // checked PN ContinuePred B, which guarantees PN != B for NE and LT
+  // predicates. For an increment by one, PN != B together with StartValue <= B
+  // (added precondition) imply PN <= B.
+  const APInt *Step;
+  bool HasHeaderBound =
+      !IncStep && match(Backedge, m_IncrementOf(m_Specific(PN), Step)) &&
+      Step->isOne() &&
+      (ContinuePred == CmpInst::ICMP_NE || ICmpInst::isLT(ContinuePred));
+  if (HasHeaderBound) {
+    for (CmpInst::Predicate BoundPred : {CmpInst::ICMP_ULE, CmpInst::ICMP_SLE})
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          HeaderDTN, BoundPred, PN, B, ConditionTy(BoundPred, StartValue, B)));
+  }
+
+  // For latch conditions, we need to inject the condition that holds for the
+  // next iteration into the header. We limit to post-inc conditions, for which
+  // an original PN + Step != B condition results in a PN < B constraint in the
+  // header, which also holds for the next loop iteration. This would no longer
+  // be correct if the post-inc handling would inject a more precise PN + Step <
+  // B constraint instead.
+  if (&BB == Latch && !IncStep)
+    return;
 
   if (ICmpInst::isRelational(ContinuePred)) {
     if (A != Backedge)
       return;
 
-    // The latch condition ensures ContinuePred holds in the header on each
-    // iteration other than the first. Together with a precondition on the start
-    // value (StartValue ContinuePred B), we can add B as bound of PN.
+    // The condition ensures ContinuePred holds in the header on each iteration
+    // other than the first. Together with a precondition on the start value
+    // (StartValue ContinuePred B), we can add B as bound of PN.
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
+        HeaderDTN, ContinuePred, PN, B,
+        ConditionTy(ContinuePred, StartValue, B)));
 
     // A signed bound can be translated to the unsigned system if PN is signed
     // non-decreasing (StartValue s<= PN s< B) and StartValue u< B holds.
@@ -1293,7 +1384,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
       if (Info.Signed && !Info.Decreasing) {
         CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
         WorkList.push_back(FactOrCheck::getConditionFact(
-            DTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
+            HeaderDTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
       }
     }
 
@@ -1388,17 +1479,24 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!Info.Signed)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
-  // Add PN < B, as the loop exits once the compared value reaches B.
-  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
-                                                   B, StartBeforeBoundSigned));
-  WorkList.push_back(FactOrCheck::getConditionFact(
-      DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+  // Add PN < B, as the loop exits once the compared value reaches B. With a
+  // header bound, the PN != B condition fact in InLoopSucc already tightens it
+  // to PN < B.
+  if (!HasHeaderBound || !canAddSuccessor(BB, InLoopSucc)) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SLT, PN, B, StartBeforeBoundSigned));
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+  }
 
   // Try to add condition from the header or latch to the dedicated exit
   // blocks. When exiting either with EQ or NE, we know that the induction value
   // must be u<= B, as other exits may only exit earlier.
   assert(!StepOffset->isNegative() && "induction must be increasing");
   assert(ContinuePred == CmpInst::ICMP_NE && "unsupported predicate");
+  // The header bound already implies PN u<= B in the exits.
+  if (HasHeaderBound)
+    return;
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
@@ -2270,10 +2368,13 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
 
   auto &CSToUse = getCS(R.IsSigned);
   // A row implied by a single existing row adds no information. Rows in the
-  // system are removed in reverse order, so the existing row outlives R.
-  if (!R.isEq() && NewVariables.empty() &&
-      CSToUse.isImpliedBySingleRow(R.Coefficients))
-    return;
+  // system are removed in reverse order, so the existing row outlives R. Rows
+  // in the system are normalized, so normalize R before comparing.
+  if (!R.isEq() && NewVariables.empty()) {
+    ConstraintSystem::normalizeByGCD(R.Coefficients);
+    if (CSToUse.isImpliedBySingleRow(R.Coefficients))
+      return;
+  }
   LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
              dbgs() << "'\n");
   bool Added = CSToUse.addRow(R.Coefficients, R.NumVars);
@@ -2374,13 +2475,16 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
                                  TargetLibraryInfo &TLI) {
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE, TLI);
   std::unique_ptr<Module> ReproducerModule(
-      DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
+      Opts.constraint_elimination_dump_reproducers
+          ? new Module(F.getName(), F.getContext())
+          : nullptr);
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
@@ -2490,7 +2594,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
       LLVM_DEBUG(dbgs() << "Processing fact to add to the system: ";
                  dumpUnpackedICmp(dbgs(), Pred, A, B); dbgs() << "\n");
-      if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
+      if (Info.getCS(CmpInst::isSigned(Pred)).size() >
+          Opts.constraint_elimination_max_rows) {
         LLVM_DEBUG(
             dbgs()
             << "Skip adding constraint because system has too many rows.\n");

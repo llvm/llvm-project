@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs\
-; RUN:       -mcpu=pwr9 --ppc-enable-pipeliner -debug-only=pipeliner 2>&1 \
+; RUN:       -mcpu=pwr9 --enable-pipeliner -debug-only=pipeliner 2>&1 \
 ; RUN:       >/dev/null | FileCheck %s
 define dso_local void @sha512(ptr %p) #0 {
 ;CHECK: prolog:

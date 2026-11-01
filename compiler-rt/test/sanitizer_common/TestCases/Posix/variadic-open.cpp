@@ -3,6 +3,8 @@
 // RUN: %run %t 1
 // RUN: %run %t 2
 
+// UNSUPPORTED: android && !android-26
+
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>

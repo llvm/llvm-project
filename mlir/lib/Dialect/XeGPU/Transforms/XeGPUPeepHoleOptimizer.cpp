@@ -467,7 +467,7 @@ public:
 /// reductions ordered based on layout to minimize cross-lane communication.
 class MultiRed2dOpPattern
     : public OpConversionPattern<vector::MultiDimReductionOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {

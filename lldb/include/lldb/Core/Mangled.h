@@ -1,4 +1,4 @@
-//===-- Mangled.h -----------------------------------------------*- C++ -*-===//
+//===-- Mangled.h ---------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,6 +46,30 @@ public:
     eManglingSchemeRustV0,
     eManglingSchemeD,
     eManglingSchemeSwift,
+  };
+
+  /// The number of mangling schemes.
+  static constexpr size_t kNumManglingSchemes = eManglingSchemeSwift + 1;
+
+  /// What a mangled function name says about the function's declaration.
+  enum class FunctionNameKind {
+    TopLevel,
+    InNamespace,
+    Method,
+    ConstructorOrDestructor,
+    Unknown,
+  };
+
+  /// The parts of a mangled function name used in the symbol table's indices.
+  struct FunctionNameParts {
+    /// If empty, the symbol is only indexed by its mangled name.
+    ConstString basename;
+    /// The enclosing context. The symbol table only uses it to work
+    /// out which contexts are classes: a ConstructorOrDestructor
+    /// shows that its context is one, and an Unknown function in such
+    /// a context is a method.
+    ConstString decl_context;
+    FunctionNameKind kind = FunctionNameKind::Unknown;
   };
 
   /// Default constructor.
@@ -194,33 +218,6 @@ public:
   ///     The language for the mangled/demangled name, eLanguageTypeUnknown
   ///     if there is no mangled or demangled counterpart.
   lldb::LanguageType GuessLanguage() const;
-
-  /// Function signature for filtering mangled names.
-  using SkipMangledNameFn = bool(llvm::StringRef, ManglingScheme);
-
-  /// Get rich mangling information. This is optimized for batch processing
-  /// while populating a name index. To get the pure demangled name string for
-  /// a single entity, use GetDemangledName() instead.
-  ///
-  /// For names that match the Itanium mangling scheme, this uses LLVM's
-  /// ItaniumPartialDemangler. All other names fall back to LLDB's builtin
-  /// parser currently.
-  ///
-  /// This function is thread-safe when used with different \a context
-  /// instances in different threads.
-  ///
-  /// \param[in] context
-  ///     The context for this function. A single instance can be stack-
-  ///     allocated in the caller's frame and used for multiple calls.
-  ///
-  /// \param[in] skip_mangled_name
-  ///     A filtering function for skipping entities based on name and mangling
-  ///     scheme. This can be null if unused.
-  ///
-  /// \return
-  ///     True on success, false otherwise.
-  bool GetRichManglingInfo(RichManglingContext &context,
-                           SkipMangledNameFn *skip_mangled_name);
 
   /// Try to identify the mangling scheme used.
   /// \param[in] name

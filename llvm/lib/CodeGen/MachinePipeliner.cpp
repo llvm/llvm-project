@@ -113,10 +113,6 @@ STATISTIC(NumFailZeroStage, "Pipeliner abort due to zero stage");
 STATISTIC(NumFailLargeMaxStage, "Pipeliner abort due to too many stages");
 STATISTIC(NumFailTooManyStores, "Pipeliner abort due to too many stores");
 
-/// A command line option to turn software pipelining on or off.
-static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
-                               cl::desc("Enable Software Pipelining"));
-
 /// A command line option to enable SWP at -Os.
 static cl::opt<bool> EnableSWPOptSize("enable-pipeliner-opt-size",
                                       cl::desc("Enable SWP at Os."), cl::Hidden,
@@ -322,12 +318,10 @@ class LoopCarriedOrderDepsTracker {
   std::vector<TaggedSUnit> TaggedSUnits;
 
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
 
 public:
   LoopCarriedOrderDepsTracker(SwingSchedulerDAG *SSD, BatchAAResults *BAA,
-                              const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI);
+                              const TargetInstrInfo *TII);
 
   /// The main function to compute loop-carried order-dependencies.
   void computeDependencies();
@@ -433,9 +427,6 @@ static bool runMachinePipeliner(
     function_ref<LiveIntervals &()> GetLIS, function_ref<AAResults &()> GetAA,
     function_ref<MachineOptimizationRemarkEmitter &()> GetORE,
     function_ref<RegisterClassInfo &()> GetRCI) {
-  if (!EnableSWP)
-    return false;
-
   if (MF.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
       !EnableSWPOptSize.getPosition())
     return false;
@@ -565,9 +556,6 @@ void MachinePipelinerImpl::setPragmaPipelineOptions(MachineLoop &L) {
     return;
 
   const Instruction *TI = BBLK->getTerminator();
-  if (TI == nullptr)
-    return;
-
   MDNode *LoopID = TI->getMetadata(LLVMContext::MD_loop);
   if (LoopID == nullptr)
     return;
@@ -1087,7 +1075,7 @@ void SwingSchedulerDAG::finishBlock() {
 
 /// Return the register values for  the operands of a Phi instruction.
 /// This function assume the instruction is a Phi.
-static void getPhiRegs(MachineInstr &Phi, MachineBasicBlock *Loop,
+static void getPhiRegs(const MachineInstr &Phi, const MachineBasicBlock *Loop,
                        Register &InitVal, Register &LoopVal) {
   assert(Phi.isPHI() && "Expecting a Phi.");
 
@@ -1181,9 +1169,7 @@ bool SUnitWithMemInfo::getUnderlyingObjects() {
 static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
                                  const SUnitWithMemInfo &Dst,
                                  BatchAAResults &BAA,
-                                 const TargetInstrInfo *TII,
-                                 const TargetRegisterInfo *TRI,
-                                 const SwingSchedulerDAG *SSD) {
+                                 const TargetInstrInfo *TII) {
   if (Src.isTriviallyDisjoint(Dst))
     return false;
   if (isSuccOrder(Src.SU, Dst.SU))
@@ -1192,7 +1178,9 @@ static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
   MachineInstr &SrcMI = *Src.SU->getInstr();
   MachineInstr &DstMI = *Dst.SU->getInstr();
 
-  if (!SSD->mayOverlapInLaterIter(&SrcMI, &DstMI))
+  const MachineBasicBlock *LoopBB = SrcMI.getParent();
+  const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
+  if (!mayOverlapInLaterIter(&SrcMI, &DstMI, LoopBB, MRI, *TII))
     return false;
 
   // Second, the more expensive check that uses alias analysis on the
@@ -1233,10 +1221,9 @@ void LoopCarriedOrderDepsTracker::NoBarrierInstsChunk::append(SUnit *SU) {
 }
 
 LoopCarriedOrderDepsTracker::LoopCarriedOrderDepsTracker(
-    SwingSchedulerDAG *SSD, BatchAAResults *BAA, const TargetInstrInfo *TII,
-    const TargetRegisterInfo *TRI)
+    SwingSchedulerDAG *SSD, BatchAAResults *BAA, const TargetInstrInfo *TII)
     : DAG(SSD), BAA(BAA), SUnits(DAG->SUnits), N(SUnits.size()),
-      LoopCarried(N, BitVector(N)), TII(TII), TRI(TRI) {}
+      LoopCarried(N, BitVector(N)), TII(TII) {}
 
 void LoopCarriedOrderDepsTracker::computeDependencies() {
   // Traverse all instructions and extract only what we are targetting.
@@ -1274,7 +1261,7 @@ void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
   if (Src.SU == Dst.SU)
     return;
 
-  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG))
+  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII))
     setLoopCarriedDep(Src.SU, Dst.SU);
 }
 
@@ -1383,7 +1370,7 @@ LoopCarriedEdges SwingSchedulerDAG::addLoopCarriedDependences() {
   LoopCarriedEdges LCE;
 
   // Add loop-carried order-dependencies
-  LoopCarriedOrderDepsTracker LCODTracker(this, &BAA, TII, TRI);
+  LoopCarriedOrderDepsTracker LCODTracker(this, &BAA, TII);
   LCODTracker.computeDependencies();
   for (unsigned I = 0; I != SUnits.size(); I++)
     for (const int Succ : LCODTracker.getLoopCarried(I).set_bits())
@@ -1654,7 +1641,7 @@ struct FuncUnitSorter {
   // Compute the critical resources needed by the instruction. This
   // function records the functional units needed by instructions that
   // must use only one functional unit. We use this as a tie breaker
-  // for computing the resource MII. The instrutions that require
+  // for computing the resource MII. The instructions that require
   // the same, highly used, functional unit have high priority.
   void calcCriticalResources(MachineInstr &MI) {
     unsigned SchedClass = MI.getDesc().getSchedClass();
@@ -2782,7 +2769,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               maxHeight = I;
           }
           NodeOrder.insert(maxHeight);
-          LLVM_DEBUG(dbgs() << maxHeight->NodeNum << " ");
+          LLVM_DEBUG(dbgs() << *maxHeight << " ");
           R.remove(maxHeight);
           for (const auto &OE : DDG->getOutEdges(maxHeight)) {
             SUnit *SU = OE.getDst();
@@ -2833,7 +2820,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               maxDepth = I;
           }
           NodeOrder.insert(maxDepth);
-          LLVM_DEBUG(dbgs() << maxDepth->NodeNum << " ");
+          LLVM_DEBUG(dbgs() << *maxDepth << " ");
           R.remove(maxDepth);
           if (Nodes.isExceedSU(maxDepth)) {
             Order = TopDown;
@@ -2878,7 +2865,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
   LLVM_DEBUG({
     dbgs() << "Node order: ";
     for (SUnit *I : NodeOrder)
-      dbgs() << " " << I->NodeNum << " ";
+      dbgs() << " " << *I << " ";
     dbgs() << "\n";
   });
 }
@@ -2926,7 +2913,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       Schedule.computeStart(SU, &EarlyStart, &LateStart, II, this);
       LLVM_DEBUG({
         dbgs() << "\n";
-        dbgs() << "Inst (" << SU->NodeNum << ") ";
+        dbgs() << *SU << " ";
         SU->getInstr()->dump();
         dbgs() << "\n";
       });
@@ -3065,7 +3052,7 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
     if (!CurReg.isValid() || !CurReg.isVirtual())
       return false;
     MachineInstr *Def = MRI.getVRegDef(CurReg);
-    if (Def->getParent() != LoopBB)
+    if (!Def || Def->getParent() != LoopBB)
       return false;
 
     if (Def->isCopy()) {
@@ -3115,11 +3102,12 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
 
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
-bool SwingSchedulerDAG::computeDelta(const MachineInstr &MI, int &Delta) const {
+static bool computeDelta(const MachineInstr &MI, const TargetInstrInfo &TII,
+                         int &Delta) {
   const MachineOperand *BaseOp;
   int64_t Offset;
   bool OffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
+  if (!TII.getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
     return false;
 
   // FIXME: This algorithm assumes instructions have fixed-size offsets.
@@ -3249,21 +3237,24 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
 
 /// Return false if there is no overlap between the region accessed by BaseMI in
 /// an iteration and the region accessed by OtherMI in subsequent iterations.
-bool SwingSchedulerDAG::mayOverlapInLaterIter(
-    const MachineInstr *BaseMI, const MachineInstr *OtherMI) const {
+bool llvm::mayOverlapInLaterIter(const MachineInstr *BaseMI,
+                                 const MachineInstr *OtherMI,
+                                 const MachineBasicBlock *LoopBB,
+                                 const MachineRegisterInfo &MRI,
+                                 const TargetInstrInfo &TII) {
   int DeltaB, DeltaO, Delta;
-  if (!computeDelta(*BaseMI, DeltaB) || !computeDelta(*OtherMI, DeltaO) ||
-      DeltaB != DeltaO)
+  if (!computeDelta(*BaseMI, TII, DeltaB) ||
+      !computeDelta(*OtherMI, TII, DeltaO) || DeltaB != DeltaO)
     return true;
   Delta = DeltaB;
 
   const MachineOperand *BaseOpB, *BaseOpO;
   int64_t OffsetB, OffsetO;
   bool OffsetBIsScalable, OffsetOIsScalable;
-  if (!TII->getMemOperandWithOffset(*BaseMI, BaseOpB, OffsetB,
-                                    OffsetBIsScalable) ||
-      !TII->getMemOperandWithOffset(*OtherMI, BaseOpO, OffsetO,
-                                    OffsetOIsScalable))
+  if (!TII.getMemOperandWithOffset(*BaseMI, BaseOpB, OffsetB,
+                                   OffsetBIsScalable) ||
+      !TII.getMemOperandWithOffset(*OtherMI, BaseOpO, OffsetO,
+                                   OffsetOIsScalable))
     return true;
 
   if (OffsetBIsScalable || OffsetOIsScalable)
@@ -3279,24 +3270,24 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
     if (!RegB.isVirtual() || !RegO.isVirtual())
       return true;
 
-    MachineInstr *DefB = MRI.getVRegDef(BaseOpB->getReg());
-    MachineInstr *DefO = MRI.getVRegDef(BaseOpO->getReg());
+    MachineInstr *DefB = MRI.getVRegDef(RegB);
+    MachineInstr *DefO = MRI.getVRegDef(RegO);
     if (!DefB || !DefO || !DefB->isPHI() || !DefO->isPHI())
       return true;
 
-    Register InitValB;
-    Register LoopValB;
-    Register InitValO;
-    Register LoopValO;
-    getPhiRegs(*DefB, BB, InitValB, LoopValB);
-    getPhiRegs(*DefO, BB, InitValO, LoopValO);
+    Register InitValB, LoopValB, InitValO, LoopValO;
+    getPhiRegs(*DefB, LoopBB, InitValB, LoopValB);
+    getPhiRegs(*DefO, LoopBB, InitValO, LoopValO);
+    if (!InitValB.isValid() || !InitValO.isValid())
+      return true;
     MachineInstr *InitDefB = MRI.getVRegDef(InitValB);
     MachineInstr *InitDefO = MRI.getVRegDef(InitValO);
-
-    if (!InitDefB->isIdenticalTo(*InitDefO))
+    if (!InitDefB || !InitDefO || !InitDefB->isIdenticalTo(*InitDefO))
       return true;
   }
 
+  if (BaseMI->memoperands_empty() || OtherMI->memoperands_empty())
+    return true;
   LocationSize AccessSizeB = (*BaseMI->memoperands_begin())->getSize();
   LocationSize AccessSizeO = (*OtherMI->memoperands_begin())->getSize();
 
@@ -3842,9 +3833,8 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
         NumNodeOrderIssues++;
         LLVM_DEBUG(dbgs() << "Predecessor ");
       }
-      LLVM_DEBUG(dbgs() << Pred->NodeNum << " and successor " << Succ->NodeNum
-                        << " are scheduled before node " << SU->NodeNum
-                        << "\n");
+      LLVM_DEBUG(dbgs() << *Pred << " and successor " << *Succ
+                        << " are scheduled before node " << *SU << "\n");
     }
   }
 
@@ -3959,6 +3949,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
   LLVM_DEBUG(dump(););
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void NodeSet::print(raw_ostream &os) const {
   os << "Num nodes " << size() << " rec " << RecMII << " mov " << MaxMOV
      << " depth " << MaxDepth << " col " << Colocate << "\n";
@@ -3967,7 +3958,6 @@ void NodeSet::print(raw_ostream &os) const {
   os << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Print the schedule information to the given output.
 void SMSchedule::print(raw_ostream &os) const {
   // Iterate over each cycle.
@@ -3976,7 +3966,7 @@ void SMSchedule::print(raw_ostream &os) const {
     const_sched_iterator cycleInstrs = ScheduledInstrs.find(cycle);
     for (SUnit *CI : cycleInstrs->second) {
       os << "cycle " << cycle << " (" << stageScheduled(CI) << ") ";
-      os << "(" << CI->NodeNum << ") ";
+      os << *CI << " ";
       CI->getInstr()->print(os);
       os << "\n";
     }
@@ -4447,8 +4437,8 @@ bool SwingSchedulerDDG::isValidSchedule(const SMSchedule &Schedule) const {
     int MaxLateStart = CycleDst + Edge.getDistance() * II - Edge.getLatency();
     if (CycleSrc > MaxLateStart) {
       LLVM_DEBUG({
-        dbgs() << "Validation failed for edge from " << Src->NodeNum << " to "
-               << Dst->NodeNum << "\n";
+        dbgs() << "Validation failed for edge from " << *Src << " to " << *Dst
+               << "\n";
       });
       return false;
     }
@@ -4498,8 +4488,10 @@ void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits,
   }
 }
 
-void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
-                            const MachineRegisterInfo *MRI) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void
+LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
+                       const MachineRegisterInfo *MRI) const {
   const auto *Order = getOrderDepOrNull(SU);
 
   if (!Order)
@@ -4517,3 +4509,4 @@ void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
   for (SUnit *Dst : *Order)
     dbgs() << "      " << DumpSU(Dst) << "\n";
 }
+#endif
