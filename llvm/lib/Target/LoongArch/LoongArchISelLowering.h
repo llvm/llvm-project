@@ -158,6 +158,11 @@ public:
                               Align &PrefAlign) const override;
 
   bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
+
+  /// Returns true if building \p Imm in a GPR and moving it to a
+  /// float register is cheaper than loading it from the constant
+  /// pool.
+  bool isFPImmCheapInGPR(const APFloat &Imm, EVT VT) const;
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
   void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,

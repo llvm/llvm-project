@@ -1461,23 +1461,10 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   };
 
   SmallPtrSet<Value *, 4> UniqueSrc;
-  Value *OnePhi = nullptr;
   for (Value *PV1 : PN->incoming_values()) {
     // Skip the phi itself being the incoming value.
     if (PV1 == PN)
       continue;
-
-    if (isa<PHINode>(PV1)) {
-      if (OnePhi && OnePhi != PV1) {
-        // To control potential compile time explosion, we choose to be
-        // conserviate when we have more than one Phi input.  It is important
-        // that we handle the single phi case as that lets us handle LCSSA
-        // phi nodes and (combined with the recursive phi handling) simple
-        // pointer induction variable patterns.
-        return AliasResult::MayAlias;
-      }
-      OnePhi = PV1;
-    }
 
     if (CheckForRecPhi(PV1))
       continue;
@@ -1486,9 +1473,10 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
       V1Srcs.push_back(PV1);
   }
 
-  if (OnePhi && UniqueSrc.size() > 1)
-    // Out of an abundance of caution, allow only the trivial lcssa and
-    // recursive phi cases.
+  // To control compile time, only allow a phi source if there is either single
+  // source or all sources are not phis, e.g. LCSSA phis or phi start values of
+  // pointer IVs.
+  if (V1Srcs.size() > 1 && any_of(V1Srcs, IsaPred<PHINode>))
     return AliasResult::MayAlias;
 
   // If V1Srcs is empty then that means that the phi has no underlying non-phi
@@ -1994,26 +1982,26 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
   return {GCD, OffsetRange, std::move(VarIndexKnownBits)};
 }
 
+/// Check whether V*Scale cannot wrap for any value of V, so that abs(V*Scale)
+/// >= abs(Scale) holds in the presence of potentially wrapping math.
+static bool multiplyByScaleNoWrap(const VariableGEPIndex &Var) {
+  if (Var.IsNSW)
+    return true;
+
+  int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
+  // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
+  // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
+  // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
+  int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
+  if (MaxScaleValueBW <= 0)
+    return false;
+  return Var.Scale.ule(
+      APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
+}
+
 std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     const DecomposedGEP &GEP, ArrayRef<KnownBits> VIKnownBits,
     DominatorTree *DT, const AAQueryInfo &AAQI) {
-  // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
-  // potentially wrapping math.
-  auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
-    if (Var.IsNSW)
-      return true;
-
-    int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
-    // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
-    // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
-    // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
-    int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
-    if (MaxScaleValueBW <= 0)
-      return false;
-    return Var.Scale.ule(
-        APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
-  };
-
   const auto &VarIndices = GEP.VarIndices;
   if (VarIndices.size() == 1) {
     // VarIndex = Scale*V.
@@ -2022,7 +2010,7 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
         isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CtxI))) {
       // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
       // presence of potentially wrapping math.
-      if (MultiplyByScaleNoWrap(Var)) {
+      if (multiplyByScaleNoWrap(Var)) {
         // If V != 0 then abs(VarIndex) >= abs(Scale).
         return Var.Scale.abs();
       }
@@ -2039,8 +2027,8 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     const VariableGEPIndex &Var1 = VarIndices[1];
     bool Preconditions =
         Var0.Val.TruncBits == 0 && Var0.Val.hasSameCastsAs(Var1.Val) &&
-        !AAQI.MayBeCrossIteration && MultiplyByScaleNoWrap(Var0) &&
-        MultiplyByScaleNoWrap(Var1);
+        !AAQI.MayBeCrossIteration && multiplyByScaleNoWrap(Var0) &&
+        multiplyByScaleNoWrap(Var1);
 
     if (!Preconditions)
       return std::nullopt;
@@ -2104,9 +2092,17 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
 
   const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
+  // After subtracting the two GEP decompositions, we handle variable indices of
+  // the form of Scale*ext(V0) − Scale*ext(V1), where ext() is the same cast.
   if (Var0.Val.TruncBits != 0 || !Var0.Val.hasSameCastsAs(Var1.Val) ||
       !Var0.hasNegatedScaleOf(Var1) ||
       Var0.Val.V->getType() != Var1.Val.V->getType())
+    return false;
+
+  // MinDiffBytes below is computed as MinDiff * Scale in the index width. This
+  // is correct so long as neither Scale*ext(V0) nor Scale*ext(V1) wraps around
+  // the index space.
+  if (!multiplyByScaleNoWrap(Var0) || !multiplyByScaleNoWrap(Var1))
     return false;
 
   // We'll strip off the Extensions of Var0 and Var1 and do another round

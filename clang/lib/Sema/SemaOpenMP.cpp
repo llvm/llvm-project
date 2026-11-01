@@ -2613,7 +2613,6 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
       Expr *ThisExpr = SemaRef.BuildCXXThisExpr(SourceLocation(),
                                                 SemaRef.getCurrentThisType(),
                                                 /*IsImplicit=*/true);
-      const CXXScopeSpec CS = CXXScopeSpec();
       Expr *ME = SemaRef.BuildMemberExpr(
           ThisExpr, /*IsArrow=*/true, SourceLocation(),
           NestedNameSpecifierLoc(), SourceLocation(), FD,
@@ -3018,6 +3017,13 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
     SmallVector<Expr *, 8> PrivateCopies;
     for (Expr *DE : Clause->varlist()) {
       if (DE->isValueDependent() || DE->isTypeDependent()) {
+        PrivateCopies.push_back(nullptr);
+        continue;
+      }
+      // Data members are captured, and get private copies, on instantiation.
+      if (isa<MemberExpr>(DE->IgnoreParens())) {
+        assert(SemaRef.CurContext->isDependentContext() &&
+               "uncaptured data member in a non-dependent context");
         PrivateCopies.push_back(nullptr);
         continue;
       }

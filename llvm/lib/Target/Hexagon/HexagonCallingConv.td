@@ -54,6 +54,14 @@ def CC_Hexagon_Legacy: CallingConv<[
   CCDelegateTo<CC_HexagonStack>
 ]>;
 
+class CCIfHvx64<CCAction A>
+  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
+         ".useHVX64BOps()", A>;
+
+class CCIfHvx128<CCAction A>
+  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
+         ".useHVX128BOps()", A>;
+
 def CC_Hexagon: CallingConv<[
   CCIfType<[i1,i8,i16],
     CCPromoteToType<i32>>,
@@ -86,43 +94,6 @@ def CC_Hexagon: CallingConv<[
   CCIfType<[i64,v2i32,v4i16,v8i8],
     CCAssignToReg<[D0,D1,D2]>>,
 
-  CCDelegateTo<CC_HexagonStack>
-]>;
-
-def RetCC_Hexagon: CallingConv<[
-  CCIfType<[i1,i8,i16],
-    CCPromoteToType<i32>>,
-  CCIfType<[bf16],
-    CCBitConvertToType<i32>>,
-  CCIfType<[f32],
-    CCBitConvertToType<i32>>,
-  CCIfType<[f64],
-    CCBitConvertToType<i64>>,
-
-  // Small structures are returned in a pair of registers, (which is
-  // always r1:0). In such case, what is returned are two i32 values
-  // without any additional information (in ArgFlags) stating that
-  // they are parts of a structure. Because of that there is no way
-  // to differentiate that situation from an attempt to return two
-  // values, so always assign R0 and R1.
-  CCIfSplit<
-    CCAssignToReg<[R0,R1]>>,
-  CCIfType<[i32,v2i16,v4i8],
-    CCAssignToReg<[R0,R1]>>,
-  CCIfType<[i64,v2i32,v4i16,v8i8],
-    CCAssignToReg<[D0]>>
-]>;
-
-
-class CCIfHvx64<CCAction A>
-  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
-         ".useHVX64BOps()", A>;
-
-class CCIfHvx128<CCAction A>
-  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
-         ".useHVX128BOps()", A>;
-
-def CC_Hexagon_HVX: CallingConv<[
   // HVX 64-byte mode
 
   CCIfHvx64<
@@ -167,10 +138,32 @@ def CC_Hexagon_HVX: CallingConv<[
     CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16,v64bf16],
       CCAssignToStack<256,128>>>,
 
-  CCDelegateTo<CC_Hexagon>
+  CCDelegateTo<CC_HexagonStack>
 ]>;
 
-def RetCC_Hexagon_HVX: CallingConv<[
+def RetCC_Hexagon: CallingConv<[
+  CCIfType<[i1,i8,i16],
+    CCPromoteToType<i32>>,
+  CCIfType<[bf16],
+    CCBitConvertToType<i32>>,
+  CCIfType<[f32],
+    CCBitConvertToType<i32>>,
+  CCIfType<[f64],
+    CCBitConvertToType<i64>>,
+
+  // Small structures are returned in a pair of registers, (which is
+  // always r1:0). In such case, what is returned are two i32 values
+  // without any additional information (in ArgFlags) stating that
+  // they are parts of a structure. Because of that there is no way
+  // to differentiate that situation from an attempt to return two
+  // values, so always assign R0 and R1.
+  CCIfSplit<
+    CCAssignToReg<[R0,R1]>>,
+  CCIfType<[i32,v2i16,v4i8],
+    CCAssignToReg<[R0,R1]>>,
+  CCIfType<[i64,v2i32,v4i16,v8i8],
+    CCAssignToReg<[D0]>>,
+
   // HVX 64-byte mode
   CCIfHvx64<
     CCIfType<[v16i32,v32i16,v64i8],
@@ -186,7 +179,4 @@ def RetCC_Hexagon_HVX: CallingConv<[
   CCIfHvx128<
     CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16,v128bf16],
       CCAssignToReg<[W0]>>>,
-
-  CCDelegateTo<RetCC_Hexagon>
 ]>;
-

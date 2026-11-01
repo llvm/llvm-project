@@ -17,6 +17,7 @@
 #include "Protocol/ProtocolTypes.h"
 
 #include "lldb/API/SBAddress.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/lldb-types.h"
 
 namespace lldb_dap {
@@ -50,6 +51,10 @@ std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
 ///     An optional "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
 std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
+
+/// Converts structured data to JSON, or std::nullopt if it is invalid or empty.
+std::optional<llvm::json::Value>
+GetStructuredDataAsJSON(const lldb::SBStructuredData &data);
 
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);

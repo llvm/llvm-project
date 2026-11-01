@@ -3948,19 +3948,24 @@ static StringRef getCanonicalArchString(Compilation &C,
         return StringRef();
       }
     }
+  } else if (Triple.isSPIRV() && ArchStr.starts_with("igca")) {
+    if (!StringToOffloadArch(ArchStr).isIntelIGCA()) {
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "IGCA" << ArchStr;
+      return StringRef();
+    }
   }
 
   if (Arch.isNVPTX())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
   if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
-    llvm::StringMap<bool> Features;
-    std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
-    if (!Arch) {
+    std::optional<std::string> TargetID = getCanonicalTargetID(Triple, ArchStr);
+    if (!TargetID) {
       C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << ArchStr;
       return StringRef();
     }
-    return Args.MakeArgStringRef(getCanonicalTargetID(*Arch, Features));
+    return Args.MakeArgStringRef(*TargetID);
   }
 
   // If the input isn't CUDA or HIP just return the architecture.

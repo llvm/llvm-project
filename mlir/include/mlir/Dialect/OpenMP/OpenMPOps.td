@@ -306,7 +306,8 @@ def TeamsOp : OpenMP_Op<"teams", traits = [
 //===----------------------------------------------------------------------===//
 
 def SectionOp : OpenMP_Op<"section", traits = [
-    BlockArgOpenMPOpInterface, HasParent<"SectionsOp">
+    BlockArgOpenMPOpInterface, HasParent<"SectionsOp">,
+    RecursiveMemoryEffects
   ], singleRegion = true> {
   let summary = "section directive";
   let description = [{
@@ -329,10 +330,12 @@ def SectionOp : OpenMP_Op<"section", traits = [
 
 def SectionsOp : OpenMP_Op<"sections", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
-    HasParallelRegion
+    HasParallelRegion,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>, RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClause, OpenMP_NowaitClause, OpenMP_PrivateClause,
-    OpenMP_ReductionClause
+    OpenMP_AllocateClause, OpenMP_NowaitClause,
+    OpenMP_PrivateClauseSkip<boundedRecipeEffects = true>,
+    OpenMP_ReductionClauseSkip<boundedRecipeEffects = true>
   ], singleRegion = true> {
   let summary = "sections construct";
   let description = [{
@@ -355,7 +358,7 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
         $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
-        type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
+        type($reduction_vars), $reduction_byref, $reduction_syms) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;

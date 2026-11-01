@@ -36,10 +36,10 @@ using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::debug;
 using namespace llvm::omp::target::helpers;
 
-using llvm::omp::target::plugin::GenericKernelTy;
 namespace llvm::offload::tmp {
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
-GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol);
+llvm::omp::target::plugin::DeviceImageTy *
+__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
 } // namespace llvm::offload::tmp
 
 void PluginManager::init() {
@@ -489,9 +489,8 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             REPORT() << "Failed to load kernel " << Entry.SymbolName << ": "
                      << llvm::toString(AddrOrErr.takeError());
           } else {
-            GenericKernelTy *Kernel =
-                llvm::offload::tmp::__ol_tgt_GetKernelFromSymbol(*AddrOrErr);
-            DeviceEntry.Address = *AddrOrErr;
+            ol_symbol_handle_t KernelSym = *AddrOrErr;
+            DeviceEntry.Address = KernelSym;
 
             // Read this kernel's launch-geometry properties once, from its
             // "<name>_kernel_environment" global, and cache them on the device
@@ -503,7 +502,9 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             KernelEnvironmentTy KernelEnv{};
             llvm::omp::target::plugin::GlobalTy KernelEnvGlobal(
                 EnvName, sizeof(KernelEnv), &KernelEnv);
-            auto &Image = Kernel->getImage();
+            auto &Image =
+                *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
+                    Program.getHandle());
             if (auto Err =
                     GenericDevice.Plugin.getGlobalHandler().readGlobalFromImage(
                         GenericDevice, Image, KernelEnvGlobal)) {
@@ -519,14 +520,28 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
                              KernelEnv.Configuration.ExecMode))
                   << " execution mode";
             }
+            uint32_t StaticBlockMemSize = 0;
+            uint32_t KernelMaxThreads = 0;
+            if (auto Res = olGetSymbolInfo(
+                    KernelSym, OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE,
+                    sizeof(StaticBlockMemSize), &StaticBlockMemSize))
+              REPORT() << "Failed to query static block memory size of "
+                       << Entry.SymbolName << ": " << Res->Details;
+            if (auto Res = olGetSymbolInfo(
+                    KernelSym, OL_SYMBOL_INFO_KERNEL_MAX_THREADS,
+                    sizeof(KernelMaxThreads), &KernelMaxThreads))
+              REPORT() << "Failed to query max threads of " << Entry.SymbolName
+                       << ": " << Res->Details;
 
             const auto &Cfg = KernelEnv.Configuration;
             KernelLaunchInfoTy LaunchInfo;
-            LaunchInfo.Name = Kernel->getName();
+            LaunchInfo.Name = Entry.SymbolName;
+            LaunchInfo.Image = Image.getMemoryBuffer();
+            LaunchInfo.IRImage = Image.getIRImageMemoryBuffer();
             LaunchInfo.Mode =
                 static_cast<llvm::omp::OMPTgtExecModeFlags>(Cfg.ExecMode);
             LaunchInfo.ReductionDataSize = Cfg.ReductionDataSize;
-            LaunchInfo.StaticBlockMemSize = Kernel->getStaticBlockMemSize();
+            LaunchInfo.StaticBlockMemSize = StaticBlockMemSize;
             // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max,
             // further clamped to the kernel function's own driver-reported
             // maximum.
@@ -535,7 +550,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
                 std::min(Cfg.MaxThreads > 0 ? std::min(uint32_t(Cfg.MaxThreads),
                                                        DeviceThreadLimit)
                                             : DeviceThreadLimit,
-                         Kernel->getMaxThreads());
+                         KernelMaxThreads);
             uint32_t DefaultNumThreads = Device.getDefaultNumThreads();
             LaunchInfo.PreferredNumThreads =
                 Cfg.MinThreads > 0

@@ -53,6 +53,7 @@
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Machine SME ABI pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved
