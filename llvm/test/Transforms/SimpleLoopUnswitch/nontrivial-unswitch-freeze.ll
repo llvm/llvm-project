@@ -2362,3 +2362,35 @@ loop:
 exit:
   ret i32 0
 }
+
+; In-loop branch uses %positive, but the branch is not guaranteed to execute.
+; SimpleLoopUnswitch must not omit the freeze at the preheader.
+define i32 @test_partial_unswitch_in_loop_branch_cannot_omit_freeze(i32 %n) {
+; CHECK-LABEL: @test_partial_unswitch_in_loop_branch_cannot_omit_freeze(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INCREMENTED:%.*]] = add nsw i32 [[N:%.*]], 1
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i32 [[INCREMENTED]], 0
+; CHECK-NEXT:    [[POSITIVE_FR:%.*]] = freeze i1 [[POSITIVE]]
+; CHECK-NEXT:    br i1 [[POSITIVE_FR]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_US:%.*]]
+;
+entry:
+  %incremented = add nsw i32 %n, 1
+  %positive = icmp sgt i32 %incremented, 0
+  br label %header
+
+header:
+  br i1 true, label %exit, label %guard
+
+guard:
+  br i1 %positive, label %body, label %body
+
+body:
+  %condition = and i1 false, %positive
+  br i1 %condition, label %taken, label %header
+
+taken:
+  ret i32 0
+
+exit:
+  ret i32 0
+}
