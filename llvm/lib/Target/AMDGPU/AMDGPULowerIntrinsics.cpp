@@ -14,6 +14,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -26,6 +27,11 @@
 using namespace llvm;
 
 namespace {
+
+struct MatrixIntrinsicNarrowingResult {
+  IntrinsicInst *Current;
+  bool Changed;
+};
 
 class AMDGPULowerIntrinsicsImpl {
 public:
@@ -42,6 +48,7 @@ private:
   bool visitPtrSBufferLoad(IntrinsicInst &I);
   bool visitMonitorSleep(IntrinsicInst &I);
   bool visitCvtScale(IntrinsicInst &I);
+  MatrixIntrinsicNarrowingResult narrowF8F6F4MatrixOperands(IntrinsicInst &I);
   bool visitUnscaledWMMA(IntrinsicInst &I);
 };
 
@@ -107,8 +114,19 @@ bool AMDGPULowerIntrinsicsImpl::run() {
       forEachCall(F, [&](IntrinsicInst *II) { Changed |= visitCvtScale(*II); });
       break;
     case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
-      forEachCall(
-          F, [&](IntrinsicInst *II) { Changed |= visitUnscaledWMMA(*II); });
+      forEachCall(F, [&](IntrinsicInst *II) {
+        MatrixIntrinsicNarrowingResult Result = narrowF8F6F4MatrixOperands(*II);
+        Changed |= Result.Changed;
+        Changed |= visitUnscaledWMMA(*Result.Current);
+      });
+      break;
+    case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
+    case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4:
+    case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+    case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4:
+      forEachCall(F, [&](IntrinsicInst *II) {
+        Changed |= narrowF8F6F4MatrixOperands(*II).Changed;
+      });
       break;
     }
   }
@@ -303,6 +321,118 @@ bool AMDGPULowerIntrinsicsImpl::visitCvtScale(IntrinsicInst &I) {
       I.getDebugLoc()));
 
   return false;
+}
+
+MatrixIntrinsicNarrowingResult
+AMDGPULowerIntrinsicsImpl::narrowF8F6F4MatrixOperands(IntrinsicInst &I) {
+  unsigned Src0Idx;
+  unsigned Src1Idx;
+  unsigned Fmt0Idx;
+  unsigned Fmt1Idx;
+  bool IsWMMA;
+
+  switch (I.getIntrinsicID()) {
+  default:
+    llvm_unreachable("expected an f8f6f4 matrix intrinsic");
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4:
+    Src0Idx = 1;
+    Src1Idx = 3;
+    Fmt0Idx = 0;
+    Fmt1Idx = 2;
+    IsWMMA = true;
+    break;
+  case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4:
+    Src0Idx = 0;
+    Src1Idx = 1;
+    Fmt0Idx = 3;
+    Fmt1Idx = 4;
+    IsWMMA = false;
+    break;
+  }
+
+  auto *Fmt0 = dyn_cast<ConstantInt>(I.getArgOperand(Fmt0Idx));
+  auto *Fmt1 = dyn_cast<ConstantInt>(I.getArgOperand(Fmt1Idx));
+  if (!Fmt0 || !Fmt1)
+    return {&I, false};
+
+  uint64_t Fmt0Val = Fmt0->getZExtValue();
+  uint64_t Fmt1Val = Fmt1->getZExtValue();
+  unsigned MaxFmt =
+      IsWMMA ? static_cast<unsigned>(AMDGPU::WMMA::MATRIX_FMT_FP4)
+             : static_cast<unsigned>(AMDGPU::MFMAScaleFormats::FP4_E2M1);
+  if (Fmt0Val > MaxFmt || Fmt1Val > MaxFmt)
+    return {&I, false};
+
+  Value *Src0 = I.getArgOperand(Src0Idx);
+  Value *Src1 = I.getArgOperand(Src1Idx);
+  auto *Src0Ty = dyn_cast<FixedVectorType>(Src0->getType());
+  auto *Src1Ty = dyn_cast<FixedVectorType>(Src1->getType());
+  auto IsLegalSourceType = [IsWMMA](FixedVectorType *Ty) {
+    if (!Ty || !Ty->getElementType()->isIntegerTy(32))
+      return false;
+
+    unsigned NumElts = Ty->getNumElements();
+    if (IsWMMA)
+      return NumElts == 8 || NumElts == 12 || NumElts == 16;
+    return NumElts == 4 || NumElts == 6 || NumElts == 8;
+  };
+  if (!IsLegalSourceType(Src0Ty) || !IsLegalSourceType(Src1Ty))
+    return {&I, false};
+
+  unsigned Src0NumElts = IsWMMA
+                             ? AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(Fmt0Val)
+                             : AMDGPU::mfmaScaleF8F6F4FormatToNumRegs(Fmt0Val);
+  unsigned Src1NumElts = IsWMMA
+                             ? AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(Fmt1Val)
+                             : AMDGPU::mfmaScaleF8F6F4FormatToNumRegs(Fmt1Val);
+  if (Src0Ty->getNumElements() < Src0NumElts ||
+      Src1Ty->getNumElements() < Src1NumElts)
+    return {&I, false};
+
+  IRBuilder<> B(&I);
+  B.SetCurrentDebugLocation(I.getDebugLoc());
+  auto Narrow = [&B](Value *Src, FixedVectorType *SrcTy,
+                     unsigned NumElts) -> Value * {
+    if (SrcTy->getNumElements() == NumElts)
+      return Src;
+
+    SmallVector<int, 16> Mask;
+    for (unsigned Idx = 0; Idx != NumElts; ++Idx)
+      Mask.push_back(Idx);
+    return B.CreateShuffleVector(Src, Mask);
+  };
+
+  Value *NarrowedSrc0 = Narrow(Src0, Src0Ty, Src0NumElts);
+  Value *NarrowedSrc1 = Narrow(Src1, Src1Ty, Src1NumElts);
+  if (NarrowedSrc0 == Src0 && NarrowedSrc1 == Src1)
+    return {&I, false};
+
+  SmallVector<Value *, 14> Args(I.args());
+  Args[Src0Idx] = NarrowedSrc0;
+  Args[Src1Idx] = NarrowedSrc1;
+
+  SmallVector<Type *, 3> OverloadTypes;
+  if (IsWMMA)
+    OverloadTypes.push_back(I.getType());
+  OverloadTypes.push_back(NarrowedSrc0->getType());
+  OverloadTypes.push_back(NarrowedSrc1->getType());
+
+  SmallVector<OperandBundleDef, 2> OpBundles;
+  I.getOperandBundlesAsDefs(OpBundles);
+  CallInst *NewCall = B.CreateIntrinsicWithoutFolding(
+      I.getIntrinsicID(), OverloadTypes, Args, &I, "", OpBundles);
+  auto *NewI = cast<IntrinsicInst>(NewCall);
+  NewI->copyMetadata(I);
+  NewI->setAttributes(I.getAttributes());
+  NewI->setTailCallKind(I.getTailCallKind());
+  NewI->setCallingConv(I.getCallingConv());
+  NewI->takeName(&I);
+  I.replaceAllUsesWith(NewI);
+  I.eraseFromParent();
+  return {NewI, true};
 }
 
 bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
