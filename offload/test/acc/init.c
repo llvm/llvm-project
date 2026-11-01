@@ -1,6 +1,5 @@
-// RUN: %libacctarget-compile-run-and-check-generic
-// REQUIRES: libacctarget
-// REQUIRES: libomptarget-debug
+// RUN: %libacctarget-compile-generic && env LIBOMPTARGET_DEBUG=1 %libacctarget-run-generic 2>&1 | %fcheck-generic
+// REQUIRES: libacctarget, libomptarget-debug
 
 #include <stdio.h>
 
@@ -8,10 +7,10 @@ extern void __tgt_acc_rtl_init();
 extern void __tgt_acc_rtl_deinit();
 
 int main(void) {
-  // CHECK: Init offload library!
-  // CHECK-NOT: Init offload library!
-  // CHECK: Deinit offload library!
-  // CHECK-NOT: Deinit offload library!
+  // CHECK: Init OpenACC runtime
+  // CHECK-NOT: Init OpenACC runtime
+  // CHECK: Deinit OpenACC runtime
+  // CHECK-NOT: Deinit OpenACC runtime
   __tgt_acc_rtl_init();
   __tgt_acc_rtl_init();
   __tgt_acc_rtl_deinit();
