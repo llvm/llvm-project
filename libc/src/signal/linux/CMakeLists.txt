@@ -28,12 +28,12 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 add_entrypoint_object(
-  killpg 
-  SRCS 
+  killpg
+  SRCS
     killpg.cpp
   HDRS
     ../killpg.h
-  DEPENDS 
+  DEPENDS
     libc.hdr.errno_macros
     libc.hdr.types.pid_t
     libc.src.errno.errno

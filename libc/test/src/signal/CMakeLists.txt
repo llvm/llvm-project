@@ -26,9 +26,9 @@ add_libc_test(
 )
 add_libc_test(
   killpg_test
-  SUITE 
+  SUITE
     libc-signal-tests
-  SRCS 
+  SRCS
     killpg_test.cpp
   DEPENDS
     libc.hdr.errno_macros
