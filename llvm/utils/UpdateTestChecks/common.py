@@ -690,7 +690,7 @@ def find_run_lines(test, lines):
             directives.append([is_define, m.group(1)])
 
     # Substitute into run lines.
-    substitutions = {}
+    substitutions = collections.OrderedDict()
     run_lines = []
     for is_define, l in directives:
         if is_define:
