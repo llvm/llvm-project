@@ -93,7 +93,7 @@ body:             |
   ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
   ; CHECK-NEXT:   [[MOVSX64rm32_:%[0-9]+]]:gr64 = MOVSX64rm32 [[LEA64r]], 4, [[COPY]], 0, $noreg :: (load (s32) from jump-table)
   ; CHECK-NEXT:   [[ADD64rr:%[0-9]+]]:gr64 = ADD64rr [[MOVSX64rm32_]], [[LEA64r]], implicit-def dead $eflags
-  ; CHECK-NEXT:   JMP64r killed [[ADD64rr]]
+  ; CHECK-NEXT:   JMP64r [[ADD64rr]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
@@ -135,7 +135,7 @@ body:             |
     %2:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
     %3:gr64 = MOVSX64rm32 %2, 4, %0, 0, $noreg :: (load (s32) from jump-table)
     %4:gr64 = ADD64rr %3, %2, implicit-def dead $eflags
-    JMP64r killed %4
+    JMP64r %4
 
   bb.1:
     %5:gr32 = MOV32ri 6

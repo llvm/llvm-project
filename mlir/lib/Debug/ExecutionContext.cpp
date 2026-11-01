@@ -42,6 +42,13 @@ void ActionActiveStack::print(raw_ostream &os, bool withContext) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void ActionActiveStack::dump() const {
+  print(llvm::errs(), /*withContext=*/true);
+  llvm::errs() << "\n";
+}
+#endif
+
 //===----------------------------------------------------------------------===//
 // ExecutionContext
 //===----------------------------------------------------------------------===//
