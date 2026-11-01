@@ -450,7 +450,7 @@ bool TwoAddressInstructionImpl::isKilled(MachineInstr &MI, Register Reg,
   MachineInstr *DefMI = &MI;
   while (true) {
     // All uses of physical registers are likely to be kills.
-    if (Reg.isPhysical() && (allowFalsePositives || MRI->hasOneUse(Reg)))
+    if (Reg.isPhysical() && (allowFalsePositives || MRI->hasOneNonDBGUse(Reg)))
       return true;
     if (!isPlainlyKilled(DefMI, Reg))
       return false;
