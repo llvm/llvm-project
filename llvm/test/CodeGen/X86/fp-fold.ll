@@ -243,6 +243,8 @@ define float @fsub_zero_nsz_2(float %x) {
 define float @fadd_zero_minnum_nsz(float %x) {
 ; CHECK-LABEL: fadd_zero_minnum_nsz:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %add = fadd float %x, 0.0
