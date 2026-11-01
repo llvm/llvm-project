@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=spirv-prepare-functions -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
+; RUN: opt -S -passes=spirv-prepare-functions,spirv-remove-aggregate-types -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
 
 @fp = global ptr addrspace(4) @callback
 ; CHECK: @fp = global ptr addrspace(4) @callback

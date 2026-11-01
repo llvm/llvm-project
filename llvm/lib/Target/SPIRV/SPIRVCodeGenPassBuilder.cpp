@@ -142,7 +142,11 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
     addFunctionPass(LoopSimplifyPass(), PMW);
   }
   addFunctionPass(StripConvergenceIntrinsicsPass(), PMW);
+  // After the generic passes, which do not expect its i32 placeholders, and
+  // before any pass that records instructions in SPIRVGlobalRegistry, since it
+  // replaces functions by clones.
   flushFPMsToMPM(PMW);
+  addModulePass(SPIRVRemoveAggregateTypesPass(getTM()), PMW);
   addModulePass(SPIRVLegalizeResourceBindingPass(), PMW);
   addModulePass(SPIRVLegalizeZeroSizeArraysPass(getTM()), PMW);
   addModulePass(SPIRVCBufferAccessPass(), PMW);
