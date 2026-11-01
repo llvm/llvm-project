@@ -1,4 +1,5 @@
 // RUN: mlir-translate -no-implicit-module -split-input-file --verify-diagnostics -mlir-print-debuginfo -test-spirv-roundtrip-debug %s | FileCheck %s
+// RUN: mlir-translate -no-implicit-module -split-input-file -mlir-print-debuginfo --spirv-emit-debug-info -serialize-spirv -deserialize-spirv %s | FileCheck %s
 // RUN: %if spirv-tools %{ rm -rf %t %}
 // RUN: %if spirv-tools %{ mkdir %t %}
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --spirv-emit-debug-info --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
@@ -8,16 +9,16 @@
 // spirv DebugInfo: FileLineCol Locations
 //===----------------------------------------------------------------------===//
 
-// CHECK: #loc[[LOC_TENSOR0:.*]] = loc("{{.*}}debug-info.mlir{{.*}}:21:27")
-// CHECK: #loc[[LOC_TENSOR1:.*]] = loc("{{.*}}debug-info.mlir{{.*}}:21:67")
-// CHECK: #loc[[LOC_TENSOR2:.*]] = loc("{{.*}}debug-info.mlir{{.*}}:21:105")
+// CHECK: #loc[[LOC_TENSOR0:.*]] = loc("{{.*}}debug-info.mlir{{.*}}:22:27")
+// CHECK: #loc[[LOC_TENSOR1:.*]] = loc("{{.*}}debug-info.mlir{{.*}}:22:67")
+// CHECK: #loc[[LOC_TENSOR2:.*]] = loc("{{.*}}debug-info.mlir{{.*}}:22:105")
 spirv.module Logical Vulkan requires #spirv.vce<v1.6, [VulkanMemoryModel, Shader, Int8, Int16, Int64, Float16, TensorsARM, GraphARM], [SPV_ARM_tensors, SPV_ARM_graph, SPV_KHR_non_semantic_info]> {
   spirv.GlobalVariable @conv2d_arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<1x16x16x1xi8>, UniformConstant>
   spirv.GlobalVariable @conv2d_arg_1 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<8x3x3x1xi8>, UniformConstant>
   spirv.GlobalVariable @conv2d_arg_2 bind(0, 2) : !spirv.ptr<!spirv.arm.tensor<8xi32>, UniformConstant>
   spirv.GlobalVariable @conv2d_res_0 bind(0, 3) : !spirv.ptr<!spirv.arm.tensor<1x14x14x8xi32>, UniformConstant>
   spirv.ARM.GraphEntryPoint @conv2d, @conv2d_arg_0, @conv2d_arg_1, @conv2d_arg_2, @conv2d_res_0
-  // CHECK: spirv.ARM.Graph @{{.*}}(%arg0: !spirv.arm.tensor<1x16x16x1xi8> loc("{{.*}}debug-info.mlir{{.*}}:21:27"), %arg1: !spirv.arm.tensor<8x3x3x1xi8> loc("{{.*}}debug-info.mlir{{.*}}:21:67"), %arg2: !spirv.arm.tensor<8xi32> loc("{{.*}}debug-info.mlir{{.*}}:21:105")) -> !spirv.arm.tensor<1x14x14x8xi32> attributes {entry_point = true} {
+  // CHECK: spirv.ARM.Graph @{{.*}}(%arg0: !spirv.arm.tensor<1x16x16x1xi8> loc("{{.*}}debug-info.mlir{{.*}}:22:27"), %arg1: !spirv.arm.tensor<8x3x3x1xi8> loc("{{.*}}debug-info.mlir{{.*}}:22:67"), %arg2: !spirv.arm.tensor<8xi32> loc("{{.*}}debug-info.mlir{{.*}}:22:105")) -> !spirv.arm.tensor<1x14x14x8xi32> attributes {entry_point = true} {
   spirv.ARM.Graph @conv2d(%arg0: !spirv.arm.tensor<1x16x16x1xi8>, %arg1: !spirv.arm.tensor<8x3x3x1xi8>, %arg2: !spirv.arm.tensor<8xi32>) -> (!spirv.arm.tensor<1x14x14x8xi32>) {
       %0 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
       %1 = spirv.Constant dense<0> : !spirv.arm.tensor<1xi8>
@@ -27,8 +28,8 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.6, [VulkanMemoryModel, Shader
   // CHECK: } loc(#loc[[LOC_GRAPH:.*]])
   }
 }
-// CHECK-DAG: #loc[[LOC_GRAPH]] = loc("{{.*}}debug-info.mlir{{.*}}:21:3")
-// CHECK-DAG: #loc[[LOC_OP]] = loc("{{.*}}debug-info.mlir{{.*}}:25:12")
+// CHECK-DAG: #loc[[LOC_GRAPH]] = loc("{{.*}}debug-info.mlir{{.*}}:22:3")
+// CHECK-DAG: #loc[[LOC_OP]] = loc("{{.*}}debug-info.mlir{{.*}}:26:12")
 
 // -----
 
