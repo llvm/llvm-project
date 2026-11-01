@@ -306,7 +306,8 @@ getSdmaEngineId(hsa_agent_t DstAgent, hsa_agent_t SrcAgent) {
       !AvailMask)
     return std::nullopt;
 
-  constexpr uint32_t ShiftWidthMask = 32 - 1;
+  // Evaluates to 31, aka 0b11111.
+  constexpr uint32_t ShiftWidthMask = sizeof(uint32_t) * 8 - 1;
   // The first engine ID we want to check is at NextIdx in the engine mask.
   uint32_t Start = NextIdx.load(std::memory_order_relaxed);
   // Inspect the bits starting from this ID.
