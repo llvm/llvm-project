@@ -1,0 +1,40 @@
+## The symbol table has two entries, so index 2 is the first invalid index.
+# RUN: yaml2obj %s -DINDEX=2 -o %t.o
+# RUN: not ld.lld --icf=all -e 0 %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld --icf=safe -e 0 %t.o -o /dev/null 2>&1 | FileCheck %s
+
+## Check a large, valid ULEB128 value that is not a valid symbol index.
+# RUN: yaml2obj %s -DINDEX=4294967295 -o %t.o
+# RUN: not ld.lld --icf=all -e 0 %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld --icf=safe -e 0 %t.o -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: error: {{.*}}.o: invalid symbol index in addrsig section
+
+## Both the null symbol and the last valid symbol index are accepted.
+# RUN: yaml2obj %s -DINDEX=0 -o %t.o
+# RUN: ld.lld --icf=all -e 0 %t.o -o /dev/null
+# RUN: ld.lld --icf=safe -e 0 %t.o -o /dev/null
+# RUN: yaml2obj %s -DINDEX=1 -o %t.o
+# RUN: ld.lld --icf=all -e 0 %t.o -o /dev/null
+# RUN: ld.lld --icf=safe -e 0 %t.o -o /dev/null
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: C3
+  - Name:    .llvm_addrsig
+    Type:    SHT_LLVM_ADDRSIG
+    Flags:   [ SHF_EXCLUDE ]
+    Link:    .symtab
+    Symbols: [ '[[INDEX]]' ]
+Symbols:
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text
