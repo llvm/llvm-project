@@ -28,6 +28,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -295,6 +296,7 @@ private:
   bool optimizeExt(Instruction *&I);
   bool optimizeExtUses(Instruction *I);
   bool optimizeLoadExt(LoadInst *Load);
+  bool narrowMaskedStore(StoreInst &SI);
   bool optimizeShiftInst(BinaryOperator *BO);
   bool optimizeFunnelShift(IntrinsicInst *Fsh);
   bool optimizeSelectInst(SelectInst *SI);
@@ -8503,6 +8505,113 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   return true;
 }
 
+// Narrow a masked load/merge/store to a store of the replaced byte:
+//
+//   Old = load iN StorePtr
+//   Insert = X & InsertMask
+//   store ((Old & KeepMask) or disjoint Insert), StorePtr
+//     =>
+//   store i8 trunc(Insert >> Shift), StorePtr + Offset
+//
+// Example: i32, Shift = 16 (bytes shown from high bits to low bits).
+//
+//               +------+------+------+------+
+//   Old         | old3 | old2 | old1 | old0 |
+//   KeepMask    |  FF  |  00  |  FF  |  FF  |
+//   Insert      |  00  | new2 |  00  |  00  |
+//   Result      | old3 | new2 | old1 | old0 |
+//               +------+------+------+------+
+//
+// Only new2 needs storing: at StorePtr + 2 on little endian, or + 1 on
+// big endian, provided the other bytes still contain their loaded values.
+//
+// 1. Match simple accesses and a single-use disjoint merge of complementary
+//    masks.
+// 2. Require exactly one whole byte and compute its address and alignment.
+// 3. Prove the loaded word is still available at the store in the same block.
+// 4. Emit the byte store and remove any newly dead instructions.
+bool CodeGenPrepare::narrowMaskedStore(StoreInst &SI) {
+  Value *StorePtr = SI.getPointerOperand();
+  auto *Ty = dyn_cast<IntegerType>(SI.getValueOperand()->getType());
+  // Preserve volatile/atomic access semantics. Limit the transform to integer
+  // words with no partial byte; an i8 store cannot be narrowed further.
+  // A swifterror pointer cannot be used to form the byte-offset GEP below.
+  if (!SI.isSimple() || !Ty || Ty->getBitWidth() <= 8 ||
+      Ty->getBitWidth() % 8 || StorePtr->isSwiftError())
+    return false;
+
+  Value *Old, *Insert;
+  const APInt *KeepMask, *InsertMask;
+  // Require the merge to die with this store. Splitting a shared merge can
+  // lose target instruction combines and increase register pressure.
+  // Match the load from this exact destination, allowing commuted operands.
+  // Keep the insertion AND itself so the extraction retains the original
+  // computation, including any poison-generating flags in its operands.
+  if (!match(SI.getValueOperand(),
+             m_OneUse(m_c_DisjointOr(
+                 m_c_And(m_Value(Old, m_LoadSimple(m_Specific(StorePtr))),
+                         m_APInt(KeepMask)),
+                 m_Value(Insert, m_c_And(m_Value(), m_APInt(InsertMask)))))))
+    return false;
+
+  unsigned Shift, Width;
+  // Disjointness alone does not confine Insert to the bits cleared from Old.
+  // Complementary masks establish that partition. A contiguous, byte-aligned
+  // run of eight bits then identifies one byte; it also bounds the shift.
+  if (*InsertMask != ~*KeepMask || !InsertMask->isShiftedMask(Shift, Width) ||
+      Width != 8 || Shift % 8)
+    return false;
+
+  Type *ByteTy = Type::getInt8Ty(SI.getContext());
+  // Bit positions run from the least significant bit regardless of endianness;
+  // byte addresses run in opposite directions on little- and big-endian
+  // targets. Use the alignment guaranteed at the new address, not the original
+  // store's.
+  unsigned Offset =
+      DL->isLittleEndian() ? Shift / 8 : Ty->getBitWidth() / 8 - Shift / 8 - 1;
+  Align Alignment = commonAlignment(SI.getAlign(), Offset);
+  // Ask whether the byte access is allowed. This is not a profitability check
+  // for the extraction and address calculation as a whole.
+  if (!TLI->allowsMemoryAccess(SI.getContext(), *DL, MVT::i8,
+                               SI.getPointerAddressSpace(), Alignment,
+                               MachineMemOperand::MOStore))
+    return false;
+
+  // The wide store writes the preserved bytes back from Old. Leaving them in
+  // memory is equivalent only if they still have those values. Conservatively
+  // check availability of the entire word, scanning at most 32 instructions.
+  // Require this load's value: another available load or stored value does not
+  // prove equality with Old. The parent check keeps this transform block-local.
+  auto *LI = cast<LoadInst>(Old);
+  auto ScanFrom = SI.getIterator();
+  if (LI->getParent() != SI.getParent() ||
+      FindAvailableLoadedValue(LI, SI.getParent(), ScanFrom, 32) != LI)
+    return false;
+
+  IRBuilder<> Builder(&SI);
+  // Extract the selected byte without changing the insertion computation and
+  // keep the store at its original position. A zero shift or offset needs no
+  // IR.
+  Value *Byte = Insert;
+  if (Shift)
+    Byte = Builder.CreateLShr(Byte, Shift);
+  Byte = Builder.CreateTrunc(Byte, ByteTy);
+  Value *BytePtr = StorePtr;
+  if (Offset)
+    BytePtr = Builder.CreateConstGEP1_64(ByteTy, BytePtr, Offset);
+  StoreInst *NewSI = Builder.CreateAlignedStore(Byte, BytePtr, Alignment);
+  // Reuse the AA metadata utility for the new subaccess, including tbaa.struct.
+  NewSI->setAAMetadata(SI.getAAMetadata().adjustForAccess(Offset, ByteTy, *DL));
+  Value *Merged = SI.getValueOperand();
+  SI.eraseFromParent();
+  // Keep any shared operands live. Drop only dead instructions and clear
+  // CGP's cached handles to them before deletion.
+  RecursivelyDeleteTriviallyDeadInstructions(
+      Merged, TLInfo, nullptr,
+      [&](Value *V) { removeAllAssertingVHReferences(V); });
+  return true;
+}
+
 // Return true if the GEP has two operands, the first operand is of a sequential
 // type, and the second operand is a constant.
 static bool GEPSequentialConstIndexed(GetElementPtrInst *GEP) {
@@ -8833,7 +8942,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   }
 
   if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (splitMergedValStore(*SI, *DL, *TLI, Opts.cgp_force_split_store))
+    if (narrowMaskedStore(*SI) ||
+        splitMergedValStore(*SI, *DL, *TLI, Opts.cgp_force_split_store))
       return true;
     bool Modified = tryToSinkFreeOperands(I);
     SI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
