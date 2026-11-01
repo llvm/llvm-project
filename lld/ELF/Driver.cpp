@@ -416,6 +416,10 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z mark-plt requires -z rela";
   }
 
+  if (ctx.arg.emachine == EM_CUDA && !ctx.arg.ltoEmitAsm && !ctx.arg.emitLLVM)
+    ErrAlways(ctx) << "CUDA input is only supported with --lto-emit-asm or "
+                      "--lto-emit-llvm";
+
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
 
