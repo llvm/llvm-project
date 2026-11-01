@@ -11,6 +11,7 @@
 
 #include "index/SymbolID.h"
 #include "index/SymbolLocation.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"
@@ -130,6 +131,26 @@ public:
     return sizeof(*this) + Arena.getTotalMemory() +
            sizeof(value_type) * Refs.capacity();
   }
+
+  /// Builds a RefSlab from refs that are already grouped by symbol, such as
+  /// the ones read from an index file. Unlike Builder, does not deduplicate
+  /// individual refs, which makes it much cheaper.
+  class BundleBuilder {
+  public:
+    BundleBuilder() : UniqueStrings(Arena) {}
+    /// Adds all refs of \p ID. Deep copy: strings will be owned by the slab.
+    void insert(const SymbolID &ID, llvm::ArrayRef<Ref> SymbolRefs);
+    RefSlab build() &&;
+
+  private:
+    llvm::BumpPtrAllocator Arena;
+    llvm::UniqueStringSaver UniqueStrings; // Contents on the arena.
+    /// Input FileURI pointer -> interned copy. The input usually points into
+    /// a string table, so most lookups hit without hashing the string.
+    llvm::DenseMap<const char *, const char *> InternedURIs;
+    std::vector<value_type> Refs;
+    size_t NumRefs = 0;
+  };
 
   /// RefSlab::Builder is a mutable container that can 'freeze' to RefSlab.
   class Builder {

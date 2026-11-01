@@ -514,6 +514,55 @@ TEST(MergeIndexTest, Refs) {
                                       fileURI("unittest:///test2.cc"))))));
 }
 
+TEST(RefSlabTest, BundleBuilderMatchesBuilder) {
+  SymbolID A("a"), B("b"), C("c");
+  std::string FileX = "file:///x.cc", FileY = "file:///y.cc";
+  auto MakeRef = [](const std::string &File, uint32_t Line) {
+    Ref R;
+    R.Location.FileURI = File.c_str();
+    R.Location.Start.setLine(Line);
+    R.Location.End.setLine(Line);
+    R.Kind = RefKind::Reference;
+    return R;
+  };
+  // Bundles out of SymbolID order, refs out of order within a bundle, and
+  // symbol C split over two bundles that share a ref.
+  std::vector<std::pair<SymbolID, std::vector<Ref>>> Bundles = {
+      {B, {MakeRef(FileY, 2), MakeRef(FileX, 1)}},
+      {C, {MakeRef(FileX, 5)}},
+      {A, {MakeRef(FileX, 3)}},
+      {C, {MakeRef(FileY, 4), MakeRef(FileX, 5)}},
+  };
+  auto Build = [&](bool WithDuplicateSymbol) {
+    RefSlab::Builder Expected;
+    RefSlab::BundleBuilder Actual;
+    for (const auto &[ID, Refs] : Bundles) {
+      if (!WithDuplicateSymbol && &Bundles.back().second == &Refs)
+        continue;
+      for (const Ref &R : Refs)
+        Expected.insert(ID, R);
+      Actual.insert(ID, Refs);
+    }
+    return std::make_pair(std::move(Expected).build(),
+                          std::move(Actual).build());
+  };
+  for (bool WithDuplicateSymbol : {false, true}) {
+    auto [Expected, Actual] = Build(WithDuplicateSymbol);
+    // Strings must be owned by the slabs.
+    std::fill(FileX.begin(), FileX.end(), '?');
+    std::fill(FileY.begin(), FileY.end(), '?');
+    EXPECT_EQ(Expected.numRefs(), Actual.numRefs());
+    ASSERT_EQ(Expected.size(), Actual.size());
+    for (size_t I = 0; I < Expected.size(); ++I) {
+      auto ExpectedIt = Expected.begin() + I, ActualIt = Actual.begin() + I;
+      EXPECT_EQ(ExpectedIt->first, ActualIt->first);
+      EXPECT_EQ(ExpectedIt->second, ActualIt->second);
+    }
+    FileX = "file:///x.cc";
+    FileY = "file:///y.cc";
+  }
+}
+
 TEST(MergeIndexTest, IndexedFiles) {
   SymbolSlab DynSymbols;
   RefSlab DynRefs;

@@ -518,11 +518,10 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
   }
   if (Chunks.count("refs")) {
     Reader RefsReader(Chunks.lookup("refs"));
-    RefSlab::Builder Refs;
+    RefSlab::BundleBuilder Refs;
     while (!RefsReader.eof()) {
       auto RefsBundle = readRefs(RefsReader, Strings->Strings);
-      for (const auto &Ref : RefsBundle.second) // FIXME: bulk insert?
-        Refs.insert(RefsBundle.first, Ref);
+      Refs.insert(RefsBundle.first, RefsBundle.second);
     }
     if (RefsReader.err())
       return error("malformed or truncated refs");
