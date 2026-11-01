@@ -1347,6 +1347,11 @@ public:
       LI->removeBlock(SCEVCheckBlock);
     }
 
+    // Clean up directly if the memory checks folded to false, to avoid further
+    // expansions re-using anything left over from MemCheckExp.
+    if (MemCheckBlock && !getMemRuntimeChecks().first)
+      eraseMemCheckBlock();
+
     // Outer loop is used as part of the later cost calculations.
     OuterLoop = L->getParentLoop();
   }
