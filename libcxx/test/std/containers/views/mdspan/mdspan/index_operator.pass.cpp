@@ -220,10 +220,6 @@ constexpr void test_index_cast() {
   // assert(&m[index] == &data[3]);
 }
 
-struct RValueInt {
-  constexpr operator int() && noexcept { return 0; }
-};
-
 constexpr bool test() {
   test_layout<std::layout_left>();
   test_layout<std::layout_right>();
@@ -231,7 +227,7 @@ constexpr bool test() {
 
   int data[1]{};
   std::mdspan m(data, std::extents<int, 1>{1});
-  TEST_IGNORE_NODISCARD m[RValueInt{}];
+  TEST_IGNORE_NODISCARD m[RValueInt{0}];
 
   test_index_cast();
   return true;
