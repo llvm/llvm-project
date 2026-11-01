@@ -1150,3 +1150,135 @@ B1:
 end:
   ret i32 0
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Test bounds where phi-input is guarded by a comparison with a variable bound.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Loop guard with variable bound: %n64 = zext i32 %n has 32 leading zeros.
+; Guard: icmp ult %iv.next, %n64 implies %iv.next < 2^32 on the backedge,
+; giving %iv 32 leading zeros and enabling nuw nsw on the add.
+define void @loop_phi_variable_bound_zext(i32 %n, ptr %p) {
+; CHECK-LABEL: @loop_phi_variable_bound_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N64:%.*]] = zext i32 [[N:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    store i64 [[IV]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IV_NEXT]], [[N64]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %n64 = zext i32 %n to i64
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  store i64 %iv, ptr %p
+  %cmp = icmp ult i64 %iv.next, %n64
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Negative test: bound is arbitrary i64, no leading zeros derivable.
+define void @loop_phi_variable_bound_no_lz(i64 %n, ptr %p) {
+; CHECK-LABEL: @loop_phi_variable_bound_no_lz(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    store i64 [[IV]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  store i64 %iv, ptr %p
+  %cmp = icmp ult i64 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Variable bound version of phi_ugt_high_bits.
+define i8 @phi_ugt_variable_high_bits(i8 %x, i8 %b) {
+; CHECK-LABEL: @phi_ugt_variable_high_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BOUND:%.*]] = or i8 [[B:%.*]], -65
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret i8 64
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %bound = or i8 %b, 191
+  %cmp = icmp ugt i8 %x, %bound
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry ], [ -1, %F ]
+  %r = and i8 %v, 64
+  ret i8 %r
+F:
+  br label %T
+}
+
+; Variable bound version of phi_ult_low_bits.
+define i8 @phi_ult_variable_low_bits(i8 %x, i8 %b) {
+; CHECK-LABEL: @phi_ult_variable_low_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BOUND:%.*]] = or i8 [[B:%.*]], -64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    br label [[F]]
+; CHECK:       F:
+; CHECK-NEXT:    ret i8 64
+;
+entry:
+  %bound = or i8 %b, 192
+  %cmp = icmp ult i8 %x, %bound
+  br i1 %cmp, label %T, label %F
+T:
+  br label %F
+F:
+  %v = phi i8 [ %x, %entry ], [ -1, %T ]
+  %r = and i8 %v, 64
+  ret i8 %r
+}
+
+; Negative: %b has no known bits, so ugt gives no useful range for %x.
+define i8 @phi_ugt_variable_no_known_bits(i8 %x, i8 %b) {
+; CHECK-LABEL: @phi_ugt_variable_no_known_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 64
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %cmp = icmp ugt i8 %x, %b
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry ], [ -1, %F ]
+  %r = and i8 %v, 64
+  ret i8 %r
+F:
+  br label %T
+}
