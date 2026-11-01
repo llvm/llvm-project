@@ -520,12 +520,12 @@ body:             |
   bb.1:
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
 
-    %5:vmv0 = PseudoVMSEQ_VI_MF2 killed %3, 0, -1, 5
+    %5:vmv0 = PseudoVMSEQ_VI_MF2 %3, 0, -1, 5
     $v0 = COPY %5
-    %6:vrnov0 = PseudoVLE32_V_MF2_MASK %4, killed %0, $v0, -1, 5, 0
+    %6:vrnov0 = PseudoVLE32_V_MF2_MASK %4, %0, $v0, -1, 5, 0
     %7:gpr = PseudoVCPOP_M_B64 %5, -1, 0
     %8:gpr = COPY $x0
-    BEQ killed %7, %8, %bb.3
+    BEQ %7, %8, %bb.3
     PseudoBR %bb.2
 
   bb.2:
@@ -597,7 +597,7 @@ body:             |
     %7:vr = PseudoVADD_VX_M1 undef $noreg, %4:vr, %6:gpr, -1, 6, 0
     %8:gpr = MUL %6:gpr, %2:gpr
     %9:gpr = ADD %0:gpr, %8:gpr
-    PseudoVSE32_V_MF2 killed %7:vr, killed %9:gpr, -1, 5
+    PseudoVSE32_V_MF2 %7:vr, %9:gpr, -1, 5
     %10:gpr = ADDI %6:gpr, 1
     BLTU %10:gpr, %3:gpr, %bb.1
     PseudoBR %bb.2
@@ -668,7 +668,7 @@ body:             |
     %7:vr = PseudoVADD_VX_M1 undef $noreg, %4:vr, %6:gpr, -1, 6, 0
     %8:gpr = MUL %6:gpr, %2:gpr
     %9:gpr = ADD %0:gpr, %8:gpr
-    PseudoVSE32_V_MF2 killed %7:vr, killed %9:gpr, -1, 5
+    PseudoVSE32_V_MF2 %7:vr, %9:gpr, -1, 5
     %10:gpr = ADDI %6:gpr, 1
 
   bb.3:
@@ -754,7 +754,7 @@ body:             |
     %12:vr = COPY %11
     %10:vr = COPY %12
     %13:gpr = LUI 1
-    %9:gpr = ADDIW killed %13, -2048
+    %9:gpr = ADDIW %13, -2048
 
   bb.1.vector.body:
     successors: %bb.2(0x04000000), %bb.1(0x7c000000)
@@ -763,7 +763,7 @@ body:             |
     %1:gpr = PHI %9, %bb.0, %4, %bb.1
     %2:vr = PHI %10, %bb.0, %16, %bb.1
     %14:vr = PseudoVLE32_V_M1 undef $noreg, %0, 4, 5, 0 :: (load (s128) from %ir.lsr.iv12, align 4)
-    %16:vr = PseudoVADD_VV_M1 undef $noreg, killed %14, %2, 4, 5, 0
+    %16:vr = PseudoVADD_VV_M1 undef $noreg, %14, %2, 4, 5, 0
     %4:gpr = nsw ADDI %1, -4
     %5:gpr = ADDI %0, 16
     %18:gpr = COPY $x0
@@ -773,8 +773,8 @@ body:             |
   bb.2.middle.block:
     %19:gpr = COPY $x0
     %20:vr = PseudoVMV_S_X undef $noreg, %19, 1, 5
-    %23:vr = PseudoVREDSUM_VS_M1_E8 undef $noreg, %16, killed %20, 4, 5, 1
-    PseudoVSE32_V_M1 killed %23, %8, 1, 5 :: (store (s32) into %ir.res)
+    %23:vr = PseudoVREDSUM_VS_M1_E8 undef $noreg, %16, %20, 4, 5, 1
+    PseudoVSE32_V_M1 %23, %8, 1, 5 :: (store (s32) into %ir.res)
     PseudoRET
 
 ...
@@ -846,14 +846,14 @@ body:             |
     successors: %bb.3
 
     $v0 = COPY %mask
-    early-clobber %t0:vrnov0 = PseudoVLUXEI64_V_M1_MF8_MASK %t5, killed %inaddr, %idxs, $v0, -1, 3, 1
+    early-clobber %t0:vrnov0 = PseudoVLUXEI64_V_M1_MF8_MASK %t5, %inaddr, %idxs, $v0, -1, 3, 1
     %ldval:vr = COPY %t0
     PseudoBR %bb.3
 
   bb.3:
     %stval:vr = PHI %t4, %bb.1, %ldval, %bb.2
     $v0 = COPY %mask
-    PseudoVSOXEI64_V_M1_MF8_MASK killed %stval, killed %b, %idxs, $v0, -1, 3
+    PseudoVSOXEI64_V_M1_MF8_MASK %stval, %b, %idxs, $v0, -1, 3
     PseudoRET
 
 ...
@@ -920,7 +920,7 @@ body:             |
     %11:gpr = COPY $x14
     %12:gpr = COPY $x15
     %vlenb:gpr = PseudoReadVLENB
-    %inc:gpr = SRLI killed %vlenb, 3
+    %inc:gpr = SRLI %vlenb, 3
     %10:vr = PseudoVID_V_M1 undef $noreg, -1, 6, 0
     %59:gpr = COPY $x0
     PseudoBR %bb.1
@@ -930,21 +930,21 @@ body:             |
 
     %26:gpr = PHI %59, %bb.0, %28, %bb.3
     %61:gpr = ADD %12, %26
-    %27:vr = PseudoVADD_VX_M1 undef $noreg, %10, killed %61, -1, 6, 0
+    %27:vr = PseudoVADD_VX_M1 undef $noreg, %10, %61, -1, 6, 0
     %62:vr = PseudoVMSLTU_VX_M1 %27, %11, -1, 6
     %63:gpr = PseudoVCPOP_M_B64 %62, -1, 0
     %64:gpr = COPY $x0
-    BEQ killed %63, %64, %bb.3
+    BEQ %63, %64, %bb.3
     PseudoBR %bb.2
 
   bb.2:
     successors: %bb.3(0x80000000)
 
     %66:gpr = ADD %src, %26
-    %67:vrnov0 = PseudoVLE8_V_MF8 undef $noreg, killed %66, -1, 3, 0
+    %67:vrnov0 = PseudoVLE8_V_MF8 undef $noreg, %66, -1, 3, 0
     %76:vrnov0 = PseudoVADD_VI_MF8 undef $noreg, %67, 4, -1, 3, 0
     %77:gpr = ADD %dst, %26
-    PseudoVSE8_V_MF8 killed %76, killed %77, -1, 3
+    PseudoVSE8_V_MF8 %76, %77, -1, 3
 
   bb.3:
     successors: %bb.1(0x7c000000), %bb.4(0x04000000)
@@ -1077,7 +1077,7 @@ body: |
 
   bb.4:
     renamable $v10m2 = PseudoVADD_VV_M2 undef renamable $v10m2, %v, %v, -1, 5, 0
-    renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, killed %v, %outvl:gprnox0, 5, 0
+    renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, %v, %outvl:gprnox0, 5, 0
     PseudoRET implicit $v8m2
 ...
 ---

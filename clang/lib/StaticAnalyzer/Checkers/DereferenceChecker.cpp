@@ -202,7 +202,7 @@ void DereferenceChecker::reportDerefBug(const DerefBugType &BT,
   }
 
   // Generate an error node.
-  ExplodedNode *N = C.generateErrorNode(State);
+  ExplodedNode *N = C.addSink(State);
   if (!N)
     return;
 
@@ -467,7 +467,7 @@ void DereferenceChecker::checkPreStmt(const BinaryOperator *Op,
       llvm::formatv("{0} of a {1} and a {2} {3} in undefined behavior",
                     OpcodeStr, DerefArg1, DerefArg2, ResultStr);
 
-  ExplodedNode *N = C.generateErrorNode(State);
+  ExplodedNode *N = C.addSink(State);
   if (!N)
     return;
   auto BR =

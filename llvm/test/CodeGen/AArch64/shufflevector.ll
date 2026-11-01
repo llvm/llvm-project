@@ -221,14 +221,11 @@ define <2 x i1> @shufflevector_v2i1(<2 x i1> %a, <2 x i1> %b){
 define i32 @shufflevector_v4i8(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-SD-LABEL: shufflevector_v4i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #16
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    ext v0.8b, v1.8b, v0.8b, #6
 ; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
 ; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shufflevector_v4i8:
@@ -277,12 +274,9 @@ define <32 x i8> @shufflevector_v32i8(<32 x i8> %a, <32 x i8> %b){
 define i32 @shufflevector_v2i16(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-SD-LABEL: shufflevector_v2i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #16
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
 ; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shufflevector_v2i16:
@@ -428,13 +422,9 @@ define <2 x i1> @shufflevector_v2i1_zeroes(<2 x i1> %a, <2 x i1> %b){
 define i32 @shufflevector_v4i8_zeroes(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-SD-LABEL: shufflevector_v4i8_zeroes:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #16
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    dup v0.8b, v0.b[0]
 ; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shufflevector_v4i8_zeroes:
@@ -461,13 +451,9 @@ define <32 x i8> @shufflevector_v32i8_zeroes(<32 x i8> %a, <32 x i8> %b){
 define i32 @shufflevector_v2i16_zeroes(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-SD-LABEL: shufflevector_v2i16_zeroes:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #16
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v0.2s, v0.s[0]
-; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shufflevector_v2i16_zeroes:

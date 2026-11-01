@@ -1577,7 +1577,6 @@ Error DumpOutputStyle::dumpGSIRecords() {
   Pipeline.addCallbackToPipeline(Dumper);
   CVSymbolVisitor Visitor(Pipeline);
 
-  BinaryStreamRef SymStream = Records.getSymbolArray().getUnderlyingStream();
   if (auto E = Visitor.visitSymbolStream(Records.getSymbolArray(), 0))
     return E;
   return Error::success();

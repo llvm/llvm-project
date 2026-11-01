@@ -69,7 +69,6 @@ class InitListExpr;
 class HLSLBufferDecl;
 class HLSLRootSignatureDecl;
 class HLSLVkBindingAttr;
-class HLSLResourceBindingAttr;
 class Type;
 class RecordType;
 class DeclContext;
@@ -322,7 +321,6 @@ public:
   void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
 
   void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
-  void setHLSLFunctionAttributes(const FunctionDecl *FD, llvm::Function *Fn);
   void handleGlobalVarDefinition(const VarDecl *VD, llvm::GlobalVariable *Var);
 
   llvm::Instruction *getConvergenceToken(llvm::BasicBlock &BB);
@@ -362,9 +360,6 @@ private:
                                     const CGHLSLOffsetInfo &OffsetInfo);
   void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                    llvm::GlobalVariable *GV);
-  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
-                                   llvm::GlobalVariable *GV,
-                                   HLSLResourceBindingAttr *RBA);
 
   llvm::Value *emitSPIRVUserSemanticLoad(
       llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,

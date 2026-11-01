@@ -27,11 +27,12 @@ regBankSelected: true
 body:             |
   bb.0.entry:
     ; RV64I-LABEL: name: ctlz_s64
-    ; RV64I: [[CLZ:%[0-9]+]]:gpr = CLZ [[CLZ]]
+    ; RV64I: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; RV64I-NEXT: [[CLZ:%[0-9]+]]:gpr = CLZ [[COPY]]
     ; RV64I-NEXT: $x10 = COPY [[CLZ]]
     ; RV64I-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CTLZ %1
+    %1:gprb(s64) = G_CTLZ %0
     $x10 = COPY %1(s64)
     PseudoRET implicit $x10
 

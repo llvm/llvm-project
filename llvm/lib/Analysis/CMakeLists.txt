@@ -1,3 +1,8 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS AnalysisOptions.td)
+tablegen(LLVM AnalysisOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(AnalysisOptionsTableGen)
+
 include(MLGOLower)
 mlgo_lower_models(
   "${LLVM_MLGO_MODELS}"
@@ -55,6 +60,7 @@ add_llvm_component_library(LLVMAnalysis
   AliasAnalysisEvaluator.cpp
   AliasSetTracker.cpp
   Analysis.cpp
+  AnalysisOptions.cpp
   AssumeBundleQueries.cpp
   AssumptionCache.cpp
   BasicAliasAnalysis.cpp
@@ -180,6 +186,7 @@ add_llvm_component_library(LLVMAnalysis
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis
 
   DEPENDS
+  AnalysisOptionsTableGen
   analysis_gen
   intrinsics_gen
   ${MLDeps}
@@ -192,6 +199,7 @@ add_llvm_component_library(LLVMAnalysis
   Core
   FrontendHLSL
   Object
+  Option
   ProfileData
   Support
   TargetParser

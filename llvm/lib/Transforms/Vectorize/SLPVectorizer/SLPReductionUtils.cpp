@@ -12,8 +12,10 @@
 #include "SLPUtils.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
@@ -214,6 +216,102 @@ Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
     return Rdx;
 
   return nullptr;
+}
+
+bool isReductionOfConsecutiveAccumulators(Instruction *Root, const LoopInfo &LI,
+                                          const DataLayout &DL,
+                                          ScalarEvolution &SE,
+                                          unsigned MaxDepth,
+                                          SmallVectorImpl<unsigned> &Shape,
+                                          SmallPtrSetImpl<PHINode *> &Accs) {
+  SmallVector<Instruction *> RdxVals;
+  SmallVector<Instruction *> Worklist(1, Root);
+  while (!Worklist.empty()) {
+    for (Value *Op : Worklist.pop_back_val()->operands()) {
+      auto *I = dyn_cast<Instruction>(Op);
+      if (!I)
+        return false;
+      if (I->getOpcode() == Root->getOpcode() &&
+          I->getParent() == Root->getParent() && I->hasOneUse() &&
+          isReductionCandidate(I))
+        Worklist.push_back(I);
+      else
+        RdxVals.push_back(I);
+    }
+  }
+  constexpr unsigned MinReducedVals = 4;
+  BasicBlock *BB = RdxVals.front()->getParent();
+  const Loop *L = LI.getLoopFor(BB);
+  if (RdxVals.size() < MinReducedVals || !L || L->contains(Root) ||
+      any_of(RdxVals, [&](Instruction *I) { return I->getParent() != BB; }))
+    return false;
+  // The accumulators, used by the other ones, cannot be vectorized along the
+  // reduced values without the shuffles in the loop.
+  auto GetAccumulator = [&](Instruction *RdxVal) -> PHINode * {
+    PHINode *Acc = nullptr;
+    for (User *U : RdxVal->users()) {
+      if (!L->contains(cast<Instruction>(U)))
+        continue;
+      auto *P = dyn_cast<PHINode>(U);
+      if (Acc || !P || P->getParent() != L->getHeader() || !P->hasOneUse())
+        return nullptr;
+      Acc = P;
+    }
+    return Acc;
+  };
+  SmallVector<SmallVector<LoadInst *>> Loads;
+  for (Instruction *RdxVal : RdxVals) {
+    PHINode *Acc = GetAccumulator(RdxVal);
+    if (!Acc)
+      return false;
+    Accs.insert(Acc);
+    SmallVectorImpl<LoadInst *> &RdxLoads = Loads.emplace_back();
+    SmallVector<unsigned> RdxShape;
+    SmallPtrSet<Instruction *, 16> Visited;
+    SmallVector<std::pair<Instruction *, unsigned>> Stack(1, {RdxVal, 0});
+    while (!Stack.empty()) {
+      auto [I, Depth] = Stack.pop_back_val();
+      if (!Visited.insert(I).second)
+        continue;
+      if (I != Acc && isa<PHINode>(I) && I->getParent() == L->getHeader())
+        return false;
+      if (auto *LdI = dyn_cast<LoadInst>(I)) {
+        RdxLoads.push_back(LdI);
+        RdxShape.push_back(I->getOpcode());
+        continue;
+      }
+      if (Depth == MaxDepth || isa<PHINode>(I) || I->getParent() != BB)
+        continue;
+      RdxShape.push_back(I->getOpcode());
+      if (auto *Cmp = dyn_cast<CmpInst>(I))
+        RdxShape.push_back(Cmp->getPredicate());
+      for (Value *Op : reverse(I->operands()))
+        if (auto *OpI = dyn_cast<Instruction>(Op))
+          Stack.emplace_back(OpI, Depth + 1);
+    }
+    if (RdxLoads.empty() || !Visited.contains(Acc))
+      return false;
+    if (Shape.empty())
+      Shape.assign(RdxShape.begin(), RdxShape.end());
+    else if (RdxShape != Shape)
+      return false;
+  }
+  return all_of(seq<unsigned>(Loads.front().size()), [&](unsigned Pos) {
+    LoadInst *Ld0 = Loads.front()[Pos];
+    SmallVector<int64_t> Offsets;
+    for (ArrayRef<LoadInst *> RdxLoads : Loads) {
+      std::optional<int64_t> Diff = getPointersDiff(
+          Ld0->getType(), Ld0->getPointerOperand(), RdxLoads[Pos]->getType(),
+          RdxLoads[Pos]->getPointerOperand(), DL, SE);
+      if (!Diff)
+        return false;
+      Offsets.push_back(*Diff);
+    }
+    sort(Offsets);
+    return all_of(enumerate(Offsets), [&](const auto &P) {
+      return P.value() == Offsets.front() + static_cast<int64_t>(P.index());
+    });
+  });
 }
 
 } // namespace llvm::slpvectorizer

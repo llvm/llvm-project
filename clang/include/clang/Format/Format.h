@@ -6425,10 +6425,6 @@ struct FormatStyle {
     std::shared_ptr<MapType> Styles;
   };
 
-  static FormatStyleSet BuildStyleSetFromConfiguration(
-      const FormatStyle &MainStyle,
-      const std::vector<FormatStyle> &ConfigurationStyles);
-
 private:
   FormatStyleSet StyleSet;
 
@@ -6598,17 +6594,6 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
                                               StringRef Code,
                                               ArrayRef<tooling::Range> Ranges,
                                               StringRef FileName = "<stdin>");
-
-/// Inserts or removes empty lines separating definition blocks including
-/// classes, structs, functions, namespaces, and enums in the given \p Ranges in
-/// \p Code.
-///
-/// Returns the `Replacements` that inserts or removes empty lines separating
-/// definition blocks in all \p Ranges in \p Code.
-tooling::Replacements separateDefinitionBlocks(const FormatStyle &Style,
-                                               StringRef Code,
-                                               ArrayRef<tooling::Range> Ranges,
-                                               StringRef FileName = "<stdin>");
 
 /// Sort consecutive using declarations in the given \p Ranges in
 /// \p Code.

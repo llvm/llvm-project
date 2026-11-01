@@ -71,7 +71,7 @@ TEST_F(VPVerifierTest, LiveIn) {
   // Live-ins must be in the plan's entry block.
   VPBasicBlock *VPBB = Plan.createVPBasicBlock("bb");
   VPBlockUtils::connectBlocks(Entry, VPBB);
-  LiveIn->moveBefore(*VPBB, VPBB->end());
+  LiveIn->moveBefore(VPBB->end());
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
