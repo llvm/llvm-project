@@ -63803,6 +63803,7 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
 
     SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
     if (VT.getVectorElementType() != MVT::f32) {
+      assert(VT.getScalarSizeInBits() > 32 && "Unexpected fpext");
       EVT TmpVT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
       if (IsStrict) {
         Src = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {TmpVT, MVT::Other},
