@@ -887,8 +887,11 @@ public:
 
     mlir::Location loc = cgf.getLoc(e->getSourceRange().getBegin());
 
-    if (cir::isFPOrVectorOfFPType(operand.getType()))
-      return builder.createOrFold<cir::FNegOp>(loc, operand);
+    if (cir::isFPOrVectorOfFPType(operand.getType())) {
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+      return builder.createOrFold<cir::FNegOp>(loc, operand,
+                                               builder.getFastMathFlagsAttr());
+    }
 
     // TODO(cir): We might have to change this to support overflow trapping.
     //            Classic codegen routes unary minus through emitSub to ensure
@@ -2110,9 +2113,9 @@ static mlir::Value buildFMulAdd(mlir::Location addLoc, cir::FMulOp mulOp,
 
   // Carry the mul's fenv attribute so a constrained fmul yields a constrained
   // fmuladd; the builder is under the add's FP options, not the mul's.
-  mlir::Value fmuladd =
-      cir::FMulAddOp::create(builder, loc, addend.getType(), mulOp0, mulOp1,
-                             addend, mulOp.getFenvAttr());
+  mlir::Value fmuladd = cir::FMulAddOp::create(
+      builder, loc, addend.getType(), mulOp0, mulOp1, addend,
+      mulOp.getFenvAttr(), builder.getFastMathFlagsAttr());
   mulOp.erase();
   return fmuladd;
 }

@@ -94,6 +94,12 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
     mlir::LLVM::FastmathFlags fastmathFlags = {});
 
 template <typename LLVMOp>
+mlir::LogicalResult lowerFPOp(mlir::Operation *op, mlir::ValueRange operands,
+                              cir::FastMathFlagsAttr fastmath,
+                              const mlir::TypeConverter &typeConverter,
+                              mlir::ConversionPatternRewriter &rewriter);
+
+template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
     cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,

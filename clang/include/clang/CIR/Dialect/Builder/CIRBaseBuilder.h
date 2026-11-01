@@ -947,10 +947,9 @@ public:
     assert(cir::isFPOrVectorOfFPType(operand.getType()) &&
            "expected floating-point or vector-of-float type");
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fastMathFlags());
     // fneg does not raise FP exceptions or depend on the rounding mode, so it
     // never carries an fenv attribute.
-    return cir::FNegOp::create(*this, loc, operand);
+    return cir::FNegOp::create(*this, loc, operand, getFastMathFlagsAttr());
   }
 
   mlir::Value createXor(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {

@@ -2196,6 +2196,9 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     The `cir.fneg` operation negates the operand. The operand and result must
     have the same type.
 
+    The optional `fastmath_flags` attribute holds the fast-math flags of the
+    operation.
+
     Example:
 
     ```
@@ -2204,6 +2207,19 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     %5 = cir.fneg %4 : !cir.vector<4 x !cir.float>
     ```
   }];
+
+  let arguments = !con(commonArgs, (ins
+      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
+
+  let assemblyFormat = [{
+    $input `:` type($input) prop-dict attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$input), [{
+      build($_builder, $_state, input, cir::FastMathFlagsAttr{});
+    }]>
+  ];
 
   let hasFolder = 1;
 
@@ -8802,6 +8818,8 @@ def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
   }];
 }
 
+// The optional `fastmath_flags` attribute holds the fast-math flags of the
+// operation.
 class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic,
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
@@ -8810,19 +8828,21 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     CIR_AnyFloatOrVecOfFloatType:$a,
     CIR_AnyFloatOrVecOfFloatType:$b,
     CIR_AnyFloatOrVecOfFloatType:$c,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    OptionalAttr<CIR_FenvAttr>:$fenv,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
   );
 
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = [{
-    $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? attr-dict
+    $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? prop-dict attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
                    "mlir::Value":$c), [{
-      build($_builder, $_state, result, a, b, c, cir::FenvAttr{});
+      build($_builder, $_state, result, a, b, c, cir::FenvAttr{},
+            cir::FastMathFlagsAttr{});
     }]>
   ];
 
