@@ -90,23 +90,32 @@ public:
           "scripted Interface python object '__class__.__module__' attribute "
           "is not a string");
 
-    llvm::StringRef py_obj_module_str_ref = py_obj_module_str.GetString();
-    PythonModule py_module = PythonModule::AddModule(py_obj_module_str_ref);
+    return GetModuleFile(py_obj_module_str.GetString());
+  }
+
+  /// The file the already imported \p module_name was loaded from, read from
+  /// its `__file__`. The caller must hold the GIL.
+  static llvm::Expected<FileSpec> GetModuleFile(llvm::StringRef module_name) {
+    using namespace python;
+
+    PythonModule py_module = PythonModule::AddModule(module_name);
     if (!py_module.IsValid())
-      return llvm::createStringError("failed to import '%s' module",
-                                     py_obj_module_str_ref.data());
+      return llvm::createStringError(
+          llvm::formatv("failed to import '{0}' module", module_name).str());
 
     PythonObject py_module_file = py_module.GetAttributeValue("__file__");
     if (!py_module_file.IsValid())
       return llvm::createStringError(
-          "module '%s' is missing '__file__' attribute",
-          py_obj_module_str_ref.data());
+          llvm::formatv("module '{0}' is missing '__file__' attribute",
+                        module_name)
+              .str());
 
     PythonString py_module_file_str = py_module_file.Str();
     if (!py_module_file_str.IsValid())
       return llvm::createStringError(
-          "module '%s.__file__' attribute is not a string",
-          py_obj_module_str_ref.data());
+          llvm::formatv("module '{0}.__file__' attribute is not a string",
+                        module_name)
+              .str());
 
     return FileSpec(py_module_file_str.GetString());
   }
@@ -416,6 +425,37 @@ public:
 
     m_object_instance_sp = StructuredData::GenericSP(
         new StructuredPythonObject(std::move(result)));
+
+    // An object handed over by the script wasn't built from the metadata,
+    // which may even describe its creator, so name it after its own class and
+    // don't attribute the metadata's arguments to it.
+    std::string qualified_class_name = script_obj ? "" : class_name.str();
+    PythonString obj_module_name =
+        obj_class.GetAttributeValue("__module__").AsType<PythonString>();
+    if (qualified_class_name.empty() && obj_module_name.IsValid())
+      qualified_class_name =
+          llvm::formatv("{0}.{1}", obj_module_name.GetString(),
+                        obj_class_name.GetString())
+              .str();
+
+    // Modules can be imported or reloaded without LLDB seeing it, so ask the
+    // class's module for its current file rather than remembering one.
+    FileSpec source_path;
+    if (obj_module_name.IsValid()) {
+      if (llvm::Expected<FileSpec> path_or_err =
+              GetModuleFile(obj_module_name.GetString()))
+        source_path = *path_or_err;
+      else
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Script), path_or_err.takeError(),
+                       "failed to find the file defining {1}: {0}",
+                       qualified_class_name);
+    }
+    if (!script_obj)
+      m_scripted_metadata->SetSourcePath(source_path);
+    RegisterInstance(m_interpreter.GetScriptedInstanceRegistry(),
+                     std::move(qualified_class_name), std::move(source_path),
+                     script_obj ? nullptr : m_scripted_metadata->GetArgsSP());
+
     return m_object_instance_sp;
   }
 

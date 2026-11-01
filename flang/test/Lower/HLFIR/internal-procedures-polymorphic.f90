@@ -65,7 +65,7 @@ end module
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi ne, %[[VAL_5]], %[[VAL_6]] : i64
 ! CHECK:           %[[VAL_8:.*]] = fir.absent !fir.class<!fir.type<_QMcaptured_optional_polymorphicTsometype>>
 ! CHECK:           %[[VAL_9:.*]] = arith.select %[[VAL_7]], %[[VAL_3]], %[[VAL_8]] : !fir.class<!fir.type<_QMcaptured_optional_polymorphicTsometype>>
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {fortran_attrs = #fir.var_attrs<optional, host_assoc>, {{.*}}Ex
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {{.*}}uniq_name({{.*}}Ex") fortran_attrs<optional, host_assoc>
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_12:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_11]]
 ! CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.ref<!fir.class<!fir.array<?x!fir.type<_QMcaptured_optional_polymorphicTsometype>>>>
@@ -78,4 +78,4 @@ end module
 ! CHECK:           %[[VAL_20:.*]] = fir.absent !fir.class<!fir.array<?x!fir.type<_QMcaptured_optional_polymorphicTsometype>>>
 ! CHECK:           %[[VAL_21:.*]] = arith.select %[[VAL_19]], %[[VAL_13]], %[[VAL_20]] : !fir.class<!fir.array<?x!fir.type<_QMcaptured_optional_polymorphicTsometype>>>
 ! CHECK:           %[[VAL_22:.*]] = fir.shift %[[VAL_15]]#0 : (index) -> !fir.shift<1>
-! CHECK:           %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_21]](%[[VAL_22]]) {fortran_attrs = #fir.var_attrs<optional, host_assoc>, {{.*}}Ey
+! CHECK:           %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_21]](%[[VAL_22]]) {{.*}}uniq_name({{.*}}Ey") fortran_attrs<optional, host_assoc>

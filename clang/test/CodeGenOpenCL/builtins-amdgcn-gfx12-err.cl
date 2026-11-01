@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple amdgpu12.00-unknown-unknown -verify -emit-llvm -o - %s
 
 typedef unsigned int uint;
+typedef unsigned short ushort;
 
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 
@@ -33,9 +34,9 @@ void builtin_test_unsupported(double a_double, float a_float,
                               v2s a_v2s, v4s a_v4s, v8s a_v8s,
                               v2i a_v2i, v4i a_v4i, v16i a_v16i, v32i a_v32i,
                               v2f a_v2f, v4f a_v4f, v16f a_v16f, v32f  a_v32f,
+                              short a_short, ushort a_ushort,
                               v4h a_v4h, v8h a_v8h, v32h a_v32h,
                               v6u a_v6u, v32bf a_v32bf,
-
                               uint a, uint b) {
 
   __builtin_amdgcn_ds_gws_init(a, b); // expected-error {{'__builtin_amdgcn_ds_gws_init' needs target feature gws}}
@@ -106,4 +107,18 @@ void builtin_test_unsupported(double a_double, float a_float,
   a_v32f  = __builtin_amdgcn_cvt_scale_pk32_f32_fp6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f32_fp6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
 
   a = __builtin_amdgcn_wave_match_b32(a, b); // expected-error {{'__builtin_amdgcn_wave_match_b32' needs target feature wave-match-insts}}
+
+  a_int = __builtin_amdgcn_exclusive_scan_sum_i32(a_int, a_int, true); // expected-error {{'__builtin_amdgcn_exclusive_scan_sum_i32' needs target feature exclusive-scan-insts}}
+  a = __builtin_amdgcn_exclusive_scan_sum_u32(a, a, true); // expected-error {{'__builtin_amdgcn_exclusive_scan_sum_u32' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_xor_b32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_xor_b32' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_or_b32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_or_b32' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_and_b32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_and_b32' needs target feature exclusive-scan-insts}}
+  a_short = __builtin_amdgcn_exclusive_scan_min_i16(a_short, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_min_i16' needs target feature exclusive-scan-insts}}
+  a_ushort = __builtin_amdgcn_exclusive_scan_min_u16(a_ushort, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_min_u16' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_min_i32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_min_i32' needs target feature exclusive-scan-insts}}
+  a = __builtin_amdgcn_exclusive_scan_min_u32(a, a); // expected-error {{'__builtin_amdgcn_exclusive_scan_min_u32' needs target feature exclusive-scan-insts}}
+  a_short = __builtin_amdgcn_exclusive_scan_max_i16(a_short, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_max_i16' needs target feature exclusive-scan-insts}}
+  a_ushort = __builtin_amdgcn_exclusive_scan_max_u16(a_ushort, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_max_u16' needs target feature exclusive-scan-insts}}
+  a_int = __builtin_amdgcn_exclusive_scan_max_i32(a_int, a_int); // expected-error {{'__builtin_amdgcn_exclusive_scan_max_i32' needs target feature exclusive-scan-insts}}
+  a = __builtin_amdgcn_exclusive_scan_max_u32(a, a); // expected-error {{'__builtin_amdgcn_exclusive_scan_max_u32' needs target feature exclusive-scan-insts}}
 }

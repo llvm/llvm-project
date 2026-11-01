@@ -135,6 +135,36 @@ entry:
 ; CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float 2.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
 }
 
+; Fast-math flags are preserved.
+define float @inlined_15(float %a) {
+entry:
+  %add = fadd nnan float %a, %a
+  ret float %add
+}
+
+define float @host_16(float %a) #0 {
+entry:
+  %0 = call float @inlined_15(float %a) #0
+  ret float %0
+; CHECK-LABEL: @host_16
+; CHECK: call nnan float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+}
+
+; Fast-math flags are preserved.
+define float @inlined_17(float %a, float %b) {
+entry:
+  %t = call afn float @llvm.pow.f32(float %a, float %b)
+  ret float %t
+}
+
+define float @host_18(float %a, float %b) #0 {
+entry:
+  %0 = call float @inlined_17(float %a, float %b) #0
+  ret float %0
+; CHECK-LABEL: @host_18
+; CHECK: call afn float @llvm.experimental.constrained.pow.f32(float %a, float %b, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+}
+
 attributes #0 = { strictfp }
 
 declare float  @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
@@ -143,3 +173,5 @@ declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
 declare i1     @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 declare float  @llvm.experimental.constrained.ceil.f32(float, metadata)
 declare float  @llvm.ceil.f32(float)
+declare float  @llvm.experimental.constrained.pow.f32(float, float, metadata, metadata)
+declare float  @llvm.pow.f32(float, float)

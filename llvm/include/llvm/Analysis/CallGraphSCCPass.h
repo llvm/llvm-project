@@ -31,6 +31,11 @@ class CallGraph;
 class CallGraphNode;
 class CallGraphSCC;
 class PMStack;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
+
+LLVM_ABI unsigned getMaxDevirtIterations(const cl::LibraryOptionsContext *);
 
 class LLVM_ABI CallGraphSCCPass : public Pass {
 public:
@@ -82,11 +87,10 @@ public:
 /// CallGraphSCC - This is a single SCC that a CallGraphSCCPass is run on.
 class CallGraphSCC {
   const CallGraph &CG; // The call graph for this SCC.
-  void *Context; // The CGPassManager object that is vending this.
   std::vector<CallGraphNode *> Nodes;
 
 public:
-  CallGraphSCC(CallGraph &cg, void *context) : CG(cg), Context(context) {}
+  CallGraphSCC(CallGraph &cg) : CG(cg) {}
 
   void initialize(ArrayRef<CallGraphNode *> NewNodes) {
     Nodes.assign(NewNodes.begin(), NewNodes.end());
@@ -94,14 +98,6 @@ public:
 
   bool isSingular() const { return Nodes.size() == 1; }
   unsigned size() const { return Nodes.size(); }
-
-  /// ReplaceNode - This informs the SCC and the pass manager that the specified
-  /// Old node has been deleted, and New is to be used in its place.
-  LLVM_ABI void ReplaceNode(CallGraphNode *Old, CallGraphNode *New);
-
-  /// DeleteNode - This informs the SCC and the pass manager that the specified
-  /// Old node has been deleted.
-  LLVM_ABI void DeleteNode(CallGraphNode *Old);
 
   using iterator = std::vector<CallGraphNode *>::const_iterator;
 

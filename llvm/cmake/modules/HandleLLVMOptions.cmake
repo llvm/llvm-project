@@ -135,22 +135,22 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
   # Enable assertions in libstdc++.
   add_compile_definitions(_GLIBCXX_ASSERTIONS)
-  # Cautiously enable the extensive hardening mode in libc++.
+  # Cautiously enable the extensive hardening mode in the build of libc++.
   if((DEFINED LIBCXX_HARDENING_MODE) AND
      (NOT LIBCXX_HARDENING_MODE STREQUAL "extensive"))
-    message(WARNING "LLVM_ENABLE_ASSERTIONS implies LIBCXX_HARDENING_MODE \"extensive\" but is overriden from command line with value \"${LIBCXX_HARDENING_MODE}\".")
+    message(STATUS "LLVM_ENABLE_ASSERTIONS implies LIBCXX_HARDENING_MODE \"extensive\" but is overriden from command line with value \"${LIBCXX_HARDENING_MODE}\".")
   else()
     set(LIBCXX_HARDENING_MODE "extensive")
   endif()
 
-  string(TOUPPER "_LIBCPP_HARDENING_MODE_${LIBCXX_HARDENING_MODE}" LIBCXX_HARDENING_MODE_SPELLING)
+  # Enable libc++ extensive hardening mode used to build binaries and tests if supported.
   CHECK_CXX_SOURCE_COMPILES("
-  #define _LIBCPP_HARDENING_MODE ${LIBCXX_HARDENING_MODE_SPELLING}
+  #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_EXTENSIVE
   #include <string>
   int main() { return 0; }
   " SUPPORTS_LIBCXX_HARDENING_MODE)
   if(SUPPORTS_LIBCXX_HARDENING_MODE)
-    add_compile_definitions(_LIBCPP_HARDENING_MODE=${LIBCXX_HARDENING_MODE_SPELLING})
+    add_compile_definitions(_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE)
   endif()
 endif()
 
@@ -708,7 +708,8 @@ if( MSVC )
     has_msvc_incremental_no_flag("${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_SHARED_LINKER_FLAGS}" NO_INCR_SHARED)
     if (NO_INCR_EXE AND NO_INCR_MODULE AND NO_INCR_SHARED)
       # The /Brepro flag in `clang-cl` omits the timestamp for .obj files while the linker flag omits the timestamp for .exe and .dll files.
-      append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+      add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/Brepro>")
+      add_link_options("LINKER:/Brepro")
     else()
       message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
     endif()

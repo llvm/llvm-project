@@ -38,7 +38,13 @@ config.environment["PYTHONHOME"] = config.python_root_dir
 # Enable sanitizer runtime flags.
 if config.llvm_use_sanitizer:
     config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-    config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+    tsan_suppressions = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "tsan-suppressions.txt"
+    )
+    tsan_options = "halt_on_error=1:suppressions=" + tsan_suppressions
+    if config.lldb_test_extra_tsan_options:
+        tsan_options += ":" + config.lldb_test_extra_tsan_options
+    config.environment["TSAN_OPTIONS"] = tsan_options
     config.environment["MallocNanoZone"] = "0"
 
 # testFormat: The test format to use to interpret tests.

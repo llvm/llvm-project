@@ -1388,11 +1388,13 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
                << ") has invalid binding: " << (int)binding;
 
     // st_value of STT_TLS represents the assigned offset, not the actual
-    // address which is used by STT_FUNC and STT_OBJECT. STT_TLS symbols can
-    // only be referenced by special TLS relocations. It is usually an error if
-    // a STT_TLS symbol is replaced by a non-STT_TLS symbol, vice versa.
-    if (LLVM_UNLIKELY(sym.isTls()) && eSym.getType() != STT_TLS &&
-        eSym.getType() != STT_NOTYPE)
+    // address which is used by STT_FUNC and STT_OBJECT. Report a TLS/non-TLS
+    // mismatch between the resolved symbol and this file's symbol. Exempt
+    // STT_NOTYPE, which may come from hand-written assembly or bitcode module
+    // asm (STT_NOTYPE before LTO).
+    if (LLVM_UNLIKELY(sym.isTls() != (eSym.getType() == STT_TLS)) &&
+        eSym.getType() != STT_NOTYPE &&
+        !(sym.type == STT_NOTYPE && isa_and_nonnull<BitcodeFile>(sym.file)))
       Err(ctx) << "TLS attribute mismatch: " << &sym << "\n>>> in " << sym.file
                << "\n>>> in " << this;
 
@@ -1795,6 +1797,9 @@ static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
     return t.isOSIAMCU() ? EM_IAMCU : EM_386;
   case Triple::x86_64:
     return EM_X86_64;
+  case Triple::nvptx:
+  case Triple::nvptx64:
+    return EM_CUDA;
   default:
     ErrAlways(ctx) << path
                    << ": could not infer e_machine from bitcode target triple "

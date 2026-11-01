@@ -1,3 +1,4 @@
+// REQUIRES: host-supports-cuda
 // Tests device function templates
 // RUN: cat %s | clang-repl --cuda | FileCheck %s
 

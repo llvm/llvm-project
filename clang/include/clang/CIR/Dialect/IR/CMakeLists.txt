@@ -5,8 +5,8 @@
 
 # Equivalent to add_mlir_dialect(CIROps cir)
 set(LLVM_TARGET_DEFINITIONS CIROps.td)
-mlir_tablegen(CIROps.h.inc -gen-op-decls)
-mlir_tablegen(CIROps.cpp.inc -gen-op-defs)
+mlir_tablegen(CIROps.h.inc -gen-op-decls -op-shard-count=${CLANG_CIR_OP_SHARD_COUNT})
+mlir_tablegen(CIROps.cpp.inc -gen-op-defs -op-shard-count=${CLANG_CIR_OP_SHARD_COUNT})
 mlir_tablegen(CIROpsTypes.h.inc -gen-typedef-decls)
 mlir_tablegen(CIROpsTypes.cpp.inc -gen-typedef-defs)
 mlir_tablegen(CIROpsDialect.h.inc -gen-dialect-decls)
@@ -22,6 +22,11 @@ mlir_tablegen(CIROpsEnums.cpp.inc -gen-enum-defs)
 mlir_tablegen(CIROpsAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(CIROpsAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRCIREnumsGen)
+
+# CIR dialect bytecode reader/writer tables.
+set(LLVM_TARGET_DEFINITIONS CIRDialectBytecode.td)
+mlir_tablegen(CIRDialectBytecode.cpp.inc -gen-bytecode -bytecode-dialect="CIR")
+add_public_tablegen_target(MLIRCIRDialectBytecodeIncGen)
 
 clang_tablegen(CIRLowering.inc -gen-cir-lowering
                SOURCE CIROps.td

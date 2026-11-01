@@ -298,7 +298,15 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_flags, os_unfair_lock_t lock,
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock_with_flags, lock, flags);
   MutexPreLock(thr, pc, (uptr)lock);
+#    if SANITIZER_IOSSIM
+  // Sometimes this call is forwarded to lock_with_options, which we also
+  // intercept. Avoid the confusion by ignoring interceptors temporarily.
+  cur_thread()->ignore_interceptors++;
   REAL(os_unfair_lock_lock_with_flags)(lock, flags);
+  cur_thread()->ignore_interceptors--;
+#    else
+  REAL(os_unfair_lock_lock_with_flags)(lock, flags);
+#    endif
   MutexPostLock(thr, pc, (uptr)lock);
 }
 #    pragma clang diagnostic pop

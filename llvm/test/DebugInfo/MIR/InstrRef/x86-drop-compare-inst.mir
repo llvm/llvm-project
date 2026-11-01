@@ -80,7 +80,7 @@ body:             |
     successors: %bb.1(0x30000000), %bb.2(0x50000000)
 
     %1:gr64 = IMPLICIT_DEF
-    %0:gr64 = MOV64rm killed %1, 1, $noreg, 0, $noreg, debug-location !7 :: (load (s64) from `ptr undef`)
+    %0:gr64 = MOV64rm %1, 1, $noreg, 0, $noreg, debug-location !7 :: (load (s64) from `ptr undef`)
     %2:gr32 = COPY %0.sub_32bit, debug-location !7
     %3:gr32 = SUB32rm %2, %0, 1, $noreg, 0, $noreg, implicit-def $eflags, debug-instr-number 1, debug-location !7 :: (load (s32) from %ir._M_start.i2756, align 8)
     DBG_INSTR_REF !8, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !7

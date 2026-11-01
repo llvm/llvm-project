@@ -1,11 +1,11 @@
 # RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu -start-after \
-# RUN:   virtregrewriter -ppc-asm-full-reg-names -verify-machineinstrs %s \
+# RUN:   virt-reg-rewriter -ppc-asm-full-reg-names -verify-machineinstrs %s \
 # RUN:   -o - | FileCheck %s
 # RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu -start-after \
-# RUN:   virtregrewriter -ppc-asm-full-reg-names -verify-machineinstrs %s \
+# RUN:   virt-reg-rewriter -ppc-asm-full-reg-names -verify-machineinstrs %s \
 # RUN:   -o - | FileCheck %s
 # RUN: llc -mcpu=pwr10 -mtriple=powerpc64le-unknown-linux-gnu -start-after \
-# RUN:   virtregrewriter -ppc-asm-full-reg-names -verify-machineinstrs %s \
+# RUN:   virt-reg-rewriter -ppc-asm-full-reg-names -verify-machineinstrs %s \
 # RUN:   -o - | FileCheck %s
 
 --- |

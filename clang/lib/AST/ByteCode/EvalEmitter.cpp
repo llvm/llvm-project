@@ -157,13 +157,7 @@ Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
-  Desc.Desc = D;
-  Desc.Offset = sizeof(InlineDescriptor);
-  Desc.IsActive = false;
-  Desc.IsBase = false;
-  Desc.IsFieldMutable = false;
-  Desc.IsConst = false;
-  Desc.IsInitialized = false;
+  new (&Desc) InlineDescriptor(D);
 
   // Register the local.
   unsigned Off = Locals.size();
@@ -282,16 +276,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (Ptr.isPastEnd())
-      return false;
-
     if (!Ptr.isZero() && !CheckFinalLoad(S, CodePtr(), Ptr))
-      return false;
-
-    // Never allow reading from a non-const pointer, unless the memory
-    // has been created in this evaluation.
-    if (!Ptr.isZero() && !Ptr.isConst() && Ptr.isBlockPointer() &&
-        Ptr.block()->getEvalID() != Ctx.getEvalID())
       return false;
 
     if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
@@ -340,7 +325,7 @@ bool EvalEmitter::emitRetValue(SourceInfo Info) {
 
   if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
-  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+  if (!EvalResult.checkFullyInitialized(S, Ptr))
     return false;
   if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
     return false;

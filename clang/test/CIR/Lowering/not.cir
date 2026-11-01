@@ -2,6 +2,7 @@
 // RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering  | FileCheck %s -check-prefix=LLVM
 
 !s128i = !cir.int<s, 128>
+!s32i = !cir.int<s, 32>
 !u128i = !cir.int<u, 128>
 
 module attributes { cir.triple = "x86_64-unknown-linux-gnu" } {
@@ -30,4 +31,17 @@ cir.func @unsigned(%arg: !u128i) -> !u128i {
 // LLVM: define i128 @unsigned(i128 %[[ARG:.*]])
 // LLVM: %[[INVERT:.*]] = xor i128 %[[ARG]], -1 
 // LLVM: ret i128 %[[INVERT]]
+
+cir.func @scalable_vector(%arg: !cir.vector<[4] x !s32i>) -> !cir.vector<[4] x !s32i> {
+  %inverted = cir.not %arg : !cir.vector<[4] x !s32i>
+  cir.return %inverted : !cir.vector<[4] x !s32i>
+}
+// MLIR: llvm.func @scalable_vector(%[[ARG:.*]]: vector<[4]xi32>) -> vector<[4]xi32>
+// MLIR: %[[NEG_ONE:.*]] = llvm.mlir.constant(dense<-1> : vector<[4]xi32>) : vector<[4]xi32>
+// MLIR: %[[INVERT:.*]] = llvm.xor %[[ARG]], %[[NEG_ONE]] : vector<[4]xi32>
+// MLIR: llvm.return %[[INVERT]] : vector<[4]xi32>
+
+// LLVM: define <vscale x 4 x i32> @scalable_vector(<vscale x 4 x i32> %[[ARG:.*]])
+// LLVM: %[[INVERT:.*]] = xor <vscale x 4 x i32> %[[ARG]], splat (i32 -1)
+// LLVM: ret <vscale x 4 x i32> %[[INVERT]]
 }

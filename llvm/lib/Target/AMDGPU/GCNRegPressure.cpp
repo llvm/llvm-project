@@ -627,7 +627,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   DefPressure += CurPressure;
   if (HasECDefs)
     DefPressure += ECDefPressure;
-  MaxPressure = max(DefPressure, MaxPressure);
+  updateMaxPressure(DefPressure);
 
   // Make uses alive.
   SmallVector<VRegMaskOrUnit, 8> RegUses;
@@ -640,8 +640,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   }
 
   // Update MaxPressure with uses plus early-clobber defs pressure.
-  MaxPressure = HasECDefs ? max(CurPressure + ECDefPressure, MaxPressure)
-                          : max(CurPressure, MaxPressure);
+  updateMaxPressure(HasECDefs ? CurPressure + ECDefPressure : CurPressure);
 
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
@@ -671,85 +670,79 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
   return NextMI != End;
 }
 
-bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
-                                             bool UseInternalIterator) {
-  assert(MRI && "call reset first");
-  SlotIndex SI;
-  const MachineInstr *CurrMI;
-  if (UseInternalIterator) {
-    if (!LastTrackedMI)
-      return NextMI == MBBEnd;
-
-    assert(NextMI == MBBEnd || !NextMI->isDebugInstr());
-    CurrMI = LastTrackedMI;
-
-    SI = NextMI == MBBEnd
-             ? LIS.getInstructionIndex(*LastTrackedMI).getDeadSlot()
-             : LIS.getInstructionIndex(*NextMI).getBaseIndex();
-  } else { //! UseInternalIterator
-    SI = LIS.getInstructionIndex(*MI).getBaseIndex();
-    CurrMI = MI;
-  }
-
-  assert(SI.isValid());
-
-  // Remove dead registers or mask bits.
-  SmallSet<Register, 8> SeenRegs;
-  for (auto &MO : CurrMI->operands()) {
-    if (!MO.isReg() || !MO.getReg().isVirtual())
-      continue;
-    if (MO.isUse() && !MO.readsReg())
-      continue;
-    if (!UseInternalIterator && MO.isDef())
-      continue;
-    if (!SeenRegs.insert(MO.getReg()).second)
-      continue;
-    const LiveInterval &LI = LIS.getInterval(MO.getReg());
-    if (LI.hasSubRanges()) {
-      auto It = LiveRegs.end();
-      for (const auto &S : LI.subranges()) {
-        if (!S.liveAt(SI)) {
-          if (It == LiveRegs.end()) {
-            It = LiveRegs.find(MO.getReg());
-            if (It == LiveRegs.end())
-              llvm_unreachable("register isn't live");
-          }
-          auto PrevMask = It->second;
-          It->second &= ~S.LaneMask;
-          CurPressure.inc(MO.getReg(), PrevMask, It->second, *MRI);
+void GCNDownwardRPTrackerBase::retireVirtReg(Register Reg, SlotIndex SI) {
+  const LiveInterval &LI = LIS.getInterval(Reg);
+  if (LI.hasSubRanges()) {
+    auto It = LiveRegs.end();
+    for (const auto &S : LI.subranges()) {
+      if (!S.liveAt(SI)) {
+        if (It == LiveRegs.end()) {
+          It = LiveRegs.find(Reg);
+          if (It == LiveRegs.end())
+            llvm_unreachable("register isn't live");
         }
+        auto PrevMask = It->second;
+        It->second &= ~S.LaneMask;
+        CurPressure.inc(Reg, PrevMask, It->second, *MRI);
       }
-      if (It != LiveRegs.end() && It->second.none())
-        LiveRegs.erase(It);
-    } else if (!LI.liveAt(SI)) {
-      auto It = LiveRegs.find(MO.getReg());
-      if (It == LiveRegs.end())
-        llvm_unreachable("register isn't live");
-      CurPressure.inc(MO.getReg(), It->second, LaneBitmask::getNone(), *MRI);
-      LiveRegs.erase(It);
     }
+    if (It != LiveRegs.end() && It->second.none())
+      LiveRegs.erase(It);
+  } else if (!LI.liveAt(SI)) {
+    auto It = LiveRegs.find(Reg);
+    if (It == LiveRegs.end())
+      llvm_unreachable("register isn't live");
+    CurPressure.inc(Reg, It->second, LaneBitmask::getNone(), *MRI);
+    LiveRegs.erase(It);
   }
-
-  MaxPressure = max(MaxPressure, CurPressure);
-
-  LastTrackedMI = nullptr;
-
-  return UseInternalIterator && (NextMI == MBBEnd);
 }
 
-void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI,
-                                         bool UseInternalIterator) {
-  if (UseInternalIterator) {
-    LastTrackedMI = &*NextMI++;
-    NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
-  } else {
-    LastTrackedMI = MI;
+void GCNDownwardRPTrackerBase::retireDeadUses(const MachineInstr &MI) {
+  assert(MRI && "call reset first");
+
+  if (MI.isPHI())
+    return;
+
+  // Mirror ECDefPressure handling from GCNUpwardRPTracker::recede().
+  GCNRegPressure ECDefPressure;
+  for (const MachineOperand &MO : MI.all_defs()) {
+    Register Reg = MO.getReg();
+    if (Reg.isVirtual() && MO.isEarlyClobber())
+      ECDefPressure.inc(Reg, LaneBitmask::getNone(), getDefRegMask(MO, *MRI),
+                        *MRI);
   }
 
-  const MachineInstr *CurrMI = LastTrackedMI;
+  updateMaxPressure(CurPressure + ECDefPressure);
+
+  SlotIndex SI = LIS.getInstructionIndex(MI).getDeadSlot();
+  assert(SI.isValid());
+  SmallSet<Register, 8> SeenRegs;
+  for (const MachineOperand &MO : MI.all_uses()) {
+    Register Reg = MO.getReg();
+    if (MO.readsReg() && Reg.isVirtual() && SeenRegs.insert(Reg).second)
+      retireVirtReg(Reg, SI);
+  }
+}
+
+void GCNDownwardRPTrackerBase::retireDeadDefs(const MachineInstr &MI,
+                                              SlotIndex SI) {
+  assert(MRI && "call reset first");
+
+  SmallSet<Register, 8> SeenRegs;
+  for (const MachineOperand &MO : MI.all_defs()) {
+    Register Reg = MO.getReg();
+    if (Reg.isVirtual() && SeenRegs.insert(Reg).second)
+      retireVirtReg(Reg, SI);
+  }
+
+  updateMaxPressure(CurPressure);
+}
+
+void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
+  assert(MRI && "call reset first");
 
   // Add new registers or mask bits.
-  for (const auto &MO : CurrMI->all_defs()) {
+  for (const MachineOperand &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
     if (!Reg.isVirtual())
       continue;
@@ -758,26 +751,36 @@ void GCNDownwardRPTracker::advanceToNext(MachineInstr *MI,
     LiveMask |= getDefRegMask(MO, *MRI);
     CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
   }
-
-  MaxPressure = max(MaxPressure, CurPressure);
+  updateMaxPressure(CurPressure);
 }
 
-bool GCNDownwardRPTracker::advance(MachineInstr *MI, bool UseInternalIterator) {
-  if (UseInternalIterator && NextMI == MBBEnd)
+bool GCNDownwardRPTracker::advanceBeforeNext() {
+  if (!LastTrackedMI.isValid())
+    return NextMI == MBBEnd;
+  assert(NextMI == MBBEnd || !NextMI->isDebugInstr());
+
+  SlotIndex SI = NextMI == MBBEnd
+                     ? LIS.getInstructionIndex(*LastTrackedMI).getDeadSlot()
+                     : LIS.getInstructionIndex(*NextMI).getBaseIndex();
+  assert(SI.isValid());
+  GCNDownwardRPTrackerBase::retireDeadDefs(*LastTrackedMI, SI);
+  LastTrackedMI = nullptr;
+  return NextMI == MBBEnd;
+}
+
+void GCNDownwardRPTracker::advanceToNext() {
+  LastTrackedMI = NextMI++;
+  NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
+  GCNDownwardRPTrackerBase::retireDeadUses(*LastTrackedMI);
+  GCNDownwardRPTrackerBase::addDefs(*LastTrackedMI);
+}
+
+bool GCNDownwardRPTracker::advance() {
+  if (NextMI == MBBEnd)
     return false;
 
-  advanceBeforeNext(MI, UseInternalIterator);
-  advanceToNext(MI, UseInternalIterator);
-  if (!UseInternalIterator) {
-    const MachineInstr *SavedLastTrackedMI = LastTrackedMI;
-    // We must remove any dead def lanes from the current RP
-    advanceBeforeNext(MI, true);
-    // Restore LastTrackedMI set by advanceToNext, otherwise
-    // speculative queries (bumpDownwardPressure) don't
-    // know the last scheduled instruction and fail to
-    // correctly estimate pressure change.
-    LastTrackedMI = SavedLastTrackedMI;
-  }
+  advanceBeforeNext();
+  advanceToNext();
   return true;
 }
 
@@ -793,7 +796,18 @@ bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
                                    const LiveRegSet *LiveRegsCopy) {
   if (!reset(*Begin, End, LiveRegsCopy))
     return false;
-  return advance(End);
+  return GCNDownwardRPTracker::advance(End);
+}
+
+void GCNManualDownwardRPTracker::advance(const MachineInstr &MI) {
+  GCNDownwardRPTrackerBase::retireDeadUses(MI);
+  GCNDownwardRPTrackerBase::addDefs(MI);
+  GCNDownwardRPTrackerBase::retireDeadDefs(
+      MI, LIS.getInstructionIndex(MI).getDeadSlot());
+
+  // Speculative queries (bumpDownwardPressure) must know the last scheduled
+  // instruction to correctly estimate pressure change.
+  LastTrackedMI = &MI;
 }
 
 Printable llvm::reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
@@ -821,9 +835,8 @@ Printable llvm::reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
   });
 }
 
-GCNRegPressure
-GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
-                                           const SIRegisterInfo *TRI) const {
+GCNRegPressure GCNDownwardRPTrackerBase::bumpDownwardPressure(
+    const MachineInstr *MI, const SIRegisterInfo *TRI) const {
   assert(!MI->isDebugOrPseudoInstr() && "Expect a nondebug instruction.");
 
   SlotIndex SlotIdx;
@@ -832,7 +845,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
   SlotIndex CurrIdx;
   const MachineBasicBlock *MBB = MI->getParent();
   MachineBasicBlock::const_iterator StartPos =
-      LastTrackedMI ? std::next(LastTrackedMI->getIterator()) : MBB->begin();
+      LastTrackedMI.isValid() ? std::next(LastTrackedMI) : MBB->begin();
   MachineBasicBlock::const_iterator IdxPos =
       skipDebugInstructionsForward(StartPos, MBB->end());
   if (IdxPos == MBB->end()) {
@@ -973,7 +986,7 @@ getRegLiveThroughMask(const MachineRegisterInfo &MRI, const LiveIntervals &LIS,
 bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  const LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   auto &OS = dbgs();
 
@@ -1026,8 +1039,9 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 
         while (!RPT.advanceBeforeNext()) {
           GCNRegPressure RPBeforeMI = RPT.getPressure();
+          RPT.resetMaxPressure();
           RPT.advanceToNext();
-          RP.emplace_back(RPBeforeMI, RPT.getPressure());
+          RP.emplace_back(RPBeforeMI, RPT.getMaxPressure());
         }
 
         LiveOut = RPT.getLiveRegs();
@@ -1105,11 +1119,17 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   unsigned MaxNumRegs = 0;
   const MachineInstr *MaxPressureMI = nullptr;
   GCNUpwardRPTracker RPT(LIS);
+  // The maximum pressure of the tracker pairs the VGPR and AVGPR components,
+  // so take the maximum of Kind alone from each point.
+  unsigned NumRegs = 0;
+  RPT.setPressureCallback([&](const GCNRegPressure &RP) {
+    NumRegs = std::max(NumRegs, RP.getNumRegs(Kind));
+  });
   for (const MachineBasicBlock &MBB : MF) {
     RPT.reset(MRI, LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
+    NumRegs = RPT.getPressure().getNumRegs(Kind);
     for (const MachineInstr &MI : reverse(MBB)) {
       RPT.recede(MI);
-      unsigned NumRegs = RPT.getMaxPressure().getNumRegs(Kind);
       if (NumRegs > MaxNumRegs) {
         MaxNumRegs = NumRegs;
         MaxPressureMI = &MI;

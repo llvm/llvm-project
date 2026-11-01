@@ -35,15 +35,11 @@ class FunctionPass;
 // LLVM IR passes.
 class WebAssemblyLowerEmscriptenEHSjLjPass
     : public RequiredPassInfoMixin<WebAssemblyLowerEmscriptenEHSjLjPass> {
-  bool EnableEmEH;
-
 public:
-  WebAssemblyLowerEmscriptenEHSjLjPass(bool EnableEmEH = false)
-      : EnableEmEH(EnableEmEH) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
-ModulePass *createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(bool EnableEmEH);
+ModulePass *createWebAssemblyLowerEmscriptenEHSjLjLegacyPass();
 
 class WebAssemblyAddMissingPrototypesPass
     : public RequiredPassInfoMixin<WebAssemblyAddMissingPrototypesPass> {

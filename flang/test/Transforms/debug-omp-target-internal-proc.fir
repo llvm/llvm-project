@@ -15,7 +15,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func private @_QFPtar(%arg0: !fir.ref<i32>) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
     %0 = omp.map.info var_ptr(%arg0 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("n") -> !fir.ref<i32>
     omp.target kernel_type(generic) map_entries(%0 -> %arg1 : !fir.ref<i32>) {
-      %1 = fircg.ext_declare %arg1 {uniq_name = "_QFEn"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
+      %1 = fircg.ext_declare %arg1 uniq_name("_QFEn") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
       omp.terminator
     } loc(#loc4)
     return
@@ -39,7 +39,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>, omp.is_gpu = true, omp.is_tar
   func.func private @_QFPtar(%arg0: !fir.ref<i32>) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
     %0 = omp.map.info var_ptr(%arg0 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("n") -> !fir.ref<i32>
     omp.target kernel_type(generic) map_entries(%0 -> %arg1 : !fir.ref<i32>) {
-      %1 = fircg.ext_declare %arg1 {uniq_name = "_QFEn"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
+      %1 = fircg.ext_declare %arg1 uniq_name("_QFEn") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
       omp.terminator
     } loc(#loc4)
     return

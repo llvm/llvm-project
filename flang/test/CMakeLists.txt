@@ -114,6 +114,7 @@ if (NOT FLANG_STANDALONE_BUILD)
     not
     llvm-bcanalyzer
     llvm-dis
+    llvm-dwarfdump
     llvm-objcopy
     llvm-objdump
     llvm-profdata

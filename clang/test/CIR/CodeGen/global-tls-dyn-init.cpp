@@ -122,7 +122,7 @@ thread_local CtorDtor tls_cd = 5;
 // LLVM-BOTH:   ret void
 
 thread_local CtorDtor tls_cd_dyn = get_i();
-// CIR-BEFORE-LPP:  cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10tls_cd_dyn", "_ZTH10tls_cd_dyn"> @tls_cd_dyn = ctor : !rec_CtorDtor {
+// CIR-BEFORE-LPP:  cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10tls_cd_dyn", "_ZTH10tls_cd_dyn"> @tls_cd_dyn = #cir.zero : !rec_CtorDtor ctor {
 // CIR-BEFORE-LPP:    %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:    %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR-BEFORE-LPP:    cir.call @_ZN8CtorDtorC1Ei(%[[GET_GLOB]], %[[CALL]]) : (!cir.ptr<!rec_CtorDtor>
@@ -155,7 +155,7 @@ thread_local CtorDtor tls_cd_dyn = get_i();
 // LLVM-BOTH:   ret void
 
 thread_local CtorDtor &tls_cd_ref = tls_cd_dyn;
-// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10tls_cd_ref", "_ZTH10tls_cd_ref"> @tls_cd_ref = ctor : !cir.ptr<!rec_CtorDtor> {
+// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10tls_cd_ref", "_ZTH10tls_cd_ref"> @tls_cd_ref = #cir.ptr<null> : !cir.ptr<!rec_CtorDtor> ctor {
 // CIR-BEFORE-LPP:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_ref : !cir.ptr<!cir.ptr<!rec_CtorDtor>>
 // CIR-BEFORE-LPP:   %[[CALL:.*]] = cir.get_global thread_local @tls_cd_dyn : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:   cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor>, !cir.ptr<!cir.ptr<!rec_CtorDtor>>
@@ -182,7 +182,7 @@ thread_local CtorDtor &tls_cd_ref = tls_cd_dyn;
 // OGCG: }
 
 thread_local CtorDtor tls_cd_dyn_not_used = get_i();
-// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW19tls_cd_dyn_not_used", "_ZTH19tls_cd_dyn_not_used"> @tls_cd_dyn_not_used = ctor : !rec_CtorDtor {
+// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW19tls_cd_dyn_not_used", "_ZTH19tls_cd_dyn_not_used"> @tls_cd_dyn_not_used = #cir.zero : !rec_CtorDtor ctor {
 // CIR-BEFORE-LPP:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn_not_used : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:   %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR-BEFORE-LPP:   cir.call @_ZN8CtorDtorC1Ei(%[[GET_GLOB]], %[[CALL]])

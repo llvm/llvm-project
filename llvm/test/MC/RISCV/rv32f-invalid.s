@@ -6,8 +6,10 @@ flw ft1, -2049(a0) # CHECK: :[[@LINE]]:10: error: operand must be a symbol with 
 fsw ft2, 2048(a1) # CHECK: :[[@LINE]]:10: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 # Memory operand not formatted correctly
-flw ft1, a0, -200 # CHECK: :[[@LINE]]:14: error: register must be a GPR
-fsw ft2, a1, 100 # CHECK: :[[@LINE]]:14: error: register must be a GPR
+flw ft1, a0, -200 # CHECK: :[[@LINE]]:14: error: register must be a GPR excluding zero (x0)
+fsw ft2, a1, 100 # CHECK: :[[@LINE]]:14: error: register must be a GPR excluding zero (x0)
+flw ft1, a_symbol, x0 # CHECK: :[[@LINE]]:20: error: register must be a GPR excluding zero (x0)
+fsw ft2, a_symbol, x0 # CHECK: :[[@LINE]]:20: error: register must be a GPR excluding zero (x0)
 
 # Invalid register names
 flw ft15, 100(a0) # CHECK: :[[@LINE]]:5: error: register must be a FPR

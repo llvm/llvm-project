@@ -95,6 +95,24 @@ void test_builtin_stdc_memreverse8_u64(unsigned char *p) {
 // LLVM: call i64 @llvm.bswap.i64(
 // LLVM: store i64
 
+void test_builtin_stdc_memreverse8_as3(
+    __attribute__((address_space(3))) unsigned char *p) {
+  __builtin_stdc_memreverse8(4, p);
+}
+
+// CIR-LABEL: test_builtin_stdc_memreverse8_as3
+// CIR: %[[P:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!u8i, target_address_space(3)>>, !cir.ptr<!u8i, target_address_space(3)>
+// CIR: %[[CAST:.*]] = cir.cast bitcast %[[P]] : !cir.ptr<!u8i, target_address_space(3)> -> !cir.ptr<!u32i, target_address_space(3)>
+// CIR: %[[VAL:.*]] = cir.load {{.*}} %[[CAST]] : !cir.ptr<!u32i, target_address_space(3)>, !u32i
+// CIR: %[[SWAP:.*]] = cir.byte_swap %[[VAL]] : !u32i
+// CIR: cir.store {{.*}} %[[SWAP]], %[[CAST]] : !u32i, !cir.ptr<!u32i, target_address_space(3)>
+
+// LLVM-LABEL: test_builtin_stdc_memreverse8_as3
+// LLVM: %[[P:.*]] = load ptr addrspace(3), ptr
+// LLVM: %[[VAL:.*]] = load i32, ptr addrspace(3) %[[P]]
+// LLVM: %[[SWAP:.*]] = call i32 @llvm.bswap.i32(i32 %[[VAL]])
+// LLVM: store i32 %[[SWAP]], ptr addrspace(3) %[[P]]
+
 void test_builtin_stdc_memreverse8_size3(unsigned char *p) {
   __builtin_stdc_memreverse8(3, p);
 }

@@ -21,15 +21,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 
-#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
-#include <sanitizer/lsan_interface.h>
-static int SkipLeakCheck;
-LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return SkipLeakCheck; }
-static void skipLeakCheck() { SkipLeakCheck = 1; }
-#else
-static void skipLeakCheck() {}
-#endif
-
 using namespace llvm;
 using namespace llvm::object;
 
@@ -119,18 +110,18 @@ static void reportError(StringRef Input, Error Err) {
 
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
-  auto Fatal = [](const Twine &Msg) {
+  bool HasError = false;
+  auto ErrorFn = [&](const Twine &Msg) {
     WithColor::error(errs(), "obj2yaml") << Msg << '\n';
-    // exit() terminates without unwinding the stack or running destructors, and
-    // there is no guaranty that pointers to allocations will be preserved, so
-    // LSan reports in-flight heap allocations as leaks at atexit.
-    skipLeakCheck();
-    exit(1);
+    HasError = true;
   };
   BumpPtrAllocator A;
   StringSaver Saver(A);
   Obj2YamlOptTable Tbl;
-  opt::InputArgList Args = Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, Fatal);
+  opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, ErrorFn);
+  if (HasError)
+    return 1;
   if (Args.hasArg(OPT_help)) {
     Tbl.printHelp(outs(), "obj2yaml [options] <input file>",
                   "Dump a YAML description from an object file");
@@ -143,7 +134,7 @@ int main(int argc, char *argv[]) {
 
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   if (Inputs.size() > 1)
-    Fatal("too many input files");
+    ErrorFn("too many input files");
   StringRef InputFilename =
       Inputs.empty() ? StringRef("-") : StringRef(Inputs[0]);
   StringRef OutputFilename = Args.getLastArgValue(OPT_o, "-");
@@ -154,19 +145,22 @@ int main(int argc, char *argv[]) {
     else if (S == "linkedit")
       RawSegment |= RawSegments::linkedit;
     else
-      Fatal("unknown segment '" + S + "' for --raw-segment");
+      ErrorFn("unknown segment '" + S + "' for --raw-segment");
   }
+  if (HasError)
+    return 1;
 
   std::error_code EC;
-  std::unique_ptr<ToolOutputFile> Out(
-      new ToolOutputFile(OutputFilename, EC, sys::fs::OF_Text));
-  if (EC)
-    Fatal("failed to open '" + OutputFilename + "': " + EC.message());
-  if (Error Err = dumpInput(InputFilename, RawSegment, Out->os())) {
+  ToolOutputFile Out(OutputFilename, EC, sys::fs::OF_Text);
+  if (EC) {
+    ErrorFn("failed to open '" + OutputFilename + "': " + EC.message());
+    return 1;
+  }
+  if (Error Err = dumpInput(InputFilename, RawSegment, Out.os())) {
     reportError(InputFilename, std::move(Err));
     return 1;
   }
-  Out->keep();
+  Out.keep();
 
   return 0;
 }

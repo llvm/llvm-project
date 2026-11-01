@@ -17,7 +17,6 @@
 #include <optional>
 
 namespace mlir {
-
 class UnrealizedConversionCastOp;
 class VectorType;
 class OpOperand;
@@ -38,7 +37,6 @@ struct uArch;
 } // namespace xegpu
 
 namespace xegpu {
-
 /// Flatten a set of ValueRange into a single SmallVector<Value>
 SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
 
@@ -104,6 +102,13 @@ Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 /// if no GPU module parent or XeVM target attribute exists.
 std::optional<std::string> getChipStr(Operation *op);
 
+/// Returns the number of subgroups the kernel enclosing `op` runs, derived from
+/// the `known_block_size` of its parent `gpu.func`. Fails when there is no such
+/// parent, when the attribute is absent, when a block dimension is not a
+/// positive power of two, or when the block does not cover a whole subgroup.
+FailureOr<int64_t> getNumSubgroupsFromBlockSize(Operation *op,
+                                                int64_t subgroupSize);
+
 /// Generates element-wise addition ops of two arrays with same length.
 SmallVector<OpFoldResult> addElementwise(OpBuilder &builder, Location loc,
                                          ArrayRef<OpFoldResult> lhs,
@@ -142,11 +147,12 @@ Value lowerToVectorReductions(TypedValue<VectorType> src,
                               Location loc, PatternRewriter &rewriter);
 
 /// Creates a constant filled with the neutral (identity) value for the
-/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL/AND,
-/// max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and +/-infinity
-/// for float min/max operations. If \p type is a VectorType, returns a splat
-/// vector constant; otherwise returns a scalar constant. Returns nullptr if
-/// the element type is incompatible with the requested reduction kind.
+/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL, all ones
+/// for AND, max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and
+/// +/-infinity for float min/max operations. If \p type is a VectorType,
+/// returns a splat vector constant; otherwise returns a scalar constant.
+/// Returns nullptr if the element type is incompatible with the requested
+/// reduction kind.
 Value createReductionNeutralValue(OpBuilder &builder, Location loc, Type type,
                                   vector::CombiningKind kind);
 
@@ -240,8 +246,8 @@ bool hasStaticShapeAndStrides(MemRefType type);
 bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                            SmallVector<int64_t> &expandedUnitDims);
 
-// Checks if dst shape is an expansion of src shape where each dimension in src
-// is split into one or more consecutive dimensions in dst
+// Checks if dst shape is a non-unit expansion of src shape where each
+// dimension in src is split into one or more consecutive dimensions in dst.
 bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                             SmallVector<SmallVector<int64_t>> &splitDimGroups);
 
@@ -297,9 +303,7 @@ void cleanupUnrealizedConversionCasts(
 // dst=[1,4096] -> true, collapseDims=[[],[0,1,2]].
 bool matchDimCollapse(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                       SmallVector<SmallVector<int64_t>> &collapseDims);
-
 } // namespace xegpu
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_
