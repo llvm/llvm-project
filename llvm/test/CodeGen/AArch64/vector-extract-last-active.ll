@@ -503,10 +503,9 @@ define i8 @extract_last_active_split(<vscale x 32 x i8> %data, <vscale x 32 x i1
 ; CHECK-NEXT:    rdvl x10, #2
 ; CHECK-NEXT:    csel x8, x8, x9, ne
 ; CHECK-NEXT:    sub x9, x10, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    ptest p0, p0.b
+; CHECK-NEXT:    and x8, x8, x9
+; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    ldrb w8, [x9, x8]
 ; CHECK-NEXT:    csel w0, w8, w0, ne
 ; CHECK-NEXT:    addvl sp, sp, #2

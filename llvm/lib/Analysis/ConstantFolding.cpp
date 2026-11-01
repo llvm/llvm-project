@@ -1037,11 +1037,11 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
       return nullptr;
 
   unsigned BitWidth = DL.getTypeSizeInBits(IntIdxTy);
-  APInt Offset = APInt(
-      BitWidth,
-      DL.getIndexedOffsetInType(
-          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)),
-      /*isSigned=*/true, /*implicitTrunc=*/true);
+  APInt Offset(BitWidth, 0);
+  ArrayRef<const Value *> Indices(
+      reinterpret_cast<const Value *const *>(Ops.data()) + 1, Ops.size() - 1);
+  if (!GEPOperator::accumulateConstantOffset(SrcElemTy, Indices, DL, Offset))
+    return nullptr;
 
   std::optional<ConstantRange> InRange = GEP->getInRange();
   if (InRange)
@@ -1053,16 +1053,9 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   while (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
     NW &= GEP->getNoWrapFlags();
 
-    SmallVector<Value *, 4> NestedOps(llvm::drop_begin(GEP->operands()));
-
-    // Do not try the incorporate the sub-GEP if some index is not a number.
-    bool AllConstantInt = true;
-    for (Value *NestedOp : NestedOps)
-      if (!isa<ConstantInt>(NestedOp)) {
-        AllConstantInt = false;
-        break;
-      }
-    if (!AllConstantInt)
+    // Do not try to incorporate the sub-GEP if some index is not a number.
+    APInt NestedOffset(BitWidth, 0);
+    if (!GEP->accumulateConstantOffset(DL, NestedOffset))
       break;
 
     // Adjust inrange offset and intersect inrange attributes
@@ -1074,10 +1067,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
     Ptr = cast<Constant>(GEP->getOperand(0));
     SrcElemTy = GEP->getSourceElementType();
-    Offset = Offset.sadd_ov(
-        APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps),
-              /*isSigned=*/true, /*implicitTrunc=*/true),
-        Overflow);
+    Offset = Offset.sadd_ov(NestedOffset, Overflow);
   }
 
   // Preserving nusw (without inbounds) also requires that the offset
@@ -1685,24 +1675,6 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
     }
     break;
   case Instruction::IntToPtr:
-    // If the input is a ptrtoint, turn the pair into a ptr to ptr bitcast if
-    // the int size is >= the ptr size and the address spaces are the same.
-    // This requires knowing the width of a pointer, so it can't be done in
-    // ConstantExpr::getCast.
-    if (auto *CE = dyn_cast<ConstantExpr>(C)) {
-      if (CE->getOpcode() == Instruction::PtrToInt) {
-        Constant *SrcPtr = CE->getOperand(0);
-        unsigned SrcPtrSize = DL.getPointerTypeSizeInBits(SrcPtr->getType());
-        unsigned MidIntSize = CE->getType()->getScalarSizeInBits();
-
-        if (MidIntSize >= SrcPtrSize) {
-          unsigned SrcAS = SrcPtr->getType()->getPointerAddressSpace();
-          if (SrcAS == DestTy->getPointerAddressSpace())
-            return FoldBitCast(CE->getOperand(0), DestTy, DL);
-        }
-      }
-    }
-    break;
   case Instruction::Trunc:
   case Instruction::ZExt:
   case Instruction::SExt:
@@ -2109,9 +2081,11 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
     return !IsStrictFP;
 
-  // NVVM fadd/fmul intrinsics with explicit rounding modes
+  // NVVM fadd/fmul/fma intrinsics with explicit rounding modes
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fma:
+  case Intrinsic::nvvm_fma_ftz:
   case Intrinsic::nvvm_fmul:
   case Intrinsic::nvvm_fmul_ftz:
 
@@ -2128,20 +2102,6 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::nvvm_div_rn_ftz_f:
   case Intrinsic::nvvm_div_rp_ftz_f:
   case Intrinsic::nvvm_div_rz_ftz_f:
-
-  // NVVM fma intrinsics with explicit rounding modes
-  case Intrinsic::nvvm_fma_rm_d:
-  case Intrinsic::nvvm_fma_rn_d:
-  case Intrinsic::nvvm_fma_rp_d:
-  case Intrinsic::nvvm_fma_rz_d:
-  case Intrinsic::nvvm_fma_rm_f:
-  case Intrinsic::nvvm_fma_rn_f:
-  case Intrinsic::nvvm_fma_rp_f:
-  case Intrinsic::nvvm_fma_rz_f:
-  case Intrinsic::nvvm_fma_rm_ftz_f:
-  case Intrinsic::nvvm_fma_rn_ftz_f:
-  case Intrinsic::nvvm_fma_rp_ftz_f:
-  case Intrinsic::nvvm_fma_rz_ftz_f:
 
   // Sign operations are actually bitwise operations, they do not raise
   // exceptions even for SNANs.
@@ -4298,37 +4258,6 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
           return ConstantFP::get(Ty, V);
         }
 
-        case Intrinsic::nvvm_fma_rm_f:
-        case Intrinsic::nvvm_fma_rn_f:
-        case Intrinsic::nvvm_fma_rp_f:
-        case Intrinsic::nvvm_fma_rz_f:
-        case Intrinsic::nvvm_fma_rm_d:
-        case Intrinsic::nvvm_fma_rn_d:
-        case Intrinsic::nvvm_fma_rp_d:
-        case Intrinsic::nvvm_fma_rz_d:
-        case Intrinsic::nvvm_fma_rm_ftz_f:
-        case Intrinsic::nvvm_fma_rn_ftz_f:
-        case Intrinsic::nvvm_fma_rp_ftz_f:
-        case Intrinsic::nvvm_fma_rz_ftz_f: {
-          bool IsFTZ = nvvm::FMAShouldFTZ(IntrinsicID);
-          APFloat A = IsFTZ ? FTZPreserveSign(C1) : C1;
-          APFloat B = IsFTZ ? FTZPreserveSign(C2) : C2;
-          APFloat C = IsFTZ ? FTZPreserveSign(C3) : C3;
-
-          APFloat::roundingMode RoundMode =
-              nvvm::GetFMARoundingMode(IntrinsicID);
-
-          APFloat Res = A;
-          APFloat::opStatus Status = Res.fusedMultiplyAdd(B, C, RoundMode);
-
-          if (!Res.isNaN() &&
-              (Status == APFloat::opOK || Status == APFloat::opInexact)) {
-            Res = IsFTZ ? FTZPreserveSign(Res) : Res;
-            return ConstantFP::get(Ty, Res);
-          }
-          return nullptr;
-        }
-
         case Intrinsic::amdgcn_cubeid:
         case Intrinsic::amdgcn_cubema:
         case Intrinsic::amdgcn_cubesc:
@@ -4438,6 +4367,47 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
   return nullptr;
 }
 
+static Constant *ConstantFoldScalarCall4(StringRef Name,
+                                         Intrinsic::ID IntrinsicID, Type *Ty,
+                                         ArrayRef<Constant *> Operands,
+                                         const TargetLibraryInfo *TLI = nullptr,
+                                         const CallBase *Call = nullptr) {
+  assert(Operands.size() == 4 && "Wrong number of operands.");
+
+  // TODO: Add constant folding for the _sat and _relu variants.
+  if (IntrinsicID == Intrinsic::nvvm_fma ||
+      IntrinsicID == Intrinsic::nvvm_fma_ftz) {
+    const auto *Op1 = dyn_cast<ConstantFP>(Operands[0]);
+    const auto *Op2 = dyn_cast<ConstantFP>(Operands[1]);
+    const auto *Op3 = dyn_cast<ConstantFP>(Operands[2]);
+    if (!Op1 || !Op2 || !Op3)
+      return nullptr;
+
+    bool IsFTZ = nvvm::FPArithShouldFTZ(IntrinsicID);
+    APFloat A =
+        IsFTZ ? FTZPreserveSign(Op1->getValueAPF()) : Op1->getValueAPF();
+    APFloat B =
+        IsFTZ ? FTZPreserveSign(Op2->getValueAPF()) : Op2->getValueAPF();
+    APFloat C =
+        IsFTZ ? FTZPreserveSign(Op3->getValueAPF()) : Op3->getValueAPF();
+
+    APFloat::roundingMode RoundMode =
+        nvvm::GetRoundingModeFromImmArg(Operands[3]);
+
+    APFloat Res = A;
+    APFloat::opStatus Status = Res.fusedMultiplyAdd(B, C, RoundMode);
+
+    if (!Res.isNaN() &&
+        (Status == APFloat::opOK || Status == APFloat::opInexact)) {
+      Res = IsFTZ ? FTZPreserveSign(Res) : Res;
+      return ConstantFP::get(Ty, Res);
+    }
+    return nullptr;
+  }
+
+  return nullptr;
+}
+
 static Constant *ConstantFoldScalarCall(StringRef Name,
                                         Intrinsic::ID IntrinsicID, Type *Ty,
                                         ArrayRef<Constant *> Operands,
@@ -4461,6 +4431,9 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
 
   if (Operands.size() == 3)
     return ConstantFoldScalarCall3(Name, IntrinsicID, Ty, Operands, TLI, Call);
+
+  if (Operands.size() == 4)
+    return ConstantFoldScalarCall4(Name, IntrinsicID, Ty, Operands, TLI, Call);
 
   return nullptr;
 }
@@ -4673,6 +4646,8 @@ static Constant *ConstantFoldFixedVectorCall(
   }
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fma:
+  case Intrinsic::nvvm_fma_ftz:
   case Intrinsic::nvvm_fmul:
   case Intrinsic::nvvm_fmul_ftz:
     // The rounding mode operand is a scalar, so the lane-wise folding below

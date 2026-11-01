@@ -22,6 +22,7 @@ add_object_library(
     time_utils.h
   DEPENDS
     .time_constants
+    libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
@@ -33,7 +34,6 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.libc_assert
-    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.uint128
 )

@@ -174,7 +174,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
 
     getActionDefinitionsBuilder(G_FNEG).lowerFor({s32, s64});
 
-    getActionDefinitionsBuilder(G_FCONSTANT).customFor({s32, s64});
+    getActionDefinitionsBuilder(G_FCONSTANT).lowerFor({s32, s64});
 
     getActionDefinitionsBuilder(G_FCMP).customForCartesianProduct({s1},
                                                                   {s32, s64});
@@ -471,14 +471,6 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     if (ConstantMaterializationCost(ImmVal, &ST) > 2 && !ST.genExecuteOnly())
       return Helper.lowerConstant(MI) == LegalizerHelper::Legalized;
     return true;
-  }
-  case G_FCONSTANT: {
-    // Convert to integer constants, while preserving the binary representation.
-    auto AsInteger =
-        MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
-    MIRBuilder.buildConstant(MI.getOperand(0),
-                             *ConstantInt::get(Ctx, AsInteger));
-    break;
   }
   case G_SET_FPMODE: {
     // New FPSCR = (FPSCR & FPStatusBits) | (Modes & ~FPStatusBits)

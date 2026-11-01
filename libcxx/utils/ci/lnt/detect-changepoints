@@ -23,6 +23,11 @@ import sys
 import tabulate
 
 
+# Statistics that only differ by this relative amount are considered equal. This tolerance
+# is used to ensure that we don't depend on implementation details such as the order in which
+# we perform arithmetic operations.
+RELATIVE_TOLERANCE = 1e-9
+
 # Ways to aggregate repeated measurements of one point into the single value taken into
 # account by the detection algorithm.
 AGGREGATORS = {
@@ -51,6 +56,12 @@ class Split(NamedTuple):
     """A candidate division of a segment: where it falls, and how good it is."""
     point: int
     statistic: float
+
+
+class Segment(NamedTuple):
+    """What is needed to test the division of a segment, which only depends on its points."""
+    best: Optional[Split]  # the best way to divide it, if it can be divided
+    nulls: numpy.ndarray   # its `null_statistics`
 
 
 class Candidate(NamedTuple):
@@ -188,83 +199,107 @@ def read_series(stream, x: str, y: str, order_by: str, series_by: Optional[str] 
     return ({key: builder.series() for (key, builder) in builders.items()}, errors)
 
 
-def cumulative_distances(values: numpy.ndarray) -> numpy.ndarray:
-    """
-    Return the prefix sums of the pairwise distance matrix of `values`.
-
-    Element [i, j] holds the sum of the distances between the first `i` values and the
-    first `j` values, which makes the sum over any rectangular block of points computable
-    with four lookups. The scan for a changepoint needs exactly such block sums for every
-    candidate location, and getting them in constant time keeps the permutation test affordable.
-    """
+def distances(a: numpy.ndarray, b: numpy.ndarray) -> numpy.ndarray:
+    """Return the distances between the points of `a` and `b`, which are broadcast together."""
     # The energy statistic is consistent for any exponent in (0, 2) applied to the
     # distances. One is the usual choice and the one this tool is calibrated against.
-    distances = numpy.abs(values[:, None] - values[None, :])
-    prefix = numpy.zeros((len(values) + 1, len(values) + 1))
-    prefix[1:, 1:] = distances.cumsum(axis=0).cumsum(axis=1)
-    return prefix
+    return numpy.abs(a - b)
 
 
-def block(prefix: numpy.ndarray, row_begin, row_end, column_begin, column_end):
-    """Sum the distance matrix over the given half-open ranges of points."""
-    return (prefix[row_end, column_end] - prefix[row_begin, column_end]
-            - prefix[row_end, column_begin] + prefix[row_begin, column_begin])
-
-
-def energy_statistic(prefix: numpy.ndarray, first: int, last: int,
-                     splits: numpy.ndarray) -> numpy.ndarray:
+def scaled_energy(across, within_before, within_after, before, after):
     """
-    Return the scaled energy statistic for dividing the points [first, last) at each of
-    `splits`.
+    Return the scaled energy statistic of splits, given the sum of the distances across the
+    two sides of each split, the sums of the distances within each side (counting every pair
+    twice, as a distance matrix does) and the number of points on each side.
 
-    This is the two-sample energy distance: how far apart the two candidate segments are
-    on average, minus how spread out each of them is internally.
+    This is the two-sample energy distance: how far apart the two sides are on average, minus
+    how spread out each of them is internally.
 
     The result is scaled by `n * m / (n + m)` so that the statistic of an unbalanced split
     is comparable to that of a balanced one. Without it, splits near the middle of a
     segment would win on size alone.
     """
-    before = splits - first
-    after = last - splits
-    # The two within-segment blocks count every unordered pair twice, so pairing them with
+    # The two within-side sums count every unordered pair twice, so pairing them with
     # the doubled pair count `n * (n - 1)` averages over each pair exactly once.
-    across = block(prefix, first, splits, splits, last)
-    within_before = block(prefix, first, splits, first, splits)
-    within_after = block(prefix, splits, last, splits, last)
     distance = (2.0 * across / (before * after)
                 - within_before / (before * (before - 1))
                 - within_after / (after * (after - 1)))
     return distance * before * after / (before + after)
 
 
-def best_split(prefix: numpy.ndarray, first: int, last: int,
-               min_points: int) -> Optional[Split]:
+def split_statistics(segment: numpy.ndarray, orders: numpy.ndarray, min_points: int) -> numpy.ndarray:
+    """
+    Return the statistic of every way of dividing the points of `segment` in two, for each of
+    `orders`: element [i, j] is the statistic of putting the first `min_points + j` points of
+    `segment[orders[i]]` on one side and the rest on the other.
+
+    Since `--min-points` is at least two, every split leaves at least two points on each
+    side. The statistic needs that in order to have a notion of within-side dispersion.
+    """
+    count = len(segment)
+    splits = numpy.arange(min_points, count - min_points + 1)
+
+    # Each point's distance to all the points, which doesn't depend on the order.
+    to_all = distances(segment[:, None], segment[None, :]).sum(axis=1)
+
+    # Each point's distance to the points before it, for every order.
+    ordered = segment[orders].T
+    to_earlier = numpy.zeros_like(ordered)
+    for k in range(1, count):
+        to_earlier[k] = distances(ordered[:k], ordered[k]).sum(axis=0)
+
+    # Sums within a side count every pair twice, like a distance matrix. Every pair is either
+    # before, across or after the split.
+    within_before = 2 * numpy.cumsum(to_earlier, axis=0)[splits - 1].T
+    across = numpy.cumsum(to_all[orders], axis=1)[:, splits - 1] - within_before
+    within_after = to_all.sum() - 2 * across - within_before
+    return scaled_energy(across, within_before, within_after, splits, count - splits)
+
+
+def best_split(values: numpy.ndarray, first: int, last: int, min_points: int) -> Optional[Split]:
     """
     Return the most likely changepoint in the points [first, last), or None when the
     segment is too short to be divided.
-
-    Since `--min-points` is at least two, every candidate leaves at least two points on
-    each side. The statistic needs that in order to have a notion of within-segment dispersion.
     """
-    candidates = numpy.arange(first + min_points, last - min_points + 1)
-    if candidates.size == 0:
+    if last - first < 2 * min_points:
         return None
-    energies = energy_statistic(prefix, first, last, candidates)
+    energies = split_statistics(values[first:last], numpy.arange(last - first)[None, :], min_points)[0]
     best = int(numpy.argmax(energies))
-    return Split(point=int(candidates[best]), statistic=float(energies[best]))
+    return Split(point=first + min_points + best, statistic=float(energies[best]))
 
 
-def significance(values: numpy.ndarray, segments: Sequence[Tuple[int, int]],
-                 min_points: int, observed: float, permutations: int,
-                 rng: numpy.random.Generator) -> float:
+def null_statistics(values: numpy.ndarray, first: int, last: int, min_points: int,
+                    permutations: int, rng: numpy.random.Generator) -> numpy.ndarray:
     """
-    Return the permutation p-value of the best candidate changepoint across `segments`.
+    Return the statistic of the best split of the points [first, last) under as many random
+    reorderings of those points, as an array with one element per reordering.
 
-    Under the hypothesis that nothing changes within any of the segments, the points of
-    each segment are exchangeable, so reordering them at random is as likely to produce
-    the data as the order we observed. Shuffling many times and counting how often chance
-    alone explains a split at least as good as the observed one is therefore a direct
-    estimate of how surprising that split is.
+    Under the hypothesis that nothing changes within the segment, its points are exchangeable,
+    so reordering them at random is as likely to produce the data as the order we observed.
+    These statistics are therefore draws from the distribution of the best split of the
+    segment when nothing changed in it, which is what a candidate is tested against.
+
+    A segment too short to be divided can't produce a split at all, which is represented by
+    statistics of minus infinity.
+    """
+    count = last - first
+    if count < 2 * min_points:
+        return numpy.full(permutations, -numpy.inf)
+    orders = numpy.stack([rng.permutation(count) for _ in range(permutations)])
+    return split_statistics(values[first:last], orders, min_points).max(axis=1)
+
+
+def significance(nulls: Sequence[numpy.ndarray], observed: float) -> float:
+    """
+    Return the permutation p-value of a candidate changepoint with the given statistic,
+    given the `null_statistics` of every segment of the series.
+
+    Under the hypothesis that nothing changes within any of the segments, the segments are
+    reordered independently of each other, and the best split of a reordering of the whole
+    series is the best of the splits of its segments. Combining the i-th reordering of every
+    segment is one such reordering, since the reorderings of different segments are independent.
+    Counting how often chance alone explains a split at least as good as the observed one is
+    therefore a direct estimate of how surprising that split is.
 
     The points are exchangeable, but not the measurements behind them, so `analyze`
     combines each point down to one value before any of this runs.
@@ -273,18 +308,9 @@ def significance(values: numpy.ndarray, segments: Sequence[Tuple[int, int]],
     avoids reporting a p-value of exactly zero, which no finite number of permutations
     can justify.
     """
-    atypical = 0
-    shuffled = values.copy()
-    for _ in range(permutations):
-        for (first, last) in segments:
-            shuffled[first:last] = rng.permutation(values[first:last])
-        # Distances between points of different segments end up in the prefix sums, but
-        # are never looked at: every block a split needs lies within a single segment.
-        prefix = cumulative_distances(shuffled)
-        splits = [best_split(prefix, first, last, min_points) for (first, last) in segments]
-        if max(split.statistic for split in splits if split is not None) >= observed:
-            atypical += 1
-    return (atypical + 1) / (permutations + 1)
+    best = numpy.max(numpy.stack(nulls), axis=0)
+    atypical = int(numpy.count_nonzero(best >= observed - RELATIVE_TOLERANCE * abs(observed)))
+    return (atypical + 1) / (len(best) + 1)
 
 
 def detect(values: numpy.ndarray, labels: Sequence[str],
@@ -300,25 +326,27 @@ def detect(values: numpy.ndarray, labels: Sequence[str],
     The search stops as soon as the best remaining candidate fails its test. Because the
     statistic is scaled to be comparable across segments, that candidate is the one most
     likely to have survived, so the ones it was preferred over would not have survived either.
+
+    Neither the best split of a segment nor what it looks like when nothing changes in it
+    depend on anything but the segment's own points, so both are computed once, when the
+    segment is created, and reused by every test that follows. Only the two halves of a
+    divided segment need computing. This makes successive tests correlated, since they share
+    the reorderings of the segments they have in common, but each of them remains a valid test.
     """
-    prefix = cumulative_distances(values)
-    segments = [(0, len(values))]
+    def segment(first: int, last: int) -> Segment:
+        return Segment(best_split(values, first, last, settings.min_points),
+                       null_statistics(values, first, last, settings.min_points, settings.permutations, rng))
+
+    segments = {(0, len(values)): segment(0, len(values))}
     found: List[Candidate] = []
     while True:
-        best: Optional[Tuple[Split, Tuple[int, int]]] = None
-        for (first, last) in segments:
-            split = best_split(prefix, first, last, settings.min_points)
-            if split is None:
-                continue
-            if best is None or split.statistic > best[0].statistic:
-                best = (split, (first, last))
-        if best is None:
+        candidates = [(s.best, bounds) for (bounds, s) in segments.items() if s.best is not None]
+        if not candidates:
             logging.debug('no segment is long enough to be divided further')
             break
 
-        (split, (first, last)) = best
-        p_value = significance(values, segments, settings.min_points,
-                               split.statistic, settings.permutations, rng)
+        (split, (first, last)) = max(candidates, key=lambda candidate: candidate[0].statistic)
+        p_value = significance([s.nulls for s in segments.values()], split.statistic)
         label = labels[split.point]
         if p_value > settings.p_value:
             logging.debug(f'stopping: the best remaining candidate ({label}, statistic '
@@ -327,8 +355,9 @@ def detect(values: numpy.ndarray, labels: Sequence[str],
         logging.debug(f'accepted a changepoint at {label} (statistic {split.statistic:.4g}, '
                       f'p-value {p_value:.4g}), dividing points [{first}, {last})')
         found.append(Candidate(split.point, p_value))
-        segments.remove((first, last))
-        segments += [(first, split.point), (split.point, last)]
+        del segments[(first, last)]
+        for (begin, end) in [(first, split.point), (split.point, last)]:
+            segments[(begin, end)] = segment(begin, end)
 
     return sorted(found)
 

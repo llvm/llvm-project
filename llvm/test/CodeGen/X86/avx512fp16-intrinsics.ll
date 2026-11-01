@@ -1163,35 +1163,9 @@ define <8 x half> @test_x86_avx512fp16_vcvtsi2sh(<8 x half> %arg0, i32 %arg1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2sh %edi, %xmm0, %xmm1
 ; CHECK-NEXT:    vcvtsi2sh %edi, {rd-sae}, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm4 = xmm1[3,3,3,3]
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
-; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm3
-; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm4
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm4
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
-; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    vaddph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res1 = call <8 x half> @llvm.x86.avx512fp16.vcvtsi2sh(<8 x half> %arg0, i32 %arg1, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.vcvtsi2sh(<8 x half> %arg0, i32 %arg1, i32 9)
@@ -1206,35 +1180,9 @@ define <8 x half> @test_x86_avx512fp16_vcvtsi642sh(<8 x half> %arg0, i64 %arg1) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsi2sh %rdi, %xmm0, %xmm1
 ; CHECK-NEXT:    vcvtsi2sh %rdi, {rn-sae}, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm4 = xmm1[3,3,3,3]
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
-; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm3
-; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm4
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm4
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
-; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    vaddph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res1 = call <8 x half> @llvm.x86.avx512fp16.vcvtsi642sh(<8 x half> %arg0, i64 %arg1, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.vcvtsi642sh(<8 x half> %arg0, i64 %arg1, i32 8)
@@ -1249,35 +1197,9 @@ define <8 x half> @test_x86_avx512fp16_vcvtusi2sh(<8 x half> %arg0, i32 %arg1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtusi2sh %edi, %xmm0, %xmm1
 ; CHECK-NEXT:    vcvtusi2sh %edi, {rd-sae}, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm4 = xmm1[3,3,3,3]
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
-; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm3
-; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm4
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm4
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
-; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    vaddph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res1 = call <8 x half> @llvm.x86.avx512fp16.vcvtusi2sh(<8 x half> %arg0, i32 %arg1, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.vcvtusi2sh(<8 x half> %arg0, i32 %arg1, i32 9)
@@ -1292,35 +1214,9 @@ define <8 x half> @test_x86_avx512fp16_vcvtusi642sh(<8 x half> %arg0, i64 %arg1)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtusi2sh %rdi, %xmm0, %xmm1
 ; CHECK-NEXT:    vcvtusi2sh %rdi, {rd-sae}, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vaddsh %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm4 = xmm1[3,3,3,3]
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
-; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm3
-; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm4
-; CHECK-NEXT:    vaddsh %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vaddsh %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm4
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
-; CHECK-NEXT:    vaddsh %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    vaddph %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res1 = call <8 x half> @llvm.x86.avx512fp16.vcvtusi642sh(<8 x half> %arg0, i64 %arg1, i32 4)
   %res2 = call <8 x half> @llvm.x86.avx512fp16.vcvtusi642sh(<8 x half> %arg0, i64 %arg1, i32 9)

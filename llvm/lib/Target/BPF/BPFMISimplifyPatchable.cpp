@@ -314,9 +314,9 @@ void BPFMISimplifyPatchableImpl::processInst(MachineRegisterInfo *MRI,
 
   switch (Opcode) {
   case BPF::ADD_rr: {
-    // If the struct offset is greater than INT16_MAX, skip optimization.
     auto Reloc = BPFCoreSharedInfo::AmaRelocation::decode(GVal->getName());
-    if (Reloc.PatchImm <= INT16_MAX)
+    // libbpf only patches memory offsets in the range [0, INT16_MAX].
+    if (Reloc.PatchImm >= 0 && Reloc.PatchImm <= INT16_MAX)
       checkADDrr(MRI, Inst, RelocOpNo, GVal);
     break;
   }

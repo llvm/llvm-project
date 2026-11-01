@@ -302,6 +302,7 @@ copy("Headers") {
     "lsxintrin.h",
     "lwpintrin.h",
     "lzcntintrin.h",
+    "meta",
     "mm3dnow.h",
     "mm_malloc.h",
     "mmintrin.h",

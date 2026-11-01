@@ -696,6 +696,27 @@ set(files
   __pstl/backends/default.h
   __pstl/backends/libdispatch.h
   __pstl/backends/serial.h
+  __pstl/backends/statpart.h
+  __pstl/backends/statpart/any_of.h
+  __pstl/backends/statpart/basis.h
+  __pstl/backends/statpart/fill.h
+  __pstl/backends/statpart/find_end.h
+  __pstl/backends/statpart/find_if.h
+  __pstl/backends/statpart/for_each.h
+  __pstl/backends/statpart/is_heap_until.h
+  __pstl/backends/statpart/merge.h
+  __pstl/backends/statpart/min_element.h
+  __pstl/backends/statpart/minmax_element.h
+  __pstl/backends/statpart/mismatch.h
+  __pstl/backends/statpart/reverse.h
+  __pstl/backends/statpart/search.h
+  __pstl/backends/statpart/search_n.h
+  __pstl/backends/statpart/stable_sort.h
+  __pstl/backends/statpart/swap_ranges.h
+  __pstl/backends/statpart/transform.h
+  __pstl/backends/statpart/transform_reduce.h
+  __pstl/backends/statpart/uninitialized_copy.h
+  __pstl/backends/statpart/uninitialized_move.h
   __pstl/backends/std_thread.h
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h

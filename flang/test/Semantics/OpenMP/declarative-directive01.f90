@@ -40,7 +40,7 @@ subroutine declare_simd_2
   use m1
   procedure (sub) sub1
   !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
-  !ERROR: INBRANCH and NOTINBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
+  !ERROR: INBRANCH and NOTINBRANCH clauses are mutually exclusive as members of 'branch' clause group
   !$omp declare simd(sub1) inbranch notinbranch
   procedure (sub), pointer::p
   p=>sub1
@@ -62,6 +62,7 @@ contains
     !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopenmp-usage]
     !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopenmp-usage]
     !$omp declare target (foo, N, M)
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
     !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
@@ -71,6 +72,7 @@ contains
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target enter(Q, S) link(R)
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
     !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: MAP clause is not allowed on DECLARE TARGET directive

@@ -344,7 +344,10 @@ static ConstantIntRanges inferDivSRange(const ConstantIntRanges &lhs,
                                         DivisionFixupFn fixup) {
   const APInt &lhsMin = lhs.smin(), &lhsMax = lhs.smax(), &rhsMin = rhs.smin(),
               &rhsMax = rhs.smax();
-  bool canDivide = rhsMin.isStrictlyPositive() || rhsMax.isNegative();
+  // An empty (min > max) divisor range can arise from poison, e.g. a
+  // saturated `nsw`/`nuw` subtraction. Don't trust its bounds.
+  bool canDivide = rhsMin.sle(rhsMax) &&
+                   (rhsMin.isStrictlyPositive() || rhsMax.isNegative());
 
   if (canDivide) {
     auto sdiv = [&fixup](const APInt &a,

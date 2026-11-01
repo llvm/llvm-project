@@ -1782,6 +1782,7 @@ More information can be found [here](Modules.md).
 | `= delete ("should have a reason");`          | \_\_cpp_deleted_function           | C++26         | C++03         |
 | Variadic Friends                              | \_\_cpp_variadic_friend            | C++26         | C++03         |
 | Trivial Relocatability                        | \_\_cpp_trivial_relocatability     | C++26         | C++03         |
+| `#embed`                                      | \_\_cpp_pp_embed                   | C++26         | C++03         |
 |``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
 | Pack Indexing for Template Names              | \_\_cpp_pack_indexing >= 202606L   | C++2d         | C++03         |
 | Designated initializers (N494)                |                                    | C99           | C89           |
@@ -1807,7 +1808,7 @@ More information can be found [here](Modules.md).
 | `_Thread_local` (N1364)                       |                                    | C11           | C89, C++      |
 | Array & element qualification (N2607)         |                                    | C23           | C89           |
 | Attributes (N2335)                            |                                    | C23           | C89           |
-| `#embed` (N3017)                              |                                    | C23           | C89, C++      |
+| `#embed` (N3017)                              |                                    | C23           | C89           |
 | Enum with fixed underlying type (N3030)       |                                    | C23           | C89           |
 | `#warning` (N2686)                            |                                    | C23           | C89           |
 | `_BitInt` (N3035)                             |                                    | C23           | C89, C++      |

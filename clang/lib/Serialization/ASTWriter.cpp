@@ -1578,12 +1578,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   // Imports
   if (Chain) {
+    const auto &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(IMPORT));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Kind
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // ImportLoc
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Module name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
+    Abbrev->Add(
+        BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));       // C++20/prebuilt HU
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name raw kind
@@ -1607,9 +1610,20 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
       AddStringBlob(M.ModuleName, Record, Blob);
       Record.push_back(M.StandardCXXModule);
 
-      // We don't want to hard code the information about imported modules
-      // in the C++20 named modules.
-      if (M.StandardCXXModule) {
+      // We don't want to hard code file information for C++20 Modules
+      // (including explicitly mapped header units).
+      const Module *ImportedModule =
+          PP.getHeaderSearchInfo().getModuleMap().findModule(M.ModuleName);
+      bool IsPrebuiltHeaderUnit =
+          ImportedModule && ImportedModule->isHeaderUnit() &&
+          M.Kind == MK_PrebuiltModule &&
+          HSOpts.PrebuiltModuleFiles.count(M.ModuleName);
+
+      bool IsCXX20ModuleOrPrebuiltHeaderUnit =
+          M.StandardCXXModule || IsPrebuiltHeaderUnit;
+      Record.push_back(IsCXX20ModuleOrPrebuiltHeaderUnit);
+
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit) {
         Record.push_back(0);
         Record.push_back(0);
         Record.push_back(0);
