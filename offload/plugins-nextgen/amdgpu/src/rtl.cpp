@@ -310,12 +310,12 @@ getSdmaEngineId(hsa_agent_t DstAgent, hsa_agent_t SrcAgent) {
   uint32_t EngineId = 1u;
 
   do {
-    EngineId <<= LocalSelect++;
-    if (EngineId > AvailMask)
-      EngineId = 1u;
+    if (LocalSelect >= 32 || (1u << LocalSelect) > AvailMask)
+      LocalSelect = 0u;
+    EngineId = 1u << LocalSelect++;
   } while (!(AvailMask & EngineId));
 
-  Select.store(LocalSelect, std::memory_order_relaxed);
+  Select.store(LocalSelect, std::memory_order_release);
   return static_cast<hsa_amd_sdma_engine_id_t>(EngineId);
 }
 
