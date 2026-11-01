@@ -6331,6 +6331,18 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
     return true;
   }
 
+  // The offset from the image base is not known until link time. The result is
+  // an integral based on the CallExpr, which codegen turns into a relocation.
+  if (BuiltinID == Builtin::BI__builtin_imgrel32) {
+    if (!this->visit(E->getArg(0)))
+      return false;
+    if (!this->emitImgrel32(E, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopUint32(E);
+    return true;
+  }
+
   // For these, we're expected to ultimately return an APValue pointing
   // to the CallExpr. This is needed to get the correct codegen.
   if (BuiltinID == Builtin::BI__builtin___CFStringMakeConstantString ||

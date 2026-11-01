@@ -857,6 +857,10 @@ def CastPointerIntegralAP : Opcode {
 def CastPointerIntegralAPS : Opcode {
   let Args = [ArgUint32];
 }
+// [Pointer] -> [Uint32]
+def Imgrel32 : Opcode {
+  let Args = [ArgExpr];
+}
 def CastIntegralFixedPoint : Opcode {
   let Types = [IntegralTypeClass];
   let Args = [ArgUint32];

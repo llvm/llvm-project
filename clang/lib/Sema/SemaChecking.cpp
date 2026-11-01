@@ -307,6 +307,45 @@ static bool BuiltinFunctionStart(Sema &S, CallExpr *TheCall) {
                                               TheCall->getBeginLoc());
 }
 
+/// Check the argument to __builtin_imgrel32, the 32-bit offset of a global
+/// from the image base. It is only meaningful as a constant.
+static bool BuiltinImgrel32(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+
+  if (TheCall->getArg(0)->containsErrors())
+    return true;
+
+  if (!S.Context.getTargetInfo().getTriple().isOSBinFormatCOFF()) {
+    S.Diag(TheCall->getBeginLoc(), diag::err_imgrel32_requires_coff)
+        << TheCall->getSourceRange();
+    return true;
+  }
+
+  ExprResult Arg = S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+  if (Arg.isInvalid())
+    return true;
+  TheCall->setArg(0, Arg.get());
+
+  // A dllimport declaration lives in another image and a thread-local variable
+  // has no fixed address, so neither has an offset from this image's base.
+  Expr::EvalResult Result;
+  const auto *D =
+      Arg.get()->EvaluateAsRValue(Result, S.Context) && Result.Val.isLValue()
+          ? Result.Val.getLValueBase().dyn_cast<const ValueDecl *>()
+          : nullptr;
+  if (!D || D->hasAttr<DLLImportAttr>() ||
+      (isa<VarDecl>(D) &&
+       cast<VarDecl>(D)->getTLSKind() != VarDecl::TLS_None)) {
+    S.Diag(TheCall->getBeginLoc(), diag::err_imgrel32_not_address_constant)
+        << TheCall->getSourceRange();
+    return true;
+  }
+
+  TheCall->setType(S.Context.UnsignedIntTy);
+  return false;
+}
+
 /// Check the number of arguments and set the result type to
 /// the argument type.
 static bool BuiltinPreserveAI(Sema &S, CallExpr *TheCall) {
@@ -3638,6 +3677,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   case Builtin::BI__builtin_function_start:
     if (BuiltinFunctionStart(*this, TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_imgrel32:
+    if (BuiltinImgrel32(*this, TheCall))
       return ExprError();
     break;
   case Builtin::BI__builtin_is_aligned:

@@ -2266,6 +2266,12 @@ llvm::Constant *ConstantLValueEmitter::tryEmit() {
       return nullptr;
   }
 
+  // The base is the address the offset is taken from; subtract the image base.
+  if (const auto *CE =
+          dyn_cast_if_present<CallExpr>(base.dyn_cast<const Expr *>()))
+    if (CE->getBuiltinCallee() == Builtin::BI__builtin_imgrel32)
+      return CGM.GetImageRelativeOffset(value, destTy);
+
   // Convert to the appropriate type; this could be an lvalue for
   // an integer.  FIXME: performAddrSpaceCast
   if (isa<llvm::PointerType>(destTy))
@@ -2514,6 +2520,10 @@ ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *E) {
 ConstantLValue
 ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
   unsigned builtin = E->getBuiltinCallee();
+  if (builtin == Builtin::BI__builtin_imgrel32)
+    return Emitter.tryEmitPrivateForMemory(E->getArg(0),
+                                           E->getArg(0)->getType());
+
   if (builtin == Builtin::BI__builtin_function_start)
     return CGM.GetFunctionStart(
         E->getArg(0)->getAsBuiltinConstantDeclRef(CGM.getContext()));
