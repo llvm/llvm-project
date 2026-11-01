@@ -126,8 +126,6 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s[0:1]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s[0:1]
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, v1, s[0:1]
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, v0, s[0:1]
 ; CHECK-NEXT:    ds_write_b128 v4, v[12:15]
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a1, a0
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a2, a0
@@ -143,33 +141,36 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_cselect_b32 s69, s13, 0
 ; CHECK-NEXT:    s_cselect_b32 s70, s12, 0
 ; CHECK-NEXT:    s_and_b64 vcc, s[2:3], exec
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, v1, s[0:1]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, v0, s[0:1]
 ; CHECK-NEXT:    ds_write_b128 v4, a[0:3]
 ; CHECK-NEXT:    ds_write_b128 v5, v[12:15]
 ; CHECK-NEXT:    ds_write_b128 v4, v[0:3]
-; CHECK-NEXT:    v_mov_b32_e32 v0, s70
-; CHECK-NEXT:    v_mov_b32_e32 v1, s69
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s67
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s66
 ; CHECK-NEXT:    s_cselect_b32 s66, s65, 0
 ; CHECK-NEXT:    s_cselect_b32 s67, s64, 0
-; CHECK-NEXT:    s_cselect_b32 s69, s63, 0
-; CHECK-NEXT:    s_cselect_b32 s70, s62, 0
+; CHECK-NEXT:    s_cselect_b32 s65, s63, 0
+; CHECK-NEXT:    s_cselect_b32 s64, s62, 0
 ; CHECK-NEXT:    s_and_b64 s[50:51], s[50:51], exec
-; CHECK-NEXT:    v_mov_b32_e32 v4, 0
-; CHECK-NEXT:    ds_write_b128 v4, v[0:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s69
-; CHECK-NEXT:    v_mov_b32_e32 v2, s67
-; CHECK-NEXT:    v_mov_b32_e32 v3, s66
+; CHECK-NEXT:    v_mov_b32_e32 v14, s67
+; CHECK-NEXT:    v_mov_b32_e32 v15, s66
 ; CHECK-NEXT:    s_cselect_b32 s69, 0x3f803f80, 0
 ; CHECK-NEXT:    s_and_b64 s[66:67], s[6:7], exec
 ; CHECK-NEXT:    s_cselect_b32 s66, s33, 0
 ; CHECK-NEXT:    s_and_b64 s[52:53], s[52:53], exec
 ; CHECK-NEXT:    s_cselect_b32 s67, 0x3f803f80, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s70
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    s_lshr_b32 s66, s66, 16
 ; CHECK-NEXT:    s_lshr_b32 s67, s67, 16
-; CHECK-NEXT:    v_mov_b32_e32 v0, s70
+; CHECK-NEXT:    v_mov_b32_e32 v12, s64
+; CHECK-NEXT:    v_mov_b32_e32 v13, s65
+; CHECK-NEXT:    ds_write_b128 v4, v[0:3]
+; CHECK-NEXT:    v_accvgpr_read_b32 v0, a25
 ; CHECK-NEXT:    s_and_b64 s[54:55], s[54:55], exec
-; CHECK-NEXT:    ds_write_b128 v5, v[0:3]
+; CHECK-NEXT:    ds_write_b128 v0, v[12:15]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s69
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s69
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s69

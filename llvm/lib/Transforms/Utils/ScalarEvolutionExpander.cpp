@@ -193,26 +193,13 @@ void SCEVExpander::eraseDeadInstructions(Value *Root) {
 
 BasicBlock::iterator
 SCEVExpander::GetOptimalInsertionPointForCastOf(Value *V) const {
-  // Cast the argument at the beginning of the entry block, after
-  // any bitcasts of other arguments, but not below the insertion point.
-  if (Argument *A = dyn_cast<Argument>(V)) {
-    BasicBlock::iterator IP = A->getParent()->getEntryBlock().begin();
-    for (; IP != Builder.GetInsertPoint(); ++IP) {
-      auto *BCI = dyn_cast<BitCastInst>(IP);
-      auto *Arg = BCI ? dyn_cast<Argument>(BCI->getOperand(0)) : nullptr;
-      if (!Arg || Arg == A)
-        break;
-    }
-    return IP;
-  }
-
   // Cast the instruction immediately after the instruction.
   if (Instruction *I = dyn_cast<Instruction>(V))
     return findInsertPointAfter(I, &*Builder.GetInsertPoint());
 
-  // Otherwise, this must be some kind of a constant,
+  // Otherwise, this must be a constant or argument,
   // so let's plop this cast into the function's entry block.
-  assert(isa<Constant>(V) &&
+  assert((isa<Constant, Argument>(V)) &&
          "Expected the cast argument to be a global/constant");
   return Builder.GetInsertBlock()
       ->getParent()

@@ -439,48 +439,49 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_pk_add_f32 v[28:29], v[28:29], v[28:29]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
-; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; test:10:1
-; CHECK-NEXT:    v_accvgpr_write_b32 a4, s8
-; CHECK-NEXT:    v_accvgpr_write_b32 a5, s9
-; CHECK-NEXT:    v_accvgpr_write_b32 a6, s10
-; CHECK-NEXT:    v_accvgpr_write_b32 a7, s11
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x28
-; CHECK-NEXT:    v_accvgpr_write_b32 a8, s12
-; CHECK-NEXT:    v_accvgpr_write_b32 a9, s13
-; CHECK-NEXT:    v_accvgpr_write_b32 a10, s14
-; CHECK-NEXT:    v_accvgpr_write_b32 a11, s15
-; CHECK-NEXT:    v_accvgpr_write_b32 a15, v3
-; CHECK-NEXT:    v_accvgpr_write_b32 a14, v2
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
-; CHECK-NEXT:    v_accvgpr_write_b32 a13, v1
-; CHECK-NEXT:    v_accvgpr_write_b32 a12, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a11, v3
+; CHECK-NEXT:    v_accvgpr_write_b32 a10, v2
+; CHECK-NEXT:    v_accvgpr_write_b32 a9, v1
+; CHECK-NEXT:    v_accvgpr_write_b32 a8, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[224:227], s[0:1] offset:2032
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[228:231], s[0:1] offset:2016
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[232:235], s[0:1] offset:2000
+; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; test:10:1
+; CHECK-NEXT:    v_accvgpr_write_b32 a4, s12
+; CHECK-NEXT:    v_accvgpr_write_b32 a5, s13
+; CHECK-NEXT:    v_mov_b64_e32 v[234:235], s[10:11]
+; CHECK-NEXT:    v_mov_b64_e32 v[232:233], s[8:9]
+; CHECK-NEXT:    v_accvgpr_write_b32 a6, s14
+; CHECK-NEXT:    v_accvgpr_write_b32 a7, s15
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    global_store_dwordx4 v0, v[236:239], s[0:1] offset:1984
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], v[232:235], a[4:7], a[0:3]
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v236, 0
+; CHECK-NEXT:    global_store_dwordx4 v236, v[244:247], s[0:1] offset:1968
+; CHECK-NEXT:    s_nop 4
 ; CHECK-NEXT:    v_accvgpr_read_b32 v227, a3
 ; CHECK-NEXT:    v_accvgpr_read_b32 v226, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v225, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v224, a0
-; CHECK-NEXT:    v_mov_b32_e32 v232, 0
-; CHECK-NEXT:    global_store_dwordx4 v232, v[236:239], s[0:1] offset:1984
 ; CHECK-NEXT:    .loc 1 20 1 ; test:20:1
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[228:231], a[4:7], a[8:11], v[224:227]
-; CHECK-NEXT:    global_store_dwordx4 v232, v[244:247], s[0:1] offset:1968
+; CHECK-NEXT:    s_nop 1
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[228:231], v[232:235], a[4:7], v[224:227]
 ; CHECK-NEXT:    .loc 1 30 1 ; test:30:1
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[224:227], a[8:11], a[4:7], v[224:227]
-; CHECK-NEXT:    s_nop 5
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[224:227], a[4:7], v[232:235], v[224:227]
+; CHECK-NEXT:    s_nop 6
 ; CHECK-NEXT:    v_add_f32_e32 v228, 1.0, v228
-; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_add_f32_e32 v229, 2.0, v224
 ; CHECK-NEXT:    v_mov_b32_e32 v224, 0
-; CHECK-NEXT:    global_store_dwordx2 v232, v[228:229], s[0:1]
-; CHECK-NEXT:    global_store_dwordx4 v232, v[240:243], s[0:1] offset:1952
-; CHECK-NEXT:    global_store_dwordx4 v232, v[248:251], s[0:1] offset:1936
-; CHECK-NEXT:    global_store_dwordx4 v232, v[252:255], s[0:1] offset:1920
+; CHECK-NEXT:    global_store_dwordx2 v236, v[228:229], s[0:1]
+; CHECK-NEXT:    global_store_dwordx4 v236, v[240:243], s[0:1] offset:1952
+; CHECK-NEXT:    global_store_dwordx4 v236, v[248:251], s[0:1] offset:1936
+; CHECK-NEXT:    global_store_dwordx4 v236, v[252:255], s[0:1] offset:1920
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[192:195], s[0:1] offset:368
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[196:199], s[0:1] offset:352
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[200:203], s[0:1] offset:336
@@ -529,7 +530,7 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[52:55], s[0:1] offset:928
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[56:59], s[0:1] offset:912
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[60:63], s[0:1] offset:896
-; CHECK-NEXT:    global_store_dwordx4 v224, a[12:15], s[0:1] offset:1136
+; CHECK-NEXT:    global_store_dwordx4 v224, a[8:11], s[0:1] offset:1136
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[4:7], s[0:1] offset:1120
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[8:11], s[0:1] offset:1104
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[12:15], s[0:1] offset:1088

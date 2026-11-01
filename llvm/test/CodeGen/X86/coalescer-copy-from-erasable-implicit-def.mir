@@ -23,7 +23,7 @@ body:             |
     %0:vr128 = IMPLICIT_DEF
     %1:vr128 = COPY %0
     %1:vr128 = SHUFPSrmi %1, $rip, 1, $noreg, %const.0, $noreg, 16 :: (load (s128) from constant-pool)
-    %2:vr128 = COPY killed %1
-    %2:vr128 = SHUFPSrri %2, killed %0, -24
-    RET 0, implicit killed %2
+    %2:vr128 = COPY %1
+    %2:vr128 = SHUFPSrri %2, %0, -24
+    RET 0, implicit %2
 ...

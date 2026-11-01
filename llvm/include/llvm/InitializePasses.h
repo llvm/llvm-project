@@ -165,7 +165,6 @@ LLVM_ABI void initializeLiveIntervalsWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeLiveRangeShrinkPass(PassRegistry &);
 LLVM_ABI void initializeLiveRegMatrixWrapperLegacyPass(PassRegistry &);
 LLVM_ABI void initializeLiveStacksWrapperLegacyPass(PassRegistry &);
-LLVM_ABI void initializeLiveVariablesWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeLoadStoreOptLegacyPass(PassRegistry &);
 LLVM_ABI void initializeLoadStoreVectorizerLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLocalStackSlotPassPass(PassRegistry &);

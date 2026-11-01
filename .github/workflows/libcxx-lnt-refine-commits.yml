@@ -4,6 +4,10 @@
 # The selected commits are uploaded as an artifact containing a single `refinement.txt` file, with one
 # commit per line, best first. That file is empty when there is nothing to refine.
 #
+# To avoid re-downloading tons of data from LNT, this workflow caches the result last obtained and only
+# re-requests runs submitted since the last download. The cache is cleared weekly so we start over from
+# scratch.
+#
 # See libcxx/utils/ci/lnt/README.md for a description of the tools used here.
 
 name: "[libc++] Select refinement commits"
@@ -39,6 +43,9 @@ jobs:
   select:
     name: Select refinement commits for ${{ inputs.lnt-machine }}
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      actions: write # to delete superseded cache entries
     timeout-minutes: 60
     defaults:
       run:
@@ -52,19 +59,21 @@ jobs:
     steps:
       # The selection only changes as new runs are submitted to LNT, and computing it takes several minutes.
       # It is cached and recomputed every hour instead of every time this workflow is called.
-      - name: Compute the cache key
+      - name: Compute the cache keys
         id: key
-        run: echo "key=lnt-refinement-commits-${MACHINE}-${METRIC}-${DIRECTION}-${MAX_COMMITS}-$(date -u +%F-%H)" >> "${GITHUB_OUTPUT}"
+        run: |
+          echo "key=lnt-refinement-commits-${MACHINE}-${METRIC}-${DIRECTION}-${MAX_COMMITS}-$(date -u +%F-%H)" >> "${GITHUB_OUTPUT}"
+          echo "series-prefix=lnt-series-${MACHINE}-${METRIC}-$(date -u +%G-W%V)-" >> "${GITHUB_OUTPUT}"
 
       - name: Try restoring the selection from cache
-        id: restore
+        id: restore-refinements
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/refinement.txt # restore to temp since the checkout below would overwrite it
           key: ${{ steps.key.outputs.key }}
 
       - name: Checkout the full LLVM monorepo
-        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -73,7 +82,7 @@ jobs:
           filter: blob:none
 
       - name: Install Python
-        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.15'
@@ -81,18 +90,42 @@ jobs:
           cache-dependency-path: libcxx/utils/ci/lnt/requirements.txt
 
       - name: Install dependencies
-        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
         run: pip install -r libcxx/utils/ci/lnt/requirements.txt
 
+      # When we need to compute the refinements, we at least try to do so from a cached version of the time series
+      # data, since downloading it is really expensive and incurs a load on the LNT instance. `restore-keys` will
+      # make us find the most recently cached series that starts with the given prefix.
+      - name: Restore the series from cache
+        id: restore-series
+        if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/series
+          key: ${{ steps.key.outputs.series-prefix }}never-found-fallback-to-restore-keys
+          restore-keys: ${{ steps.key.outputs.series-prefix }}
+
       - name: Download the data from LNT
-        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
         run: |
           # Download the data and the runs as of a fixed time point. That way, the commits that we consider
           # "attempted" are exactly those used to find changepoints.
           as_of=$(date -u -d '5 minutes ago' +%FT%TZ)
+
+          # Only download the runs submitted since the last update, if any.
+          series="${RUNNER_TEMP}/series"
+          mkdir -p "${series}"
+          since=()
+          if [ -f "${series}/as-of" ]; then
+            since=(--data-urlencode submitted_after="$(cat "${series}/as-of")")
+          else
+            rm -f "${series}/series.jsonl"
+          fi
           curl -sS --fail --compressed -G "${LNT_URL}/api/suites/libcxx/series"                           \
                --data-urlencode machine="${MACHINE}" --data-urlencode metric="${METRIC}"                  \
-               --data-urlencode has_ordinal=true --data-urlencode submitted_before="${as_of}" -o series.jsonl
+               --data-urlencode has_ordinal=true --data-urlencode submitted_before="${as_of}" "${since[@]}" \
+               >> "${series}/series.jsonl"
+          echo "${as_of}" > "${series}/as-of"
 
           curl -sS --fail -G "${LNT_URL}/api/suites/libcxx/runs"                                          \
                --data-urlencode machine="${MACHINE}" --data-urlencode submitted_before="${as_of}"         \
@@ -100,21 +133,36 @@ jobs:
             | jq -r 'if .cursor.next then error("more runs than fit in a page") else .items[].commit end' \
             | sort -u > attempted.txt
 
+      - name: Delete the superseded series from cache
+        if: ${{ steps.restore-series.outputs.cache-matched-key != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OLD_KEY: ${{ steps.restore-series.outputs.cache-matched-key }}
+        run: gh cache delete "${OLD_KEY}" --ref "${GITHUB_REF}" || echo "::warning::Failed to delete ${OLD_KEY} from the cache"
+
+      - name: Save the series to cache
+        if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/series
+          key: ${{ steps.key.outputs.series-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+
       - name: Detect changepoints
-        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
         run: |
-          libcxx/utils/ci/lnt/detect-changepoints --input series.jsonl --series-by test --aggregate median \
-                                                  --jobs "$(nproc)" -v --output changes.jsonl
+          libcxx/utils/ci/lnt/detect-changepoints --input "${RUNNER_TEMP}/series/series.jsonl" --series-by test \
+                                                  --aggregate median --jobs "$(nproc)" -v --output changes.jsonl
 
       - name: Select refinement commits
-        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
         run: |
           libcxx/utils/ci/lnt/select-refinement-commits --changes changes.jsonl --attempted-commits attempted.txt \
                                                         --direction "${DIRECTION}" --max-commits "${MAX_COMMITS}"   \
                                                         -v --output "${RUNNER_TEMP}/refinement.txt"
 
       - name: Cache the selection
-        if: ${{ steps.restore.outputs.cache-hit != 'true' }}
+        if: ${{ steps.restore-refinements.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/refinement.txt

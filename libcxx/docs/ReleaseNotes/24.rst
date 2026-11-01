@@ -85,6 +85,8 @@ Potentially breaking changes
   Specifically, when an exception is thrown, the appended elements are now destructed from first to last instead of
   last to first.
 
+- ``type_info`` no longer provides a protected constructor taking a ``const char*``.
+
 Announcements About Future Releases
 -----------------------------------
 
