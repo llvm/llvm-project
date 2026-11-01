@@ -136,7 +136,7 @@ define double @double_in_gprs(i64 %x) {
   ; CHECK-NEXT:   [[LD_Fp064_:%[0-9]+]]:rfp64 = nofpexcept LD_Fp064 implicit-def dead $fpsw, implicit $fpcw
   ; CHECK-NEXT:   RET 0, [[LD_Fp064_]]
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.z.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.z.split (label-must-be-emitted, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   MOV32mr %stack.1, 1, $noreg, 0, $noreg, %1 :: (store (s32) into %stack.1, align 8)
   ; CHECK-NEXT:   MOV32mr %stack.1, 1, $noreg, 4, $noreg, %2 :: (store (s32) into %stack.1 + 4, basealign 8)
   ; CHECK-NEXT:   [[LD_Fp64m1:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.1)

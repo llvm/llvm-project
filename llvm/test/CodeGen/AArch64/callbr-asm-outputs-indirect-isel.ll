@@ -566,7 +566,7 @@ define i32 @flag_output() {
   ; CHECK-NEXT:   $w0 = COPY [[COPY1]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.indirect (inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.indirect (label-must-be-emitted, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   liveins: $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
