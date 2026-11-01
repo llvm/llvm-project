@@ -14,7 +14,7 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 define i64 @rotl_clz_at_most_63(i64 %a, i64 %b) {
 ; CHECK-LABEL: rotl_clz_at_most_63(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -22,11 +22,10 @@ define i64 @rotl_clz_at_most_63(i64 %a, i64 %b) {
 ; CHECK-NEXT:    ld.param.b64 %rd2, [rotl_clz_at_most_63_param_1];
 ; CHECK-NEXT:    or.b64 %rd3, %rd2, 1;
 ; CHECK-NEXT:    clz.b64 %r1, %rd3;
-; CHECK-NEXT:    and.b32 %r2, %r1, 63;
-; CHECK-NEXT:    shl.b64 %rd4, %rd1, %r2;
-; CHECK-NEXT:    neg.s32 %r3, %r1;
-; CHECK-NEXT:    and.b32 %r4, %r3, 63;
-; CHECK-NEXT:    shr.u64 %rd5, %rd1, %r4;
+; CHECK-NEXT:    shl.b64 %rd4, %rd1, %r1;
+; CHECK-NEXT:    neg.s32 %r2, %r1;
+; CHECK-NEXT:    and.b32 %r3, %r2, 63;
+; CHECK-NEXT:    shr.u64 %rd5, %rd1, %r3;
 ; CHECK-NEXT:    or.b64 %rd6, %rd4, %rd5;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
@@ -63,7 +62,7 @@ define i64 @rotl_clz(i64 %a, i64 %b) {
 define i64 @rotl_popc_at_most_63(i64 %a, i64 %b) {
 ; CHECK-LABEL: rotl_popc_at_most_63(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -71,11 +70,10 @@ define i64 @rotl_popc_at_most_63(i64 %a, i64 %b) {
 ; CHECK-NEXT:    ld.param.b64 %rd2, [rotl_popc_at_most_63_param_1];
 ; CHECK-NEXT:    and.b64 %rd3, %rd2, -2;
 ; CHECK-NEXT:    popc.b64 %r1, %rd3;
-; CHECK-NEXT:    and.b32 %r2, %r1, 63;
-; CHECK-NEXT:    shl.b64 %rd4, %rd1, %r2;
-; CHECK-NEXT:    neg.s32 %r3, %r1;
-; CHECK-NEXT:    and.b32 %r4, %r3, 63;
-; CHECK-NEXT:    shr.u64 %rd5, %rd1, %r4;
+; CHECK-NEXT:    shl.b64 %rd4, %rd1, %r1;
+; CHECK-NEXT:    neg.s32 %r2, %r1;
+; CHECK-NEXT:    and.b32 %r3, %r2, 63;
+; CHECK-NEXT:    shr.u64 %rd5, %rd1, %r3;
 ; CHECK-NEXT:    or.b64 %rd6, %rd4, %rd5;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
@@ -114,25 +112,25 @@ define i64 @mul_cttz_sext(i64 %a, i32 %b) {
 ; CHECK-LABEL: mul_cttz_sext(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [mul_cttz_sext_param_1];
 ; CHECK-NEXT:    ld.param.b64 %rd1, [mul_cttz_sext_param_0];
 ; CHECK-NEXT:    setp.eq.b64 %p1, %rd1, 0;
-; CHECK-NEXT:    mov.b64 %rd7, 64;
+; CHECK-NEXT:    mov.b64 %rd6, 64;
 ; CHECK-NEXT:    @%p1 bra $L__BB4_2;
 ; CHECK-NEXT:  // %bb.1: // %cond.false
 ; CHECK-NEXT:    add.s64 %rd2, %rd1, -1;
 ; CHECK-NEXT:    not.b64 %rd3, %rd1;
 ; CHECK-NEXT:    and.b64 %rd4, %rd3, %rd2;
 ; CHECK-NEXT:    popc.b64 %r2, %rd4;
-; CHECK-NEXT:    cvt.u64.u32 %rd7, %r2;
+; CHECK-NEXT:    cvt.u64.u32 %rd6, %r2;
 ; CHECK-NEXT:  $L__BB4_2: // %cond.end
-; CHECK-NEXT:    cvt.s64.s32 %rd5, %r1;
-; CHECK-NEXT:    mul.lo.s64 %rd6, %rd7, %rd5;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
+; CHECK-NEXT:    cvt.u32.u64 %r3, %rd6;
+; CHECK-NEXT:    mul.wide.s32 %rd5, %r3, %r1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd5;
 ; CHECK-NEXT:    ret;
   %count = call i64 @llvm.cttz.i64(i64 %a, i1 false)
   %sext = sext i32 %b to i64
