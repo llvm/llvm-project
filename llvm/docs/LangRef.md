@@ -7326,7 +7326,7 @@ referenced by an ID (e.g., `!1`).
 
 Some examples of expressions:
 
-```text
+```llvm
 !DIExpression(DW_OP_deref)
 !DIExpression(DW_OP_plus_uconst, 3)
 !DIExpression(DW_OP_constu, 3, DW_OP_plus)
@@ -7359,7 +7359,7 @@ used in {ref}`debug records <debugrecords>` in combination with a
 within a function, it must only be used as a function argument, must always be
 inlined, and cannot appear in named metadata.
 
-```text
+```llvm
 #dbg_value(!DIArgList(i32 %a, i32 %b),
            !16,
            !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus),
@@ -11008,7 +11008,7 @@ the `catchret`'s behavior is undefined.
 
 ##### Example:
 
-```text
+```llvm
 catchret from %catch to label %continue
 ```
 
@@ -11052,7 +11052,7 @@ It transfers control to `continue` or unwinds out of the function.
 
 ##### Example:
 
-```text
+```llvm
 cleanupret from %cleanup unwind to caller
 cleanupret from %cleanup unwind label %continue
 ```
@@ -11118,7 +11118,7 @@ unsafe floating-point optimizations:
 
 ##### Example:
 
-```text
+```llvm
 <result> = fneg float %val          ; yields float:result = -%var
 ```
 
@@ -11175,7 +11175,7 @@ unsigned and/or signed overflow, respectively, occurs.
 
 ##### Example:
 
-```text
+```llvm
 <result> = add i32 4, %var          ; yields i32:result = 4 + %var
 ```
 
@@ -11208,7 +11208,7 @@ unsafe floating-point optimizations:
 
 ##### Example:
 
-```text
+```llvm
 <result> = fadd float 4.0, %var          ; yields float:result = 4.0 + %var
 ```
 
@@ -11256,7 +11256,7 @@ unsigned and/or signed overflow, respectively, occurs.
 
 ##### Example:
 
-```text
+```llvm
 <result> = sub i32 4, %var          ; yields i32:result = 4 - %var
 <result> = sub i32 0, %val          ; yields i32:result = -%var
 ```
@@ -11290,7 +11290,7 @@ unsafe floating-point optimizations:
 
 ##### Example:
 
-```text
+```llvm
 <result> = fsub float 4.0, %var           ; yields float:result = 4.0 - %var
 <result> = fsub float -0.0, %val          ; yields float:result = -%var
 ```
@@ -11340,7 +11340,7 @@ unsigned and/or signed overflow, respectively, occurs.
 
 ##### Example:
 
-```text
+```llvm
 <result> = mul i32 4, %var          ; yields i32:result = 4 * %var
 ```
 
@@ -11373,7 +11373,7 @@ unsafe floating-point optimizations:
 
 ##### Example:
 
-```text
+```llvm
 <result> = fmul float 4.0, %var          ; yields float:result = 4.0 * %var
 ```
 
@@ -11415,7 +11415,7 @@ such, "((a udiv exact b) mul b) == a").
 
 ##### Example:
 
-```text
+```llvm
 <result> = udiv i32 4, %var          ; yields i32:result = 4 / %var
 ```
 
@@ -11458,7 +11458,7 @@ a {ref}`poison value <poisonvalues>` if the result would be rounded.
 
 ##### Example:
 
-```text
+```llvm
 <result> = sdiv i32 4, %var          ; yields i32:result = 4 / %var
 ```
 
@@ -11491,7 +11491,7 @@ unsafe floating-point optimizations:
 
 ##### Example:
 
-```text
+```llvm
 <result> = fdiv float 4.0, %var          ; yields float:result = 4.0 / %var
 ```
 
@@ -11531,7 +11531,7 @@ undefined behavior.
 
 ##### Example:
 
-```text
+```llvm
 <result> = urem i32 4, %var          ; yields i32:result = 4 % %var
 ```
 
@@ -11584,7 +11584,7 @@ result of the division and the remainder.)
 
 ##### Example:
 
-```text
+```llvm
 <result> = srem i32 4, %var          ; yields i32:result = 4 % %var
 ```
 
@@ -11627,7 +11627,7 @@ unsafe floating-point optimizations:
 
 ##### Example:
 
-```text
+```llvm
 <result> = frem float 4.0, %var          ; yields float:result = 4.0 % %var
 ```
 
@@ -11681,7 +11681,7 @@ value if it shifts out any bits that disagree with the resultant sign bit.
 
 ##### Example:
 
-```text
+```llvm
 <result> = shl i32 4, %var   ; yields i32: 4 << %var
 <result> = shl i32 4, 2      ; yields i32: 16
 <result> = shl i32 1, 10     ; yields i32: 1024
@@ -11725,7 +11725,7 @@ a poison value if any of the bits shifted out are non-zero.
 
 ##### Example:
 
-```text
+```llvm
 <result> = lshr i32 4, 1   ; yields i32:result = 2
 <result> = lshr i32 4, 2   ; yields i32:result = 1
 <result> = lshr i8  4, 3   ; yields i8:result = 0
@@ -11770,7 +11770,7 @@ a poison value if any of the bits shifted out are non-zero.
 
 ##### Example:
 
-```text
+```llvm
 <result> = ashr i32 4, 1   ; yields i32:result = 2
 <result> = ashr i32 4, 2   ; yields i32:result = 1
 <result> = ashr i8  4, 3   ; yields i8:result = 0
@@ -11813,7 +11813,7 @@ The truth table used for the '`and`' instruction is:
 
 ##### Example:
 
-```text
+```llvm
 <result> = and i32 4, %var         ; yields i32:result = 4 & %var
 <result> = and i32 15, 40          ; yields i32:result = 8
 <result> = and i32 4, 8            ; yields i32:result = 0
@@ -11901,7 +11901,7 @@ The truth table used for the '`xor`' instruction is:
 
 ##### Example:
 
-```text
+```llvm
 <result> = xor i32 4, %var         ; yields i32:result = 4 ^ %var
 <result> = xor i32 15, 40          ; yields i32:result = 39
 <result> = xor i32 4, 8            ; yields i32:result = 12
@@ -12052,7 +12052,7 @@ of `idx` exceeds the runtime length of the vector, the result is a
 
 ##### Example:
 
-```text
+```llvm
 <result> = extractelement <4 x i32> %vec, i64 0    ; yields i32
 ```
 
@@ -12092,7 +12092,7 @@ is a {ref}`poison value <poisonvalues>`.
 
 ##### Example:
 
-```text
+```llvm
 <result> = insertelement <4 x i32> %vec, i32 1, i64 0    ; yields <4 x i32>
 ```
 
@@ -12144,7 +12144,7 @@ literals for a vector with a length unknown at compile time.
 
 ##### Example:
 
-```text
+```llvm
 <result> = shufflevector <4 x i32> %v1, <4 x i32> %v2,
                         <4 x i32> <i32 0, i32 4, i32 1, i32 5>  ; yields <4 x i32>
 <result> = shufflevector <4 x i32> %v1, <4 x i32> poison,
@@ -12196,7 +12196,7 @@ the index operands.
 
 ##### Example:
 
-```text
+```llvm
 <result> = extractvalue {i32, float} %agg, 0    ; yields i32
 ```
 
@@ -12611,7 +12611,7 @@ A `fence` instruction can also take an optional
 
 ##### Example:
 
-```text
+```llvm
 fence acquire                                        ; yields void
 fence syncscope("singlethread") seq_cst              ; yields void
 fence syncscope("agent") seq_cst                     ; yields void
@@ -13841,7 +13841,7 @@ same sign then the result is a {ref}`poison value <poisonvalues>`.
 
 ##### Example:
 
-```text
+```llvm
 <result> = icmp eq i32 4, 5          ; yields: result=false
 <result> = icmp ne ptr %X, %X        ; yields: result=false
 <result> = icmp ult i16  4, 5        ; yields: result=true
@@ -13948,7 +13948,7 @@ assumptions to be made about the values of input arguments; namely
 
 ##### Example:
 
-```text
+```llvm
 <result> = fcmp oeq float 4.0, 5.0    ; yields: result=false
 <result> = fcmp one float 4.0, 5.0    ; yields: result=true
 <result> = fcmp olt float 4.0, 5.0    ; yields: result=true

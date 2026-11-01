@@ -23,12 +23,7 @@ from pygments.token import Keyword, Name, Number, Punctuation
 
 __all__ = ["LlvmLexer"]
 
-try:
-    _LLVM_DIR = Path(__file__).resolve().parents[2]
-except NameError:
-    # `pygmentize -x` runs this file with exec(), which doesn't set __file__.
-    # Assume it runs from the llvm-project root.
-    _LLVM_DIR = Path.cwd() / "llvm"
+_LLVM_DIR = Path(__file__).resolve().parents[2]
 _LLLEXER = _LLVM_DIR / "lib" / "AsmParser" / "LLLexer.cpp"
 _ATTRIBUTES = _LLVM_DIR / "include" / "llvm" / "IR" / "Attributes.td"
 
