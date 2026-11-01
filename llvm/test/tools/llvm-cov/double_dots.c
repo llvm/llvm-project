@@ -3,9 +3,9 @@
 // llvm-cov convert-for-testing to extract the covmapping.
 
 // RUN: llvm-profdata merge %S/Inputs/double_dots.proftext -o %t.profdata
-// RUN: llvm-cov show %S/Inputs/double_dots.covmapping -instr-profile=%t.profdata -o %t.dir
+// RUN: llvm-cov show --respect-coverage-exclusion-markers=false %S/Inputs/double_dots.covmapping -instr-profile=%t.profdata -o %t.dir
 // RUN: FileCheck -input-file=%t.dir/index.txt %s
-// RUN: llvm-cov show -format=html %S/Inputs/double_dots.covmapping -instr-profile=%t.profdata -o %t.dir
+// RUN: llvm-cov show --respect-coverage-exclusion-markers=false -format=html %S/Inputs/double_dots.covmapping -instr-profile=%t.profdata -o %t.dir
 // RUN: FileCheck -input-file=%t.dir/index.html %s
 
 // CHECK-NOT: coverage{{.*}}dots{{.*}}..{{.*}}dots
@@ -20,5 +20,5 @@ int main() {}
 
 // Check that we get the right error when writing to an invalid path:
 
-// RUN: not llvm-cov show %S/Inputs/double_dots.covmapping -instr-profile=%t.profdata -o /dev/null 2>&1 | FileCheck %s -check-prefix=ERROR-MESSAGE
+// RUN: not llvm-cov show --respect-coverage-exclusion-markers=false %S/Inputs/double_dots.covmapping -instr-profile=%t.profdata -o /dev/null 2>&1 | FileCheck %s -check-prefix=ERROR-MESSAGE
 // ERROR-MESSAGE: error: {{.*}}: could not create index file!
