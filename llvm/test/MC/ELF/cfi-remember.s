@@ -1,55 +1,47 @@
 # RUN: llvm-mc -triple x86_64 %s | FileCheck %s --check-prefix=ASM
-# RUN: llvm-mc -filetype=obj -triple x86_64 %s | llvm-readobj -S --sr --sd - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64 %s -o %t
+# RUN: llvm-dwarfdump --eh-frame %t | FileCheck %s
 
 # ASM:      .cfi_remember_state{{$}}
-# ASM-NEXT: nop
+# ASM-NEXT: pushq %rbx
+# ASM:      .cfi_restore_state{{$}}
+# ASM-NEXT: pushq %rbp
+
+## .cfi_restore_state restores the CFA offset that .cfi_adjust_cfa_offset and
+## .cfi_rel_offset are relative to.
+# CHECK:      0x0: CFA=RSP+8: RIP=[CFA-8]
+# CHECK-NEXT: 0x1: CFA=RSP+16: RIP=[CFA-8]
+# CHECK-NEXT: 0x2: CFA=RSP+24: RBX=[CFA-24], RIP=[CFA-8]
+# CHECK-NEXT: 0x3: CFA=RSP+16: RIP=[CFA-8]
+# CHECK-NEXT: 0x4: CFA=RSP+8: RIP=[CFA-8]
+# CHECK-NEXT: 0x5: CFA=RSP+24: RBX=[CFA-24], RIP=[CFA-8]
+# CHECK-NEXT: 0x6: CFA=RSP+32: RBX=[CFA-24], RBP=[CFA-32], RIP=[CFA-8]
+# CHECK-NEXT: 0x8: CFA=RSP+16: RIP=[CFA-8]
+# CHECK-NEXT: 0x9: CFA=RSP+8: RIP=[CFA-8]
+# CHECK-EMPTY:
 
 f:
 	.cfi_startproc
-        nop
+	pushq	%rax
+	.cfi_adjust_cfa_offset 8
 	.cfi_remember_state
-        nop
+	pushq	%rbx
+	.cfi_adjust_cfa_offset 8
+	.cfi_rel_offset %rbx, 0
+	.cfi_remember_state
+	popq	%rbx
+	.cfi_adjust_cfa_offset -8
+	.cfi_restore %rbx
+	popq	%rax
+	.cfi_adjust_cfa_offset -8
+	ret
 	.cfi_restore_state
-        nop
+	pushq	%rbp
+	.cfi_adjust_cfa_offset 8
+	.cfi_rel_offset %rbp, 0
+	ud2
+	.cfi_restore_state
+	popq	%rax
+	.cfi_adjust_cfa_offset -8
+	ret
 	.cfi_endproc
-
-// CHECK:        Section {
-// CHECK:          Index:
-// CHECK:          Name: .eh_frame
-// CHECK-NEXT:     Type: SHT_X86_64_UNWIND
-// CHECK-NEXT:     Flags [
-// CHECK-NEXT:       SHF_ALLOC
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x48
-// CHECK-NEXT:     Size: 48
-// CHECK-NEXT:     Link: 0
-// CHECK-NEXT:     Info: 0
-// CHECK-NEXT:     AddressAlignment: 8
-// CHECK-NEXT:     EntrySize: 0
-// CHECK-NEXT:     Relocations [
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 14000000 00000000 017A5200 01781001
-// CHECK-NEXT:       0010: 1B0C0708 90010000 14000000 1C000000
-// CHECK-NEXT:       0020: 00000000 03000000 00410A41 0B000000
-// CHECK-NEXT:     )
-// CHECK-NEXT:   }
-// CHECK:        Section {
-// CHECK:          Index:
-// CHECK-NEXT:     Name: .rela.eh_frame
-// CHECK-NEXT:     Type: SHT_RELA
-// CHECK-NEXT:     Flags [
-// CHECK-NEXT:       SHF_INFO_LINK
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset:
-// CHECK-NEXT:     Size: 24
-// CHECK-NEXT:     Link:
-// CHECK-NEXT:     Info:
-// CHECK-NEXT:     AddressAlignment: 8
-// CHECK-NEXT:     EntrySize: 24
-// CHECK-NEXT:     Relocations [
-// CHECK-NEXT:       0x20 R_X86_64_PC32 .text 0x0
-// CHECK-NEXT:     ]
-// CHECK:        }

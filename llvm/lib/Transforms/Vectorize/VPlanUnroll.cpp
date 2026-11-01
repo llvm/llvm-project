@@ -206,7 +206,7 @@ void UnrollState::unrollWidenInductionByUF(
   // The newly added recipes are added to ToSkip to avoid interleaving them
   // again.
   VPValue *Prev = IV;
-  Builder.setInsertPoint(IV->getParent(), InsertPtForPhi);
+  Builder.setInsertPoint(InsertPtForPhi);
   unsigned AddOpc;
   VPIRFlags AddFlags;
   if (IVTy->isPointerTy()) {
@@ -259,7 +259,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
   auto InsertPt = std::next(R->getIterator());
   for (unsigned Part = 1; Part != UF; ++Part) {
     VPRecipeBase *Copy = R->clone();
-    Copy->insertBefore(*R->getParent(), InsertPt);
+    Copy->insertBefore(InsertPt);
     addRecipeForPart(R, Copy, Part);
     if (RdxPhi) {
       // If the start value is a ReductionStartVector, use the identity value
@@ -317,10 +317,9 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
 
   // Unroll non-uniform recipes.
   auto InsertPt = std::next(R.getIterator());
-  VPBasicBlock &VPBB = *R.getParent();
   for (unsigned Part = 1; Part != UF; ++Part) {
     VPRecipeBase *Copy = R.clone();
-    Copy->insertBefore(VPBB, InsertPt);
+    Copy->insertBefore(InsertPt);
     addRecipeForPart(&R, Copy, Part);
 
     // Phi operands are updated once all other recipes have been unrolled.
@@ -865,7 +864,7 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     BuildVectors.push_back(BV);
     Phi->replaceAllUsesWith(BV);
     BV->setOperand(0, Phi);
-    BV->insertBefore(*Successor, Successor->getFirstNonPhi());
+    BV->insertBefore(Successor->getFirstNonPhi());
   }
 
   // Clone converted blocks for remaining lanes and process each in reverse
