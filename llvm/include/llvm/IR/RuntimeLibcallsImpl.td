@@ -63,6 +63,7 @@ class FuncArgType {
 def NoneType : FuncArgType; // dummy
 def Void : FuncArgType;
 def Bool : FuncArgType;     // 8 bits on all targets
+def Int8 : FuncArgType;
 def Int16 : FuncArgType;
 def Int32 : FuncArgType;
 def Int : FuncArgType;
@@ -70,6 +71,7 @@ def IntPlus : FuncArgType;  // Int or bigger.
 def Long : FuncArgType;     // Either 32 or 64 bits.
 def IntX : FuncArgType;     // Any integer type.
 def Int64 : FuncArgType;
+def Int128 : FuncArgType;
 def LLong : FuncArgType;    // 64 bits on all targets.
 def UInt16 : FuncArgType;
 def UInt32 : FuncArgType;
@@ -84,6 +86,9 @@ def SSizeT : FuncArgType;   // POSIX ssize_t.
 def Flt : FuncArgType;      // IEEE float.
 def Dbl : FuncArgType;      // IEEE double.
 def LDbl : FuncArgType;     // Any floating type (TODO: tighten this up).
+def X86FP80 : FuncArgType;
+def FP128 : FuncArgType;
+def PPCFP128 : FuncArgType;
 def Floating : FuncArgType; // Any floating type.
 def Ptr : FuncArgType;      // Any pointer type.
 def Struct : FuncArgType;   // Any struct type.
@@ -154,6 +159,25 @@ multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
+  FuncArgType ReturnType = P.ReturnType;
+  list<FuncArgType> ArgumentTypes = P.ArgumentTypes;
+}
+
+// Implementation of a long double function, which provides the libcall
+// matching the module's long double format.
+class LongDoubleLibcallImpl<string libcall_basename, string Name = NAME>
+    : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F128"),
+                         Name> {
+  let Provides = ?;
+  RuntimeLibcall ProvidesF80 = !cast<RuntimeLibcall>(libcall_basename#"_F80");
+  RuntimeLibcall ProvidesF128 = !cast<RuntimeLibcall>(libcall_basename#"_F128");
+  RuntimeLibcall ProvidesPPCF128 =
+      !cast<RuntimeLibcall>(libcall_basename#"_PPCF128");
+
+  let ReturnType = !if(!eq(ProvidesF128.ReturnType, FP128), LDbl,
+                       ProvidesF128.ReturnType);
+  let ArgumentTypes = !foreach(Ty, ProvidesF128.ArgumentTypes,
+                               !if(!eq(Ty, FP128), LDbl, Ty));
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used

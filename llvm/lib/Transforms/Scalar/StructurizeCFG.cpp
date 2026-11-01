@@ -1410,8 +1410,7 @@ static bool runImpl(DominatorTree &DT, RegionInfo &RI,
 }
 
 bool StructurizeCFGLegacyPass::runOnFunction(Function &F) {
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   const UniformityInfo *UI = nullptr;
   if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
     UI = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
@@ -1427,8 +1426,7 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = AM.getResult<RegionInfoAnalysis>(F);
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   const UniformityInfo *UI = nullptr;
   if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions))
     UI = &AM.getResult<UniformityInfoAnalysis>(F);

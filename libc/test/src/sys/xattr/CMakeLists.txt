@@ -14,7 +14,6 @@ add_libc_test(
     libc.src.__support.CPP.scope
     libc.src.__support.CPP.string_view
     libc.src.__support.libc_errno
-    libc.src.errno.errno
     libc.src.fcntl.creat
     libc.src.sys.xattr.fgetxattr
     libc.src.sys.xattr.flistxattr
@@ -39,7 +38,6 @@ add_libc_test(
     libc.src.__support.CPP.scope
     libc.src.__support.CPP.string_view
     libc.src.__support.libc_errno
-    libc.src.errno.errno
     libc.src.fcntl.creat
     libc.src.sys.xattr.lgetxattr
     libc.src.sys.xattr.llistxattr
@@ -65,7 +63,6 @@ add_libc_test(
     libc.src.__support.CPP.scope
     libc.src.__support.CPP.string_view
     libc.src.__support.libc_errno
-    libc.src.errno.errno
     libc.src.fcntl.creat
     libc.src.sys.xattr.getxattr
     libc.src.sys.xattr.listxattr

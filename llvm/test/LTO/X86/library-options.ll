@@ -12,8 +12,13 @@
 ; RUN: llvm-lto -thinlto-action=run -vectorize-loops=0 -thinlto-save-temps=%t/ %t/a.bc
 ; RUN: llvm-dis %t/0.4.opt.bc -o - | FileCheck %s --check-prefix=NOVEC
 
+;; Target library options are registered when targets are initialized.
+; RUN: llvm-lto -x86-asm-syntax=intel -exported-symbol=f -filetype=asm -o %t/intel.s %t/a.bc
+; RUN: FileCheck %s --check-prefix=INTEL --input-file=%t/intel.s
+
 ; VEC:       !"llvm.loop.isvectorized"
 ; NOVEC-NOT: isvectorized
+; INTEL:     .intel_syntax noprefix
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

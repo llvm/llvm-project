@@ -57,11 +57,11 @@ define amdgpu_ps i16 @extractelement_sgpr_v4i16_sgpr_idx(ptr addrspace(4) inreg 
 ;
 ; GFX11-LABEL: extractelement_sgpr_v4i16_sgpr_idx:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_and_b32 s0, s4, 3
+; GFX11-NEXT:    s_and_b32 s2, s2, 3
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX11-NEXT:    s_lshl_b32 s2, s2, 1
+; GFX11-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -127,7 +127,7 @@ define amdgpu_ps i16 @extractelement_vgpr_v4i16_sgpr_idx(ptr addrspace(1) %ptr, 
 ;
 ; GFX11-LABEL: extractelement_vgpr_v4i16_sgpr_idx:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_and_b32 s0, s2, 3
+; GFX11-NEXT:    s_and_b32 s0, s0, 3
 ; GFX11-NEXT:    s_mov_b32 s1, 0
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -260,7 +260,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v4i16_vgpr_idx(ptr addrspace(4) inreg 
 ; GFX11-NEXT:    v_and_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -309,7 +309,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v4i16_idx0(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v4i16_idx0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -360,7 +360,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v4i16_idx1(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v4i16_idx1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:2
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -411,7 +411,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v4i16_idx2(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v4i16_idx2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:4
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -462,7 +462,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v4i16_idx3(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v4i16_idx3:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:6
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:6
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -701,11 +701,11 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_sgpr_idx(ptr addrspace(4) inreg 
 ;
 ; GFX11-LABEL: extractelement_sgpr_v8i16_sgpr_idx:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_and_b32 s0, s4, 7
+; GFX11-NEXT:    s_and_b32 s2, s2, 7
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX11-NEXT:    s_lshl_b32 s2, s2, 1
+; GFX11-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -771,7 +771,7 @@ define amdgpu_ps i16 @extractelement_vgpr_v8i16_sgpr_idx(ptr addrspace(1) %ptr, 
 ;
 ; GFX11-LABEL: extractelement_vgpr_v8i16_sgpr_idx:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_and_b32 s0, s2, 7
+; GFX11-NEXT:    s_and_b32 s0, s0, 7
 ; GFX11-NEXT:    s_mov_b32 s1, 0
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -904,7 +904,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_vgpr_idx(ptr addrspace(4) inreg 
 ; GFX11-NEXT:    v_and_b32_e32 v0, 7, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -953,7 +953,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx0(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -1004,7 +1004,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx1(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:2
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -1055,7 +1055,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx2(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:4
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -1106,7 +1106,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx3(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx3:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:6
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:6
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -1157,7 +1157,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx4(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx4:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:8
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:8
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -1208,7 +1208,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx5(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx5:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:10
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:10
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -1259,7 +1259,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx6(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx6:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:12
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:12
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -1310,7 +1310,7 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx7(ptr addrspace(4) inreg %ptr
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx7:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:14
+; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1] offset:14
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog

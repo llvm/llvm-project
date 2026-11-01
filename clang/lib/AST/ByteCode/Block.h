@@ -140,8 +140,7 @@ public:
   void invokeCtorNoMemset() {
     assert(!IsInitialized);
     if (Desc->CtorFn)
-      Desc->CtorFn(this, data(), Desc->IsConst, Desc->IsMutable,
-                   Desc->IsVolatile,
+      Desc->CtorFn(data(), Desc->IsConst, Desc->IsMutable, Desc->IsVolatile,
                    /*isActive=*/true, /*InUnion=*/false, Desc);
 
     IsInitialized = true;
@@ -151,7 +150,7 @@ public:
   void invokeDtor() {
     assert(IsInitialized);
     if (Desc->DtorFn)
-      Desc->DtorFn(this, data(), Desc);
+      Desc->DtorFn(data(), Desc);
     IsInitialized = false;
   }
 

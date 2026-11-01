@@ -132,6 +132,7 @@ expand_template(
     name = "ConfigHeader",
     out = "include/lldb/Host/Config.h",
     substitutions = {
+        "#cmakedefine01 HAVE_GETEXECPATH": "#define HAVE_GETEXECPATH 0",
         "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 1",
         "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 1",
 
@@ -1089,6 +1090,34 @@ cc_binary(
         ],
         "//conditions:default": [],
     }),
+)
+
+# A test driver for the lit Shell tests. Like CMake, link in every plugin.
+cc_binary(
+    name = "lldb-test",
+    srcs = glob([
+        "tools/lldb-test/*.cpp",
+        "tools/lldb-test/*.h",
+    ]),
+    deps = [
+        ":API",
+        ":Breakpoint",
+        ":Core",
+        ":DataFormatters",
+        ":Expression",
+        ":Headers",
+        ":Host",
+        ":Initialization",
+        ":Interpreter",
+        ":Symbol",
+        ":Target",
+        ":Utility",
+        ":Version",
+        "//lldb/source/Plugins:PluginSymbolFileDWARF",
+        "//lldb/source/Plugins:PluginsClang",
+        "//lldb/source/Plugins:PluginsConfig",
+        "//llvm:Support",
+    ],
 )
 
 expand_template(
