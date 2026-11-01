@@ -6040,7 +6040,7 @@ static QualType getIntTypeForBitwidthOrBitInt(ASTContext &C, unsigned Bits,
 }
 
 static Expr *buildInitListValue(Sema &SemaRef, Expr *E) {
-  auto *ILE = dyn_cast<InitListExpr>(E);
+  auto *ILE = dyn_cast<InitListExpr>(E->IgnoreImplicit());
   if (!ILE)
     return E;
   if (ILE->isTransparent())
@@ -6056,16 +6056,12 @@ static Expr *buildInitListValue(Sema &SemaRef, Expr *E) {
         AssignmentAction::Converting);
     return Zero.isUsable() ? Zero.get() : E;
   }
-  InitListExpr *Syntactic = ILE->getSyntacticForm();
+  Expr *Syntactic = ILE->getSyntacticForm();
   if ((!IsEmptyScalar && !Ty->isRecordType()) || !Syntactic)
     return E;
   Sema::TentativeAnalysisScope Trap(SemaRef);
-  ExprResult List = CaptureVars(SemaRef).TransformExpr(Syntactic);
-  if (List.isInvalid())
-    return E;
-  Expr *ListExpr = List.get();
   ExprResult Value = SemaRef.BuildCXXTypeConstructExpr(
-      SemaRef.Context.getTrivialTypeSourceInfo(Ty, LBrace), LBrace, ListExpr,
+      SemaRef.Context.getTrivialTypeSourceInfo(Ty, LBrace), LBrace, Syntactic,
       ILE->getRBraceLoc(), /*ListInitialization=*/true);
   return Value.isUsable() ? Value.get() : E;
 }
