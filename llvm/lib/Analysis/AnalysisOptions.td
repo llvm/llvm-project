@@ -165,11 +165,11 @@ defm : BoolField<"enable-unsafe-globalsmodref-alias-results", "false", "">;
 // FIXME: Use a default vocab when not specified
 defm : ValueField<"ir2vec-vocab-path", "StringRef", "",
   "Path to the vocabulary file for IR2Vec">;
-defm : ValueField<"ir2vec-opc-weight", "float", "1.0",
+defm : ValueField<"ir2vec-opc-weight", "float", "1.0f",
   "Weight for opcode embeddings">;
-defm : ValueField<"ir2vec-type-weight", "float", "0.5",
+defm : ValueField<"ir2vec-type-weight", "float", "0.5f",
   "Weight for type embeddings">;
-defm : ValueField<"ir2vec-arg-weight", "float", "0.2",
+defm : ValueField<"ir2vec-arg-weight", "float", "0.2f",
   "Weight for argument embeddings">;
 defm : EnumField<"ir2vec-kind", "IR2VecKind", "", "symbolic,flow-aware", ["IR2VecKind::Symbolic", "IR2VecKind::FlowAware"],
   "IR2Vec embedding kind">;
@@ -326,7 +326,7 @@ defm : BoolField<"inliner-interactive-include-default", "false",
   "In interactive mode, also send the default policy decision: inlining_default">;
 defm : BoolField<"ml-advisor-keep-fpi-cache", "false",
   "For test - keep the ML Inline advisor's FunctionPropertiesInfo cache">;
-defm : ValueField<"ml-advisor-size-increase-threshold", "float", "2.0",
+defm : ValueField<"ml-advisor-size-increase-threshold", "float", "2.0f",
   "Maximum factor by which expected native size may increase before blocking any further inlining">;
 defm : ValueField<"ml-inliner-model-selector", "StringRef", "", "">;
 defm : EnumField<"ml-inliner-skip-policy", "SkipMLPolicyCriteria", "SkipMLPolicyCriteria::Never", "never,if-caller-not-cold", ["SkipMLPolicyCriteria::Never", "SkipMLPolicyCriteria::IfCallerIsNotCold"], "">;
