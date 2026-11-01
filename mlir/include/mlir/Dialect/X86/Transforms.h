@@ -122,6 +122,11 @@ void populatePrepareVectorContractLoopsPatterns(RewritePatternSet &patterns);
 void populateVectorContractMultiLevelUnrollForAMXPatterns(
     RewritePatternSet &patterns);
 
+// Approximates vectorized f32 `math.rsqrt` with the AVX `vrsqrtps`
+// instruction followed by one Newton-Raphson step. Requires the inner vector
+// dimension to be a multiple of 8.
+void populateMathRsqrtApproximationPatterns(RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h

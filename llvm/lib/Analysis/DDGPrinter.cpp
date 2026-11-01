@@ -13,18 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DDGPrinter.h"
-#include "llvm/Support/CommandLine.h"
+#include "AnalysisOptions.h"
 #include "llvm/Support/GraphWriter.h"
 
 using namespace llvm;
 
-static cl::opt<bool> DotOnly("dot-ddg-only", cl::Hidden,
-                             cl::desc("simple ddg dot graph"));
-static cl::opt<std::string> DDGDotFilenamePrefix(
-    "dot-ddg-filename-prefix", cl::init("ddg"), cl::Hidden,
-    cl::desc("The prefix used for the DDG dot file names."));
-
-static void writeDDGToDotFile(DataDependenceGraph &G, bool DOnly = false);
+static void writeDDGToDotFile(const AnalysisOptions &Opts,
+                              DataDependenceGraph &G);
 
 //===--------------------------------------------------------------------===//
 // Implementation of DDG DOT Printer for a loop
@@ -32,13 +27,14 @@ static void writeDDGToDotFile(DataDependenceGraph &G, bool DOnly = false);
 PreservedAnalyses DDGDotPrinterPass::run(Loop &L, LoopAnalysisManager &AM,
                                          LoopStandardAnalysisResults &AR,
                                          LPMUpdater &U) {
-  writeDDGToDotFile(*AM.getResult<DDGAnalysis>(L, AR), DotOnly);
+  writeDDGToDotFile(getAnalysisOptions(L), *AM.getResult<DDGAnalysis>(L, AR));
   return PreservedAnalyses::all();
 }
 
-static void writeDDGToDotFile(DataDependenceGraph &G, bool DOnly) {
+static void writeDDGToDotFile(const AnalysisOptions &Opts,
+                              DataDependenceGraph &G) {
   std::string Filename =
-      Twine(DDGDotFilenamePrefix + "." + G.getName() + ".dot").str();
+      Twine(Opts.dot_ddg_filename_prefix + "." + G.getName() + ".dot").str();
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;
@@ -47,7 +43,7 @@ static void writeDDGToDotFile(DataDependenceGraph &G, bool DOnly) {
   if (!EC)
     // We only provide the constant verson of the DOTGraphTrait specialization,
     // hence the conversion to const pointer
-    WriteGraph(File, (const DataDependenceGraph *)&G, DOnly);
+    WriteGraph(File, (const DataDependenceGraph *)&G, Opts.dot_ddg_only);
   else
     errs() << "  error opening file for writing!";
   errs() << "\n";

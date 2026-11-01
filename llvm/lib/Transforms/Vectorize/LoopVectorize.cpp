@@ -1634,11 +1634,11 @@ static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
   VPIRBasicBlock *IRVPBB = Plan->createEmptyVPIRBasicBlock(IRBB);
   auto IP = IRVPBB->begin();
   for (auto &R : make_early_inc_range(VPBB->phis()))
-    R.moveBefore(*IRVPBB, IP);
+    R.moveBefore(IP);
 
   for (auto &R :
        make_early_inc_range(make_range(VPBB->getFirstNonPhi(), VPBB->end())))
-    R.moveBefore(*IRVPBB, IRVPBB->end());
+    R.moveBefore(IRVPBB->end());
 
   VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
   // VPBB is now dead and will be cleaned up when the plan gets destroyed.
@@ -2881,6 +2881,11 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             .Case(
                 [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
             .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
+            .Case([](const VPWidenStoreEVLRecipe *R) {
+              return Instruction::Store;
+            })
+            .Case(
+                [](const VPWidenLoadEVLRecipe *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
@@ -4643,13 +4648,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
 
       // All instructions in an Any-of reduction chain are narrowed to bool.
       // Check if that is the case for this phi node.
-      auto *HeaderUser = cast_if_present<PHINode>(
-          find_singleton<User>(Phi->users(), [this](User *U, bool) -> User * {
+      auto *HeaderUser = find_singleton<PHINode>(
+          Phi->users(), [this](User *U, bool) -> PHINode * {
             auto *Phi = dyn_cast<PHINode>(U);
             if (Phi && Phi->getParent() == TheLoop->getHeader())
               return Phi;
             return nullptr;
-          }));
+          });
       if (HeaderUser) {
         auto &ReductionVars = Legal->getReductionVars();
         auto Iter = ReductionVars.find(HeaderUser);
@@ -4691,9 +4696,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     [[fallthrough]];
   case Instruction::Add:
   case Instruction::Sub: {
-    auto Info = Legal->getHistogramInfo(I);
-    if (Info && VF.isVector()) {
-      const HistogramInfo *HGram = Info.value();
+    const HistogramInfo *HGram = Legal->getHistogramInfo(I);
+    if (HGram && VF.isVector()) {
       // Assume that a non-constant update value (or a constant != 1) requires
       // a multiply, and add that into the cost.
       InstructionCost MulCost = TTI::TCC_Free;
@@ -5605,8 +5609,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // which may be needed for epilogue vectorization.
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                  /*OnlyLatches=*/true);
-  RUN_VPLAN_PASS(VPlanTransforms::materializeBackedgeTakenCount, BestVPlan,
-                 VectorPH);
   std::optional<uint64_t> MaxRuntimeStep = getMaxRuntimeElementCount(
       BestVF * BestUF, *OrigLoop->getHeader()->getParent());
 
@@ -5792,8 +5794,9 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
 
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    auto *LoadR = Builder.createWidenLoad(*Load, Ptr, Mask, Consecutive, *VPI,
-                                          Load->getDebugLoc());
+    auto *LoadR =
+        Builder.createWidenLoad(*Load, Ptr, Mask, Consecutive, Load->getAlign(),
+                                *VPI, Load->getDebugLoc());
     if (Reverse)
       return Builder.createNaryOp(VPInstruction::Reverse, LoadR,
                                   LoadR->getDebugLoc());
@@ -5806,7 +5809,8 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
   return Builder.createWidenStore(*Store, Ptr, StoredVal, Mask, Consecutive,
-                                  *VPI, Store->getDebugLoc());
+                                  Store->getAlign(), *VPI,
+                                  Store->getDebugLoc());
 }
 
 bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
@@ -5867,25 +5871,23 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (VPI->getOpcode() != Instruction::Store)
     return nullptr;
 
-  auto HistInfo =
+  const HistogramInfo *HistInfo =
       Legal->getHistogramInfo(cast<StoreInst>(VPI->getUnderlyingInstr()));
   if (!HistInfo)
     return nullptr;
-
-  const HistogramInfo *HI = *HistInfo;
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
   HGramOps.push_back(VPI->getOperand(1));
   // Increment value.
-  HGramOps.push_back(Plan.getOrAddLiveIn(HI->Update->getOperand(1)));
+  HGramOps.push_back(Plan.getOrAddLiveIn(HistInfo->Update->getOperand(1)));
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
-  if (CM.isMaskRequired(HI->Store))
+  if (CM.isMaskRequired(HistInfo->Store))
     HGramOps.push_back(VPI->getMask());
 
-  return new VPHistogramRecipe(HI->UpdateKind, HGramOps,
+  return new VPHistogramRecipe(HistInfo->UpdateKind, HGramOps,
                                cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
@@ -5900,10 +5902,10 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       VPValue *Addr = VPI->getOperand(1);
       // We need to store the exiting value of the reduction, so use the blend
       // if tail folded.
-      if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
+      if (auto *Blend = VPlanPatternMatch::findSingleUser<VPBlendRecipe>(Val))
         Val = Blend;
       [[maybe_unused]] auto *Rdx =
-          VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
+          VPlanPatternMatch::findSingleUser<VPReductionPHIRecipe>(Val);
       assert((isa<VPIRValue>(Val) || !Rdx || Rdx->getBackedgeValue() == Val) &&
              "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
@@ -6554,13 +6556,14 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // also modeled in VPlan.
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
-    Builder.setInsertPoint(MiddleVPBB, IP);
+    Builder.setInsertPoint(IP);
     // For AnyOf reductions, find the select among PhiR's users and convert
     // the reduction phi to operate on bools before creating the final
     // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *AnyOfSelect = cast<VPSingleDefRecipe>(
-          findUserOf(PhiR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())));
+      auto *AnyOfSelect = findSingleUser<VPSingleDefRecipe>(
+          PhiR,
+          m_Select(m_Unless(m_Specific(HeaderMask)), m_VPValue(), m_VPValue()));
       VPValue *Start = PhiR->getStartValue();
       bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.
@@ -6628,7 +6631,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       NewPhiR->setOperand(1, NewExiting);
       PhiR->replaceAllUsesWith(Plan->getPoison(PhiR->getScalarType()));
 
-      Builder.setInsertPoint(MiddleVPBB, IP);
+      Builder.setInsertPoint(IP);
       FinalReductionResult =
           Builder.createAnyOfReduction(NewExiting, NewVal, Start, ExitDL);
     } else {
@@ -6646,7 +6649,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         {
           VPBuilder::InsertPointGuard Guard(Builder);
           Builder.setInsertPoint(
-              NewExitingVPV->getDefiningRecipe()->getParent(),
               std::next(NewExitingVPV->getDefiningRecipe()->getIterator()));
           ReductionOp =
               Builder.createWidenCast(Instruction::Trunc, NewExitingVPV, RdxTy);
@@ -6741,17 +6743,11 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    // The VPlan expander cannot hoist bounds out of an enclosing loop.
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
-    if (OrigLoop->getParentLoop())
-      return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
-                            MemCheckCond, MemCheckBlock, HasBranchWeights);
-
     // Erase the temporary IR before recipe expansion can reuse its values.
     RTChecks.eraseMemCheckBlock();
     RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan, RtPtrChecking,
-                   *PSE.getSE(), VF, UF, OrigLoop->getStartLoc(),
-                   HasBranchWeights);
+                   OrigLoop, *PSE.getSE(), VF, UF, HasBranchWeights);
   }
 }
 
@@ -7043,7 +7039,7 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
   assert(MatchedTC && "must match vector trip count");
 
   VPBasicBlock *MiddleVPBB = MainPlan.getMiddleBlock();
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder MiddleBuilder(MiddleVPBB->getFirstNonPhi());
   VPInstruction *VectorTCMarker = MiddleBuilder.createNaryOp(
       VPInstruction::ResumeForEpilogue,
       {VectorTC, MainPlan.getZero(VectorTC->getScalarType())});
@@ -7053,8 +7049,8 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
   // them so they can be used as resume values when vectorizing the epilogue.
   // The epilogue plan creates the resume phis after the main plan executed.
   VPRecipeBase *MiddleTerm = MiddleVPBB->getTerminator();
-  MiddleBuilder.setInsertPoint(
-      MiddleVPBB, MiddleTerm ? MiddleTerm->getIterator() : MiddleVPBB->end());
+  MiddleBuilder.setInsertPoint(MiddleTerm ? MiddleTerm->getIterator()
+                                          : MiddleVPBB->end());
   auto ResumeValues = to_vector(
       map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
         auto *ResumePhi = cast<VPPhi>(R.getOperand(0));
@@ -7117,7 +7113,7 @@ static void preparePlanForEpilogueVectorLoop(
         Plan.getOrAddLiveIn(ResumeForEpi->getOperand(1)->getUnderlyingValue());
     if (MainV == BypassV)
       return MainV;
-    return VPBuilder(VectorPH, VectorPH->getFirstNonPhi())
+    return VPBuilder(VectorPH->getFirstNonPhi())
         .createScalarPhi({MainV, BypassV}, {}, Name);
   };
 
@@ -7145,7 +7141,7 @@ static void preparePlanForEpilogueVectorLoop(
          "the canonical IV should only be used by its increment, casts, "
          "stride scaling, ScalarIVSteps or DerivedIV when resetting the start "
          "value");
-  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPBuilder Builder(Header->getFirstNonPhi());
   VPInstruction *Add = Builder.createAdd(IV, VPV);
   // Replace all users of the canonical IV and its increment with the offset
   // version, except for the Add itself and the canonical IV increment.
@@ -7159,7 +7155,7 @@ static void preparePlanForEpilogueVectorLoop(
   OffsetIVInc->setOperand(0, Increment);
 
   // Resume values must be created in the vector preheader.
-  VPBuilder PHBuilder(VectorPH, VectorPH->getFirstNonPhi());
+  VPBuilder PHBuilder(VectorPH->getFirstNonPhi());
 
   // Ensure that the start values for all header phi recipes are updated before
   // vectorizing the epilogue loop.
@@ -7394,8 +7390,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                              TTI->enableInterleavedAccessVectorization());
 
   // Analyze interleaved memory accesses.
-  if (UseInterleaved)
+  if (UseInterleaved) {
     IAI.analyzeInterleaving(useMaskedInterleavedAccesses(Opts, *TTI));
+    // If the loop exits from a block other than the latch, the scalar
+    // iteration reserved for the exit may leave the loop before reaching the
+    // grouped accesses.
+    if (L->getExitingBlock() != L->getLoopLatch() &&
+        !LVL.hasUncountableEarlyExit())
+      IAI.invalidateGroupsRequiringScalarEpilogue();
+  }
 
   if (LVL.hasUncountableEarlyExit()) {
     BasicBlock *LoopLatch = L->getLoopLatch();

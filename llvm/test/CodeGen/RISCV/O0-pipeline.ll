@@ -48,6 +48,7 @@
 ; CHECK-NEXT:       RISC-V VMV0 Elimination
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       RISC-V Insert VSETVLI pass
 ; CHECK-NEXT:       Fast Register Allocator

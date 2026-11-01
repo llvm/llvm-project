@@ -8,7 +8,6 @@ add_libc_test(
     poll_test.cpp
   DEPENDS
     libc.hdr.limits_macros
-    libc.src.errno.errno
     libc.src.poll.poll
     libc.test.UnitTest.ErrnoCheckingTest
 )
@@ -30,7 +29,6 @@ add_libc_test(
     libc.hdr.types.struct_sigaction
     libc.hdr.types.struct_timespec
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.poll.ppoll
     libc.src.signal.raise
     libc.src.signal.sigaction

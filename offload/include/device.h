@@ -47,6 +47,9 @@ struct __tgt_target_table;
 
 /// Kernel launch-geometry properties.
 struct KernelLaunchInfoTy {
+  const char *Name = nullptr;
+  llvm::MemoryBufferRef Image;
+  llvm::MemoryBufferRef IRImage;
   uint32_t MaxNumThreads = 0;
   uint32_t PreferredNumThreads = 0;
   uint32_t ReductionDataSize = 0;
@@ -151,6 +154,9 @@ struct DeviceTy {
   llvm::Expected<void *> getAndRecordGlobalAddress(const ProgramTy &Program,
                                                    const char *Name,
                                                    size_t ExpectedSize);
+
+  /// The plugin-side context backing this device's context handle.
+  llvm::omp::target::plugin::PluginContextTy *getPluginContext();
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
