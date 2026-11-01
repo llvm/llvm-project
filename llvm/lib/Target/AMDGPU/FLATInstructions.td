@@ -1297,7 +1297,7 @@ defm SCRATCH_LOAD_LDS_USHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_u
 defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_sshort">;
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
-let SubtargetPredicate = isGFX125xOnly in {
+let SubtargetPredicate = HasLoadMonitorInsts in {
 defm FLAT_LOAD_MONITOR_B32    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b32",  VGPROp_32>;
 defm FLAT_LOAD_MONITOR_B64    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b64",  VGPROp_64>;
 defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128", VGPROp_128>;
@@ -1305,7 +1305,7 @@ defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128",
 defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPROp_32>;
 defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VGPROp_64>;
 defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VGPROp_128>;
-} // End SubtargetPredicate = isGFX125xOnly
+} // End SubtargetPredicate = HasLoadMonitorInsts
 
 let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
 let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
@@ -2371,7 +2371,7 @@ let WaveSizePredicate = isWave32,  OtherPredicates = [HasTransposeLoadF4F6Insts]
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
 }
 
-let OtherPredicates = [isGFX125xOnly] in {
+let SubtargetPredicate = HasLoadMonitorInsts in {
   def  : FlatLoadPat <FLAT_LOAD_MONITOR_B32,  AMDGPUflat_load_monitor,  i32>;
   def  : FlatLoadPat <FLAT_LOAD_MONITOR_B64,  AMDGPUflat_load_monitor,  v2i32>;
   def  : FlatLoadPat <FLAT_LOAD_MONITOR_B128, AMDGPUflat_load_monitor, v4i32>;
@@ -2379,7 +2379,7 @@ let OtherPredicates = [isGFX125xOnly] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B32,  AMDGPUglobal_load_monitor,  i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B64,  AMDGPUglobal_load_monitor,  v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B128, AMDGPUglobal_load_monitor, v4i32>;
-} // End SubtargetPredicate = isGFX125xOnly
+} // End SubtargetPredicate = HasLoadMonitorInsts
 
 let OtherPredicates = [isGFX1250Plus] in {
   defm : GlobalFLATLoadPats_M0 <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;

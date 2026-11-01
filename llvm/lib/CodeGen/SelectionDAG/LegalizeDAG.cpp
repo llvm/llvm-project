@@ -201,7 +201,7 @@ private:
   SDValue ExpandVectorBuildThroughStack(SDNode* Node);
   SDValue ExpandConcatVectors(SDNode *Node);
 
-  SDValue ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP);
+  SDValue ExpandConstantFP(ConstantFPSDNode *CFP);
   SDValue ExpandConstant(ConstantSDNode *CP);
 
   // if ExpandNode returns false, LegalizeOp falls back to ConvertNodeToLibcall
@@ -313,10 +313,8 @@ SDValue SelectionDAGLegalize::ShuffleWithNarrowerEltType(
   return DAG.getVectorShuffle(NVT, dl, N1, N2, NewMask);
 }
 
-/// Expands the ConstantFP node to an integer constant or
-/// a load from the constant pool.
-SDValue
-SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
+/// Expands the ConstantFP node to a load from the constant pool.
+SDValue SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP) {
   bool Extend = false;
   SDLoc dl(CFP);
 
@@ -328,11 +326,6 @@ SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
   // fp stack or PPC FP unit).
   EVT VT = CFP->getValueType(0);
   ConstantFP *LLVMC = const_cast<ConstantFP*>(CFP->getConstantFPValue());
-  if (!UseCP) {
-    assert((VT == MVT::f64 || VT == MVT::f32) && "Invalid type expansion");
-    return DAG.getConstant(LLVMC->getValueAPF().bitcastToAPInt(), dl,
-                           (VT == MVT::f64) ? MVT::i64 : MVT::i32);
-  }
 
   APFloat APF = CFP->getValueAPF();
   EVT OrigVT = VT;
@@ -3972,11 +3965,28 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::ConstantFP: {
     ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Node);
-    // Check to see if this FP immediate is already legal.
-    // If this is a legal constant, turn it into a TargetConstantFP node.
-    if (!TLI.isFPImmLegal(CFP->getValueAPF(), Node->getValueType(0),
-                          DAG.shouldOptForSize()))
-      Results.push_back(ExpandConstantFP(CFP, true));
+    EVT VT = Node->getValueType(0);
+    TargetLowering::FPImmAction Action =
+        TLI.getFPImmAction(CFP->getValueAPF(), VT, DAG.shouldOptForSize());
+    switch (Action) {
+    case TargetLowering::FPImmAction::Legal:
+      break;
+    case TargetLowering::FPImmAction::Bitcast: {
+      EVT IntVT = VT.changeTypeToInteger();
+      assert(TLI.isTypeLegal(IntVT) &&
+             "integer type for FP immediate bits must be legal");
+      // The constant is opaque so the bitcast is not folded back.
+      SDValue Bits =
+          DAG.getConstant(CFP->getValueAPF().bitcastToAPInt(), dl, IntVT,
+                          /*isTarget=*/false, /*isOpaque=*/true);
+      Results.push_back(DAG.getBitcast(VT, Bits));
+      break;
+    }
+    case TargetLowering::FPImmAction::ConstantPool:
+      Results.push_back(ExpandConstantFP(CFP));
+      break;
+    }
+
     break;
   }
   case ISD::Constant: {
