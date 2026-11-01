@@ -19,14 +19,28 @@ src:*bits/shared_ptr_base.h
 
 [cfi-icall]
 # Different callback types for C and C++.
-src:*llvm/include/llvm/IR/DiagnosticHandler.h
-src:*llvm/lib/IR/LLVMContext.cpp
+fun:*DiagnosticHandler17handleDiagnostics*
+fun:*LLVMContext5yield*
 
 # Indirect calls into JIT-generated code.
-src:*llvm/lib/ExecutionEngine/MCJIT/MCJIT.cpp
-src:*llvm/lib/ExecutionEngine/Orc/ExecutionUtils.cpp
-src:*llvm/lib/ExecutionEngine/Orc/LLJIT.cpp
-src:*llvm/lib/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.cpp
-src:*llvm/tools/lli/lli.cpp
-src:*llvm/tools/llvm-rtdyld/llvm-rtdyld.cpp
-src:*llvm/unittests/ExecutionEngine/*
+fun:*CtorDtorRunner3run*
+fun:*GenericLLVMIRPlatformSupport*initialize*
+fun:*ItaniumCXAAtExitSupport10runAtExits*
+fun:*LocalCXXRuntimeOverridesBase14runDestructors*
+fun:*MCJIT11runFunction*
+fun:*executeInput*
+fun:*llvm3orc*runAs*
+fun:*runOrcJIT*
+
+# ExecutionEngine unit tests calling JIT-generated functions.
+fun:*COFFAutoImportGeneratorTest*
+fun:*JITLinkRedirectionManagerTest*
+fun:*LazyReexportsTest*
+fun:*MCJITCAPITest*
+fun:*MCJITMultipleModuleTest*
+fun:*MCJITObjectCacheTest*
+fun:*MCJITTest*
+fun:*OrcCAPITestBase*
+fun:*ReOptimizeLayerTest*
+fun:*checkAccumulate*
+fun:*checkAdd*
