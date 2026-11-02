@@ -192,11 +192,4 @@ define <2 x float> @minimum_sitofp_vec(<2 x i32> %x, <2 x i32> %y) {
 }
 
 declare void @use(float)
-declare float @llvm.maxnum.f32(float, float)
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maximum.f32(float, float)
-declare float @llvm.minimum.f32(float, float)
-declare half @llvm.maximumnum.f16(half, half)
-declare half @llvm.minimumnum.f16(half, half)
-declare half @llvm.maxnum.f16(half, half)
-declare <2 x float> @llvm.minimum.v2f32(<2 x float>, <2 x float>)
+
