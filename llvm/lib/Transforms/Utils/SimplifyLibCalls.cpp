@@ -1337,7 +1337,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
   // Slice off the sought character's high end bits.
   CharVal = B.CreateTrunc(CharVal, Int8Ty);
-  Value *CEqS0 = B.CreateICmpEQ(ConstantInt::get(Int8Ty, Str[0]), CharVal);
+  Value *CEqS0 =
+      B.CreateICmpEQ(ConstantInt::get(Int8Ty, (unsigned char)Str[0]), CharVal);
   Value *And = B.CreateLogicalAnd(NNeZ, CEqS0);
   if (auto *AndSI = dyn_cast<SelectInst>(And))
     setExplicitlyUnknownBranchWeightsIfProfiled(*AndSI, DEBUG_TYPE);
@@ -1437,7 +1438,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     if (Pos != StringRef::npos) {
       // Handle two consecutive sequences of the same characters.
       Value *PosVal = ConstantInt::get(SizeTy, Pos);
-      Value *StrPos = ConstantInt::get(Int8Ty, Str[Pos]);
+      Value *StrPos = ConstantInt::get(Int8Ty, (unsigned char)Str[Pos]);
       Value *CEqSPos = B.CreateICmpEQ(CharVal, StrPos);
       Value *NGtPos = B.CreateICmp(ICmpInst::ICMP_UGT, Size, PosVal);
       Value *And = B.CreateAnd(CEqSPos, NGtPos);
@@ -1448,7 +1449,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
                                               "memchr.sel1");
     }
 
-    Value *Str0 = ConstantInt::get(Int8Ty, Str[0]);
+    Value *Str0 = ConstantInt::get(Int8Ty, (unsigned char)Str[0]);
     Value *CEqS0 = B.CreateICmpEQ(Str0, CharVal);
     Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
     Value *And = B.CreateAnd(NNeZ, CEqS0);
@@ -1994,25 +1995,25 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   case LibFunc_size_returning_new:
     NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
                                           LibFunc_size_returning_new_hot_cold,
-                                          HotColdVal);
+                                          HotColdVal, CI->getType());
     break;
   case LibFunc_size_returning_new_hot_cold:
     if (ShouldOptimizeExistingHotColdNew)
-      NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
-                                            LibFunc_size_returning_new_hot_cold,
-                                            getHotColdHintForExisting(HotCold));
+      NewCall = emitHotColdSizeReturningNew(
+          CI->getArgOperand(0), B, TLI, LibFunc_size_returning_new_hot_cold,
+          getHotColdHintForExisting(HotCold), CI->getType());
     break;
   case LibFunc_size_returning_new_aligned:
     NewCall = emitHotColdSizeReturningNewAligned(
         CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal);
+        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal, CI->getType());
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
     if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdSizeReturningNewAligned(
           CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold,
-          getHotColdHintForExisting(HotCold));
+          getHotColdHintForExisting(HotCold), CI->getType());
     break;
   default:
     return nullptr;
@@ -2703,7 +2704,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Module *Mod = Log->getModule();
   Type *Ty = Log->getType();
 
-  if (UnsafeFPShrink && hasFloatVersion(Mod, LogNm))
+  if (UnsafeFPShrink && (LogFn->isIntrinsic() || hasFloatVersion(Mod, LogNm)))
     if (Value *Ret = optimizeUnaryDoubleFP(Log, B, TLI, true))
       return Ret;
 
@@ -3154,7 +3155,8 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *X;
   Value *Src = CI->getArgOperand(0);
 
-  if (match(Src, m_OneUse(m_FNeg(m_Value(X)))) &&
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Src, m_OneUse(m_FNegOrFSubNegZero(m_Value(X)))) &&
       (IsEven || !mayFlushDenormalsToPositiveZero(CI))) {
     auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     auto *CallInst = copyFlags(*CI, Call);
@@ -4254,7 +4256,11 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_sqrtf:
   case LibFunc_sqrt:
   case LibFunc_sqrtl:
-    return optimizeSqrt(CI, Builder);
+    if (Value *V = optimizeSqrt(CI, Builder))
+      return V;
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::sqrt);
+    return nullptr;
   case LibFunc_fmod:
   case LibFunc_fmodf:
   case LibFunc_fmodl:
@@ -4291,19 +4297,33 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_atanhf:
   case LibFunc_atanhl:
     return optimizeTrigInversionPairs(CI, Builder);
+  case LibFunc_ceilf:
   case LibFunc_ceil:
+  case LibFunc_ceill:
     return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
+  case LibFunc_floorf:
   case LibFunc_floor:
+  case LibFunc_floorl:
     return replaceUnaryCall(CI, Builder, Intrinsic::floor);
+  case LibFunc_roundf:
   case LibFunc_round:
+  case LibFunc_roundl:
     return replaceUnaryCall(CI, Builder, Intrinsic::round);
+  case LibFunc_roundevenf:
   case LibFunc_roundeven:
+  case LibFunc_roundevenl:
     return replaceUnaryCall(CI, Builder, Intrinsic::roundeven);
+  case LibFunc_nearbyintf:
   case LibFunc_nearbyint:
+  case LibFunc_nearbyintl:
     return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
+  case LibFunc_rintf:
   case LibFunc_rint:
+  case LibFunc_rintl:
     return replaceUnaryCall(CI, Builder, Intrinsic::rint);
+  case LibFunc_truncf:
   case LibFunc_trunc:
+  case LibFunc_truncl:
     return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
   case LibFunc_sin:
   case LibFunc_cos:
@@ -4329,8 +4349,12 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return nullptr;
   case LibFunc_copysign:
     if (hasFloatVersion(M, CI->getCalledFunction()->getName()))
-      return optimizeBinaryDoubleFP(CI, Builder, TLI);
-    return nullptr;
+      if (Value *V = optimizeBinaryDoubleFP(CI, Builder, TLI))
+        return V;
+    [[fallthrough]];
+  case LibFunc_copysignf:
+  case LibFunc_copysignl:
+    return replaceBinaryCall(CI, Builder, Intrinsic::copysign);
   case LibFunc_fdim:
   case LibFunc_fdimf:
   case LibFunc_fdiml:

@@ -705,12 +705,19 @@ define amdgpu_cs void @atomic_store_i16x4_monotonic_agent_offset_min(<4 x i16> %
 ; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off offset:-4096
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX10-LABEL: atomic_store_i16x4_monotonic_agent_offset_min:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, 0xfffff000, v2
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, -1, v3, vcc_lo
-; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
-; GFX10-NEXT:    s_endpgm
+; GFX10-SDAG-LABEL: atomic_store_i16x4_monotonic_agent_offset_min:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    v_add_co_u32 v2, vcc_lo, 0xfffff000, v2
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, -1, v3, vcc_lo
+; GFX10-SDAG-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-SDAG-NEXT:    s_endpgm
+;
+; GFX10-GISEL-LABEL: atomic_store_i16x4_monotonic_agent_offset_min:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 0xfffff000
+; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, -1, v3, vcc_lo
+; GFX10-GISEL-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-GISEL-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: atomic_store_i16x4_monotonic_agent_offset_min:
 ; GFX11:       ; %bb.0:
@@ -766,7 +773,7 @@ define amdgpu_cs void @atomic_store_i16x4_monotonic_agent_offset_max(<4 x i16> %
 ;
 ; GFX10-GISEL-LABEL: atomic_store_i16x4_monotonic_agent_offset_max:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xff8, v2
+; GFX10-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 0xff8
 ; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX10-GISEL-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
 ; GFX10-GISEL-NEXT:    s_endpgm

@@ -10,7 +10,7 @@ add_header_library(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.vdso
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.__support.error_or
     libc.src.__support.threads.raw_rwlock
 )
@@ -131,8 +131,8 @@ add_entrypoint_object(
   HDRS
     ../sigemptyset.h
   DEPENDS
-    .signal_utils
     libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.errno.errno
 )
 
@@ -143,8 +143,8 @@ add_entrypoint_object(
   HDRS
     ../sigaddset.h
   DEPENDS
-    .signal_utils
     libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.errno.errno
 )
 
@@ -166,8 +166,8 @@ add_entrypoint_object(
   HDRS
     ../sigfillset.h
   DEPENDS
-    .signal_utils
     libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.errno.errno
 )
 
@@ -178,7 +178,20 @@ add_entrypoint_object(
   HDRS
     ../sigdelset.h
   DEPENDS
-    .signal_utils
     libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigismember
+  SRCS
+    sigismember.cpp
+  HDRS
+    ../sigismember.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.errno.errno
 )
