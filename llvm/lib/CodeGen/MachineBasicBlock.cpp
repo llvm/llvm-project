@@ -318,6 +318,14 @@ bool MachineBasicBlock::isLegalToHoistInto() const {
   return true;
 }
 
+bool MachineBasicBlock::hasNoIndirectOrConditionalTerminator() const {
+  auto Terminator = getFirstTerminator();
+  if (Terminator != end() &&
+      (Terminator->isIndirectBranch() || Terminator->isConditionalBranch()))
+    return false;
+  return true;
+}
+
 bool MachineBasicBlock::hasName() const {
   if (const BasicBlock *LBB = getBasicBlock())
     return LBB->hasName();

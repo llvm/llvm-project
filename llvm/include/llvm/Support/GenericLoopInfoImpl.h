@@ -197,13 +197,30 @@ template <class BlockT> bool isLegalToHoistInto(BlockT *Block) {
     return Block->isLegalToHoistInto();
   return false;
 }
+
+template <class BlockT>
+using has_no_indirect_or_conditional_terminator_check =
+    decltype(&BlockT::hasNoIndirectOrConditionalTerminator);
+
+template <class BlockT>
+using detect_has_no_indirect_or_conditional_terminator_check =
+    llvm::is_detected<has_no_indirect_or_conditional_terminator_check, BlockT>;
+
+template <class BlockT>
+bool hasNoIndirectOrConditionalTerminator(BlockT *Block) {
+  if constexpr (detect_has_no_indirect_or_conditional_terminator_check<
+                    BlockT>::value)
+    return Block->hasNoIndirectOrConditionalTerminator();
+  return true;
+}
 } // namespace detail
 
 /// getLoopPreheader - If there is a preheader for this loop, return it.  A
 /// loop has a preheader if there is only one edge to the header of the loop
-/// from outside of the loop and it is legal to hoist instructions into the
-/// predecessor. If this is the case, the block branching to the header of the
-/// loop is the preheader node.
+/// from outside of the loop, that edge is not made by a conditional or indirect
+/// branch, and it is legal to hoist instructions into the predecessor. If
+/// this is the case, the block branching to the header of the loop is the
+/// preheader node.
 ///
 /// This method returns null if there is no preheader for the loop.
 ///
@@ -213,6 +230,10 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPreheader() const {
   // Keep track of nodes outside the loop branching to the header...
   BlockT *Out = getLoopPredecessor();
   if (!Out)
+    return nullptr;
+
+  // The preheader must end in a direct, unconditional branch.
+  if (!detail::hasNoIndirectOrConditionalTerminator(Out))
     return nullptr;
 
   // Make sure we are allowed to hoist instructions into the predecessor.
