@@ -27,8 +27,10 @@ ExprDependence clang::computeDependence(FullExpr *E) {
 
 ExprDependence clang::computeDependence(OpaqueValueExpr *E) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
+  // An OpaqueValueExpr has no syntactic children, so it does not contain an
+  // unexpanded pack even if its source does.
   if (auto *S = E->getSourceExpr())
-    D |= S->getDependence();
+    D |= S->getDependence() & ~ExprDependence::UnexpandedPack;
   assert(!(D & ExprDependence::UnexpandedPack));
   return D;
 }
