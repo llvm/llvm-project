@@ -657,7 +657,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
     }
   }
 
-  if (!ST.has1024AddressableVGPRs())
+  if (!ST.hasVGPRMSBs())
     return Changed;
 
   LLVM_DEBUG(dbgs() << "*** AMDGPULowerVGPREncoding on " << MF.getName()
