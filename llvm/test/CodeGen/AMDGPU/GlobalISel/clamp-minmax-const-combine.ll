@@ -712,7 +712,7 @@ define amdgpu_ps float @test_min_max_f32_sgpr_nosnan(float inreg %a.arg) {
 ;
 ; GFX1170-LABEL: test_min_max_f32_sgpr_nosnan:
 ; GFX1170:       ; %bb.0:
-; GFX1170-NEXT:    v_max_num_f32_e64 v0, s2, s2
+; GFX1170-NEXT:    v_max_num_f32_e64 v0, s0, s0
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX1170-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1170-NEXT:    s_max_f32 s0, s0, 0
@@ -723,12 +723,14 @@ define amdgpu_ps float @test_min_max_f32_sgpr_nosnan(float inreg %a.arg) {
 ;
 ; GFX12-LABEL: test_min_max_f32_sgpr_nosnan:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_max_num_f32_e64 v0, s2, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    v_max_num_f32_e64 v0, s0, s0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_max_num_f32 s0, s0, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_min_num_f32 s0, s0, 1.0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
   %a = call float @llvm.canonicalize.f32(float %a.arg)
@@ -783,7 +785,7 @@ define amdgpu_ps float @test_min_max_f32_sgpr_1_nosnan(float inreg %a.arg) {
 ;
 ; GFX1170-LABEL: test_min_max_f32_sgpr_1_nosnan:
 ; GFX1170:       ; %bb.0: ; %.entry
-; GFX1170-NEXT:    v_max_num_f32_e64 v0, s2, s2
+; GFX1170-NEXT:    v_max_num_f32_e64 v0, s0, s0
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX1170-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1170-NEXT:    s_max_f32 s0, s0, 0
@@ -795,13 +797,16 @@ define amdgpu_ps float @test_min_max_f32_sgpr_1_nosnan(float inreg %a.arg) {
 ;
 ; GFX12-LABEL: test_min_max_f32_sgpr_1_nosnan:
 ; GFX12:       ; %bb.0: ; %.entry
-; GFX12-NEXT:    v_max_num_f32_e64 v0, s2, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    v_max_num_f32_e64 v0, s0, s0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_max_num_f32 s0, s0, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_min_num_f32 s0, s0, 1.0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-NEXT:    s_fmaak_f32 s0, s0, 0, 0x0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 .entry:
@@ -857,26 +862,28 @@ define amdgpu_ps float @test_min_max_f32_sgpr_fma_user_nosnan(float inreg %a.arg
 ;
 ; GFX1170-LABEL: test_min_max_f32_sgpr_fma_user_nosnan:
 ; GFX1170:       ; %bb.0:
-; GFX1170-NEXT:    v_max_num_f32_e64 v0, s2, s2
+; GFX1170-NEXT:    v_max_num_f32_e64 v0, s0, s0
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX1170-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1170-NEXT:    s_max_f32 s0, s0, 0
 ; GFX1170-NEXT:    s_min_f32 s0, s0, 1.0
 ; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX1170-NEXT:    s_fmac_f32 s4, s0, s3
-; GFX1170-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1170-NEXT:    s_fmac_f32 s2, s0, s1
+; GFX1170-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1170-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: test_min_max_f32_sgpr_fma_user_nosnan:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_max_num_f32_e64 v0, s2, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    v_max_num_f32_e64 v0, s0, s0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_max_num_f32 s0, s0, 0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_min_num_f32 s0, s0, 1.0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX12-NEXT:    s_fmac_f32 s4, s0, s3
-; GFX12-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    s_fmac_f32 s2, s0, s1
+; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    ; return to shader part epilog
   %a = call float @llvm.canonicalize.f32(float %a.arg)
   %mx = call float @llvm.maxnum.f32(float %a, float 0.000000e+00)
