@@ -725,6 +725,35 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
   return reductionResult;
 }
 
+/// Returns the neutral value of the float min or max reduction `kind` over
+/// elements of `semantics`. Builds only values the format can represent:
+/// - A kind that ignores NaN operands uses a quiet NaN, if the format has one.
+/// - Otherwise it uses the infinity that never wins.
+/// - A format without that infinity uses its lowest (for max) or highest (for
+///   min) value. That value never wins either.
+static APFloat getMinMaxNeutral(const llvm::fltSemantics &semantics,
+                                vector::CombiningKind kind) {
+  bool isMax = kind == vector::CombiningKind::MAXIMUMF ||
+               kind == vector::CombiningKind::MAXNUMF ||
+               kind == vector::CombiningKind::MAXIMUMNUMF;
+  bool ignoresNaN = kind != vector::CombiningKind::MINIMUMF &&
+                    kind != vector::CombiningKind::MAXIMUMF;
+  if (ignoresNaN && APFloat::semanticsHasNaN(semantics))
+    return APFloat::getQNaN(semantics);
+  if (!isMax)
+    return APFloat::semanticsHasInf(semantics) ? APFloat::getInf(semantics)
+                                               : APFloat::getLargest(semantics);
+  // An unsigned format has no negative values. Its lowest value is zero, or
+  // its smallest positive value if it has no zero.
+  if (!APFloat::semanticsHasSignedRepr(semantics))
+    return APFloat::semanticsHasZero(semantics)
+               ? APFloat::getZero(semantics)
+               : APFloat::getSmallest(semantics);
+  return APFloat::semanticsHasInf(semantics)
+             ? APFloat::getInf(semantics, /*Negative=*/true)
+             : APFloat::getLargest(semantics, /*Negative=*/true);
+}
+
 Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
                                          Type type,
                                          vector::CombiningKind kind) {
@@ -776,25 +805,14 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
     return nullptr;
 
   case vector::CombiningKind::MINIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
-    return nullptr;
-
   case vector::CombiningKind::MAXIMUMF:
-    if (auto floatTy = dyn_cast<FloatType>(elemTy))
-      return makeConst(builder.getFloatAttr(
-          elemTy,
-          APFloat::getInf(floatTy.getFloatSemantics(), /*Negative=*/true)));
-    return nullptr;
-
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMNUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getQNaN(floatTy.getFloatSemantics())));
+          elemTy, getMinMaxNeutral(floatTy.getFloatSemantics(), kind)));
     return nullptr;
   }
   return nullptr;
@@ -845,6 +863,39 @@ bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
   int64_t offset;
   return succeeded(type.getStridesAndOffset(strides, offset)) &&
          llvm::none_of(strides, ShapedType::isDynamic);
+}
+
+Value xegpu::addElemOffsetInBytes(OpBuilder &builder, Location loc,
+                                  Value baseAddr, Value elemOffset,
+                                  MemRefType memrefTy) {
+  Type type = elemOffset.getType();
+  assert(baseAddr.getType() == type &&
+         "expected base address and offset of the same type");
+  auto makeConst = [&](int64_t value) -> Value {
+    return arith::ConstantOp::create(builder, loc, type,
+                                     builder.getIntegerAttr(type, value));
+  };
+
+  // finalAddr = baseAddr + elemOffset * bitWidth / 8
+  unsigned elemBits = memrefTy.getElementTypeBitWidth();
+  Value byteOffset;
+  if (elemBits % 8 == 0) {
+    // For byte-sized elements divide by 8 statically so that the division is
+    // folded into the constant:
+    //   finalAddr = baseAddr + elemOffset * (bitWidth / 8)
+    byteOffset = arith::MulIOp::create(builder, loc, elemOffset,
+                                       makeConst(elemBits / 8));
+  } else {
+    // For sub-byte elements multiply first and then divide by 8, otherwise the
+    // byte size would be zero (e.g. 4 / 8 == 0 for i4):
+    //   finalAddr = baseAddr + (elemOffset * bitWidth) / 8
+    Value bitSize = makeConst(elemBits);
+    Value eight = makeConst(8);
+    byteOffset = arith::DivUIOp::create(
+        builder, loc, arith::MulIOp::create(builder, loc, elemOffset, bitSize),
+        eight);
+  }
+  return arith::AddIOp::create(builder, loc, baseAddr, byteOffset);
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
