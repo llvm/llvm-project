@@ -150,30 +150,55 @@ func.func @ceildivs() -> (index, index, index) {
 }
 
 // CHECK-LABEL: @ceildivs_neg
-func.func @ceildivs_neg() -> index {
+func.func @ceildivs_neg() -> (index, index) {
   %c5 = index.constant -5
   %c2 = index.constant 2
-  // CHECK: %[[A:.*]] = index.constant -2
+  %cn2 = index.constant -2
+
+  // CHECK-DAG: %[[A:.*]] = index.constant -2
   %0 = index.ceildivs %c5, %c2
-  // CHECK: return %[[A]]
-  return %0 : index
+
+  // Both operands are negative, so the exact quotient is positive and the
+  // truncated one has to be corrected.
+  // CHECK-DAG: %[[B:.*]] = index.constant 3
+  %1 = index.ceildivs %c5, %cn2
+
+  // CHECK: return %[[A]], %[[B]]
+  return %0, %1 : index, index
 }
 
 // CHECK-LABEL: @ceildivs_edge
 func.func @ceildivs_edge() -> (index, index) {
+  // CHECK-DAG: %[[B:.*]] = index.constant -2147483647
+  // CHECK-DAG: %[[NEG_ONE:.*]] = index.constant -1
+  // CHECK-DAG: %[[INT_MIN:.*]] = index.constant -2147483648
   %cn1 = index.constant -1
   %cIntMin = index.constant -2147483648
   %cIntMax = index.constant 2147483647
 
-  // The result is 0 on 32-bit.
-  // CHECK-DAG: %[[A:.*]] = index.constant 2147483648
+  // The result, 2147483648, is not representable on 32-bit, so this does not
+  // fold on either bitwidth.
+  // CHECK: %[[A:.*]] = index.ceildivs %[[INT_MIN]], %[[NEG_ONE]]
   %0 = index.ceildivs %cIntMin, %cn1
 
-  // CHECK-DAG: %[[B:.*]] = index.constant -2147483647
   %1 = index.ceildivs %cIntMax, %cn1
 
   // CHECK: return %[[A]], %[[B]]
   return %0, %1 : index, index
+}
+
+// CHECK-LABEL: @ceildivs_intmin_dividend
+func.func @ceildivs_intmin_dividend() -> index {
+  %c7 = index.constant 7
+  %cIntMin = index.constant -2147483648
+
+  // Negating the dividend wrapped on 32-bit and gave a positive result there,
+  // which disagreed with the 64-bit one, so this used not to fold at all.
+  // CHECK: %[[A:.*]] = index.constant -306783378
+  %0 = index.ceildivs %cIntMin, %c7
+
+  // CHECK: return %[[A]]
+  return %0 : index
 }
 
 // CHECK-LABEL: @ceildivu
