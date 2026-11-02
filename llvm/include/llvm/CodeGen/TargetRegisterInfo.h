@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -837,7 +838,7 @@ public:
   /// expect to see generic copy hints added.
   virtual bool
   getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                        SmallVectorImpl<MCPhysReg> &Hints,
+                        SmallSetVector<MCPhysReg, 16> &Hints,
                         const MachineFunction &MF,
                         const VirtRegMap *VRM = nullptr,
                         const LiveRegMatrix *Matrix = nullptr) const;
@@ -1086,6 +1087,12 @@ public:
     return false;
   }
 
+  /// Whether the greedy allocator should drop the SlotIndexes entries of
+  /// erased instructions before allocating. Lets targets opt in one at a time.
+  virtual bool shouldCompactSlotIndexes(const MachineFunction &MF) const {
+    return false;
+  }
+
   //===--------------------------------------------------------------------===//
   /// Debug information queries.
 
@@ -1150,19 +1157,21 @@ public:
 // also satisfies the above requirement, assuming Reg:0 == Reg.
 //
 class SuperRegClassIterator {
-  const unsigned RCMaskWords;
+  const TargetRegisterClass *RC;
   unsigned SubReg = 0;
   const uint16_t *Idx;
+  /// Offset of the mask of the entry Idx points at. Walked in step with Idx,
+  /// so that advancing costs one load rather than re-locating the offsets.
+  const uint32_t *MaskOff;
   const uint32_t *Mask;
 
 public:
   /// Create a SuperRegClassIterator that visits all the super-register classes
   /// of RC. When IncludeSelf is set, also include the (0, sub-classes) entry.
-  SuperRegClassIterator(const TargetRegisterClass *RC,
-                        const TargetRegisterInfo *TRI,
-                        bool IncludeSelf = false)
-    : RCMaskWords((TRI->getNumRegClasses() + 31) / 32),
-      Idx(RC->getSuperRegIndices()), Mask(RC->getSubClassMask()) {
+  SuperRegClassIterator(const TargetRegisterClass *RC, bool IncludeSelf = false)
+      : RC(RC), Idx(RC->getSuperRegIndices()),
+        MaskOff(RC->getSuperRegClassMaskOffsets()),
+        Mask(RC->getSubClassMask()) {
     if (!IncludeSelf)
       ++*this;
   }
@@ -1181,10 +1190,12 @@ public:
   /// Advance iterator to the next entry.
   void operator++() {
     assert(isValid() && "Cannot move iterator past end.");
-    Mask += RCMaskWords;
     SubReg = *Idx++;
-    if (!SubReg)
+    if (!SubReg) {
       Idx = nullptr;
+      return;
+    }
+    Mask = RC->getSuperRegClassMaskAt(*MaskOff++);
   }
 };
 

@@ -446,7 +446,7 @@ define float @v_fdot2_inline_literal_b(<2 x half> %a, float %c) {
 ;
 ; GFX1170-GFX12-LABEL: v_fdot2_inline_literal_b:
 ; GFX1170-GFX12:  ; %bb.0:
-; GFX1170-GFX12:    v_dot2_f32_f16 v0, 0x40004000, v0, v1
+; GFX1170-GFX12:    v_dot2_f32_f16 v0, v0, 0x40004000, v1
   %ret = tail call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> <half 2.0, half 2.0>, float %c, i1 false)
   ret float %ret
 }
@@ -658,7 +658,7 @@ define float @v_fdot2_inline_literal_b_clamp(<2 x half> %a, float %c) {
 ;
 ; GFX11PLUS-LABEL: v_fdot2_inline_literal_b_clamp:
 ; GFX11PLUS:  ; %bb.0:
-; GFX11PLUS:    v_dot2_f32_f16 v0, 0x40004000, v0, v1 clamp
+; GFX11PLUS:    v_dot2_f32_f16 v0, v0, 0x40004000, v1 clamp
   %ret = tail call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> <half 2.0, half 2.0>, float %c, i1 true)
   ret float %ret
 }

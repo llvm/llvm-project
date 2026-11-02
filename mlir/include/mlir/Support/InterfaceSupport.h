@@ -18,6 +18,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/TypeName.h"
 
+#include <type_traits>
+
 namespace mlir {
 namespace detail {
 //===----------------------------------------------------------------------===//
@@ -157,19 +159,21 @@ class InterfaceMap {
   template <typename T>
   using detect_initialize_method = llvm::is_detected<has_initialize_method, T>;
 
+  // Only exact generated models with trivial copy construction can be copied
+  // from a constant prototype. Derived models may carry additional state or
+  // use a custom constructor to configure callbacks.
+  template <typename T, typename = void>
+  struct IsConstexprGeneratedModel : std::false_type {};
+  template <typename T>
+  struct IsConstexprGeneratedModel<T, std::void_t<typename T::GeneratedModel>>
+      : std::bool_constant<std::is_same_v<T, typename T::GeneratedModel> &&
+                           std::is_trivially_copy_constructible_v<T>> {};
+
 public:
   InterfaceMap() = default;
-  InterfaceMap(InterfaceMap &&) = default;
-  InterfaceMap &operator=(InterfaceMap &&rhs) {
-    for (auto &it : interfaces)
-      free(it.second);
-    interfaces = std::move(rhs.interfaces);
-    return *this;
-  }
-  ~InterfaceMap() {
-    for (auto &it : interfaces)
-      free(it.second);
-  }
+  InterfaceMap(InterfaceMap &&);
+  InterfaceMap &operator=(InterfaceMap &&rhs);
+  ~InterfaceMap();
 
   /// Construct an InterfaceMap with the given set of template types. For
   /// convenience given that object trait lists may contain other non-interface
@@ -183,7 +187,11 @@ public:
       return InterfaceMap();
     } else {
       InterfaceMap map;
-      map.insertPotentialInterfaces<Types...>();
+      // A comma fold registers interfaces in source order. All non-interface
+      // traits share the same no-op specialization.
+      (map.insertPotentialInterface<std::conditional_t<
+           detect_get_interface_id<Types>::value, Types, void>>(),
+       ...);
       return map;
     }
   }
@@ -205,13 +213,6 @@ public:
   }
 
 private:
-  /// Insert the given interface types in source order. A comma fold is
-  /// sequenced left to right in C++17.
-  template <typename... Types>
-  void insertPotentialInterfaces() {
-    (insertPotentialInterface<Types>(), ...);
-  }
-
   /// Insert the given interface type into the map, ignoring it if it doesn't
   /// actually represent an interface.
   template <typename T>
@@ -228,9 +229,19 @@ private:
     // static_assert(std::is_trivially_destructible_v<InterfaceModel>,
     //               "interface models must be trivially destructible");
 
-    // Build the interface model, optionally initializing if necessary.
-    InterfaceModel *model =
-        new (malloc(sizeof(InterfaceModel))) InterfaceModel();
+    // Generated models contain a fixed table of callbacks. Copy a constant
+    // prototype so the callbacks need not be set up for each model.
+    InterfaceModel *model;
+    if constexpr (IsConstexprGeneratedModel<InterfaceModel>::value) {
+      static constexpr InterfaceModel prototype;
+      model = new (malloc(sizeof(InterfaceModel))) InterfaceModel(prototype);
+    } else {
+      // Construct fallback, external, and custom models normally; they may
+      // need more than a copy of the generated callback table.
+      model = new (malloc(sizeof(InterfaceModel))) InterfaceModel();
+    }
+    // Run model-specific initialization after either path, including links to
+    // registered base interfaces.
     if constexpr (detect_initialize_method<InterfaceModel>::value)
       model->initializeInterfaceConcept(*this);
 

@@ -48,13 +48,14 @@ TEST(PluginsTests, LoadPlugin) {
   auto PluginPath = LibPath();
   ASSERT_NE("", PluginPath);
 
-  Expected<PassPlugin> Plugin = PassPlugin::Load(PluginPath);
+  Expected<PassPlugin> Plugin = PassPlugin::load(PluginPath);
   ASSERT_TRUE(!!Plugin) << "Plugin path: " << PluginPath;
 
   ASSERT_EQ(TEST_PLUGIN_NAME, Plugin->getPluginName());
   ASSERT_EQ(TEST_PLUGIN_VERSION, Plugin->getPluginVersion());
 
-  PassBuilder PB;
+  LLVMContext C;
+  PassBuilder PB(C);
   ModulePassManager PM;
   ASSERT_THAT_ERROR(PB.parsePassPipeline(PM, "plugin-pass"), Failed());
 
@@ -76,18 +77,18 @@ TEST(PluginsTests, LoadMultiplePlugins) {
   ASSERT_NE("", DoublerPluginPath);
   ASSERT_NE("", TestPluginPath);
 
-  Expected<PassPlugin> DoublerPlugin1 = PassPlugin::Load(DoublerPluginPath);
+  Expected<PassPlugin> DoublerPlugin1 = PassPlugin::load(DoublerPluginPath);
   ASSERT_TRUE(!!DoublerPlugin1)
       << "Plugin path: " << DoublerPlugin1->getFilename();
 
-  Expected<PassPlugin> TestPlugin = PassPlugin::Load(TestPluginPath);
+  Expected<PassPlugin> TestPlugin = PassPlugin::load(TestPluginPath);
   ASSERT_TRUE(!!TestPlugin) << "Plugin path: " << TestPlugin->getFilename();
 
   // If llvmGetPassPluginInfo is resolved as a weak symbol taking into account
-  // all loaded symbols, the second call to PassPlugin::Load will actually
+  // all loaded symbols, the second call to PassPlugin::load will actually
   // return the llvmGetPassPluginInfo from the most recently loaded plugin, in
   // this case TestPlugin.
-  Expected<PassPlugin> DoublerPlugin2 = PassPlugin::Load(DoublerPluginPath);
+  Expected<PassPlugin> DoublerPlugin2 = PassPlugin::load(DoublerPluginPath);
   ASSERT_TRUE(!!DoublerPlugin2)
       << "Plugin path: " << DoublerPlugin2->getFilename();
 
@@ -100,7 +101,8 @@ TEST(PluginsTests, LoadMultiplePlugins) {
   ASSERT_EQ("DoublerPlugin", DoublerPlugin2->getPluginName());
   ASSERT_EQ("2.2-unit", DoublerPlugin2->getPluginVersion());
 
-  PassBuilder PB;
+  LLVMContext C;
+  PassBuilder PB(C);
   ModulePassManager PM;
   const char *PipelineText = "module(doubler-pass,plugin-pass,doubler-pass)";
   ASSERT_THAT_ERROR(PB.parsePassPipeline(PM, PipelineText), Failed());
@@ -109,7 +111,6 @@ TEST(PluginsTests, LoadMultiplePlugins) {
   DoublerPlugin2->registerPassBuilderCallbacks(PB);
   ASSERT_THAT_ERROR(PB.parsePassPipeline(PM, PipelineText), Succeeded());
 
-  LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M =
       parseAssemblyString(R"IR(@doubleme = constant i32 7)IR", Err, C);

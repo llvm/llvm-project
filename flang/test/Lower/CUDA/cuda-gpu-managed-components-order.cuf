@@ -34,11 +34,11 @@ end subroutine
 ! A component the user attributed relocates the object, whichever order the
 ! components are declared in.
 ! CHECK-LABEL: func.func @_QPs()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "obj", data_attr = #cuf.cuda<managed>
+! CHECK: cuf.alloc {{.*}} bindc_name("obj") data_attr(managed)
 
 ! Each component is then allocated in its own memory space: the MANAGED one
 ! through the managed allocator, the DEVICE one through the device allocator.
-! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
-! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.embox {{.*}} allocator_idx(3)
+! CHECK: cuf.allocate {{.*}} data_attr(managed) -> i32
+! CHECK: fir.embox {{.*}} allocator_idx(2)
+! CHECK: cuf.allocate {{.*}} data_attr(device) -> i32

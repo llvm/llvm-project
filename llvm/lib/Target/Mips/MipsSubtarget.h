@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_MIPS_MIPSSUBTARGET_H
 
 #include "MCTargetDesc/MipsABIInfo.h"
+#include "MCTargetDesc/MipsMCOptions.h"
 #include "MipsFrameLowering.h"
 #include "MipsISelLowering.h"
 #include "MipsInstrInfo.h"
@@ -32,19 +33,27 @@
 namespace llvm {
 class StringRef;
 
-enum CompactBranchPolicy {
-  CB_Never,   ///< The policy 'never' may in some circumstances or for some
-              ///< ISAs not be absolutely adhered to.
-  CB_Optimal, ///< Optimal is the default and will produce compact branches
-              ///< when appropriate.
-  CB_Always   ///< 'always' may in some circumstances may not be
-              ///< absolutely adhered to, there may not be a corresponding
-              ///< compact form of a branch.
+enum class CompactBranchPolicy {
+  Never,   ///< The policy 'never' may in some circumstances or for some
+           ///< ISAs not be absolutely adhered to.
+  Optimal, ///< Optimal is the default and will produce compact branches
+           ///< when appropriate.
+  Always   ///< 'always' may in some circumstances may not be
+           ///< absolutely adhered to, there may not be a corresponding
+           ///< compact form of a branch.
 };
+} // namespace llvm
 
+#define OPTIONS_STRUCT_DECL
+#include "MipsOptions.inc"
+
+namespace llvm {
 class MipsTargetMachine;
 
 class MipsSubtarget : public MipsGenSubtargetInfo {
+  const MipsOptions &CLOpts;
+  const MipsMCOptions &MCCLOpts;
+
   virtual void anchor();
 
   enum MipsArchEnum {
@@ -221,6 +230,8 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   const MipsTargetMachine &TM;
 
+  MipsABIInfo ABI;
+
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
   std::unique_ptr<const MipsInstrInfo> InstrInfo;
   std::unique_ptr<const MipsFrameLowering> FrameLowering;
@@ -236,7 +247,7 @@ public:
   bool isABI_N64() const;
   bool isABI_N32() const;
   bool isABI_O32() const;
-  const MipsABIInfo &getABI() const;
+  const MipsABIInfo &getABI() const { return ABI; }
   bool isABI_FPXX() const { return isABI_O32() && IsFPXX; }
 
   bool isGPRReservedByUser(unsigned GPR) const {
@@ -246,8 +257,9 @@ public:
 
   /// This constructor initializes the data members to match that
   /// of the specified triple.
-  MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS, bool little,
-                const MipsTargetMachine &TM, MaybeAlign StackAlignOverride);
+  MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                StringRef ABIName, bool little, const MipsTargetMachine &TM,
+                MaybeAlign StackAlignOverride);
 
   ~MipsSubtarget() override;
 
@@ -365,7 +377,7 @@ public:
 
   // for now constant islands are on for the whole compilation unit but we only
   // really use them if in addition we are in mips16 mode
-  static bool useConstantIslands();
+  bool useConstantIslands() const;
 
   Align getStackAlignment() const { return stackAlignment; }
 
@@ -386,6 +398,8 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  const MipsOptions &getCLOpts() const { return CLOpts; }
+  const MipsMCOptions &getMCCLOpts() const { return MCCLOpts; }
   const MipsInstrInfo *getInstrInfo() const override { return InstrInfo.get(); }
   const TargetFrameLowering *getFrameLowering() const override {
     return FrameLowering.get();
@@ -411,6 +425,6 @@ public:
   const RegisterBankInfo *getRegBankInfo() const override;
   InstructionSelector *getInstructionSelector() const override;
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif

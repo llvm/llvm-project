@@ -27,9 +27,9 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -46,6 +46,7 @@
 namespace llvm {
 
 class OverflowingBinaryOperator;
+struct AnalysisOptions;
 class AssumptionCache;
 class BasicBlock;
 class Constant;
@@ -69,7 +70,7 @@ enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
 
-/// NoWrapFlags are bitfield indices into SCEV's SubclassData.
+/// SCEVFlags are bitfield indices into SCEV's SubclassData.
 ///
 /// Add and Mul expressions may have no-unsigned-wrap <NUW> or
 /// no-signed-wrap <NSW> properties, which are derived from the IR
@@ -107,11 +108,12 @@ LLVM_ABI extern bool VerifySCEV;
 /// can trap) can be defined per these rules in regions where it would trap
 /// at runtime.  A SCEV being defined does not require the existence of any
 /// instruction within the defined scope.
-enum class SCEVNoWrapFlags {
+enum class SCEVFlags {
   FlagNone = 0,       // No guarantee.
   FlagNW = (1 << 0),  // No self-wrap.
   FlagNUW = (1 << 1), // No unsigned wrap.
   FlagNSW = (1 << 2), // No signed wrap.
+  FlagsNoWrapMask = (1 << 3) - 1,
   FlagsMask = (1 << 3) - 1,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FlagsMask)
 };
@@ -126,11 +128,11 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
 
   SCEVUseT() : Base(nullptr, 0) {}
   SCEVUseT(SCEVPtrT S) : Base(S, 0) {}
-  /// Construct with NoWrapFlags; only NUW/NSW are encoded, NW is dropped. \p S
+  /// Construct with SCEVFlags; only NUW/NSW are encoded, NW is dropped. \p S
   /// must be an expression supporting flags. Only flags not already present on
   /// \p S are added. Note that the expression may gain flags also part of the
-  /// SCEVUse later, via settNoWrapFlags.
-  SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags);
+  /// SCEVUse later, via setFlags.
+  SCEVUseT(SCEVPtrT S, SCEVFlags Flags);
   template <typename OtherPtrT, typename = std::enable_if_t<
                                     std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
   SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
@@ -149,18 +151,23 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
 
-  /// Return the no-wrap flags for this SCEVUse, which is the union of the
-  /// use-specific flags and the underlying SCEV's flags, masked by \p Mask.
-  SCEVNoWrapFlags
-  getNoWrapFlags(SCEVNoWrapFlags Mask = SCEVNoWrapFlags::FlagsMask) const;
+  /// Return a SCEVUse that can replace both \p A and \p B. Both must be
+  /// operands of the same poison-propagating expression, so the use flags of
+  /// both hold for either.
+  static SCEVUseT getCommon(SCEVUseT A, SCEVUseT B);
 
-  /// Return only the use-specific no-wrap flags (NUW/NSW) without the
-  /// underlying SCEV's flags.
-  SCEVNoWrapFlags getUseNoWrapFlags() const {
-    SCEVNoWrapFlags UseFlags =
-        static_cast<SCEVNoWrapFlags>(Base::getInt() << 1);
-    if (any(UseFlags & (SCEVNoWrapFlags::FlagNUW | SCEVNoWrapFlags::FlagNSW)))
-      UseFlags |= SCEVNoWrapFlags::FlagNW;
+  /// Return the flags for this SCEVUse, which is the union of the use-specific
+  /// flags and the underlying SCEV's flags, masked by \p Mask.
+  SCEVFlags getNoWrapFlags(SCEVFlags Mask = SCEVFlags::FlagsNoWrapMask) const;
+
+  /// Return only the use-specific flags without the underlying SCEV's flags.
+  SCEVFlags getUseNoWrapFlags() const {
+    return getUseFlags() & SCEVFlags::FlagsNoWrapMask;
+  }
+  SCEVFlags getUseFlags() const {
+    SCEVFlags UseFlags = static_cast<SCEVFlags>(Base::getInt() << 1);
+    if (any(UseFlags & (SCEVFlags::FlagNUW | SCEVFlags::FlagNSW)))
+      UseFlags |= SCEVFlags::FlagNW;
     return UseFlags;
   }
 
@@ -194,16 +201,16 @@ using SCEVUse = SCEVUseT<const SCEV *>;
 
 /// The no-wrap flags to apply when creating a SCEV expression, to the
 /// expression and use respectively.
-struct SCEVFlags {
+struct SCEVFlagsPair {
   /// Flags applied directly to a SCEV expression, must be valid wherever the
   /// expression is valid.
-  SCEVNoWrapFlags ExprFlags;
+  SCEVFlags ExprFlags;
 
   /// Flags only applied to a SCEVUse.
-  SCEVNoWrapFlags UseFlags;
+  SCEVFlags UseFlags;
 
-  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagNone,
-                      SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagNone)
+  constexpr SCEVFlagsPair(SCEVFlags ExprFlags = SCEVFlags::FlagNone,
+                          SCEVFlags UseFlags = SCEVFlags::FlagNone)
       : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
 };
 
@@ -293,12 +300,12 @@ protected:
   Type *const Ty;
 
 public:
-  using NoWrapFlags = SCEVNoWrapFlags;
-  static constexpr auto FlagNone = SCEVNoWrapFlags::FlagNone;
-  static constexpr auto FlagNW = SCEVNoWrapFlags::FlagNW;
-  static constexpr auto FlagNUW = SCEVNoWrapFlags::FlagNUW;
-  static constexpr auto FlagNSW = SCEVNoWrapFlags::FlagNSW;
-  static constexpr auto FlagsMask = SCEVNoWrapFlags::FlagsMask;
+  static constexpr auto FlagNone = SCEVFlags::FlagNone;
+  static constexpr auto FlagNW = SCEVFlags::FlagNW;
+  static constexpr auto FlagNUW = SCEVFlags::FlagNUW;
+  static constexpr auto FlagNSW = SCEVFlags::FlagNSW;
+  static constexpr auto FlagsNoWrapMask = SCEVFlags::FlagsNoWrapMask;
+  static constexpr auto FlagsMask = SCEVFlags::FlagsMask;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize, Type *Ty)
@@ -489,7 +496,7 @@ public:
 /// have more than X iterations.
 class LLVM_ABI SCEVWrapPredicate final : public SCEVPredicate {
 public:
-  /// Similar to SCEV::NoWrapFlags, but with slightly different semantics
+  /// Similar to SCEVFlags, but with slightly different semantics
   /// for FlagNUSW. The increment is considered to be signed, and a + b
   /// (where b is the increment) is considered to wrap if:
   ///    zext(a + b) != zext(a) + sext(b)
@@ -598,7 +605,7 @@ public:
   /// and the given predicate \p N.
   SCEVUnionPredicate getUnionWith(const SCEVPredicate *N,
                                   ScalarEvolution &SE) const {
-    SCEVUnionPredicate Result(Preds, SE);
+    SCEVUnionPredicate Result = *this;
     Result.add(N, SE);
     return Result;
   }
@@ -640,22 +647,19 @@ public:
     ProperlyDominatesBlock ///< The SCEV properly dominates the block.
   };
 
-  /// Convenient NoWrapFlags manipulation. TODO: Replace with & operator of
+  /// Convenient SCEVFlags manipulation. TODO: Replace with & operator of
   /// enum class.
-  [[nodiscard]] static SCEV::NoWrapFlags maskFlags(SCEV::NoWrapFlags Flags,
-                                                   SCEV::NoWrapFlags Mask) {
+  [[nodiscard]] static SCEVFlags maskFlags(SCEVFlags Flags, SCEVFlags Mask) {
     return Flags & Mask;
   }
-  [[nodiscard]] static SCEV::NoWrapFlags setFlags(SCEV::NoWrapFlags Flags,
-                                                  SCEV::NoWrapFlags OnFlags) {
+  [[nodiscard]] static SCEVFlags setFlags(SCEVFlags Flags, SCEVFlags OnFlags) {
     return Flags | OnFlags;
   }
-  [[nodiscard]] static SCEV::NoWrapFlags
-  clearFlags(SCEV::NoWrapFlags Flags, SCEV::NoWrapFlags OffFlags) {
+  [[nodiscard]] static SCEVFlags clearFlags(SCEVFlags Flags,
+                                            SCEVFlags OffFlags) {
     return Flags & ~OffFlags;
   }
-  [[nodiscard]] static bool hasFlags(SCEV::NoWrapFlags Flags,
-                                     SCEV::NoWrapFlags TestFlags) {
+  [[nodiscard]] static bool hasFlags(SCEVFlags Flags, SCEVFlags TestFlags) {
     return TestFlags == maskFlags(Flags, TestFlags);
   };
 
@@ -666,6 +670,8 @@ public:
   LLVM_ABI ~ScalarEvolution();
 
   LLVMContext &getContext() const { return F.getContext(); }
+
+  Module &getModule() const { return *F.getParent(); }
 
   /// Test if values of the given type are analyzable within the SCEV
   /// framework. This primarily includes integer types, and it can optionally
@@ -717,7 +723,7 @@ public:
   /// Does not mutate the original instruction. Returns std::nullopt if it could
   /// not deduce more precise flags than the instruction already has, otherwise
   /// returns proven flags.
-  LLVM_ABI std::optional<SCEV::NoWrapFlags>
+  LLVM_ABI std::optional<SCEVFlags>
   getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
 
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
@@ -745,9 +751,8 @@ public:
   LLVM_ABI const SCEV *getTruncateExpr(SCEVUse Op, Type *Ty,
                                        unsigned Depth = 0);
   LLVM_ABI const SCEV *getVScale(Type *Ty);
-  LLVM_ABI const SCEV *
-  getElementCount(Type *Ty, ElementCount EC,
-                  SCEV::NoWrapFlags Flags = SCEV::FlagNone);
+  LLVM_ABI const SCEV *getElementCount(Type *Ty, ElementCount EC,
+                                       SCEVFlags Flags = SCEV::FlagNone);
   LLVM_ABI const SCEV *getZeroExtendExpr(SCEVUse Op, Type *Ty,
                                          unsigned Depth = 0);
   LLVM_ABI const SCEV *getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
@@ -760,26 +765,26 @@ public:
   LLVM_ABI const SCEV *getAnyExtendExpr(SCEVUse Op, Type *Ty);
 
   LLVM_ABI SCEVUse getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
-                              SCEVFlags Flags = {}, unsigned Depth = 0);
-  SCEVUse getAddExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags = {},
+                              SCEVFlagsPair Flags = {}, unsigned Depth = 0);
+  SCEVUse getAddExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlagsPair Flags = {},
                      unsigned Depth = 0) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getAddExpr(Ops, Flags, Depth);
   }
   SCEVUse getAddExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                     SCEVFlags Flags = {}, unsigned Depth = 0) {
+                     SCEVFlagsPair Flags = {}, unsigned Depth = 0) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getAddExpr(Ops, Flags, Depth);
   }
   LLVM_ABI SCEVUse getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
-                              SCEVFlags Flags = {}, unsigned Depth = 0);
-  SCEVUse getMulExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags = {},
+                              SCEVFlagsPair Flags = {}, unsigned Depth = 0);
+  SCEVUse getMulExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlagsPair Flags = {},
                      unsigned Depth = 0) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getMulExpr(Ops, Flags, Depth);
   }
   SCEVUse getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                     SCEVFlags Flags = {}, unsigned Depth = 0) {
+                     SCEVFlagsPair Flags = {}, unsigned Depth = 0) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getMulExpr(Ops, Flags, Depth);
   }
@@ -787,11 +792,11 @@ public:
   LLVM_ABI const SCEV *getUDivExactExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getURemExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI SCEVUse getAddRecExpr(SCEVUse Start, SCEVUse Step, const Loop *L,
-                                 SCEVFlags Flags);
+                                 SCEVFlagsPair Flags);
   LLVM_ABI SCEVUse getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
-                                 const Loop *L, SCEVFlags Flags);
+                                 const Loop *L, SCEVFlagsPair Flags);
   SCEVUse getAddRecExpr(const SmallVectorImpl<SCEVUse> &Operands, const Loop *L,
-                        SCEVFlags Flags) {
+                        SCEVFlagsPair Flags) {
     SmallVector<SCEVUse, 4> NewOp(Operands.begin(), Operands.end());
     return getAddRecExpr(NewOp, L, Flags);
   }
@@ -811,10 +816,10 @@ public:
   /// \p IndexExprs The expressions for the indices.
   LLVM_ABI const SCEV *getGEPExpr(GEPOperator *GEP,
                                   ArrayRef<SCEVUse> IndexExprs);
-  LLVM_ABI const SCEV *getGEPExpr(SCEVUse BaseExpr,
-                                  ArrayRef<SCEVUse> IndexExprs,
-                                  Type *SrcElementTy,
-                                  GEPNoWrapFlags NW = GEPNoWrapFlags::none());
+  LLVM_ABI const SCEV *
+  getGEPExpr(SCEVUse BaseExpr, ArrayRef<SCEVUse> IndexExprs, Type *SrcElementTy,
+             GEPNoWrapFlags BaseNW = GEPNoWrapFlags::none(),
+             GEPNoWrapFlags OffsetNW = GEPNoWrapFlags::none());
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
                                      SmallVectorImpl<SCEVUse> &Operands);
@@ -864,8 +869,8 @@ public:
                                        unsigned FieldNo);
 
   /// Return the SCEV object corresponding to -V.
-  LLVM_ABI const SCEV *
-  getNegativeSCEV(const SCEV *V, SCEV::NoWrapFlags Flags = SCEV::FlagNone);
+  LLVM_ABI const SCEV *getNegativeSCEV(const SCEV *V,
+                                       SCEVFlags Flags = SCEV::FlagNone);
 
   /// Return the SCEV object corresponding to ~V.
   LLVM_ABI const SCEV *getNotSCEV(const SCEV *V);
@@ -878,7 +883,7 @@ public:
   /// explicitly convert the arguments using getPtrToAddrExpr(), for pointer
   /// types that support it.
   LLVM_ABI const SCEV *getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
-                                    SCEV::NoWrapFlags Flags = SCEV::FlagNone,
+                                    SCEVFlags Flags = SCEV::FlagNone,
                                     unsigned Depth = 0);
 
   /// Compute ceil(N / D). N and D are treated as unsigned values.
@@ -1268,6 +1273,9 @@ public:
   /// Returns true if \p Op is guaranteed to not be poison.
   LLVM_ABI static bool isGuaranteedNotToBePoison(const SCEV *Op);
 
+  /// Returns true if \p Op is guaranteed not to cause immediate UB.
+  LLVM_ABI bool isGuaranteedNotToCauseUB(const SCEV *Op);
+
   /// Test if the given expression is known to be a power of 2.  OrNegative
   /// allows matching negative power of 2s, and OrZero allows matching 0.
   LLVM_ABI bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
@@ -1527,9 +1535,6 @@ public:
   /// the specified basic block.
   LLVM_ABI bool properlyDominates(const SCEV *S, const BasicBlock *BB);
 
-  /// Test whether the given SCEV has Op as a direct or indirect operand.
-  LLVM_ABI bool hasOperand(const SCEV *S, const SCEV *Op) const;
-
   /// Return the size of an element read or written by Inst.
   LLVM_ABI const SCEV *getElementSize(Instruction *Inst);
 
@@ -1574,16 +1579,24 @@ public:
   /// Update no-wrap flags of an AddRec. This may drop the cached info about
   /// this AddRec (such as range info) in case if new flags may potentially
   /// sharpen it.
-  LLVM_ABI void setNoWrapFlags(SCEVAddRecExpr *AddRec, SCEV::NoWrapFlags Flags);
+  LLVM_ABI void setNoWrapFlags(SCEVAddRecExpr *AddRec, SCEVFlags Flags);
 
   class LoopGuards {
     DenseMap<const SCEV *, const SCEV *> RewriteMap;
     SmallDenseSet<std::pair<const SCEV *, const SCEV *>> NotEqual;
     bool PreserveNUW = false;
     bool PreserveNSW = false;
+    /// The loop to collect guards for on first use by applyLoopGuards, if not
+    /// collected yet.
+    const Loop *PendingLoop = nullptr;
     ScalarEvolution &SE;
 
     LoopGuards(ScalarEvolution &SE) : SE(SE) {}
+
+    friend class ScalarEvolution;
+
+    /// Collect the guards for PendingLoop.
+    void collectPending();
 
     /// Recursively collect loop guards in \p Guards, starting from
     /// block \p Block with predecessor \p Pred. The intended starting point
@@ -1605,9 +1618,12 @@ public:
         unsigned Depth);
 
   public:
-    /// Collect rewrite map for loop guards for loop \p L, together with flags
-    /// indicating if NUW and NSW can be preserved during rewriting.
-    LLVM_ABI static LoopGuards collect(const Loop *L, ScalarEvolution &SE);
+    /// Return loop guards for loop \p L, which are collected on first use.
+    static LoopGuards collectOnDemand(const Loop *L, ScalarEvolution &SE) {
+      LoopGuards Guards(SE);
+      Guards.PendingLoop = L;
+      return Guards;
+    }
 
     /// Try to apply the collected loop guards to \p Expr.
     LLVM_ABI const SCEV *rewrite(const SCEV *Expr) const;
@@ -1615,8 +1631,7 @@ public:
 
   /// Try to apply information from loop guards for \p L to \p Expr.
   LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
-  LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr,
-                                       const LoopGuards &Guards);
+  LLVM_ABI const SCEV *applyLoopGuards(const SCEV *Expr, LoopGuards &Guards);
 
   /// Return true if the loop has no abnormal exits. That is, if the loop
   /// is not infinite, it must exit through an explicit edge in the CFG.
@@ -1689,6 +1704,8 @@ private:
   // Needs getWithOperands to rebuild a node from its canonical operands.
   friend void SCEV::computeAndSetCanonical(ScalarEvolution &SE);
 
+  const AnalysisOptions &Opts;
+
   /// The function we are analyzing.
   Function &F;
 
@@ -1722,8 +1739,7 @@ private:
   HasRecMapType HasRecMap;
 
   /// The type for ExprValueMap.
-  using ValueSetVector = SmallSetVector<Value *, 4>;
-  using ExprValueMapType = DenseMap<const SCEV *, ValueSetVector>;
+  using ExprValueMapType = DenseMap<const SCEV *, TinyPtrVector<Value *>>;
 
   /// ExprValueMap -- This map records the original values from which
   /// the SCEV expr is generated from.
@@ -2018,7 +2034,7 @@ private:
 
   /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step},
   /// and whether it may wrap. Helper for \c getRange.
-  std::pair<ConstantRange, SCEV::NoWrapFlags>
+  std::pair<ConstantRange, SCEVFlags>
   getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
                       const APInt &MaxBECount);
   /// If \p S is a SCEVConstant, return the wrapped constant or nullptr
@@ -2118,7 +2134,7 @@ private:
   /// Variant of getSmallConstantTripMultiple taking pre-collected loop
   /// \p Guards. \p ExitCount must be computable.
   unsigned getSmallConstantTripMultiple(const SCEV *ExitCount,
-                                        const LoopGuards &Guards);
+                                        LoopGuards &Guards);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if it exits via the specified block. If AllowPredicates is set,
@@ -2232,21 +2248,19 @@ private:
   /// less-than comparison will execute.  If not computable, return
   /// CouldNotCompute.
   ///
-  /// \p isSigned specifies whether the less-than is signed.
+  /// \p IsSigned specifies whether the less-than is signed.
+  ///
+  /// If \p Invert is set, analyze "LHS > RHS" as "~LHS < ~RHS".
   ///
   /// \p ControlsOnlyExit is true when the LHS < RHS condition directly controls
   /// the branch (loops exits only if condition is true). In this case, we can
-  /// use NoWrapFlags to skip overflow checks.
+  /// use no-wrap flags to skip overflow checks.
   ///
   /// If \p AllowPredicates is set, this call will try to use a minimal set of
   /// SCEV predicates in order to return an exact answer.
   ExitLimit howManyLessThans(const SCEV *LHS, const SCEV *RHS, const Loop *L,
-                             bool isSigned, bool ControlsOnlyExit,
+                             bool IsSigned, bool Invert, bool ControlsOnlyExit,
                              bool AllowPredicates = false);
-
-  ExitLimit howManyGreaterThans(const SCEV *LHS, const SCEV *RHS, const Loop *L,
-                                bool isSigned, bool IsSubExpr,
-                                bool AllowPredicates = false);
 
   /// Return a predecessor of BB (which may not be an immediate predecessor)
   /// which has exactly one successor from which BB is reachable, or null if
@@ -2318,6 +2332,14 @@ private:
                                       const SCEV *RHS, CmpPredicate FoundPred,
                                       const SCEV *FoundLHS,
                                       const SCEV *FoundRHS);
+
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the condition described by FoundLHS, FoundRHS, and Pred with the
+  /// other signedness is true.
+  bool isImpliedCondViaSignFlippedPred(CmpPredicate Pred, const SCEV *LHS,
+                                       const SCEV *RHS, const SCEV *FoundLHS,
+                                       const SCEV *FoundRHS,
+                                       const Instruction *CtxI);
 
   /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied
   /// by a call to @llvm.experimental.guard in \p BB.
@@ -2401,8 +2423,7 @@ private:
                                     SCEVUse RHS);
 
   /// Try to match the Expr as "(L + R)<Flags>".
-  bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R,
-                      SCEV::NoWrapFlags &Flags);
+  bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R, SCEVFlags &Flags);
 
   /// Forget predicated/non-predicated backedge taken counts for the given loop.
   void forgetBackedgeTakenCounts(const Loop *L, bool Predicated);
@@ -2443,11 +2464,11 @@ private:
 
   /// Try to prove NSW on \p AR by proving facts about conditions known  on
   /// entry and backedge.
-  SCEV::NoWrapFlags proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR);
+  SCEVFlags proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR);
 
   /// Try to prove NUW on \p AR by proving facts about conditions known on
   /// entry and backedge.
-  SCEV::NoWrapFlags proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR);
+  SCEVFlags proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR);
 
   std::optional<MonotonicPredicateType>
   getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
@@ -2456,7 +2477,7 @@ private:
   /// Return SCEV no-wrap flags that can be proven based on reasoning about
   /// how poison produced from no-wrap flags on this value (e.g. a nuw add)
   /// would trigger undefined behavior on overflow.
-  SCEV::NoWrapFlags getNoWrapFlagsFromUB(const Value *V);
+  SCEVFlags getNoWrapFlagsFromUB(const Value *V);
 
   /// Return a scope which provides an upper bound on the defining scope of
   /// 'S'. Specifically, return the first instruction in said bounding scope.
@@ -2478,9 +2499,6 @@ private:
   /// prove B must execute given A executes.
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,
                                          const Instruction *B);
-
-  /// Returns true if \p Op is guaranteed not to cause immediate UB.
-  bool isGuaranteedNotToCauseUB(const SCEV *Op);
 
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since
@@ -2555,16 +2573,14 @@ private:
                          bool Invert = false);
 
   /// Get add expr already created or create a new one.
-  const SCEV *getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,
-                                 SCEV::NoWrapFlags Flags);
+  const SCEV *getOrCreateAddExpr(ArrayRef<SCEVUse> Ops, SCEVFlags Flags);
 
   /// Get mul expr already created or create a new one.
-  const SCEV *getOrCreateMulExpr(ArrayRef<SCEVUse> Ops,
-                                 SCEV::NoWrapFlags Flags);
+  const SCEV *getOrCreateMulExpr(ArrayRef<SCEVUse> Ops, SCEVFlags Flags);
 
   // Get addrec expr already created or create a new one.
   const SCEV *getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops, const Loop *L,
-                                    SCEV::NoWrapFlags Flags);
+                                    SCEVFlags Flags);
 
   // Get UDiv expression already created or create a new one.
   const SCEV *getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS);
@@ -2577,9 +2593,11 @@ private:
   /// an add rec on said loop.
   void getUsedLoops(const SCEV *S, SmallPtrSetImpl<const Loop *> &LoopsUsed);
 
-  /// Look for a SCEV expression with type `SCEVType` and operands `Ops` in
-  /// `UniqueSCEVs`.  Return if found, else nullptr.
-  SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<SCEVUse> Ops);
+  /// Look for a SCEV expression with type \p SCEVType and operands \p Ops in
+  /// UniqueSCEVs. If \p SCEVType is scAddRecExpr, the loop \p L must be passed.
+  /// Return if found, else nullptr.
+  SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<SCEVUse> Ops,
+                                const Loop *L = nullptr);
 
   /// Get reachable blocks in this function, making limited use of SCEV
   /// reasoning about conditions.
@@ -2619,6 +2637,9 @@ private:
   /// allocated. This is used by releaseMemory to locate them all and call
   /// their destructors.
   SCEVUnknown *FirstUnknown = nullptr;
+
+  /// OrderID to assign to the next SCEVUnknown created.
+  unsigned NextUnknownOrderID = 0;
 };
 
 /// Analysis pass that exposes the \c ScalarEvolution for a function.
@@ -2800,10 +2821,21 @@ template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
   return getPointer()->getCanonical();
 }
 
+template <>
+inline SCEVUse SCEVUseT<const SCEV *>::getCommon(SCEVUse A, SCEVUse B) {
+  if (A.getPointer() == B.getPointer()) {
+    A.setInt(A.getInt() | B.getInt());
+    return A;
+  }
+  if (A.getCanonical() == B.getCanonical())
+    return A.getCanonical();
+  return SCEVUse();
+}
+
 template <typename SCEVPtrT>
 void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
   getPointer()->print(OS);
-  SCEV::NoWrapFlags Flags = getUseNoWrapFlags();
+  SCEVFlags Flags = getUseNoWrapFlags();
   if (any(Flags & SCEV::FlagNUW))
     OS << "<u nuw>";
   if (any(Flags & SCEV::FlagNSW))

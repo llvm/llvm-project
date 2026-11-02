@@ -222,65 +222,6 @@ public:
                      std::forward<FnT>(OnComplete), ArgBuffer);
   }
 
-  /// Run a wrapper function in the executor. The wrapper function should be
-  /// callable as:
-  ///
-  /// \code{.cpp}
-  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
-  /// \endcode{.cpp}
-  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
-                                            ArrayRef<char> ArgBuffer) {
-    std::promise<shared::WrapperFunctionBuffer> RP;
-    auto RF = RP.get_future();
-    callWrapperAsync(
-        RunInPlace(), WrapperFnAddr,
-        [&](shared::WrapperFunctionBuffer R) {
-          RP.set_value(std::move(R));
-        }, ArgBuffer);
-    return RF.get();
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  template <typename SPSSignature, typename RunPolicyT, typename SendResultT,
-            typename... ArgTs>
-  void callSPSWrapperAsync(RunPolicyT &&Runner, ExecutorAddr WrapperFnAddr,
-                           SendResultT &&SendResult, const ArgTs &...Args) {
-    shared::WrapperFunction<SPSSignature>::callAsync(
-        [this, WrapperFnAddr, Runner = std::move(Runner)]
-        (auto &&SendResult, const char *ArgData, size_t ArgSize) mutable {
-          this->callWrapperAsync(std::move(Runner), WrapperFnAddr,
-                                 std::move(SendResult),
-                                 ArrayRef<char>(ArgData, ArgSize));
-        },
-        std::forward<SendResultT>(SendResult), Args...);
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(ExecutorAddr WrapperFnAddr, SendResultT &&SendResult,
-                           const ArgTs &...Args) {
-    callSPSWrapperAsync<SPSSignature>(RunAsTask(*D), WrapperFnAddr,
-                                      std::forward<SendResultT>(SendResult),
-                                      Args...);
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  ///
-  /// If SPSSignature is a non-void function signature then the second argument
-  /// (the first in the Args list) should be a reference to a return value.
-  template <typename SPSSignature, typename... WrapperCallArgTs>
-  Error callSPSWrapper(ExecutorAddr WrapperFnAddr,
-                       WrapperCallArgTs &&...WrapperCallArgs) {
-    return shared::WrapperFunction<SPSSignature>::call(
-        [this, WrapperFnAddr](const char *ArgData, size_t ArgSize) {
-          return callWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
-        },
-        std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
-  }
-
   /// Disconnect from the target process.
   ///
   /// This should be called after the JIT session is shut down.

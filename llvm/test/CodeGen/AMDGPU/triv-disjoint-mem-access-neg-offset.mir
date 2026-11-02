@@ -4,7 +4,7 @@
 # Make sure handling of unsigned immediate values interpreted as negative values
 # still works for SIInstrInfo::areMemAccessesTriviallyDisjoint.
 
-# LABEL: {{^}}no_reorder_flat_load_local_store_local_load:
+# CHECK-LABEL: {{^}}no_reorder_flat_load_local_store_local_load:
 # CHECK:      SU(5):   %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # CHECK:      SU(6):   DS_WRITE_B128_gfx9 %5:vgpr_32, %4:vreg_128, 512, 0, implicit $exec
 # CHECK:      SU(7):   %6:vreg_64 = DS_READ2_B32_gfx9 %5:vgpr_32, -127, -126, 0, implicit $exec
