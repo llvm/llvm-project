@@ -121,13 +121,11 @@ _Complex _BitInt(3) Cmplx;
 // expected-error@+1{{'_Complex _BitInt' is invalid}}
 typedef _Complex _BitInt(3) Cmp;
 
-// Reject cases of _Atomic:
-// expected-error@+1{{_Atomic cannot be applied to integer type '_BitInt(4)'}}
-_Atomic _BitInt(4) TooSmallAtomic;
-// expected-error@+1{{_Atomic cannot be applied to integer type '_BitInt(9)'}}
+// _Atomic accepts any _BitInt width: small and non-power-of-2 included.
+// Sizes the target cannot lower inline use the __atomic_* libcalls.
+_Atomic _BitInt(4) SmallAtomic;
 _Atomic _BitInt(9) NotPow2Atomic;
-// expected-error@+1{{_Atomic cannot be applied to integer type '_BitInt(128)'}}
-_Atomic _BitInt(128) JustRightAtomic;
+_Atomic _BitInt(128) WideAtomic;
 
 // Test result types of Unary/Bitwise/Binary Operations:
 void Ops() {
