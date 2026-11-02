@@ -632,15 +632,10 @@ func.func @math_fpowi_neg_odd_power(%0 : tensor<8xf32>) -> tensor<8xf32> {
 }
 //  CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>) -> tensor<8xf32> {
 //  CHECK-DAG:    %[[CST1:.*]] = arith.constant dense<1.000000e+00> : tensor<8xf32>
-//  CHECK-DAG:    %[[CST0:.*]] = arith.constant dense<0.000000e+00> : tensor<8xf32>
-//  CHECK-DAG:    %[[CSTINF:.*]] = arith.constant dense<0x7F800000> : tensor<8xf32>
 //  CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
 //  CHECK:        %[[CUBE:.*]] = arith.mulf %[[SQ]], %[[ARG0]] : tensor<8xf32>
-//  CHECK:        %[[CMP0:.*]] = arith.cmpf oeq, %[[CUBE]], %[[CST0]] : tensor<8xf32>
-//  CHECK:        %[[SIGNEDINF:.*]] = math.copysign %[[CSTINF]], %[[CUBE]] : tensor<8xf32>
 //  CHECK:        %[[INV:.*]] = arith.divf %[[CST1]], %[[CUBE]] : tensor<8xf32>
-//  CHECK:        %[[RES:.*]] = arith.select %[[CMP0]], %[[SIGNEDINF]], %[[INV]] : tensor<8xi1>, tensor<8xf32>
-//  CHECK:      return %[[RES]] : tensor<8xf32>
+//  CHECK:      return %[[INV]] : tensor<8xf32>
 
 // -----
 
@@ -652,15 +647,10 @@ func.func @math_fpowi_neg_even_power(%0 : tensor<8xf32>) -> tensor<8xf32> {
 }
 //  CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>) -> tensor<8xf32> {
 //  CHECK-DAG:    %[[CST1:.*]] = arith.constant dense<1.000000e+00> : tensor<8xf32>
-//  CHECK-DAG:    %[[CST0:.*]] = arith.constant dense<0.000000e+00> : tensor<8xf32>
-//  CHECK-DAG:    %[[CSTINF:.*]] = arith.constant dense<0x7F800000> : tensor<8xf32>
 //  CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
 //  CHECK:        %[[PW4:.*]] = arith.mulf %[[SQ]], %[[SQ]] : tensor<8xf32>
-//  CHECK:        %[[CMP0:.*]] = arith.cmpf oeq, %[[PW4]], %[[CST0]] : tensor<8xf32>
-//  CHECK:        %[[SIGNEDINF:.*]] = math.copysign %[[CSTINF]], %[[PW4]] : tensor<8xf32>
 //  CHECK:        %[[INV:.*]] = arith.divf %[[CST1]], %[[PW4]] : tensor<8xf32>
-//  CHECK:        %[[RES:.*]] = arith.select %[[CMP0]], %[[SIGNEDINF]], %[[INV]] : tensor<8xi1>, tensor<8xf32>
-//  CHECK:      return %[[RES]] : tensor<8xf32>
+//  CHECK:      return %[[INV]] : tensor<8xf32>
 
 // -----
 
