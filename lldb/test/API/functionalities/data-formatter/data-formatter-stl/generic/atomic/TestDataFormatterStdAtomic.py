@@ -131,6 +131,26 @@ class StdAtomicTestCase(TestBase):
             self.assertEqual(og_summary, atomic_weak.GetSummary())
             self.assertEqual(og_addr, val_weak.GetValueAsAddress())
 
+            weak_expired = self.get_variable("w_value2")
+            atomic_weak_expired = self.get_variable("atomic_weak_expired")
+
+            expired_child = atomic_weak_expired.GetChildAtIndex(0)
+            self.assertIsNotNone(expired_child)
+            self.assertNotEqual(expired_child.GetValueAsAddress(), 0)
+            self.assertNotEqual(
+                expired_child.GetValueAsAddress(), lldb.LLDB_INVALID_ADDRESS
+            )
+            self.assertEqual(
+                expired_child.GetValueAsAddress(),
+                weak_expired.GetChildAtIndex(0).GetValueAsAddress(),
+            )
+            self.assertEqual(weak_expired.summary, atomic_weak_expired.summary)
+
+            atomic_shared_null = self.get_variable("atomic_shared_null")
+            null_child = atomic_shared_null.GetChildAtIndex(0)
+            self.assertEqual(null_child.GetValueAsAddress(), 0)
+            self.assertEqual(atomic_shared_null.GetSummary(), "nullptr")
+
     def verify_floating_point_equal(self, value: str, expected: float):
         self.assertAlmostEqual(float(value), float(expected), places=4)
 

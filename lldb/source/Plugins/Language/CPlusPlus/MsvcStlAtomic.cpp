@@ -31,7 +31,7 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
-  ValueObjectSP m_storage;
+  ValueObject *m_storage;
   bool m_is_smart_ptr = false;
 };
 
@@ -56,7 +56,7 @@ static ValueObjectSP ValueOfAtomic(ValueObject &valobj) {
       return nullptr;
   }
 
-  return valobj.Cast(element_type);
+  return storage_sp->Cast(element_type);
 }
 
 lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::
@@ -73,25 +73,26 @@ lldb::ValueObjectSP
 lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
   if (idx == 0 && m_storage)
-    return m_storage;
+    return m_storage->GetSP();
   return nullptr;
 }
 
 lldb::ChildCacheState
 lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::Update() {
-  m_storage.reset();
+  m_storage = nullptr;
 
+  ValueObjectSP value;
   if (m_is_smart_ptr) {
     ValueObjectSP ptr = m_backend.GetChildMemberWithName("_Ptr");
     if (!ptr)
       return lldb::eRefetch;
-    m_storage = ValueOfAtomic(*ptr);
+    value = ValueOfAtomic(*ptr);
   } else {
-    m_storage = ValueOfAtomic(m_backend);
+    value = ValueOfAtomic(m_backend);
   }
 
-  if (m_storage)
-    m_storage = m_storage->Clone("Value");
+  if (value)
+    m_storage = value->Clone("Value").get();
 
   return lldb::eRefetch;
 }
@@ -138,9 +139,9 @@ static bool AtomicSharedPtrSummaryProvider(ValueObject &ptr,
   //   static constexpr uintptr_t _Lock_mask = 3;
   //   static constexpr uintptr_t _Ptr_value_mask = ~_Lock_mask;
   //
-  //   atomic<uintptr_t> Storage_;
+  //   atomic<uintptr_t> _Storage;
   // }
-  ValueObjectSP rep_storage_sp = rep_wrap.GetChildAtIndex(0);
+  ValueObjectSP rep_storage_sp = rep_wrap.GetChildMemberWithName("_Storage");
   if (!rep_storage_sp)
     return false;
   ValueObjectSP rep_ptr_sp = ValueOfAtomic(*rep_storage_sp);
