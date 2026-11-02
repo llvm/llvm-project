@@ -1936,8 +1936,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     return nullptr;
 
   // Stop info is set for every thread at a stop, so a search of the thread
-  // list here would take time quadratic in the number of threads. Search only
-  // when the caller does not have the thread.
+  // list for each would take time quadratic in the number of threads.
   if (!thread_sp || thread_sp->GetProtocolID() != tid) {
     // m_thread_list_real does have its own mutex, but we need to hold onto the
     // mutex between the call to m_thread_list_real.FindThreadByID(...) and the

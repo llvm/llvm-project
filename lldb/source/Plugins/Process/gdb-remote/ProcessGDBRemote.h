@@ -409,9 +409,21 @@ protected:
   GetThreadStopInfoFromJSON(ThreadGDBRemote *thread,
                             const StructuredData::ObjectSP &thread_infos_sp);
 
+  /// Set the stop info of the thread that \a thread_dict describes.
+  ///
+  /// \param[in] thread_sp
+  ///     The thread that \a thread_dict describes, if the caller already has
+  ///     it, which saves searching the thread list. A caller that sets stop
+  ///     info for every thread at a stop should pass it. If it is null or a
+  ///     different thread, the thread is found by its ID, or created.
   lldb::ThreadSP SetThreadStopInfo(StructuredData::Dictionary *thread_dict,
                                    lldb::ThreadSP thread_sp = nullptr);
 
+  /// Set the stop info of thread \a tid.
+  ///
+  /// \param[in] thread_sp
+  ///     The thread with ID \a tid, if the caller already has it, as in the
+  ///     overload above.
   lldb::ThreadSP
   SetThreadStopInfo(lldb::tid_t tid,
                     ExpeditedRegisterMap &expedited_register_map, uint8_t signo,
