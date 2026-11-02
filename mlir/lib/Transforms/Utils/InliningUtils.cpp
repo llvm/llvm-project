@@ -145,7 +145,10 @@ void InlinerInterface::handleTerminator(Operation *op,
 /// Returns true if the inliner can use the fast path for the given inlined
 /// block. Only called when exactly one block was inlined.
 bool InlinerInterface::allowSingleBlockOptimization(Block *inlinedBlock) const {
-  auto *handler = getInterfaceFor(inlinedBlock->getParentOp());
+  // The fast path hands the terminator to the interface of the terminator's
+  // dialect (see handleTerminator), so that interface decides whether the fast
+  // path is allowed.
+  auto *handler = getInterfaceFor(inlinedBlock->getTerminator());
   assert(handler && "expected valid dialect handler");
   return handler->allowSingleBlockOptimization(inlinedBlock);
 }
