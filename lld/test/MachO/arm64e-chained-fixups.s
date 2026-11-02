@@ -37,8 +37,8 @@
 # RUN: llvm-objdump --macho --dyld-info %t/no-fixup-chains.dylib | \
 # RUN:   FileCheck %s --check-prefix=AUTH
 
-## arm64e chains pointers with an 8-byte stride; don't suggest the ignored
-## -no_fixup_chains when two pointers are 4 bytes out of step.
+## arm64e chains pointers with an 8-byte stride, so a pointer that is only
+## 4-byte aligned is an error. Don't suggest the ignored -no_fixup_chains.
 # RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos -o %t/unaligned.o \
 # RUN:   %t/unaligned.s
 # RUN: not %lld -arch arm64e -platform_version macos 13.0 13.0 -dylib \
@@ -97,7 +97,7 @@
 # RUN: %{format} | FileCheck %s --check-prefix=USERLAND24
 
 # WARN: warning: bind opcodes are no longer supported with arm64e, switching to chained fixups
-# UNALIGNED: error: __DATA,__data, offset 12: fixups are unaligned (offset 12 is not a multiple of the stride)
+# UNALIGNED: error: {{.*}}unaligned.o:(symbol _a+0xc): fixup is not 8-byte aligned; stop packing structs containing pointers{{$}}
 # STRADDLE: error: {{.*}}straddle.o:(symbol _p+0x0): fixup straddles page boundary; stop packing structs containing pointers{{$}}
 # PAGE-INDEX: error: page index in __DATA,__big too large for chained fixups{{$}}
 

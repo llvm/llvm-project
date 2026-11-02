@@ -1315,8 +1315,6 @@ void Writer::buildFixupChains() {
   TimeTraceScope timeScope("Build fixup chains");
 
   const uint64_t pageSize = target->getPageSize();
-  // All ARM64E userland formats use 8-byte stride; DYLD_CHAINED_PTR_64 uses 4.
-  const uint32_t stride = config->arch() == AK_arm64e ? 8 : 4;
 
   for (size_t i = 0, count = loc.size(); i < count;) {
     const OutputSegment *oseg = loc[i].isec->parent->parent;
@@ -1327,32 +1325,23 @@ void Writer::buildFixupChains() {
     while (i < count && loc[i].isec->parent->parent == oseg &&
            (loc[i].offset / pageSize) == pageIdx) {
       uint64_t offset = loc[i].offset - loc[i - 1].offset;
-
-      auto fail = [&](Twine message) {
+      if (offset < target->wordSize) {
         error(loc[i].isec->getSegName() + "," + loc[i].isec->getName() +
               ", offset " +
               Twine(loc[i].offset - loc[i].isec->parent->getSegmentOffset()) +
-              ": " + message);
-      };
-
-      if (offset < target->wordSize)
-        return fail("fixups overlap");
-      if (offset % stride != 0)
-        return fail("fixups are unaligned (offset " + Twine(offset) +
-                    " is not a multiple of the stride)" +
-                    (canDisableChainedFixups()
-                         ? ". Re-link with -no_fixup_chains"
-                         : ""));
+              ": fixups overlap");
+        return;
+      }
 
       // The "next" field is in the same location for bind and rebase entries.
       uint8_t *prev = buf + loc[i - 1].offset;
       if (config->arch() == AK_arm64e) {
         auto *entry =
             reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(prev);
-        entry->next = offset / stride;
+        entry->next = offset / ChainedFixupsSection::chainStride();
       } else {
         auto *entry = reinterpret_cast<dyld_chained_ptr_64_bind *>(prev);
-        entry->next = offset / stride;
+        entry->next = offset / ChainedFixupsSection::chainStride();
       }
       ++i;
     }

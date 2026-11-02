@@ -853,6 +853,17 @@ let Predicates = [HasSVE_or_SME] in {
   foreach VT = [nxv16i8, nxv8i16, nxv4i32, nxv2i64] in
     def : Pat<(VT (vnot VT:$op)), (SUBR_ZI_B_PSEUDO ZPR8:$op, (i32 255), (i32 0))>;
 
+  // An all-active NOT intrinsic also produces ~op in every lane.
+  multiclass SVEAllActiveNotPat<ValueType VT, ValueType PT> {
+    def : Pat<(VT (int_aarch64_sve_not (VT srcvalue),
+                    (PT (SVEAllActive)), VT:$op)),
+              (SUBR_ZI_B_PSEUDO ZPR8:$op, (i32 255), (i32 0))>;
+  }
+  defm : SVEAllActiveNotPat<nxv16i8, nxv16i1>;
+  defm : SVEAllActiveNotPat<nxv8i16, nxv8i1>;
+  defm : SVEAllActiveNotPat<nxv4i32, nxv4i1>;
+  defm : SVEAllActiveNotPat<nxv2i64, nxv2i1>;
+
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", AArch64mad_m1, "MLA_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", AArch64msb_m1, "MLS_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", AArch64mla_m1, "MAD_ZPmZZ">;

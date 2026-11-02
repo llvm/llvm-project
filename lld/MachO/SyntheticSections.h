@@ -809,6 +809,10 @@ public:
 
   const std::vector<Location> &getLocations() const { return locations; }
 
+  // Each fixup's "next" field holds the distance to the next fixup on its page
+  // in units of this stride, so every fixup must be aligned to it.
+  static uint32_t chainStride();
+
   bool hasWeakBinding() const { return hasWeakBind; }
   bool hasNonWeakDefinition() const { return hasNonWeakDef; }
 

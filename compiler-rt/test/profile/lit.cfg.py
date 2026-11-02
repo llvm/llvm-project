@@ -2,6 +2,7 @@
 
 import os
 import re
+import shlex
 
 
 def get_required_attr(config, attr_name):
@@ -49,6 +50,14 @@ config.suffixes = [".c", ".cpp", ".m", ".mm", ".ll", ".test"]
 
 # What to exclude.
 config.excludes = ["Inputs"]
+
+# Compiler-only GPU tests require a registered backend, independently of HIP
+# runtime and GPU availability.
+registered_targets = lit_config.run_command_cached(
+    shlex.split(config.clang) + ["--print-targets"], allow_failure=True, text=True
+)
+if re.search(r"^\s*amdgcn\s+-", registered_targets, re.MULTILINE):
+    config.available_features.add("amdgpu-registered-target")
 
 # Clang flags.
 target_cflags = [get_required_attr(config, "target_cflags")]

@@ -2702,6 +2702,11 @@ void ChainedFixupsSection::writeTo(uint8_t *buf) const {
   assert(curOffset() == getRawSize());
 }
 
+uint32_t ChainedFixupsSection::chainStride() {
+  // All ARM64E userland formats use 8-byte stride; DYLD_CHAINED_PTR_64 uses 4.
+  return config->arch() == AK_arm64e ? 8 : 4;
+}
+
 // This is step 2 of the algorithm described in the class comment of
 // ChainedFixupsSection.
 void ChainedFixupsSection::finalizeContents() {
@@ -2734,17 +2739,21 @@ void ChainedFixupsSection::finalizeContents() {
   for (Location &loc : locations) {
     uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
-    if (offset % pageSize + target->wordSize > pageSize) {
+    auto report = [&](const Twine &problem) {
       std::string msg =
-          loc.isec->getLocation(loc.offset) +
-          ": fixup straddles page boundary; stop packing structs "
-          "containing pointers" +
-          (canDisableChainedFixups() ? " or link with -no_fixup_chains" : "");
+          (loc.isec->getLocation(loc.offset) + ": " + problem +
+           "; stop packing structs containing pointers" +
+           (canDisableChainedFixups() ? " or link with -no_fixup_chains" : ""))
+              .str();
       std::string src = loc.isec->getSourceLocation(loc.offset);
       if (!src.empty())
         msg += "\n>>> defined at " + src;
       error(msg);
-    }
+    };
+    if (offset % pageSize + target->wordSize > pageSize)
+      report("fixup straddles page boundary");
+    if (offset % chainStride() != 0)
+      report("fixup is not " + Twine(chainStride()) + "-byte aligned");
     loc.offset = offset;
   }
 
