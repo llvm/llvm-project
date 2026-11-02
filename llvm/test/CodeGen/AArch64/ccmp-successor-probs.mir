@@ -10,6 +10,7 @@
 # CHECK:         CCMPXr %5, %4, 0, 10, implicit-def $nzcv, implicit $nzcv
 #
 name: aarch64-ccmp-successor-probs
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }

@@ -3,6 +3,7 @@
 
 ---
 name:            blendv_positive
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: blendv_positive
@@ -115,6 +116,7 @@ body:             |
 
 ---
 name:            masked_blend_mask_has_multiple_uses
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: masked_blend_mask_has_multiple_uses
@@ -129,6 +131,7 @@ body:             |
 
 ---
 name:            blendv_mask_has_multiple_uses
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: blendv_mask_has_multiple_uses
@@ -144,6 +147,7 @@ body:             |
 
 ---
 name:            blendv_mask_has_later_tied_use
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: blendv_mask_has_later_tied_use
@@ -159,6 +163,7 @@ body:             |
 
 ---
 name:            blendv_source_vector_clobbered
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: blendv_source_vector_clobbered
@@ -174,6 +179,7 @@ body:             |
 
 ---
 name:            blendv_uses_extended_register
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: blendv_uses_extended_register
@@ -187,6 +193,7 @@ body:             |
 
 ---
 name:            blendv_incompatible_mask_width
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; A dword mask extracted from XMM cannot directly become the vector mask
