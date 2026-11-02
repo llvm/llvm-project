@@ -690,8 +690,11 @@ bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   // but with the difference that any floating-point type is allowed,
   // including __fp16.
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
+    // AArch64 cannot lower x86_fp80; pass an x87 'long double' in GPRs.
     if (BT->isFloatingPoint())
-      return true;
+      return BT->getKind() != BuiltinType::LongDouble ||
+             &getTarget().getLongDoubleFormat() !=
+                 &llvm::APFloat::x87DoubleExtended();
   } else if (const VectorType *VT = Ty->getAs<VectorType>()) {
     if (auto Kind = VT->getVectorKind();
         Kind == VectorKind::SveFixedLengthData ||
