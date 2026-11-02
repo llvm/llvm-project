@@ -1,4 +1,4 @@
-//===- ShardingInterfaceImpl.cpp ------------------------------------------===//
+//===- ShardingExtensions.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tosa/IR/ShardingInterfaceImpl.h"
+#include "mlir/Dialect/Tosa/Extensions/ShardingExtensions.h"
 #include "mlir/Dialect/Shard/IR/ShardOps.h"
 #include "mlir/Dialect/Shard/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h"
@@ -22,7 +22,6 @@ using namespace mlir::tosa;
 using namespace mlir::shard;
 
 namespace {
-
 // loop types: [parallel, parallel, parallel, reduction_sum]
 // indexing maps:
 // (d0, d1, d2, d3) -> (d0, d1, d3)
@@ -110,7 +109,6 @@ template <typename... OpTypes>
 static void registerElemwiseAll(MLIRContext *ctx) {
   (registerElemwiseOne<OpTypes>(ctx), ...);
 }
-
 } // namespace
 
 void mlir::tosa::registerShardingInterfaceExternalModels(

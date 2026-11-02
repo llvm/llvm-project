@@ -835,6 +835,7 @@ enum AttributeKindCodes {
   ATTR_KIND_FLATTEN = 108,
   ATTR_KIND_NOIPA = 109,
   ATTR_KIND_NOFREEOBJ = 110,
+  ATTR_KIND_SANITIZE_CONCURRENCY = 111,
 
   // TODO: Get rid of this.
   // There really shouldn't be incompatible bitcode changes specific to AMD

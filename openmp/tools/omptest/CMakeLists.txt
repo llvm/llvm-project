@@ -82,10 +82,10 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
     $<TARGET_OBJECTS:default_gtest>
   )
 
-  # Add default_gtest's include directories and compile definitions to omptest.
-  # Especially make these available to dependant targets, e.g. for unit tests.
-  # Only use these properties for the build interface, to avoid the target
-  # dependency on default_gtest during installation.
+  # Take GTest's include directories and compile definitions, and make them
+  # available to dependent targets such as the unit tests. BUILD_INTERFACE
+  # keeps default_gtest out of the link interface, which install(EXPORT)
+  # would otherwise require to be in an export set.
   target_include_directories(omptest PUBLIC
     $<BUILD_INTERFACE:$<TARGET_PROPERTY:default_gtest,INCLUDE_DIRECTORIES>>
   )
