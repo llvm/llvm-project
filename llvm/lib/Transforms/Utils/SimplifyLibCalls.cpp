@@ -55,6 +55,11 @@ static cl::opt<bool>
                          cl::desc("Enable unsafe double to float "
                                   "shrinking for math lib calls"));
 
+static cl::opt<bool> EnableSinCosFusion(
+    "sincos-fusion", cl::Hidden, cl::init(true),
+    cl::desc("Combine a sin(x) call and a cos(x) call with the same argument "
+             "into a single sincos(x) call"));
+
 // Enable conversion of operator new calls with a MemProf hot or cold hint
 // to an operator new call that takes a hot/cold hint. Off by default since
 // not all allocators currently support this extension.
@@ -3277,6 +3282,129 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBa
   return IsSin ? Sin : Cos;
 }
 
+/// Check that CI is a call to a one-argument floating-point function
+/// returning the same floating-point type, as expected for sin/cos.
+static bool hasSinCosPrototype(CallInst *CI) {
+  FunctionType *FTy = CI->getFunctionType();
+  Type *Ty = CI->getType();
+  return FTy->getNumParams() == 1 && FTy->getParamType(0) == Ty &&
+         Ty->isFloatingPointTy();
+}
+
+/// Returns true if A and B are in the same basic block and no instruction
+/// between them may access errno memory, so the errno write of the earlier
+/// call cannot be observed to move and the write of the later call cannot be
+/// observed to disappear. Accesses to memory local to the function (derived
+/// from an alloca) cannot access the errno global and are allowed, so that
+/// pairs like std::complex<double>(cos(x), sin(x)) -- which store the first
+/// result between the two calls -- can be fused.
+static bool haveNoInterveningErrnoAccess(CallInst *A, CallInst *B) {
+  if (A->getParent() != B->getParent())
+    return false;
+  CallInst *First = A->comesBefore(B) ? A : B;
+  CallInst *Second = First == A ? B : A;
+  for (auto It = std::next(First->getIterator()); &*It != Second; ++It) {
+    Instruction *I = &*It;
+    if (!I->mayReadOrWriteMemory())
+      continue;
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      if (isa<AllocaInst>(getUnderlyingObject(LI->getPointerOperand())))
+        continue;
+      return false;
+    }
+    if (auto *SI = dyn_cast<StoreInst>(I)) {
+      if (isa<AllocaInst>(getUnderlyingObject(SI->getPointerOperand())))
+        continue;
+      return false;
+    }
+    // Anything else (calls, atomics, accesses to non-local memory) may
+    // access errno.
+    return false;
+  }
+  return true;
+}
+
+Value *LibCallSimplifier::optimizeSinCos(CallInst *CI, bool IsSin,
+                                         IRBuilderBase &B) {
+  if (!EnableSinCosFusion || !hasSinCosPrototype(CI) || !CI->doesNotThrow() ||
+      CI->isNoBuiltin() || CI->isStrictFP())
+    return nullptr;
+
+  Value *Arg = CI->getArgOperand(0);
+  if (isa<Constant>(Arg))
+    return nullptr;
+
+  // Look for a matching cos/sin call with the same argument.
+  Module *M = CI->getModule();
+  Function *F = CI->getFunction();
+  bool IsFloat = CI->getType()->isFloatTy();
+  CallInst *Match = nullptr;
+  for (User *U : Arg->users()) {
+    auto *Cand = dyn_cast<CallInst>(U);
+    if (!Cand || Cand == CI || Cand->use_empty() || Cand->getFunction() != F ||
+        Cand->isNoBuiltin())
+      continue;
+    Function *Callee = Cand->getCalledFunction();
+    if (!Callee)
+      continue;
+    LibFunc LF = TLI->getLibFunc(*Callee);
+    if (LF != (IsSin ? (IsFloat ? LibFunc_cosf : LibFunc_cos)
+                     : (IsFloat ? LibFunc_sinf : LibFunc_sin)))
+      continue;
+    if (!isLibFuncEmittable(M, TLI, LF) || !hasSinCosPrototype(Cand) ||
+        !Cand->doesNotThrow() || Cand->isStrictFP() ||
+        !haveNoInterveningErrnoAccess(CI, Cand))
+      continue;
+    Match = Cand;
+    break;
+  }
+  if (!Match)
+    return nullptr;
+
+  LibFunc SinCosLF = IsFloat ? LibFunc_sincosf : LibFunc_sincos;
+  if (!isLibFuncEmittable(M, TLI, SinCosLF))
+    return nullptr;
+
+  IRBuilderBase::InsertPointGuard Guard(B);
+
+  // Allocate storage for the results in the entry block.
+  B.SetInsertPoint(&*F->getEntryBlock().getFirstInsertionPt());
+  AllocaInst *SinAlloca = B.CreateAlloca(CI->getType(), nullptr, "sincos.sin");
+  AllocaInst *CosAlloca = B.CreateAlloca(CI->getType(), nullptr, "sincos.cos");
+
+  // Model the fused call's memory behaviour explicitly instead of copying the
+  // memory attribute from the sin/cos call: sincos reads the input argument,
+  // writes through both result pointers, and (like sin/cos) writes errno. A
+  // sin/cos call is often declared memory(errnomem: write); copying that would
+  // model the fused call as not writing the result slots, so the loads below
+  // would read uninitialized memory.
+  AttributeList Attrs = CI->getCalledFunction()->getAttributes();
+  MemoryEffects ME = MemoryEffects::argumentOrErrnoMemOnly(ModRefInfo::ModRef,
+                                                           ModRefInfo::Mod);
+  Attrs = Attrs.addFnAttribute(
+      M->getContext(), Attribute::getWithMemoryEffects(M->getContext(), ME));
+  FunctionCallee SinCosFn =
+      getOrInsertLibFunc(M, *TLI, SinCosLF, Attrs, B.getVoidTy(),
+                         Arg->getType(), B.getPtrTy(), B.getPtrTy());
+
+  // Emit the fused call at the earlier of the two calls; nothing between the
+  // two calls can observe errno, and both write the same errno value for the
+  // same input, so the write cannot be observed to move.
+  CallInst *Earlier = CI->comesBefore(Match) ? CI : Match;
+  // NOTE: the fused call returns void (results through pointers), so
+  // fast-math flags from the original calls cannot be attached to it;
+  // FMF only applies to FPMathOperators. This is conservative but sound.
+  B.SetInsertPoint(Earlier);
+  B.CreateCall(SinCosFn, {Arg, SinAlloca, CosAlloca});
+  Value *Sin = B.CreateLoad(CI->getType(), SinAlloca, "sin");
+  Value *Cos = B.CreateLoad(CI->getType(), CosAlloca, "cos");
+
+  // Replace and erase the matching call.
+  replaceAllUsesWith(Match, IsSin ? Cos : Sin);
+  eraseFromParent(Match);
+  return IsSin ? Sin : Cos;
+}
+
 void LibCallSimplifier::classifyArgUse(
     Value *Val, Function *F, bool IsFloat,
     SmallVectorImpl<CallInst *> &SinCalls,
@@ -4220,11 +4348,17 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cospi:
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
   case LibFunc_sinf:
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::sin);
+    return optimizeSinCos(CI, /*IsSin*/ true, Builder);
   case LibFunc_sinl:
     if (CI->doesNotAccessMemory())
       return replaceUnaryCall(CI, Builder, Intrinsic::sin);
     return nullptr;
   case LibFunc_cosf:
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::cos);
+    return optimizeSinCos(CI, /*IsSin*/ false, Builder);
   case LibFunc_cosl:
     if (CI->doesNotAccessMemory())
       return replaceUnaryCall(CI, Builder, Intrinsic::cos);
@@ -4334,7 +4468,7 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     if (CI->doesNotAccessMemory())
       return replaceUnaryCall(
           CI, Builder, Func == LibFunc_sin ? Intrinsic::sin : Intrinsic::cos);
-    return nullptr;
+    return optimizeSinCos(CI, Func == LibFunc_sin, Builder);
   case LibFunc_acos:
   case LibFunc_acosh:
   case LibFunc_asin:
