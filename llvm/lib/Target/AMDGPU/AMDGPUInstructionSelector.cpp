@@ -5952,22 +5952,21 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
   if (IsSMEM) {
     if (!IsExtended && MRI->getType(Offset).getSizeInBits() == 64) {
       KnownBits Known = VT->getKnownBits(Op0);
-      ScaleOffset = Known.countMaxActiveBits() + Bits <= 32;
+      if (Known.countMaxActiveBits() + Bits > 32)
+        return false;
     }
   } else if (IsExtended) {
     const MachineInstr *Scale = MRI->getVRegDef(OffsetReg);
-    if (IsSigned)
-      ScaleOffset = Scale->getFlag(MachineInstr::NoSWrap) ||
-                    VT->computeNumSignBits(Op0) > Bits;
-    else
-      ScaleOffset = Scale->getFlag(MachineInstr::NoUWrap) ||
-                    VT->getKnownBits(Op0).countMinLeadingZeros() >= Bits;
+    if (IsSigned && !Scale->getFlag(MachineInstr::NoSWrap) &&
+        VT->computeNumSignBits(Op0) <= Bits)
+      return false;
+    if (!IsSigned && !Scale->getFlag(MachineInstr::NoUWrap) &&
+        VT->getKnownBits(Op0).countMinLeadingZeros() < Bits)
+      return false;
   }
 
-  if (ScaleOffset)
-    Offset = Op0;
-
-  return ScaleOffset;
+  Offset = Op0;
+  return true;
 }
 
 bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,

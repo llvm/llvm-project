@@ -2502,24 +2502,22 @@ bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N, SDValue &Offset,
   if (IsSMEM) {
     if (Off.getValueType() == MVT::i64) {
       KnownBits Known = CurDAG->computeKnownBits(Off.getOperand(0));
-      ScaleOffset = Known.countMaxActiveBits() + Bits <= 32;
+      if (Known.countMaxActiveBits() + Bits > 32)
+        return false;
     }
   } else if (Off != Offset) {
     SDNodeFlags Flags = Off->getFlags();
     SDValue Idx = Off.getOperand(0);
-    if (IsSigned)
-      ScaleOffset =
-          Flags.hasNoSignedWrap() || CurDAG->ComputeNumSignBits(Idx) > Bits;
-    else
-      ScaleOffset =
-          Flags.hasNoUnsignedWrap() ||
-          CurDAG->computeKnownBits(Idx).countMinLeadingZeros() >= Bits;
+    if (IsSigned && !Flags.hasNoSignedWrap() &&
+        CurDAG->ComputeNumSignBits(Idx) <= Bits)
+      return false;
+    if (!IsSigned && !Flags.hasNoUnsignedWrap() &&
+        CurDAG->computeKnownBits(Idx).countMinLeadingZeros() < Bits)
+      return false;
   }
 
-  if (ScaleOffset)
-    Offset = Off.getOperand(0);
-
-  return ScaleOffset;
+  Offset = Off.getOperand(0);
+  return true;
 }
 
 // Match an immediate (if Offset is not null) or an SGPR (if SOffset is
