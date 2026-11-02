@@ -59,6 +59,7 @@ _EXTRA_DATA = {
             "invalid.test",
             "wasm/data-segment-names.yaml",
             "wasm/wasm-data-section-load-address.yaml",
+            "wasm/wasm-export-data-symbols.yaml",
             "wasm/wasm-formatter-sections.yaml",
             "wasm/wasm-globals.yaml",
             "wasm/wasm-local-decls.yaml",
