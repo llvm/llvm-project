@@ -2,14 +2,16 @@
 ; RUN: llvm-profdata merge %t/original.proftext -o %t/original.profdata
 ; RUN: llvm-profdata merge %t/outlined.proftext -o %t/outlined.profdata
 ;
-; The original profile matches before entry/body separation. A profile from
-; the outlined shape is a second control. Keep the original profile on the
-; coroutine body when introducing an artificial entry: accepting a profile
-; while discarding its counts is not sufficient.
+; Profiles must match the CFG that was instrumented. Matching profiles work
+; before and after entry/body separation. A backend receiving already-profiled
+; IR from an older producer must retain those annotations when it separates the
+; entry. Conversely, feeding an old-shape profile to a new outlined frontend
+; must diagnose the stale data, rather than attach it to the wrong function.
 ;
 ; RUN: opt -verify-each -passes='function(simplifycfg,sroa,early-cse),pgo-instr-use' -pgo-test-profile-file=%t/original.profdata -pgo-warn-missing-function -S %t/input.ll 2>&1 | FileCheck %s --check-prefix=ORIGINAL --implicit-check-not=warning:
 ; RUN: opt -verify-each -passes='coro-early,function(simplifycfg,sroa,early-cse),pgo-instr-use' -pgo-test-profile-file=%t/outlined.profdata -pgo-warn-missing-function -S %t/input.ll 2>&1 | FileCheck %s --check-prefix=BODY --implicit-check-not=warning:
-; RUN: opt -verify-each -passes='coro-early,function(simplifycfg,sroa,early-cse),pgo-instr-use' -pgo-test-profile-file=%t/original.profdata -pgo-warn-missing-function -S %t/input.ll 2>&1 | FileCheck %s --check-prefix=BODY --implicit-check-not=warning:
+; RUN: opt -verify-each -passes='function(simplifycfg,sroa,early-cse),pgo-instr-use,coro-early' -pgo-test-profile-file=%t/original.profdata -pgo-warn-missing-function -S %t/input.ll 2>&1 | FileCheck %s --check-prefix=BODY --implicit-check-not=warning:
+; RUN: opt -verify-each -passes='coro-early,function(simplifycfg,sroa,early-cse),pgo-instr-use' -pgo-test-profile-file=%t/original.profdata -pgo-warn-missing-function -disable-output %t/input.ll 2>&1 | FileCheck %s --check-prefix=STALE
 ;
 ; ORIGINAL-LABEL: define { ptr, i32 } @yield_once(
 ; ORIGINAL-SAME: !prof ![[ENTRY:[0-9]+]]
@@ -18,6 +20,9 @@
 ; BODY-LABEL: define internal { ptr, i32 } @yield_once.coro.body(
 ; BODY-SAME: !prof ![[ENTRY:[0-9]+]]
 ; BODY: ![[ENTRY]] = !{!"function_entry_count", i64 1000}
+;
+; STALE: function control flow change detected (hash mismatch) yield_once
+; STALE: no profile data available for function yield_once.coro.body
 
 ;--- input.ll
 source_filename = "retcon-ramp-pgo.ll"

@@ -27,6 +27,7 @@ define { ptr, i32 } @yield_once(ptr %buffer) presplitcoroutine !dbg !5 {
 entry:
   %id = call token @llvm.coro.id.retcon.once(i32 16, i32 8, ptr %buffer,
       ptr @prototype, ptr @malloc, ptr @free), !dbg !9
+    #dbg_value(ptr %buffer, !12, !DIExpression(), !9)
   %handle = call ptr @llvm.coro.begin(token %id, ptr null), !dbg !9
   %unwind = call i1 (...) @llvm.coro.suspend.retcon.i1(i32 7), !dbg !10
   br i1 %unwind, label %cleanup, label %cleanup, !dbg !10
@@ -48,11 +49,14 @@ declare void @free(ptr)
 !llvm.module.flags = !{!7, !8}
 !0 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !1, producer: "regression", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "retcon-ramp-debug.swift", directory: "/test")
-!3 = !{}
+!3 = !{null, !13}
 !4 = !DISubroutineType(types: !3)
-!5 = distinct !DISubprogram(name: "yield_once", linkageName: "yield_once", scope: !1, file: !1, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!5 = distinct !DISubprogram(name: "yield_once", linkageName: "yield_once", scope: !1, file: !1, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !14)
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !DILocation(line: 2, column: 1, scope: !5)
 !10 = !DILocation(line: 3, column: 1, scope: !5)
 !11 = !DILocation(line: 4, column: 1, scope: !5)
+!12 = !DILocalVariable(name: "buffer", arg: 1, scope: !5, file: !1, line: 1, type: !13)
+!13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+!14 = !{!12}

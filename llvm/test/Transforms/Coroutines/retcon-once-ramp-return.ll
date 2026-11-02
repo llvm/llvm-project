@@ -2,6 +2,7 @@
 ; RUN: opt -verify-each -passes='coro-early,ipsccp,cgscc(coro-split),coro-cleanup,ipsccp,instcombine' -S %s | FileCheck %s
 ; RUN: opt -verify-each -passes='default<O2>,ipsccp,instcombine' -S %s | FileCheck %s
 ; RUN: opt -verify-each -passes='thinlto-pre-link<O2>,thinlto<O2>,ipsccp,instcombine' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='thinlto<O2>,ipsccp,instcombine' -S %s | FileCheck %s
 
 ; The body never returns, but the ramp returns the yielded value at the first
 ; suspension. Body exits do not describe that caller-visible return.
@@ -9,7 +10,8 @@
 ; running IPO before splitting must preserve it too.
 ; A final IPSCCP pass folds the now-visible ramp return, but cannot repair an
 ; earlier incorrect replacement of the caller's result with undef.
-; The ThinLTO backend expects the pre-link pipeline to have run CoroEarly.
+; Older producers did not separate the entry in their CoroEarly pass. Their
+; bitcode must also work when sent directly to the ThinLTO backend.
 
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)

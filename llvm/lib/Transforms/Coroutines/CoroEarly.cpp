@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -221,7 +222,13 @@ static void separateRetconRamp(Function &Body) {
   Ramp->copyAttributesFrom(&Body);
   Ramp->setComdat(Body.getComdat());
   Ramp->copyMetadata(&Body, 0);
-  Ramp->setSubprogram(nullptr);
+  if (DISubprogram *SP = Body.getSubprogram()) {
+    // The entry needs a distinct subprogram. Local variables still belong to
+    // the body and will be remapped normally when it is inlined into the ramp.
+    TempDISubprogram RampSP = SP->clone();
+    RampSP->replaceRetainedNodes({});
+    Ramp->setSubprogram(MDNode::replaceWithDistinct(std::move(RampSP)));
+  }
   Ramp->setSplittedCoroutine();
   Ramp->removeFnAttr(Attribute::NoReturn);
   Ramp->removeRetAttr(Attribute::NoAlias);
@@ -246,6 +253,9 @@ static void separateRetconRamp(Function &Body) {
     Body.removeFnAttr(Attribute::NoInline);
 
   IRBuilder<> Builder(BasicBlock::Create(M->getContext(), "entry", Ramp));
+  if (DISubprogram *SP = Ramp->getSubprogram())
+    Builder.SetCurrentDebugLocation(
+        DILocation::get(M->getContext(), SP->getScopeLine(), 0, SP));
   Value *BodyPtr = Builder.CreatePointerCast(&Body, Builder.getPtrTy());
   auto *Prepared =
       Builder.CreateIntrinsic(Intrinsic::coro_prepare_retcon, {}, {BodyPtr});
