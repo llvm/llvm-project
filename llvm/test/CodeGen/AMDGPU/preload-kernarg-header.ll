@@ -5,10 +5,28 @@
 ; RUN: llc -mtriple=amdgpu9.42-- -asm-verbose=0 < %s | FileCheck -check-prefixes=CHECK,NONHSA %s
 ; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -filetype=obj < %s | llvm-objdump --triple=amdgpu9.42 --disassemble - | FileCheck -check-prefixes=OBJ %s
 ; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -amdgpu-kernarg-preload-count=1 -asm-verbose=0 < %s | llvm-mc -triple amdgpu9.42-amd-amdhsa -mcpu=gfx942 -filetype=obj | llvm-objdump --triple=amdgpu9.42 --disassemble - | FileCheck -check-prefixes=OBJ %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -global-isel -verify-machineinstrs -asm-verbose=0 < %s | FileCheck -check-prefix=GISEL %s
+; RUN: llc -mtriple=amdgpu9.42-- -global-isel -verify-machineinstrs -asm-verbose=0 < %s | FileCheck -check-prefix=GISEL-NONHSA %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -global-isel -verify-machineinstrs -filetype=obj < %s | llvm-objdump --triple=amdgpu9.42 --disassemble - | FileCheck -check-prefix=OBJ %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -global-isel -verify-machineinstrs -amdgpu-kernarg-preload-count=1 -asm-verbose=0 < %s | llvm-mc -triple amdgpu9.42-amd-amdhsa -mcpu=gfx942 -filetype=obj | llvm-objdump --triple=amdgpu9.42 --disassemble - | FileCheck -check-prefix=OBJ %s
 
 ; OBJ: preload_ptr_kernarg_header
 ; OBJ-COUNT-60: s_nop 0
 define amdgpu_kernel void @preload_ptr_kernarg_header(ptr inreg %arg) {
+; GISEL-LABEL: preload_ptr_kernarg_header:
+; GISEL:         s_load_dwordx2 s[8:9], s[4:5], 0x0
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    s_branch [[ENTRY:\.LBB[0-9]+_0]]
+; GISEL-NEXT:    .p2align 8
+; GISEL-NEXT:  [[ENTRY]]:
+;
+; GISEL-NONHSA-LABEL: preload_ptr_kernarg_header:
+; GISEL-NONHSA:         s_load_dwordx2 s[8:9], s[4:5], 0x24
+; GISEL-NONHSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NONHSA-NEXT:    s_branch [[ENTRY:\.LBB[0-9]+_0]]
+; GISEL-NONHSA-NEXT:    .p2align 8
+; GISEL-NONHSA-NEXT:  [[ENTRY]]:
+;
 ; ASM-LABEL: preload_ptr_kernarg_header:
 ; ASM:         s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; ASM-NEXT:    s_waitcnt lgkmcnt(0)
@@ -37,6 +55,22 @@ define amdgpu_kernel void @preload_ptr_kernarg_header(ptr inreg %arg) {
 ; OBJ: preload_i32_kernarg_header
 ; OBJ-COUNT-58: s_nop 0
 define amdgpu_kernel void @preload_i32_kernarg_header(ptr inreg %arg, i32 inreg %arg1) {
+; GISEL-LABEL: preload_i32_kernarg_header:
+; GISEL:         s_load_dwordx2 s[8:9], s[4:5], 0x0
+; GISEL-NEXT:    s_load_dword s10, s[4:5], 0x8
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    s_branch [[ENTRY:\.LBB[0-9]+_0]]
+; GISEL-NEXT:    .p2align 8
+; GISEL-NEXT:  [[ENTRY]]:
+;
+; GISEL-NONHSA-LABEL: preload_i32_kernarg_header:
+; GISEL-NONHSA:         s_load_dwordx2 s[8:9], s[4:5], 0x24
+; GISEL-NONHSA-NEXT:    s_load_dword s10, s[4:5], 0x2c
+; GISEL-NONHSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NONHSA-NEXT:    s_branch [[ENTRY:\.LBB[0-9]+_0]]
+; GISEL-NONHSA-NEXT:    .p2align 8
+; GISEL-NONHSA-NEXT:  [[ENTRY]]:
+;
 ; ASM-LABEL: preload_i32_kernarg_header:
 ; ASM:         s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; ASM-NEXT:    s_load_dword s10, s[4:5], 0x8
@@ -69,6 +103,10 @@ define amdgpu_kernel void @preload_i32_kernarg_header(ptr inreg %arg, i32 inreg 
 ; OBJ-NOT: s_branch
 ; ASM-NOT: s_branch
 define void @non_kernel_function(ptr %arg) {
+; GISEL-LABEL: non_kernel_function:
+; GISEL-NOT: s_branch
+; GISEL-NONHSA-LABEL: non_kernel_function:
+; GISEL-NONHSA-NOT: s_branch
 ; CHECK-LABEL: non_kernel_function:
 ; CHECK:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]

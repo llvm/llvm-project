@@ -29,6 +29,10 @@ class AMDGPUCallLowering final : public CallLowering {
   void lowerParameter(MachineIRBuilder &B, ArgInfo &AI, uint64_t Offset,
                       Align Alignment) const;
 
+  void lowerPreloadedParameter(MachineIRBuilder &B, ArgInfo &AI,
+                               ArrayRef<MCRegister> Regs,
+                               unsigned BitOffset) const;
+
   bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
                       SmallVectorImpl<BaseArgInfo> &Outs,
                       bool IsVarArg) const override;
