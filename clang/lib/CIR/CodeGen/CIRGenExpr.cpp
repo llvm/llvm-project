@@ -860,8 +860,8 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
 
   // HLSL allows treating scalars as one-element vectors. Converting the scalar
   // IR value to a vector here allows the rest of codegen to behave as normal.
-  if (getLangOpts().HLSL && (!mlir::isa<cir::VectorType>(vec.getType()) &&
-                             !mlir::isa<cir::MatrixType>(vec.getType()))) {
+  if (getLangOpts().HLSL &&
+      !mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) {
     cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: HLSL");
     return {};
   }
@@ -875,9 +875,8 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
     int64_t indexValue = getAccessedFieldNo(0, elts);
     cir::ConstantOp index =
         builder.getConstInt(loc, builder.getSInt64Ty(), indexValue);
-    if (mlir::isa<cir::VectorType>(vec.getType())) {
+    if (mlir::isa<cir::VectorType>(vec.getType()))
       return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
-    }
 
     cir::ConstantOp columnIdx =
         builder.getConstInt(loc, builder.getSInt64Ty(), 0);
@@ -1668,9 +1667,9 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
 
 LValue CIRGenFunction::emitMatrixElementExpr(const MatrixElementExpr *e) {
   LValue base;
-  if (e->getBase()->isGLValue())
+  if (e->getBase()->isGLValue()) {
     base = emitLValue(e->getBase());
-  else {
+  } else {
     cgm.errorNYI(e->getSourceRange(), "emitMatrixElementExpr base not GLValue");
     return {};
   }
