@@ -15,6 +15,7 @@ load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
 load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
+load(":instrumentor.bzl", "INSTRUMENTOR_RUNTIME_HELPER")
 load(":targets.bzl", "llvm_targets")
 
 package(
@@ -2372,14 +2373,13 @@ cc_library(
     ],
 )
 
-genrule(
+# The instrumentor includes the helper as C++ and emits its source in runtime
+# stubs. Use the same template as CMake and GN for the embedded string.
+expand_template(
     name = "instrumentor_variables_gen",
-    srcs = ["include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"],
-    outs = ["include/llvm/Transforms/IPO/InstrumentorVariables.inc"],
-    cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
-    # `set /p` writes its prompt without a newline, like printf; it also returns
-    # errorlevel 1 on empty input, hence the single `&` after it.
-    cmd_bat = ">$@ <nul set /p =constexpr char InstrumentorRuntimeHelper[] = R^\"(& >>$@ type $(SRCS)&& >>$@ echo ^)^\";",
+    out = "include/llvm/Transforms/IPO/InstrumentorVariables.inc",
+    substitutions = {"@LLVM_INSTRUMENTOR_RUNTIME_HELPER@": INSTRUMENTOR_RUNTIME_HELPER},
+    template = "include/llvm/Transforms/IPO/InstrumentorVariables.inc.in",
 )
 
 cc_library(
