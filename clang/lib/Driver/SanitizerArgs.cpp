@@ -533,18 +533,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Add &= ~NotAllowedWithMinimalRuntime;
       }
 
-      if (llvm::opt::Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
-        StringRef CM = A->getValue();
-        if (CM != "small" &&
-            (Add & SanitizerKind::Function & ~DiagnosedKinds)) {
-          if (DiagnoseErrors)
-            D.Diag(diag::err_drv_argument_only_allowed_with)
-                << "-fsanitize=function"
-                << "-mcmodel=small";
-          Add &= ~SanitizerKind::Function;
-          DiagnosedKinds |= SanitizerKind::Function;
-        }
-      }
       // -fsanitize=function and -fsanitize=kcfi instrument indirect function
       // calls to load a type hash before the function label. Therefore, an
       // execute-only target doesn't support the function and kcfi sanitizers.
