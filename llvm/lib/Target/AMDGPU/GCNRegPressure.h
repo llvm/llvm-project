@@ -82,6 +82,14 @@ struct GCNRegPressure {
            NumAGPRs;
   }
 
+  /// Returns the aggregated VGPR pressure for \p NumArchVGPRs ArchVGPRs and
+  /// \p NumAGPRs AGPRs, with AVGPRs already distributed across the banks.
+  static unsigned getBankedUnifiedVGPRNum(unsigned NumArchVGPRs,
+                                          unsigned NumAGPRs) {
+    return NumAGPRs ? getUnifiedVGPRNum(NumArchVGPRs, NumAGPRs, 0)
+                    : NumArchVGPRs;
+  }
+
   /// \returns the ArchVGPR32 pressure, plus the AVGPRS which we assume will be
   /// allocated as VGPR
   unsigned getArchVGPRNum() const { return Value[VGPR] + Value[AVGPR]; }

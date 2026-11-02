@@ -305,7 +305,7 @@ void GCNSchedStrategy::getRegisterPressures(
   Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = ArchNum;
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AccNum;
   CandUnifiedVGPRPressure =
-      NewPressure.getVGPRNum(/*UnifiedVGPRFile=*/UnifiedVGPRExcessLimit > 0);
+      GCNRegPressure::getBankedUnifiedVGPRNum(ArchNum, AccNum);
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -2044,7 +2044,7 @@ void GCNSchedStage::checkScheduling() {
   // Distribute the pressure of each point instead.
   unsigned ArchVGPRBankLimit, AGPRBankLimit;
   std::tie(ArchVGPRBankLimit, AGPRBankLimit) = S.getBankLimits();
-  unsigned BankedArchVGPRPeak = 0, BankedAGPRPeak = 0;
+  unsigned BankedArchVGPRPeak = 0, BankedAGPRPeak = 0, BankedUnifiedPeak = 0;
   std::function<void(const GCNRegPressure &)> TrackBankedPeaks;
   if (AVGPRBanking) {
     TrackBankedPeaks = [&](const GCNRegPressure &RP) {
@@ -2052,6 +2052,9 @@ void GCNSchedStage::checkScheduling() {
           RP.getBankedVGPRNum(ArchVGPRBankLimit, AGPRBankLimit);
       BankedArchVGPRPeak = std::max(BankedArchVGPRPeak, ArchNum);
       BankedAGPRPeak = std::max(BankedAGPRPeak, AccNum);
+      BankedUnifiedPeak =
+          std::max(BankedUnifiedPeak,
+                   GCNRegPressure::getBankedUnifiedVGPRNum(ArchNum, AccNum));
     };
   }
 
@@ -2118,7 +2121,10 @@ void GCNSchedStage::checkScheduling() {
                         : PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
                               PressureAfter.getAGPRNum() > MaxArchVGPRs;
 
-  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs || BankExcess ||
+  unsigned VGPRNum = AVGPRBanking && UnifiedVGPRFile
+                         ? BankedUnifiedPeak
+                         : PressureAfter.getVGPRNum(UnifiedVGPRFile);
+  if (VGPRNum > MaxVGPRs || BankExcess ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
     DAG.RegionsWithHighRP[RegionIdx] = true;
     DAG.RegionsWithExcessRP[RegionIdx] = true;
