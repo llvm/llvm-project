@@ -44,9 +44,11 @@ class CompilerInstance;
 class CXXRecordDecl;
 class Decl;
 class IncrementalParser;
-class IncrementalCUDADeviceParser;
+class IncrementalDeviceParser;
 
-enum class OffloadType { CUDA, HIP };
+/// The device language to offload to. \c Detect selects the vendor of the
+/// device available on the machine.
+enum class OffloadType { Detect, CUDA, HIP };
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
@@ -67,17 +69,8 @@ public:
   // Offload options
   void SetOffloadArch(llvm::StringRef Arch) { OffloadArch = Arch; };
 
-  void SetDeviceSDK(OffloadType Type, llvm::StringRef Path) {
-    if (Type == OffloadType::HIP)
-      RocmSDKPath = Path;
-    else
-      CudaSDKPath = Path;
-  }
-
-  // Retained for compatibility with existing CUDA callers.
-  void SetCudaSDK(llvm::StringRef Path) {
-    SetDeviceSDK(OffloadType::CUDA, Path);
-  }
+  // The SDK path (CUDA or ROCm) of the device language being offloaded to.
+  void SetDeviceSDK(llvm::StringRef Path) { DeviceSDKPath = Path; }
 
   // Hand over the compilation.
   void SetDriverCompilationCallback(std::function<DriverCompilationFn> C) {
@@ -89,27 +82,18 @@ public:
   llvm::Expected<std::unique_ptr<CompilerInstance>>
   CreateDevice(OffloadType Type);
 
-  // Retained for compatibility with existing CUDA callers.
-  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaHost() {
-    return CreateHost(OffloadType::CUDA);
-  }
-  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaDevice() {
-    return CreateDevice(OffloadType::CUDA);
-  }
-
 private:
   llvm::Expected<std::unique_ptr<CompilerInstance>>
   create(std::string TT, std::vector<const char *> &ClangArgv);
 
   llvm::Expected<std::unique_ptr<CompilerInstance>>
-  createOffload(OffloadType Type, bool device);
+  createOffload(bool device, OffloadType Type = OffloadType::Detect);
 
   std::vector<const char *> UserArgs;
   std::optional<std::string> TargetTriple;
 
   llvm::StringRef OffloadArch;
-  llvm::StringRef RocmSDKPath;
-  llvm::StringRef CudaSDKPath;
+  llvm::StringRef DeviceSDKPath;
 
   std::string OffloadCUID;
 
@@ -131,7 +115,7 @@ class Interpreter {
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
 
   // An optional parser for CUDA offloading
-  std::unique_ptr<IncrementalCUDADeviceParser> DeviceParser;
+  std::unique_ptr<IncrementalDeviceParser> DeviceParser;
 
   // An optional action for CUDA offloading
   std::unique_ptr<IncrementalAction> DeviceAct;
@@ -172,8 +156,9 @@ public:
   create(std::unique_ptr<CompilerInstance> CI,
          std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr);
   static llvm::Expected<std::unique_ptr<Interpreter>>
-  createWithDevice(OffloadType Type, std::unique_ptr<CompilerInstance> CI,
-                   std::unique_ptr<CompilerInstance> DCI);
+  createWithDevice(std::unique_ptr<CompilerInstance> CI,
+                   std::unique_ptr<CompilerInstance> DCI,
+                   OffloadType Type = OffloadType::Detect);
 
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
@@ -184,6 +169,11 @@ public:
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
   llvm::Error ParseAndExecute(llvm::StringRef Code, Value *V = nullptr);
+
+  /// Set the optimization level and size used to emit subsequently parsed
+  /// input. \p OptSize mirrors \c CodeGenOptions::OptimizeSize (1 for -Os,
+  /// 2 for -Oz).
+  void setOptLevel(unsigned OptLevel, unsigned OptSize = 0);
 
   /// Undo N previous incremental inputs.
   llvm::Error Undo(unsigned N = 1);

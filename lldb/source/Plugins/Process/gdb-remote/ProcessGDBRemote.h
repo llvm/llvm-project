@@ -167,6 +167,8 @@ public:
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
                                 Status &error) override;
 
+  bool DoCanAllocateMemory() override;
+
   Status DoDeallocateMemory(lldb::addr_t ptr) override;
 
   // Process STDIO

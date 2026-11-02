@@ -810,9 +810,10 @@ define i32 @fct19(i64 %arg1) nounwind readonly ssp  {
 ; LLC-NEXT:    add w0, w8, #16
 ; LLC-NEXT:    ret
 ; LLC-NEXT:  .LBB26_4: // %if.end13
-; LLC-NEXT:    lsr w8, w0, #16
-; LLC-NEXT:    cbz w8, .LBB26_6
+; LLC-NEXT:    tst w0, #0xffff0000
+; LLC-NEXT:    b.eq .LBB26_6
 ; LLC-NEXT:  // %bb.5: // %if.then17
+; LLC-NEXT:    lsr w8, w0, #16
 ; LLC-NEXT:    adrp x9, first_ones
 ; LLC-NEXT:    add x9, x9, :lo12:first_ones
 ; LLC-NEXT:    ldrb w8, [x9, x8]

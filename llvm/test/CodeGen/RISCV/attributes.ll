@@ -363,10 +363,10 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+rva23s64 %s -o - | FileCheck --check-prefix=RVA23S64 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+rvb23u64 %s -o - | FileCheck --check-prefix=RVB23U64 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+rvb23s64 %s -o - | FileCheck --check-prefix=RVB23S64 %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rva23p1s64 %s -o - | FileCheck --check-prefix=RVA23S64 %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rvb23p1s64 %s -o - | FileCheck --check-prefix=RVB23S64 %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rva23p1s64,+ssccfg,+ssctr,+ssdbltrp,+ssqosid,+svrsw60t59b %s -o - | FileCheck --check-prefix=RVA23P1S64-OPTIONS %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-rvb23p1s64,+ssccfg,+ssctr,+ssdbltrp,+ssqosid,+svrsw60t59b %s -o - | FileCheck --check-prefix=RVB23P1S64-OPTIONS %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva23p1s64 %s -o - | FileCheck --check-prefix=RVA23S64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rvb23p1s64 %s -o - | FileCheck --check-prefix=RVB23S64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva23p1s64,+ssccfg,+ssctr,+ssdbltrp,+ssqosid,+svrsw60t59b %s -o - | FileCheck --check-prefix=RVA23P1S64-OPTIONS %s
+; RUN: llc -mtriple=riscv64 -mattr=+rvb23p1s64,+ssccfg,+ssctr,+ssdbltrp,+ssqosid,+svrsw60t59b %s -o - | FileCheck --check-prefix=RVB23P1S64-OPTIONS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-rvm23u32 %s -o - | FileCheck --check-prefix=RVM23U32 %s
 
 ; CHECK: .attribute 4, 16
@@ -711,7 +711,7 @@
 ; RV64SDEXT: .attribute 5, "rv64i2p1_sdext1p0"
 ; RV64SDTRIG: .attribute 5, "rv64i2p1_sdtrig1p0"
 ; RV64P: .attribute 5, "rv64i2p1_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0"
-; RV64Y: .attribute 5, "rv64i2p1_y0p910"
+; RV64Y: .attribute 5, "rv64y0p910"
 ; RV64ZIBI: .attribute 5, "rv64i2p1_zibi0p1"
 ; RV64ZVQWBDOTA8I: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_zvqwbdota8i0p2"
 ; RV64ZVQWBDOTA16I: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvl32b1p0_zvl64b1p0_zvqwbdota16i0p2"

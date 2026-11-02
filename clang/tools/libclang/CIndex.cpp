@@ -1574,6 +1574,7 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 
   case BuiltinType::Void:
   case BuiltinType::NullPtr:
+  case BuiltinType::MetaInfo:
   case BuiltinType::Dependent:
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   case BuiltinType::Id:
@@ -5492,6 +5493,11 @@ CXString clang_getCursorSpelling(CXCursor C) {
         C.kind == CXCursor_CompoundAssignOperator) {
       return clang_getBinaryOperatorKindSpelling(
           clang_getCursorBinaryOperatorKind(C));
+    }
+
+    if (C.kind == CXCursor_UnaryOperator) {
+      return clang_getUnaryOperatorKindSpelling(
+          clang_getCursorUnaryOperatorKind(C));
     }
 
     const Decl *D = getDeclFromExpr(getCursorExpr(C));

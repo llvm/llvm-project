@@ -382,7 +382,7 @@ define amdgpu_kernel void @test_spill_cost_reset(
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:av_128_align2 = COPY %1891.sub4_sub5_sub6_sub7
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop:
-  ; CHECK-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_MOV_B32_e32_139:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 [[COPY1]], [[COPY2]], [[V_MOV_B32_e32_139]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[V_MOV_B32_e32_]], 8, [[V_MOV_B32_e32_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -529,7 +529,7 @@ define amdgpu_kernel void @test_spill_cost_reset(
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def dead $scc
   ; CHECK-NEXT:   S_CMP_LT_I32 [[S_MOV_B32_]], [[S_LOAD_DWORD_IMM]], implicit-def $scc
   ; CHECK-NEXT:   [[V_MOV_B32_e32_127:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[V_MOV_B32_e32_127]], 8, [[V_MOV_B32_e32_127]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.epilogue:

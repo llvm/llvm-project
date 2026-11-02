@@ -29,7 +29,7 @@ end
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}scalar
 ! CHECK:  %[[VAL_3:.*]] = fir.call @_QPreturn_array_with_side_effects() {{.*}}: () -> !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>
 ! CHECK:  fir.save_result %[[VAL_3]] to %[[VAL_1:.*]] : !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>>
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>>)
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>>)
 ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>>
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_5]], %[[VAL_6]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMdef_some_typesTt{i:i32}>>>>, index) -> (index, index, index)

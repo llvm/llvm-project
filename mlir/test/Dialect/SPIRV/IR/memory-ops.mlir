@@ -752,6 +752,16 @@ func.func @copy_memory_target_bad_operand() {
 
 // -----
 
+func.func @copy_memory_target_make_pointer_available_missing_non_private() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable>, source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
 func.func @copy_memory_source_bad_operand() {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   %1 = spirv.Variable : !spirv.ptr<f32, Function>

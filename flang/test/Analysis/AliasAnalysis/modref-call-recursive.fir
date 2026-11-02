@@ -8,8 +8,8 @@
 // CHECK: test_if -> test_var_if#1: NoModRef
 func.func @_QPtest_if_then(%arg0: !fir.ref<f32> {fir.bindc_name = "test_var_if"}, %arg1: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_if_thenEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-  %2:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_if_thenEtest_var_if", test.ptr ="test_var_if"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtest_if_thenEcond") : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+  %2:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_if_thenEtest_var_if") {test.ptr = "test_var_if"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %3 = fir.load %1#0 : !fir.ref<!fir.logical<4>>
   %4 = fir.convert %3 : (!fir.logical<4>) -> i1
   fir.if %4 {
@@ -23,8 +23,8 @@ func.func @_QPtest_if_then(%arg0: !fir.ref<f32> {fir.bindc_name = "test_var_if"}
 // CHECK: test_if_then_else -> test_var_if_then_else#1: NoModRef
 func.func @_QPtest_if_then_else(%arg0: !fir.ref<f32> {fir.bindc_name = "test_var_if_then_else"}, %arg1: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtest_if_then_elseEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-  %2:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_if_then_elseEtest_var_if_then_else", test.ptr ="test_var_if_then_else"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtest_if_then_elseEcond") : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+  %2:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_if_then_elseEtest_var_if_then_else") {test.ptr = "test_var_if_then_else"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %3 = fir.load %1#0 : !fir.ref<!fir.logical<4>>
   %4 = fir.convert %3 : (!fir.logical<4>) -> i1
   fir.if %4 {
@@ -40,8 +40,8 @@ func.func @_QPtest_if_then_else(%arg0: !fir.ref<f32> {fir.bindc_name = "test_var
 func.func @_QPtest_do_loop(%arg0: !fir.ref<f32> {fir.bindc_name = "test_var_do_loop"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_do_loopEi"}
-  %2:2 = hlfir.declare %1 {uniq_name = "_QFtest_do_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_do_loopEtest_var_do_loop", test.ptr ="test_var_do_loop"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %2:2 = hlfir.declare %1 uniq_name("_QFtest_do_loopEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_do_loopEtest_var_do_loop") {test.ptr = "test_var_do_loop"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %c1_i32 = arith.constant 1 : i32
   %4 = fir.convert %c1_i32 : (i32) -> index
   %c10_i32 = arith.constant 10 : i32

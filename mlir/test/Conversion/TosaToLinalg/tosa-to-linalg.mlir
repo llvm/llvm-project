@@ -792,6 +792,29 @@ func.func @test_simple_ui8(%arg0: tensor<1xi8>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_cast_input_unsigned
+func.func @test_cast_input_unsigned(%arg0: tensor<1xi8>, %arg1: tensor<1xi16>, %arg2: tensor<1xi32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.uitofp %{{.*}} : i8 to f32
+  %0 = tosa.cast %arg0 input_unsigned(true) : (tensor<1xi8>) -> tensor<1xf32>
+
+  // CHECK: linalg.generic
+  // CHECK: arith.extui %{{.*}} : i16 to i32
+  %1 = tosa.cast %arg1 input_unsigned(true) : (tensor<1xi16>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
+  // CHECK: arith.trunci %{{.*}} : i32 to i16
+  %2 = tosa.cast %arg2 input_unsigned(true) : (tensor<1xi32>) -> tensor<1xi16>
+
+  // CHECK: linalg.generic
+  // CHECK: arith.cmpi ne
+  %3 = tosa.cast %arg0 input_unsigned(true) : (tensor<1xi8>) -> tensor<1xi1>
+
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_i8
 func.func @test_i8(%arg0: tensor<1xi8>) -> () {
   // CHECK: linalg.generic
@@ -1785,6 +1808,8 @@ func.func @tile_dyn_multiples(%arg0 : tensor<2x3xi8>) -> () {
 // CHECK: #[[$MAP3:.*]] = affine_map<(d0) -> (d0)>
 // CHECK: #[[$MAP4:.*]] = affine_map<(d0) -> ()>
 
+// CHECK-LABEL: @argmax(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]+]]: tensor<3x2xi32>, [[FLOAT_INPUT:%.+]]: tensor<6xf32>
 func.func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK: [[IDX_INIT:%.+]] = tensor.empty()
   // CHECK: [[IDX_MIN:%.+]] = arith.constant 0 : i32
@@ -1808,7 +1833,7 @@ func.func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK: [[VAL_INIT:%.+]] = tensor.empty()
   // CHECK: [[VAL_MIN:%.+]] = arith.constant -2147483648
   // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MIN]]{{.*}}outs([[VAL_INIT]]
-  // CHECK: linalg.generic {indexing_maps = [#map, #map2, #map2], iterator_types = ["parallel", "reduction"]} ins(%[[ARG0]] : tensor<3x2xi32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<3xi32>, tensor<3xi32>)
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP2]], #[[$MAP2]]], iterator_types = ["parallel", "reduction"]} ins(%[[ARG0]] : tensor<3x2xi32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<3xi32>, tensor<3xi32>)
   // CHECK: ^bb0(%[[ARG1:[0-9a-zA-Z_]+]]: i32, %[[ARG2:[0-9a-zA-Z_]+]]: i32, %[[ARG3:[0-9a-zA-Z_]+]]: i32
   // CHECK:   [[IDX:%.+]] = linalg.index 1
   // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]]
@@ -1818,16 +1843,24 @@ func.func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]]
   %1 = tosa.argmax %arg0 axis(1) : (tensor<3x2xi32>)  -> tensor<3xi32>
 
-  // FINITE: arith.constant -3.40282347E+38 : f32
-  // NONFINITE: arith.constant 0xFF800000 : f32
-  // CHECK: linalg.index
-  // CHECK: arith.index_cast
-  // CHECK: arith.cmpf ugt
-  // CHECK: arith.cmpf ord
-  // CHECK: andi
-  // CHECK: select
-  // CHECK: select
-  // CHECK: linalg.yield
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<i32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<i32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<f32>
+  // FINITE: [[VAL_MIN:%.+]] = arith.constant -3.40282347E+38 : f32
+  // NONFINITE: [[VAL_MIN:%.+]] = arith.constant 0xFF800000 : f32
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MIN]] : f32) outs([[VAL_INIT]] : tensor<f32>)
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP3]], #[[$MAP4]], #[[$MAP4]]], iterator_types = ["reduction"]}
+  // CHECK-SAME: ins([[FLOAT_INPUT]] : tensor<6xf32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<i32>, tensor<f32>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: f32, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f32):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf ugt, [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[OLD_NOT_NAN:%.+]] = arith.cmpf ord, [[OLD_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[UPDATE:%.+]] = arith.andi [[CMP]], [[OLD_NOT_NAN]] : i1
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[UPDATE]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[UPDATE]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f32
   %2 = tosa.argmax %arg1 axis(0) : (tensor<6xf32>)  -> tensor<i32>
 
   return
@@ -1838,6 +1871,8 @@ func.func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
 
+// CHECK-LABEL: @argmax_dyn_non_axis(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]+]]: tensor<3x?xi32>
 func.func @argmax_dyn_non_axis(%arg0 : tensor<3x?xi32>) -> () {
   // CHECK: %[[CST1:.+]] = arith.constant 1
   // CHECK: %[[DYN:.+]] = tensor.dim %[[ARG0]], %[[CST1]]
@@ -1864,6 +1899,8 @@ func.func @argmax_dyn_non_axis(%arg0 : tensor<3x?xi32>) -> () {
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0)>
 
+// CHECK-LABEL: @argmax_dyn_axis(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]+]]: tensor<3x?xi32>
 func.func @argmax_dyn_axis(%arg0 : tensor<3x?xi32>) -> () {
   // CHECK: %[[IDX_INIT:.+]] = tensor.empty()
   // CHECK: %[[IDX_MIN:.+]] = arith.constant 0 : i32
@@ -1872,6 +1909,7 @@ func.func @argmax_dyn_axis(%arg0 : tensor<3x?xi32>) -> () {
   // CHECK: %[[VAL_MIN:.+]] = arith.constant -2147483648
   // CHECK: %[[VAL_FILL:.+]] = linalg.fill ins(%[[VAL_MIN]]{{.*}}outs(%[[VAL_INIT]]
   // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["parallel", "reduction"]} ins(%[[ARG0]] : tensor<3x?xi32>) outs(%[[IDX_FILL]], %[[VAL_FILL]] : tensor<3xi32>, tensor<3xi32>)
+  // CHECK: ^bb0(%[[ARG1:[0-9a-zA-Z_]+]]: i32, %[[ARG2:[0-9a-zA-Z_]+]]: i32, %[[ARG3:[0-9a-zA-Z_]+]]: i32
   // CHECK:   %[[IDX:.+]] = linalg.index 1
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[IDX]]
   // CHECK:   %[[CMP:.+]] = arith.cmpi sgt, %[[ARG1]], %[[ARG3]]
@@ -1879,6 +1917,126 @@ func.func @argmax_dyn_axis(%arg0 : tensor<3x?xi32>) -> () {
   // CHECK:   %[[SELECT_IDX:.+]] = arith.select %[[CMP]], %[[CAST]], %[[ARG2]]
   // CHECK:   linalg.yield %[[SELECT_IDX]], %[[SELECT_VAL]]
   %0 = tosa.argmax %arg0 axis(1) : (tensor<3x?xi32>)  -> tensor<3xi32>
+  return
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
+// CHECK: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d0)>
+// CHECK: #[[$MAP3:.*]] = affine_map<(d0) -> (d0)>
+// CHECK: #[[$MAP4:.*]] = affine_map<(d0) -> ()>
+
+// CHECK-LABEL: @argmin(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]+]]: tensor<3x2xi32>, [[FLOAT_INPUT:%.+]]: tensor<6xf32>
+func.func @argmin(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty()
+  // CHECK: [[IDX_MIN:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_MIN]]{{.*}}outs([[IDX_INIT]]
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty()
+  // CHECK: [[VAL_MAX:%.+]] = arith.constant 2147483647
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MAX]]{{.*}}outs([[VAL_INIT]]
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]} ins(%[[ARG0]] : tensor<3x2xi32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<2xi32>, tensor<2xi32>)
+  // CHECK: ^bb0(%[[ARG1:[0-9a-zA-Z_]+]]: i32, %[[ARG2:[0-9a-zA-Z_]+]]: i32, %[[ARG3:[0-9a-zA-Z_]+]]: i32
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]]
+  // CHECK:   [[CMP:%.+]] = arith.cmpi slt, %[[ARG1]], %[[ARG3]]
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], %[[ARG1]], %[[ARG3]]
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], %[[ARG2]]
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]]
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<3x2xi32>)  -> tensor<2xi32>
+
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty()
+  // CHECK: [[IDX_MIN:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_MIN]]{{.*}}outs([[IDX_INIT]]
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty()
+  // CHECK: [[VAL_MAX:%.+]] = arith.constant 2147483647
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MAX]]{{.*}}outs([[VAL_INIT]]
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP2]], #[[$MAP2]]], iterator_types = ["parallel", "reduction"]} ins(%[[ARG0]] : tensor<3x2xi32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<3xi32>, tensor<3xi32>)
+  // CHECK: ^bb0(%[[ARG1:[0-9a-zA-Z_]+]]: i32, %[[ARG2:[0-9a-zA-Z_]+]]: i32, %[[ARG3:[0-9a-zA-Z_]+]]: i32
+  // CHECK:   [[IDX:%.+]] = linalg.index 1
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]]
+  // CHECK:   [[CMP:%.+]] = arith.cmpi slt, %[[ARG1]], %[[ARG3]]
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], %[[ARG1]], %[[ARG3]]
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], %[[ARG2]]
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]]
+  %1 = tosa.argmin %arg0 axis(1) : (tensor<3x2xi32>)  -> tensor<3xi32>
+
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<i32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<i32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<f32>
+  // FINITE: [[VAL_MAX:%.+]] = arith.constant 3.40282347E+38 : f32
+  // NONFINITE: [[VAL_MAX:%.+]] = arith.constant 0x7F800000 : f32
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MAX]] : f32) outs([[VAL_INIT]] : tensor<f32>)
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP3]], #[[$MAP4]], #[[$MAP4]]], iterator_types = ["reduction"]}
+  // CHECK-SAME: ins([[FLOAT_INPUT]] : tensor<6xf32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<i32>, tensor<f32>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: f32, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f32):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf ult, [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[OLD_NOT_NAN:%.+]] = arith.cmpf ord, [[OLD_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[UPDATE:%.+]] = arith.andi [[CMP]], [[OLD_NOT_NAN]] : i1
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[UPDATE]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[UPDATE]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f32
+  %2 = tosa.argmin %arg1 axis(0) : (tensor<6xf32>)  -> tensor<i32>
+
+  return
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
+
+// CHECK-LABEL: @argmin_dyn_non_axis(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]+]]: tensor<3x?xi32>
+func.func @argmin_dyn_non_axis(%arg0 : tensor<3x?xi32>) -> () {
+  // CHECK: %[[CST1:.+]] = arith.constant 1
+  // CHECK: %[[DYN:.+]] = tensor.dim %[[ARG0]], %[[CST1]]
+  // CHECK: %[[IDX_INIT:.+]] = tensor.empty(%[[DYN]])
+  // CHECK: %[[IDX_MIN:.+]] = arith.constant 0 : i32
+  // CHECK: %[[IDX_FILL:.+]] = linalg.fill ins(%[[IDX_MIN]]{{.*}}outs(%[[IDX_INIT]]
+  // CHECK: %[[VAL_INIT:.+]] = tensor.empty(%[[DYN]])
+  // CHECK: %[[VAL_MAX:.+]] = arith.constant 2147483647
+  // CHECK: %[[VAL_FILL:.+]] = linalg.fill ins(%[[VAL_MAX]]{{.*}}outs(%[[VAL_INIT]]
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]} ins(%[[ARG0]] : tensor<3x?xi32>) outs(%[[IDX_FILL]], %[[VAL_FILL]] : tensor<?xi32>, tensor<?xi32>)
+  // CHECK: ^bb0(%[[ARG1:[0-9a-zA-Z_]+]]: i32, %[[ARG2:[0-9a-zA-Z_]+]]: i32, %[[ARG3:[0-9a-zA-Z_]+]]: i32
+  // CHECK:   %[[IDX:.+]] = linalg.index 0
+  // CHECK:   %[[CAST:.+]] = arith.index_cast %[[IDX]]
+  // CHECK:   %[[CMP:.+]] = arith.cmpi slt, %[[ARG1]], %[[ARG3]]
+  // CHECK:   %[[SELECT_VAL:.+]] = arith.select %[[CMP]], %[[ARG1]], %[[ARG3]]
+  // CHECK:   %[[SELECT_IDX:.+]] = arith.select %[[CMP]], %[[CAST]], %[[ARG2]]
+  // CHECK:   linalg.yield %[[SELECT_IDX]], %[[SELECT_VAL]]
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<3x?xi32>)  -> tensor<?xi32>
+  return
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0)>
+
+// CHECK-LABEL: @argmin_dyn_axis(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]+]]: tensor<3x?xi32>
+func.func @argmin_dyn_axis(%arg0 : tensor<3x?xi32>) -> () {
+  // CHECK: %[[IDX_INIT:.+]] = tensor.empty()
+  // CHECK: %[[IDX_MIN:.+]] = arith.constant 0 : i32
+  // CHECK: %[[IDX_FILL:.+]] = linalg.fill ins(%[[IDX_MIN]]{{.*}}outs(%[[IDX_INIT]]
+  // CHECK: %[[VAL_INIT:.+]] = tensor.empty()
+  // CHECK: %[[VAL_MAX:.+]] = arith.constant 2147483647
+  // CHECK: %[[VAL_FILL:.+]] = linalg.fill ins(%[[VAL_MAX]]{{.*}}outs(%[[VAL_INIT]]
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["parallel", "reduction"]} ins(%[[ARG0]] : tensor<3x?xi32>) outs(%[[IDX_FILL]], %[[VAL_FILL]] : tensor<3xi32>, tensor<3xi32>)
+  // CHECK: ^bb0(%[[ARG1:[0-9a-zA-Z_]+]]: i32, %[[ARG2:[0-9a-zA-Z_]+]]: i32, %[[ARG3:[0-9a-zA-Z_]+]]: i32
+  // CHECK:   %[[IDX:.+]] = linalg.index 1
+  // CHECK:   %[[CAST:.+]] = arith.index_cast %[[IDX]]
+  // CHECK:   %[[CMP:.+]] = arith.cmpi slt, %[[ARG1]], %[[ARG3]]
+  // CHECK:   %[[SELECT_VAL:.+]] = arith.select %[[CMP]], %[[ARG1]], %[[ARG3]]
+  // CHECK:   %[[SELECT_IDX:.+]] = arith.select %[[CMP]], %[[CAST]], %[[ARG2]]
+  // CHECK:   linalg.yield %[[SELECT_IDX]], %[[SELECT_VAL]]
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<3x?xi32>)  -> tensor<3xi32>
   return
 }
 
@@ -1960,6 +2118,77 @@ func.func @gather_int(%arg0: tensor<2x3x2xi32>, %arg1: tensor<2x3xi32>) -> () {
   // CHECK:   linalg.yield %[[EXTRACT]]
   %0 = tosa.gather %arg0, %arg1 : (tensor<2x3x2xi32>, tensor<2x3xi32>)  -> tensor<2x3x2xi32>
   return
+}
+
+// -----
+
+// Verify batched ROW_GATHER lowering and row_count output expansion.
+// CHECK-LABEL: @row_gather
+// CHECK-SAME: (%[[VALUES:[0-9a-zA-Z_]*]]
+// CHECK-SAME:  %[[INDICES:[0-9a-zA-Z_]*]]
+// CHECK-SAME:  %[[ROW_COUNT_TENSOR:[0-9a-zA-Z_]*]]
+func.func @row_gather(%values: tensor<2x5x3xf32>, %indices: tensor<2x2xi32>, %row_count: tensor<1xi32>) -> tensor<2x4x3xf32> {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK: %[[ROW_COUNT:.+]] = tensor.extract %[[ROW_COUNT_TENSOR]][%[[C0]]] : tensor<1xi32>
+  // CHECK: %[[ROW_COUNT_INDEX:.+]] = arith.index_cast %[[ROW_COUNT]] : i32 to index
+  // CHECK: %[[INIT:.+]] = tensor.empty() : tensor<2x4x3xf32>
+  // CHECK: %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: outs(%[[INIT]] : tensor<2x4x3xf32>)
+  // CHECK:   %[[BATCH:.+]] = linalg.index 0 : index
+  // CHECK:   %[[OUTPUT_ROW:.+]] = linalg.index 1 : index
+  // CHECK:   %[[CHANNEL:.+]] = linalg.index 2 : index
+  // CHECK:   %[[INDEX_SLOT:.+]] = arith.divui %[[OUTPUT_ROW]], %[[ROW_COUNT_INDEX]] : index
+  // CHECK:   %[[ROW_OFFSET:.+]] = arith.remui %[[OUTPUT_ROW]], %[[ROW_COUNT_INDEX]] : index
+  // CHECK:   %[[INDEX:.+]] = tensor.extract %[[INDICES]][%[[BATCH]], %[[INDEX_SLOT]]] : tensor<2x2xi32>
+  // CHECK:   %[[ROW:.+]] = arith.index_cast %[[INDEX]] : i32 to index
+  // CHECK:   %[[INPUT_ROW:.+]] = arith.addi %[[ROW]], %[[ROW_OFFSET]] : index
+  // CHECK:   %[[VALUE:.+]] = tensor.extract %[[VALUES]][%[[BATCH]], %[[INPUT_ROW]], %[[CHANNEL]]] : tensor<2x5x3xf32>
+  // CHECK:   linalg.yield %[[VALUE]] : f32
+  // CHECK: return %[[RESULT]]
+  %0 = tosa.row_gather %values, %indices, %row_count : (tensor<2x5x3xf32>, tensor<2x2xi32>, tensor<1xi32>) -> tensor<2x4x3xf32>
+  return %0 : tensor<2x4x3xf32>
+}
+
+// -----
+
+// Verify i64 indices and the largest valid start row.
+// CHECK-LABEL: @row_gather_i64_boundary_indices
+func.func @row_gather_i64_boundary_indices(%values: tensor<2x5x2xi16>) -> tensor<2x4x2xi16> {
+  // CHECK: %[[INDICES:.+]] = tosa.const values(dense<{{\[\[}}0, 3], [3, 1]]> : tensor<2x2xi64>) : () -> tensor<2x2xi64>
+  // CHECK: %[[ROW_COUNT:.+]] = tosa.const values(dense<2> : tensor<1xi32>) : () -> tensor<1xi32>
+  // CHECK: linalg.generic
+  // CHECK:   %[[INDEX:.+]] = tensor.extract %[[INDICES]][{{.+}}] : tensor<2x2xi64>
+  // CHECK:   %[[ROW:.+]] = arith.index_cast %[[INDEX]] : i64 to index
+  // CHECK:   %[[VALUE:.+]] = tensor.extract %arg0[{{.+}}, %{{.+}}, %{{.+}}] : tensor<2x5x2xi16>
+  // CHECK:   linalg.yield %[[VALUE]] : i16
+  %indices = "tosa.const"() <{values = dense<[[0, 3], [3, 1]]> : tensor<2x2xi64>}> : () -> tensor<2x2xi64>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %0 = tosa.row_gather %values, %indices, %row_count : (tensor<2x5x2xi16>, tensor<2x2xi64>, tensor<1xi32>) -> tensor<2x4x2xi16>
+  return %0 : tensor<2x4x2xi16>
+}
+
+// -----
+
+// Verify dynamic output dimensions are materialized from the operands.
+// CHECK-LABEL: @row_gather_all_dynamic
+// CHECK-SAME: (%[[VALUES:[0-9a-zA-Z_]*]]
+// CHECK-SAME:  %[[INDICES:[0-9a-zA-Z_]*]]
+// CHECK-SAME:  %[[ROW_COUNT_TENSOR:[0-9a-zA-Z_]*]]
+func.func @row_gather_all_dynamic(%values: tensor<?x?x?xi8>, %indices: tensor<?x?xi32>, %row_count: tensor<1xi32>) -> tensor<?x?x?xi8> {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK: %[[ROW_COUNT:.+]] = tensor.extract %[[ROW_COUNT_TENSOR]][%[[C0]]] : tensor<1xi32>
+  // CHECK: %[[ROW_COUNT_INDEX:.+]] = arith.index_cast %[[ROW_COUNT]] : i32 to index
+  // CHECK: %[[BATCH:.+]] = tensor.dim %[[VALUES]], %[[C0]]
+  // CHECK: %[[C1:.+]] = arith.constant 1 : index
+  // CHECK: %[[WIDTH:.+]] = tensor.dim %[[INDICES]], %[[C1]]
+  // CHECK: %[[OUTPUT_ROWS:.+]] = arith.muli %[[WIDTH]], %[[ROW_COUNT_INDEX]] : index
+  // CHECK: %[[C2:.+]] = arith.constant 2 : index
+  // CHECK: %[[CHANNELS:.+]] = tensor.dim %[[VALUES]], %[[C2]]
+  // CHECK: %[[INIT:.+]] = tensor.empty(%[[BATCH]], %[[OUTPUT_ROWS]], %[[CHANNELS]]) : tensor<?x?x?xi8>
+  // CHECK: linalg.generic
+  // CHECK-SAME: outs(%[[INIT]] : tensor<?x?x?xi8>)
+  %0 = tosa.row_gather %values, %indices, %row_count : (tensor<?x?x?xi8>, tensor<?x?xi32>, tensor<1xi32>) -> tensor<?x?x?xi8>
+  return %0 : tensor<?x?x?xi8>
 }
 
 // -----
@@ -2551,16 +2780,28 @@ func.func @maximum_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) ->
 // -----
 
 // CHECK-LABEL: @argmax_nan_propagate
+// CHECK-SAME: ([[INPUT:%[0-9a-zA-Z_]+]]: tensor<5x4xf32>
 func.func @argmax_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<4xi32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<4xi32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<4xf32>
+  // FINITE: [[VAL_MIN:%.+]] = arith.constant -3.40282347E+38 : f32
+  // NONFINITE: [[VAL_MIN:%.+]] = arith.constant 0xFF800000 : f32
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MIN]] : f32) outs([[VAL_INIT]] : tensor<4xf32>)
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf ugt
-  // CHECK: arith.cmpf ord
-  // CHECK: andi
-  // CHECK: arith.select
-  // CHECK: arith.select
+  // CHECK-SAME: ins([[INPUT]] : tensor<5x4xf32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<4xi32>, tensor<4xf32>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: f32, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f32):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf ugt, [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[OLD_NOT_NAN:%.+]] = arith.cmpf ord, [[OLD_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[UPDATE:%.+]] = arith.andi [[CMP]], [[OLD_NOT_NAN]] : i1
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[UPDATE]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[UPDATE]], [[CAST]], [[OLD_INDEX]] : i32
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
-  // CHECK: linalg.yield
+  // CHECK: linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f32
   %11 = tosa.argmax %arg0 axis(0) : (tensor<5x4xf32>)  -> tensor<4xi32>
   return
 }
@@ -2568,16 +2809,27 @@ func.func @argmax_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) 
 // -----
 
 // CHECK-LABEL: @argmax_nan_ignore_int
+// CHECK-SAME: ([[INPUT:%[0-9a-zA-Z_]+]]: tensor<5x4xi8>
 func.func @argmax_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<4xi32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<4xi32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<4xi8>
+  // CHECK: [[VAL_MIN:%.+]] = arith.constant -128 : i8
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MIN]] : i8) outs([[VAL_INIT]] : tensor<4xi8>)
   // CHECK: linalg.generic
-  // CHECK: arith.cmpi sgt
-  // CHECK: arith.select
-  // CHECK: arith.select
+  // CHECK-SAME: ins([[INPUT]] : tensor<5x4xi8>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<4xi32>, tensor<4xi8>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: i8, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: i8):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpi sgt, [[NEW_VALUE]], [[OLD_VALUE]] : i8
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], [[NEW_VALUE]], [[OLD_VALUE]] : i8
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], [[OLD_INDEX]] : i32
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK-NOT: arith.select
-  // CHECK: linalg.yield
+  // CHECK: linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, i8
  %12 = tosa.argmax %arg0 axis(0) nan_mode<IGNORE> : (tensor<5x4xi8>)  -> tensor<4xi32>
   return
 }
@@ -2585,13 +2837,107 @@ func.func @argmax_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -
 // -----
 
 // CHECK-LABEL: @argmax_nan_ignore
+// CHECK-SAME: ([[INPUT:%[0-9a-zA-Z_]+]]: tensor<5x4xf32>
 func.func @argmax_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<4xi32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<4xi32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<4xf32>
+  // FINITE: [[VAL_MIN:%.+]] = arith.constant -3.40282347E+38 : f32
+  // NONFINITE: [[VAL_MIN:%.+]] = arith.constant 0xFF800000 : f32
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MIN]] : f32) outs([[VAL_INIT]] : tensor<4xf32>)
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf ogt
-  // CHECK: arith.select
-  // CHECK: arith.select
-  // CHECK: linalg.yield
+  // CHECK-SAME: ins([[INPUT]] : tensor<5x4xf32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<4xi32>, tensor<4xf32>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: f32, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f32):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf ogt, [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f32
   %12 = tosa.argmax %arg0 axis(0) nan_mode<IGNORE> : (tensor<5x4xf32>)  -> tensor<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @argmin_nan_propagate
+// CHECK-SAME: ([[INPUT:%[0-9a-zA-Z_]+]]: tensor<5x4xf32>
+func.func @argmin_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<4xi32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<4xi32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<4xf32>
+  // FINITE: [[VAL_MAX:%.+]] = arith.constant 3.40282347E+38 : f32
+  // NONFINITE: [[VAL_MAX:%.+]] = arith.constant 0x7F800000 : f32
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MAX]] : f32) outs([[VAL_INIT]] : tensor<4xf32>)
+  // CHECK: linalg.generic
+  // CHECK-SAME: ins([[INPUT]] : tensor<5x4xf32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<4xi32>, tensor<4xf32>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: f32, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f32):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf ult, [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[OLD_NOT_NAN:%.+]] = arith.cmpf ord, [[OLD_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[UPDATE:%.+]] = arith.andi [[CMP]], [[OLD_NOT_NAN]] : i1
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[UPDATE]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[UPDATE]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f32
+  %11 = tosa.argmin %arg0 axis(0) : (tensor<5x4xf32>)  -> tensor<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @argmin_nan_ignore_int
+// CHECK-SAME: ([[INPUT:%[0-9a-zA-Z_]+]]: tensor<5x4xi8>
+func.func @argmin_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<4xi32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<4xi32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<4xi8>
+  // CHECK: [[VAL_MAX:%.+]] = arith.constant 127 : i8
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MAX]] : i8) outs([[VAL_INIT]] : tensor<4xi8>)
+  // CHECK: linalg.generic
+  // CHECK-SAME: ins([[INPUT]] : tensor<5x4xi8>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<4xi32>, tensor<4xi8>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: i8, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: i8):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpi slt, [[NEW_VALUE]], [[OLD_VALUE]] : i8
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], [[NEW_VALUE]], [[OLD_VALUE]] : i8
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, i8
+ %12 = tosa.argmin %arg0 axis(0) nan_mode<IGNORE> : (tensor<5x4xi8>)  -> tensor<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @argmin_nan_ignore
+// CHECK-SAME: ([[INPUT:%[0-9a-zA-Z_]+]]: tensor<5x4xf32>
+func.func @argmin_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<4xi32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<4xi32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<4xf32>
+  // FINITE: [[VAL_MAX:%.+]] = arith.constant 3.40282347E+38 : f32
+  // NONFINITE: [[VAL_MAX:%.+]] = arith.constant 0x7F800000 : f32
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MAX]] : f32) outs([[VAL_INIT]] : tensor<4xf32>)
+  // CHECK: linalg.generic
+  // CHECK-SAME: ins([[INPUT]] : tensor<5x4xf32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<4xi32>, tensor<4xf32>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: f32, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f32):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf olt, [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], [[NEW_VALUE]], [[OLD_VALUE]] : f32
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f32
+  %12 = tosa.argmin %arg0 axis(0) nan_mode<IGNORE> : (tensor<5x4xf32>)  -> tensor<4xi32>
   return
 }
 
@@ -2683,6 +3029,73 @@ func.func @mul_no_const_shift(%arg0: tensor<2x3xi32>, %arg1: tensor<2x3xi32>, %a
 func.func @negate_i64_no_noop_cast(%arg0: tensor<4xi64>, %in_zp: tensor<1xi64>, %out_zp: tensor<1xi64>) -> tensor<4xi64> {
   %neg = tosa.negate %arg0, %in_zp, %out_zp : (tensor<4xi64>, tensor<1xi64>, tensor<1xi64>) -> tensor<4xi64>
   return %neg : tensor<4xi64>
+}
+
+// -----
+
+// A non-constant mul shift or negate zero point is a single-element tensor: it
+// does not take part in broadcasting and every iteration reads its element 0.
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<() -> ()>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<() -> (0)>
+// CHECK-LABEL: @mul_non_const_shift_rank0
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<i32>, %[[SHIFT:[0-9a-zA-Z_]*]]: tensor<1xi8>
+func.func @mul_non_const_shift_rank0(%arg0: tensor<i32>, %shift: tensor<1xi8>) -> tensor<i32> {
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP1]], #[[$MAP0]]], iterator_types = []} ins(%[[ARG0]], %[[ARG0]], %[[SHIFT]] : tensor<i32>, tensor<i32>, tensor<1xi8>)
+  // CHECK: tosa.apply_scale
+  %0 = tosa.mul %arg0, %arg0, %shift : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (0)>
+// CHECK-LABEL: @negate_non_const_zp_size1_dim
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<1x1xf32>, %[[ZP:[0-9a-zA-Z_]*]]: tensor<1xf32>
+func.func @negate_non_const_zp_size1_dim(%arg0: tensor<1x1xf32>, %zp: tensor<1xf32>) -> tensor<1x1xf32> {
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel", "parallel"]} ins(%[[ARG0]], %[[ZP]], %[[ZP]] : tensor<1x1xf32>, tensor<1xf32>, tensor<1xf32>)
+  // CHECK: arith.negf
+  %0 = tosa.negate %arg0, %zp, %zp : (tensor<1x1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1xf32>
+  return %0 : tensor<1x1xf32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (0)>
+// CHECK-LABEL: @negate_non_const_zp_dynamic
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<?xi8>, %[[IN_ZP:[0-9a-zA-Z_]*]]: tensor<1xi8>, %[[OUT_ZP:[0-9a-zA-Z_]*]]: tensor<1xi8>
+func.func @negate_non_const_zp_dynamic(%arg0: tensor<?xi8>, %in_zp: tensor<1xi8>, %out_zp: tensor<1xi8>) -> tensor<?xi8> {
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%[[ARG0]], %[[IN_ZP]], %[[OUT_ZP]] : tensor<?xi8>, tensor<1xi8>, tensor<1xi8>)
+  %0 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<?xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<?xi8>
+  return %0 : tensor<?xi8>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<() -> ()>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<() -> (0)>
+// CHECK-LABEL: @negate_non_const_zp_rank0
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<i32>, %[[IN_ZP:[0-9a-zA-Z_]*]]: tensor<1xi32>, %[[OUT_ZP:[0-9a-zA-Z_]*]]: tensor<1xi32>
+func.func @negate_non_const_zp_rank0(%arg0: tensor<i32>, %in_zp: tensor<1xi32>, %out_zp: tensor<1xi32>) -> tensor<i32> {
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = []} ins(%[[ARG0]], %[[IN_ZP]], %[[OUT_ZP]] : tensor<i32>, tensor<1xi32>, tensor<1xi32>)
+  %0 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<i32>, tensor<1xi32>, tensor<1xi32>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (0)>
+// CHECK-LABEL: @negate_mixed_const_zp
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<1xi32>, %[[IN_ZP:[0-9a-zA-Z_]*]]: tensor<1xi32>
+func.func @negate_mixed_const_zp(%arg0: tensor<1xi32>, %in_zp: tensor<1xi32>) -> tensor<1xi32> {
+  // CHECK: %[[OUT_ZP:.*]] = tosa.const
+  // CHECK: linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%[[ARG0]], %[[IN_ZP]], %[[OUT_ZP]] : tensor<1xi32>, tensor<1xi32>, tensor<1xi32>)
+  %out_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %0 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<1xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  return %0 : tensor<1xi32>
 }
 
 // -----
@@ -2838,11 +3251,164 @@ func.func @reduce_max_nan_ignore_seed(%arg0: tensor<5x4xf32>) -> () {
 // -----
 
 // CHECK-LABEL: @argmax_f16
+// CHECK-SAME: ([[INPUT:%[0-9a-zA-Z_]+]]: tensor<6xf16>
 func.func @argmax_f16(%arg0: tensor<6xf16>) -> () {
-  // FINITE: arith.constant -6.550400e+04 : f16
-  // NONFINITE: arith.constant 0xFC00 : f16
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<i32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<i32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<f16>
+  // FINITE: [[VAL_MIN:%.+]] = arith.constant -6.550400e+04 : f16
+  // NONFINITE: [[VAL_MIN:%.+]] = arith.constant 0xFC00 : f16
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MIN]] : f16) outs([[VAL_INIT]] : tensor<f16>)
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf ugt
+  // CHECK-SAME: ins([[INPUT]] : tensor<6xf16>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<i32>, tensor<f16>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: f16, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f16):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf ugt, [[NEW_VALUE]], [[OLD_VALUE]] : f16
+  // CHECK:   [[OLD_NOT_NAN:%.+]] = arith.cmpf ord, [[OLD_VALUE]], [[OLD_VALUE]] : f16
+  // CHECK:   [[UPDATE:%.+]] = arith.andi [[CMP]], [[OLD_NOT_NAN]] : i1
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[UPDATE]], [[NEW_VALUE]], [[OLD_VALUE]] : f16
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[UPDATE]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f16
   %0 = tosa.argmax %arg0 axis(0) : (tensor<6xf16>) -> tensor<i32>
   return
+}
+// -----
+
+// CHECK-LABEL: @argmin_f16
+// CHECK-SAME: ([[INPUT:%[0-9a-zA-Z_]+]]: tensor<6xf16>
+func.func @argmin_f16(%arg0: tensor<6xf16>) -> () {
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<i32>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i32) outs([[IDX_INIT]] : tensor<i32>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<f16>
+  // FINITE: [[VAL_MAX:%.+]] = arith.constant 6.550400e+04 : f16
+  // NONFINITE: [[VAL_MAX:%.+]] = arith.constant 0x7C00 : f16
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MAX]] : f16) outs([[VAL_INIT]] : tensor<f16>)
+  // CHECK: linalg.generic
+  // CHECK-SAME: ins([[INPUT]] : tensor<6xf16>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<i32>, tensor<f16>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: f16, [[OLD_INDEX:%.+]]: i32, [[OLD_VALUE:%.+]]: f16):
+  // CHECK:   [[IDX:%.+]] = linalg.index 0
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i32
+  // CHECK:   [[CMP:%.+]] = arith.cmpf ult, [[NEW_VALUE]], [[OLD_VALUE]] : f16
+  // CHECK:   [[OLD_NOT_NAN:%.+]] = arith.cmpf ord, [[OLD_VALUE]], [[OLD_VALUE]] : f16
+  // CHECK:   [[UPDATE:%.+]] = arith.andi [[CMP]], [[OLD_NOT_NAN]] : i1
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[UPDATE]], [[NEW_VALUE]], [[OLD_VALUE]] : f16
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[UPDATE]], [[CAST]], [[OLD_INDEX]] : i32
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f16
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<6xf16>) -> tensor<i32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @argmin_i64_index
+// CHECK-SAME: [[ARGMIN_INPUT:%.*]]: tensor<3x2xi8>
+func.func @argmin_i64_index(%arg0: tensor<3x2xi8>) -> tensor<3xi64> {
+  // CHECK: [[IDX_INIT:%.+]] = tensor.empty() : tensor<3xi64>
+  // CHECK: [[IDX_ZERO:%.+]] = arith.constant 0 : i64
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill ins([[IDX_ZERO]] : i64) outs([[IDX_INIT]] : tensor<3xi64>)
+  // CHECK: [[VAL_INIT:%.+]] = tensor.empty() : tensor<3xi8>
+  // CHECK: [[VAL_MAX:%.+]] = arith.constant 127 : i8
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill ins([[VAL_MAX]] : i8) outs([[VAL_INIT]] : tensor<3xi8>)
+  // CHECK: [[RESULT:%.+]]:2 = linalg.generic
+  // CHECK-SAME: ins([[ARGMIN_INPUT]] : tensor<3x2xi8>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<3xi64>, tensor<3xi8>)
+  // CHECK: ^bb0([[NEW_VALUE:%.+]]: i8, [[OLD_INDEX:%.+]]: i64, [[OLD_VALUE:%.+]]: i8):
+  // CHECK:   [[IDX:%.+]] = linalg.index 1
+  // CHECK:   [[CAST:%.+]] = arith.index_cast [[IDX]] : index to i64
+  // CHECK:   [[CMP:%.+]] = arith.cmpi slt, [[NEW_VALUE]], [[OLD_VALUE]] : i8
+  // CHECK:   [[SELECT_VAL:%.+]] = arith.select [[CMP]], [[NEW_VALUE]], [[OLD_VALUE]] : i8
+  // CHECK:   [[SELECT_IDX:%.+]] = arith.select [[CMP]], [[CAST]], [[OLD_INDEX]] : i64
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i64, i8
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<3x2xi8>) -> tensor<3xi64>
+  // CHECK: return [[RESULT]]#0 : tensor<3xi64>
+  return %0 : tensor<3xi64>
+}
+
+// -----
+
+// Nonzero zero points require a generic lowering because
+// linalg.quantized_batch_matmul has no transpose-B variant.
+
+// CHECK-DAG: #[[$MATMUL_T_RANK2_A_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$MATMUL_T_RANK2_B_MAP:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK-DAG: #[[$MATMUL_T_RANK2_OUT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: @matmul_t_zero_point_rank2
+func.func @matmul_t_zero_point_rank2(%arg0: tensor<5x3xi8>, %arg1: tensor<6x3xi8>) -> tensor<5x6xi32> {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : i32
+  // CHECK: %[[INIT:.+]] = tensor.empty() : tensor<5x6xi32>
+  // CHECK: %[[FILLED:.+]] = linalg.fill ins(%[[C0]] : i32) outs(%[[INIT]] : tensor<5x6xi32>) -> tensor<5x6xi32>
+  // CHECK: %[[RESULT:.+]] = linalg.generic {indexing_maps = [#[[$MATMUL_T_RANK2_A_MAP]], #[[$MATMUL_T_RANK2_B_MAP]], #[[$MATMUL_T_RANK2_OUT_MAP]]], iterator_types = ["parallel", "parallel", "reduction"]}
+  // CHECK-SAME: ins(%arg0, %arg1 : tensor<5x3xi8>, tensor<6x3xi8>) outs(%[[FILLED]] : tensor<5x6xi32>)
+  // CHECK: ^bb0(%[[A:.+]]: i8, %[[B:.+]]: i8, %[[ACC:.+]]: i32):
+  // CHECK:   %[[EXT_A:.+]] = arith.extsi %[[A]] : i8 to i32
+  // CHECK:   %[[EXT_B:.+]] = arith.extsi %[[B]] : i8 to i32
+  // CHECK:   %[[AZP:.+]] = arith.constant 1 : i32
+  // CHECK:   %[[BZP:.+]] = arith.constant 2 : i32
+  // CHECK:   %[[ADJUSTED_A:.+]] = arith.subi %[[EXT_A]], %[[AZP]] : i32
+  // CHECK:   %[[ADJUSTED_B:.+]] = arith.subi %[[EXT_B]], %[[BZP]] : i32
+  // CHECK:   %[[PRODUCT:.+]] = arith.muli %[[ADJUSTED_A]], %[[ADJUSTED_B]] : i32
+  // CHECK:   %[[SUM:.+]] = arith.addi %[[ACC]], %[[PRODUCT]] : i32
+  // CHECK:   linalg.yield %[[SUM]] : i32
+  // CHECK: return %[[RESULT]] : tensor<5x6xi32>
+  %a_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<5x3xi8>, tensor<6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<5x6xi32>
+  return %0 : tensor<5x6xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @matmul_t_zero_point
+func.func @matmul_t_zero_point(%arg0: tensor<4x5x3xi8>, %arg1: tensor<1x6x3xi8>) -> tensor<4x5x6xi32> {
+  // CHECK: %[[SLICE:.+]] = tensor.extract_slice %arg1[0, 0, 0] [1, 6, 3] [1, 1, 1] : tensor<1x6x3xi8> to tensor<6x3xi8>
+  // CHECK: %[[BCAST:.+]] = linalg.broadcast ins(%[[SLICE]] : tensor<6x3xi8>)
+  // CHECK: %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: ins(%arg0, %[[BCAST]] : tensor<4x5x3xi8>, tensor<4x6x3xi8>)
+  // CHECK: ^bb0(%[[A:.+]]: i8, %[[BVAL:.+]]: i8, %[[ACC:.+]]: i32):
+  // CHECK:   %[[EXT_A:.+]] = arith.extsi %[[A]] : i8 to i32
+  // CHECK:   %[[EXT_B:.+]] = arith.extsi %[[BVAL]] : i8 to i32
+  // CHECK:   %[[AZP:.+]] = arith.constant 1 : i32
+  // CHECK:   %[[BZP:.+]] = arith.constant 2 : i32
+  // CHECK:   %[[ADJUSTED_A:.+]] = arith.subi %[[EXT_A]], %[[AZP]] : i32
+  // CHECK:   %[[ADJUSTED_B:.+]] = arith.subi %[[EXT_B]], %[[BZP]] : i32
+  // CHECK:   %[[PRODUCT:.+]] = arith.muli %[[ADJUSTED_A]], %[[ADJUSTED_B]] : i32
+  // CHECK:   %[[SUM:.+]] = arith.addi %[[ACC]], %[[PRODUCT]] : i32
+  // CHECK:   linalg.yield %[[SUM]] : i32
+  %a_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<4x5x3xi8>, tensor<1x6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<4x5x6xi32>
+  return %0 : tensor<4x5x6xi32>
+}
+
+// -----
+
+// CHECK-DAG: #[[$MATMUL_T_A_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d4)>
+// CHECK-DAG: #[[$MATMUL_T_B_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d3, d4)>
+// CHECK-DAG: #[[$MATMUL_T_OUT_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>
+// CHECK-LABEL: @matmul_t_zero_point_rank4
+func.func @matmul_t_zero_point_rank4(%arg0: tensor<2x1x5x3xi8>, %arg1: tensor<1x3x6x3xi8>) -> tensor<2x3x5x6xi32> {
+  // CHECK: %[[B_SLICE:.+]] = tensor.extract_slice %arg1
+  // CHECK: %[[B_BCAST:.+]] = linalg.broadcast ins(%[[B_SLICE]] : tensor<3x6x3xi8>) {{.*}} dimensions = [0]
+  // CHECK: %[[A_SLICE:.+]] = tensor.extract_slice %arg0
+  // CHECK: %[[A_BCAST:.+]] = linalg.broadcast ins(%[[A_SLICE]] : tensor<2x5x3xi8>) {{.*}} dimensions = [1]
+  // CHECK: linalg.generic {indexing_maps = [#[[$MATMUL_T_A_MAP]], #[[$MATMUL_T_B_MAP]], #[[$MATMUL_T_OUT_MAP]]], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction"]} ins(%[[A_BCAST]], %[[B_BCAST]] : tensor<2x3x5x3xi8>, tensor<2x3x6x3xi8>)
+  %a_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<2x1x5x3xi8>, tensor<1x3x6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2x3x5x6xi32>
+  return %0 : tensor<2x3x5x6xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @matmul_t_b_zero_point
+func.func @matmul_t_b_zero_point(%arg0: tensor<5x3xi8>, %arg1: tensor<6x3xi8>) -> tensor<5x6xi32> {
+  // CHECK: linalg.generic
+  // CHECK: %[[BZP:.+]] = arith.constant 2 : i32
+  // CHECK: arith.subi %{{.+}}, %[[BZP]] : i32
+  %a_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<5x3xi8>, tensor<6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<5x6xi32>
+  return %0 : tensor<5x6xi32>
 }
