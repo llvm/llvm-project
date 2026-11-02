@@ -40,12 +40,13 @@ bool useSmallMappingSize(const Twine &Path);
 /// Thread-safe alternative to \c sys::fs::lockFile. This does not support all
 /// the platforms that \c sys::fs::lockFile does, so keep it in the CAS library
 /// for now.
-std::error_code lockFileThreadSafe(int FD, llvm::sys::fs::LockKind Kind);
+LLVM_ABI_FOR_TEST std::error_code
+lockFileThreadSafe(int FD, llvm::sys::fs::LockKind Kind);
 
 /// Thread-safe alternative to \c sys::fs::unlockFile. This does not support all
 /// the platforms that \c sys::fs::lockFile does, so keep it in the CAS library
 /// for now.
-std::error_code unlockFileThreadSafe(int FD);
+LLVM_ABI_FOR_TEST std::error_code unlockFileThreadSafe(int FD);
 
 /// Thread-safe alternative to \c sys::fs::tryLockFile. This does not support
 /// all the platforms that \c sys::fs::lockFile does, so keep it in the CAS
@@ -66,9 +67,9 @@ Expected<size_t> preallocateFileTail(int FD, size_t CurrentSize,
 /// Get boot time for the OS. This can be used to check if the CAS has been
 /// validated since boot.
 ///
-/// \returns the boot time in seconds (0 if operation not supported), or an \c
-/// Error.
-Expected<uint64_t> getBootTime();
+/// \returns the boot time in platform-specific units (0 if operation not
+/// supported), or an \c Error.
+LLVM_ABI_FOR_TEST Expected<uint64_t> getBootTime();
 
 /// Helper RAII class for copying a file to a unique file path. At destruction
 /// time it will delete any new temporary files created.

@@ -6,6 +6,7 @@
 
 ---
 name:            empty_prolog_block
+tracksRegLiveness: false
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 32, alignment: 4,
       stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,

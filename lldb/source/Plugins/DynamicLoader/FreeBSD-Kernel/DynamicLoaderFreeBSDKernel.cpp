@@ -13,6 +13,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -62,7 +63,25 @@ static bool is_kernel(Module *module) {
   ObjectFile *objfile = module->GetObjectFile();
   if (!objfile)
     return false;
-  if (objfile->GetType() != ObjectFile::eTypeExecutable)
+
+  ObjectFile::Type expected_type;
+  switch (module->GetArchitecture().GetMachine()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+  case llvm::Triple::arm:
+  case llvm::Triple::aarch64:
+  case llvm::Triple::riscv64:
+    expected_type = ObjectFile::eTypeExecutable;
+    break;
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    expected_type = ObjectFile::eTypeSharedLibrary;
+    break;
+  default:
+    return false;
+  }
+
+  if (objfile->GetType() != expected_type)
     return false;
   if (objfile->GetStrata() != ObjectFile::eStrataUnknown &&
       objfile->GetStrata() != ObjectFile::eStrataKernel)
@@ -74,26 +93,69 @@ static bool is_kernel(Module *module) {
 static bool is_kmod(Module *module) {
   if (!module)
     return false;
-  if (!module->GetObjectFile())
-    return false;
+
   ObjectFile *objfile = module->GetObjectFile();
-  if (objfile->GetType() != ObjectFile::eTypeObjectFile &&
-      objfile->GetType() != ObjectFile::eTypeSharedLibrary)
+  if (!objfile)
     return false;
 
+  switch (module->GetArchitecture().GetMachine()) {
+  case llvm::Triple::x86_64:
+    return objfile->GetType() == ObjectFile::eTypeObjectFile;
+  case llvm::Triple::x86:
+  case llvm::Triple::arm:
+  case llvm::Triple::aarch64:
+  case llvm::Triple::riscv64:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    return objfile->GetType() == ObjectFile::eTypeSharedLibrary;
+  default:
+    return false;
+  }
+}
+
+static bool set_debug_file(const ModuleSP &module,
+                           llvm::StringRef target_path) {
+  if (!module || module->GetSymbolFileFileSpec())
+    return false;
+
+  FileSpec local_file = module->GetFileSpec();
+
+  FileSpec target_file(target_path);
+  if (!target_file.IsAbsolute())
+    return false;
+
+  std::string local_path = local_file.GetPath();
+  std::string normalized_target_path = target_file.GetPath();
+  llvm::StringRef local_sysroot(local_path);
+  if (!local_sysroot.consume_back(normalized_target_path))
+    return false;
+
+  std::string debug_path = local_sysroot.str();
+  debug_path += "/usr/lib/debug";
+  debug_path += normalized_target_path;
+  debug_path += ".debug";
+  FileSpec debug_file(debug_path);
+  if (!FileSystem::Instance().Exists(debug_file))
+    return false;
+
+  module->SetSymbolFileFileSpec(debug_file);
   return true;
 }
 
 static bool is_reloc(Module *module) {
   if (!module)
     return false;
-  if (!module->GetObjectFile())
-    return false;
+
   ObjectFile *objfile = module->GetObjectFile();
-  if (objfile->GetType() != ObjectFile::eTypeObjectFile)
+  if (!objfile)
     return false;
 
-  return true;
+  switch (module->GetArchitecture().GetMachine()) {
+  case llvm::Triple::x86_64:
+    return objfile->GetType() == ObjectFile::eTypeObjectFile;
+  default:
+    return false;
+  }
 }
 
 // Instantiate Function of the FreeBSD Kernel Dynamic Loader Plugin called when
@@ -113,6 +175,18 @@ DynamicLoaderFreeBSDKernel::CreateInstance(lldb_private::Process *process,
     if (!triple_ref.isOSFreeBSD()) {
       return nullptr;
     }
+  }
+
+  // ProcessFreeBSDKernelCore explicitly selects this plugin after libkvm has
+  // established the kernel's section load addresses.  Some architectures do
+  // not map the ELF file and program headers at the kernel's load address, so
+  // use the supplied kernel module instead of requiring an in-memory header.
+  if (force && exec) {
+    Address base_address = exec->GetObjectFile()->GetBaseAddress();
+    addr_t kernel_address = base_address.GetLoadAddress(&process->GetTarget());
+    if (kernel_address == LLDB_INVALID_ADDRESS)
+      kernel_address = base_address.GetFileAddress();
+    return new DynamicLoaderFreeBSDKernel(process, kernel_address);
   }
 
   // At this point we have checked the target is a FreeBSD kernel and all we
@@ -181,10 +255,14 @@ bool DynamicLoaderFreeBSDKernel::ReadELFHeader(Process *process,
 lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
     Process *process, lldb::addr_t addr, bool *read_error) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
+  bool local_read_error;
+
+  if (!read_error)
+    read_error = &local_read_error;
+  *read_error = false;
 
   if (addr == LLDB_INVALID_ADDRESS) {
-    if (read_error)
-      *read_error = true;
+    *read_error = true;
     return UUID();
   }
 
@@ -199,8 +277,23 @@ lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
     return UUID();
   }
 
-  // Check header type
-  if (header.e_type != llvm::ELF::ET_EXEC)
+  uint16_t expected_type;
+  switch (header.e_machine) {
+  case llvm::ELF::EM_386:
+  case llvm::ELF::EM_X86_64:
+  case llvm::ELF::EM_ARM:
+  case llvm::ELF::EM_AARCH64:
+  case llvm::ELF::EM_RISCV:
+    expected_type = llvm::ELF::ET_EXEC;
+    break;
+  case llvm::ELF::EM_PPC64:
+    expected_type = llvm::ELF::ET_DYN;
+    break;
+  default:
+    return UUID();
+  }
+
+  if (header.e_type != expected_type)
     return UUID();
 
   llvm::Expected<ModuleSP> memory_module_sp_or_err =
@@ -379,6 +472,9 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       }
     }
 
+    if (m_module_sp && !IsKernel())
+      set_debug_file(m_module_sp, GetPath());
+
     if (m_module_sp) {
       // If the file is not kernel or kmod, the target should be loaded once and
       // don't reload again
@@ -459,6 +555,7 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
         target.SetSectionLoadAddress(on_disk_section_sp,
                                      on_disk_section_sp->GetFileAddress() +
                                          fixed_slide);
+        ++num_load_sections;
 
       } else {
         const Section *memory_section =

@@ -85,25 +85,12 @@ template <typename T, typename U> constexpr T refract_impl(T I, T N, U Eta) {
 }
 
 template <typename T> constexpr T fmod_impl(T X, T Y) {
-#if !defined(__DIRECTX__)
-  return __builtin_elementwise_fmod(X, Y);
+#if defined(__DIRECTX__)
+  T Div = X / Y;
+  T Frc = frac(abs(Div));
+  return select(Div >= 0, Frc, (T)-Frc) * Y;
 #else
-  T div = X / Y;
-  bool ge = div >= 0;
-  T frc = frac(abs(div));
-  return select<T>(ge, frc, -frc) * Y;
-#endif
-}
-
-template <typename T, int N>
-constexpr vector<T, N> fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
-#if !defined(__DIRECTX__)
   return __builtin_elementwise_fmod(X, Y);
-#else
-  vector<T, N> div = X / Y;
-  vector<bool, N> ge = div >= 0;
-  vector<T, N> frc = frac(abs(div));
-  return select<T>(ge, frc, -frc) * Y;
 #endif
 }
 

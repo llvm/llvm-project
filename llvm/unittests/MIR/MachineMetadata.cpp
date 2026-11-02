@@ -80,7 +80,7 @@ protected:
     if (!Mod)
       return nullptr;
 
-    Mod->setDataLayout(TM.createDataLayout());
+    Mod->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
     if (MIR->parseMachineFunctions(*Mod, MMI)) {
       M.reset();
@@ -265,7 +265,7 @@ body:             |
   std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
-CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
+CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"domain"}
 CHECK-DAG: ![[MMSCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope0"}
 CHECK-DAG: ![[MMSCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope1"}
 CHECK-DAG: ![[MMSET0:[0-9]+]] = !{![[MMSCOPE0]]}
@@ -304,6 +304,7 @@ TEST_F(MachineMetadataTest, isMetaInstruction) {
 ...
 ---
 name:            test0
+tracksRegLiveness: false
 machineFunctionInfo
 body:             |
   bb.0:
@@ -475,7 +476,7 @@ body:             |
   std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
-CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
+CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"domain"}
 CHECK-DAG: ![[MMSCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope0"}
 CHECK-DAG: ![[MMSCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope1"}
 CHECK-DAG: ![[MMSET0:[0-9]+]] = !{![[MMSCOPE0]]}
@@ -579,7 +580,7 @@ body:             |
   std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
-CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
+CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"domain"}
 CHECK-DAG: ![[MMSCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope0"}
 CHECK-DAG: ![[MMSCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope1"}
 CHECK-DAG: ![[MMSET0:[0-9]+]] = !{![[MMSCOPE0]]}

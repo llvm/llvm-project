@@ -14,6 +14,7 @@ import lldb
     ios,
     tvos,
     watchos,
+    xros,
     bridgeos,
     darwin_all,
     darwin_embedded,
@@ -22,10 +23,15 @@ import lldb
     netbsd,
     bsd_all,
     android,
-) = range(15)
+) = range(16)
 
-__darwin_embedded = ["ios", "tvos", "watchos", "bridgeos"]
-__darwin_simulators = ["iphonesimulator", "watchsimulator", "appletvsimulator"]
+__darwin_embedded = ["ios", "tvos", "watchos", "xros", "bridgeos"]
+__darwin_simulators = [
+    "iphonesimulator",
+    "watchsimulator",
+    "appletvsimulator",
+    "xrsimulator",
+]
 
 __name_lookup = {
     windows: ["windows"],
@@ -35,6 +41,7 @@ __name_lookup = {
     ios: ["ios", "iphonesimulator"],
     tvos: ["tvos", "appletvsimulator"],
     watchos: ["watchos", "watchsimulator"],
+    xros: ["xros", "xrsimulator"],
     bridgeos: ["bridgeos"],
     darwin_all: ["macosx", "darwin"] + __darwin_embedded + __darwin_simulators,
     darwin_embedded: __darwin_embedded + __darwin_simulators,

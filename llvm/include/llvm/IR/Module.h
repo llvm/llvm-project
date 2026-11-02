@@ -1095,6 +1095,26 @@ public:
 
   /// Set the thread model.
   void setThreadModel(ThreadModel Model);
+
+  /// @name Utility function for querying the exception model
+  /// @{
+
+  /// Returns the exception model recorded by the "exception-model" module flag,
+  /// or the target's default exception model (from the target triple) when the
+  /// flag is absent. Never returns ExceptionHandling::Default.
+  ExceptionHandling getExceptionModel() const;
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting the debugger tuning
+  /// @{
+
+  /// Returns the debugger tuning recorded by the "debugger-tuning" module flag,
+  /// or Default is absent or an unrecognized kind.
+  DebuggerKind getDebuggerTuning() const;
+
+  /// Set the debugger tuning.
+  void setDebuggerTuning(DebuggerKind Tuning);
   /// @}
 
   /// @}

@@ -27,7 +27,7 @@ i1 %a190, i1 %a191, i1 %a192, i1 %a193, i1 %a194, i1 %a195, i1 %a196, i1 %a197, 
 i1 %a200
 ) {
   ; CHECK: @arg_overflow.dfsan
-  ; CHECK: [[A199:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 199), align 4
+  ; CHECK: [[A199:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 796), align 4
   ; CHECK: store i32 [[A199]], ptr @__dfsan_retval_origin_tls, align 4
 
   %r = add i1 %a199, %a200
@@ -36,7 +36,7 @@ i1 %a200
 
 define i1 @param_overflow(i1 %a) {
   ; CHECK: @param_overflow.dfsan
-  ; CHECK: store i32 %1, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 199), align 4
+  ; CHECK: store i32 %1, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 796), align 4
   ; CHECK-NEXT: store i8 %2, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 398), align 2
   ; CHECK-NEXT: store i8 %2, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 400), align 2
   ; CHECK-NEXT: %r = call i1 @arg_overflow.dfsan

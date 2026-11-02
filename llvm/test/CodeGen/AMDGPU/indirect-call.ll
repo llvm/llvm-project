@@ -1065,14 +1065,14 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, ptr %fptr) #0 {
 ; GISEL-NEXT:    v_mov_b32_e32 v40, v0
 ; GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s6, v1
-; GISEL-NEXT:    v_readfirstlane_b32 s7, v2
-; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[1:2]
-; GISEL-NEXT:    s_and_saveexec_b64 s[8:9], vcc
+; GISEL-NEXT:    v_readfirstlane_b32 s8, v1
+; GISEL-NEXT:    v_readfirstlane_b32 s9, v2
+; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[1:2]
+; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GISEL-NEXT:    v_mov_b32_e32 v0, v40
-; GISEL-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; GISEL-NEXT:    ; implicit-def: $vgpr1
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[8:9]
+; GISEL-NEXT:    s_xor_b64 exec, exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execnz .LBB7_1
 ; GISEL-NEXT:  ; %bb.2:
 ; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
@@ -1331,13 +1331,13 @@ define void @test_indirect_tail_call_vgpr_ptr(ptr %fptr) #0 {
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 15
 ; GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s6, v0
-; GISEL-NEXT:    v_readfirstlane_b32 s7, v1
-; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[0:1]
-; GISEL-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GISEL-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GISEL-NEXT:    v_readfirstlane_b32 s8, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s9, v1
+; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[0:1]
+; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
-; GISEL-NEXT:    s_xor_b64 exec, exec, s[8:9]
+; GISEL-NEXT:    s_xor_b64 exec, exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execnz .LBB9_1
 ; GISEL-NEXT:  ; %bb.2:
 ; GISEL-NEXT:    s_mov_b64 exec, s[4:5]

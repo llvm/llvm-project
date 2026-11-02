@@ -12,7 +12,7 @@ define void @pr34653() {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-512, %rsp # imm = 0xFE00
-; CHECK-NEXT:    subq $1024, %rsp # imm = 0x400
+; CHECK-NEXT:    subq $512, %rsp # imm = 0x200
 ; CHECK-NEXT:    movq %rsp, %rdi
 ; CHECK-NEXT:    callq test@PLT
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero

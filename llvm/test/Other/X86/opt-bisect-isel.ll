@@ -4,6 +4,7 @@
 ; if it is not run in -O0 mode.
 
 ; RUN: llc -O3 -opt-bisect-limit=0 -o - %s | FileCheck %s
+; RUN: llc -O3 -opt-bisect-limit=0 -enable-new-pm -o - %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

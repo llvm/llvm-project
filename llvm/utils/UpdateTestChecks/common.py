@@ -578,6 +578,7 @@ def invoke_tool(exe, cmd_args, ir, preprocess_cmd=None, verbose=False):
 
 ##### LLVM IR parser
 RUN_LINE_RE = re.compile(r"^\s*(?://|[;#])\s*RUN:\s*(.*)$")
+DEFINE_LINE_RE = re.compile(r"^\s*(?://|[;#])\s*(?:RE)?DEFINE:\s*(.*)$")
 CHECK_PREFIX_RE = re.compile(r"--?check-prefix(?:es)?[= ](\S+)")
 PREFIX_RE = re.compile("^[a-zA-Z0-9_-]+$")
 CHECK_RE = re.compile(
@@ -647,6 +648,8 @@ SEPARATOR = "."
 METADATA_NODES_RE = re.compile(r"^\s*!(\d+)\s*=\s*!\{(.*)\}", re.M)
 TBAA_TAGS_RE = re.compile(r"!tbaa\s*!([0-9]+)")
 
+MULTIPLE_BRACES_RE = re.compile(r"{{+|\[\[+")
+
 
 def error(msg, test_file=None):
     if test_file:
@@ -670,12 +673,32 @@ def debug(*args, **kwargs):
 
 def find_run_lines(test, lines):
     debug("Scanning for RUN lines in test file:", test)
-    raw_lines = [m.group(1) for m in [RUN_LINE_RE.match(l) for l in lines] if m]
-    run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
-    for l in raw_lines[1:]:
-        if run_lines[-1].endswith("\\"):
-            run_lines[-1] = run_lines[-1].rstrip("\\") + " " + l
+    # Collect run and (re)define lines.
+    directives = []
+    for l in lines:
+        m = RUN_LINE_RE.match(l) or DEFINE_LINE_RE.match(l)
+        if not m:
+            continue
+        is_define = m.re is DEFINE_LINE_RE
+        if (
+            directives
+            and directives[-1][0] == is_define
+            and directives[-1][1].endswith("\\")
+        ):
+            directives[-1][1] = directives[-1][1].rstrip("\\") + " " + m.group(1)
         else:
+            directives.append([is_define, m.group(1)])
+
+    # Substitute into run lines.
+    substitutions = collections.OrderedDict()
+    run_lines = []
+    for is_define, l in directives:
+        if is_define:
+            name, value = l.split("=", 1)
+            substitutions[name.strip()] = value.strip()
+        else:
+            for name, value in reversed(substitutions.items()):
+                l = l.replace(name, value)
             run_lines.append(l)
     debug("Found {} RUN lines in {}:".format(len(run_lines), test))
     for l in run_lines:
@@ -1004,6 +1027,14 @@ class FunctionTestBuilder:
         """
         Returns the number of functions processed from the output by the regex.
         """
+
+        def escape_braces(match_obj):
+            return "{{" + re.escape(match_obj.group(0)) + "}}"
+
+        # Escape multiple {{ or [[ as {{}} and [[]] have special meaning in
+        # FileCheck.
+        raw_tool_output = MULTIPLE_BRACES_RE.sub(escape_braces, raw_tool_output)
+
         build_global_values_dictionary(
             self._global_var_dict, raw_tool_output, prefixes, self._ginfo
         )
@@ -1921,11 +1952,6 @@ def generalize_check_lines(
     else:
         regexp = ginfo.get_regexp()
 
-    multiple_braces_re = re.compile(r"({{+)|(}}+)")
-
-    def escape_braces(match_obj):
-        return "{{" + re.escape(match_obj.group(0)) + "}}"
-
     if ginfo.is_ir():
         for i, line in enumerate(lines):
             for regex in _global_hex_value_regex:
@@ -2101,12 +2127,6 @@ def generalize_check_lines(
             line += line_template
 
             lines[i] = line
-
-    if ginfo.is_analyze():
-        for i, _ in enumerate(lines):
-            # Escape multiple {{ or }} as {{}} denotes a FileCheck regex.
-            scrubbed_line = multiple_braces_re.sub(escape_braces, lines[i])
-            lines[i] = scrubbed_line
 
     return lines
 

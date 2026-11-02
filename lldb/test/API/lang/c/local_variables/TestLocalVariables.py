@@ -23,28 +23,7 @@ class LocalVariablesTestCase(TestBase):
         """Test local variable value."""
         self.build()
 
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
-
-        # Break inside the main.
-        lldbutil.run_break_set_by_file_and_line(
-            self, self.source, self.line, num_expected_locations=1, loc_exact=True
-        )
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
-        )
-
-        # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
+        lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec(self.source), self.line)
 
         self.expect(
             "frame variable i",

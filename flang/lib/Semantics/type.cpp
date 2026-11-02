@@ -379,6 +379,9 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     if (!mutableTypeScope.derivedTypeSpec()) {
       mutableTypeScope.set_derivedTypeSpec(*this);
     }
+    // Size the type now so that any enclosing type instantiated before the
+    // whole-program offset pass measures this component correctly.
+    ComputeOffsets(containingScope.context(), mutableTypeScope);
     return;
   }
 

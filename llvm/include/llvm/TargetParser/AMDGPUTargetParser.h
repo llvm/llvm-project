@@ -209,12 +209,13 @@ LLVM_ABI unsigned getAddressableNumVGPRs(Triple::SubArchType SubArch,
 ///   min(getMaxHWAddressableLocalMemorySize(), getLocalMemorySize())
 ///
 /// The physical LDS block belongs to a WGP on gfx10/11/12 and to a CU
-/// otherwise. On gfx10/11/12, the block is twice the address limit, so a
-/// work-group cannot address the entire block in full-SIMD mode.
+/// otherwise. On gfx6 and gfx10/11/12, the block is twice the address limit, so
+/// a work-group cannot address the entire block in full-SIMD mode.
 ///
 /// The mode columns below show local/addressable LDS, in KiB:
 ///
 ///   GPU      address limit   full-SIMD   half-SIMD
+///   gfx600              32        64/32   n/a (always full-SIMD)
 ///   gfx900              64        64/64   n/a (always full-SIMD)
 ///   gfx1030             64       128/64   64/64
 ///   gfx1250            320      320/320   n/a (always full-SIMD)
@@ -239,6 +240,16 @@ LLVM_ABI unsigned getAddressableLocalMemorySize(Triple::SubArchType SubArch,
 /// \returns Number of LDS banks per compute unit.
 LLVM_ABI unsigned getLDSBankCount(GPUKind AK);
 LLVM_ABI unsigned getLDSBankCount(Triple::SubArchType SubArch);
+
+/// \returns Hardware LDS allocation granularity in bytes, used for occupancy.
+LLVM_ABI unsigned getLDSAllocGranule(GPUKind AK);
+LLVM_ABI unsigned getLDSAllocGranule(Triple::SubArchType SubArch);
+
+/// \returns LDS size encoding granularity in bytes, used for program resource
+/// registers and metadata. This can differ from the allocation granularity.
+/// Returns zero if the target has no LDS encoding granularity feature.
+LLVM_ABI unsigned getLDSEncodingGranule(GPUKind AK);
+LLVM_ABI unsigned getLDSEncodingGranule(Triple::SubArchType SubArch);
 
 /// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
 /// functional block in full-SIMD mode, half of them otherwise.

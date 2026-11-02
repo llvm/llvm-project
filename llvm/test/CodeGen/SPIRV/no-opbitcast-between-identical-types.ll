@@ -7,7 +7,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpFunction
-; CHECK-NO: OpBitcast
+; CHECK-NOT: OpBitcast
 ; CHECK: OpReturn
 
 define void @foo() {

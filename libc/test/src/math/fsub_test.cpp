@@ -10,4 +10,4 @@
 
 #include "src/math/fsub.h"
 
-LIST_SUB_TESTS(float, double, LIBC_NAMESPACE::fsub)
+LIST_SUB_TESTS(Fsub, float, double, LIBC_NAMESPACE::fsub)
