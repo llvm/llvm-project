@@ -2395,14 +2395,6 @@ def : GCNPat <
   let SubtargetPredicate = HasPackedFP64SingleSGPROps;
 }
 
-def : GCNPat <
-  (fcanonicalize (DivergentUnaryFrag<fneg> (v2f64 VReg_128:$src))),
-  (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
-                !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
-> {
-  let SubtargetPredicate = HasPackedFP64SingleSGPROps;
-}
-
 foreach fp16vt = [f16, bf16] in {
 let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <

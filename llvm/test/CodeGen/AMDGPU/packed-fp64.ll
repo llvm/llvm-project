@@ -2233,6 +2233,30 @@ define <2 x double> @fneg_v2f64(<2 x double> %x) {
   ret <2 x double> %neg
 }
 
+define <2 x double> @fneg_fabs_v2f64(<2 x double> %x) {
+; GFX1251-SDAG-LABEL: fneg_fabs_v2f64:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1251-SDAG-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX1251-SDAG-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; GFX1251-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1251-GISEL-LABEL: fneg_fabs_v2f64:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    v_or_b32_e32 v1, 0x80000000, v1
+; GFX1251-GISEL-NEXT:    v_or_b32_e32 v3, 0x80000000, v3
+; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+  %abs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %x)
+  %neg = fneg <2 x double> %abs
+  ret <2 x double> %neg
+}
+
 define <2 x double> @canonicalize_fneg_v2f64(<2 x double> %x) {
 ; GFX1251-SDAG-LABEL: canonicalize_fneg_v2f64:
 ; GFX1251-SDAG:       ; %bb.0:
