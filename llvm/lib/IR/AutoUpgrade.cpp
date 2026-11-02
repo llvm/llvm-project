@@ -1422,12 +1422,9 @@ shouldUpgradeNVPTXTcgen05AllocSharedIntrinsic(Function *F, StringRef Name) {
   if (F->arg_size() != 2)
     return Intrinsic::not_intrinsic;
 
-  if (!Name.consume_front("tcgen05.alloc.shared."))
-    return Intrinsic::not_intrinsic;
-
   return StringSwitch<Intrinsic::ID>(Name)
-      .Case("cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
-      .Case("cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
+      .Case("tcgen05.alloc.shared.cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
+      .Case("tcgen05.alloc.shared.cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
       .Default(Intrinsic::not_intrinsic);
 }
 
