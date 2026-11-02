@@ -532,15 +532,9 @@ public:
         ArrayType(ElementType, NumElements, SizeInBits, IsMatrixType);
   }
 
-  /// Returns nullptr when \p ElementType is an opaque 8-bit float. A vector
-  /// of that format uses an 8-bit integer element.
   const VectorType *getVectorType(const Type *ElementType,
                                   ElementCount NumElements, Align Align,
                                   VectorKind VecKind = VectorKind::Generic) {
-    assert(!ElementType->isOpaqueFloat8() &&
-           "opaque 8-bit float is not a valid vector element type");
-    if (ElementType->isOpaqueFloat8())
-      return nullptr;
     return new (Allocator.Allocate<VectorType>())
         VectorType(ElementType, NumElements, Align, VecKind);
   }

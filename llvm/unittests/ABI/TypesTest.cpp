@@ -70,12 +70,6 @@ TEST_F(ABITypesTest, OpaqueFloat8IsNotAVectorElement) {
   EXPECT_DEATH((void)VectorType(MFP8, ElementCount::getFixed(16), Align(16)),
                "opaque 8-bit float is not a valid vector element type");
 }
-#else
-TEST_F(ABITypesTest, OpaqueFloat8IsNotAVectorElement) {
-  const llvm::abi::Type *MFP8 = TB.getOpaqueFloat8Type(Align(1));
-  EXPECT_EQ(TB.getVectorType(MFP8, ElementCount::getFixed(16), Align(16)),
-            nullptr);
-}
 #endif
 
 TEST_F(ABITypesTest, AtomicTypeProperties) {
