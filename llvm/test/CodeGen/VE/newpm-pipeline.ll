@@ -78,6 +78,7 @@
 ; CHECK-NEXT:     fentry-insert
 ; CHECK-NEXT:     xray-instrumentation
 ; CHECK-NEXT:     patchable-function
+; CHECK-NEXT:     ve-lvl-gen
 ; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses
 ; CHECK-NEXT:     StackMapLivenessPass

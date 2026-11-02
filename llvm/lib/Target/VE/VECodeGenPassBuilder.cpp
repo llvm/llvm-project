@@ -48,7 +48,7 @@ Error VECodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
 
 void VECodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // LVLGen should be called after scheduling and register allocation
-  // TODO(boomanaiden154): Add VELVLGenPass
+  addMachineFunctionPass(VELVLGenPass(), PMW);
 }
 
 void VECodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {

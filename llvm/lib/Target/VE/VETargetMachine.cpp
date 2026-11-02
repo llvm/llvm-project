@@ -116,5 +116,5 @@ bool VEPassConfig::addInstSelector() {
 
 void VEPassConfig::addPreEmitPass() {
   // LVLGen should be called after scheduling and register allocation
-  addPass(createLVLGenPass());
+  addPass(createVELVLGenLegacyPass());
 }
