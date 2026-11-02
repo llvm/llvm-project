@@ -194,6 +194,26 @@ public:
       semantics::SemanticsContext *semaCtx = nullptr,
       llvm::DenseMap<const semantics::Symbol *, mlir::Value>
           *reductionVarCache = nullptr);
+
+private:
+  /// Resolve the omp.declare_reduction op that an OpenMP reduction clause binds
+  /// for one reduction variable, handling the user-defined operator, intrinsic
+  /// operator, named, and intrinsic-shadowing forms (materializing an imported
+  /// declaration on demand).
+  ///
+  /// Returns true when the declaration has already been appended to
+  /// \p reductionDeclSymbols and the caller should move on to the next
+  /// variable, and false when the caller should create the declaration itself
+  /// from the \p reductionName and \p redId set here.
+  template <typename OpType>
+  static bool processOpenMPReductionOperator(
+      mlir::Location currentLocation, lower::AbstractConverter &converter,
+      const omp::clause::ReductionOperatorList &redOperatorList,
+      llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+      const semantics::Symbol &reductionSymbol,
+      semantics::SemanticsContext *semaCtx, fir::ReferenceType redType,
+      bool isByRef, const fir::KindMapping &kindMap, std::string &reductionName,
+      ReductionIdentifier &redId);
 };
 
 template <typename FloatOp, typename IntegerOp>

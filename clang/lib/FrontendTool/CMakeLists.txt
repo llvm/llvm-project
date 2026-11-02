@@ -21,17 +21,14 @@ set(deps)
 
 if(CLANG_ENABLE_CIR)
   list(APPEND deps
-    MLIRBuiltinOpsIncGen
-  )
+    MLIRCIRPassIncGen
+    mlir-headers
+    )
   list(APPEND link_libs
     clangCIRFrontendAction
     MLIRCIRTransforms
     MLIRIR
     MLIRPass
-    )
-  list(APPEND deps
-    MLIRBuiltinLocationAttributesIncGen
-    MLIRBuiltinTypeInterfacesIncGen
     )
 
   include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
