@@ -112,8 +112,10 @@ public:
 };
 
 /// Represents an open file.
-class LLVM_ABI File {
+class LLVM_ABI File : public RTTIExtends<File, RTTIRoot> {
 public:
+  static const char ID;
+
   /// Destroy the file after closing it (if open).
   /// Sub-classes should generally call close() inside their destructors.  We
   /// cannot do that from the base class, since close is virtual.
@@ -142,9 +144,24 @@ public:
   static ErrorOr<std::unique_ptr<File>>
   getWithPath(ErrorOr<std::unique_ptr<File>> Result, const Twine &P);
 
+  /// Get a file that forwards to \p F but whose \c status() returns \p S.
+  ///
+  /// This is used by file systems that remap paths, such as
+  /// \c RedirectingFileSystem. File types with an extended interface, such as
+  /// \c cas::CASBackedFile, keep it by overriding \c createWithFixedStatus().
+  static std::unique_ptr<File> getWithFixedStatus(std::unique_ptr<File> F,
+                                                  Status S);
+
 protected:
   // Set the file's underlying path.
   virtual void setPath(const Twine &Path) {}
+
+private:
+  /// Implementation of \c getWithFixedStatus(), which is its only caller and
+  /// always passes the owner of this file as \p Self. The default returns a
+  /// wrapper that forwards the \c File interface and overrides \c status().
+  virtual std::unique_ptr<File>
+  createWithFixedStatus(std::unique_ptr<File> Self, Status S);
 };
 
 /// A member of a directory, yielded by a directory_iterator.
