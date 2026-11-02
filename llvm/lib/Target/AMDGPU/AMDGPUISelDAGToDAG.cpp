@@ -2476,7 +2476,7 @@ bool AMDGPUDAGToDAGISel::isSOffsetLegalWithImmOffset(SDValue *SOffset,
 // the load byte size. If it is update \p Offset to a pre-scaled value and
 // return true.
 bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N, SDValue &Offset,
-                                           bool IsSigned) const {
+                                           bool IsSigned, bool IsSMEM) const {
   bool ScaleOffset = false;
   if (!Subtarget->hasScaleOffset() || !Offset)
     return false;
@@ -2502,10 +2502,30 @@ bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N, SDValue &Offset,
       ScaleOffset = C->getZExtValue() == Size;
   }
 
-  if (ScaleOffset)
-    Offset = Off.getOperand(0);
+  if (!ScaleOffset)
+    return false;
 
-  return ScaleOffset;
+  // SMEM scales the offset in 32 bits, other instructions in 64 bits.
+  unsigned Bits = Log2_32_Ceil(Size);
+  if (IsSMEM) {
+    if (Off.getValueType() == MVT::i64) {
+      KnownBits Known = CurDAG->computeKnownBits(Off.getOperand(0));
+      if (Known.countMaxActiveBits() + Bits > 32)
+        return false;
+    }
+  } else if (Off != Offset) {
+    SDNodeFlags Flags = Off->getFlags();
+    SDValue Idx = Off.getOperand(0);
+    if (IsSigned && !Flags.hasNoSignedWrap() &&
+        CurDAG->ComputeNumSignBits(Idx) <= Bits)
+      return false;
+    if (!IsSigned && !Flags.hasNoUnsignedWrap() &&
+        CurDAG->computeKnownBits(Idx).countMinLeadingZeros() < Bits)
+      return false;
+  }
+
+  Offset = Off.getOperand(0);
+  return true;
 }
 
 // Match an immediate (if Offset is not null) or an SGPR (if SOffset is
@@ -2522,7 +2542,8 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode,
   if (ScaleOffset) {
     assert(N && SOffset);
 
-    *ScaleOffset = SelectScaleOffset(N, ByteOffsetNode, false /* IsSigned */);
+    *ScaleOffset = SelectScaleOffset(N, ByteOffsetNode, false /* IsSigned */,
+                                     true /* IsSMEM */);
   }
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(ByteOffsetNode);
