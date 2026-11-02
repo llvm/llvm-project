@@ -592,16 +592,33 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
   }
 
   if (F->isVarArg()) {
-    // The 5th argument to variadic entry thunks is used to model the x64 sp
+    // The last argument to variadic entry thunks is used to model the x64 sp
     // which is passed to the thunk in x4, this can be passed to the callee as
     // the variadic argument start address after skipping over the 32 byte
     // shadow store.
 
     // The EC thunk CC will assign any argument marked as InReg to x4.
-    Thunk->addParamAttr(5, Attribute::InReg);
-    Value *Arg = Thunk->getArg(5);
-    Arg = IRB.CreatePtrAddWithUnsignedOffset(Arg, 0x20);
-    Args.push_back(Arg);
+    Thunk->addParamAttr(Thunk->arg_size() - 1, Attribute::InReg);
+    Value *StackArgs = Thunk->getArg(Thunk->arg_size() - 1);
+
+    // The first stack argument is at X4+0x20. For a non-sret function this is
+    // the 5th argument. But when a function returns a 16-byte structure, in
+    // the x86-64 calling convention it is returned in memory with a hidden
+    // pointer, but in the ARM64EC calling convention it is returned in {X0,X1}
+    // so it does not have a hidden pointer. In this case the x86-64 function
+    // has one more argument, and up to at most three arguments can be passed
+    // in register. Therefore, X4 now points to the 4th argument, but it will
+    // be passed in an integer register to ARM64EC, so load it in there, and
+    // add 8 to X4 so it points to the 5th argument.
+    uint64_t StackOffset = 0x20;
+    if (TransformDirectToSRet) {
+      Args.push_back(IRB.CreateAlignedLoad(
+          IRB.getInt64Ty(),
+          IRB.CreatePtrAddWithUnsignedOffset(StackArgs, StackOffset),
+          Align(8)));
+      StackOffset += 8;
+    }
+    Args.push_back(IRB.CreatePtrAddWithUnsignedOffset(StackArgs, StackOffset));
 
     // Pass in a zero variadic argument size (in x5).
     Args.push_back(IRB.getInt64(0));
