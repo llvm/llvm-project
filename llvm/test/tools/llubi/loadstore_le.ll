@@ -108,13 +108,15 @@ define void @main() {
   %load_int_non_zero_padding = load i33, ptr %alloc_padding_vec
   %load_vec_non_zero_padding = load <3 x i11>, ptr %alloc_padding_vec
 
-  ; A vector with all bits poison poisons padding bits; a mixed vector zeroes
-  ; them.
+  ; Padding bits are poison only if all non-padding bits in the padding byte
+  ; are poison.
   %alloc_vec_padding = alloca i16
   store <3 x b4> poison, ptr %alloc_vec_padding
   %all_poison_vec_bytes = load b16, ptr %alloc_vec_padding
   store <3 x b4> <b4 1, b4 poison, b4 poison>, ptr %alloc_vec_padding
   %mixed_poison_vec_bytes = load b16, ptr %alloc_vec_padding
+  store <3 x b4> <b4 poison, b4 poison, b4 1>, ptr %alloc_vec_padding
+  %mixed_poison_vec_bytes2 = load b16, ptr %alloc_vec_padding
 
   ; Non-byte-sized vector elements follow integer lane poison semantics.
   %alloc_i7_vec = alloca i16
@@ -292,7 +294,9 @@ define void @main() {
 ; CHECK-NEXT:   store <3 x b4> poison, ptr %alloc_vec_padding, align 2
 ; CHECK-NEXT:   %all_poison_vec_bytes = load b16, ptr %alloc_vec_padding, align 2 => b16 0x!! 0x!! 
 ; CHECK-NEXT:   store <3 x b4> <b4 1, b4 poison, b4 poison>, ptr %alloc_vec_padding, align 2
-; CHECK-NEXT:   %mixed_poison_vec_bytes = load b16, ptr %alloc_vec_padding, align 2 => b16 !!!!0001 0000!!!! 
+; CHECK-NEXT:   %mixed_poison_vec_bytes = load b16, ptr %alloc_vec_padding, align 2 => b16 !!!!0001 0x!! 
+; CHECK-NEXT:   store <3 x b4> <b4 poison, b4 poison, b4 1>, ptr %alloc_vec_padding, align 2
+; CHECK-NEXT:   %mixed_poison_vec_bytes2 = load b16, ptr %alloc_vec_padding, align 2 => b16 0x!! 0x01 
 ; CHECK-NEXT:   %alloc_i7_vec = alloca i16, align 2 => ptr 0xAE [alloc_i7_vec]
 ; CHECK-NEXT:   store i16 -1, ptr %alloc_i7_vec, align 2
 ; CHECK-NEXT:   %load_i7_vec_padding = load <2 x i7>, ptr %alloc_i7_vec, align 2 => { i7 -1, poison }

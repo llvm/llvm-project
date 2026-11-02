@@ -87,7 +87,7 @@ entry:
 ; CHECK-NEXT:   %bitinsert_b12_poison = bitinsert b12 0, i12 poison, i32 0 => b12 !!!! 0x!! 
 ; CHECK-NEXT:   %alloca16 = alloca i16, align 2 => ptr 0xE [alloca16]
 ; CHECK-NEXT:   store b12 %bitinsert_b12_mixed, ptr %alloca16, align 2
-; CHECK-NEXT:   %bitinsert_b12_mixed_bytes = load b16, ptr %alloca16, align 2 => b16 0000!!!! !!!!0101 
+; CHECK-NEXT:   %bitinsert_b12_mixed_bytes = load b16, ptr %alloca16, align 2 => b16 0x!! !!!!0101 
 ; CHECK-NEXT:   store b12 %bitinsert_b12_poison, ptr %alloca16, align 2
 ; CHECK-NEXT:   %bitinsert_b12_poison_bytes = load b16, ptr %alloca16, align 2 => b16 0x!! 0x!! 
 ; CHECK-NEXT:   ret void

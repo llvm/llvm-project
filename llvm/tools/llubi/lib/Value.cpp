@@ -326,8 +326,7 @@ AnyValue AnyValue::getVectorSplat(const AnyValue &Scalar, size_t NumElements) {
 }
 
 ByteValue::ByteValue(const APInt &V, bool IsLittleEndian)
-    : BitWidth(V.getBitWidth()), IsLittleEndian(IsLittleEndian),
-      IsAllBitsPoison(false) {
+    : BitWidth(V.getBitWidth()), IsLittleEndian(IsLittleEndian) {
   Val.resize(divideCeil(BitWidth, 8));
   MutableBytesView View(Val, IsLittleEndian);
   for (uint32_t I = 0; I < BitWidth; I += 8)

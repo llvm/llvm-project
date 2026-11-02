@@ -546,7 +546,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     if (DL.isBigEndian())
       std::reverse(LogicalBytes.begin(), LogicalBytes.end());
     return ByteValue(NumBits, std::move(LogicalBytes), DL.isLittleEndian(),
-                     ByteValue::PaddingBitsMode::Unspecified);
+                     ByteValue::PaddingBitsMode::PaddingFromValue);
   }
 
   APInt Bits(NumBitsToExtract, RawBits);
@@ -586,7 +586,7 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
   if (Ty->isByteTy()) {
     unsigned BitWidth = Ty->getByteBitWidth();
     ByteValue Res(BitWidth, Bytes, DL.isLittleEndian(),
-                  ByteValue::PaddingBitsMode::Memory);
+                  ByteValue::PaddingBitsMode::ValueFromPadding);
     bool HasUndefinedBits = false;
     for (Byte &V : Res.mutableBytes()) {
       if (V.ConcreteMask != 255)
@@ -777,17 +777,7 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
     auto &ByteVal = Val.asByte();
     ArrayRef<Byte> SrcBytes = ByteVal.bytes();
     assert(Bytes.size() == SrcBytes.size() && "Mismatched byte array.");
-    if (ByteVal.isAllBitsPoison()) {
-      fill(Bytes, Byte::poison());
-      return;
-    }
     copy(SrcBytes, Bytes.begin());
-    unsigned BitWidth = Ty->getByteBitWidth();
-    if (BitWidth & 7) {
-      uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
-      Byte &MSB = DL.isLittleEndian() ? Bytes.back() : Bytes.front();
-      MSB.zeroBits(Mask);
-    }
     return;
   }
 
@@ -795,22 +785,9 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
     Type *ElemTy = VecTy->getElementType();
     uint32_t ElemBits = DL.getTypeSizeInBits(ElemTy).getFixedValue();
     uint32_t NumElements = getEVL(VecTy->getElementCount());
-    if (Val.isPoison() || all_of(Val.asAggregate(), [](const AnyValue &Elem) {
-          return Elem.isPoison() ||
-                 (Elem.isByte() && Elem.asByte().isAllBitsPoison());
-        })) {
-      fill(Bytes, Byte::poison());
-      return;
-    }
-    // Zero padding bits. <N x iM> acts as if an integer type with N * M bits.
     uint32_t VecBits = ElemBits * NumElements;
     uint32_t AlignedVecBits = alignTo(VecBits, 8);
     MutableBytesView View(Bytes, DL);
-    if (VecBits != AlignedVecBits) {
-      Byte &PaddingByte = View[Bytes.size() - 1];
-      uint32_t Mask = (~0U << (VecBits % 8)) & 255U;
-      PaddingByte.zeroBits(Mask);
-    }
     // For little endian element zero is put in the least significant bits of
     // the integer, and for big endian element zero is put in the most
     // significant bits.
@@ -820,6 +797,16 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
     } else {
       for (const auto &[I, Val] : enumerate(reverse(Val.asAggregate())))
         toBytes(Val, ElemTy, ElemBits * I, View, /*PaddingBits=*/false);
+    }
+    // The padding bits are poison only if all non-padding bits in the padding
+    // byte are poison; otherwise, they are zero.
+    if (VecBits != AlignedVecBits) {
+      Byte &PaddingByte = View[Bytes.size() - 1];
+      uint8_t Mask = static_cast<uint8_t>((~0U) << (VecBits & 7));
+      if ((PaddingByte.ConcreteMask & ~Mask) == 0)
+        PaddingByte.poisonBits(Mask);
+      else
+        PaddingByte.zeroBits(Mask);
     }
     return;
   }
@@ -876,7 +863,7 @@ void Context::insertBits(ByteValue &Base, uint32_t OffsetInBits,
          "Bit range out of bounds");
   toBytes(Val, Ty, OffsetInBits, MutableBytesView(Base.mutableBytes(), DL),
           /*PaddingBits=*/false);
-  Base.canonicalize(ByteValue::PaddingBitsMode::Unspecified);
+  Base.canonicalize(ByteValue::PaddingBitsMode::PaddingFromValue);
 }
 
 AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
@@ -936,13 +923,8 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
       if (mayUseNonDeterminism())
         V.Value |= (Rng() & 255) & ~OldMask;
     }
-    unsigned NumBits = Val.asByte().getBitWidth();
-    if (NumBits & 7) {
-      auto &MSB = DL.isLittleEndian() ? Bytes.back() : Bytes.front();
-      uint8_t Mask = static_cast<uint8_t>((~0U) << (NumBits & 7));
-      MSB.zeroBits(Mask);
-    }
-    Val.asMutableByte().canonicalize(ByteValue::PaddingBitsMode::Unspecified);
+    Val.asMutableByte().canonicalize(
+        ByteValue::PaddingBitsMode::PaddingFromValue);
     return;
   }
   if (Val.isAggregate()) {

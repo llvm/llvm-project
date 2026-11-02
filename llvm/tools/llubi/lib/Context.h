@@ -423,8 +423,8 @@ public:
   /// value bits.
   AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
                      bool *ContainsUndefinedBits = nullptr);
-  /// Convert a value to byte sequence. If every bit of the value is poison,
-  /// the padding bits are poison as well; otherwise, they are zero.
+  /// Convert a value to byte sequence. If every non-padding bit in the padding
+  /// byte is poison, the padding bits are poison; otherwise, they are zero.
   void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
   /// Read the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Src as a
   /// value of type \p Ty. The bit range must be within \p Src.
