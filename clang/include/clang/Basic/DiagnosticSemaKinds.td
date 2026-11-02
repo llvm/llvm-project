@@ -11110,6 +11110,10 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
+def note_lifetime_safety_used_by_destructor
+    : Note<"later used by the destructor of %0 at scope exit">;
+def note_lifetime_safety_used_by_cleanup
+    : Note<"later used by the cleanup function of %0 at scope exit">;
 def note_lifetime_safety_invalidated_here : Note<"%0 is invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"%0 is destroyed here">;
 def note_lifetime_safety_freed_here : Note<"%0 is freed here">;
@@ -11172,6 +11176,14 @@ def warn_lifetime_safety_noescape_escapes
 def warn_lifetime_safety_field_origin_escape
     : Warning<"return value depends on the object referenced by %0, not on '*this'">,
       InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_scope
+    : Warning<"%0 does not live long enough">,
+      InGroup<LifetimeSafetyDestructorUse>,
+      DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_invalidation
+    : Warning<"%0 is later invalidated">,
+      InGroup<LifetimeSafetyDestructorUse>,
       DefaultIgnore;
 
 def note_lifetime_safety_owned_field_suggestion

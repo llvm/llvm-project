@@ -27,6 +27,7 @@
 
 ---
 name:            tbuffer_store1
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: tbuffer_store1
@@ -39,6 +40,7 @@ body:             |
 
 ---
 name:            tbuffer_store2
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: tbuffer_store2
@@ -51,6 +53,7 @@ body:             |
 
 ---
 name:            flat_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: flat_store
@@ -63,6 +66,7 @@ body:             |
 
 ---
 name:            global_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: global_store
@@ -76,6 +80,7 @@ body:             |
 
 ---
 name:            buffer_store_format
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: buffer_store_format
@@ -88,6 +93,7 @@ body:             |
 
 ---
 name:            ds_write_b32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: ds_write_b32
@@ -102,6 +108,7 @@ body:             |
 ...
 ---
 name:            global_store_dword
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -117,6 +124,7 @@ body:             |
 
 ---
 name:            multiple_basic_blocks1
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: multiple_basic_blocks1
   ; CHECK-NOT: S_SENDMSG 3
@@ -143,6 +151,7 @@ body:             |
 
 ---
 name:            multiple_basic_blocks2
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: multiple_basic_blocks2
   ; CHECK: bb.2:
@@ -169,6 +178,7 @@ body:             |
 
 ---
 name:            multiple_basic_blocks3
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: multiple_basic_blocks3
   ; CHECK: bb.4:
@@ -205,6 +215,7 @@ body:             |
 
 ---
 name:            recursive_loop
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: recursive_loop
   ; CHECK-NOT: S_SENDMSG 3
@@ -229,6 +240,7 @@ body:             |
 
 ---
 name:            recursive_loop_vmem
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: recursive_loop_vmem
   ; CHECK-NOT: S_SENDMSG 3
@@ -254,6 +266,7 @@ body:             |
 
 ---
 name:            image_store
+tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: image_store
@@ -266,6 +279,7 @@ body:             |
 
 ---
 name:            scratch_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: scratch_store
@@ -279,6 +293,7 @@ body:             |
 
 ---
 name:            buffer_atomic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: buffer_atomic
@@ -291,6 +306,7 @@ body:             |
 
 ---
 name:            flat_atomic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: flat_atomic
@@ -304,6 +320,7 @@ body:             |
 
 ---
 name:            global_atomic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: global_atomic
@@ -316,6 +333,7 @@ body:             |
 
 ---
 name:            image_atomic
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: image_atomic
@@ -328,6 +346,7 @@ body:             |
 
 ---
 name:            global_store_optnone
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: global_store_optnone

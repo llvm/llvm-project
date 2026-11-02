@@ -3600,6 +3600,8 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
 
   if (Ptr.isRoot() || !Ptr.isUnknownSizeArray() || !S.inConstantContext()) {
     if (Ptr.isBlockPointer()) {
+      if (!Ptr.isArrayRoot())
+        return false;
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
       return true;
     }
