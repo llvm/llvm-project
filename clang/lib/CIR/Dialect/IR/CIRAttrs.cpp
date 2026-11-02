@@ -311,7 +311,7 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult LoopHintAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, mlir::UnitAttr mustProgress,
-    mlir::UnitAttr vectorizeEnable, uint32_t vectorizeWidth,
+    mlir::BoolAttr vectorizeEnable, uint32_t vectorizeWidth,
     mlir::BoolAttr vectorizeScalable, mlir::BoolAttr vectorizePredicate,
     uint32_t interleaveCount, std::optional<cir::LoopUnrollMode> unroll,
     uint32_t unrollCount, std::optional<cir::LoopUnrollMode> unrollAndJam,

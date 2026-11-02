@@ -1097,7 +1097,7 @@ static cir::LoopHintAttr getHintsAfterJam(cir::LoopHintAttr hints,
   mlir::MLIRContext *ctx = hints.getContext();
   return cir::LoopHintAttr::get(
       ctx, /*must_progress=*/mlir::UnitAttr(),
-      /*vectorize_enable=*/mlir::UnitAttr(), /*vectorize_width=*/0,
+      /*vectorize_enable=*/mlir::BoolAttr(), /*vectorize_width=*/0,
       /*vectorize_scalable=*/mlir::BoolAttr(), hints.getVectorizePredicate(),
       /*interleave_count=*/0, unroll, hints.getUnrollCount(),
       /*unroll_and_jam=*/std::nullopt, /*unroll_and_jam_count=*/0,

@@ -567,11 +567,11 @@ void inner_jam_vectorized(int n) {
 #pragma clang loop vectorize(enable) unroll_count(4) pipeline_initiation_interval(3)
     for (int j = 0; j < n; ++j)
       use(j);
-  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable>
+  // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable = true>
   // BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 vectorized>>
-  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable>
+  // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable = true>
   // BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll = disable unroll_and_jam_count = 2 code_align = 32 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 vectorized>>
-  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable>
+  // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < vectorize_enable = true>
   // AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress unroll_and_jam_count = 2 unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4 pipeline_initiation_interval = 3 vectorized>>
 }
 
