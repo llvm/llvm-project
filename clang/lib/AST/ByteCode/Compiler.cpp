@@ -7759,6 +7759,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       return false;
 
     for (const auto *Init : Ctor->inits()) {
+      LocalScope<Emitter> VirtLocalScope(this);
       if (const Type *Base = Init->getBaseClass();
           Base && Init->isBaseVirtual()) {
         const auto *BaseDecl = Base->getAsCXXRecordDecl();
