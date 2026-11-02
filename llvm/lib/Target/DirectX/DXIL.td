@@ -325,6 +325,7 @@ defvar WaveBitOpKind_Or = 1;
 defvar WaveBitOpKind_Xor = 2;
 
 defvar WaveMultiPrefixOpKind_And = 1;
+defvar WaveMultiPrefixOpKind_Xor = 3;
 
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
@@ -1569,6 +1570,13 @@ def WaveMultiPrefixOp : DXILOp<166, waveMultiPrefixOp> {
                    IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
                    IntrinArgIndex<3>, IntrinArgIndex<4>,
                    IntrinArgI8<WaveMultiPrefixOpKind_And>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_bit_xor,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Xor>,
                    IntrinArgI8<SignedOpKind_Signed>
                  ]>
   ];

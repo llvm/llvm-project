@@ -322,8 +322,9 @@ private:
   bool selectWaveExclusiveScanProduct(Register ResVReg, SPIRVTypeInst ResType,
                                       MachineInstr &I) const;
 
-  bool selectWaveMultiPrefixBitAnd(Register ResVReg, SPIRVTypeInst ResType,
-                                   MachineInstr &I) const;
+  bool selectWaveMultiPrefixOp(Register ResVReg, SPIRVTypeInst ResType,
+                               MachineInstr &I, unsigned Opcode,
+                               StringRef BuiltinName) const;
 
   bool selectQuadSwap(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                       unsigned Direction) const;
@@ -4040,15 +4041,17 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
   return true;
 }
 
-bool SPIRVInstructionSelector::selectWaveMultiPrefixBitAnd(
-    Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectWaveMultiPrefixOp(
+    Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I, unsigned Opcode,
+    StringRef BuiltinName) const {
   if (!STI.canUseExtension(
           SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned) &&
       !STI.canUseExtension(
           SPIRV::Extension::SPV_NV_shader_subgroup_partitioned))
     return diagnoseUnsupported(
-        I, "WaveMultiPrefixBitAnd requires SPV_EXT_shader_subgroup_partitioned "
-           "or SPV_NV_shader_subgroup_partitioned");
+        I, Twine(BuiltinName) +
+               " requires SPV_EXT_shader_subgroup_partitioned or "
+               "SPV_NV_shader_subgroup_partitioned");
 
   assert(I.getNumOperands() == 7);
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
@@ -4063,8 +4066,7 @@ bool SPIRVInstructionSelector::selectWaveMultiPrefixBitAnd(
     MaskMIB.addUse(I.getOperand(Op).getReg());
   MaskMIB.constrainAllUses(TII, TRI, RBI);
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(),
-          TII.get(SPIRV::OpGroupNonUniformBitwiseAnd))
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
@@ -5855,7 +5857,13 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_prefix_sum:
     return selectWaveExclusiveScanSum(ResVReg, ResType, I);
   case Intrinsic::spv_subgroup_multi_prefix_bit_and:
-    return selectWaveMultiPrefixBitAnd(ResVReg, ResType, I);
+    return selectWaveMultiPrefixOp(ResVReg, ResType, I,
+                                   SPIRV::OpGroupNonUniformBitwiseAnd,
+                                   "WaveMultiPrefixBitAnd");
+  case Intrinsic::spv_subgroup_multi_prefix_bit_xor:
+    return selectWaveMultiPrefixOp(ResVReg, ResType, I,
+                                   SPIRV::OpGroupNonUniformBitwiseXor,
+                                   "WaveMultiPrefixBitXor");
   case Intrinsic::spv_wave_prefix_product:
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_quad_read_across_x: {
