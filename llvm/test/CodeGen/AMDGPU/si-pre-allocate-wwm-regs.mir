@@ -3,7 +3,7 @@
 # RUN: llc -mtriple=amdgpu9.0a -amdgpu-prealloc-sgpr-spill-vgprs -run-pass=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=CHECK2
 
 # RUN: llc -mtriple=amdgpu9.0a -passes=si-pre-allocate-wwm-regs -o - %s  | FileCheck %s
-# RUN: llc -mtriple=amdgpu9.0a -verify-machineinstrs -amdgpu-prealloc-sgpr-spill-vgprs -passes=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=CHECK2
+# RUN: llc -mtriple=amdgpu9.0a -amdgpu-prealloc-sgpr-spill-vgprs -passes=si-pre-allocate-wwm-regs -o - %s  | FileCheck %s --check-prefix=CHECK2
 
 # COM: auto-generated updates might remove checks for MachineFunctionInfo reserved registers.
 

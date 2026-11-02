@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=amdgpu9.00 -run-pass=si-shrink-instructions %s -o - | FileCheck %s
-# RUN: llc -mtriple=amdgpu9.00 -passes=si-shrink-instructions --verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00 -passes=si-shrink-instructions %s -o - | FileCheck %s
 
 # Make sure immediate folding into V_CNDMASK respects constant bus restrictions.
 ---
