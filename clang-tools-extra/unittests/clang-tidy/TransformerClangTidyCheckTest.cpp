@@ -335,7 +335,6 @@ TEST(TransformerClangTidyCheckTest, AddIncludeObeysSortStyleLocalOption) {
 int h(int x) { return 3; })cc";
 
   std::string TreatsAsLibraryHeader = R"cc(#include "input.h"
-
 #include "bar.h"
 int h(int x) { return 5; })cc";
 
@@ -367,7 +366,6 @@ TEST(TransformerClangTidyCheckTest, AddIncludeObeysSortStyleGlobalOption) {
 int h(int x) { return 3; })cc";
 
   std::string TreatsAsLibraryHeader = R"cc(#include "input.h"
-
 #include "bar.h"
 int h(int x) { return 5; })cc";
 

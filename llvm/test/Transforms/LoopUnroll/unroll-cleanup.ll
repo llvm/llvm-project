@@ -21,7 +21,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-LABEL: define void @_Z3fn1v(
-; CHECK-SAME: ptr writeonly captures(none) [[R:%.*]], ptr readonly captures(none) [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree writeonly captures(none) [[R:%.*]], ptr nofree readonly captures(none) [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    [[TOBOOL20:%.*]] = icmp eq i32 [[T]], 0
@@ -31,13 +31,13 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A_021:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[T2:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[T1_PRE:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    br label %[[FOR_COND_LOOPEXIT:.*]]
 ; CHECK:       [[FOR_COND_LOOPEXIT]]:
 ; CHECK-NEXT:    [[T1:%.*]] = phi i32 [ [[T12:%.*]], %[[FOR_BODY]] ], [ [[T1_PRE]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[R_1_LCSSA:%.*]] = phi ptr [ [[R_022:%.*]], %[[FOR_BODY]] ], [ [[ADD_PTR_LCSSA]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
-; CHECK-NEXT:    [[A_1_LCSSA:%.*]] = phi ptr [ [[A_021:%.*]], %[[FOR_BODY]] ], [ [[SCEVGEP1]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[A_1_LCSSA:%.*]] = phi ptr [ [[A_021]], %[[FOR_BODY]] ], [ [[SCEVGEP1]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[T1]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[FOR_END6]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_BODY]]:

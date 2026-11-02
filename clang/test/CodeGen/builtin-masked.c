@@ -72,7 +72,7 @@ v8i test_load_passthru(v8b m, int *p, v8i t) {
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[T_ADDR]], align 32
-// CHECK-NEXT:    [[MASKED_EXPAND_LOAD:%.*]] = call <8 x i32> @llvm.masked.expandload.v8i32(ptr [[TMP3]], <8 x i1> [[TMP2]], <8 x i32> [[TMP4]])
+// CHECK-NEXT:    [[MASKED_EXPAND_LOAD:%.*]] = call <8 x i32> @llvm.masked.expandload.v8i32.p0(ptr [[TMP3]], <8 x i1> [[TMP2]], <8 x i32> [[TMP4]])
 // CHECK-NEXT:    ret <8 x i32> [[MASKED_EXPAND_LOAD]]
 //
 v8i test_load_expand(v8b m, int *p, v8i t) {
@@ -150,7 +150,7 @@ void gtest_store(v8b m, gv8i v, int *p) {
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[V_ADDR]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.masked.compressstore.v8i32(<8 x i32> [[TMP3]], ptr [[TMP4]], <8 x i1> [[TMP2]])
+// CHECK-NEXT:    call void @llvm.masked.compressstore.v8i32.p0(<8 x i32> [[TMP3]], ptr [[TMP4]], <8 x i1> [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_compress_store(v8b m, v8i v, int *p) {
@@ -176,7 +176,7 @@ void test_compress_store(v8b m, v8i v, int *p) {
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[V_ADDR]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.masked.compressstore.v8i32(<8 x i32> [[TMP3]], ptr [[TMP4]], <8 x i1> [[TMP2]])
+// CHECK-NEXT:    call void @llvm.masked.compressstore.v8i32.p0(<8 x i32> [[TMP3]], ptr [[TMP4]], <8 x i1> [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void gtest_compress_store(v8b m, gv8i v, int *p) {

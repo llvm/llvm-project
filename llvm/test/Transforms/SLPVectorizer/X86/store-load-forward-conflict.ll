@@ -32,7 +32,7 @@ define void @stlf_conflict_backward_misaligned(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -103,7 +103,7 @@ define void @stlf_no_conflict_backward_aligned(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -168,7 +168,7 @@ define void @stlf_no_conflict_forward(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[FWD_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[FWD_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[FWD_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -227,7 +227,7 @@ define void @stlf_no_conflict_no_loop(ptr noalias %A) {
 ; CHECK-SAME: ptr noalias [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 -5
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[TMP2]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[A]], align 4
@@ -271,7 +271,7 @@ define void @stlf_no_conflict_different_base(ptr noalias %A, ptr noalias %B,
 ; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[B_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[B_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -338,7 +338,7 @@ define void @stlf_volatile_load_skipped(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load volatile i32, ptr [[BACK_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -410,7 +410,7 @@ define void @stlf_multiple_conflicting_loads(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[T7:%.*]] = load i32, ptr [[BACK7_GEP]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[T5]], [[T7]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[SUM]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[SUM]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -483,7 +483,7 @@ define void @stlf_pointer_diff_unknown(ptr noalias %A, ptr noalias %IdxA, i64 %n
 ; CHECK-NEXT:    [[DYN_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[DYN_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[DYN_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -552,7 +552,7 @@ define void @stlf_no_conflict_within_prev_store(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -624,7 +624,7 @@ define void @stlf_large_loop_bypassed(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -693,7 +693,7 @@ define void @stlf_no_conflict_iter_safety_boundary(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
@@ -762,7 +762,7 @@ define void @stlf_conflict_backward_misaligned_i64(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[BACK_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i64, ptr [[BACK_GEP]], align 8
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[T]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[T]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i64> [[TMP1]], <i64 1, i64 2>
 ; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[GEP0]], align 8

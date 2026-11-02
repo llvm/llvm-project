@@ -25,6 +25,16 @@ namespace Fortran::semantics {
 class Scope;
 class SemanticsContext;
 
+// Check keyword constraints on actual arguments for procedures with implicit
+// interfaces.
+void CheckImplicitInterfaceArgKeywords(
+    const evaluate::ActualArgument &, parser::ContextualMessages &);
+
+// Check constraints on actual arguments for procedures with implicit
+// interfaces.
+void CheckImplicitInterfaceArg(evaluate::ActualArgument &,
+    parser::ContextualMessages &, SemanticsContext &);
+
 // Argument treatingExternalAsImplicit should be true when the called procedure
 // does not actually have an explicit interface at the call site, but
 // its characteristics are known because it is a subroutine or function
@@ -54,5 +64,13 @@ parser::Messages CheckExplicitInterface(
 bool CheckInterfaceForGeneric(const evaluate::characteristics::Procedure &,
     evaluate::ActualArguments &, SemanticsContext &,
     bool allowActualArgumentConversions = false);
+
+// F2023 C1545: reports the cross-consequent-arg inconsistencies that a
+// conditional argument may not have in a reference to a generic procedure, and
+// returns whether any were reported.  C1545 does not apply to a reference to a
+// specific procedure, though the ordinary argument-association rules may still
+// reject the same combinations there.
+bool CheckConditionalArgsInGenericReference(
+    const evaluate::ActualArguments &, parser::ContextualMessages &);
 } // namespace Fortran::semantics
 #endif

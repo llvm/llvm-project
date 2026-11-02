@@ -12,22 +12,22 @@ define void @test(ptr %i1, ptr %i2, ptr %o, i1 %arg) {
 ; CHECK-NEXT:    [[I1_0:%.*]] = load double, ptr [[I1:%.*]], align 16
 ; CHECK-NEXT:    [[I1_GEP1:%.*]] = getelementptr double, ptr [[I1]], i64 1
 ; CHECK-NEXT:    [[I1_1:%.*]] = load double, ptr [[I1_GEP1]], align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[I1_0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[I1_1]], i32 1
-; CHECK-NEXT:    br i1 %arg, label [[THEN:%.*]], label [[END:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[I1_0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[I1_1]], i64 1
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[I2_0:%.*]] = load double, ptr [[I2:%.*]], align 16
 ; CHECK-NEXT:    [[I2_GEP1:%.*]] = getelementptr inbounds double, ptr [[I2]], i64 1
 ; CHECK-NEXT:    [[I2_1:%.*]] = load double, ptr [[I2_GEP1]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[I2_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[I2_1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[I2_0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[I2_1]], i64 1
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x double> [ [[TMP1]], [[ENTRY:%.*]] ], [ [[TMP3]], [[THEN]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
 ; CHECK-NEXT:    store double [[TMP5]], ptr [[O:%.*]], align 16
 ; CHECK-NEXT:    [[O_GEP1:%.*]] = getelementptr inbounds double, ptr [[O]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; CHECK-NEXT:    store double [[TMP6]], ptr [[O_GEP1]], align 16
 ; CHECK-NEXT:    ret void
 ;

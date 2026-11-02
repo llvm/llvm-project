@@ -27,6 +27,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
+#include <atomic>
 #include <cassert>
 #include <cstdint>
 #include <ctime>
@@ -214,8 +216,6 @@ public:
   }
 };
 
-class FileSystem;
-
 namespace detail {
 
 /// Keeps state for the recursive_directory_iterator.
@@ -313,6 +313,16 @@ public:
   /// This returns errc::operation_not_permitted if not implemented by subclass.
   virtual std::error_code getRealPath(const Twine &Path,
                                       SmallVectorImpl<char> &Output);
+
+  /// Collect the paths in the real file system that contribute to a potentially
+  /// virtual directory when iterated via \a dir_begin. This can be used for
+  /// directory watching.
+  ///
+  /// Only paths that are OS-level visible are returned, so in memory and other
+  /// such entirely virtual filesystems contribute no paths.
+  virtual void
+  getDirectoryContentRealSources(const Twine &Dir,
+                                 SmallVectorImpl<std::string> &Out) {}
 
   /// Check whether \p Path exists. By default this uses \c status(), but
   /// filesystems may provide a more efficient implementation if available.
@@ -417,6 +427,9 @@ public:
   std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;
+  void
+  getDirectoryContentRealSources(const Twine &Dir,
+                                 SmallVectorImpl<std::string> &Out) override;
 
   using iterator = FileSystemList::reverse_iterator;
   using const_iterator = FileSystemList::const_reverse_iterator;
@@ -480,6 +493,11 @@ public:
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override {
     return FS->getRealPath(Path, Output);
+  }
+  void
+  getDirectoryContentRealSources(const Twine &Dir,
+                                 SmallVectorImpl<std::string> &Out) override {
+    return FS->getDirectoryContentRealSources(Dir, Out);
   }
   std::error_code isLocal(const Twine &Path, bool &Result) override {
     return FS->isLocal(Path, Result);
@@ -1080,6 +1098,10 @@ public:
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;
 
+  void
+  getDirectoryContentRealSources(const Twine &Dir,
+                                 SmallVectorImpl<std::string> &Out) override;
+
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
 
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
@@ -1156,20 +1178,28 @@ public:
 /// File system that tracks the number of calls to the underlying file system.
 /// This is particularly useful when wrapped around \c RealFileSystem to add
 /// lightweight tracking of expensive syscalls.
-class LLVM_ABI TracingFileSystem
-    : public llvm::RTTIExtends<TracingFileSystem, ProxyFileSystem> {
+///
+/// Templated on the counter type so callers can choose between non-atomic
+/// counters (suitable for single-threaded tracing) and atomic counters
+/// (suitable for tracing under concurrent access). Use the
+/// \c TracingFileSystem and \c AtomicTracingFileSystem aliases below.
+template <typename CounterT>
+class TracingFileSystemImpl
+    : public llvm::RTTIExtends<TracingFileSystemImpl<CounterT>,
+                               ProxyFileSystem> {
 public:
-  static const char ID;
+  inline static const char ID = 0;
 
-  std::size_t NumStatusCalls = 0;
-  std::size_t NumOpenFileForReadCalls = 0;
-  std::size_t NumDirBeginCalls = 0;
-  std::size_t NumGetRealPathCalls = 0;
-  std::size_t NumExistsCalls = 0;
-  std::size_t NumIsLocalCalls = 0;
+  CounterT NumStatusCalls = 0;
+  CounterT NumOpenFileForReadCalls = 0;
+  CounterT NumDirBeginCalls = 0;
+  CounterT NumGetRealPathCalls = 0;
+  CounterT NumExistsCalls = 0;
+  CounterT NumIsLocalCalls = 0;
 
-  TracingFileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-      : RTTIExtends(std::move(FS)) {}
+  TracingFileSystemImpl(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+      : llvm::RTTIExtends<TracingFileSystemImpl<CounterT>, ProxyFileSystem>(
+            std::move(FS)) {}
 
   ErrorOr<Status> status(const Twine &Path) override {
     ++NumStatusCalls;
@@ -1203,9 +1233,43 @@ public:
   }
 
 protected:
-  void printImpl(raw_ostream &OS, PrintType Type,
-                 unsigned IndentLevel) const override;
+  void printImpl(raw_ostream &OS, FileSystem::PrintType Type,
+                 unsigned IndentLevel) const override {
+    FileSystem::printIndent(OS, IndentLevel);
+    OS << "TracingFileSystem\n";
+    if (Type == FileSystem::PrintType::Summary)
+      return;
+
+    FileSystem::printIndent(OS, IndentLevel);
+    OS << "NumStatusCalls=" << static_cast<std::size_t>(NumStatusCalls) << "\n";
+    FileSystem::printIndent(OS, IndentLevel);
+    OS << "NumOpenFileForReadCalls="
+       << static_cast<std::size_t>(NumOpenFileForReadCalls) << "\n";
+    FileSystem::printIndent(OS, IndentLevel);
+    OS << "NumDirBeginCalls=" << static_cast<std::size_t>(NumDirBeginCalls)
+       << "\n";
+    FileSystem::printIndent(OS, IndentLevel);
+    OS << "NumGetRealPathCalls="
+       << static_cast<std::size_t>(NumGetRealPathCalls) << "\n";
+    FileSystem::printIndent(OS, IndentLevel);
+    OS << "NumExistsCalls=" << static_cast<std::size_t>(NumExistsCalls) << "\n";
+    FileSystem::printIndent(OS, IndentLevel);
+    OS << "NumIsLocalCalls=" << static_cast<std::size_t>(NumIsLocalCalls)
+       << "\n";
+
+    if (Type == FileSystem::PrintType::Contents)
+      Type = FileSystem::PrintType::Summary;
+    this->getUnderlyingFS().print(OS, Type, IndentLevel + 1);
+  }
 };
+
+/// Single-threaded tracing filesystem. Counters are plain \c std::size_t and
+/// must not be incremented concurrently.
+using TracingFileSystem = TracingFileSystemImpl<std::size_t>;
+
+/// Concurrent-safe tracing filesystem. Counters are \c std::atomic<std::size_t>
+/// so the proxy can be shared across threads.
+using AtomicTracingFileSystem = TracingFileSystemImpl<std::atomic<std::size_t>>;
 
 } // namespace vfs
 } // namespace llvm

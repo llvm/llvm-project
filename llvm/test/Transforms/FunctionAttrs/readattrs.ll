@@ -9,7 +9,7 @@ declare void @test1_1(ptr %x1_1, ptr nocapture readonly %y1_1, ...)
 
 define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 ; FNATTRS-LABEL: define {{[^@]+}}@test1_2
-; FNATTRS-SAME: (ptr [[X1_2:%.*]], ptr readonly captures(none) [[Y1_2:%.*]], ptr [[Z1_2:%.*]]) {
+; FNATTRS-SAME: (ptr [[X1_2:%.*]], ptr nofree readonly captures(none) [[Y1_2:%.*]], ptr [[Z1_2:%.*]]) {
 ; FNATTRS-NEXT:    call void (ptr, ptr, ...) @test1_1(ptr [[X1_2]], ptr [[Y1_2]], ptr [[Z1_2]])
 ; FNATTRS-NEXT:    store i32 0, ptr @x, align 4
 ; FNATTRS-NEXT:    ret void
@@ -35,7 +35,7 @@ define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 define ptr @test2(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, target_mem: none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test2
-; FNATTRS-SAME: (ptr readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; FNATTRS-SAME: (ptr nofree readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    store i32 0, ptr @x, align 4
 ; FNATTRS-NEXT:    ret ptr [[P]]
 ;
@@ -58,7 +58,7 @@ define ptr @test2(ptr %p) {
 define i1 @test3(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test3
-; FNATTRS-SAME: (ptr readnone captures(address) [[P:%.*]], ptr readnone captures(address) [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
+; FNATTRS-SAME: (ptr nofree readnone captures(address) [[P:%.*]], ptr nofree readnone captures(address) [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
 ; FNATTRS-NEXT:    [[A:%.*]] = icmp ult ptr [[P]], [[Q]]
 ; FNATTRS-NEXT:    ret i1 [[A]]
 ;
@@ -83,7 +83,7 @@ declare void @test4_1(ptr nocapture) readonly
 define void @test4_2(ptr %p) {
 ; FNATTRS: Function Attrs: nofree memory(read)
 ; FNATTRS-LABEL: define {{[^@]+}}@test4_2
-; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR3:[0-9]+]] {
+; FNATTRS-SAME: (ptr nofree readonly captures(none) [[P:%.*]]) #[[ATTR3:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @test4_1(ptr [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -107,7 +107,7 @@ define void @test4_2(ptr %p) {
 define void @test5(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test5
-; FNATTRS-SAME: (ptr writeonly captures(none) initializes((0, 8)) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR4:[0-9]+]] {
+; FNATTRS-SAME: (ptr nofree writeonly captures(none) initializes((0, 8)) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR4:[0-9]+]] {
 ; FNATTRS-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; FNATTRS-NEXT:    ret void
 ;
@@ -132,7 +132,7 @@ declare void @test6_1()
 ; This is not a missed optz'n.
 define void @test6_2(ptr %p, ptr %q) {
 ; FNATTRS-LABEL: define {{[^@]+}}@test6_2
-; FNATTRS-SAME: (ptr writeonly captures(none) initializes((0, 8)) [[P:%.*]], ptr [[Q:%.*]]) {
+; FNATTRS-SAME: (ptr nofree writeonly captures(none) initializes((0, 8)) [[P:%.*]], ptr [[Q:%.*]]) {
 ; FNATTRS-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; FNATTRS-NEXT:    call void @test6_1()
 ; FNATTRS-NEXT:    ret void
@@ -197,7 +197,7 @@ define void @test7_2(ptr preallocated(i32) %a) {
 define ptr @test8_1(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test8_1
-; FNATTRS-SAME: (ptr readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR1]] {
+; FNATTRS-SAME: (ptr nofree readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    ret ptr [[P]]
 ;
@@ -220,7 +220,7 @@ entry:
 define void @test8_2(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test8_2
-; FNATTRS-SAME: (ptr writeonly captures(none) [[P:%.*]]) #[[ATTR4]] {
+; FNATTRS-SAME: (ptr nofree writeonly captures(none) [[P:%.*]]) #[[ATTR4]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[CALL:%.*]] = call ptr @test8_1(ptr [[P]])
 ; FNATTRS-NEXT:    store i32 10, ptr [[CALL]], align 4
@@ -348,7 +348,7 @@ define <4 x i32> @test12_2(<4 x ptr> %ptrs) {
 define i32 @volatile_load(ptr %p) {
 ; FNATTRS: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; FNATTRS-LABEL: define {{[^@]+}}@volatile_load
-; FNATTRS-SAME: (ptr captures(address) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
+; FNATTRS-SAME: (ptr nofree captures(address) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
 ; FNATTRS-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
 ; FNATTRS-NEXT:    ret i32 [[LOAD]]
 ;
@@ -377,7 +377,7 @@ declare void @escape_readonly_ptr(ptr %addr, ptr readonly %ptr)
 ; %addr, causing the store to write to %escaped_then_written.
 define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
 ; FNATTRS-LABEL: define {{[^@]+}}@unsound_readnone
-; FNATTRS-SAME: (ptr readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; FNATTRS-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; FNATTRS-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; FNATTRS-NEXT:    call void @escape_readnone_ptr(ptr [[ADDR]], ptr [[ESCAPED_THEN_WRITTEN]])
 ; FNATTRS-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -409,7 +409,7 @@ define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
 
 define void @unsound_readonly(ptr %ignored, ptr %escaped_then_written) {
 ; FNATTRS-LABEL: define {{[^@]+}}@unsound_readonly
-; FNATTRS-SAME: (ptr readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; FNATTRS-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; FNATTRS-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; FNATTRS-NEXT:    call void @escape_readonly_ptr(ptr [[ADDR]], ptr [[ESCAPED_THEN_WRITTEN]])
 ; FNATTRS-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -441,7 +441,7 @@ define void @unsound_readonly(ptr %ignored, ptr %escaped_then_written) {
 
 define void @fptr_test1a(ptr %p, ptr %f) {
 ; FNATTRS-LABEL: define {{[^@]+}}@fptr_test1a
-; FNATTRS-SAME: (ptr readnone captures(none) [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) {
+; FNATTRS-SAME: (ptr nofree readnone captures(none) [[P:%.*]], ptr nofree readonly captures(none) [[F:%.*]]) {
 ; FNATTRS-NEXT:    call void [[F]](ptr readnone captures(none) [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -462,7 +462,7 @@ define void @fptr_test1a(ptr %p, ptr %f) {
 ; Can't infer readnone here because call might capture %p
 define void @fptr_test1b(ptr %p, ptr %f) {
 ; FNATTRS-LABEL: define {{[^@]+}}@fptr_test1b
-; FNATTRS-SAME: (ptr [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) {
+; FNATTRS-SAME: (ptr [[P:%.*]], ptr nofree readonly captures(none) [[F:%.*]]) {
 ; FNATTRS-NEXT:    call void [[F]](ptr readnone [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -483,7 +483,7 @@ define void @fptr_test1b(ptr %p, ptr %f) {
 define void @fptr_test1c(ptr %p, ptr %f) {
 ; FNATTRS: Function Attrs: nofree memory(read)
 ; FNATTRS-LABEL: define {{[^@]+}}@fptr_test1c
-; FNATTRS-SAME: (ptr readnone captures(address) [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (ptr nofree readnone captures(address) [[P:%.*]], ptr nofree readonly captures(none) [[F:%.*]]) #[[ATTR3]] {
 ; FNATTRS-NEXT:    call void [[F]](ptr readnone [[P]]) #[[ATTR2:[0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
@@ -505,7 +505,7 @@ define void @fptr_test1c(ptr %p, ptr %f) {
 
 define void @fptr_test2a(ptr %p, ptr %f) {
 ; FNATTRS-LABEL: define {{[^@]+}}@fptr_test2a
-; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) {
+; FNATTRS-SAME: (ptr nofree readonly captures(none) [[P:%.*]], ptr nofree readonly captures(none) [[F:%.*]]) {
 ; FNATTRS-NEXT:    call void [[F]](ptr readonly captures(none) [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -526,7 +526,7 @@ define void @fptr_test2a(ptr %p, ptr %f) {
 define void @fptr_test2b(ptr %p, ptr %f) {
   ; Can't infer readonly here because call might capture %p
 ; FNATTRS-LABEL: define {{[^@]+}}@fptr_test2b
-; FNATTRS-SAME: (ptr [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) {
+; FNATTRS-SAME: (ptr [[P:%.*]], ptr nofree readonly captures(none) [[F:%.*]]) {
 ; FNATTRS-NEXT:    call void [[F]](ptr readonly [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -547,7 +547,7 @@ define void @fptr_test2b(ptr %p, ptr %f) {
 define void @fptr_test2c(ptr %p, ptr %f) {
 ; FNATTRS: Function Attrs: nofree memory(read)
 ; FNATTRS-LABEL: define {{[^@]+}}@fptr_test2c
-; FNATTRS-SAME: (ptr readonly captures(address) [[P:%.*]], ptr readonly captures(none) [[F:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (ptr nofree readonly captures(address) [[P:%.*]], ptr nofree readonly captures(none) [[F:%.*]]) #[[ATTR3]] {
 ; FNATTRS-NEXT:    call void [[F]](ptr readonly [[P]]) #[[ATTR2]]
 ; FNATTRS-NEXT:    ret void
 ;
@@ -682,7 +682,7 @@ define void @op_bundle_readnone_unknown(ptr %p) {
 
 define void @op_bundle_readonly_deopt(ptr %p) {
 ; FNATTRS-LABEL: define {{[^@]+}}@op_bundle_readonly_deopt
-; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) {
+; FNATTRS-SAME: (ptr nofree readonly captures(none) [[P:%.*]]) {
 ; FNATTRS-NEXT:    call void @readonly_param(ptr [[P]]) [ "deopt"() ]
 ; FNATTRS-NEXT:    ret void
 ;
@@ -723,7 +723,7 @@ define void @op_bundle_readonly_unknown(ptr %p) {
 define i32 @writable_readonly(ptr writable dereferenceable(4) %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; FNATTRS-LABEL: define {{[^@]+}}@writable_readonly
-; FNATTRS-SAME: (ptr readonly captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR13:[0-9]+]] {
+; FNATTRS-SAME: (ptr nofree readonly captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR13:[0-9]+]] {
 ; FNATTRS-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
 ; FNATTRS-NEXT:    ret i32 [[V]]
 ;
@@ -746,7 +746,7 @@ define i32 @writable_readonly(ptr writable dereferenceable(4) %p) {
 define void @writable_readnone(ptr writable dereferenceable(4) %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define {{[^@]+}}@writable_readnone
-; FNATTRS-SAME: (ptr readnone captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR1]] {
+; FNATTRS-SAME: (ptr nofree readnone captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -766,7 +766,7 @@ declare void @byval_param(ptr byval(i32) %p)
 
 define void @call_byval_param(ptr %p) {
 ; FNATTRS-LABEL: define {{[^@]+}}@call_byval_param
-; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) {
+; FNATTRS-SAME: (ptr nofree readonly captures(none) [[P:%.*]]) {
 ; FNATTRS-NEXT:    call void @byval_param(ptr byval(i32) [[P]])
 ; FNATTRS-NEXT:    ret void
 ;

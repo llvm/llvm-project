@@ -73,15 +73,18 @@ template <class> struct S {};
 template<template<True T> typename Wrapper>
 using Test = Wrapper<int>;
 
-template<template<False T> typename Wrapper>
-using Test = Wrapper<int>;
+template<template<False T> typename Wrapper> // #TTP-Wrapper
+using Test = Wrapper<int>; // expected-error {{constraints not satisfied for template template parameter 'Wrapper' [with T = int]}}
+
+// expected-note@#TTP-Wrapper {{'int' does not satisfy 'False'}}
+// expected-note@#False {{evaluated to false}}
 
 template <typename U, template<False> typename T>
 void foo(T<U>); // #foo
 
 void bar() {
-  // FIXME: CWG2980: There is no way to check the constraints on the template template parameter.
-  foo<int>(S<int>{});
+  foo<int>(S<int>{}); // expected-error {{no matching function for call to 'foo'}}
+  // expected-note@#foo {{substitution failure [with U = int]: constraints not satisfied for template template parameter 'T' [with $0 = int]}}
 }
 
 }

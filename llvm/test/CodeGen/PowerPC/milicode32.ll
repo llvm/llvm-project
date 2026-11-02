@@ -68,7 +68,7 @@ entry:
   ret i32 %call
 }
 
-define i32 @strlen_test_fp_strict(ptr noundef %str) nounwind {
+define i32 @strlen_test_fp_strict(ptr noundef %str) strictfp nounwind {
 ; CHECK-AIX-32-P9-LABEL: strlen_test_fp_strict:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    mflr r0

@@ -182,14 +182,6 @@ entry:
 @c = common addrspace(1) global i32 0, align 4
 
 define internal void @f5_as1(ptr addrspace(1) byval(%struct.S1) nocapture readonly align 4 %p) {
-; CHECK-LABEL: define internal void @f5_as1(
-; CHECK-SAME: ptr addrspace(1) readonly byval([[STRUCT_S1:%.*]]) align 4 captures(none) [[P:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, ptr addrspace(1) @d, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[P]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) @c, align 4
-; CHECK-NEXT:    ret void
-;
 entry:
   store i32 0, ptr addrspace(1) @d, align 4
   %0 = load i32, ptr addrspace(1) %p, align 4
@@ -200,7 +192,13 @@ entry:
 define i32 @test5_as1() {
 ; CHECK-LABEL: define i32 @test5_as1() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @f5_as1(ptr addrspace(1) byval([[STRUCT_S1:%.*]]) align 4 @d)
+; CHECK-NEXT:    [[D:%.*]] = alloca [[STRUCT_S1:%.*]], align 8, addrspace(1)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[D]])
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 8 [[D]], ptr addrspace(1) align 4 @d, i64 4, i1 false)
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) @d, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[D]], align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) @c, align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p1(ptr addrspace(1) [[D]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) @c, align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
@@ -208,4 +206,58 @@ entry:
   tail call void @f5_as1(ptr addrspace(1) byval(%struct.S1) align 4 @d)
   %0 = load i32, ptr addrspace(1) @c, align 4
   ret i32 %0
+}
+
+; The byval copy must use the alloc size, not the store size.
+
+define internal i8 @callee_fp80(ptr byval(x86_fp80) %p) {
+  %q = getelementptr i8, ptr %p, i64 10
+  %v = load i8, ptr %q, align 1
+  ret i8 %v
+}
+
+define i8 @byval_fp80_alloc_size() {
+; CHECK-LABEL: define i8 @byval_fp80_alloc_size() {
+; CHECK-NEXT:    [[P1:%.*]] = alloca x86_fp80, align 16
+; CHECK-NEXT:    [[P:%.*]] = alloca [16 x i8], align 16
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 10
+; CHECK-NEXT:    store i8 -86, ptr [[Q]], align 1
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[P1]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[P1]], ptr [[P]], i64 16, i1 false)
+; CHECK-NEXT:    [[Q_I:%.*]] = getelementptr i8, ptr [[P1]], i64 10
+; CHECK-NEXT:    [[V_I:%.*]] = load i8, ptr [[Q_I]], align 1
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[P1]])
+; CHECK-NEXT:    ret i8 [[V_I]]
+;
+  %p = alloca [16 x i8], align 16
+  %q = getelementptr i8, ptr %p, i64 10
+  store i8 -86, ptr %q, align 1
+  %r = call i8 @callee_fp80(ptr byval(x86_fp80) %p)
+  ret i8 %r
+}
+
+define internal i8 @callee_i24(ptr byval(i24) %p) {
+  %q = getelementptr i8, ptr %p, i64 3
+  %v = load i8, ptr %q, align 1
+  ret i8 %v
+}
+
+define i8 @byval_i24_alloc_size() {
+; CHECK-LABEL: define i8 @byval_i24_alloc_size() {
+; CHECK-NEXT:    [[P1:%.*]] = alloca i24, align 4
+; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8], align 4
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; CHECK-NEXT:    store i8 -86, ptr [[Q]], align 1
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[P1]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P1]], ptr [[P]], i64 4, i1 false)
+; CHECK-NEXT:    [[Q_I:%.*]] = getelementptr i8, ptr [[P1]], i64 3
+; CHECK-NEXT:    [[V_I:%.*]] = load i8, ptr [[Q_I]], align 1
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[P1]])
+; CHECK-NEXT:    ret i8 [[V_I]]
+;
+  %p = alloca [4 x i8], align 4
+  %q = getelementptr i8, ptr %p, i64 3
+  store i8 -86, ptr %q, align 1
+  %r = call i8 @callee_i24(ptr byval(i24) %p)
+  ret i8 %r
 }

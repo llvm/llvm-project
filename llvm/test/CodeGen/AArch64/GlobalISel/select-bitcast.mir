@@ -14,6 +14,8 @@
   define void @bitcast_s64_fpr_gpr() { ret void }
   define void @bitcast_s64_v2f32_fpr() { ret void }
   define void @bitcast_s64_v8i8_fpr() { ret void }
+  define void @bitcast_i16_gpr_to_f16_fpr() { ret void }
+  define void @bitcast_f16_fpr_to_i16_gpr() { ret void }
 ...
 
 ---
@@ -35,9 +37,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[COPY2]]
-    %0(s32) = COPY $w0
-    %1(<2 x s16>) = G_BITCAST %0
-    %2(s32) = G_BITCAST %1
+    %0(i32) = COPY $w0
+    %1(<2 x i16>) = G_BITCAST %0
+    %2(i32) = G_BITCAST %1
     $w0 = COPY %2
 ...
 
@@ -61,9 +63,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY [[COPY1]]
     ; CHECK-NEXT: $s0 = COPY [[COPY2]]
-    %0(s32) = COPY $s0
-    %1(<2 x s16>) = G_BITCAST %0
-    %2(s32) = G_BITCAST %1
+    %0(i32) = COPY $s0
+    %1(<2 x i16>) = G_BITCAST %0
+    %2(i32) = G_BITCAST %1
     $s0 = COPY %2
 ...
 
@@ -86,8 +88,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]]
     ; CHECK-NEXT: $s0 = COPY [[COPY1]]
-    %0(s32) = COPY $w0
-    %1(<2 x s16>) = G_BITCAST %0
+    %0(i32) = COPY $w0
+    %1(<2 x i16>) = G_BITCAST %0
     $s0 = COPY %1
 ...
 
@@ -110,9 +112,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %0(<2 x s16>) = COPY $s0
-    %1(s32) = G_BITCAST %0
-    $w0 = COPY %1(s32)
+    %0(<2 x i16>) = COPY $s0
+    %1(i32) = G_BITCAST %0
+    $w0 = COPY %1(i32)
 ...
 
 ---
@@ -136,10 +138,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
     ; CHECK-NEXT: $x0 = COPY [[COPY2]]
-    %0(s64) = COPY $x0
-    %1(<2 x s32>) = G_BITCAST %0
-    %2(s64) = G_BITCAST %1
-    $x0 = COPY %2(s64)
+    %0(i64) = COPY $x0
+    %1(<2 x i32>) = G_BITCAST %0
+    %2(i64) = G_BITCAST %1
+    $x0 = COPY %2(i64)
 ...
 
 ---
@@ -160,8 +162,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: $d0 = COPY [[COPY]]
-    %0(s64) = COPY $d0
-    %1(<2 x s32>) = G_BITCAST %0
+    %0(i64) = COPY $d0
+    %1(<2 x i32>) = G_BITCAST %0
     $d0 = COPY %1
 ...
 
@@ -183,8 +185,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[COPY1]]
-    %0(s64) = COPY $x0
-    %1(<2 x s32>) = G_BITCAST %0
+    %0(i64) = COPY $x0
+    %1(<2 x i32>) = G_BITCAST %0
     $d0 = COPY %1
 ...
 
@@ -207,8 +209,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64all = COPY [[COPY]]
     ; CHECK-NEXT: $x0 = COPY [[COPY1]]
-    %0(s64) = COPY $d0
-    %1(<2 x s32>) = G_BITCAST %0
+    %0(i64) = COPY $d0
+    %1(<2 x i32>) = G_BITCAST %0
     $x0 = COPY %1
 ...
 
@@ -230,9 +232,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: $x0 = COPY [[COPY]]
-    %0(s64) = COPY $d0
-    %1(<2 x s32>) = G_BITCAST %0
-    $x0 = COPY %1(<2 x s32>)
+    %0(i64) = COPY $d0
+    %1(<2 x i32>) = G_BITCAST %0
+    $x0 = COPY %1(<2 x i32>)
 ...
 
 ---
@@ -253,7 +255,49 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: $x0 = COPY [[COPY]]
-    %0(s64) = COPY $d0
-    %1(<8 x s8>) = G_BITCAST %0
-    $x0 = COPY %1(<8 x s8>)
+    %0(i64) = COPY $d0
+    %1(<8 x i8>) = G_BITCAST %0
+    $x0 = COPY %1(<8 x i8>)
+...
+
+---
+name:            bitcast_i16_gpr_to_f16_fpr
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: bitcast_i16_gpr_to_f16_fpr
+    ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[FMOVWSr:%[0-9]+]]:fpr32 = FMOVWSr [[DEF]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[FMOVWSr]].hsub
+    ; CHECK-NEXT: RET_ReallyLR implicit [[COPY1]]
+    %0(i16) = G_IMPLICIT_DEF
+    %1(f16) = G_BITCAST %0
+    RET_ReallyLR implicit %1
+...
+
+---
+name:            bitcast_f16_fpr_to_i16_gpr
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: bitcast_f16_fpr_to_i16_gpr
+    ; CHECK: [[DEF:%[0-9]+]]:fpr16 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[DEF]], %subreg.hsub
+    ; CHECK-NEXT: [[FMOVSWr:%[0-9]+]]:gpr32 = FMOVSWr [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: RET_ReallyLR implicit [[FMOVSWr]]
+    %0(f16) = G_IMPLICIT_DEF
+    %1(i16) = G_BITCAST %0
+    RET_ReallyLR implicit %1
 ...

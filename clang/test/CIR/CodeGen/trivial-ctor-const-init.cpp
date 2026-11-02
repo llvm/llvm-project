@@ -27,7 +27,7 @@ StructWithCtorArg withArg = 0.0;
 // OGCG: @withArg = global %struct.StructWithCtorArg zeroinitializer
 
 // CIR: cir.func {{.*}} @__cxx_global_var_init()
-// CIR:   %[[TMP0:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["ref.tmp0"]
+// CIR:   %[[TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!cir.double>
 // CIR:   %[[WITH_ARG:.*]] = cir.get_global @withArg : !cir.ptr<!rec_StructWithCtorArg>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.double
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[TMP0]] : !cir.double, !cir.ptr<!cir.double>

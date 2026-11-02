@@ -33,13 +33,9 @@ ManagedEventThread::~ManagedEventThread() {
 }
 
 DAPSessionManager &DAPSessionManager::GetInstance() {
-  static std::once_flag initialized;
-  static DAPSessionManager *instance =
-      nullptr; // NOTE: intentional leak to avoid issues with C++ destructor
-               // chain
-
-  std::call_once(initialized, []() { instance = new DAPSessionManager(); });
-
+  // NOTE: Intentional leak. Detached client threads may still notify
+  // m_sessions_condition at exit, so it has to outlive them.
+  static auto *instance = new DAPSessionManager();
   return *instance;
 }
 
@@ -119,6 +115,15 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
   listener.StartListeningForEventClass(
       debugger, lldb::SBThread::GetBroadcasterClassName(),
       lldb::SBThread::eBroadcastBitStackChanged);
+  // Listen for target events.
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBTarget::GetBroadcasterClassName(),
+      lldb::SBTarget::eBroadcastBitBreakpointChanged |
+          lldb::SBTarget::eBroadcastBitModulesLoaded |
+          lldb::SBTarget::eBroadcastBitModulesUnloaded |
+          lldb::SBTarget::eBroadcastBitSymbolsLoaded |
+          lldb::SBTarget::eBroadcastBitSymbolsChanged |
+          lldb::SBTarget::eBroadcastBitNewTargetCreated);
 
   // Create a new event thread and store it.
   auto new_thread_sp = std::make_shared<ManagedEventThread>(
@@ -133,10 +138,10 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
 DAP *DAPSessionManager::FindDAPForTarget(lldb::SBTarget target) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
+  const lldb::user_id_t debugger_id = target.GetDebugger().GetID();
   for (const auto &[loop, dap] : m_active_sessions)
-    if (dap && dap->target.IsValid() && dap->target == target)
+    if (dap && dap->debugger.GetID() == debugger_id)
       return dap;
-
   return nullptr;
 }
 

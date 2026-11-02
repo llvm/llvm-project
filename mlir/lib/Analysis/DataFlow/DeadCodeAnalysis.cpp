@@ -521,13 +521,14 @@ void DeadCodeAnalysis::visitRegionBranchEdges(
     RegionBranchOpInterface regionBranchOp, Operation *predecessorOp,
     const SmallVector<RegionSuccessor> &successors) {
   for (const RegionSuccessor &successor : successors) {
-    // The successor can be either an entry block or the parent operation.
+    // The successor can be either an entry block or an operation to resume
+    // after.
     // Skip empty regions — they have no entry block to mark executable.
-    if (!successor.isParent() && successor.getSuccessor()->empty())
+    if (successor.isRegion() && successor.getSuccessor()->empty())
       continue;
     ProgramPoint *point =
-        successor.isParent()
-            ? getProgramPointAfter(regionBranchOp)
+        successor.isOperation()
+            ? getProgramPointAfter(successor.getSuccessorOp())
             : getProgramPointBefore(&successor.getSuccessor()->front());
 
     // Mark the entry block as executable.
@@ -535,7 +536,7 @@ void DeadCodeAnalysis::visitRegionBranchEdges(
     propagateIfChanged(state, state->setToLive());
     LDBG() << "Marked region successor live: " << *point;
 
-    // Add the parent op as a predecessor.
+    // Add the region branch predecessor.
     auto *predecessors = getOrCreate<PredecessorState>(point);
     propagateIfChanged(
         predecessors,

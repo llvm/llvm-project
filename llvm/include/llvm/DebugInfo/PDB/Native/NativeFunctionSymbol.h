@@ -20,7 +20,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeFunctionSymbol : public NativeRawSymbol {
+class LLVM_ABI NativeFunctionSymbol : public NativeRawSymbol {
 public:
   NativeFunctionSymbol(NativeSession &Session, SymIndexId Id,
                        const codeview::ProcSym &Sym, uint32_t RecordOffset);

@@ -14,6 +14,7 @@
 
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
+#include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -32,24 +33,6 @@ STATISTIC(MeetsUnwindV2Criteria,
           "Number of functions that meet Unwind v2 criteria");
 STATISTIC(FailsUnwindV2Criteria,
           "Number of functions that fail Unwind v2 criteria");
-
-static cl::opt<unsigned>
-    UnwindCodeThreshold("x86-wineh-unwindv2-unwind-codes-threshold", cl::Hidden,
-                        cl::desc("Maximum number of unwind codes before "
-                                 "splitting into a new unwind info."),
-                        cl::init(UINT8_MAX));
-
-static cl::opt<unsigned>
-    ForceMode("x86-wineh-unwindv2-force-mode", cl::Hidden,
-              cl::desc("Overwrites the Unwind v2 mode for testing purposes."));
-
-// This threshold is for the *approximate* number of instructions, see the
-// comment in runAnalysisOnFuncOrFunclet for more details.
-static cl::opt<unsigned> InstructionCountThreshold(
-    "x86-wineh-unwindv2-instruction-count-threshold", cl::Hidden,
-    cl::desc("Maximum number of (approximate) instructions before splitting "
-             "into a new unwind info."),
-    cl::init(600));
 
 namespace {
 
@@ -79,9 +62,9 @@ public:
 
 /// Rejects the current function due to an internal error within LLVM.
 std::nullopt_t rejectCurrentFunctionInternalError(const MachineFunction &MF,
-                                                  WinX64EHUnwindV2Mode Mode,
+                                                  WinX64EHUnwindMode Mode,
                                                   StringRef Reason) {
-  if (Mode == WinX64EHUnwindV2Mode::Required)
+  if (Mode == WinX64EHUnwindMode::V2Required)
     reportFatalInternalError("Windows x64 Unwind v2 is required, but LLVM has "
                              "generated incompatible code in function '" +
                              MF.getName() + "': " + Reason);
@@ -120,7 +103,7 @@ DebugLoc findDebugLoc(const MachineBasicBlock &MBB) {
 // Continues running the analysis on the given function or funclet.
 std::optional<FrameInfo>
 runAnalysisOnFuncOrFunclet(MachineFunction &MF, MachineFunction::iterator &Iter,
-                           WinX64EHUnwindV2Mode Mode) {
+                           WinX64EHUnwindMode Mode) {
   const TargetFrameLowering &TFL = *MF.getSubtarget().getFrameLowering();
 
   // Current state of processing the function. We'll assume that all functions
@@ -373,12 +356,21 @@ runAnalysisOnFuncOrFunclet(MachineFunction &MF, MachineFunction::iterator &Iter,
 }
 
 bool runX86WinEHUnwindV2(MachineFunction &MF) {
-  WinX64EHUnwindV2Mode Mode =
-      ForceMode.getNumOccurrences()
-          ? static_cast<WinX64EHUnwindV2Mode>(ForceMode.getValue())
-          : MF.getFunction().getParent()->getWinX64EHUnwindV2Mode();
+  const X86Options &CLOpts = MF.getSubtarget<X86Subtarget>().getCLOpts();
+  std::optional<unsigned> ForceMode = CLOpts.wineh_unwindv2_force_mode;
+  WinX64EHUnwindMode Mode =
+      ForceMode ? static_cast<WinX64EHUnwindMode>(*ForceMode)
+                : MF.getFunction().getParent()->getWinX64EHUnwindMode();
 
-  if (Mode == WinX64EHUnwindV2Mode::Disabled)
+  // Only act on V2 modes; V1 = disabled, V3 handled by the V3 pass.
+  if (Mode != WinX64EHUnwindMode::V2BestEffort &&
+      Mode != WinX64EHUnwindMode::V2Required)
+    return false;
+
+  // A function that requires V3 (see requireWinX64UnwindV3()) is emitted as V3
+  // instead; skip it here so this pass does not stamp V2 pseudos that conflict
+  // with the V3 layout.
+  if (requireWinX64UnwindV3(MF))
     return false;
 
   // Requested changes.
@@ -410,13 +402,15 @@ bool runX86WinEHUnwindV2(MachineFunction &MF) {
       MachineBasicBlock &MBB = *Info.UnwindV2StartLocation->getParent();
       const DebugLoc &DL = Info.UnwindV2StartLocation->getDebugLoc();
       BuildMI(MBB, Info.UnwindV2StartLocation, DL,
-              TII->get(X86::SEH_UnwindV2Start));
+              TII->get(X86::SEH_UnwindV2Start))
+          .setMIFlag(MachineInstr::FrameDestroy);
 
       if ((LastUnwindInfoEndPosition - Info.ApproximateInstructionPosition >=
-           InstructionCountThreshold) ||
-          (UnwindCodeCount >= UnwindCodeThreshold)) {
+           CLOpts.wineh_unwindv2_instruction_count_threshold) ||
+          (UnwindCodeCount >= CLOpts.wineh_unwindv2_unwind_codes_threshold)) {
         BuildMI(MBB, MBB.begin(), DL,
-                TII->get(X86::SEH_SplitChainedAtEndOfBlock));
+                TII->get(X86::SEH_SplitChainedAtEndOfBlock))
+            .setMIFlag(MachineInstr::FrameDestroy);
         LastUnwindInfoEndPosition = Info.ApproximateInstructionPosition;
         // Doesn't reset to 0, as the prolog unwind codes are now in this info.
         UnwindCodeCount = FI.ApproximatePrologCodeCount + 1;
@@ -430,7 +424,8 @@ bool runX86WinEHUnwindV2(MachineFunction &MF) {
   MachineBasicBlock &FirstMBB = MF.front();
   BuildMI(FirstMBB, FirstMBB.front(), findDebugLoc(FirstMBB),
           TII->get(X86::SEH_UnwindVersion))
-      .addImm(2);
+      .addImm(2)
+      .setMIFlag(MachineInstr::FrameSetup);
 
   return true;
 }

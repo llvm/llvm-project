@@ -15,10 +15,6 @@ void test_sized_delete(SizedDelete *x) {
   delete x;
 }
 
-// SizedDelete::operator delete(void*, unsigned long)
-// CIR:  cir.func private @_ZN11SizedDeletedlEPvm(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
-// LLVM: declare void @_ZN11SizedDeletedlEPvm(ptr noundef, i64 noundef)
-
 // CIR: cir.func {{.*}} @_Z17test_sized_deleteP11SizedDelete
 // CIR:   %[[X:.*]] = cir.load{{.*}} %{{.*}}
 // CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_SizedDelete>
@@ -59,7 +55,9 @@ void test_sized_delete(SizedDelete *x) {
 // OGCG: [[DELETE_NOTNULL]]:
 // OGCG:   call void @_ZN11SizedDeletedlEPvm(ptr noundef %[[X]], i64 noundef 4)
 
-// This function is declared below the call in OGCG.
+// SizedDelete::operator delete(void*, unsigned long)
+// CIR:  cir.func private @_ZN11SizedDeletedlEPvm(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
+// LLVM: declare void @_ZN11SizedDeletedlEPvm(ptr noundef, i64 noundef)
 // OGCG: declare void @_ZN11SizedDeletedlEPvm(ptr noundef, i64 noundef)
 
 struct Contents {
@@ -70,14 +68,6 @@ struct Container {
   ~Container();
 };
 Container::~Container() { delete contents; }
-
-// Contents::~Contents()
-// CIR: cir.func {{.*}} @_ZN8ContentsD2Ev
-// LLVM: define linkonce_odr void @_ZN8ContentsD2Ev
-
-// operator delete(void*, unsigned long)
-// CIR: cir.func {{.*}} @_ZdlPvm(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
-// LLVM: declare void @_ZdlPvm(ptr noundef, i64 noundef)
 
 // Container::~Container()
 // CIR: cir.func {{.*}} @_ZN9ContainerD2Ev
@@ -129,8 +119,14 @@ Container::~Container() { delete contents; }
 // OGCG:   call void @_ZN8ContentsD2Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CONTENTS_PTR]])
 // OGCG:   call void @_ZdlPvm(ptr noundef %[[CONTENTS_PTR]], i64 noundef 1)
 
-// These functions are declared/defined below the calls in OGCG.
+// Contents::~Contents()
+// CIR: cir.func {{.*}} @_ZN8ContentsD2Ev
+// LLVM: define linkonce_odr void @_ZN8ContentsD2Ev
 // OGCG: define linkonce_odr void @_ZN8ContentsD2Ev
+
+// operator delete(void*, unsigned long)
+// CIR: cir.func {{.*}} @_ZdlPvm(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
+// LLVM: declare void @_ZdlPvm(ptr noundef, i64 noundef)
 // OGCG: declare void @_ZdlPvm(ptr noundef, i64 noundef)
 
 struct StructWithVirtualDestructor {
@@ -142,7 +138,7 @@ void destroy(StructWithVirtualDestructor *x) {
 }
 
 // CIR: cir.func {{.*}} @_Z7destroyP27StructWithVirtualDestructor(%[[X_ARG:.*]]: !cir.ptr<!rec_StructWithVirtualDestructor> {{.*}})
-// CIR:   %[[X_ADDR:.*]] = cir.alloca !cir.ptr<!rec_StructWithVirtualDestructor>
+// CIR:   %[[X_ADDR:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!rec_StructWithVirtualDestructor>>
 // CIR:   cir.store %[[X_ARG]], %[[X_ADDR]]
 // CIR:   %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
 // CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_StructWithVirtualDestructor>

@@ -63,6 +63,12 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     BC.MIB->createLongTailCall(Seq, BC.Ctx->createTempSymbol(), BC.Ctx.get());
     PatchSize = BC.computeCodeSize(Seq.begin(), Seq.end());
   }
+  static size_t FillerSize = 0;
+  if (BC.isX86() && FillerSize == 0) {
+    std::array<MCInst, 1> Seq;
+    BC.MIB->createBreakpoint(Seq[0]);
+    FillerSize = BC.computeCodeSize(Seq.begin(), Seq.end());
+  }
 
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
@@ -91,8 +97,6 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
         return false;
       }
 
-      PendingPatches.emplace_back(
-          Patch{Symbol, Function.getAddress() + Offset});
       NextValidByte = Offset + PatchSize;
       if (NextValidByte > Function.getMaxSize()) {
         if (opts::Verbosity >= 1)
@@ -101,6 +105,22 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
         return false;
       }
 
+      const uint64_t PatchAddress = Function.getAddress() + Offset;
+      Patch P{Symbol, PatchAddress};
+
+      if (BC.isX86()) {
+        uint64_t OverwriteLength =
+            Function.getInstructionSequenceLength(Offset, PatchSize);
+        P.PaddingAfter = OverwriteLength - PatchSize;
+        assert(PendingPatches.empty() ||
+               (PendingPatches.back().Address + PatchSize +
+                    PendingPatches.back().PaddingAfter <=
+                PatchAddress) &&
+                   "Entry point cannot overlap with instruction stream of "
+                   "previous entrypoint.");
+      }
+
+      PendingPatches.emplace_back(P);
       return true;
     });
 
@@ -117,6 +137,16 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       // Add instruction patch to the binary.
       InstructionListType Instructions;
       BC.MIB->createLongTailCall(Instructions, Patch.Symbol, BC.Ctx.get());
+
+      if (BC.isX86()) {
+        assert(Patch.PaddingAfter % FillerSize == 0 &&
+               "Padding must be multiple of filler size.");
+        llvm::MCInst Inst;
+        BC.MIB->createBreakpoint(Inst);
+        Instructions.resize(
+            Instructions.size() + Patch.PaddingAfter / FillerSize, Inst);
+      }
+
       BinaryFunction *PatchFunction = BC.createInstructionPatch(
           Patch.Address, Instructions,
           NameResolver::append(Patch.Symbol->getName(), ".org.0"));
@@ -128,7 +158,8 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       uint64_t HotSize, ColdSize;
       std::tie(HotSize, ColdSize) = BC.calculateEmittedSize(*PatchFunction);
       assert(!ColdSize && "unexpected cold code");
-      assert(HotSize <= PatchSize && "max patch size exceeded");
+      assert(HotSize <= PatchSize + Patch.PaddingAfter &&
+             "max patch size exceeded");
     }
   }
   return Error::success();

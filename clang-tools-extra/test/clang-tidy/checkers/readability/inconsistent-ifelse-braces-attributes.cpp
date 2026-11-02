@@ -28,6 +28,54 @@ void f(bool b) {
   // CHECK-MESSAGES: :[[@LINE-4]]:20: warning: statement should have braces [readability-inconsistent-ifelse-braces]
   // CHECK-FIXES: if (b) {{[[][[]}}likely{{[]][]]}} {
   // CHECK-FIXES: } else {{[[][[]}}unlikely{{[]][]]}} {
+
+  if (b) hoo: {
+    return;
+  } else loo: [[unlikely]]
+    return;
+  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: } else { loo: {{[[][[]}}unlikely{{[]][]]}}
+  // CHECK-FIXES-NEXT:   return;
+  // CHECK-FIXES-NEXT: }
+
+  if (b)
+    return;
+  else coo: [[unlikely]] {
+    return;
+  }
+  // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: if (b) {
+  // CHECK-FIXES-NEXT:   return;
+  // CHECK-FIXES-NEXT: } else coo: {{[[][[]}}unlikely{{[]][]]}} {
+
+  if (b) aoo:
+    return;
+  else boo: [[unlikely]] {
+    return;
+  }
+  // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: if (b) { aoo:
+  // CHECK-FIXES-NEXT:   return;
+  // CHECK-FIXES-NEXT: } else boo: {{[[][[]}}unlikely{{[]][]]}} {
+
+  if (b) moo: [[unlikely]]
+    return;
+  else noo: [[unlikely]] {
+    return;
+  }
+  // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: if (b) { moo: {{[[][[]}}unlikely{{[]][]]}}
+  // CHECK-FIXES-NEXT:   return;
+  // CHECK-FIXES-NEXT: } else noo: {{[[][[]}}unlikely{{[]][]]}} {
+
+  if (b) poo: [[likely]] {
+    return;
+  } else qoo: [[unlikely]]
+    return;
+  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: } else { qoo: {{[[][[]}}unlikely{{[]][]]}}
+  // CHECK-FIXES-NEXT:    return;
+  // CHECK-FIXES-NEXT: }
 }
 
 // Negative tests.
@@ -85,4 +133,21 @@ void g(bool b) {
   } else [[unlikely]] [[unlikely]] {
     return;
   }
+
+  if (b) {
+    return;
+  } else goo: [[unlikely]] {
+    return;
+  }
+
+  if (b) roo: [[unlikely]] {
+    return;
+  } else {
+    return;
+  }
+
+  if (b) poo: [[likely]]
+    return;
+  else qoo: [[unlikely]]
+    return;
 }

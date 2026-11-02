@@ -332,15 +332,17 @@ public:
   ParseResult parseIntegerSetReference(IntegerSet &set);
 
   /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
-  ParseResult
-  parseAffineMapOfSSAIds(AffineMap &map,
-                         function_ref<ParseResult(bool)> parseElement,
-                         Delimiter delimiter);
+  ParseResult parseAffineMapOfSSAIds(
+      AffineMap &map,
+      function_ref<FailureOr<OpAsmParser::UnresolvedOperand>()> parseElement,
+      function_ref<void(bool, OpAsmParser::UnresolvedOperand)> addOperand,
+      Delimiter delimiter);
 
   /// Parse an AffineExpr where dim and symbol identifiers are SSA ids.
-  ParseResult
-  parseAffineExprOfSSAIds(AffineExpr &expr,
-                          function_ref<ParseResult(bool)> parseElement);
+  ParseResult parseAffineExprOfSSAIds(
+      AffineExpr &expr,
+      function_ref<FailureOr<OpAsmParser::UnresolvedOperand>()> parseElement,
+      function_ref<void(bool, OpAsmParser::UnresolvedOperand)> addOperand);
 
   //===--------------------------------------------------------------------===//
   // Code Completion

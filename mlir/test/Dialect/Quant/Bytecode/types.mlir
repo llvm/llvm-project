@@ -85,3 +85,19 @@ module @parseUniformSubChannel attributes {
   // CHECK: !quant.uniform<i8:f32:{0:1, 1:2}, {{\{}}{2.000000e+00:10, 3.000000e+00:20}, {4.000000e+00:30, 5.000000e+00:40}}>
   bytecode.test = !quant.uniform<i8:f32:{0:1, 1:2}, {{2.0:10, 3.0:20}, {4.0:30, 5.0:40}}>
 } {}
+
+//===----------------------------------------------------------------------===//
+// QuantileType
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: parseQuantileNoStorageBounds
+module @parseQuantileNoStorageBounds attributes {
+  // CHECK: !quant.quantile<ui4:f16, {-1.000000e+00,-8.750000e-01,-7.500000e-01,-6.250000e-01,-5.000000e-01,-3.750000e-01,-2.500000e-01,-1.250000e-01,1.250000e-01,2.500000e-01,3.750000e-01,5.000000e-01,6.250000e-01,7.500000e-01,8.750000e-01,1.000000e+00}>
+  bytecode.test = !quant.quantile<ui4:f16, {-1.0,-0.875,-0.75,-0.625,-0.5,-0.375,-0.25,-0.125,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1.0}>
+} {}
+
+// CHECK-LABEL: parseQuantileWithStorageBounds
+module @parseQuantileWithStorageBounds attributes {
+  // CHECK: !quant.quantile<ui4:f16, {-1.000000e+00,-5.000000e-01,2.500000e-01,7.500000e-01,1.000000e+00}, <-2:2>>
+  bytecode.test = !quant.quantile<ui4:f16, {-1.0,-0.5,0.25,0.75,1.0}, <-2:2>>
+} {}

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CtxProfAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CFG.h"
@@ -45,13 +46,6 @@ static cl::opt<CtxProfAnalysisPrinterPass::PrintMode> PrintLevel(
                clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::YAML, "yaml",
                           "just the yaml representation of the profile")),
     cl::desc("Verbosity level of the contextual profile printer pass."));
-
-static cl::opt<bool> ForceIsInSpecializedModule(
-    "ctx-profile-force-is-specialized", cl::init(false),
-    cl::desc("Treat the given module as-if it were containing the "
-             "post-thinlink module containing the root"));
-
-const char *AssignGUIDPass::GUIDMetadataName = "guid";
 
 class ProfileAnnotatorImpl final {
   friend class ProfileAnnotator;
@@ -420,33 +414,6 @@ bool ProfileAnnotator::getOutgoingBranchWeights(
   return MaxCount > 0;
 }
 
-PreservedAnalyses AssignGUIDPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  for (auto &F : M.functions()) {
-    if (F.isDeclaration())
-      continue;
-    if (F.getMetadata(GUIDMetadataName))
-      continue;
-    const GlobalValue::GUID GUID = F.getGUID();
-    F.setMetadata(GUIDMetadataName,
-                  MDNode::get(M.getContext(),
-                              {ConstantAsMetadata::get(ConstantInt::get(
-                                  Type::getInt64Ty(M.getContext()), GUID))}));
-  }
-  return PreservedAnalyses::none();
-}
-
-GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
-  if (F.isDeclaration()) {
-    assert(GlobalValue::isExternalLinkage(F.getLinkage()));
-    return F.getGUID();
-  }
-  auto *MD = F.getMetadata(GUIDMetadataName);
-  assert(MD && "guid not found for defined function");
-  return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
-                               ->getValue()
-                               ->stripPointerCasts())
-      ->getZExtValue();
-}
 AnalysisKey CtxProfAnalysis::Key;
 
 CtxProfAnalysis::CtxProfAnalysis(std::optional<StringRef> Profile)
@@ -496,13 +463,15 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   };
   const auto ProfileRootsInModule = DetermineRootsInModule();
   PGOContextualProfile Result;
+  Result.IsInSpecializedModule =
+      valueOr(getAnalysisOptions(M).ctx_profile_force_is_specialized,
+              !ProfileRootsInModule.empty());
 
   // the logic from here on allows for modules that contain - by design - more
   // than one root. We currently don't support that, because the determination
   // happens based on the module name matching the root guid, but the logic can
   // avoid assuming that.
   if (!ProfileRootsInModule.empty()) {
-    Result.IsInSpecializedModule = true;
     // Trim first the roots that aren't in this module.
     for (auto &[RootGuid, _] :
          llvm::make_early_inc_range(MaybeProfiles->Contexts))
@@ -515,7 +484,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   for (const auto &F : M) {
     if (F.isDeclaration())
       continue;
-    auto GUID = AssignGUIDPass::getGUID(F);
+    auto GUID = F.getGUID();
     assert(GUID && "guid not found for defined function");
     const auto &Entry = F.begin();
     uint32_t MaxCounters = 0; // we expect at least a counter.
@@ -547,13 +516,6 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   Result.Profiles = std::move(*MaybeProfiles);
   Result.initIndex();
   return Result;
-}
-
-GlobalValue::GUID
-PGOContextualProfile::getDefinedFunctionGUID(const Function &F) const {
-  if (auto It = FuncInfo.find(AssignGUIDPass::getGUID(F)); It != FuncInfo.end())
-    return It->first;
-  return 0;
 }
 
 CtxProfAnalysisPrinterPass::CtxProfAnalysisPrinterPass(raw_ostream &OS)
@@ -664,14 +626,12 @@ void PGOContextualProfile::initIndex() {
 }
 
 bool PGOContextualProfile::isInSpecializedModule() const {
-  return ForceIsInSpecializedModule.getNumOccurrences() > 0
-             ? ForceIsInSpecializedModule
-             : IsInSpecializedModule;
+  return IsInSpecializedModule;
 }
 
 void PGOContextualProfile::update(Visitor V, const Function &F) {
   assert(isFunctionKnown(F));
-  GlobalValue::GUID G = getDefinedFunctionGUID(F);
+  GlobalValue::GUID G = F.getGUID();
   for (auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
        Node = Node->Next)
     V(*reinterpret_cast<PGOCtxProfContext *>(Node));
@@ -682,7 +642,7 @@ void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
     return preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
                          const PGOCtxProfContext>(Profiles.Contexts, V);
   assert(isFunctionKnown(*F));
-  GlobalValue::GUID G = getDefinedFunctionGUID(*F);
+  GlobalValue::GUID G = F->getGUID();
   for (const auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
        Node = Node->Next)
     V(*reinterpret_cast<const PGOCtxProfContext *>(Node));

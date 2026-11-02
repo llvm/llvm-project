@@ -46,12 +46,12 @@ void Foo::bar() {
   auto* obj1 = m_obj1.get();
   obj1->method();
   auto* obj2 = m_obj2.get();
-  // expected-warning@-1{{Local variable 'obj2' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'obj2' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   obj2->method();
   auto& obj3 = ensureObj3();
   obj3.method();
   auto& obj4 = ensureObj4();
-  // expected-warning@-1{{Local variable 'obj4' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'obj4' is a raw reference to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   obj4.method();
   auto* obj5 = ensureObj5();
 }
@@ -74,7 +74,7 @@ void Foo::bar() {
   auto& obj1 = m_obj1.get();
   obj1.method();
   auto& obj2 = m_obj2.get();
-  // expected-warning@-1{{Local variable 'obj2' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'obj2' is a raw reference to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   obj2.method();
 }
 
@@ -96,7 +96,7 @@ void Foo::bar() {
   auto* obj1 = m_obj1.get();
   obj1->method();
   auto* obj2 = m_obj2.get();
-  // expected-warning@-1{{Local variable 'obj2' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'obj2' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   obj2->method();
 }
 

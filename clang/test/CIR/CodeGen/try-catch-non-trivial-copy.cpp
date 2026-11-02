@@ -42,10 +42,10 @@ int test_non_trivial_exception_copy() {
 // it later.
 
 // CIR-LABEL: cir.func {{.*}} @_Z31test_non_trivial_exception_copyv()
-// CIR:         %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:         %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["rv", init]
+// CIR:         %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:         %[[RV:.*]] = cir.alloca "rv" {{.*}} init : !cir.ptr<!s32i>
 // CIR:         cir.scope {
-// CIR:           %[[E:.*]] = cir.alloca !rec_MyException, !cir.ptr<!rec_MyException>, ["e"]
+// CIR:           %[[E:.*]] = cir.alloca "e" {{.*}} : !cir.ptr<!rec_MyException>
 // CIR:           cir.try {
 // CIR:             cir.call @_Z8mayThrowv() : () -> ()
 // CIR:           } catch [type #cir.global_view<@_ZTI11MyException> : !cir.ptr<!u8i>] (%[[EH_TOKEN:.*]]: !cir.eh_token {{.*}}) {
@@ -357,7 +357,7 @@ int test_copy_ctor_extra_args() {
 // exact switch shape here, but we do verify the EH-relevant control flow.
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z25test_copy_ctor_extra_argsv()
-// CIR-FLAT:         %{{.*}} = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot", cleanup_dest_slot]
+// CIR-FLAT:         %{{.*}} = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
 // CIR-FLAT:         cir.try_call @_Z8mayThrowv() ^[[T2F_CONT:bb[0-9]+]], ^[[T2F_LPAD:bb[0-9]+]]
 
 // CIR-FLAT:       ^[[T2F_LPAD]]:

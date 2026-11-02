@@ -778,8 +778,8 @@ define <vscale x 8 x i1> @intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i64_i64(<vsca
 ; RV32-LABEL: intrinsic_vmsbc.borrow.in_vxm_nxv8i1_nxv8i64_i64:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero

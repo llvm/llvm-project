@@ -18,8 +18,4 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
-_LIBCPP_END_NAMESPACE_STD
-
 #endif // _LIBCPP___CHARCONV_TO_CHARS

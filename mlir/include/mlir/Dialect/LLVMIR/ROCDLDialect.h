@@ -24,9 +24,11 @@
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/Dialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialectDecl.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+
+#include "mlir/Dialect/LLVMIR/ROCDLOpsEnums.h.inc"
 
 ///// Ops /////
 #define GET_ATTRDEF_CLASSES
@@ -34,7 +36,5 @@
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/ROCDLOps.h.inc"
-
-#include "mlir/Dialect/LLVMIR/ROCDLOpsDialect.h.inc"
 
 #endif /* MLIR_DIALECT_LLVMIR_ROCDLDIALECT_H_ */

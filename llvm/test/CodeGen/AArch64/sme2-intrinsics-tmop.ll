@@ -119,7 +119,7 @@ define void @ftmopa_za16_f8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <v
 ; CHECK-NEXT:    mov z28.d, z3.d
 ; CHECK-NEXT:    ftmopa za0.h, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.ftmopa.za16.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.fp8.ftmopa.za16(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -129,7 +129,7 @@ define void @ftmopa_za32_f8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <v
 ; CHECK-NEXT:    mov z28.d, z3.d
 ; CHECK-NEXT:    ftmopa za0.s, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.ftmopa.za32.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.fp8.ftmopa.za32(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 

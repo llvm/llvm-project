@@ -52,7 +52,7 @@ if.end:                                           ; preds = %entry
 
 ; Make sure we don't try to outline the entire function, especially when the
 ; entry block is cold.
-; CHECK: define void @cold_entry_block() [[COLD_ATTR:#[0-9]+]]
+; CHECK: define void @cold_entry_block()
 ; CHECK-NOT: cold_entry_block.cold.1
 define void @cold_entry_block() {
 entry:
@@ -162,6 +162,20 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+; CHECK-LABEL: @sanitize_concurrency
+; CHECK-NOT: sanitize_concurrency.cold.1
+define void @sanitize_concurrency(i1 %arg) sanitize_concurrency {
+entry:
+  br i1 %arg, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  call void @sink()
+  ret void
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
 ; CHECK-LABEL: @sanitize_memory
 ; CHECK-NOT: sanitize_memory.cold.1
 define void @sanitize_memory(i1 %arg) sanitize_memory {
@@ -191,8 +205,6 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry
   ret void
 }
-
-; CHECK: attributes [[COLD_ATTR]] = { {{.*}}cold
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

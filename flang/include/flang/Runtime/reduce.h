@@ -21,7 +21,6 @@
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
-#include <complex>
 #include <cstdint>
 
 namespace Fortran::runtime {

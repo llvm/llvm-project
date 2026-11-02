@@ -8,8 +8,6 @@
 
 #include "LibCxx.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -236,7 +234,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
   ~LibCxxMapIteratorSyntheticFrontEnd() override = default;
 
@@ -482,7 +480,7 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::GetChildAtIndex(
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (!m_pair_sp)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
 

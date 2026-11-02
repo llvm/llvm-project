@@ -2,6 +2,7 @@
 
 import os
 import re
+import shlex
 
 
 def get_required_attr(config, attr_name):
@@ -30,6 +31,11 @@ if (
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 
+if target_is_msvc:
+    config.environment["LIB"] = os.path.pathsep.join(
+        [config.compiler_rt_libdir, config.environment.get("LIB", "")]
+    )
+
 if config.target_os in ["Linux"]:
     extra_link_flags = ["-ldl"]
 elif target_is_msvc:
@@ -44,6 +50,14 @@ config.suffixes = [".c", ".cpp", ".m", ".mm", ".ll", ".test"]
 
 # What to exclude.
 config.excludes = ["Inputs"]
+
+# Compiler-only GPU tests require a registered backend, independently of HIP
+# runtime and GPU availability.
+registered_targets = lit_config.run_command_cached(
+    shlex.split(config.clang) + ["--print-targets"], allow_failure=True, text=True
+)
+if re.search(r"^\s*amdgcn\s+-", registered_targets, re.MULTILINE):
+    config.available_features.add("amdgpu-registered-target")
 
 # Clang flags.
 target_cflags = [get_required_attr(config, "target_cflags")]
@@ -186,3 +200,5 @@ if config.have_curl:
 
 if config.target_os in ("AIX", "Darwin", "Linux"):
     config.available_features.add("continuous-mode")
+
+config.suffixes.append(".hip")

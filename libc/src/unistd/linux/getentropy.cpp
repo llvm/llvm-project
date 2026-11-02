@@ -8,11 +8,9 @@
 
 #include "src/unistd/getentropy.h"
 #include "hdr/errno_macros.h"
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
-
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, getentropy, (void *buffer, size_t length)) {
@@ -26,16 +24,16 @@ LLVM_LIBC_FUNCTION(int, getentropy, (void *buffer, size_t length)) {
   while (length != 0) {
     // 0 flag means urandom and blocking, which meets the assumption of
     // getentropy
-    auto ret = syscall_impl<long>(SYS_getrandom, cursor, length, 0);
+    auto result = linux_syscalls::getrandom(cursor, length, 0);
 
     // on success, advance the buffer pointer
-    if (ret >= 0) {
-      length -= static_cast<size_t>(ret);
-      cursor += ret;
+    if (result) {
+      length -= static_cast<size_t>(result.value());
+      cursor += result.value();
       continue;
     }
 
-    auto error = -static_cast<int>(ret);
+    auto error = result.error();
 
     // on EINTR, try again
     if (error == EINTR)

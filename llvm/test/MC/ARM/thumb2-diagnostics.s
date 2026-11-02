@@ -43,11 +43,10 @@
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
-@ CHECK-ERRORS-V8: invalid instruction
 @ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: invalid operand for instruction
 
         @ Out of range immediate for ROR.
         @ (Assembling this instruction to "mov r1, r1" might also be OK.)
@@ -135,7 +134,7 @@ foo2:
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS: note: instruction requires: arm-mode
 @ CHECK-ERRORS: note: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid instruction
+@ CHECK-ERRORS: error: invalid operand for instruction
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS: note: invalid operand for instruction
 @ CHECK-ERRORS: note: instruction requires: arm-mode
@@ -195,3 +194,8 @@ foo2:
         @ v8 allows rn = sp
 @ CHECK-ERRORS-V7: error: instruction variant requires ARMv8 or later
         @ rn=pc is allowed so not included here
+
+        @ "sub pc, lr, #imm" (without 's') is not a Thumb2 instruction
+        sub pc, lr, #4
+@ CHECK-ERRORS-V7: error: operand must be a register in range [r0, r12] or r14
+@ CHECK-ERRORS-V8: error: operand must be a register in range [r0, r14]

@@ -555,6 +555,14 @@ class ValueProvidingFrame(ScriptedFrame):
         """No register context."""
         return None
 
+    def get_value_type_for_variable(self, var):
+        name = var.GetName()
+        if name == "_handler_one":
+            return lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag
+        if name == "variable_in_main":
+            return lldb.eValueTypeVariableLocal
+        return None
+
     def get_variables(self):
         """"""
         out = lldb.SBValueList()

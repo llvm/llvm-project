@@ -1,4 +1,6 @@
-; RUN: llc --filetype=obj %s -o - | dxil-dis -o - | FileCheck %s
+; RUN: llc --filetype=obj %s -o %t.dxbc
+; RUN: llvm-objcopy --dump-section=ILDB=%t.bc %t.dxbc
+; RUN: dxil-dis %t.bc -o - | FileCheck %s
 target triple = "dxil-unknown-shadermodel6.7-library"
 
 define float @fmaf(float %x, float %y, float %z) !dbg !4 {

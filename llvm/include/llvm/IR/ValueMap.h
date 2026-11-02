@@ -202,20 +202,6 @@ public:
 
   ValueT &operator[](const KeyT &Key) { return Map[Wrap(Key)]; }
 
-  /// isPointerIntoBucketsArray - Return true if the specified pointer points
-  /// somewhere into the ValueMap's array of buckets (i.e. either to a key or
-  /// value in the ValueMap).
-  bool isPointerIntoBucketsArray(const void *Ptr) const {
-    return Map.isPointerIntoBucketsArray(Ptr);
-  }
-
-  /// getPointerIntoBucketsArray() - Return an opaque pointer into the buckets
-  /// array.  In conjunction with the previous method, this can be used to
-  /// determine whether an insertion caused the ValueMap to reallocate.
-  const void *getPointerIntoBucketsArray() const {
-    return Map.getPointerIntoBucketsArray();
-  }
-
 private:
   // Takes a key being looked up in the map and wraps it into a
   // ValueMapCallbackVH, the actual key type of the map.  We use a helper
@@ -291,10 +277,6 @@ public:
 template <typename KeyT, typename ValueT, typename Config>
 struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
   using VH = ValueMapCallbackVH<KeyT, ValueT, Config>;
-
-  static inline VH getEmptyKey() {
-    return VH(DenseMapInfo<Value *>::getEmptyKey());
-  }
 
   static unsigned getHashValue(const VH &Val) {
     return DenseMapInfo<KeyT>::getHashValue(Val.Unwrap());

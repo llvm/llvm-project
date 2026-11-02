@@ -14,7 +14,6 @@
 #include "SIFixVGPRCopies.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 using namespace llvm;

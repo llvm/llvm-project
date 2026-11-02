@@ -7,7 +7,7 @@
 //
 // Now add Movable.framework to JustBuilt.
 // RUN: mkdir %t/JustBuilt
-// RUN: cp -r %t/StableFrameworks/Movable.framework %t/JustBuilt/Movable.framework
+// RUN: cp -R %t/StableFrameworks/Movable.framework %t/JustBuilt/Movable.framework
 //
 // Load Movable.pcm at first for JustBuilt location and then in the same TU try to load transitively for StableFrameworks location.
 // RUN: %clang_cc1 -fsyntax-only -F %t/JustBuilt -F %t/StableFrameworks %t/trigger-error.m \

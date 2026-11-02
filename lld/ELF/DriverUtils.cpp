@@ -33,24 +33,10 @@ using namespace lld::elf;
 
 // Create OptTable
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-// Create prefix string literals used in Options.td
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-// Create table mapping all options defined in Options.td
-static constexpr opt::OptTable::Info optInfo[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Options.inc"
-#undef OPTION
-};
-
-ELFOptTable::ELFOptTable()
-    : GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
+ELFOptTable::ELFOptTable() : OptTable(optionTables()) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
@@ -184,7 +170,10 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       // directories for the output path (-o doesn't create directories).
       // Strip directories to prevent the issue.
       os << arg->getSpelling();
-      if (arg->getOption().getRenderStyle() == opt::Option::RenderSeparateStyle)
+      if (opt::Option::RenderStyleKind style =
+              arg->getOption().getRenderStyle();
+          style == opt::Option::RenderSeparateStyle ||
+          style == opt::Option::RenderEqStyle)
         os << ' ';
       os << quote(path::filename(arg->getValue())) << '\n';
       break;

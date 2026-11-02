@@ -48,6 +48,12 @@ def CIR_AnyCatchAllAttr
 def CIR_AnyUnwindAttr
     : CIR_AttrConstraint<"::cir::UnwindAttr", "unwind attribute">;
 
+def CIR_AnyEhFilterAttr
+    : CIR_AttrConstraint<"::cir::EhFilterAttr", "eh filter attribute">;
+
+def CIR_AnyEhUnexpectedAttr
+    : CIR_AttrConstraint<"::cir::EhUnexpectedAttr", "eh unexpected attribute">;
+
 //===----------------------------------------------------------------------===//
 // GlobalViewAttr constraints
 //===----------------------------------------------------------------------===//
@@ -62,8 +68,10 @@ def CIR_AnyIntOrGlobalViewAttr
 }
 
 def CIR_TryHandlerAttr
-    : AnyAttrOf<[CIR_AnyGlobalViewAttr, CIR_AnyCatchAllAttr, CIR_AnyUnwindAttr],
-                "catch all or unwind or global view attribute"> {
+    : AnyAttrOf<[CIR_AnyGlobalViewAttr, CIR_AnyCatchAllAttr, CIR_AnyUnwindAttr,
+                 CIR_AnyEhFilterAttr, CIR_AnyEhUnexpectedAttr],
+                "catch all, unwind, eh filter, eh unexpected or global view "
+                "attribute"> {
   string cppType = "::mlir::TypedAttr";
 }
 
@@ -71,15 +79,35 @@ def CIR_TryHandlerAttr
 // ArrayAttr constraints
 //===----------------------------------------------------------------------===//
 
-def CIR_IntArrayAttr : TypedArrayAttrBase<CIR_AnyIntAttr,
-   "integer array attribute">;
-
-def CIR_IntOrGlobalViewArrayAttr : TypedArrayAttrBase<CIR_AnyIntOrGlobalViewAttr,
-   "integer or global view array attribute">{
+class CIR_TypedArrayAttrBase<Attr element, string summary>
+    : TypedArrayAttrBase<element, summary> {
   string cppType = "::mlir::ArrayAttr";
 }
 
-def CIR_TryHandlerArrayAttr : TypedArrayAttrBase<CIR_TryHandlerAttr,
-                         "catch all or unwind or global view array attribute">;
+class CIR_TypedArrayAttrOrNullBase<Attr element, string summary>
+    : CIR_TypedArrayAttrBase<element, summary> {
+  let predicate = Or<[
+    CPred<"!$_self">,
+    CIR_TypedArrayAttrBase<element, summary>.predicate
+  ]>;
+  string defaultValue = "::mlir::ArrayAttr()";
+}
+
+def CIR_IntArrayAttr : CIR_TypedArrayAttrBase<CIR_AnyIntAttr,
+   "integer array attribute">;
+
+def CIR_IntOrGlobalViewArrayAttr
+    : CIR_TypedArrayAttrBase<CIR_AnyIntOrGlobalViewAttr,
+                             "integer or global view array attribute">;
+
+def CIR_StringArrayAttr
+    : CIR_TypedArrayAttrBase<StrAttr, "string array attribute">;
+
+def CIR_StringArrayAttrOrNull
+    : CIR_TypedArrayAttrOrNullBase<StrAttr, "string array attribute or null">;
+
+def CIR_TryHandlerArrayAttr : CIR_TypedArrayAttrBase<CIR_TryHandlerAttr,
+    "catch all, unwind, eh filter, eh unexpected or global view array "
+    "attribute">;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRCONSTRAINTS_TD

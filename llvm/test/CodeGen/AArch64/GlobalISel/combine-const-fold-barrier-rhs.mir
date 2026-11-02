@@ -10,17 +10,17 @@ body:             |
     ; CHECK-LABEL: name: cfb_lhs
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %add:_(s32) = G_ADD [[COPY]], %cfb
-    ; CHECK-NEXT: $w0 = COPY %add(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %add:_(i32) = G_ADD [[COPY]], %cfb
+    ; CHECK-NEXT: $w0 = COPY %add(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    %cst2:_(s32) = G_CONSTANT i32 2
-    %add:_(s32) = G_ADD %cfb, %0
+    %0:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    %cst2:_(i32) = G_CONSTANT i32 2
+    %add:_(i32) = G_ADD %cfb, %0
     $w0 = COPY %add
     RET_ReallyLR
 
@@ -35,19 +35,19 @@ body:             |
     ; CHECK-LABEL: name: cfb_lhs_cfb_already_rhs
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %cst2:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: %cfb2:_(s32) = G_CONSTANT_FOLD_BARRIER %cst2
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %cfb, %cfb2
-    ; CHECK-NEXT: $w0 = COPY %add(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %cst2:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: %cfb2:_(i32) = G_CONSTANT_FOLD_BARRIER %cst2
+    ; CHECK-NEXT: %add:_(i32) = G_ADD %cfb, %cfb2
+    ; CHECK-NEXT: $w0 = COPY %add(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    %cst2:_(s32) = G_CONSTANT i32 2
-    %cfb2:_(s32) = G_CONSTANT_FOLD_BARRIER %cst2
-    %add:_(s32) = G_ADD %cfb, %cfb2
+    %0:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    %cst2:_(i32) = G_CONSTANT i32 2
+    %cfb2:_(i32) = G_CONSTANT_FOLD_BARRIER %cst2
+    %add:_(i32) = G_ADD %cfb, %cfb2
     $w0 = COPY %add
     RET_ReallyLR
 
@@ -63,17 +63,17 @@ body:             |
     ; CHECK-LABEL: name: cfb_lhs_cst_on_rhs
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %cst2:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %cfb, %cst2
-    ; CHECK-NEXT: $w0 = COPY %add(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %cst2:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: %add:_(i32) = G_ADD %cfb, %cst2
+    ; CHECK-NEXT: $w0 = COPY %add(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    %cst2:_(s32) = G_CONSTANT i32 2
-    %add:_(s32) = G_ADD %cfb, %cst2
+    %0:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    %cst2:_(i32) = G_CONSTANT i32 2
+    %add:_(i32) = G_ADD %cfb, %cst2
     $w0 = COPY %add
     RET_ReallyLR
 
@@ -88,18 +88,18 @@ body:             |
     ; CHECK-LABEL: name: cfb_lhs_smulo
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %mul:_(s32), %overflow:_(s1) = G_SMULO [[COPY]], %cfb
-    ; CHECK-NEXT: %ret:_(s32) = G_ANYEXT %overflow(s1)
-    ; CHECK-NEXT: $w0 = COPY %ret(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %mul:_(i32), %overflow:_(i1) = G_SMULO [[COPY]], %cfb
+    ; CHECK-NEXT: %ret:_(i32) = G_ANYEXT %overflow(i1)
+    ; CHECK-NEXT: $w0 = COPY %ret(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    %mul:_(s32), %overflow:_(s1) = G_SMULO %cfb, %0
-    %ret:_(s32) = G_ANYEXT %overflow
+    %0:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    %mul:_(i32), %overflow:_(i1) = G_SMULO %cfb, %0
+    %ret:_(i32) = G_ANYEXT %overflow
     $w0 = COPY %ret
     RET_ReallyLR
 
@@ -114,21 +114,21 @@ body:             |
     ; CHECK-LABEL: name: cfb_lhs_cfb_already_rhs_smulo
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %cst2:_(s32) = G_CONSTANT i32 6
-    ; CHECK-NEXT: %cfb2:_(s32) = G_CONSTANT_FOLD_BARRIER %cst2
-    ; CHECK-NEXT: %mul:_(s32), %overflow:_(s1) = G_SMULO %cfb, %cfb2
-    ; CHECK-NEXT: %ret:_(s32) = G_ANYEXT %overflow(s1)
-    ; CHECK-NEXT: $w0 = COPY %ret(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %cst2:_(i32) = G_CONSTANT i32 6
+    ; CHECK-NEXT: %cfb2:_(i32) = G_CONSTANT_FOLD_BARRIER %cst2
+    ; CHECK-NEXT: %mul:_(i32), %overflow:_(i1) = G_SMULO %cfb, %cfb2
+    ; CHECK-NEXT: %ret:_(i32) = G_ANYEXT %overflow(i1)
+    ; CHECK-NEXT: $w0 = COPY %ret(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    %cst2:_(s32) = G_CONSTANT i32 6
-    %cfb2:_(s32) = G_CONSTANT_FOLD_BARRIER %cst2
-    %mul:_(s32), %overflow:_(s1) = G_SMULO %cfb, %cfb2
-    %ret:_(s32) = G_ANYEXT %overflow
+    %0:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    %cst2:_(i32) = G_CONSTANT i32 6
+    %cfb2:_(i32) = G_CONSTANT_FOLD_BARRIER %cst2
+    %mul:_(i32), %overflow:_(i1) = G_SMULO %cfb, %cfb2
+    %ret:_(i32) = G_ANYEXT %overflow
     $w0 = COPY %ret
     RET_ReallyLR
 
@@ -144,19 +144,19 @@ body:             |
     ; CHECK-LABEL: name: cfb_lhs_cst_on_rhs_smulo
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %cst2:_(s32) = G_CONSTANT i32 6
-    ; CHECK-NEXT: %mul:_(s32), %overflow:_(s1) = G_SMULO %cfb, %cst2
-    ; CHECK-NEXT: %ret:_(s32) = G_ANYEXT %overflow(s1)
-    ; CHECK-NEXT: $w0 = COPY %ret(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %cst2:_(i32) = G_CONSTANT i32 6
+    ; CHECK-NEXT: %mul:_(i32), %overflow:_(i1) = G_SMULO %cfb, %cst2
+    ; CHECK-NEXT: %ret:_(i32) = G_ANYEXT %overflow(i1)
+    ; CHECK-NEXT: $w0 = COPY %ret(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    %cst2:_(s32) = G_CONSTANT i32 6
-    %mul:_(s32), %overflow:_(s1) = G_SMULO %cfb, %cst2
-    %ret:_(s32) = G_ANYEXT %overflow
+    %0:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    %cst2:_(i32) = G_CONSTANT i32 6
+    %mul:_(i32), %overflow:_(i1) = G_SMULO %cfb, %cst2
+    %ret:_(i32) = G_ANYEXT %overflow
     $w0 = COPY %ret
     RET_ReallyLR
 
@@ -171,16 +171,16 @@ body:             |
     ; CHECK-LABEL: name: cfb_lhs_umulfixsat
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %mul:_(s32) = G_UMULFIXSAT [[COPY]], %cfb, 7
-    ; CHECK-NEXT: $w0 = COPY %mul(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %mul:_(i32) = G_UMULFIXSAT [[COPY]], %cfb, 7
+    ; CHECK-NEXT: $w0 = COPY %mul(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    %mul:_(s32) = G_UMULFIXSAT %cfb, %0, 7
+    %0:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    %mul:_(i32) = G_UMULFIXSAT %cfb, %0, 7
     $w0 = COPY %mul
     RET_ReallyLR
 
@@ -195,19 +195,19 @@ body:             |
     ; CHECK-LABEL: name: cfb_lhs_cfb_already_rhs_umulfixsat
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %cst2:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: %cfb2:_(s32) = G_CONSTANT_FOLD_BARRIER %cst2
-    ; CHECK-NEXT: %add:_(s32) = G_UMULFIXSAT %cfb, %cfb2, 7
-    ; CHECK-NEXT: $w0 = COPY %add(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %cst2:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: %cfb2:_(i32) = G_CONSTANT_FOLD_BARRIER %cst2
+    ; CHECK-NEXT: %add:_(i32) = G_UMULFIXSAT %cfb, %cfb2, 7
+    ; CHECK-NEXT: $w0 = COPY %add(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    %cst2:_(s32) = G_CONSTANT i32 2
-    %cfb2:_(s32) = G_CONSTANT_FOLD_BARRIER %cst2
-    %add:_(s32) = G_UMULFIXSAT %cfb, %cfb2, 7
+    %0:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    %cst2:_(i32) = G_CONSTANT i32 2
+    %cfb2:_(i32) = G_CONSTANT_FOLD_BARRIER %cst2
+    %add:_(i32) = G_UMULFIXSAT %cfb, %cfb2, 7
     $w0 = COPY %add
     RET_ReallyLR
 
@@ -223,17 +223,17 @@ body:             |
     ; CHECK-LABEL: name: cfb_lhs_cst_on_rhs_umulfixsat
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    ; CHECK-NEXT: %cst2:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: %add:_(s32) = G_UMULFIXSAT %cfb, %cst2, 7
-    ; CHECK-NEXT: $w0 = COPY %add(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    ; CHECK-NEXT: %cst2:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: %add:_(i32) = G_UMULFIXSAT %cfb, %cst2, 7
+    ; CHECK-NEXT: $w0 = COPY %add(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cfb:_(s32) = G_CONSTANT_FOLD_BARRIER %cst
-    %cst2:_(s32) = G_CONSTANT i32 2
-    %add:_(s32) = G_UMULFIXSAT %cfb, %cst2, 7
+    %0:_(i32) = COPY $w0
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cfb:_(i32) = G_CONSTANT_FOLD_BARRIER %cst
+    %cst2:_(i32) = G_CONSTANT i32 2
+    %add:_(i32) = G_UMULFIXSAT %cfb, %cst2, 7
     $w0 = COPY %add
     RET_ReallyLR
 

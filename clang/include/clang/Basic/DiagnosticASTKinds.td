@@ -16,6 +16,11 @@ def note_constexpr_invalid_cast : Note<
   "of a reinterpret_cast}1}|%CastFrom{cast from %1}}0"
   " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
+def note_constexpr_invalid_cast_ptrtoint : Note<
+  "%select{reinterpret_cast||"
+  "%select{this conversion|cast that performs the conversions of a reinterpret_cast}1|"
+  "}0 is not allowed in a constant expression">;
+def note_constexpr_has_lvalue : Note<"converting the address of an object to an integer is not allowed">;
 def note_constexpr_invalid_void_star_cast : Note<
   "cast from %0 is not allowed in a constant expression "
   "%select{in C++ standards before C++2c|because the pointed object "
@@ -24,6 +29,10 @@ def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
   "value %0 is outside the range of representable values of type %1">;
+def note_constexpr_builtin_arg_out_of_range : Note<
+  "argument value %0 is outside the valid range [%1, %2]">;
+def note_constexpr_offsetof_overflow : Note<
+  "overflow in offsetof">;
 def note_constexpr_negative_shift : Note<"negative shift count %0">;
 def note_constexpr_large_shift : Note<
   "shift count %0 >= width of type %1 (%2 bit%s2)">;
@@ -168,7 +177,7 @@ def note_constexpr_depth_limit_exceeded : Note<
 def note_constexpr_call_limit_exceeded : Note<
   "constexpr evaluation hit maximum call limit">;
 def note_constexpr_step_limit_exceeded : Note<
-  "constexpr evaluation hit maximum step limit; possible infinite loop?">;
+  "constexpr evaluation hit maximum step limit of %0; possible infinite loop?">;
 def note_constexpr_heap_alloc_limit_exceeded : Note<
   "constexpr evaluation hit maximum heap allocation limit">;
 def note_constexpr_this : Note<
@@ -215,6 +224,9 @@ def note_constexpr_ltor_non_integral : Note<
   "is not allowed in a constant expression">;
 def note_constexpr_ltor_non_constexpr : Note<
   "read of non-constexpr variable %0 is not allowed in a constant expression">;
+def note_constexpr_ltor_for_range_var : Note<
+  "read of implicit variable %0 of range-based 'for' loop is not allowed in a "
+  "constant expression">;
 def note_constexpr_ltor_incomplete_type : Note<
   "read of incomplete type %0 is not allowed in a constant expression">;
 def note_constexpr_access_null : Note<
@@ -272,6 +284,9 @@ def note_constexpr_alignment_compute : Note<
   "cannot constant evaluate whether run-time alignment is at least %0">;
 def note_constexpr_alignment_adjust : Note<
   "cannot constant evaluate the result of adjusting alignment to %0">;
+def note_constexpr_load8_unaligned : Note<
+  "%0 requires a pointer aligned to %1 %plural{1:byte|:bytes}1, but the "
+  "given pointer is only aligned to %2 %plural{1:byte|:bytes}2">;
 def note_constexpr_destroy_out_of_lifetime : Note<
   "destroying object '%0' whose lifetime has already ended">;
 def note_constexpr_unsupported_destruction : Note<
@@ -353,8 +368,9 @@ def note_constexpr_new_negative : Note<
 def note_constexpr_new_too_large : Note<
   "cannot allocate array; evaluated array bound %0 is too large">;
 def note_constexpr_new_exceeds_limits : Note<
-  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1); "
-  "use '-fconstexpr-steps' to increase this limit">;
+  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1)">;
+def note_constexpr_steps : Note<
+  "use -fconstexpr-steps= to increase this limit (=0 will remove the limit)">;
 def note_constexpr_new_too_small : Note<
   "cannot allocate array; evaluated array bound %0 is too small to hold "
   "%1 explicitly initialized elements">;
@@ -404,8 +420,8 @@ def note_constexpr_infer_alloc_token_type_inference_failed : Note<
   "could not infer allocation type for __builtin_infer_alloc_token">;
 def note_constexpr_infer_alloc_token_no_metadata : Note<
   "could not get token metadata for inferred type">;
-def note_constexpr_infer_alloc_token_stateful_mode
-    : Note<"stateful alloc token mode not supported in constexpr">;
+def note_constexpr_infer_alloc_token_unsupported_mode
+    : Note<"alloc token mode not supported in constexpr">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,
@@ -436,6 +452,10 @@ def err_invalid_is_within_lifetime : Note<
   "%select{a null pointer|a one-past-the-end pointer|"
   "a pointer to an object whose lifetime has not yet begun}1"
 >;
+
+def note_break_continue_label_outside_context : Note<
+  "cannot %select{break|continue}0 to a label outside "
+  "the current evaluation context">;
 
 // inline asm related.
 let CategoryName = "Inline Assembly Issue" in {
@@ -1030,6 +1050,15 @@ def warn_npot_ms_struct : Warning<
   "ms_struct may not produce Microsoft-compatible layouts with fundamental "
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+def warn_relaxed_constant_fold_cast : Extension<
+  "folding constant expression involving "
+  "cast that performs the conversions of a reinterpret_cast "
+  "is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>;
+def warn_relaxed_constant_fold_null : Extension<
+  "folding constant expression that takes field address of null pointer "
+  "is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>;
 
 def err_itanium_layout_unimplemented : Error<
   "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
@@ -1050,6 +1079,7 @@ def err_unsupported_itanium_mangling : Error<
     "|%UnnamedUnionNTTP{unnamed union non-type template parameter}"
     "|%RequiresExprWithSubstitutionFailure{requires-expression "
     "containing a substitution failure}"
+    "|%PackIndexTemplateName{pack indexing template name}"
     "}0">;
 
 def err_unsupported_itanium_expr_mangling : Error<

@@ -62,6 +62,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -363,9 +364,8 @@ bool ExpandVariadics::runOnModule(Module &M) {
   if (!ABI->enableForTarget())
     return Changed;
 
-  auto &Ctx = M.getContext();
   const DataLayout &DL = M.getDataLayout();
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
 
   // Lowering needs to run on all functions exactly once.
   // Optimize could run on functions containing va_start exactly once.
@@ -618,11 +618,12 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
 
   SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
 
-  Type *ParameterType = ABI->vaListParameterType(M);
+  Value *VaListValue = VaListInstance;
   if (ABI->vaListPassedInSSARegister())
-    Args.push_back(Builder.CreateLoad(ParameterType, VaListInstance));
-  else
-    Args.push_back(Builder.CreateAddrSpaceCast(VaListInstance, ParameterType));
+    VaListValue = Builder.CreateLoad(VaListTy, VaListInstance);
+
+  Type *ParameterType = ABI->vaListParameterType(M);
+  Args.push_back(Builder.CreateAddrSpaceCast(VaListValue, ParameterType));
 
   CallInst *Result = Builder.CreateCall(FixedArityReplacement, Args);
 
@@ -701,7 +702,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
       // The va_arg lowering loads through a pointer. Set up an alloca to aim
       // that pointer at.
       Builder.SetInsertPointPastAllocas(CBF);
-      Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
+      Builder.SetCurrentDebugLocation(CB->getDebugLoc());
       Value *CallerCopy =
           Builder.CreateAlloca(UnderlyingType, nullptr, "IndirectAlloca");
 
@@ -767,7 +768,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   Builder.SetInsertPointPastAllocas(CBF);
 
   // SetCurrentDebugLocation when the builder SetInsertPoint method does not
-  Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
+  Builder.SetCurrentDebugLocation(CB->getDebugLoc());
 
   // The awkward construction here is to set the alignment on the instance
   AllocaInst *Alloced = Builder.Insert(
@@ -791,7 +792,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
     if (!ABI->vaListPassedInSSARegister()) {
       Type *VaListTy = ABI->vaListType(Ctx);
       Builder.SetInsertPointPastAllocas(CBF);
-      Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
+      Builder.SetCurrentDebugLocation(CB->getDebugLoc());
       VaList = Builder.CreateAlloca(VaListTy, nullptr, "va_argument");
       Builder.SetInsertPoint(CB);
       Builder.CreateLifetimeStart(VaList);
@@ -847,7 +848,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   NewCB->setDebugLoc(DebugLoc());
 
   // DeadArgElim and ArgPromotion copy exactly this metadata
-  NewCB->copyMetadata(*CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+  NewCB->copyProfileAndDebugMetadata(*CB);
 
   CB->replaceAllUsesWith(NewCB);
   CB->eraseFromParent();
@@ -887,7 +888,13 @@ bool ExpandVariadics::expandVAIntrinsicCall(IRBuilder<> &Builder,
     // to it, then create a va_copy. When vaCopyIsMemcpy(), this optimises to a
     // store to the VaStartArg.
     assert(ABI->vaCopyIsMemcpy());
-    Builder.CreateStore(PassedVaList, VaStartArg);
+    // The va_list parameter may be passed in a different address space than
+    // the va_list object iterates in (e.g. NVPTX passes a local pointer but
+    // stores a generic cursor). Cast it to the type va_arg expects to load.
+    Value *Cursor = PassedVaList;
+    if (Cursor->getType() != VaStartArg->getType())
+      Cursor = Builder.CreateAddrSpaceCast(Cursor, VaStartArg->getType());
+    Builder.CreateStore(Cursor, VaStartArg);
   } else {
 
     // Otherwise emit a vacopy to pick up target-specific handling if any
@@ -1008,7 +1015,7 @@ struct NVPTX final : public VariadicABIInfo {
   }
 
   Type *vaListParameterType(Module &M) override {
-    return PointerType::getUnqual(M.getContext());
+    return PointerType::get(M.getContext(), NVPTXAS::ADDRESS_SPACE_LOCAL);
   }
 
   Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,
@@ -1059,8 +1066,13 @@ struct SPIRV final : public VariadicABIInfo {
     StringRef DemangledName(Demangled);
 
     // Skip any SPIR-V builtins.
+    // Note: an unmangled C `printf` declaration demangles to "printf" with no
+    // argument list, so the "printf(" prefix check below misses it. Match the
+    // bare name as well so OpenCL/HIP printf (emitted unmangled) is left as a
+    // variadic call for the backend's OpenCL.std printf lowering to expand
+    // inline, rather than being packed into a vararg buffer here.
     if (DemangledName.starts_with("__spirv_") ||
-        DemangledName.starts_with("printf("))
+        DemangledName.starts_with("printf(") || F->getName() == "printf")
       return true;
 
     return false;
@@ -1113,8 +1125,8 @@ struct Wasm final : public VariadicABIInfo {
 
 std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
   switch (T.getArch()) {
-  case Triple::r600:
-  case Triple::amdgcn: {
+  case Triple::amdgpu:
+  case Triple::r600: {
     return std::make_unique<Amdgpu>();
   }
 

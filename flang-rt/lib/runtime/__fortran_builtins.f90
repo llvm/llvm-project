@@ -52,7 +52,9 @@ module __fortran_builtins
   end type
 
   type, public :: __builtin_event_type
-    integer(kind=int64), private :: __count = -1
+    integer(kind=int64), private :: & ! 64-bytes of opaque zero-initialized data
+       __m1 = 0, __m2 = 0, __m3 = 0, __m4 = 0, &
+       __m5 = 0, __m6 = 0, __m7 = 0, __m8 = 0
   end type
 
   type, public :: __builtin_notify_type
@@ -99,8 +101,17 @@ module __fortran_builtins
     __builtin_ieee_other = &
       __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_OTHER)
 
+  type, private :: __builtin_dummy_team_descriptor_type
+    ! this type is a placeholder for the opaque PRIF type
+    integer(kind=int64), private :: __placeholder = -1
+  end type
+
   type, public :: __builtin_team_type
-    integer(kind=int64), private :: __id = -1
+    type(__builtin_dummy_team_descriptor_type), pointer, private :: info => null()
+  end type
+
+  type, public, bind(C) :: __builtin_prif_coarray_handle_type
+    type(__builtin_c_ptr), private :: info
   end type
 
   integer, parameter, public :: __builtin_atomic_int_kind = selected_int_kind(18)

@@ -218,11 +218,96 @@ struct SimplifyDelinearizeOfLinearizeDisjoint final
   }
 };
 
+/// Simplifies the affine map results by eliminating redundant expressions.
+///
+/// This function performs a pairwise comparison of all expressions in the map
+/// using the analysis from `ValueBoundsConstraintSet`. If an expression `a` is
+/// statically proven to be strictly bounded or covered by another expression
+/// `b` (based on the given comparison operator `cmp`), `a` is considered
+/// redundant and is safely pruned from the results.
+static SmallVector<AffineExpr>
+simplifyRedundantMapResults(AffineMap map, ValueRange operands,
+                            ValueBoundsConstraintSet::ComparisonOperator cmp) {
+  llvm::BitVector preservedExprs(map.getNumResults(), true);
+  for (size_t i = 0, e = map.getNumResults(); i < e; ++i) {
+    AffineMap mapA = map.getSubMap(i);
+    ValueBoundsConstraintSet::Variable varA(mapA, operands);
+
+    for (size_t j = 0; j < e; ++j) {
+      if (i == j || !preservedExprs[j])
+        continue;
+
+      AffineMap mapB = map.getSubMap(j);
+      ValueBoundsConstraintSet::Variable varB(mapB, operands);
+
+      if (ValueBoundsConstraintSet::compare(varB, cmp, varA)) {
+        preservedExprs[i] = false;
+        break;
+      }
+    }
+  }
+
+  SmallVector<AffineExpr> mapResults;
+  for (size_t i = 0, e = map.getNumResults(); i < e; ++i)
+    if (preservedExprs[i])
+      mapResults.push_back(map.getResult(i));
+  return mapResults;
+}
+
+/// A pattern that simplifies multi-result lower and upper bounds of
+/// `affine.for` loops by pruning redundant expressions leveraging
+/// `ValueBoundsConstraintSet`.
+struct SimplifyAffineLoopBoundMap final : OpRewritePattern<AffineForOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(AffineForOp forOp,
+                                PatternRewriter &rewriter) const override {
+    AffineMap lowerBoundMap = forOp.getLowerBoundMap();
+    auto lowerBoundOperands = forOp.getLowerBoundOperands();
+    AffineMap upperBoundMap = forOp.getUpperBoundMap();
+    auto upperBoundOperands = forOp.getUpperBoundOperands();
+    if (lowerBoundMap.getNumResults() < 2 &&
+        forOp.getUpperBoundMap().getNumResults() < 2)
+      return failure();
+
+    SmallVector<AffineExpr> lowerMapExprs = simplifyRedundantMapResults(
+        lowerBoundMap, lowerBoundOperands, ValueBoundsConstraintSet::GT);
+    SmallVector<AffineExpr> upperMapExprs = simplifyRedundantMapResults(
+        upperBoundMap, upperBoundOperands, ValueBoundsConstraintSet::LT);
+
+    bool lowerBoundUpdate =
+        lowerMapExprs.size() < lowerBoundMap.getNumResults();
+    bool upperBoundUpdate =
+        upperMapExprs.size() < upperBoundMap.getNumResults();
+    if (!(lowerBoundUpdate || upperBoundUpdate))
+      return failure();
+
+    MLIRContext *context = forOp->getContext();
+    if (lowerBoundUpdate) {
+      rewriter.modifyOpInPlace(forOp, [&]() {
+        forOp.setLowerBound(forOp.getLowerBoundOperands(),
+                            AffineMap::get(lowerBoundMap.getNumDims(),
+                                           lowerBoundMap.getNumSymbols(),
+                                           lowerMapExprs, context));
+      });
+    }
+    if (upperBoundUpdate) {
+      rewriter.modifyOpInPlace(forOp, [&]() {
+        forOp.setUpperBound(forOp.getUpperBoundOperands(),
+                            AffineMap::get(upperBoundMap.getNumDims(),
+                                           upperBoundMap.getNumSymbols(),
+                                           upperMapExprs, context));
+      });
+    }
+    return success();
+  }
+};
 } // namespace
 
 void affine::populateSimplifyAffineWithBoundsPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<SimplifyDelinearizeOfLinearizeDisjoint>(patterns.getContext());
+  patterns
+      .add<SimplifyDelinearizeOfLinearizeDisjoint, SimplifyAffineLoopBoundMap>(
+          patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//

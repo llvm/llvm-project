@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; End-to-end test for https://github.com/llvm/llvm-project/issues/115595.
 define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %face_cell, ptr noalias noundef %x, ptr noalias noundef %y) #0 {
 ; CHECK-LABEL: define void @test(
-; CHECK-SAME: i32 noundef [[NFACE:%.*]], i32 noundef [[NCELL:%.*]], ptr noalias noundef readonly captures(none) [[FACE_CELL:%.*]], ptr noalias noundef readonly captures(none) [[X:%.*]], ptr noalias noundef captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 noundef [[NFACE:%.*]], i32 noundef [[NCELL:%.*]], ptr noalias nofree noundef readonly captures(none) [[FACE_CELL:%.*]], ptr noalias nofree noundef readonly captures(none) [[X:%.*]], ptr noalias nofree noundef captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[NFACE]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
@@ -187,7 +187,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !15 = distinct !{!15, !16, !17, !18}
 !16 = !{!"llvm.loop.mustprogress"}
 !17 = !{!"llvm.loop.parallel_accesses", !12}
-!18 = !{!"llvm.loop.vectorize.enable", i1 true}
+!18 = !{!"llvm.loop.vectorize.enable"}
 
 ;.
 ; CHECK: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}

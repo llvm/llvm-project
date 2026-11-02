@@ -8,6 +8,11 @@
 
 #include "FloorTest.h"
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/floorf128.h"
 
-LIST_FLOOR_TESTS(float128, LIBC_NAMESPACE::floorf128)
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+
+LIST_FLOOR_TESTS(Floorf128, float128, LIBC_NAMESPACE::floorf128)

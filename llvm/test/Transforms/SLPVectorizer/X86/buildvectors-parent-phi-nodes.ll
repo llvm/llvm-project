@@ -5,9 +5,9 @@ define void @test(ptr %0, float %1) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], float [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[BB5:.*]]
 ; CHECK:       [[BB5]]:

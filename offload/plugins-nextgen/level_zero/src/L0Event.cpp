@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "L0Event.h"
-#include "L0Device.h"
 #include "L0Trace.h"
 
 namespace llvm::omp::target::plugin {
@@ -25,6 +24,16 @@ Expected<ze_event_handle_t> EventPoolTy::getEventLocked() {
                               /* count */ 0};
     Desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE | Flags;
     Desc.count = static_cast<uint32_t>(PoolSize);
+
+    ze_event_pool_counter_based_exp_desc_t CounterBasedDesc = {
+        ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC,
+        /* pNext */ nullptr,
+        /* flags */ 0};
+    CounterBasedDesc.flags = ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE;
+
+    if (UseCounterBasedEvents)
+      Desc.pNext = &CounterBasedDesc;
+
     ze_event_pool_handle_t Pool;
     CALL_ZE_RET_ERROR(zeEventPoolCreate, Context, &Desc, 0, nullptr, &Pool);
     Pools.push_back(Pool);
@@ -62,7 +71,8 @@ Expected<ze_event_handle_t> EventPoolTy::getEventLocked() {
 /// Return an event to the pool.
 Error EventPoolTy::releaseEvent(ze_event_handle_t Event) {
   std::lock_guard<std::mutex> Lock(*Mtx);
-  CALL_ZE_RET_ERROR(zeEventHostReset, Event);
+  if (!UseCounterBasedEvents)
+    CALL_ZE_RET_ERROR(zeEventHostReset, Event);
   Events.push_back(Event);
   return Plugin::success();
 }
@@ -75,7 +85,7 @@ Expected<L0EventTy *> EventPoolTy::getEventObject() {
     if (!EventOrErr)
       return EventOrErr.takeError();
     auto Event = *EventOrErr;
-    auto *EventObj = new L0EventTy(Event);
+    auto *EventObj = new L0EventTy(Event, UseCounterBasedEvents);
     return EventObj;
   }
 

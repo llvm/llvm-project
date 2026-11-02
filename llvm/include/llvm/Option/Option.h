@@ -59,19 +59,22 @@ public:
     InputClass,
     UnknownClass,
     FlagClass,
+    FlagOrEqClass,
     JoinedClass,
     ValuesClass,
     SeparateClass,
+    SeparateOrEqClass,
     RemainingArgsClass,
     RemainingArgsJoinedClass,
     CommaJoinedClass,
     MultiArgClass,
     JoinedOrSeparateClass,
-    JoinedAndSeparateClass
+    JoinedAndSeparateClass,
   };
 
   enum RenderStyleKind {
     RenderCommaJoinedStyle,
+    RenderEqStyle,
     RenderJoinedStyle,
     RenderSeparateStyle,
     RenderValuesStyle
@@ -90,7 +93,8 @@ public:
 
   unsigned getID() const {
     assert(Info && "Must have a valid info!");
-    return Info->ID;
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getOptionID(*Info);
   }
 
   OptionClass getKind() const {
@@ -99,11 +103,7 @@ public:
   }
 
   /// Get the name of this option without any prefix.
-  StringRef getName() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionName(Info->ID);
-  }
+  StringRef getName() const { return Owner->getOptionName(getID()); }
 
   const Option getGroup() const {
     assert(Info && "Must have a valid info!");
@@ -120,47 +120,33 @@ public:
   /// Get the alias arguments as a \0 separated list.
   /// E.g. ["foo", "bar"] would be returned as "foo\0bar\0".
   const char *getAliasArgs() const {
-    assert(Info && "Must have a valid info!");
-    assert((!Info->AliasArgs || Info->AliasArgs[0] != 0) &&
-           "AliasArgs should be either 0 or non-empty.");
-
-    return Info->AliasArgs;
+    return Owner->getOptionAliasArgs(getID());
   }
+
+  bool hasAliasArgs() const { return *getAliasArgs() != '\0'; }
 
   /// Get the default prefix for this option.
-  StringRef getPrefix() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefix(Info->ID);
-  }
+  StringRef getPrefix() const { return Owner->getOptionPrefix(getID()); }
 
   /// Get the name of this option with the default prefix.
   StringRef getPrefixedName() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefixedName(Info->ID);
+    return Owner->getOptionPrefixedName(getID());
   }
 
   /// Get the help text for this option.
-  StringRef getHelpText() const {
-    assert(Info && "Must have a valid info!");
-    return Info->HelpText;
-  }
+  StringRef getHelpText() const { return Owner->getOptionHelpText(getID()); }
 
   /// Get the meta-variable list for this option.
-  StringRef getMetaVar() const {
-    assert(Info && "Must have a valid info!");
-    return Info->MetaVar;
-  }
+  StringRef getMetaVar() const { return Owner->getOptionMetaVar(getID()); }
 
-  unsigned getNumArgs() const { return Info->Param; }
+  unsigned getNumArgs() const { return Owner->getExtra(*Info).Param; }
 
-  bool hasNoOptAsInput() const { return Info->Flags & RenderAsInput;}
+  bool hasNoOptAsInput() const { return hasFlag(RenderAsInput); }
 
   RenderStyleKind getRenderStyle() const {
-    if (Info->Flags & RenderJoined)
+    if (hasFlag(RenderJoined))
       return RenderJoinedStyle;
-    if (Info->Flags & RenderSeparate)
+    if (hasFlag(RenderSeparate))
       return RenderSeparateStyle;
     switch (getKind()) {
     case GroupClass:
@@ -170,6 +156,9 @@ public:
     case JoinedClass:
     case JoinedAndSeparateClass:
       return RenderJoinedStyle;
+    case FlagOrEqClass:
+    case SeparateOrEqClass:
+      return RenderEqStyle;
     case CommaJoinedClass:
       return RenderCommaJoinedStyle;
     case FlagClass:
@@ -186,12 +175,12 @@ public:
 
   /// Test if this option has the flag \a Val.
   bool hasFlag(unsigned Val) const {
-    return Info->Flags & Val;
+    return Owner->getExtra(*Info).Flags & Val;
   }
 
   /// Test if this option has the visibility flag \a Val.
   bool hasVisibilityFlag(unsigned Val) const {
-    return Info->Visibility & Val;
+    return Owner->getExtra(*Info).Visibility & Val;
   }
 
   /// getUnaliasedOption - Return the final option this option
@@ -216,7 +205,7 @@ public:
   /// always be false.
   LLVM_ABI bool matches(OptSpecifier ID) const;
 
-  LLVM_ABI bool isRegisteredSC(StringRef SubCommand) const {
+  bool isRegisteredSC(StringRef SubCommand) const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
     return Owner->isValidForSubCommand(Info, SubCommand);

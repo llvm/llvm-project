@@ -430,7 +430,8 @@ static Expr<LogicalResult> CompareUnsigned(FoldingContext &context,
   Expr<SomeType> result{ApplyIntrinsic(context, intrin,
       ActualArguments{
           ActualArgument{std::move(x)}, ActualArgument{std::move(y)}})};
-  return DEREF(UnwrapExpr<Expr<LogicalResult>>(result));
+  auto &logical{DEREF(UnwrapExpr<Expr<SomeLogical>>(result))};
+  return ConvertToType<LogicalResult>(std::move(logical));
 }
 
 // Determines the right kind of INTEGER to hold the bits of a REAL type.

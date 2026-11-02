@@ -1,4 +1,4 @@
-; Second example from Doc/Coroutines.rst (custom alloc and free functions)
+; Second example from Doc/Coroutines.md (custom alloc and free functions)
 ; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s
 
 define ptr @f(i32 %n) presplitcoroutine {

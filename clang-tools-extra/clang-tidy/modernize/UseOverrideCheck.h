@@ -29,6 +29,7 @@ private:
   const bool IgnoreDestructors;
   const bool IgnoreTemplateInstantiations;
   const bool AllowOverrideAndFinal;
+  const bool AllowVirtualAndOverride;
   const StringRef OverrideSpelling;
   const StringRef FinalSpelling;
 };

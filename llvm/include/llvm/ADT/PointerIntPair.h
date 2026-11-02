@@ -217,12 +217,6 @@ template <typename PointerTy, unsigned IntBits, typename IntType>
 struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>, void> {
   using Ty = PointerIntPair<PointerTy, IntBits, IntType>;
 
-  static Ty getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<Ty>::NumLowBitsAvailable;
-    return Ty::getFromOpaqueValue(reinterpret_cast<void *>(Val));
-  }
-
   static unsigned getHashValue(Ty V) {
     uintptr_t IV = reinterpret_cast<uintptr_t>(V.getOpaqueValue());
     return unsigned(IV) ^ unsigned(IV >> 9);

@@ -52,9 +52,10 @@ declare void @hoge()
 define i32 @crash(i32 signext %x, i32 signext %y, i32 signext %z) {
 ; RV64I-LABEL: crash:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    seqz a3, a0
+; RV64I-NEXT:    mv a3, a0
 ; RV64I-NEXT:    addw a0, a1, a2
-; RV64I-NEXT:    slli a1, a3, 3
+; RV64I-NEXT:    seqz a1, a3
+; RV64I-NEXT:    slli a1, a1, 3
 ; RV64I-NEXT:  .LBB1_1: # %bb
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    beq a0, a1, .LBB1_1

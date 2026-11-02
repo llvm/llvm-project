@@ -20,7 +20,7 @@ struct ZeroInit {
 };
 
 // CIR: cir.func{{.*}} @_ZN8ZeroInitC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_ZeroInit> {{.*}})
-// CIR:   %[[ITER:.*]] = cir.alloca {{.*}} ["arrayinit.temp"]
+// CIR:   %[[ITER:.*]] = cir.alloca "arrayinit.temp"
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ALLOCA:.*]]
 // CIR:   %[[I:.*]] = cir.get_member %[[THIS]][0] {name = "i"}
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
@@ -126,7 +126,7 @@ struct ValueInit {
 };
 
 // CIR: cir.func{{.*}} @_ZN9ValueInitC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_ValueInit> {{.*}})
-// CIR:   %[[ITER:.*]] = cir.alloca {{.*}} ["arrayinit.temp"]
+// CIR:   %[[ITER:.*]] = cir.alloca "arrayinit.temp"
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ALLOCA:.*]]
 // CIR:   %[[I:.*]] = cir.get_member %[[THIS]][0] {name = "i"}
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i

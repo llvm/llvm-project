@@ -1,0 +1,104 @@
+// LinkageTable deserialization error tests: EntityLinkage, LinkageTable entry,
+// and LinkageTable structural / consistency errors.
+
+// REQUIRES: plugins
+
+// ============================================================================
+// entityLinkageFromJSON() errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-entry-linkage-missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-LINKAGE-MISSING-TYPE
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-entry-linkage-missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-LINKAGE-MISSING-TYPE
+// LINKAGE-TABLE-ENTRY-LINKAGE-MISSING-TYPE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-entry-linkage-missing-type.json'
+// LINKAGE-TABLE-ENTRY-LINKAGE-MISSING-TYPE-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-TABLE-ENTRY-LINKAGE-MISSING-TYPE-NEXT: reading LinkageTable entry from index '0'
+// LINKAGE-TABLE-ENTRY-LINKAGE-MISSING-TYPE-NEXT: reading EntityLinkage from field 'linkage'
+// LINKAGE-TABLE-ENTRY-LINKAGE-MISSING-TYPE-NEXT: failed to read EntityLinkageType from field 'type': expected JSON string
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-entry-linkage-invalid-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-entry-linkage-invalid-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE
+// LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-entry-linkage-invalid-type.json'
+// LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE-NEXT: reading LinkageTable entry from index '0'
+// LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE-NEXT: reading EntityLinkage from field 'linkage'
+// LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE-NEXT: reading EntityLinkageType from field 'type'
+// LINKAGE-TABLE-ENTRY-LINKAGE-INVALID-TYPE-NEXT: invalid EntityLinkageType value 'invalid_type' for field 'type'
+
+// ============================================================================
+// linkageTableEntryFromJSON() errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-entry-missing-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-MISSING-ID
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-entry-missing-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-MISSING-ID
+// LINKAGE-TABLE-ENTRY-MISSING-ID:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-entry-missing-id.json'
+// LINKAGE-TABLE-ENTRY-MISSING-ID-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-TABLE-ENTRY-MISSING-ID-NEXT: reading LinkageTable entry from index '0'
+// LINKAGE-TABLE-ENTRY-MISSING-ID-NEXT: failed to read EntityId from field 'id': expected JSON number (unsigned 64-bit integer)
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-entry-id-not-uint64.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-ID-NOT-UINT64
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-entry-id-not-uint64.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-ID-NOT-UINT64
+// LINKAGE-TABLE-ENTRY-ID-NOT-UINT64:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-entry-id-not-uint64.json'
+// LINKAGE-TABLE-ENTRY-ID-NOT-UINT64-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-TABLE-ENTRY-ID-NOT-UINT64-NEXT: reading LinkageTable entry from index '0'
+// LINKAGE-TABLE-ENTRY-ID-NOT-UINT64-NEXT: failed to read EntityId from field 'id': expected JSON number (unsigned 64-bit integer)
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-entry-missing-linkage.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-MISSING-LINKAGE
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-entry-missing-linkage.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ENTRY-MISSING-LINKAGE
+// LINKAGE-TABLE-ENTRY-MISSING-LINKAGE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-entry-missing-linkage.json'
+// LINKAGE-TABLE-ENTRY-MISSING-LINKAGE-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-TABLE-ENTRY-MISSING-LINKAGE-NEXT: reading LinkageTable entry from index '0'
+// LINKAGE-TABLE-ENTRY-MISSING-LINKAGE-NEXT: failed to read EntityLinkage from field 'linkage': expected JSON object
+
+// ============================================================================
+// linkageTableFromJSON() errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-NOT-ARRAY
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-NOT-ARRAY
+// LINKAGE-TABLE-NOT-ARRAY:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-not-array.json'
+// LINKAGE-TABLE-NOT-ARRAY-NEXT: failed to read LinkageTable from field 'linkage_table': expected JSON array
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-element-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ELEMENT-NOT-OBJECT
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-element-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-ELEMENT-NOT-OBJECT
+// LINKAGE-TABLE-ELEMENT-NOT-OBJECT:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-element-not-object.json'
+// LINKAGE-TABLE-ELEMENT-NOT-OBJECT-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-TABLE-ELEMENT-NOT-OBJECT-NEXT: failed to read LinkageTable entry from index '0': expected JSON object
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-extra-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-EXTRA-ID
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-extra-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-EXTRA-ID
+// LINKAGE-TABLE-EXTRA-ID:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-extra-id.json'
+// LINKAGE-TABLE-EXTRA-ID-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-TABLE-EXTRA-ID-NEXT: reading LinkageTable entry from index '0'
+// LINKAGE-TABLE-EXTRA-ID-NEXT: failed to deserialize LinkageTable: extra 'EntityId(0)' not present in IdTable
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-missing-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-MISSING-ID
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-missing-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-MISSING-ID
+// LINKAGE-TABLE-MISSING-ID:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-missing-id.json'
+// LINKAGE-TABLE-MISSING-ID-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-TABLE-MISSING-ID-NEXT: failed to deserialize LinkageTable: missing 'EntityId(0)' present in IdTable
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/linkage-table-duplicate-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-DUPLICATE-ID
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/linkage-table-duplicate-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LINKAGE-TABLE-DUPLICATE-ID
+// LINKAGE-TABLE-DUPLICATE-ID:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}linkage-table-duplicate-id.json'
+// LINKAGE-TABLE-DUPLICATE-ID-NEXT: reading LinkageTable from field 'linkage_table'
+// LINKAGE-TABLE-DUPLICATE-ID-NEXT: failed to insert LinkageTable entry at index '1': encountered duplicate 'EntityId(0)'

@@ -3,7 +3,7 @@
 // RUN:   -fnative-int16-type -emit-llvm -O1 -o - | FileCheck %s -DTARGET=dx \
 // RUN:   --check-prefixes=CHECK,DXCHECK
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type \
 // RUN:   -fnative-int16-type -emit-llvm -O1 -o - | FileCheck %s -DTARGET=spv
 
 #ifdef __HLSL_ENABLE_16_BIT

@@ -5,8 +5,12 @@
 ; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+unaligned-scalar-mem \
 ; RUN:   | FileCheck %s --check-prefixes=RV32-BOTH,RV32-FAST
+; RUN: llc < %s -mtriple=riscv32 -mcpu=andes-a45 -mtune=rocket \
+; RUN:   | FileCheck %s --check-prefixes=RV32-BOTH,RV32-FAST
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+unaligned-scalar-mem \
-; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64-FAST
+; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64-FAST,RV64-UNALIGNED
+; RUN: llc < %s -mtriple=riscv64 -mcpu=andes-ax45 -mtune=rocket \
+; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64-FAST,RV64-ANDES
 
 ; ----------------------------------------------------------------------
 ; Fully unaligned cases
@@ -714,49 +718,147 @@ entry:
 define i32 @memcpy11_align8(ptr nocapture %dest, ptr %src) {
 ; RV32-LABEL: memcpy11_align8:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lbu a2, 10(a1)
-; RV32-NEXT:    sb a2, 10(a0)
-; RV32-NEXT:    lh a2, 8(a1)
-; RV32-NEXT:    sh a2, 8(a0)
-; RV32-NEXT:    lw a2, 4(a1)
-; RV32-NEXT:    sw a2, 4(a0)
+; RV32-NEXT:    lbu a3, 10(a1)
+; RV32-NEXT:    mv a2, a0
+; RV32-NEXT:    sb a3, 10(a0)
+; RV32-NEXT:    lh a0, 8(a1)
+; RV32-NEXT:    sh a0, 8(a2)
+; RV32-NEXT:    lw a0, 4(a1)
+; RV32-NEXT:    sw a0, 4(a2)
 ; RV32-NEXT:    lw a1, 0(a1)
-; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    sw a1, 0(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: memcpy11_align8:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lbu a2, 10(a1)
-; RV64-NEXT:    sb a2, 10(a0)
-; RV64-NEXT:    lh a2, 8(a1)
-; RV64-NEXT:    sh a2, 8(a0)
+; RV64-NEXT:    lbu a3, 10(a1)
+; RV64-NEXT:    mv a2, a0
+; RV64-NEXT:    sb a3, 10(a0)
+; RV64-NEXT:    lh a0, 8(a1)
+; RV64-NEXT:    sh a0, 8(a2)
 ; RV64-NEXT:    ld a1, 0(a1)
-; RV64-NEXT:    sd a1, 0(a0)
 ; RV64-NEXT:    li a0, 0
+; RV64-NEXT:    sd a1, 0(a2)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: memcpy11_align8:
 ; RV32-FAST:       # %bb.0: # %entry
-; RV32-FAST-NEXT:    lw a2, 7(a1)
-; RV32-FAST-NEXT:    sw a2, 7(a0)
-; RV32-FAST-NEXT:    lw a2, 4(a1)
-; RV32-FAST-NEXT:    sw a2, 4(a0)
+; RV32-FAST-NEXT:    lw a3, 7(a1)
+; RV32-FAST-NEXT:    mv a2, a0
+; RV32-FAST-NEXT:    sw a3, 7(a0)
+; RV32-FAST-NEXT:    lw a0, 4(a1)
+; RV32-FAST-NEXT:    sw a0, 4(a2)
 ; RV32-FAST-NEXT:    lw a1, 0(a1)
-; RV32-FAST-NEXT:    sw a1, 0(a0)
 ; RV32-FAST-NEXT:    li a0, 0
+; RV32-FAST-NEXT:    sw a1, 0(a2)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: memcpy11_align8:
 ; RV64-FAST:       # %bb.0: # %entry
-; RV64-FAST-NEXT:    lw a2, 7(a1)
-; RV64-FAST-NEXT:    sw a2, 7(a0)
+; RV64-FAST-NEXT:    lw a3, 7(a1)
+; RV64-FAST-NEXT:    mv a2, a0
+; RV64-FAST-NEXT:    sw a3, 7(a0)
 ; RV64-FAST-NEXT:    ld a1, 0(a1)
-; RV64-FAST-NEXT:    sd a1, 0(a0)
 ; RV64-FAST-NEXT:    li a0, 0
+; RV64-FAST-NEXT:    sd a1, 0(a2)
 ; RV64-FAST-NEXT:    ret
 entry:
   call void @llvm.memcpy.p0.p0.i32(ptr align 8 %dest, ptr align 8 %src, i32 11, i1 false)
   ret i32 0
 }
 
+define void @memcpy_i32_var(ptr %dest, ptr %src, i32 %n) nounwind {
+; RV32-BOTH-LABEL: memcpy_i32_var:
+; RV32-BOTH:       # %bb.0: # %entry
+; RV32-BOTH-NEXT:    addi sp, sp, -16
+; RV32-BOTH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-BOTH-NEXT:    call memcpy
+; RV32-BOTH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-BOTH-NEXT:    addi sp, sp, 16
+; RV32-BOTH-NEXT:    ret
+;
+; RV64-LABEL: memcpy_i32_var:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    slli a2, a2, 32
+; RV64-NEXT:    srli a2, a2, 32
+; RV64-NEXT:    call memcpy
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    ret
+;
+; RV64-UNALIGNED-LABEL: memcpy_i32_var:
+; RV64-UNALIGNED:       # %bb.0: # %entry
+; RV64-UNALIGNED-NEXT:    addi sp, sp, -16
+; RV64-UNALIGNED-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-UNALIGNED-NEXT:    slli a2, a2, 32
+; RV64-UNALIGNED-NEXT:    srli a2, a2, 32
+; RV64-UNALIGNED-NEXT:    call memcpy
+; RV64-UNALIGNED-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-UNALIGNED-NEXT:    addi sp, sp, 16
+; RV64-UNALIGNED-NEXT:    ret
+;
+; RV64-ANDES-LABEL: memcpy_i32_var:
+; RV64-ANDES:       # %bb.0: # %entry
+; RV64-ANDES-NEXT:    addi sp, sp, -16
+; RV64-ANDES-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-ANDES-NEXT:    nds.bfoz a2, a2, 31, 0
+; RV64-ANDES-NEXT:    call memcpy
+; RV64-ANDES-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-ANDES-NEXT:    addi sp, sp, 16
+; RV64-ANDES-NEXT:    ret
+entry:
+  call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 %n, i1 false)
+  ret void
+}
+
+define void @memcpy_i32_2147483648(ptr %dest, ptr %src) nounwind {
+; RV32-BOTH-LABEL: memcpy_i32_2147483648:
+; RV32-BOTH:       # %bb.0: # %entry
+; RV32-BOTH-NEXT:    addi sp, sp, -16
+; RV32-BOTH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-BOTH-NEXT:    lui a2, 524288
+; RV32-BOTH-NEXT:    call memcpy
+; RV32-BOTH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-BOTH-NEXT:    addi sp, sp, 16
+; RV32-BOTH-NEXT:    ret
+;
+; RV64-BOTH-LABEL: memcpy_i32_2147483648:
+; RV64-BOTH:       # %bb.0: # %entry
+; RV64-BOTH-NEXT:    addi sp, sp, -16
+; RV64-BOTH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-BOTH-NEXT:    li a2, 1
+; RV64-BOTH-NEXT:    slli a2, a2, 31
+; RV64-BOTH-NEXT:    call memcpy
+; RV64-BOTH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-BOTH-NEXT:    addi sp, sp, 16
+; RV64-BOTH-NEXT:    ret
+entry:
+  call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 -2147483648, i1 false)
+  ret void
+}
+
+define void @memcpy_i64_var(ptr %dest, ptr %src, i64 %n) nounwind {
+; RV32-BOTH-LABEL: memcpy_i64_var:
+; RV32-BOTH:       # %bb.0: # %entry
+; RV32-BOTH-NEXT:    addi sp, sp, -16
+; RV32-BOTH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-BOTH-NEXT:    call memcpy
+; RV32-BOTH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-BOTH-NEXT:    addi sp, sp, 16
+; RV32-BOTH-NEXT:    ret
+;
+; RV64-BOTH-LABEL: memcpy_i64_var:
+; RV64-BOTH:       # %bb.0: # %entry
+; RV64-BOTH-NEXT:    addi sp, sp, -16
+; RV64-BOTH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-BOTH-NEXT:    call memcpy
+; RV64-BOTH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-BOTH-NEXT:    addi sp, sp, 16
+; RV64-BOTH-NEXT:    ret
+entry:
+  call void @llvm.memcpy.p0.p0.i64(ptr %dest, ptr %src, i64 %n, i1 false)
+  ret void
+}

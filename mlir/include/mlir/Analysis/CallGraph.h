@@ -120,7 +120,6 @@ private:
     using BaseInfo =
         DenseMapInfo<llvm::PointerIntPair<CallGraphNode *, 2, Edge::Kind>>;
 
-    static Edge getEmptyKey() { return Edge(BaseInfo::getEmptyKey()); }
     static unsigned getHashValue(const Edge &edge) {
       return BaseInfo::getHashValue(edge.targetAndKind);
     }
@@ -209,7 +208,9 @@ public:
   iterator end() const { return nodes.end(); }
 
   /// Dump the graph in a human readable format.
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
   void print(raw_ostream &os) const;
 
 private:

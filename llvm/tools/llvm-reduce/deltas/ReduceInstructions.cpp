@@ -24,7 +24,8 @@ using namespace llvm;
 // TODO: Technically the verifier only enforces preallocated token usage and
 // there is a none token.
 static bool shouldAlwaysKeep(const Instruction &I) {
-  return I.isEHPad() || I.getType()->isTokenTy() || I.isSwiftError();
+  return I.isEHPad() || I.getType()->isTokenTy() ||
+         I.getType()->isX86_AMXTy() || I.isSwiftError();
 }
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls

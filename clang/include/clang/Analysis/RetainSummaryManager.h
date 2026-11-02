@@ -246,11 +246,6 @@ template <> struct FoldingSetTrait<RetEffect> {
 };
 
 template <> struct DenseMapInfo<ObjCSummaryKey> {
-  static inline ObjCSummaryKey getEmptyKey() {
-    return ObjCSummaryKey(DenseMapInfo<IdentifierInfo*>::getEmptyKey(),
-                          DenseMapInfo<Selector>::getEmptyKey());
-  }
-
   static unsigned getHashValue(const ObjCSummaryKey &V) {
     typedef std::pair<IdentifierInfo*, Selector> PairTy;
     return DenseMapInfo<PairTy>::getHashValue(PairTy(V.getIdentifier(),

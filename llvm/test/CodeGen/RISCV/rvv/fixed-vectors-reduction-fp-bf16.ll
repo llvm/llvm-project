@@ -32,31 +32,31 @@ define bfloat @vreduce_ord_fadd_v4bf16(ptr %x, bfloat %s) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    fmv.h.x fa5, a0
+; CHECK-NEXT:    vslidedown.vi v9, v8, 1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    fadd.s fa5, fa4, fa5
 ; CHECK-NEXT:    fmv.h.x fa4, a0
-; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    fmv.h.x fa3, a0
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    fmv.h.x fa2, a0
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    fmv.h.x fa1, a0
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    vmv.x.s a0, v9
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
-; CHECK-NEXT:    fcvt.s.bf16 fa2, fa2
+; CHECK-NEXT:    fmv.h.x fa4, a0
 ; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    vslidedown.vi v8, v8, 3
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    fmv.h.x fa4, a0
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
-; CHECK-NEXT:    fadd.s fa5, fa5, fa2
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa3
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
@@ -72,24 +72,23 @@ define bfloat @vreduce_fadd_v64bf16(ptr %x, bfloat %s) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v24, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmv.s.x v24, a1
+; CHECK-NEXT:    vfredusum.vs v25, v16, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vfredusum.vs v12, v16, v24
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v12
 ; CHECK-NEXT:    vfredusum.vs v8, v16, v24
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    vfmv.f.s fa5, v25
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
@@ -118,406 +117,406 @@ define bfloat @vreduce_ord_fadd_v64bf16(ptr %x, bfloat %s) {
 ; RV32-NEXT:    li a1, 64
 ; RV32-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v18, v8, 15
-; RV32-NEXT:    vslidedown.vi v20, v8, 14
-; RV32-NEXT:    vslidedown.vi v22, v8, 13
-; RV32-NEXT:    vslidedown.vi v10, v8, 12
-; RV32-NEXT:    vslidedown.vi v12, v8, 11
-; RV32-NEXT:    vslidedown.vi v14, v8, 10
-; RV32-NEXT:    vslidedown.vi v16, v8, 9
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    fmv.h.x fa5, a0
 ; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v11, v8, 7
-; RV32-NEXT:    vslidedown.vi v13, v8, 6
-; RV32-NEXT:    vslidedown.vi v15, v8, 5
-; RV32-NEXT:    vslidedown.vi v17, v8, 4
-; RV32-NEXT:    vslidedown.vi v19, v8, 3
-; RV32-NEXT:    vslidedown.vi v21, v8, 2
-; RV32-NEXT:    vmv.x.s a3, v8
-; RV32-NEXT:    vslidedown.vi v23, v8, 1
-; RV32-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v8, 8
-; RV32-NEXT:    vmv.x.s a0, v18
-; RV32-NEXT:    vmv.x.s a1, v20
-; RV32-NEXT:    vmv.x.s a2, v22
-; RV32-NEXT:    fmv.h.x fa5, a3
-; RV32-NEXT:    vmv.x.s a3, v23
+; RV32-NEXT:    vslidedown.vi v16, v8, 1
 ; RV32-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
 ; RV32-NEXT:    fadd.s fa5, fa4, fa5
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v21
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v19
+; RV32-NEXT:    vslidedown.vi v16, v8, 2
 ; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v17
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v15
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v13
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v11
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v8
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v16
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v14
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v10
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v16, v8, 3
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v16, v8, 4
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v16, v8, 5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v16, v8, 6
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v16, v8, 7
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
+; RV32-NEXT:    vslidedown.vi v16, v8, 8
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v16, v8, 9
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v16, v8, 10
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v16, v8, 11
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v16, v8, 12
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v16, v8, 13
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v16, v8, 14
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v16, v8, 15
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    mv a0, sp
+; RV32-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; RV32-NEXT:    vse16.v v8, (a0)
 ; RV32-NEXT:    lh a0, 32(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 34(sp)
 ; RV32-NEXT:    lh a2, 36(sp)
 ; RV32-NEXT:    lh a3, 38(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 40(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 42(sp)
 ; RV32-NEXT:    lh a2, 44(sp)
 ; RV32-NEXT:    lh a3, 46(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 48(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 50(sp)
 ; RV32-NEXT:    lh a2, 52(sp)
 ; RV32-NEXT:    lh a3, 54(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 56(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 58(sp)
 ; RV32-NEXT:    lh a2, 60(sp)
 ; RV32-NEXT:    lh a3, 62(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 64(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 66(sp)
 ; RV32-NEXT:    lh a2, 68(sp)
 ; RV32-NEXT:    lh a3, 70(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 72(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 74(sp)
 ; RV32-NEXT:    lh a2, 76(sp)
 ; RV32-NEXT:    lh a3, 78(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 80(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 82(sp)
 ; RV32-NEXT:    lh a2, 84(sp)
 ; RV32-NEXT:    lh a3, 86(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 88(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 90(sp)
 ; RV32-NEXT:    lh a2, 92(sp)
 ; RV32-NEXT:    lh a3, 94(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 96(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 98(sp)
 ; RV32-NEXT:    lh a2, 100(sp)
 ; RV32-NEXT:    lh a3, 102(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 104(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 106(sp)
 ; RV32-NEXT:    lh a2, 108(sp)
 ; RV32-NEXT:    lh a3, 110(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 112(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 114(sp)
 ; RV32-NEXT:    lh a2, 116(sp)
 ; RV32-NEXT:    lh a3, 118(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 120(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 122(sp)
 ; RV32-NEXT:    lh a2, 124(sp)
 ; RV32-NEXT:    lh a3, 126(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fmv.h.x fa4, a3
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
@@ -546,406 +545,406 @@ define bfloat @vreduce_ord_fadd_v64bf16(ptr %x, bfloat %s) {
 ; RV64-NEXT:    li a1, 64
 ; RV64-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    mv a0, sp
-; RV64-NEXT:    vse16.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v18, v8, 15
-; RV64-NEXT:    vslidedown.vi v20, v8, 14
-; RV64-NEXT:    vslidedown.vi v22, v8, 13
-; RV64-NEXT:    vslidedown.vi v10, v8, 12
-; RV64-NEXT:    vslidedown.vi v12, v8, 11
-; RV64-NEXT:    vslidedown.vi v14, v8, 10
-; RV64-NEXT:    vslidedown.vi v16, v8, 9
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    fmv.h.x fa5, a0
 ; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v11, v8, 7
-; RV64-NEXT:    vslidedown.vi v13, v8, 6
-; RV64-NEXT:    vslidedown.vi v15, v8, 5
-; RV64-NEXT:    vslidedown.vi v17, v8, 4
-; RV64-NEXT:    vslidedown.vi v19, v8, 3
-; RV64-NEXT:    vslidedown.vi v21, v8, 2
-; RV64-NEXT:    vmv.x.s a3, v8
-; RV64-NEXT:    vslidedown.vi v23, v8, 1
-; RV64-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 8
-; RV64-NEXT:    vmv.x.s a0, v18
-; RV64-NEXT:    vmv.x.s a1, v20
-; RV64-NEXT:    vmv.x.s a2, v22
-; RV64-NEXT:    fmv.h.x fa5, a3
-; RV64-NEXT:    vmv.x.s a3, v23
+; RV64-NEXT:    vslidedown.vi v16, v8, 1
 ; RV64-NEXT:    fcvt.s.bf16 fa4, fa0
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
 ; RV64-NEXT:    fadd.s fa5, fa4, fa5
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v21
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v19
+; RV64-NEXT:    vslidedown.vi v16, v8, 2
 ; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v17
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v15
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v13
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v11
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v8
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v16
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v14
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v12
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v10
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v16, v8, 3
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v16, v8, 4
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v16, v8, 5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v16, v8, 6
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v16, v8, 7
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
+; RV64-NEXT:    vslidedown.vi v16, v8, 8
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v16, v8, 9
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v16, v8, 10
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v16, v8, 11
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v16, v8, 12
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v16, v8, 13
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v16, v8, 14
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v16, v8, 15
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    mv a0, sp
+; RV64-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; RV64-NEXT:    vse16.v v8, (a0)
 ; RV64-NEXT:    lh a0, 32(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 34(sp)
 ; RV64-NEXT:    lh a2, 36(sp)
 ; RV64-NEXT:    lh a3, 38(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 40(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 42(sp)
 ; RV64-NEXT:    lh a2, 44(sp)
 ; RV64-NEXT:    lh a3, 46(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 48(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 50(sp)
 ; RV64-NEXT:    lh a2, 52(sp)
 ; RV64-NEXT:    lh a3, 54(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 56(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 58(sp)
 ; RV64-NEXT:    lh a2, 60(sp)
 ; RV64-NEXT:    lh a3, 62(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 64(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 66(sp)
 ; RV64-NEXT:    lh a2, 68(sp)
 ; RV64-NEXT:    lh a3, 70(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 72(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 74(sp)
 ; RV64-NEXT:    lh a2, 76(sp)
 ; RV64-NEXT:    lh a3, 78(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 80(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 82(sp)
 ; RV64-NEXT:    lh a2, 84(sp)
 ; RV64-NEXT:    lh a3, 86(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 88(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 90(sp)
 ; RV64-NEXT:    lh a2, 92(sp)
 ; RV64-NEXT:    lh a3, 94(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 96(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 98(sp)
 ; RV64-NEXT:    lh a2, 100(sp)
 ; RV64-NEXT:    lh a3, 102(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 104(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 106(sp)
 ; RV64-NEXT:    lh a2, 108(sp)
 ; RV64-NEXT:    lh a3, 110(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 112(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 114(sp)
 ; RV64-NEXT:    lh a2, 116(sp)
 ; RV64-NEXT:    lh a3, 118(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 120(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 122(sp)
 ; RV64-NEXT:    lh a2, 124(sp)
 ; RV64-NEXT:    lh a3, 126(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fmv.h.x fa4, a3
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
@@ -967,62 +966,44 @@ define bfloat @vreduce_ord_fadd_v64bf16(ptr %x, bfloat %s) {
 define bfloat @vreduce_fadd_v128bf16(ptr %x, bfloat %s) {
 ; CHECK-LABEL: vreduce_fadd_v128bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a2, a1, 2
-; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 5 * vlenb
-; CHECK-NEXT:    addi a1, a0, 128
-; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    li a2, 32
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v16
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfadd.vv v24, v24, v0
-; CHECK-NEXT:    vmv.s.x v7, a1
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs1r.v v7, (a1) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v16, a0
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v16
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
-; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v24
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfadd.vv v8, v0, v16
-; CHECK-NEXT:    vl4r.v v24, (a0) # vscale x 32-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
-; CHECK-NEXT:    vfncvtbf16.f.f.w v24, v8
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vfncvtbf16.f.f.w v4, v24
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v4
+; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfredusum.vs v16, v16, v28
+; CHECK-NEXT:    vmv.s.x v7, a0
+; CHECK-NEXT:    vfredusum.vs v6, v24, v7
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a2
+; CHECK-NEXT:    vslidedown.vx v16, v16, a2
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v24, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v24
+; CHECK-NEXT:    vfncvtbf16.f.f.w v16, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v16
-; CHECK-NEXT:    vfredusum.vs v8, v8, v28
-; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
+; CHECK-NEXT:    vfredusum.vs v8, v8, v7
+; CHECK-NEXT:    vfmv.f.s fa5, v6
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK-NEXT:    fcvt.bf16.s fa4, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
@@ -1030,13 +1011,6 @@ define bfloat @vreduce_fadd_v128bf16(ptr %x, bfloat %s) {
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
 ; CHECK-NEXT:    fadd.s fa5, fa4, fa5
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a1, a0, 2
-; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %v = load <128 x bfloat>, ptr %x
   %red = call reassoc bfloat @llvm.vector.reduce.fadd.v128bf16(bfloat %s, <128 x bfloat> %v)
@@ -1055,814 +1029,814 @@ define bfloat @vreduce_ord_fadd_v128bf16(ptr %x, bfloat %s) {
 ; RV32-NEXT:    addi s0, sp, 384
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    andi sp, sp, -128
-; RV32-NEXT:    addi a1, a0, 128
-; RV32-NEXT:    li a2, 64
-; RV32-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; RV32-NEXT:    vle16.v v8, (a1)
-; RV32-NEXT:    mv a1, sp
-; RV32-NEXT:    vse16.v v8, (a1)
+; RV32-NEXT:    li a1, 64
+; RV32-NEXT:    addi a2, a0, 128
+; RV32-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; RV32-NEXT:    vle16.v v8, (a2)
+; RV32-NEXT:    mv a2, sp
+; RV32-NEXT:    vse16.v v8, (a2)
 ; RV32-NEXT:    vle16.v v16, (a0)
-; RV32-NEXT:    addi a0, sp, 128
-; RV32-NEXT:    vse16.v v16, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v18, v16, 15
-; RV32-NEXT:    vslidedown.vi v10, v16, 14
-; RV32-NEXT:    vslidedown.vi v12, v16, 13
-; RV32-NEXT:    vslidedown.vi v24, v16, 12
-; RV32-NEXT:    vslidedown.vi v26, v16, 11
+; RV32-NEXT:    vmv.x.s a0, v16
+; RV32-NEXT:    fmv.h.x fa5, a0
 ; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v25, v16, 7
-; RV32-NEXT:    vslidedown.vi v13, v16, 6
-; RV32-NEXT:    vslidedown.vi v27, v16, 5
-; RV32-NEXT:    vslidedown.vi v11, v16, 4
-; RV32-NEXT:    vslidedown.vi v7, v16, 3
-; RV32-NEXT:    vslidedown.vi v19, v16, 2
-; RV32-NEXT:    vmv.x.s a1, v16
-; RV32-NEXT:    vslidedown.vi v6, v16, 1
-; RV32-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v28, v16, 10
-; RV32-NEXT:    vslidedown.vi v30, v16, 9
-; RV32-NEXT:    vslidedown.vi v14, v16, 8
-; RV32-NEXT:    vmv.x.s a0, v18
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV32-NEXT:    vmv.x.s a2, v10
-; RV32-NEXT:    vslidedown.vi v22, v8, 15
-; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    vslidedown.vi v20, v8, 14
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v6
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v19
-; RV32-NEXT:    vslidedown.vi v18, v8, 13
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v16, 1
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v7
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa0
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa4, fa5
+; RV32-NEXT:    fmv.h.x fa4, a0
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v11
-; RV32-NEXT:    vslidedown.vi v10, v8, 12
+; RV32-NEXT:    vslidedown.vi v10, v16, 2
 ; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v27
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v13
-; RV32-NEXT:    vslidedown.vi v12, v8, 11
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v25
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v14
-; RV32-NEXT:    vslidedown.vi v14, v8, 10
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v30
-; RV32-NEXT:    vslidedown.vi v16, v8, 9
-; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v11, v8, 7
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v28
-; RV32-NEXT:    vslidedown.vi v13, v8, 6
-; RV32-NEXT:    vslidedown.vi v15, v8, 5
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v26
-; RV32-NEXT:    vslidedown.vi v17, v8, 4
-; RV32-NEXT:    vslidedown.vi v19, v8, 3
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a1, v24
-; RV32-NEXT:    vslidedown.vi v21, v8, 2
-; RV32-NEXT:    vslidedown.vi v23, v8, 1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v16, 3
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v16, 4
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v16, 5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v16, 6
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v16, 7
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
+; RV32-NEXT:    vslidedown.vi v10, v16, 8
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v16, 9
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v16, 10
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v16, 11
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v16, 12
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v16, 13
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v16, 14
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v16, 15
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    addi a0, sp, 128
+; RV32-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; RV32-NEXT:    vse16.v v16, (a0)
 ; RV32-NEXT:    lh a0, 160(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 162(sp)
 ; RV32-NEXT:    lh a2, 164(sp)
 ; RV32-NEXT:    lh a3, 166(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 168(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 170(sp)
 ; RV32-NEXT:    lh a2, 172(sp)
 ; RV32-NEXT:    lh a3, 174(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 176(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 178(sp)
 ; RV32-NEXT:    lh a2, 180(sp)
 ; RV32-NEXT:    lh a3, 182(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 184(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 186(sp)
 ; RV32-NEXT:    lh a2, 188(sp)
 ; RV32-NEXT:    lh a3, 190(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 192(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 194(sp)
 ; RV32-NEXT:    lh a2, 196(sp)
 ; RV32-NEXT:    lh a3, 198(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 200(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 202(sp)
 ; RV32-NEXT:    lh a2, 204(sp)
 ; RV32-NEXT:    lh a3, 206(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 208(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 210(sp)
 ; RV32-NEXT:    lh a2, 212(sp)
 ; RV32-NEXT:    lh a3, 214(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 216(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 218(sp)
 ; RV32-NEXT:    lh a2, 220(sp)
 ; RV32-NEXT:    lh a3, 222(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 224(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 226(sp)
 ; RV32-NEXT:    lh a2, 228(sp)
 ; RV32-NEXT:    lh a3, 230(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 232(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 234(sp)
 ; RV32-NEXT:    lh a2, 236(sp)
 ; RV32-NEXT:    lh a3, 238(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 240(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 242(sp)
 ; RV32-NEXT:    lh a2, 244(sp)
 ; RV32-NEXT:    lh a3, 246(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 248(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 250(sp)
 ; RV32-NEXT:    lh a2, 252(sp)
 ; RV32-NEXT:    lh a3, 254(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a1
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a2
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    vmv.x.s a4, v8
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v10, v8, 1
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v8, 2
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v8, 3
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v8, 4
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v8, 5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v8, 6
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    vslidedown.vi v10, v8, 7
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
 ; RV32-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v8, 8
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    vslidedown.vi v10, v8, 8
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    vmv.x.s a0, v22
 ; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    vmv.x.s a1, v20
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a2, v18
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a4
-; RV32-NEXT:    vmv.x.s a3, v23
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v21
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v19
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v17
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v15
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v13
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v11
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v8
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v16
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v14
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    vmv.x.s a3, v10
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v8, 9
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v8, 10
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v8, 11
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v8, 12
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v8, 13
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v10, v8, 14
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    vslidedown.vi v8, v8, 15
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
+; RV32-NEXT:    fmv.h.x fa4, a0
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 32(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 34(sp)
 ; RV32-NEXT:    lh a2, 36(sp)
 ; RV32-NEXT:    lh a3, 38(sp)
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 40(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 42(sp)
 ; RV32-NEXT:    lh a2, 44(sp)
 ; RV32-NEXT:    lh a3, 46(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 48(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 50(sp)
 ; RV32-NEXT:    lh a2, 52(sp)
 ; RV32-NEXT:    lh a3, 54(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 56(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 58(sp)
 ; RV32-NEXT:    lh a2, 60(sp)
 ; RV32-NEXT:    lh a3, 62(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 64(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 66(sp)
 ; RV32-NEXT:    lh a2, 68(sp)
 ; RV32-NEXT:    lh a3, 70(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 72(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 74(sp)
 ; RV32-NEXT:    lh a2, 76(sp)
 ; RV32-NEXT:    lh a3, 78(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 80(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 82(sp)
 ; RV32-NEXT:    lh a2, 84(sp)
 ; RV32-NEXT:    lh a3, 86(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 88(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 90(sp)
 ; RV32-NEXT:    lh a2, 92(sp)
 ; RV32-NEXT:    lh a3, 94(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 96(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 98(sp)
 ; RV32-NEXT:    lh a2, 100(sp)
 ; RV32-NEXT:    lh a3, 102(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 104(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 106(sp)
 ; RV32-NEXT:    lh a2, 108(sp)
 ; RV32-NEXT:    lh a3, 110(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 112(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 114(sp)
 ; RV32-NEXT:    lh a2, 116(sp)
 ; RV32-NEXT:    lh a3, 118(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a3
+; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    lh a0, 120(sp)
+; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    lh a1, 122(sp)
 ; RV32-NEXT:    lh a2, 124(sp)
 ; RV32-NEXT:    lh a3, 126(sp)
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV32-NEXT:    fcvt.bf16.s fa5, fa5
-; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a0
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a1
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32-NEXT:    fmv.h.x fa4, a2
-; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
-; RV32-NEXT:    fmv.h.x fa4, a3
 ; RV32-NEXT:    fcvt.bf16.s fa5, fa5
+; RV32-NEXT:    fmv.h.x fa4, a3
 ; RV32-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV32-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV32-NEXT:    fadd.s fa5, fa5, fa4
@@ -1888,814 +1862,814 @@ define bfloat @vreduce_ord_fadd_v128bf16(ptr %x, bfloat %s) {
 ; RV64-NEXT:    addi s0, sp, 384
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    andi sp, sp, -128
-; RV64-NEXT:    addi a1, a0, 128
-; RV64-NEXT:    li a2, 64
-; RV64-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; RV64-NEXT:    vle16.v v8, (a1)
-; RV64-NEXT:    mv a1, sp
-; RV64-NEXT:    vse16.v v8, (a1)
+; RV64-NEXT:    li a1, 64
+; RV64-NEXT:    addi a2, a0, 128
+; RV64-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; RV64-NEXT:    vle16.v v8, (a2)
+; RV64-NEXT:    mv a2, sp
+; RV64-NEXT:    vse16.v v8, (a2)
 ; RV64-NEXT:    vle16.v v16, (a0)
-; RV64-NEXT:    addi a0, sp, 128
-; RV64-NEXT:    vse16.v v16, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v18, v16, 15
-; RV64-NEXT:    vslidedown.vi v10, v16, 14
-; RV64-NEXT:    vslidedown.vi v12, v16, 13
-; RV64-NEXT:    vslidedown.vi v24, v16, 12
-; RV64-NEXT:    vslidedown.vi v26, v16, 11
+; RV64-NEXT:    vmv.x.s a0, v16
+; RV64-NEXT:    fmv.h.x fa5, a0
 ; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v25, v16, 7
-; RV64-NEXT:    vslidedown.vi v13, v16, 6
-; RV64-NEXT:    vslidedown.vi v27, v16, 5
-; RV64-NEXT:    vslidedown.vi v11, v16, 4
-; RV64-NEXT:    vslidedown.vi v7, v16, 3
-; RV64-NEXT:    vslidedown.vi v19, v16, 2
-; RV64-NEXT:    vmv.x.s a1, v16
-; RV64-NEXT:    vslidedown.vi v6, v16, 1
-; RV64-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v28, v16, 10
-; RV64-NEXT:    vslidedown.vi v30, v16, 9
-; RV64-NEXT:    vslidedown.vi v14, v16, 8
-; RV64-NEXT:    vmv.x.s a0, v18
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa0
-; RV64-NEXT:    vmv.x.s a2, v10
-; RV64-NEXT:    vslidedown.vi v22, v8, 15
-; RV64-NEXT:    vmv.x.s a3, v12
-; RV64-NEXT:    vslidedown.vi v20, v8, 14
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v6
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v19
-; RV64-NEXT:    vslidedown.vi v18, v8, 13
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v16, 1
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v7
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa0
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa4, fa5
+; RV64-NEXT:    fmv.h.x fa4, a0
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v11
-; RV64-NEXT:    vslidedown.vi v10, v8, 12
+; RV64-NEXT:    vslidedown.vi v10, v16, 2
 ; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v27
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v13
-; RV64-NEXT:    vslidedown.vi v12, v8, 11
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v25
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v14
-; RV64-NEXT:    vslidedown.vi v14, v8, 10
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v30
-; RV64-NEXT:    vslidedown.vi v16, v8, 9
-; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v11, v8, 7
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v28
-; RV64-NEXT:    vslidedown.vi v13, v8, 6
-; RV64-NEXT:    vslidedown.vi v15, v8, 5
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v26
-; RV64-NEXT:    vslidedown.vi v17, v8, 4
-; RV64-NEXT:    vslidedown.vi v19, v8, 3
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a1, v24
-; RV64-NEXT:    vslidedown.vi v21, v8, 2
-; RV64-NEXT:    vslidedown.vi v23, v8, 1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v16, 3
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v16, 4
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v16, 5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v16, 6
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v16, 7
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
+; RV64-NEXT:    vslidedown.vi v10, v16, 8
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v16, 9
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v16, 10
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v16, 11
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v16, 12
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v16, 13
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v16, 14
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v16, 15
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    addi a0, sp, 128
+; RV64-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; RV64-NEXT:    vse16.v v16, (a0)
 ; RV64-NEXT:    lh a0, 160(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 162(sp)
 ; RV64-NEXT:    lh a2, 164(sp)
 ; RV64-NEXT:    lh a3, 166(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 168(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 170(sp)
 ; RV64-NEXT:    lh a2, 172(sp)
 ; RV64-NEXT:    lh a3, 174(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 176(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 178(sp)
 ; RV64-NEXT:    lh a2, 180(sp)
 ; RV64-NEXT:    lh a3, 182(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 184(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 186(sp)
 ; RV64-NEXT:    lh a2, 188(sp)
 ; RV64-NEXT:    lh a3, 190(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 192(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 194(sp)
 ; RV64-NEXT:    lh a2, 196(sp)
 ; RV64-NEXT:    lh a3, 198(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 200(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 202(sp)
 ; RV64-NEXT:    lh a2, 204(sp)
 ; RV64-NEXT:    lh a3, 206(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 208(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 210(sp)
 ; RV64-NEXT:    lh a2, 212(sp)
 ; RV64-NEXT:    lh a3, 214(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 216(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 218(sp)
 ; RV64-NEXT:    lh a2, 220(sp)
 ; RV64-NEXT:    lh a3, 222(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 224(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 226(sp)
 ; RV64-NEXT:    lh a2, 228(sp)
 ; RV64-NEXT:    lh a3, 230(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 232(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 234(sp)
 ; RV64-NEXT:    lh a2, 236(sp)
 ; RV64-NEXT:    lh a3, 238(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 240(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 242(sp)
 ; RV64-NEXT:    lh a2, 244(sp)
 ; RV64-NEXT:    lh a3, 246(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 248(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 250(sp)
 ; RV64-NEXT:    lh a2, 252(sp)
 ; RV64-NEXT:    lh a3, 254(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a1
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a2
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    vmv.x.s a4, v8
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v10, v8, 1
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v8, 2
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v8, 3
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v8, 4
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v8, 5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v8, 6
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    vslidedown.vi v10, v8, 7
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
 ; RV64-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 8
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    vslidedown.vi v10, v8, 8
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    vmv.x.s a0, v22
 ; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    vmv.x.s a1, v20
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a2, v18
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a4
-; RV64-NEXT:    vmv.x.s a3, v23
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v21
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v19
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v17
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v15
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v13
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v11
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v8
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v16
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v14
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v12
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    vmv.x.s a3, v10
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v8, 9
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v8, 10
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v8, 11
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v8, 12
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v8, 13
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v10, v8, 14
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    vslidedown.vi v8, v8, 15
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
+; RV64-NEXT:    fmv.h.x fa4, a0
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 32(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 34(sp)
 ; RV64-NEXT:    lh a2, 36(sp)
 ; RV64-NEXT:    lh a3, 38(sp)
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 40(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 42(sp)
 ; RV64-NEXT:    lh a2, 44(sp)
 ; RV64-NEXT:    lh a3, 46(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 48(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 50(sp)
 ; RV64-NEXT:    lh a2, 52(sp)
 ; RV64-NEXT:    lh a3, 54(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 56(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 58(sp)
 ; RV64-NEXT:    lh a2, 60(sp)
 ; RV64-NEXT:    lh a3, 62(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 64(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 66(sp)
 ; RV64-NEXT:    lh a2, 68(sp)
 ; RV64-NEXT:    lh a3, 70(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 72(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 74(sp)
 ; RV64-NEXT:    lh a2, 76(sp)
 ; RV64-NEXT:    lh a3, 78(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 80(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 82(sp)
 ; RV64-NEXT:    lh a2, 84(sp)
 ; RV64-NEXT:    lh a3, 86(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 88(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 90(sp)
 ; RV64-NEXT:    lh a2, 92(sp)
 ; RV64-NEXT:    lh a3, 94(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 96(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 98(sp)
 ; RV64-NEXT:    lh a2, 100(sp)
 ; RV64-NEXT:    lh a3, 102(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 104(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 106(sp)
 ; RV64-NEXT:    lh a2, 108(sp)
 ; RV64-NEXT:    lh a3, 110(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 112(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 114(sp)
 ; RV64-NEXT:    lh a2, 116(sp)
 ; RV64-NEXT:    lh a3, 118(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a3
+; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
+; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    lh a0, 120(sp)
+; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    lh a1, 122(sp)
 ; RV64-NEXT:    lh a2, 124(sp)
 ; RV64-NEXT:    lh a3, 126(sp)
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
-; RV64-NEXT:    fcvt.bf16.s fa5, fa5
-; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
-; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a0
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a1
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64-NEXT:    fmv.h.x fa4, a2
-; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
-; RV64-NEXT:    fmv.h.x fa4, a3
 ; RV64-NEXT:    fcvt.bf16.s fa5, fa5
+; RV64-NEXT:    fmv.h.x fa4, a3
 ; RV64-NEXT:    fcvt.s.bf16 fa5, fa5
 ; RV64-NEXT:    fcvt.s.bf16 fa4, fa4
 ; RV64-NEXT:    fadd.s fa5, fa5, fa4
@@ -2739,15 +2713,15 @@ define bfloat @vreduce_fmin_v64bf16(ptr %x) {
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfredmin.vs v24, v16, v16
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vfredmin.vs v12, v16, v16
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v12
 ; CHECK-NEXT:    vfredmin.vs v8, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa5, v24
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fmin.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
@@ -2760,54 +2734,41 @@ define bfloat @vreduce_fmin_v64bf16(ptr %x) {
 define bfloat @vreduce_fmin_v128bf16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v128bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; CHECK-NEXT:    addi a1, a0, 128
-; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; CHECK-NEXT:    vle16.v v24, (a0)
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v8
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v24, a0
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vfmin.vv v16, v16, v0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v24
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    li a2, 32
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
-; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfmin.vv v8, v0, v24
-; CHECK-NEXT:    vl4r.v v24, (a0) # vscale x 32-byte Folded Reload
+; CHECK-NEXT:    vfmin.vv v24, v24, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
-; CHECK-NEXT:    vfncvtbf16.f.f.w v24, v8
+; CHECK-NEXT:    vfncvtbf16.f.f.w v4, v24
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v4
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfredmin.vs v16, v16, v16
+; CHECK-NEXT:    vfredmin.vs v7, v24, v24
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a2
+; CHECK-NEXT:    vslidedown.vx v16, v16, a2
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfmin.vv v8, v24, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v24
+; CHECK-NEXT:    vfncvtbf16.f.f.w v16, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v16
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v7
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fmin.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %v = load <128 x bfloat>, ptr %x
   %red = call bfloat @llvm.vector.reduce.fmin.v128bf16(<128 x bfloat> %v)
@@ -2839,15 +2800,15 @@ define bfloat @vreduce_fmax_v64bf16(ptr %x) {
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfredmax.vs v24, v16, v16
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vfredmax.vs v12, v16, v16
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v12
 ; CHECK-NEXT:    vfredmax.vs v8, v16, v16
+; CHECK-NEXT:    vfmv.f.s fa5, v24
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fmax.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
@@ -2860,54 +2821,41 @@ define bfloat @vreduce_fmax_v64bf16(ptr %x) {
 define bfloat @vreduce_fmax_v128bf16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v128bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; CHECK-NEXT:    addi a1, a0, 128
-; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; CHECK-NEXT:    vle16.v v24, (a0)
-; CHECK-NEXT:    vle16.v v8, (a1)
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v8
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v24, a0
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vfmax.vv v16, v16, v0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v24
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    li a2, 32
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
-; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v0, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfmax.vv v8, v0, v24
-; CHECK-NEXT:    vl4r.v v24, (a0) # vscale x 32-byte Folded Reload
+; CHECK-NEXT:    vfmax.vv v24, v24, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
-; CHECK-NEXT:    vfncvtbf16.f.f.w v24, v8
+; CHECK-NEXT:    vfncvtbf16.f.f.w v4, v24
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v4
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfredmax.vs v16, v16, v16
+; CHECK-NEXT:    vfredmax.vs v7, v24, v24
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a2
+; CHECK-NEXT:    vslidedown.vx v16, v16, a2
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfmax.vv v8, v24, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v24
+; CHECK-NEXT:    vfncvtbf16.f.f.w v16, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v16
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v7
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fmax.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %v = load <128 x bfloat>, ptr %x
   %red = call bfloat @llvm.vector.reduce.fmax.v128bf16(<128 x bfloat> %v)
@@ -3001,29 +2949,33 @@ define bfloat @vreduce_fminimum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    addi a1, a0, 128
-; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    vle16.v v24, (a1)
-; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vmv4r.v v8, v16
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v16, a0
-; CHECK-NEXT:    vmv4r.v v8, v24
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vslidedown.vx v0, v24, a0
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    add a3, sp, a3
+; CHECK-NEXT:    addi a3, a3, 16
+; CHECK-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v16, v16, a2
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v0, v8, v8
+; CHECK-NEXT:    vmv4r.v v16, v24
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v24, a2
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v7, v16, v16
 ; CHECK-NEXT:    vmerge.vvm v24, v8, v16, v0
 ; CHECK-NEXT:    vmv1r.v v0, v7
@@ -3045,23 +2997,25 @@ define bfloat @vreduce_fminimum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v8
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:  .LBB14_3:
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v16
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v0, v8, v8
-; CHECK-NEXT:    vmfeq.vv v7, v24, v24
-; CHECK-NEXT:    vmerge.vvm v16, v8, v24, v0
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmfeq.vv v7, v16, v16
+; CHECK-NEXT:    vmerge.vvm v24, v8, v16, v0
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
-; CHECK-NEXT:    vfmin.vv v8, v8, v16
+; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
+; CHECK-NEXT:    vfmin.vv v8, v8, v24
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v16, v8
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
@@ -3185,29 +3139,33 @@ define bfloat @vreduce_fmaximum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
-; CHECK-NEXT:    addi a1, a0, 128
-; CHECK-NEXT:    li a2, 64
-; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    vle16.v v24, (a1)
-; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vmv4r.v v8, v16
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v16, a0
-; CHECK-NEXT:    vmv4r.v v8, v24
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vslidedown.vx v0, v24, a0
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    add a3, sp, a3
+; CHECK-NEXT:    addi a3, a3, 16
+; CHECK-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v16, v16, a2
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v0, v8, v8
+; CHECK-NEXT:    vmv4r.v v16, v24
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v24, a2
+; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v7, v16, v16
 ; CHECK-NEXT:    vmerge.vvm v24, v8, v16, v0
 ; CHECK-NEXT:    vmv1r.v v0, v7
@@ -3229,23 +3187,25 @@ define bfloat @vreduce_fmaximum_v128bf16(ptr %x) {
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v8
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:  .LBB17_3:
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v16
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmfeq.vv v0, v8, v8
-; CHECK-NEXT:    vmfeq.vv v7, v24, v24
-; CHECK-NEXT:    vmerge.vvm v16, v8, v24, v0
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v24
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmfeq.vv v7, v16, v16
+; CHECK-NEXT:    vmerge.vvm v24, v8, v16, v0
 ; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
-; CHECK-NEXT:    vfmax.vv v8, v8, v16
+; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
+; CHECK-NEXT:    vfmax.vv v8, v8, v24
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v16, v8
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v16

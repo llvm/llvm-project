@@ -31,10 +31,6 @@ struct SymbolsMapKey {
       : Kind(Kind), Name(Name) {}
 };
 template <> struct DenseMapInfo<SymbolsMapKey> {
-  static inline SymbolsMapKey getEmptyKey() {
-    return SymbolsMapKey(MachO::EncodeKind::GlobalSymbol, StringRef{});
-  }
-
   static unsigned getHashValue(const SymbolsMapKey &Key) {
     return hash_combine(hash_value(Key.Kind), hash_value(Key.Name));
   }

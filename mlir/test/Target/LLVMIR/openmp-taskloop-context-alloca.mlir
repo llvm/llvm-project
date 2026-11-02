@@ -28,7 +28,7 @@ llvm.func @_QPtest_taskloop(%arg0: !llvm.ptr) {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 

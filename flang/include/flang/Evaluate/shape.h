@@ -15,10 +15,8 @@
 #include "expression.h"
 #include "traverse.h"
 #include "variable.h"
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include <optional>
-#include <variant>
 
 namespace Fortran::parser {
 class ContextualMessages;
@@ -152,6 +150,18 @@ inline MaybeExtentExpr GetSize(const std::optional<Shape> &maybeShape) {
 // Utility predicate: does an expression reference any implied DO index?
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
 
+// Utility predicate: does an expression embed a RankOneBoundElement that has
+// no ubound()/lbound() provenance?  Such an element has no Fortran spelling
+// (its debug rendering is the synthetic %ROBE marker) and must never reach a
+// mod file; an inquiry whose folded result would contain one must stay intact.
+template <typename T> bool ContainsUntaggedRankOneBoundElement(const Expr<T> &);
+extern template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SomeType> &);
+extern template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SomeInteger> &);
+extern template bool ContainsUntaggedRankOneBoundElement(
+    const Expr<SubscriptInteger> &);
+
 // GetShape()
 
 class GetShapeHelper
@@ -165,6 +175,7 @@ public:
 
   Result operator()(const ImpliedDoIndex &) const { return ScalarShape(); }
   Result operator()(const DescriptorInquiry &) const { return ScalarShape(); }
+  Result operator()(const RankOneBoundElement &) const { return ScalarShape(); }
   Result operator()(const TypeParamInquiry &) const { return ScalarShape(); }
   Result operator()(const BOZLiteralConstant &) const { return ScalarShape(); }
   Result operator()(const StaticDataObject::Pointer &) const {
@@ -184,6 +195,7 @@ public:
   Result operator()(const CoarrayRef &) const;
   Result operator()(const Substring &) const;
   Result operator()(const ProcedureRef &) const;
+  Result operator()(const ActualArgument &) const;
 
   template <typename T>
   Result operator()(const ArrayConstructor<T> &aconst) const {

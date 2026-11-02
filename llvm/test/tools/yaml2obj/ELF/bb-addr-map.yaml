@@ -79,6 +79,13 @@
 # CHECK-NEXT:     0010: 23010000 00000000
 # CHECK-NEXT:   )
 
+# Case 11: Specify function GUID.
+# CHECK:        Name: .llvm_bb_addr_map (1)
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 06000188 77665544 33221120 00000000
+# CHECK-NEXT:     0010: 00000001 0F010203
+# CHECK-NEXT:   )
+
 
 --- !ELF
 FileHeader:
@@ -199,6 +206,21 @@ Sections:
                CallsiteEndOffsets: []
                Hash:            0x123
 
+## 11) We can produce a SHT_LLVM_BB_ADDR_MAP section with function GUID.
+  - Name: '.llvm_bb_addr_map (11)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 6
+        Feature: 0x100
+        FuncGUID: 0x1122334455667788
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+             - ID:              15
+               AddressOffset:   0x00000001
+               Size:            0x00000002
+               Metadata:        0x00000003
+
 ## Check we can't use Entries at the same time as either Content or Size.
 # RUN: not yaml2obj --docnum=2 -DCONTENT="00" %s 2>&1 | FileCheck %s --check-prefix=INVALID
 # RUN: not yaml2obj --docnum=2 -DSIZE="0" %s 2>&1 | FileCheck %s --check-prefix=INVALID
@@ -220,7 +242,7 @@ Sections:
 
 ## Check that yaml2obj generates a warning when we use unsupported versions.
 # RUN: yaml2obj --docnum=3  %s 2>&1 | FileCheck %s --check-prefix=INVALID-VERSION
-# INVALID-VERSION: warning: unsupported SHT_LLVM_BB_ADDR_MAP version: 6; encoding using the most recent version
+# INVALID-VERSION: warning: unsupported BB address map version: 7; encoding using the most recent version
 
 --- !ELF
 FileHeader:
@@ -232,4 +254,36 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
 ##  Specify unsupported version
-      - Version: 6
+      - Version: 7
+
+## Check that yaml2obj generates a warning when FuncGUID is specified but the
+## feature is not enabled. The GUID is still encoded.
+# RUN: yaml2obj --docnum=4 %s -o %t4 2>&1 | FileCheck %s --check-prefix=GUID-WARN
+# RUN: llvm-readobj --sections --section-data %t4 | FileCheck %s --check-prefix=GUID-NOFEAT
+
+# GUID-WARN: warning: feature value(0) does not support function GUID.
+
+# GUID-NOFEAT:      Name: .llvm_bb_addr_map
+# GUID-NOFEAT:      SectionData (
+# GUID-NOFEAT-NEXT:   0000: 06000088 77665544 33221120 00000000
+# GUID-NOFEAT-NEXT:   0010: 00000001 0F010203
+# GUID-NOFEAT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: '.llvm_bb_addr_map'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version:  6
+        FuncGUID: 0x1122334455667788
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+             - ID:            15
+               AddressOffset: 0x00000001
+               Size:          0x00000002
+               Metadata:      0x00000003

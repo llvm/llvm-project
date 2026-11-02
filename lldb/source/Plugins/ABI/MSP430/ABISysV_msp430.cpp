@@ -331,6 +331,7 @@ UnwindPlanSP ABISysV_msp430::CreateDefaultUnwindPlan() {
   row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -2, true);
   row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
   row.SetRegisterLocationToUnspecified(fp_reg_num, true);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
   plan_sp->AppendRow(std::move(row));

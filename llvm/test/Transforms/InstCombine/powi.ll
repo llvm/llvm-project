@@ -11,7 +11,7 @@ declare void @use(double)
 define double @powi_fneg_even_int(double %x) {
 ; CHECK-LABEL: @powi_fneg_even_int(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
@@ -23,7 +23,7 @@ entry:
 define double @powi_fabs_even_int(double %x) {
 ; CHECK-LABEL: @powi_fabs_even_int(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
@@ -35,7 +35,7 @@ entry:
 define double @powi_copysign_even_int(double %x, double %y) {
 ; CHECK-LABEL: @powi_copysign_even_int(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
@@ -645,4 +645,89 @@ define <3 x float> @powi_unary_shuffle_ops_use(<3 x float> %x, i32 %power, ptr %
   store <3 x float> %sx, ptr %p
   %r = call <3 x float> @llvm.powi(<3 x float> %sx, i32 %power)
   ret <3 x float> %r
+}
+
+; Negative test: Missing afn flag on call
+define float @pow_2_i_ldexp_1_i_no_afn_f32(i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_1_i_no_afn_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call float @llvm.powi.f32.i32(float 2.000000e+00, i32 [[I:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = tail call float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
+  ret float %1
+}
+
+define float @pow_2_i_ldexp_1_i_afn_f32(i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_1_i_afn_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call afn float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[I:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = call afn float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
+  ret float %1
+}
+
+define float @fmul_a_pow_2_i_ldexp_a_i_afn_f32(float %a, i32 %i) {
+; CHECK-LABEL: @fmul_a_pow_2_i_ldexp_a_i_afn_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float [[A:%.*]], i32 [[I:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = call afn reassoc float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
+  %2 = fmul reassoc float %a, %1
+  ret float %2
+}
+
+define double @pow_2_i_ldexp_1_i_afn_f64(i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_1_i_afn_f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call afn double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[I:%.*]])
+; CHECK-NEXT:    ret double [[TMP1]]
+;
+  %1 = call afn double @llvm.powi.f64.i32(double 2.000000e+00, i32 %i)
+  ret double %1
+}
+
+define double @fmul_a_pow_2_i_ldexp_a_i_afn_f64(double %a, i32 %i) {
+; CHECK-LABEL: @fmul_a_pow_2_i_ldexp_a_i_afn_f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.ldexp.f64.i32(double [[A:%.*]], i32 [[I:%.*]])
+; CHECK-NEXT:    ret double [[TMP1]]
+;
+  %1 = call afn reassoc double @llvm.powi.f64.i32(double 2.000000e+00, i32 %i)
+  %2 = fmul reassoc double %a, %1
+  ret double %2
+}
+
+define <4 x float> @pow_2_i_ldexp_1_i_afn_v4f32(i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_1_i_afn_v4f32(
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[I:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call afn <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> <float 1.000000e+00, float poison, float poison, float poison>, <4 x i32> [[DOTSPLATINSERT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = call afn <4 x float> @llvm.powi.v4f32.i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>, i32 %i)
+  ret <4 x float> %1
+}
+
+define <4 x float> @pow_2_i_ldexp_a_i_afn_v4f32(<4 x float> %a, i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_a_i_afn_v4f32(
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[I:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nnan afn <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> <float 1.000000e+00, float poison, float poison, float poison>, <4 x i32> [[DOTSPLATINSERT]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <4 x float> [[A:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = call afn reassoc <4 x float> @llvm.powi.v4f32.i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>, i32 %i)
+  %2 = fmul reassoc <4 x float> %a, %1
+  ret <4 x float> %2
+}
+
+define <4 x double> @pow_2_i_ldexp_a_i_afn_v4f64(<4 x double> %a, i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_a_i_afn_v4f64(
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[I:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nnan afn <4 x double> @llvm.ldexp.v4f64.v4i32(<4 x double> <double 1.000000e+00, double poison, double poison, double poison>, <4 x i32> [[DOTSPLATINSERT]])
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <4 x double> [[A:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret <4 x double> [[TMP1]]
+;
+  %1 = call afn reassoc <4 x double> @llvm.powi.v4f64.i32(<4 x double> <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>, i32 %i)
+  %2 = fmul reassoc <4 x double> %a, %1
+  ret <4 x double> %2
 }

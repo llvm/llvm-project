@@ -20,6 +20,8 @@ entry:
   %bitcast_scalar2vec1 = bitcast i64 1 to <2 x i32>
   %bitcast_scalar2vec2 = bitcast i16 32768 to <16 x i1>
   %bitcast_vec2scalar_partial_poison = bitcast <2 x i32> <i32 poison, i32 0> to i64
+  %bitcast_vec2byte_poison_lane0 = bitcast <2 x i12> <i12 poison, i12 0> to b24
+  %bitcast_vec2byte_poison_lane1 = bitcast <2 x i12> <i12 0, i12 poison> to b24
   %bitcast_scalar2vec_poison = bitcast i64 poison to <2 x i32>
 
   %bitcast_vec2vec_up = bitcast <2 x i32> <i32 1, i32 poison> to <4 x i16>
@@ -29,6 +31,10 @@ entry:
 
   %bitcast_intvec2floatvec = bitcast <2 x i32> <i32 1, i32 2> to <4 x half>
   %bitcast_floatvec2int = bitcast <4 x half> <half 1.0, half 2.0, half 3.0, half 4.0> to i64
+
+  %bitcast_ptr2b64 = bitcast ptr %ptr to b64
+  %bitcast_b642i64 = bitcast b64 %bitcast_ptr2b64 to i64
+  %bitcast_b642ptr = bitcast b64 %bitcast_ptr2b64 to ptr
   ret void
 }
 ; CHECK: Entering function: main
@@ -47,6 +53,8 @@ entry:
 ; CHECK-NEXT:   %bitcast_scalar2vec1 = bitcast i64 1 to <2 x i32> => { i32 0, i32 1 }
 ; CHECK-NEXT:   %bitcast_scalar2vec2 = bitcast i16 -32768 to <16 x i1> => { T, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F }
 ; CHECK-NEXT:   %bitcast_vec2scalar_partial_poison = bitcast <2 x i32> <i32 poison, i32 0> to i64 => poison
+; CHECK-NEXT:   %bitcast_vec2byte_poison_lane0 = bitcast <2 x i12> <i12 poison, i12 0> to b24 => b24 0x!! !!!!0000 0x00
+; CHECK-NEXT:   %bitcast_vec2byte_poison_lane1 = bitcast <2 x i12> <i12 0, i12 poison> to b24 => b24 0x00 0000!!!! 0x!!
 ; CHECK-NEXT:   %bitcast_scalar2vec_poison = bitcast i64 poison to <2 x i32> => { poison, poison }
 ; CHECK-NEXT:   %bitcast_vec2vec_up = bitcast <2 x i32> <i32 1, i32 poison> to <4 x i16> => { i16 0, i16 1, poison, poison }
 ; CHECK-NEXT:   %bitcast_vec2vec_down1 = bitcast <4 x i16> <i16 0, i16 poison, i16 2, i16 3> to <2 x i32> => { poison, i32 131075 }
@@ -54,5 +62,8 @@ entry:
 ; CHECK-NEXT:   %bitcast_vec2vec_weird = bitcast <8 x i3> <i3 0, i3 1, i3 2, i3 3, i3 -4, i3 -3, i3 -2, i3 -1> to <3 x i8> => { i8 5, i8 57, i8 119 }
 ; CHECK-NEXT:   %bitcast_intvec2floatvec = bitcast <2 x i32> <i32 1, i32 2> to <4 x half> => { half 0.000000e+00, half 5.960460e-08, half 0.000000e+00, half 1.192090e-07 }
 ; CHECK-NEXT:   %bitcast_floatvec2int = bitcast <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00> to i64 => i64 4323526012127167488
+; CHECK-NEXT:   %bitcast_ptr2b64 = bitcast ptr %ptr to b64 => b64 ptr 0x8 [ptr]
+; CHECK-NEXT:   %bitcast_b642i64 = bitcast b64 %bitcast_ptr2b64 to i64 => i64 8
+; CHECK-NEXT:   %bitcast_b642ptr = bitcast b64 %bitcast_ptr2b64 to ptr => ptr 0x8 [ptr]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

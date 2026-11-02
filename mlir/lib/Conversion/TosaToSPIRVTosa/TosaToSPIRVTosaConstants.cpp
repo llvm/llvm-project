@@ -51,7 +51,8 @@ bool shouldMarkGraphConstant(Operation *op) {
 
 void setGraphConstantId(Operation *op, uint32_t id) {
   auto i32Type = IntegerType::get(op->getContext(), 32);
-  op->setAttr(graphARMGraphConstantIdAttrName, IntegerAttr::get(i32Type, id));
+  op->setDiscardableAttr(graphARMGraphConstantIdAttrName,
+                         IntegerAttr::get(i32Type, id));
 }
 
 struct TosaToSPIRVTosaMarkGraphConstants final
@@ -64,7 +65,7 @@ struct TosaToSPIRVTosaMarkGraphConstants final
           if (!isa<tosa::ConstOp, tosa::ConstShapeOp>(op))
             return WalkResult::advance();
 
-          if (op->hasAttr(graphARMGraphConstantIdAttrName)) {
+          if (op->hasDiscardableAttr(graphARMGraphConstantIdAttrName)) {
             op->emitOpError()
                 << "already has `" << graphARMGraphConstantIdAttrName
                 << "`; this pass assigns graph constant IDs automatically and "

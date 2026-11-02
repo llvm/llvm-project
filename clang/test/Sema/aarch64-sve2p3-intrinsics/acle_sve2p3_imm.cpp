@@ -1,10 +1,15 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2 -target-feature +sve2p3 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2p3 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2p3 -fsyntax-only -verify %s
 
 #include <arm_sve.h>
 
-
+#ifdef SVE_OVERLOADED_FORMS
+#define SVE_ACLE_FUNC(A1, A2_UNUSED) A1
+#else
+#define SVE_ACLE_FUNC(A1, A2) A1##A2
+#endif
 
 svint8_t test_svqshrn_n_s8_s16_x2(svint16x2_t zn, uint64_t imm)
 {
@@ -83,7 +88,23 @@ svuint8_t test_svqrshrun_n_u8_s16_x2(svint16x2_t zn, uint64_t imm)
   svqrshrun_n_u8_s16_x2(zn, 9); // expected-error-re {{argument value {{[0-9]+}} is outside the valid range [1, 8]}}
   svqrshrun_n_u8_s16_x2(zn, -1); // expected-error-re {{argument value {{[0-9]+}} is outside the valid range [1, 8]}}
 
-  svqrshrun_n_u8_s16_x2(zn, imm); // expected-error-re {{argument to {{.+}} must be a constant integer}}}}
+  svqrshrun_n_u8_s16_x2(zn, imm); // expected-error-re {{argument to {{.+}} must be a constant integer}}}
+}
+
+
+void test_range_0_1() {
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 1]}}
+  SVE_ACLE_FUNC(svluti6_lane, _s16_x2)(svcreate2_s16(svundef_s16(), svundef_s16()),
+                                        svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 1]}}
+  SVE_ACLE_FUNC(svluti6_lane, _u16_x2)(svcreate2_u16(svundef_u16(), svundef_u16()),
+                                        svundef_u8(), 2);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 1]}}
+  SVE_ACLE_FUNC(svluti6_lane, _f16_x2)(svcreate2_f16(svundef_f16(), svundef_f16()),
+                                        svundef_u8(), -1);
+  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 1]}}
+  SVE_ACLE_FUNC(svluti6_lane, _bf16_x2)(svcreate2_bf16(svundef_bf16(), svundef_bf16()),
+                                         svundef_u8(), 2);
 }
 
 void test_svdot_lane_x2_imm_0_7(svint16_t s16, svuint16_t u16, svint8_t s8,

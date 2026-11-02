@@ -363,17 +363,17 @@ static std::string serialize(const T &I, DiagnosticsEngine &Diags) {
 std::string serialize(const Info &I, DiagnosticsEngine &Diags) {
   switch (I.IT) {
   case InfoType::IT_namespace:
-    return serialize(static_cast<const NamespaceInfo &>(I), Diags);
+    return serialize(cast<NamespaceInfo>(I), Diags);
   case InfoType::IT_record:
-    return serialize(static_cast<const RecordInfo &>(I), Diags);
+    return serialize(cast<RecordInfo>(I), Diags);
   case InfoType::IT_enum:
-    return serialize(static_cast<const EnumInfo &>(I), Diags);
+    return serialize(cast<EnumInfo>(I), Diags);
   case InfoType::IT_function:
-    return serialize(static_cast<const FunctionInfo &>(I), Diags);
+    return serialize(cast<FunctionInfo>(I), Diags);
   case InfoType::IT_concept:
-    return serialize(static_cast<const ConceptInfo &>(I), Diags);
+    return serialize(cast<ConceptInfo>(I), Diags);
   case InfoType::IT_variable:
-    return serialize(static_cast<const VarInfo &>(I), Diags);
+    return serialize(cast<VarInfo>(I), Diags);
   case InfoType::IT_friend:
   case InfoType::IT_typedef:
   case InfoType::IT_default:
@@ -842,8 +842,8 @@ void Serializer::handleCompoundConstraints(
   } else if (Constraint->getStmtClass() ==
              Stmt::ConceptSpecializationExprClass) {
     auto *Concept = dyn_cast<ConceptSpecializationExpr>(Constraint);
-    ConstraintInfo CI(getUSRForDecl(Concept->getNamedConcept()),
-                      Concept->getNamedConcept()->getNameAsString());
+    ConstraintInfo CI(getUSRForDecl(Concept->getConceptDecl()),
+                      Concept->getConceptDecl()->getNameAsString());
     CI.ConstraintExpr = internString(exprToString(Concept));
     ConstraintInfos.push_back(CI);
   }
@@ -864,8 +864,8 @@ void Serializer::populateConstraints(TemplateInfo &I, const TemplateDecl *D) {
     if (const auto *ConstraintExpr =
             dyn_cast_or_null<ConceptSpecializationExpr>(
                 Constraint.ConstraintExpr)) {
-      ConstraintInfo CI(getUSRForDecl(ConstraintExpr->getNamedConcept()),
-                        ConstraintExpr->getNamedConcept()->getNameAsString());
+      ConstraintInfo CI(getUSRForDecl(ConstraintExpr->getConceptDecl()),
+                        ConstraintExpr->getConceptDecl()->getNameAsString());
       CI.ConstraintExpr = internString(exprToString(ConstraintExpr));
       LocalConstraints.push_back(std::move(CI));
     } else {
@@ -1029,9 +1029,6 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
   llvm::SmallVector<FriendInfo, 4> LocalFriends;
 
   for (const FriendDecl *FD : D->friends()) {
-    if (FD->isUnsupportedFriend())
-      continue;
-
     FriendInfo F(InfoType::IT_friend, getUSRForDecl(FD));
     const auto *ActualDecl = FD->getFriendDecl();
     if (!ActualDecl) {

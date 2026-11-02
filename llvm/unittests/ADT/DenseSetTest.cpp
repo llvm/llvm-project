@@ -82,7 +82,6 @@ TEST(DenseSetTest, RemoveIf) {
 }
 
 struct TestDenseSetInfo {
-  static inline unsigned getEmptyKey() { return ~0; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
   static unsigned getHashValue(const char* Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
@@ -229,7 +228,6 @@ int CountCopyAndMove::Move = 0;
 namespace llvm {
 // Specialization required to insert a CountCopyAndMove into a DenseSet.
 template <> struct DenseMapInfo<CountCopyAndMove> {
-  static inline CountCopyAndMove getEmptyKey() { return CountCopyAndMove(-1); };
   static unsigned getHashValue(const CountCopyAndMove &Val) {
     return Val.Value;
   }

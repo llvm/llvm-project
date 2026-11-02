@@ -20,12 +20,12 @@
 #include <immintrin.h>
 
 __m128d test_mm_undefined_pd(void) {
-  // CIR-LABEL: _mm_undefined_pd
-  // CIR: %{{.*}} = cir.const #cir.zero : !cir.vector<2 x !cir.double>
-  // CIR: cir.return %{{.*}} : !cir.vector<2 x !cir.double>
-
   // CIR-LABEL: cir.func {{.*}}test_mm_undefined_pd
   // CIR: call @_mm_undefined_pd
+
+  // CIR-LABEL: cir.func{{.*}} @_mm_undefined_pd(
+  // CIR: %{{.*}} = cir.const #cir.zero : !cir.vector<2 x !cir.double>
+  // CIR: cir.return %{{.*}} : !cir.vector<2 x !cir.double>
 
   // LLVM-LABEL: test_mm_undefined_pd
   // LLVM: store <2 x double> zeroinitializer, ptr %[[A:.*]], align 16
@@ -38,13 +38,13 @@ __m128d test_mm_undefined_pd(void) {
 }
 
 __m128i test_mm_undefined_si128(void) {
-  // CIR-LABEL: _mm_undefined_si128
+  // CIR-LABEL: cir.func {{.*}}test_mm_undefined_si128
+  // CIR: call @_mm_undefined_si128
+
+  // CIR-LABEL: cir.func{{.*}} @_mm_undefined_si128(
   // CIR: %[[A:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.double>
   // CIR: %{{.*}} = cir.cast bitcast %[[A]] : !cir.vector<2 x !cir.double> ->
   // CIR: cir.return %{{.*}} :
-
-  // CIR-LABEL: cir.func {{.*}}test_mm_undefined_si128
-  // CIR: call @_mm_undefined_si128
 
   // LLVM-LABEL: test_mm_undefined_si128
   // LLVM: store <2 x i64> zeroinitializer, ptr %[[A:.*]], align 16
@@ -181,4 +181,28 @@ __m128i test_mm_mul_epu32(__m128i A, __m128i B) {
   // OGCG: mul <2 x i64> %{{.*}}, %{{.*}}
 
   return _mm_mul_epu32(A, B);
+}
+
+__m128i test_mm_mulhi_epi16(__m128i A, __m128i B) {
+  // CIR-LABEL: _mm_mulhi_epi16
+  // CIR: cir.call_llvm_intrinsic "smulh" %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+
+  // LLVM-LABEL: test_mm_mulhi_epi16
+  // LLVM: call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm_mulhi_epi16
+  // OGCG: call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+  return _mm_mulhi_epi16(A, B);
+}
+
+__m128i test_mm_mulhi_epu16(__m128i A, __m128i B) {
+  // CIR-LABEL: _mm_mulhi_epu16
+  // CIR: cir.call_llvm_intrinsic "umulh" %{{.*}}, %{{.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>) -> !cir.vector<8 x !u16i>
+
+  // LLVM-LABEL: test_mm_mulhi_epu16
+  // LLVM: call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm_mulhi_epu16
+  // OGCG: call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+  return _mm_mulhi_epu16(A, B);
 }

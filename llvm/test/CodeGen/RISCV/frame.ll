@@ -29,12 +29,12 @@ define i32 @test() nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32I-WITHFP-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 32
-; RV32I-WITHFP-NEXT:    sw zero, -16(s0)
-; RV32I-WITHFP-NEXT:    sw zero, -32(s0)
-; RV32I-WITHFP-NEXT:    sw zero, -28(s0)
-; RV32I-WITHFP-NEXT:    sw zero, -24(s0)
-; RV32I-WITHFP-NEXT:    sw zero, -20(s0)
-; RV32I-WITHFP-NEXT:    addi a0, s0, -28
+; RV32I-WITHFP-NEXT:    sw zero, 16(sp)
+; RV32I-WITHFP-NEXT:    sw zero, 0(sp)
+; RV32I-WITHFP-NEXT:    sw zero, 4(sp)
+; RV32I-WITHFP-NEXT:    sw zero, 8(sp)
+; RV32I-WITHFP-NEXT:    sw zero, 12(sp)
+; RV32I-WITHFP-NEXT:    addi a0, sp, 4
 ; RV32I-WITHFP-NEXT:    call test1
 ; RV32I-WITHFP-NEXT:    li a0, 0
 ; RV32I-WITHFP-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload

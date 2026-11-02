@@ -49,8 +49,9 @@ define i32 @test_bitreverse_srli_bitreverse_i32(i32 %a) nounwind {
 define i64 @test_bitreverse_srli_bitreverse_i64(i64 %a) nounwind {
 ; RV32ZBKB-LABEL: test_bitreverse_srli_bitreverse_i64:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    slli a1, a0, 1
+; RV32ZBKB-NEXT:    mv a1, a0
 ; RV32ZBKB-NEXT:    li a0, 0
+; RV32ZBKB-NEXT:    slli a1, a1, 1
 ; RV32ZBKB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: test_bitreverse_srli_bitreverse_i64:
@@ -118,8 +119,9 @@ define i32 @test_bitreverse_shli_bitreverse_i32(i32 %a) nounwind {
 define i64 @test_bitreverse_shli_bitreverse_i64(i64 %a) nounwind {
 ; RV32ZBKB-LABEL: test_bitreverse_shli_bitreverse_i64:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    srli a0, a1, 1
+; RV32ZBKB-NEXT:    mv a0, a1
 ; RV32ZBKB-NEXT:    li a1, 0
+; RV32ZBKB-NEXT:    srli a0, a0, 1
 ; RV32ZBKB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: test_bitreverse_shli_bitreverse_i64:

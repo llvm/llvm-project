@@ -20,3 +20,9 @@ void add_uint32(std::vector<uint8_t> &buf, uint32_t val) {
   for (int i = 0; i < 4; i++)
     buf.push_back(*p++);
 }
+
+void add_uint16(std::vector<uint8_t> &buf, uint16_t val) {
+  uint8_t *p = reinterpret_cast<uint8_t *>(&val);
+  for (int i = 0; i < 2; i++)
+    buf.push_back(*p++);
+}

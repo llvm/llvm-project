@@ -116,6 +116,26 @@ void f() {
   } else MACRO_FUN;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
   // CHECK-FIXES: } else { MACRO_FUN;
+
+  if (cond("if0")) goo:
+    return;
+  else too: {
+    return;
+  }
+  // CHECK-MESSAGES: :[[@LINE-5]]:19: warning: statement should have braces [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: if (cond("if0")) { goo:
+  // CHECK-FIXES-NEXT:     return;
+  // CHECK-FIXES-NEXT: } else too: {
+
+  if (cond("if0")) xoo: {
+    return;
+  } else yoo:
+    return;
+  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
+  // CHECK-FIXES: } else { yoo:
+  // CHECK-FIXES-NEXT:   return;
+  // CHECK-FIXES-NEXT: }
+
 }
 
 // Negative tests.
@@ -134,4 +154,38 @@ void g() {
     do_something("elseif-single-line");
   else
     do_something("else-single-line");
+
+  if (cond("if2")) {
+    return;
+  } else foo: {
+    return;
+  }
+
+  if (cond("if3")) {
+    return;
+  } else hoo: {
+    return;
+  }
+
+  if (cond("if4")) joo: {
+    return;
+  } else {
+    return;
+  }
+
+  if (cond("if5")) koo: {
+    return;
+  } else loo: {
+    return;
+  }
+
+  if (cond("if6")) moo:
+    return;
+  else noo:
+    return;
+
+  if (cond("if7"))
+    return;
+  else ooo:
+    return;
 }

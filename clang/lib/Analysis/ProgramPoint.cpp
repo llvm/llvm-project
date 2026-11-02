@@ -95,6 +95,8 @@ StringRef ProgramPoint::getProgramPointKindName(Kind K) {
     return "PostImplicitCall";
   case LoopExitKind:
     return "LoopExit";
+  case LifetimeEndKind:
+    return "LifetimeEnd";
   case EpsilonKind:
     return "Epsilon";
   }
@@ -158,6 +160,10 @@ std::optional<SourceLocation> ProgramPoint::getSourceLocation() const {
     if (const Stmt *S = castAs<LoopExit>().getLoopStmt())
       return S->getBeginLoc();
     return std::nullopt;
+  case LifetimeEndKind:
+    if (const Stmt *S = castAs<LifetimeEnd>().getTriggerStmt())
+      return S->getBeginLoc();
+    return std::nullopt;
   case EpsilonKind:
     return std::nullopt;
   }
@@ -215,6 +221,11 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
   case ProgramPoint::LoopExitKind:
     Out << "LoopExit\", \"stmt\": \""
         << castAs<LoopExit>().getLoopStmt()->getStmtClassName() << '\"';
+    break;
+
+  case ProgramPoint::LifetimeEndKind:
+    Out << "LifetimeEnd\", \"var\": \""
+        << castAs<LifetimeEnd>().getDecl()->getNameAsString() << '\"';
     break;
 
   case ProgramPoint::PreImplicitCallKind: {

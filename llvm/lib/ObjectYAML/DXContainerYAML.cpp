@@ -566,6 +566,8 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("RootSignature", P.RootSignature);
   IO.mapOptional("DebugName", P.DebugName);
   IO.mapOptional("CompilerVersion", P.CompilerVersion);
+  IO.mapOptional("SourceInfo", P.SourceInfo);
+  IO.mapOptional("PrivateData", P.PrivateData);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -620,98 +622,206 @@ void MappingTraits<DXContainerYAML::StringTableEntry>::mapping(
 void ScalarEnumerationTraits<dxbc::PSV::SemanticKind>::enumeration(
     IO &IO, dxbc::PSV::SemanticKind &Value) {
   for (const auto &E : dxbc::PSV::getSemanticKinds())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::ComponentType>::enumeration(
     IO &IO, dxbc::PSV::ComponentType &Value) {
   for (const auto &E : dxbc::PSV::getComponentTypes())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::InterpolationMode>::enumeration(
     IO &IO, dxbc::PSV::InterpolationMode &Value) {
   for (const auto &E : dxbc::PSV::getInterpolationModes())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::ResourceType>::enumeration(
     IO &IO, dxbc::PSV::ResourceType &Value) {
   for (const auto &E : dxbc::PSV::getResourceTypes())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::PSV::ResourceKind>::enumeration(
     IO &IO, dxbc::PSV::ResourceKind &Value) {
   for (const auto &E : dxbc::PSV::getResourceKinds())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::D3DSystemValue>::enumeration(
     IO &IO, dxbc::D3DSystemValue &Value) {
   for (const auto &E : dxbc::getD3DSystemValues())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
     IO &IO, dxbc::SigMinPrecision &Value) {
   for (const auto &E : dxbc::getSigMinPrecisions())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
     IO &IO, dxbc::SigComponentType &Value) {
   for (const auto &E : dxbc::getSigComponentTypes())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
     IO &IO, dxbc::RootParameterType &Value) {
   for (const auto &E : dxbc::getRootParameterTypes())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxil::ResourceClass>::enumeration(
     IO &IO, dxil::ResourceClass &Value) {
-  const EnumEntry<dxil::ResourceClass> ResourceClasses[] = {
-      {"CBuffer", dxil::ResourceClass::CBuffer},
-      {"SRV", dxil::ResourceClass::SRV},
-      {"UAV", dxil::ResourceClass::UAV},
-      {"Sampler", dxil::ResourceClass::Sampler},
+  constexpr EnumStringDef<dxil::ResourceClass> ResourceClassDefs[] = {
+      {{"CBuffer"}, dxil::ResourceClass::CBuffer},
+      {{"SRV"}, dxil::ResourceClass::SRV},
+      {{"UAV"}, dxil::ResourceClass::UAV},
+      {{"Sampler"}, dxil::ResourceClass::Sampler},
   };
+  static constexpr auto ResourceClasses = BUILD_ENUM_STRINGS(ResourceClassDefs);
 
-  for (const auto &E : ResourceClasses)
-    IO.enumCase(Value, E.Name, E.Value);
+  for (const auto &E : EnumStrings(ResourceClasses))
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::SamplerFilter>::enumeration(
     IO &IO, dxbc::SamplerFilter &Value) {
   for (const auto &E : dxbc::getSamplerFilters())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::StaticBorderColor>::enumeration(
     IO &IO, dxbc::StaticBorderColor &Value) {
   for (const auto &E : dxbc::getStaticBorderColors())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::TextureAddressMode>::enumeration(
     IO &IO, dxbc::TextureAddressMode &Value) {
   for (const auto &E : dxbc::getTextureAddressModes())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::ShaderVisibility>::enumeration(
     IO &IO, dxbc::ShaderVisibility &Value) {
   for (const auto &E : dxbc::getShaderVisibility())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
 }
 
 void ScalarEnumerationTraits<dxbc::ComparisonFunc>::enumeration(
     IO &IO, dxbc::ComparisonFunc &Value) {
   for (const auto &E : dxbc::getComparisonFuncs())
-    IO.enumCase(Value, E.Name, E.Value);
+    IO.enumCase(Value, E.name(), E.value());
+}
+
+void ScalarEnumerationTraits<llvm::dxbc::SourceInfo::SectionType>::enumeration(
+    IO &IO, llvm::dxbc::SourceInfo::SectionType &Value) {
+  for (const auto &E : dxbc::SourceInfo::getSectionTypes())
+    IO.enumCase(Value, E.name(), E.value());
+}
+
+void ScalarEnumerationTraits<
+    llvm::dxbc::SourceInfo::Contents::CompressionType>::
+    enumeration(IO &IO,
+                llvm::dxbc::SourceInfo::Contents::CompressionType &Value) {
+  for (const auto &E : dxbc::SourceInfo::Contents::getCompressionTypes())
+    IO.enumCase(Value, E.name(), E.value());
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::Header>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::Header &H) {
+  IO.mapOptional("AlignedSizeInBytes", H.AlignedSizeInBytes);
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapOptional("SectionCount", H.SectionCount);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SectionHeader>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::SectionHeader &H) {
+  IO.mapOptional("AlignedSizeInBytes", H.AlignedSizeInBytes);
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapOptional("Type", H.Type);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceNames::Header>::
+    mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceNames::Header &H) {
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapOptional("Count", H.Count);
+  IO.mapOptional("EntriesSizeInBytes", H.EntriesSizeInBytes);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceNames::Entry>::
+    mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceNames::Entry &E) {
+  IO.mapOptional("AlignedSizeInBytes", E.AlignedSizeInBytes);
+  IO.mapOptional("Flags", E.Flags);
+  IO.mapOptional("NameSizeInBytes", E.NameSizeInBytes);
+  IO.mapOptional("ContentSizeInBytes", E.ContentSizeInBytes);
+  IO.mapRequired("FileName", E.FileName);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceNames>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::SourceNames &S) {
+  IO.mapRequired("SectionHeader", S.GenericHeader);
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Entries", S.Entries);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceContents::Header>::
+    mapping(IO &IO,
+            llvm::DXContainerYAML::SourceInfo::SourceContents::Header &H) {
+  IO.mapOptional("AlignedSizeInBytes", H.AlignedSizeInBytes);
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapRequired("Type", H.Type);
+  IO.mapOptional("EntriesSizeInBytes", H.EntriesSizeInBytes);
+  IO.mapOptional("UncompressedEntriesSizeInBytes",
+                 H.UncompressedEntriesSizeInBytes);
+  IO.mapOptional("Count", H.Count);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceContents::Entry>::
+    mapping(IO &IO,
+            llvm::DXContainerYAML::SourceInfo::SourceContents::Entry &E) {
+  IO.mapOptional("AlignedSizeInBytes", E.AlignedSizeInBytes);
+  IO.mapOptional("Flags", E.Flags);
+  IO.mapOptional("ContentSizeInBytes", E.ContentSizeInBytes);
+  IO.mapRequired("FileContent", E.FileContent);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceContents>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::SourceContents &S) {
+  IO.mapRequired("SectionHeader", S.GenericHeader);
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Entries", S.Entries);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::ProgramArgs::Header>::
+    mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::ProgramArgs::Header &H) {
+  IO.mapOptional("Flags", H.Flags);
+  IO.mapOptional("SizeInBytes", H.SizeInBytes);
+  IO.mapOptional("Count", H.Count);
+}
+
+void MappingTraits<mcdxbc::SourceInfo::ProgramArgs::Entry>::mapping(
+    IO &IO, mcdxbc::SourceInfo::ProgramArgs::Entry &E) {
+  IO.mapRequired("Arg", E.first);
+  IO.mapRequired("Value", E.second);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo::ProgramArgs>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo::ProgramArgs &S) {
+  IO.mapRequired("SectionHeader", S.GenericHeader);
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Args", S.Args);
+}
+
+void MappingTraits<llvm::DXContainerYAML::SourceInfo>::mapping(
+    IO &IO, llvm::DXContainerYAML::SourceInfo &S) {
+  IO.mapRequired("Header", S.Parameters);
+  IO.mapRequired("Names", S.Names);
+  IO.mapRequired("Contents", S.Contents);
+  IO.mapRequired("Args", S.Args);
 }
 
 } // namespace yaml
@@ -818,6 +928,13 @@ dumpSignature(const object::DirectX::Signature &Sig) {
   return YAML;
 }
 
+static void assign(DXContainerYAML::SourceInfo::SectionHeader &Dst,
+                   const dxbc::SourceInfo::SectionHeader &Src) {
+  Dst.AlignedSizeInBytes = Src.AlignedSizeInBytes;
+  Dst.Flags = Src.Flags;
+  Dst.Type = Src.Type;
+}
+
 Expected<std::unique_ptr<DXContainerYAML::Object>>
 DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
   std::unique_ptr<DXContainerYAML::Object> Obj =
@@ -864,6 +981,14 @@ DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
       NewPart.DebugName = DXContainerYAML::DebugName{
           DebugName->Parameters.Flags, DebugName->Parameters.NameLength,
           DebugName->Filename.str()};
+      break;
+    }
+    case dxbc::PartType::PRIV: {
+      std::optional<StringRef> PrivateData = Container.getPrivateData();
+      assert(PrivateData && "Since we are iterating and found a PRIV part, "
+                            "this should never not have a value");
+      NewPart.PrivateData.emplace(PrivateData->data(),
+                                  PrivateData->data() + PrivateData->size());
       break;
     }
     case dxbc::PartType::SFI0: {
@@ -973,6 +1098,70 @@ DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
           return std::move(E);
         NewPart.RootSignature = RootSigDescOrErr.get();
       }
+      break;
+    }
+    case dxbc::PartType::SRCI: {
+      std::optional<mcdxbc::SourceInfo> SourceInfo = Container.getSourceInfo();
+      assert(SourceInfo && "Since we are iterating and found a SRCI part, this "
+                           "should never not have a value");
+      auto &SourceInfoYAML = NewPart.SourceInfo.emplace();
+      SourceInfoYAML.Parameters.AlignedSizeInBytes =
+          SourceInfo->Parameters.AlignedSizeInBytes;
+      SourceInfoYAML.Parameters.Flags = SourceInfo->Parameters.Flags;
+      SourceInfoYAML.Parameters.SectionCount =
+          SourceInfo->Parameters.SectionCount;
+
+      auto &NamesYAML = SourceInfoYAML.Names;
+      auto &Names = SourceInfo->Names;
+      assign(NamesYAML.GenericHeader, SourceInfo->Names.GenericHeader);
+      NamesYAML.Parameters.Flags = Names.Parameters.Flags;
+      NamesYAML.Parameters.Count = Names.Parameters.Count;
+      NamesYAML.Parameters.EntriesSizeInBytes =
+          Names.Parameters.EntriesSizeInBytes;
+      NamesYAML.Entries.reserve(Names.Entries.size());
+      for (const auto &NameEntry : Names.Entries) {
+        DXContainerYAML::SourceInfo::SourceNames::Entry NameEntryYAML;
+        NameEntryYAML.AlignedSizeInBytes =
+            NameEntry.Parameters.AlignedSizeInBytes;
+        NameEntryYAML.Flags = NameEntry.Parameters.Flags;
+        NameEntryYAML.NameSizeInBytes = NameEntry.Parameters.NameSizeInBytes;
+        NameEntryYAML.ContentSizeInBytes =
+            NameEntry.Parameters.ContentSizeInBytes;
+        NameEntryYAML.FileName = NameEntry.FileName;
+        NamesYAML.Entries.emplace_back(NameEntryYAML);
+      }
+
+      auto &ContentsYAML = SourceInfoYAML.Contents;
+      auto &Contents = SourceInfo->Contents;
+      assign(ContentsYAML.GenericHeader, Contents.GenericHeader);
+      ContentsYAML.Parameters.AlignedSizeInBytes =
+          Contents.Parameters.AlignedSizeInBytes;
+      ContentsYAML.Parameters.Flags = Contents.Parameters.Flags;
+      ContentsYAML.Parameters.Type = Contents.Parameters.Type;
+      ContentsYAML.Parameters.EntriesSizeInBytes =
+          Contents.Parameters.EntriesSizeInBytes;
+      ContentsYAML.Parameters.UncompressedEntriesSizeInBytes =
+          Contents.Parameters.UncompressedEntriesSizeInBytes;
+      ContentsYAML.Parameters.Count = Contents.Parameters.Count;
+      ContentsYAML.Entries.reserve(Contents.Entries.size());
+      for (const auto &ContentEntry : Contents.Entries) {
+        DXContainerYAML::SourceInfo::SourceContents::Entry ContentEntryYAML;
+        ContentEntryYAML.AlignedSizeInBytes =
+            ContentEntry.Parameters.AlignedSizeInBytes;
+        ContentEntryYAML.Flags = ContentEntry.Parameters.Flags;
+        ContentEntryYAML.ContentSizeInBytes =
+            ContentEntry.Parameters.ContentSizeInBytes;
+        ContentEntryYAML.FileContent = ContentEntry.FileContent;
+        ContentsYAML.Entries.emplace_back(ContentEntryYAML);
+      }
+
+      auto &ArgsYAML = SourceInfoYAML.Args;
+      auto &Args = SourceInfo->Args;
+      assign(ArgsYAML.GenericHeader, Args.GenericHeader);
+      ArgsYAML.Parameters.Flags = Args.Parameters.Flags;
+      ArgsYAML.Parameters.SizeInBytes = Args.Parameters.SizeInBytes;
+      ArgsYAML.Parameters.Count = Args.Parameters.Count;
+      ArgsYAML.Args = Args.Args;
       break;
     }
     case dxbc::PartType::VERS: {

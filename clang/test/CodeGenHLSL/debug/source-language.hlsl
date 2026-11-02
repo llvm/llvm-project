@@ -5,24 +5,28 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -hlsl-entry main \
 // RUN:   -debug-info-kind=standalone -dwarf-version=4 -o - %s \
+// RUN:   -fdx-no-source-metadata \
 // RUN:   | FileCheck %s --check-prefix=CHECK-V4
 
 // SPIR-V target, DWARFv4
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan-compute -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -hlsl-entry main \
 // RUN:   -debug-info-kind=standalone -dwarf-version=4 -o - %s \
+// RUN:   -fdx-no-source-metadata \
 // RUN:   | FileCheck %s --check-prefix=CHECK-V4
 
 // DXIL target, DWARFv6
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -hlsl-entry main \
 // RUN:   -debug-info-kind=standalone -dwarf-version=6 -o - %s \
+// RUN:   -fdx-no-source-metadata \
 // RUN:   | FileCheck %s --check-prefix=CHECK-V6
 
 // SPIR-V target, DWARFv6
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan-compute -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -hlsl-entry main \
 // RUN:   -debug-info-kind=standalone -dwarf-version=6 -o - %s \
+// RUN:   -fdx-no-source-metadata \
 // RUN:   | FileCheck %s --check-prefix=CHECK-V6
 
 // CHECK-V4: !DICompileUnit(language: DW_LANG_HLSL,

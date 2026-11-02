@@ -23,14 +23,10 @@
 ///    return %0 : i1
 ///  }
 //===----------------------------------------------------------------------===//
-#include "flang/Common/static-multimap-view.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
-#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/io-api.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
 namespace fir {
 #define GEN_PASS_DEF_GENRUNTIMECALLSFORTEST

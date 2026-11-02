@@ -1941,3 +1941,60 @@ void stdTieParenthesizedPartialReinit() {
   // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
   // CHECK-NOTES: [[@LINE-5]]:3: note: move occurred here
 }
+
+namespace GH63202 {
+
+struct Base {
+  std::string name;
+  Base() = default;
+  Base(Base &&) = default;
+  Base &operator=(Base &&) = default;
+};
+
+struct Derived : Base {
+  std::string surname;
+
+  Derived() = default;
+
+  Derived(Derived &&d)
+      : Base(std::move(d)), surname(std::move(d.surname)) {}
+
+  Derived(Derived &&d, int)
+      : Base(std::forward<Base>(d)), surname(std::move(d.surname)) {}
+
+  Derived(Derived &&d, char) : Base(std::forward<Base>(d)) {
+    d.name.size();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'd' used after it was forwarded
+    // CHECK-NOTES: [[@LINE-3]]:32: note: forward occurred here
+  }
+};
+
+void invalidFullMove(Derived &&d) {
+  Derived other(std::move(d));
+  d.surname = "1";
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'd' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:11: note: move occurred here
+}
+
+void invalidFullForward(Derived &&d) {
+  Derived other(std::forward<Derived>(d));
+  d.surname = "1";
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'd' used after it was forwarded
+  // CHECK-NOTES: [[@LINE-3]]:11: note: forward occurred here
+}
+
+void partialForward(Derived &&d) {
+  Base other(std::forward<Base>(d));
+  d.surname = "1";
+}
+
+template <typename T>
+void partialForwardTemplate(T &&d) {
+  Base other(std::forward<Base>(d));
+  d.surname = "1";
+}
+
+void callPartialForwardTemplate(Derived &&d) {
+  partialForwardTemplate<Derived>(std::forward<Derived>(d));
+}
+} // namespace GH63202

@@ -75,23 +75,23 @@ entry:
   %cos1 = call double @cos(double 0.000000e+00)
 
 ; cos(inf) is a domain error
-  %cos2 = call double @cos(double 0x7FF0000000000000)
+  %cos2 = call double @cos(double +inf)
 
 ; cos(0) nobuiltin may have side effects
   %cos3 = call double @cos(double 0.000000e+00) nobuiltin
 
 ; pow(0, 1) is 0
-  %pow1 = call double @pow(double 0x7FF0000000000000, double 1.000000e+00)
+  %pow1 = call double @pow(double +inf, double 1.000000e+00)
 
 ; pow(0, -1) is a pole error
 ; FIXME: It fails on mingw host. Suppress checking.
 ; %pow2 = call double @pow(double 0.000000e+00, double -1.000000e+00)
 
 ; fmod(inf, nan) is nan
-  %fmod1 = call double @fmod(double 0x7FF0000000000000, double 0x7FF0000000000001)
+  %fmod1 = call double @fmod(double +inf, double 0x7FF0000000000001)
 
 ; fmod(inf, 1) is a domain error
-  %fmod2 = call double @fmod(double 0x7FF0000000000000, double 1.000000e+00)
+  %fmod2 = call double @fmod(double +inf, double 1.000000e+00)
 
   ret void
 }

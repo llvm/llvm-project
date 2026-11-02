@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVMergeRegionExitTargets.h"
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
@@ -31,40 +30,6 @@
 using namespace llvm;
 
 namespace {
-
-/// Create a value in BB set to the value associated with the branch the block
-/// terminator will take.
-static llvm::Value *
-createExitVariable(BasicBlock *BB,
-                   const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue) {
-  auto *T = BB->getTerminator();
-  if (isa<ReturnInst>(T))
-    return nullptr;
-  if (auto *BI = dyn_cast<UncondBrInst>(T))
-    return TargetToValue.lookup(BI->getSuccessor());
-
-  IRBuilder<> Builder(BB);
-  Builder.SetInsertPoint(T);
-
-  if (auto *BI = dyn_cast<CondBrInst>(T)) {
-    Value *LHS = TargetToValue.lookup(BI->getSuccessor(0));
-    Value *RHS = TargetToValue.lookup(BI->getSuccessor(1));
-
-    if (LHS == nullptr || RHS == nullptr)
-      return LHS == nullptr ? RHS : LHS;
-    return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
-  }
-
-  // TODO: add support for switch cases.
-  llvm_unreachable("Unhandled terminator type.");
-}
-
-static AllocaInst *createVariable(Function &F, Type *Type,
-                                  BasicBlock::iterator Position) {
-  const DataLayout &DL = F.getDataLayout();
-  return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
-                        Position);
-}
 
 // Run the pass on the given convergence region, ignoring the sub-regions.
 // Returns true if the CFG changed, false otherwise.
@@ -88,8 +53,7 @@ static bool runOnConvergenceRegionNoRecurse(LoopInfo &LI,
   auto NewExitTarget = BasicBlock::Create(F->getContext(), "new.exit", F);
   IRBuilder<> Builder(NewExitTarget);
 
-  AllocaInst *Variable = createVariable(*F, Builder.getInt32Ty(),
-                                        F->begin()->getFirstInsertionPt());
+  AllocaInst *Variable = createVariable(*F, Builder.getInt32Ty());
 
   // CodeGen output needs to be stable. Using the set as-is would order
   // the targets differently depending on the allocation pattern.
@@ -166,7 +130,7 @@ static void validateRegionExits(const SPIRV::ConvergenceRegion *CR) {
   for (auto *Child : CR->Children)
     validateRegionExits(Child);
 
-  std::unordered_set<BasicBlock *> ExitTargets;
+  SmallPtrSet<BasicBlock *, 0> ExitTargets;
   for (auto *Exit : CR->Exits) {
     for (auto *BB : successors(Exit)) {
       if (CR->Blocks.count(BB) == 0)
@@ -211,7 +175,6 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
 
@@ -222,7 +185,7 @@ public:
 } // namespace
 
 PreservedAnalyses
-SPIRVMergeRegionExitTargets::run(Function &F, FunctionAnalysisManager &AM) {
+SPIRVMergeRegionExitTargetsPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &RegionInfo = AM.getResult<SPIRVConvergenceRegionAnalysis>(F);
   return runImpl(F, LI, RegionInfo) ? PreservedAnalyses::none()
@@ -235,7 +198,6 @@ INITIALIZE_PASS_BEGIN(SPIRVMergeRegionExitTargetsLegacy,
                       "split-region-exit-blocks",
                       "SPIRV split region exit blocks", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 

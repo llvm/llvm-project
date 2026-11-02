@@ -38,6 +38,7 @@ public:
   ///
   /// The function iterates over all fields of the record type (including base
   /// classes) and works out a padded llvm type to represent the buffer layout.
+  /// If the field is a resource or resource array, it will be ignored.
   ///
   /// If a non-empty OffsetInfo is provided (ie, from `packoffset` annotations
   /// in the source), any provided offsets offsets will be respected. If the
@@ -49,8 +50,10 @@ public:
   /// Lays out an array type following HLSL buffer rules.
   llvm::Type *layOutArray(const ConstantArrayType *AT);
 
-  /// Lays out a matrix type following HLSL buffer rules.
-  llvm::Type *layOutMatrix(const ConstantMatrixType *MT);
+  /// Lays out a matrix type following HLSL buffer rules. The QualType must
+  /// retain any `row_major`/`column_major` sugar so that the correct memory
+  /// orientation is used.
+  llvm::Type *layOutMatrix(QualType Ty);
 
   /// Lays out a type following HLSL buffer rules. Arrays and structures will be
   /// padded appropriately and nested objects will be converted as appropriate.
