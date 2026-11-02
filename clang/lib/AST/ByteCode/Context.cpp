@@ -651,13 +651,13 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
 
     // Common case of only one base class.
     if (CurRecord->getNumBases() == 1) {
-      CurRecord = CurRecord->bases_begin()->getType()->getAsCXXRecordDecl();
+      CurRecord = CurRecord->bases_begin()->getType()->castAsCXXRecordDecl();
       continue;
     }
 
     // Otherwise, go to the base class that will lead to the StaticDecl.
     for (const CXXBaseSpecifier &Spec : CurRecord->bases()) {
-      const CXXRecordDecl *Base = Spec.getType()->getAsCXXRecordDecl();
+      const CXXRecordDecl *Base = Spec.getType()->castAsCXXRecordDecl();
       if (Base == StaticDecl || Base->isDerivedFrom(StaticDecl)) {
         CurRecord = Base;
         break;

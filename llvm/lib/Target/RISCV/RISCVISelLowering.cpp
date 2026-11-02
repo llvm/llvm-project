@@ -12526,11 +12526,11 @@ static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
 }
 
 /// Return the multiply high accumulate node for \p IntNo.
-static unsigned getRVPMulHighAccumulateByHalvesOpcode(unsigned IntNo) {
+static unsigned getRVPMulHighAccumulateHalfOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
-    llvm_unreachable("Unexpected RISC-V packed multiply high accumulate by "
-                     "halves intrinsic");
+    llvm_unreachable("Unexpected RISC-V packed multiply high accumulate half "
+                     "intrinsic");
   case Intrinsic::riscv_pmhacc_b0:
   case Intrinsic::riscv_pmhacc_h0:
     return RISCVISD::MHACC_HALF_0;
@@ -12549,62 +12549,26 @@ static unsigned getRVPMulHighAccumulateByHalvesOpcode(unsigned IntNo) {
 /// Return the multiply-high-parts node for a multiply-high-parts intrinsic.
 /// The scalar spelling maps to the same node; its product is the first
 /// element.
-static unsigned getRVPMulHighPartsOpcode(unsigned IntNo) {
+static unsigned getRVPMulHighHalfOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
-    llvm_unreachable("Unexpected RISC-V multiply-high-parts intrinsic");
+    llvm_unreachable("Unexpected RISC-V multiply high half intrinsic");
   case Intrinsic::riscv_pmulh_b0:
-    return RISCVISD::PMULH_H_B0;
+  case Intrinsic::riscv_pmulh_h0:
+  case Intrinsic::riscv_mulh_h0:
+    return RISCVISD::MULH_HALF_0;
   case Intrinsic::riscv_pmulh_b1:
-    return RISCVISD::PMULH_H_B1;
+  case Intrinsic::riscv_pmulh_h1:
+  case Intrinsic::riscv_mulh_h1:
+    return RISCVISD::MULH_HALF_1;
   case Intrinsic::riscv_pmulhsu_b0:
-    return RISCVISD::PMULHSU_H_B0;
+  case Intrinsic::riscv_pmulhsu_h0:
+  case Intrinsic::riscv_mulhsu_h0:
+    return RISCVISD::MULHSU_HALF_0;
   case Intrinsic::riscv_pmulhsu_b1:
-    return RISCVISD::PMULHSU_H_B1;
-  }
-}
-
-/// Return the word multiply-high-parts node for a word multiply-high-parts
-/// intrinsic. The scalar spelling maps to the same node; its product is the
-/// first element.
-static unsigned getRVPMulHighPartsWOpcode(unsigned IntNo) {
-  switch (IntNo) {
-  default:
-    llvm_unreachable("Unexpected RISC-V word multiply-high-parts intrinsic");
-  case Intrinsic::riscv_pmulh_h0:
-  case Intrinsic::riscv_mulh_h0:
-    return RISCVISD::PMULH_W_H0;
-  case Intrinsic::riscv_pmulh_h1:
-  case Intrinsic::riscv_mulh_h1:
-    return RISCVISD::PMULH_W_H1;
-  case Intrinsic::riscv_pmulhsu_h0:
-  case Intrinsic::riscv_mulhsu_h0:
-    return RISCVISD::PMULHSU_W_H0;
   case Intrinsic::riscv_pmulhsu_h1:
   case Intrinsic::riscv_mulhsu_h1:
-    return RISCVISD::PMULHSU_W_H1;
-  }
-}
-
-/// Return the scalar halfword multiply-high-parts node for \p IntNo (RV32
-/// mulh.h0/h1). The packed word spelling maps to the same node; its product
-/// is the first element.
-static unsigned getRVPScalarMulHighPartsOpcode(unsigned IntNo) {
-  switch (IntNo) {
-  default:
-    llvm_unreachable("Unexpected RISC-V scalar multiply-high-parts intrinsic");
-  case Intrinsic::riscv_pmulh_h0:
-  case Intrinsic::riscv_mulh_h0:
-    return RISCVISD::MULH_H0;
-  case Intrinsic::riscv_pmulh_h1:
-  case Intrinsic::riscv_mulh_h1:
-    return RISCVISD::MULH_H1;
-  case Intrinsic::riscv_pmulhsu_h0:
-  case Intrinsic::riscv_mulhsu_h0:
-    return RISCVISD::MULHSU_H0;
-  case Intrinsic::riscv_pmulhsu_h1:
-  case Intrinsic::riscv_mulhsu_h1:
-    return RISCVISD::MULHSU_H1;
+    return RISCVISD::MULHSU_HALF_1;
   }
 }
 
@@ -13551,7 +13515,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_pmhaccsu_b0:
   case Intrinsic::riscv_pmhaccsu_b1: {
     EVT VT = Op.getValueType();
-    unsigned Opc = getRVPMulHighAccumulateByHalvesOpcode(IntNo);
+    unsigned Opc = getRVPMulHighAccumulateHalfOpcode(IntNo);
     SDValue Rd = Op.getOperand(1);
     SDValue Rs1 = Op.getOperand(2);
     SDValue Rs2 = Op.getOperand(3);
@@ -13573,7 +13537,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_pmhaccsu_h0:
   case Intrinsic::riscv_pmhaccsu_h1: {
     EVT VT = Op.getValueType();
-    unsigned Opc = getRVPMulHighAccumulateByHalvesOpcode(IntNo);
+    unsigned Opc = getRVPMulHighAccumulateHalfOpcode(IntNo);
     SDValue Rd = Op.getOperand(1);
     SDValue Rs1 = Op.getOperand(2);
     SDValue Rs2 = Op.getOperand(3);
@@ -13601,7 +13565,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT VT = Op.getValueType();
     SDValue Rs1 = Op.getOperand(1);
     SDValue Rs2 = Op.getOperand(2);
-    unsigned Opc = getRVPMulHighPartsOpcode(IntNo);
+    unsigned Opc = getRVPMulHighHalfOpcode(IntNo);
 
     // RV32 has no single instruction for a 64-bit packed multiply-high parts.
     // Split v4i16 into two v2i16 packed operations.
@@ -13622,7 +13586,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT VT = Op.getValueType();
     SDValue Rs1 = Op.getOperand(1);
     SDValue Rs2 = Op.getOperand(2);
-    unsigned Opc = getRVPMulHighPartsWOpcode(IntNo);
+    unsigned Opc = getRVPMulHighHalfOpcode(IntNo);
 
     // RV32 has no single instruction for a 64-bit packed word multiply-high
     // parts. Split v2i32 into two scalar operations, one per result word.
@@ -13631,9 +13595,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
       };
       auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
-      unsigned SOpc = getRVPScalarMulHighPartsOpcode(IntNo);
-      SDValue Lo = DAG.getNode(SOpc, DL, MVT::i32, Extract(Rs1, 0), Rs2Lo);
-      SDValue Hi = DAG.getNode(SOpc, DL, MVT::i32, Extract(Rs1, 1), Rs2Hi);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, Extract(Rs1, 0), Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, Extract(Rs1, 1), Rs2Hi);
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
 
@@ -13679,7 +13642,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     SDValue Rs1 = Op.getOperand(1);
     SDValue Rs2 = Op.getOperand(2);
-    unsigned Opc = getRVPScalarMulHighPartsOpcode(IntNo);
+    unsigned Opc = getRVPMulHighHalfOpcode(IntNo);
     return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
   }
   case Intrinsic::riscv_pm4add:
@@ -18070,8 +18033,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       // Third operand is v4i8 - expand to v8i8
       SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8,
                                 N->getOperand(3), DAG.getUNDEF(MVT::v4i8));
-      SDValue Res = DAG.getNode(getRVPMulHighAccumulateByHalvesOpcode(IntNo),
-                                DL, WideVT, Rd, Rs1, Rs2);
+      SDValue Res = DAG.getNode(getRVPMulHighAccumulateHalfOpcode(IntNo), DL,
+                                WideVT, Rd, Rs1, Rs2);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
@@ -18226,8 +18189,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Src2 = N->getOperand(2);
       SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Src2,
                                 DAG.getUNDEF(Src2.getValueType()));
-      SDValue Res = DAG.getNode(getRVPMulHighPartsOpcode(IntNo), DL, MVT::v4i16,
-                                Rs1, Rs2);
+      SDValue Res =
+          DAG.getNode(getRVPMulHighHalfOpcode(IntNo), DL, MVT::v4i16, Rs1, Rs2);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
@@ -18247,7 +18210,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         SDValue Undef = DAG.getUNDEF(SrcVT);
         SDValue Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
                                   N->getOperand(2), Undef);
-        SDValue Res = DAG.getNode(getRVPMulHighPartsWOpcode(IntNo), DL,
+        SDValue Res = DAG.getNode(getRVPMulHighHalfOpcode(IntNo), DL,
                                   MVT::v2i32, Rd, Rs1);
         Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
         return;

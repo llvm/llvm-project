@@ -11,6 +11,7 @@
 
 ...
 name: waitcnt-loop-single-basic-block
+tracksRegLiveness: false
 body: |
   bb.0:
     S_BRANCH %bb.1
