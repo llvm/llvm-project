@@ -23,10 +23,10 @@ body:             |
     %1:intregs = COPY $r0
     %2:intregs = nsw A2_add %0, %1
     %3:intregs = S2_lsr_i_r_acc %2, %2, 31
-    %4:intregs = S2_asr_i_r killed %3, 1
+    %4:intregs = S2_asr_i_r %3, 1
     %5:predregs = C2_cmpgt %1, %4
     %6:intregs = A2_tfrsi 0
-    J2_jumpt killed %5, %bb.3, implicit-def dead $pc
+    J2_jumpt %5, %bb.3, implicit-def dead $pc
     J2_jump %bb.1, implicit-def dead $pc
   
   bb.1:
@@ -46,7 +46,7 @@ body:             |
     %14:intregs = PHI %8, %bb.1, %15, %bb.2
     %16:intregs = PHI %8, %bb.1, %17, %bb.2
     %18:intregs, %13:intregs = L2_loadri_pi %12, -4
-    %17:intregs = nsw A2_add killed %18, %16
+    %17:intregs = nsw A2_add %18, %16
     %15:intregs = A2_max %17, %14
     ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
     J2_jump %bb.3, implicit-def dead $pc

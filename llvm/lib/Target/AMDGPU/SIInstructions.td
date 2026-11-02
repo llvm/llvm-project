@@ -3805,15 +3805,17 @@ def : GCNPat<
   (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src)
 >;
 
+// GFX950 v_pk_mul_f32 must not have OP_SEL_0 on src1 without src0, so put the
+// operand, which may carry a folded swizzle, in src0 and the constant in src1.
 let SubtargetPredicate = HasPackedFP32Ops in {
   def : GCNPat<
     (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
-    (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
+    (V_PK_MUL_F32 $src_mods, $src, 0, (i64 CONST.FP32_ONE))
   >;
 
   def : GCNPat<
     (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
-    (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+    (V_PK_MUL_F32 $src_mods, $src, 0, (i64 CONST.FP32_NEG_ONE))
   >;
 } // End SubtargetPredicate = HasPackedFP32Ops
 
