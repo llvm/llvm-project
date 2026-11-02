@@ -8,7 +8,7 @@ func.func @saving_mask_and_rhs(%arg0: !fir.ref<!fir.array<10xi32>>) {
   %c0_i32 = arith.constant 0 : i32
   %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "x"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("x") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   hlfir.where {
     %2 = hlfir.elemental %0 : (!fir.shape<1>) -> !hlfir.expr<10x!fir.logical<4>> {
     ^bb0(%arg1: index):
@@ -37,13 +37,13 @@ func.func @saving_mask_and_rhs(%arg0: !fir.ref<!fir.array<10xi32>>) {
 
 // CHECK-LABEL:   func.func @saving_mask_and_rhs(
 // CHECK:  %[[VAL_8:.*]] = hlfir.elemental {{.*}} !hlfir.expr<10x!fir.logical<4>>
-// CHECK:  %[[VAL_14:.*]]:3 = hlfir.associate %[[VAL_8]]({{.*}}) {uniq_name = ".tmp.where"}
+// CHECK:  %[[VAL_14:.*]]:3 = hlfir.associate %[[VAL_8]]({{.*}}) uniq_name(".tmp.where")
 
 // Creating RHS temporary using the mask temporary (and not the hlfir.elemental)
 
 // CHECK:  %[[VAL_25:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.where", uniq_name = ""}>
 // CHECK:  %[[RHS_SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
-// CHECK:  %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_25]](%[[RHS_SHAPE]]) {uniq_name = ".tmp.where"}
+// CHECK:  %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_25]](%[[RHS_SHAPE]]) uniq_name(".tmp.where")
 // CHECK:  fir.do_loop %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:    %[[VAL_29:.*]] = hlfir.designate %[[VAL_14]]#0 ({{.*}})
 // CHECK:    %[[VAL_30:.*]] = fir.load %[[VAL_29]] : !fir.ref<!fir.logical<4>>
@@ -60,7 +60,7 @@ func.func @forall_mask_and_rhs(%arg0: !fir.ref<!fir.array<10xi32>>) {
   %c10 = arith.constant 10 : index
   %c11 = arith.constant 11 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "x"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("x") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
   hlfir.forall lb {
     hlfir.yield %c1 : index
   } ub {
@@ -93,10 +93,10 @@ func.func @forall_mask_and_rhs(%arg0: !fir.ref<!fir.array<10xi32>>) {
 // CHECK-LABEL:   func.func @forall_mask_and_rhs(
 // CHECK:           %[[VAL_18:.*]] = fir.allocmem !fir.array<?xi1>, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[MASK_SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
-// CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_18]](%[[MASK_SHAPE]]) {uniq_name = ".tmp.forall"}
+// CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_18]](%[[MASK_SHAPE]]) uniq_name(".tmp.forall")
 // CHECK:           %[[VAL_29:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[RHS_SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
-// CHECK:           %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_29]](%[[RHS_SHAPE]]) {uniq_name = ".tmp.forall"}
+// CHECK:           %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_29]](%[[RHS_SHAPE]]) uniq_name(".tmp.forall")
 // CHECK:           fir.do_loop %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 // CHECK:             %[[VAL_36:.*]] = arith.cmpi sgt, %{{.*}}, %{{.*}} : i32
 // CHECK:             %[[VAL_39:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[IV]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>

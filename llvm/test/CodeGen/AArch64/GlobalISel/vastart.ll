@@ -1,5 +1,5 @@
-; RUN: llc -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o -  -mtriple=aarch64-apple-ios7.0 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-IOS %s
-; RUN: llc -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o -  -mtriple=aarch64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=CHECK-LINUX %s
+; RUN: llc -O0 -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o -  -mtriple=aarch64-apple-ios7.0 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-IOS %s
+; RUN: llc -O0 -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o -  -mtriple=aarch64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=CHECK-LINUX %s
 
 
 declare void @llvm.va_start(ptr)

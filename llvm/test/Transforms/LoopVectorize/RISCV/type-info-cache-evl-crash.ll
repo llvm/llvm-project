@@ -12,8 +12,7 @@ define void @type_info_cache_clobber(ptr %dstv, ptr %src, i64 %wide.trip.count) 
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DSTV]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[WIDE_TRIP_COUNT]], 1
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP5]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DSTV]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
@@ -90,7 +89,7 @@ exit:
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"LVerDomain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]]}

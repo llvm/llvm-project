@@ -184,9 +184,12 @@ def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
 // DECL-LABEL: TestOpInterfaceInterfaceTraits
 // DECL: static int shared_shared_body_foo(const Concept *impl, ::mlir::Operation *tablegen_opaque_val, int input);
 // DECL: class Model : public Concept
-// DECL: Model() : Concept{foo, body_foo, Concept::shared_shared_body_foo, mixed_body_foo, default_foo}
+// DECL: using GeneratedModel = Model;
+// DECL: constexpr Model() : Concept{foo, body_foo, Concept::shared_shared_body_foo, mixed_body_foo, default_foo}
 // DECL: static inline int foo(
 // DECL: class FallbackModel : public Concept
+// DECL-NOT: using GeneratedModel = Model;
+// DECL: FallbackModel() : Concept{foo, body_foo, shared_body_foo, mixed_body_foo, default_foo}
 // DECL: static inline int foo(
 // DECL: class TestOpInterface : public ::mlir::OpInterface<TestOpInterface, detail::TestOpInterfaceInterfaceTraits>
 

@@ -157,6 +157,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
 }
 
 omp.private {type = private} @parallel_allocate_private : memref<i32>
+omp.private {type = private} @parallel_allocate_associated_private : memref<i32>
 
 func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %allocator : si32) -> () {
  // CHECK: omp.parallel
@@ -201,6 +202,16 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
    omp.terminator
  }
 
+ // CHECK: omp.parallel allocate(
+ // CHECK-SAME: allocate_private_indices([0, 1])
+ // CHECK-SAME: private(@parallel_allocate_private %[[STORAGE:.*]] -> {{.*}}, @parallel_allocate_associated_private %[[STORAGE]] -> {{.*}} : memref<i32>, memref<i32>)
+ omp.parallel allocate(%allocator : si32 -> %data_var : memref<i32>,
+                       %allocator : si32 -> %data_var : memref<i32>) allocate_private_indices([0, 1])
+     private(@parallel_allocate_private %data_var -> %private.x,
+             @parallel_allocate_associated_private %data_var -> %private.y : memref<i32>, memref<i32>) {
+   omp.terminator
+ }
+
  // CHECK: omp.parallel
  // CHECK-NEXT: omp.parallel if(%{{.*}})
  omp.parallel {
@@ -214,6 +225,32 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
  omp.parallel num_threads(%num_threads : i32) if(%if_cond) proc_bind(close) {
    omp.terminator
  }
+
+  return
+}
+
+omp.private {type = private} @scope_allocate_private : memref<i32>
+omp.private {type = private} @scope_allocate_associated_private : memref<i32>
+
+// CHECK-LABEL: omp_scope_pretty
+func.func @omp_scope_pretty(%data_var : memref<i32>, %allocator : si32) -> () {
+  // CHECK: omp.scope allocate(
+  // CHECK-SAME: allocate_alignments([64]) allocate_private_indices([0])
+  // CHECK-SAME: private(
+  omp.scope allocate(%allocator : si32 -> %data_var : memref<i32>) allocate_alignments([64]) allocate_private_indices([0])
+      private(@scope_allocate_private %data_var -> %private : memref<i32>) {
+    omp.terminator
+  }
+
+  // CHECK: omp.scope allocate(
+  // CHECK-SAME: allocate_private_indices([0, 1])
+  // CHECK-SAME: private(@scope_allocate_private %[[STORAGE:.*]] -> {{.*}}, @scope_allocate_associated_private %[[STORAGE]] -> {{.*}} : memref<i32>, memref<i32>)
+  omp.scope allocate(%allocator : si32 -> %data_var : memref<i32>,
+                     %allocator : si32 -> %data_var : memref<i32>) allocate_private_indices([0, 1])
+      private(@scope_allocate_private %data_var -> %private.x,
+              @scope_allocate_associated_private %data_var -> %private.y : memref<i32>, memref<i32>) {
+    omp.terminator
+  }
 
   return
 }
@@ -466,6 +503,8 @@ func.func @omp_loop_nest_pretty_multiple_collapse_tiles(%lb1 : i32, %ub1 : i32, 
   return
 }
 
+omp.private {type = linear} @lin.i32 : i32
+
 // CHECK-LABEL: omp_wsloop
 func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memref<i32>, %linear_var : i32, %chunk_var : i32) -> () {
 
@@ -478,33 +517,36 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, ordered = 1} :
     () -> ()
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) schedule(static) {
+  // CHECK: omp.wsloop schedule(static) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
   "omp.wsloop" (%data_var, %linear_var) ({
+  ^bb0(%l0: memref<i32>):
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,0>, schedule_kind = #omp.schedulekind<static>,
-     linear_var_types = [i32]} : (memref<i32>, i32) -> ()
+     linear_var_types = [i32], linear_syms = [@lin.i32]} : (memref<i32>, i32) -> ()
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32, %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32, i32]) schedule(static) {
+  // CHECK: omp.wsloop schedule(static) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32, @lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32, i32]) {
   // CHECK-NEXT: omp.loop_nest
   "omp.wsloop" (%data_var, %data_var, %linear_var, %linear_var) ({
+  ^bb0(%l0: memref<i32>, %l1: memref<i32>):
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   }) {operandSegmentSizes = array<i32: 0,0,2,2,0,0,0>, schedule_kind = #omp.schedulekind<static>,
-     linear_var_types = [i32,i32]} :
+     linear_var_types = [i32,i32], linear_syms = [@lin.i32, @lin.i32]} :
     (memref<i32>, memref<i32>, i32, i32) -> ()
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) ordered(2) schedule(dynamic = %{{.*}}) {
+  // CHECK: omp.wsloop ordered(2) schedule(dynamic = %{{.*}}) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
   "omp.wsloop" (%data_var, %linear_var, %chunk_var) ({
+  ^bb0(%l0: memref<i32>):
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,1>, schedule_kind = #omp.schedulekind<dynamic>, ordered = 2,
-     linear_var_types = [i32]} : (memref<i32>, i32, i32) -> ()
+     linear_var_types = [i32], linear_syms = [@lin.i32]} : (memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop nowait schedule(auto) {
   // CHECK-NEXT: omp.loop_nest
@@ -540,42 +582,42 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
     }
   }
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) schedule(static) {
+  // CHECK: omp.wsloop schedule(static) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop schedule(static) linear(%data_var : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
+  omp.wsloop schedule(static) linear(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   }
 
-  // CHECK: omp.wsloop linear(val(%{{.*}} : memref<i32> = %{{.*}} : i32), val(%{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32, i32]) schedule(static) {
+  // CHECK: omp.wsloop schedule(static) linear(val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32), val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32, i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop schedule(static) linear(val(%data_var : memref<i32> = %linear_var : i32),
-                                     val(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32, i32]) {
+  omp.wsloop schedule(static) linear(val(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32),
+                                     val(@lin.i32 %data_var -> %l1 : memref<i32> = %linear_var : i32)) linear_var_types([i32, i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   }
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) ordered(2) schedule(static = %{{.*}} : i32) {
+  // CHECK: omp.wsloop ordered(2) schedule(static = %{{.*}} : i32) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) linear_var_types([i32]) schedule(static = %chunk_var : i32) {
+  omp.wsloop ordered(2) schedule(static = %chunk_var : i32) linear(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   }
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) ordered(2) schedule(dynamic = %{{.*}} : i32, nonmonotonic) {
+  // CHECK: omp.wsloop ordered(2) schedule(dynamic = %{{.*}} : i32, nonmonotonic) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) linear_var_types([i32]) schedule(dynamic = %chunk_var : i32, nonmonotonic) {
+  omp.wsloop ordered(2) schedule(dynamic = %chunk_var : i32, nonmonotonic) linear(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step)  {
       omp.yield
     }
   }
 
-  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) ordered(2) schedule(dynamic = %{{.*}} : i16, monotonic) {
+  // CHECK: omp.wsloop ordered(2) schedule(dynamic = %{{.*}} : i16, monotonic) linear(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32]) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) linear_var_types([i32]) schedule(dynamic = %chunk_var2 : i16, monotonic) {
+  omp.wsloop ordered(2) schedule(dynamic = %chunk_var2 : i16, monotonic) linear(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -780,8 +822,8 @@ func.func @omp_simd_pretty_order(%lb : index, %ub : index, %step : index) -> () 
 // CHECK-LABEL: omp_simd_linear_val
 func.func @omp_simd_linear_val(%lb : index, %ub : index, %step : index,
                                %data_var : memref<i32>, %linear_var : i32) -> () {
-  // CHECK: omp.simd linear(val(%{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32])
-  omp.simd linear(val(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
+  // CHECK: omp.simd linear(val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32])
+  omp.simd linear(val(@lin.i32 %data_var -> %l0 : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -793,9 +835,9 @@ func.func @omp_simd_linear_val(%lb : index, %ub : index, %step : index,
 func.func @omp_simd_linear_val_multiple(%lb : index, %ub : index, %step : index,
                                         %d1 : memref<i32>, %d2 : memref<i32>,
                                         %s1 : i32, %s2 : i32) -> () {
-  // CHECK: omp.simd linear(val(%{{.*}} : memref<i32> = %{{.*}} : i32), val(%{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32, i32])
-  omp.simd linear(val(%d1 : memref<i32> = %s1 : i32),
-                  val(%d2 : memref<i32> = %s2 : i32)) linear_var_types([i32, i32]) {
+  // CHECK: omp.simd linear(val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32), val(@lin.i32 %{{.*}} -> %{{.*}} : memref<i32> = %{{.*}} : i32)) linear_var_types([i32, i32])
+  omp.simd linear(val(@lin.i32 %d1 -> %l0 : memref<i32> = %s1 : i32),
+                  val(@lin.i32 %d2 -> %l1 : memref<i32> = %s2 : i32)) linear_var_types([i32, i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -4233,6 +4275,27 @@ func.func @omp_iterator_negative_step(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   return
 }
 
+// CHECK-LABEL: func.func @omp_iterator_multi_block
+func.func @omp_iterator_multi_block(%a : !llvm.ptr, %b : !llvm.ptr) -> () {
+  // CHECK: omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   %[[C:.*]] = arith.cmpi eq, %[[IV]], %{{.*}} : index
+  // CHECK:   cf.cond_br %[[C]], ^[[BB1:.*]](%{{.*}} : !llvm.ptr), ^[[BB1]](%{{.*}} : !llvm.ptr)
+  // CHECK: ^[[BB1]](%[[P:.*]]: !llvm.ptr):
+  // CHECK:   omp.yield(%[[P]] : !llvm.ptr)
+  // CHECK: } -> !omp.iterated<!llvm.ptr>
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 4 : index
+  %st = arith.constant 1 : index
+
+  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %c = arith.cmpi eq, %iv, %lb : index
+    cf.cond_br %c, ^bb1(%a : !llvm.ptr), ^bb1(%b : !llvm.ptr)
+  ^bb1(%p : !llvm.ptr):
+    omp.yield(%p : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  return
+}
+
 // CHECK-LABEL: func.func @omp_task_affinity_iterator_1d
 func.func @omp_task_affinity_iterator_1d(%lb : index, %ub : index, %step : index,
                                        %addr : !llvm.ptr, %len : i64) -> () {
@@ -4633,3 +4696,27 @@ func.func @omp_dispatch_nocontext_novariants(%cond : i1, %x : memref<i32>) -> ()
 
 // CHECK-LABEL: func.func private @variant(memref<i32>)
 func.func private @variant(memref<i32>) -> ()
+
+// CHECK-LABEL: omp.private {type = linear} @linear.privatizer : !llvm.ptr init {
+omp.private {type = linear} @linear.privatizer : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg1 : !llvm.ptr)
+// CHECK: } data_address {
+} data_address {
+// CHECK: ^bb0(%{{.*}}: !llvm.ptr):
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+  // CHECK: omp.yield(%{{.*}} : !llvm.ptr)
+  omp.yield(%0 : !llvm.ptr)
+}
+
+// CHECK-LABEL: func @simd_linear_privatizer
+func.func @simd_linear_privatizer(%x : !llvm.ptr, %y : !llvm.ptr, %lb : i32, %ub : i32, %step : i32) {
+  // CHECK: omp.simd linear(@linear.privatizer %{{.*}} -> %{{.*}} : !llvm.ptr = %{{.*}} : i32) linear_var_types([i32]) private(@x.privatizer %{{.*}} -> %{{.*}} : !llvm.ptr)
+  omp.simd linear(@linear.privatizer %x -> %arg0 : !llvm.ptr = %step : i32) linear_var_types([i32]) private(@x.privatizer %y -> %arg1 : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  return
+}

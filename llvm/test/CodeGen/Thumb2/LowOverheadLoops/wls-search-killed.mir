@@ -105,7 +105,7 @@ body:             |
   ; CHECK:   [[COPY9:%[0-9]+]]:gpr = COPY [[COPY6]]
   ; CHECK:   [[t2ADDrs:%[0-9]+]]:gprnopc = t2ADDrs [[COPY3]], [[t2LDRi12_]], 26, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[COPY10:%[0-9]+]]:gpr = COPY [[t2ADDrs]]
-  ; CHECK:   [[t2DoLoopStart:%[0-9]+]]:gprlr = t2DoLoopStart killed [[COPY2]]
+  ; CHECK:   [[t2DoLoopStart:%[0-9]+]]:gprlr = t2DoLoopStart [[COPY2]]
   ; CHECK: bb.2.do.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   [[PHI:%[0-9]+]]:gprnopc = PHI [[COPY10]], %bb.1, %6, %bb.2
@@ -114,7 +114,7 @@ body:             |
   ; CHECK:   t2STRi12 [[COPY8]], [[PHI]], 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.lsr.iv + 4, basealign 8)
   ; CHECK:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[PHI]], 8, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[COPY11:%[0-9]+]]:gpr = COPY [[t2ADDri]]
-  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI1]], %bb.2, implicit-def $cpsr
+  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI1]], %bb.2, implicit-def dead $cpsr
   ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.if.end:
   ; CHECK:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
@@ -128,7 +128,7 @@ body:             |
     %10:gpr = COPY $r2
     %9:rgpr = COPY $r1
     %8:gprnopc = COPY $r0
-    %15:gprlr = t2WhileLoopSetup killed %9
+    %15:gprlr = t2WhileLoopSetup %9
     t2WhileLoopStart %15, %bb.3, implicit-def dead $cpsr
     t2B %bb.1, 14 /* CC::al */, $noreg
 

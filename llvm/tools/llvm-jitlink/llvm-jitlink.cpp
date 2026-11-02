@@ -39,9 +39,11 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ConnectionSpec.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/SharedMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
@@ -324,6 +326,19 @@ static cl::opt<std::string> OutOfProcessLaunch(
 
 static cl::opt<std::string> OutOfProcessConnect(
     "oop-connect", cl::desc("How to connect to the out-of-process executor"),
+    cl::cat(JITLinkCategory));
+
+enum class PlatformKind { None, Native, MachO, ELFNix, COFF };
+
+static cl::opt<PlatformKind> UsePlatform(
+    "platform", cl::desc("Which ORC platform to use"),
+    cl::init(PlatformKind::None),
+    cl::values(clEnumValN(PlatformKind::None, "none", "no platform"),
+               clEnumValN(PlatformKind::Native, "native",
+                          "Native platform for the executor"),
+               clEnumValN(PlatformKind::MachO, "macho", "MachO platform"),
+               clEnumValN(PlatformKind::ELFNix, "elfnix", "ELFNix platform"),
+               clEnumValN(PlatformKind::COFF, "coff", "COFF platform")),
     cl::cat(JITLinkCategory));
 
 static cl::opt<std::string>
@@ -1366,12 +1381,33 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   }
 
   // Set up the platform.
-  if (!OrcRuntime.empty()) {
+  if (!OrcRuntime.empty() && UsePlatform != PlatformKind::None) {
+
     assert(ProcessSymsJD && "ProcessSymsJD should have been set");
     PlatformJD = &ES.createBareJITDylib("Platform");
     PlatformJD->addToLinkOrder(*ProcessSymsJD);
 
-    if (TT.isOSBinFormatMachO()) {
+    // If the '-platform' option PlatformKind::Native then detect the
+    // platform to use.
+    if (UsePlatform == PlatformKind::Native) {
+      if (TT.isOSBinFormatMachO())
+        UsePlatform = PlatformKind::MachO;
+      else if (TT.isOSBinFormatELF())
+        UsePlatform = PlatformKind::ELFNix;
+      else if (TT.isOSBinFormatCOFF())
+        UsePlatform = PlatformKind::COFF;
+      else {
+        Err = make_error<StringError>(
+            "-" + OrcRuntime.ArgStr + " specified, but format " +
+                Triple::getObjectFormatTypeName(TT.getObjectFormat()) +
+                " not supported",
+            inconvertibleErrorCode());
+        return;
+      }
+    }
+
+    switch (UsePlatform) {
+    case PlatformKind::MachO:
       if (auto P =
               MachOPlatform::Create(*ObjLayer, *PlatformJD, OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
@@ -1379,7 +1415,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         Err = P.takeError();
         return;
       }
-    } else if (TT.isOSBinFormatELF()) {
+      break;
+    case PlatformKind::ELFNix:
       if (auto P = ELFNixPlatform::Create(*ObjLayer, *PlatformJD,
                                           OrcRuntime.c_str()))
         ES.setPlatform(std::move(*P));
@@ -1387,7 +1424,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         Err = P.takeError();
         return;
       }
-    } else if (TT.isOSBinFormatCOFF()) {
+      break;
+    case PlatformKind::COFF: {
       auto LoadDynLibrary = [&, this](JITDylib &JD,
                                       StringRef DLLName) -> Error {
         if (!DLLName.ends_with_insensitive(".dll"))
@@ -1404,13 +1442,10 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         Err = P.takeError();
         return;
       }
-    } else {
-      Err = make_error<StringError>(
-          "-" + OrcRuntime.ArgStr + " specified, but format " +
-              Triple::getObjectFormatTypeName(TT.getObjectFormat()) +
-              " not supported",
-          inconvertibleErrorCode());
-      return;
+      break;
+    }
+    default:
+      llvm_unreachable("Invalid UsePlatform value");
     }
   } else if (TT.isOSBinFormatMachO()) {
     if (!NoExec) {
@@ -1919,6 +1954,12 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
   if (!OrcRuntime.empty() && NoProcessSymbols)
     return make_error<StringError>("-orc-runtime requires process symbols",
                                    inconvertibleErrorCode());
+
+  // If no -platform option was specified then pick a default: If an ORC
+  // runtime path was given then use "native", otherwise use "none".
+  if (UsePlatform.getNumOccurrences() == 0)
+    UsePlatform =
+        OrcRuntime.empty() ? PlatformKind::None : PlatformKind::Native;
 
   // If -slab-allocate is passed, check that we're not trying to use it in
   // -oop-launch or -oop-connect mode.
@@ -2953,15 +2994,25 @@ static Error addSelfRelocations(LinkGraph &G) {
   return Error::success();
 }
 
+// Controller-interface descriptor for the ORC runtime's run-program wrapper.
+namespace llvm::orc::run_program_sps_ci {
+struct RunProgram {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_run_program_wrapper");
+  using SPSSig = int64_t(shared::SPSString, shared::SPSString,
+                         shared::SPSSequence<shared::SPSString>);
+};
+} // namespace llvm::orc::run_program_sps_ci
+
 static Expected<ExecutorSymbolDef> getMainEntryPoint(Session &S) {
   return S.ES.lookup(S.JDSearchOrder, S.ES.intern(EntryPointName));
 }
 
 static Expected<ExecutorSymbolDef> getOrcRuntimeEntryPoint(Session &S) {
-  std::string RuntimeEntryPoint = "__orc_rt_run_program_wrapper";
-  if (S.ES.getTargetTriple().getObjectFormat() == Triple::MachO)
-    RuntimeEntryPoint = '_' + RuntimeEntryPoint;
-  return S.ES.lookup(S.JDSearchOrder, S.ES.intern(RuntimeEntryPoint));
+  orc::Mangler Mangle(S.ES.getTargetTriple());
+  return S.ES.lookup(
+      S.JDSearchOrder,
+      S.ES.intern(Mangle.mangledCopy(run_program_sps_ci::RunProgram::Name)));
 }
 
 static Expected<ExecutorSymbolDef> getEntryPoint(Session &S) {
@@ -2999,15 +3050,18 @@ static Expected<int> runWithRuntime(Session &S, ExecutorAddr EntryPointAddr) {
   if (S.ES.getTargetTriple().getObjectFormat() == Triple::MachO &&
       DemangledEntryPoint.front() == '_')
     DemangledEntryPoint = DemangledEntryPoint.drop_front();
-  using llvm::orc::shared::SPSString;
-  using SPSRunProgramSig =
-      int64_t(SPSString, SPSString, shared::SPSSequence<SPSString>);
-  int64_t Result;
-  if (auto Err = S.ES.callSPSWrapper<SPSRunProgramSig>(
-          EntryPointAddr, Result, S.MainJD->getName(), DemangledEntryPoint,
-          static_cast<std::vector<std::string> &>(InputArgv)))
-    return std::move(Err);
-  return Result;
+  using RunProgramProxy =
+      Proxy<int64_t(StringRef, StringRef, ArrayRef<std::string>)>;
+  RunProgramProxy RunProgram(
+      sps::ProxySpec<RunProgramProxy, run_program_sps_ci::RunProgram>::dispatch,
+      EntryPointAddr);
+  auto Result =
+      RunProgram(S.ES, S.MainJD->getName(), DemangledEntryPoint,
+                 ArrayRef<std::string>(
+                     static_cast<std::vector<std::string> &>(InputArgv)));
+  if (!Result)
+    return Result.takeError();
+  return *Result;
 }
 
 static Expected<int> runWithoutRuntime(Session &S,
@@ -3158,7 +3212,7 @@ int main(int argc, char *argv[]) {
       Timers->JITLinkTG.printAll(errs());
     reportLLVMJITLinkError(EntryPoint.takeError());
     ExitOnErr(S->ES.endSession());
-    exit(1);
+    return 1;
   }
 
   ExitOnErr(runChecks(*S, std::move(TT), std::move(Features)));

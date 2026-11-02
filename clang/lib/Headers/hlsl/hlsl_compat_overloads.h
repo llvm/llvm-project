@@ -28,6 +28,10 @@ namespace hlsl {
   [[deprecated("In 202x mismatched vector/scalar lowering for " #fn " is "     \
                "deprecated. Explicitly cast parameters.")]]
 
+#define _DXC_DEPRECATED_SCALAR_FN(ty1, ty2, fn)                                \
+  [[deprecated("In 202x mismatched " #ty1 "/" #ty2 " lowering for " #fn " is " \
+               "deprecated. Explicitly cast parameters.")]]
+
 #define _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(fn)                                 \
   _DXC_DEPRECATED_64BIT_FN(fn)                                                 \
   constexpr float fn(double V) { return fn((float)V); }                        \
@@ -379,6 +383,49 @@ _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(frac)
 _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(frac)
 
 //===----------------------------------------------------------------------===//
+// isfinite builtins overloads
+//===----------------------------------------------------------------------===//
+
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool isfinite(double V) { return isfinite((float)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2 isfinite(double2 V) { return isfinite((float2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3 isfinite(double3 V) { return isfinite((float3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4 isfinite(double4 V) { return isfinite((float4)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool1x2 isfinite(double1x2 V) { return isfinite((float1x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool1x3 isfinite(double1x3 V) { return isfinite((float1x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool1x4 isfinite(double1x4 V) { return isfinite((float1x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2x1 isfinite(double2x1 V) { return isfinite((float2x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2x2 isfinite(double2x2 V) { return isfinite((float2x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2x3 isfinite(double2x3 V) { return isfinite((float2x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2x4 isfinite(double2x4 V) { return isfinite((float2x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3x1 isfinite(double3x1 V) { return isfinite((float3x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3x2 isfinite(double3x2 V) { return isfinite((float3x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3x3 isfinite(double3x3 V) { return isfinite((float3x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3x4 isfinite(double3x4 V) { return isfinite((float3x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4x1 isfinite(double4x1 V) { return isfinite((float4x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4x2 isfinite(double4x2 V) { return isfinite((float4x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4x3 isfinite(double4x3 V) { return isfinite((float4x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4x4 isfinite(double4x4 V) { return isfinite((float4x4)V); }
+
+//===----------------------------------------------------------------------===//
 // isinf builtins overloads
 //===----------------------------------------------------------------------===//
 
@@ -517,6 +564,12 @@ constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> max(
   return max((vector<T, N>)p0, p1);
 }
 
+_DXC_DEPRECATED_SCALAR_FN(float, int, max)
+constexpr float max(float p0, int p1) { return max(p0, (float)p1); }
+
+_DXC_DEPRECATED_SCALAR_FN(int, float, max)
+constexpr float max(int p0, float p1) { return max((float)p0, p1); }
+
 //===----------------------------------------------------------------------===//
 // min builtins overloads
 //===----------------------------------------------------------------------===//
@@ -534,6 +587,12 @@ constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> min(
     T p0, vector<T, N> p1) {
   return min((vector<T, N>)p0, p1);
 }
+
+_DXC_DEPRECATED_SCALAR_FN(float, int, min)
+constexpr float min(float p0, int p1) { return min(p0, (float)p1); }
+
+_DXC_DEPRECATED_SCALAR_FN(int, float, min)
+constexpr float min(int p0, float p1) { return min((float)p0, p1); }
 
 //===----------------------------------------------------------------------===//
 // normalize builtins overloads

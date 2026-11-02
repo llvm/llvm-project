@@ -85,7 +85,7 @@ TEST(SharedMemoryMapperTest, MemReserveInitializeDeinitializeRelease) {
     auto PageSize = Mapper->getPageSize();
     size_t ReqSize = PageSize;
     jitlink::LinkGraph G("G", std::make_shared<SymbolStringPool>(),
-                         Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+                         Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
                          jitlink::getGenericEdgeKindName);
 
     Mapper->reserve(ReqSize, [&](Expected<ExecutorAddrRange> Result) {
