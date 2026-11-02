@@ -2555,6 +2555,22 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
   ret void
 }
 
+; Wave profile metadata records measured zero separately from missing counts.
+; NOTE: Do not autogenerate. Check the serialized function/block metadata payloads.
+; CHECK-LABEL: define void @wave_profile_metadata(
+; CHECK-SAME: !wave.profile ![[WAVE_PROFILE:[0-9]+]]
+define void @wave_profile_metadata(i1 %condition) !wave.profile !19 {
+entry:
+  ; CHECK: br i1 %condition, label %observed_zero, label %unmeasured, !wave.profile.block ![[WAVE_ENTRY:[0-9]+]]
+  br i1 %condition, label %observed_zero, label %unmeasured, !wave.profile.block !20
+observed_zero:
+  ; CHECK: ret void, !wave.profile.block ![[WAVE_ZERO:[0-9]+]]
+  ret void, !wave.profile.block !21
+unmeasured:
+  ; CHECK: ret void, !wave.profile.block ![[WAVE_MISSING:[0-9]+]]
+  ret void, !wave.profile.block !22
+}
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }
@@ -2674,3 +2690,13 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
 ; CHECK: !17 = !{!15}
 !18 = !{!16}
 ; CHECK: !18 = !{!16}
+
+; Metadata -- GPU wave profile
+; CHECK: ![[WAVE_PROFILE]] = !{i64 2, i64 123, i64 32, i64 0, i64 0}
+; CHECK: ![[WAVE_ENTRY]] = !{i64 2, i64 123, i64 0, i64 1, i64 1, i64 2}
+; CHECK: ![[WAVE_ZERO]] = !{i64 2, i64 123, i64 1, i64 1}
+; CHECK: ![[WAVE_MISSING]] = !{i64 2, i64 123, i64 2, i64 0}
+!19 = !{i64 2, i64 123, i64 32, i64 0, i64 0}
+!20 = !{i64 2, i64 123, i64 0, i64 1, i64 1, i64 2}
+!21 = !{i64 2, i64 123, i64 1, i64 1}
+!22 = !{i64 2, i64 123, i64 2, i64 0}
