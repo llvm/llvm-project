@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILMemIntrinsics.h"
 #include "DirectX.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/IRBuilder.h"
@@ -212,7 +211,8 @@ static bool eliminateMemIntrinsics(Module &M) {
   return HadMemIntrinsicUses;
 }
 
-PreservedAnalyses DXILMemIntrinsics::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses DXILMemIntrinsicsPass::run(Module &M,
+                                             ModuleAnalysisManager &) {
   if (eliminateMemIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
