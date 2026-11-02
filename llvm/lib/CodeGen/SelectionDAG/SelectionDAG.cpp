@@ -227,12 +227,10 @@ bool ISD::isConstantSplatVectorAllZeros(SDValue V, bool BuildVectorOnly) {
   while (V.getOpcode() == ISD::BITCAST)
     V = V.getOperand(0);
 
-  if (!BuildVectorOnly && IsVectorBitcast) {
-    if (auto *C = dyn_cast<ConstantSDNode>(V))
-      return C->isZero();
-    // Check the bits so that floating-point negative zero does not match.
-    if (auto *C = dyn_cast<ConstantFPSDNode>(V))
-      return C->getValueAPF().bitcastToAPInt().isZero();
+  if (SDValue V(const_cast<SDNode *>(N), 0);
+      !BuildVectorOnly && IsVectorBitcast &&
+      (isNullConstant(V) || isNullFPConstant(V))) {
+    return true;
   }
 
   if (!BuildVectorOnly && V.getOpcode() == ISD::SPLAT_VECTOR) {
