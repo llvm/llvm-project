@@ -12,6 +12,7 @@
 
 #include "CodeGenModule.h"
 #include "ABIInfo.h"
+#include "ABIInfoImpl.h"
 #include "CGBlocks.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
@@ -5362,7 +5363,11 @@ void CodeGenModule::emitMultiVersionFunctions() {
           continue;
 
         auto CheckType = [&](QualType Ty, SourceLocation Loc, bool IsParam) {
-          if (!Ty->isVectorType())
+          const Type *InnerTy = isSingleElementStruct(Ty, getContext());
+          if (!Ty->isVectorType() && (!InnerTy || !InnerTy->isVectorType()))
+            return false;
+          // C++ records passed indirectly have the same ABI at every AVX level.
+          if (InnerTy && getRecordArgABI(Ty, getCXXABI()))
             return false;
           uint64_t Bits = getContext().getTypeSize(Ty);
           if (Bits <= ModuleVectorBits || Bits > VersionVectorBits)
