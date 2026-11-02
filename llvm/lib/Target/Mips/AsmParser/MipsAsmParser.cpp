@@ -6673,8 +6673,6 @@ ParseStatus MipsAsmParser::parseCOP0Register(OperandVector &Operands) {
     if (getLexer().is(AsmToken::Comma)) {
       Lex();
       SMLoc SelLoc = getLexer().getLoc();
-      if (getLexer().is(AsmToken::Dollar))
-        return Error(SelLoc, "expected 3-bit unsigned immediate");
       const MCExpr *Expr;
       if (getParser().parseExpression(Expr))
         return ParseStatus::Failure;
