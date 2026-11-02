@@ -310,7 +310,7 @@ Makes programs 10x faster by doing Special New Thing.
 
 * The AMDGPU buffer intrinsics that take their buffer resource (rsrc/V#)
   argument as a `<4 x i32>` are deprecated and will be removed in a future
-  LLVM release. Codegen now warns for their use once per module.
+  LLVM release.
 
   They all have `.ptr.` equivalents that take a `ptr addrspace(8)`, produced by
   `llvm.amdgcn.make.buffer.rsrc`, loaded directly from memory, or, if
@@ -335,9 +335,6 @@ Makes programs 10x faster by doing Special New Thing.
   Note that when emitting `llvm.amdgcn.ptr.s.buffer.load`, you must tag the intrinsic with `!invariant.load` metadata in order to recover the merging and loop hoisting behavior that `llvm.amdgcn.s.buffer.load` had because it lied about 'not reading memory'. Explicitly tagging these buffer loads as invariant will teach LLVM's general infrastructure about the property that users of the old ``s.buffer.load`` intrinsic were already asserting.
 
   While we do intend to autoupgrade the old intrinsics when they are removed, this upgrade will have to use `inttoptr` to convert buffer resources, losing pointer provenance. Therefore, we strongly encourage users to migrate to the new forms (which have been available for years) before this removal.
-
-  The warning can be suppressed with the
-  `amdgpu-warn-deprecated-buffer-intrinsics=0` option.
 
 ### Changes to the ARM Backend
 
