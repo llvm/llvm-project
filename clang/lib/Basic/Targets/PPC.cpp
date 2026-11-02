@@ -871,6 +871,9 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()
                            : &llvm::APFloat::PPCDoubleDouble();
+  if (LongDoubleFormat == &llvm::APFloat::IEEEquad() && !HasFloat128)
+    Diags.Report(diag::err_opt_not_valid_without_opt) << "-mabi=ieeelongdouble"
+                                                      << "-maltivec";
   Opts.IEEE128 = 1;
   if (getTriple().isOSAIX() && Opts.EnableAIXQuadwordAtomicsABI &&
       HasQuadwordAtomics)
