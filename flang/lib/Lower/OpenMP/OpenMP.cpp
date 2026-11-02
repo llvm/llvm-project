@@ -1876,7 +1876,7 @@ static bool canAssumeBoundedRecipeEffects(lower::AbstractConverter &converter,
 
 static bool
 canAssumeBoundedRecipeEffectsForItem(lower::AbstractConverter &converter,
-                                   const semantics::Symbol &sym) {
+                                     const semantics::Symbol &sym) {
   const auto &ultimate = sym.GetUltimate();
   if (const auto *common =
           ultimate.detailsIf<semantics::CommonBlockDetails>()) {
