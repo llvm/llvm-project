@@ -1,0 +1,46 @@
+# NOTE: Assertions are hand-written; do not regenerate them with
+# NOTE: utils/update_llc_test_checks.py.
+# RUN: llc -mtriple=amdgpu9.08 -start-before=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o - | FileCheck -check-prefix=NOEXTEND %s
+# RUN: llc -mtriple=amdgpu9.08 -start-before=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -amdgpu-remat-extend-deps -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o - | FileCheck -check-prefix=EXTEND %s
+
+# Runs the full pipeline from machine-scheduler-remat-extend-deps.mir to show
+# the effect of -amdgpu-remat-extend-deps on register allocation.
+#
+# Both functions have a register budget of 12 VGPRs ("amdgpu-num-vgpr"="12"),
+# while their high pressure region needs 15. On gfx908, values that do not fit
+# in VGPRs are parked in AGPRs (v_accvgpr_write_b32) rather than spilled to
+# scratch, and one of the 12 VGPRs is reserved for AGPR copies, so
+# num_vgpr + num_agpr is the number of registers the function needs.
+#
+# In extend_shared_base with the flag, the rematerialization stage meets the
+# budget: extending the live range of the shared base lets all four addresses
+# be rematerialized past the high pressure region, which brings pressure to
+# 12. The function then needs 11 VGPRs and 1 AGPR, i.e. 12 registers, within
+# the budget, instead of 11 VGPRs and 4 AGPRs (15 registers) without the flag.
+# In no_extend_across_blocks the extension is not allowed and nothing changes.
+
+# NOEXTEND-LABEL: {{^}}extend_shared_base:
+# NOEXTEND-COUNT-4: v_accvgpr_write_b32
+# NOEXTEND-NOT:     v_accvgpr_write_b32
+# NOEXTEND:         .set .Lextend_shared_base.num_vgpr, 11
+# NOEXTEND-NEXT:    .set .Lextend_shared_base.num_agpr, 4
+# NOEXTEND:         ; ScratchSize: 0
+# NOEXTEND-LABEL: {{^}}no_extend_across_blocks:
+# NOEXTEND-COUNT-4: v_accvgpr_write_b32
+# NOEXTEND-NOT:     v_accvgpr_write_b32
+# NOEXTEND:         .set .Lno_extend_across_blocks.num_vgpr, 11
+# NOEXTEND-NEXT:    .set .Lno_extend_across_blocks.num_agpr, 4
+# NOEXTEND:         ; ScratchSize: 0
+
+# EXTEND-LABEL: {{^}}extend_shared_base:
+# EXTEND-COUNT-1: v_accvgpr_write_b32
+# EXTEND-NOT:     v_accvgpr_write_b32
+# EXTEND:         .set .Lextend_shared_base.num_vgpr, 11
+# EXTEND-NEXT:    .set .Lextend_shared_base.num_agpr, 1
+# EXTEND:         ; ScratchSize: 0
+# EXTEND-LABEL: {{^}}no_extend_across_blocks:
+# EXTEND-COUNT-4: v_accvgpr_write_b32
+# EXTEND-NOT:     v_accvgpr_write_b32
+# EXTEND:         .set .Lno_extend_across_blocks.num_vgpr, 11
+# EXTEND-NEXT:    .set .Lno_extend_across_blocks.num_agpr, 4
+# EXTEND:         ; ScratchSize: 0

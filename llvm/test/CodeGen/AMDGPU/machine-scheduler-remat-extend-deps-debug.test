@@ -1,0 +1,49 @@
+# NOTE: Assertions are hand-written; they check -debug-only output, which
+# NOTE: utils/update_mir_test_checks.py does not generate.
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu9.08 -run-pass=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -amdgpu-remat-extend-deps -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o /dev/null -debug-only=machine-scheduler 2>&1 | FileCheck -check-prefix=EXTEND %s
+# RUN: llc -mtriple=amdgpu9.08 -run-pass=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o /dev/null -debug-only=machine-scheduler 2>&1 | FileCheck -check-prefix=NOEXTEND %s
+
+# Shows how the pre-RA rematerialization stage reaches its pressure target in
+# machine-scheduler-remat-extend-deps.mir. The final MIR only shows the four
+# rematerialized addresses; the intermediate steps are only visible in the
+# stage's debug output.
+#
+# In extend_shared_base, region 1 starts at 15/12 VGPRs. Each rematerialized
+# address is estimated to save one VGPR, so after three of them the target is
+# deemed reached. Recomputing the actual pressure shows 13/12, because the
+# estimate does not account for the live range of %base being extended through
+# the region. A new round rematerializes the fourth address, reaching 12/12.
+
+# EXTEND-LABEL: Analyzing @extend_shared_base: reduce spilling
+# EXTEND:       [1] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# EXTEND:       ** REMAT {{.*}}%addr0:vgpr_32 = V_ADD_U32_e32 0, %base
+# EXTEND:       ** REMAT {{.*}}%addr1:vgpr_32 = V_ADD_U32_e32 16, %base
+# EXTEND:       ** REMAT {{.*}}%addr2:vgpr_32 = V_ADD_U32_e32 32, %base
+# EXTEND-NOT:   ** REMAT
+# EXTEND:       [1] Target reached!
+# EXTEND-NOT:   ** REMAT
+# EXTEND:       [1] Incorrect RP estimation
+# EXTEND:       NEW REMAT ROUND
+# EXTEND:       [1] Actual/Target: {{.*}}, 13/12 ArchVGPRs
+# EXTEND:       ** REMAT {{.*}}%addr3:vgpr_32 = V_ADD_U32_e32 48, %base
+# EXTEND-NOT:   ** REMAT
+# EXTEND:       [1] Target reached!
+# EXTEND:       Objectives achieved!
+# EXTEND:       REMAT RESULTS
+# EXTEND:       [1] Achieved occupancy {{[0-9]+}} (Actual/Target: {{.*}}, 12/12 ArchVGPRs
+
+# EXTEND-LABEL: Analyzing @no_extend_across_blocks: reduce spilling
+# EXTEND:       [0] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# EXTEND-NOT:   ** REMAT
+# EXTEND:       Stop on exhausted rematerialization candidates
+
+# NOEXTEND-LABEL: Analyzing @extend_shared_base: reduce spilling
+# NOEXTEND:       [1] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# NOEXTEND-NOT:   ** REMAT
+# NOEXTEND:       Stop on exhausted rematerialization candidates
+
+# NOEXTEND-LABEL: Analyzing @no_extend_across_blocks: reduce spilling
+# NOEXTEND:       [0] Actual/Target: {{.*}}, 15/12 ArchVGPRs
+# NOEXTEND-NOT:   ** REMAT
+# NOEXTEND:       Stop on exhausted rematerialization candidates
