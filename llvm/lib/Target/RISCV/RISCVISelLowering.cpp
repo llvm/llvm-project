@@ -12531,17 +12531,13 @@ static unsigned getRVPMulHighAccumulateHalfOpcode(unsigned IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed multiply high accumulate half "
                      "intrinsic");
-  case Intrinsic::riscv_pmhacc_b0:
-  case Intrinsic::riscv_pmhacc_h0:
+  case Intrinsic::riscv_pmhacc_half_0:
     return RISCVISD::MHACC_HALF_0;
-  case Intrinsic::riscv_pmhacc_b1:
-  case Intrinsic::riscv_pmhacc_h1:
+  case Intrinsic::riscv_pmhacc_half_1:
     return RISCVISD::MHACC_HALF_1;
-  case Intrinsic::riscv_pmhaccsu_b0:
-  case Intrinsic::riscv_pmhaccsu_h0:
+  case Intrinsic::riscv_pmhaccsu_half_0:
     return RISCVISD::MHACCSU_HALF_0;
-  case Intrinsic::riscv_pmhaccsu_b1:
-  case Intrinsic::riscv_pmhaccsu_h1:
+  case Intrinsic::riscv_pmhaccsu_half_1:
     return RISCVISD::MHACCSU_HALF_1;
   }
 }
@@ -12553,20 +12549,16 @@ static unsigned getRVPMulHighHalfOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V multiply high half intrinsic");
-  case Intrinsic::riscv_pmulh_b0:
-  case Intrinsic::riscv_pmulh_h0:
+  case Intrinsic::riscv_pmulh_half_0:
   case Intrinsic::riscv_mulh_h0:
     return RISCVISD::MULH_HALF_0;
-  case Intrinsic::riscv_pmulh_b1:
-  case Intrinsic::riscv_pmulh_h1:
+  case Intrinsic::riscv_pmulh_half_1:
   case Intrinsic::riscv_mulh_h1:
     return RISCVISD::MULH_HALF_1;
-  case Intrinsic::riscv_pmulhsu_b0:
-  case Intrinsic::riscv_pmulhsu_h0:
+  case Intrinsic::riscv_pmulhsu_half_0:
   case Intrinsic::riscv_mulhsu_h0:
     return RISCVISD::MULHSU_HALF_0;
-  case Intrinsic::riscv_pmulhsu_b1:
-  case Intrinsic::riscv_pmulhsu_h1:
+  case Intrinsic::riscv_pmulhsu_half_1:
   case Intrinsic::riscv_mulhsu_h1:
     return RISCVISD::MULHSU_HALF_1;
   }
@@ -13510,10 +13502,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(MulOpc, DL, VT, Rd, Rs1, Rs2);
   }
-  case Intrinsic::riscv_pmhacc_b0:
-  case Intrinsic::riscv_pmhacc_b1:
-  case Intrinsic::riscv_pmhaccsu_b0:
-  case Intrinsic::riscv_pmhaccsu_b1: {
+  case Intrinsic::riscv_pmhacc_half_0:
+  case Intrinsic::riscv_pmhacc_half_1:
+  case Intrinsic::riscv_pmhaccsu_half_0:
+  case Intrinsic::riscv_pmhaccsu_half_1: {
     EVT VT = Op.getValueType();
     unsigned Opc = getRVPMulHighAccumulateHalfOpcode(IntNo);
     SDValue Rd = Op.getOperand(1);
@@ -13529,18 +13521,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Hi = DAG.getNode(Opc, DL, MVT::v2i16, RdHi, Rs1Hi, Rs2Hi);
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
-
-    return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
-  }
-  case Intrinsic::riscv_pmhacc_h0:
-  case Intrinsic::riscv_pmhacc_h1:
-  case Intrinsic::riscv_pmhaccsu_h0:
-  case Intrinsic::riscv_pmhaccsu_h1: {
-    EVT VT = Op.getValueType();
-    unsigned Opc = getRVPMulHighAccumulateHalfOpcode(IntNo);
-    SDValue Rd = Op.getOperand(1);
-    SDValue Rs1 = Op.getOperand(2);
-    SDValue Rs2 = Op.getOperand(3);
 
     // RV32 has no 64-bit packed form: split into two scalar operations, each
     // accumulating one word of the result.
@@ -13558,10 +13538,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
   }
-  case Intrinsic::riscv_pmulh_b0:
-  case Intrinsic::riscv_pmulh_b1:
-  case Intrinsic::riscv_pmulhsu_b0:
-  case Intrinsic::riscv_pmulhsu_b1: {
+  case Intrinsic::riscv_pmulh_half_0:
+  case Intrinsic::riscv_pmulh_half_1:
+  case Intrinsic::riscv_pmulhsu_half_0:
+  case Intrinsic::riscv_pmulhsu_half_1: {
     EVT VT = Op.getValueType();
     SDValue Rs1 = Op.getOperand(1);
     SDValue Rs2 = Op.getOperand(2);
@@ -13577,17 +13557,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
 
-    return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
-  }
-  case Intrinsic::riscv_pmulh_h0:
-  case Intrinsic::riscv_pmulh_h1:
-  case Intrinsic::riscv_pmulhsu_h0:
-  case Intrinsic::riscv_pmulhsu_h1: {
-    EVT VT = Op.getValueType();
-    SDValue Rs1 = Op.getOperand(1);
-    SDValue Rs2 = Op.getOperand(2);
-    unsigned Opc = getRVPMulHighHalfOpcode(IntNo);
-
     // RV32 has no single instruction for a 64-bit packed word multiply-high
     // parts. Split v2i32 into two scalar operations, one per result word.
     if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
@@ -13600,10 +13569,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
 
-    if (Subtarget.is64Bit())
-      return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
-
-    return SDValue();
+    return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
   }
   case Intrinsic::riscv_pmqwacc_i32x2:
   case Intrinsic::riscv_pmqrwacc_i32x2: {
@@ -18013,10 +17979,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
-    case Intrinsic::riscv_pmhacc_b0:
-    case Intrinsic::riscv_pmhacc_b1:
-    case Intrinsic::riscv_pmhaccsu_b0:
-    case Intrinsic::riscv_pmhaccsu_b1: {
+    case Intrinsic::riscv_pmhacc_half_0:
+    case Intrinsic::riscv_pmhacc_half_1:
+    case Intrinsic::riscv_pmhaccsu_half_0:
+    case Intrinsic::riscv_pmhaccsu_half_1: {
       // pmhacc.h.bXX operates on the whole register: v2i16 on RV32 and
       // v4i16 on RV64. On RV64 a v2i16 result widens to the packed v4i16
       // form and extracts the low half.
@@ -18173,10 +18139,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       reportFatalUsageError("unsupported llvm.riscv multiply-parts intrinsic");
     }
-    case Intrinsic::riscv_pmulh_b0:
-    case Intrinsic::riscv_pmulh_b1:
-    case Intrinsic::riscv_pmulhsu_b0:
-    case Intrinsic::riscv_pmulhsu_b1: {
+    case Intrinsic::riscv_pmulh_half_0:
+    case Intrinsic::riscv_pmulh_half_1:
+    case Intrinsic::riscv_pmulhsu_half_0:
+    case Intrinsic::riscv_pmulhsu_half_1: {
       // A 32-bit result has no legal container on RV64; widen the result and
       // both sources to the 64-bit packed form.
       EVT VT = N->getValueType(0);
