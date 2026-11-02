@@ -19,14 +19,12 @@ namespace {
 class VECodeGenPassBuilder : public CodeGenPassBuilder {
   using Base = CodeGenPassBuilder;
 
-  VETargetMachine &getTM() const {
-    return static_cast<VETargetMachine&>(TM);
-  }
+  VETargetMachine &getTM() const { return static_cast<VETargetMachine &>(TM); }
 
 public:
   explicit VECodeGenPassBuilder(VETargetMachine &TM,
-                                   const CGPassBuilderOption &Opts,
-                                   PassInstrumentationCallbacks *PIC)
+                                const CGPassBuilderOption &Opts,
+                                PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
   void addIRPasses(PassManagerWrapper &PMW) override;
@@ -39,7 +37,7 @@ public:
 
 void VECodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(getTM()), PMW);
-  
+
   Base::addIRPasses(PMW);
 }
 
