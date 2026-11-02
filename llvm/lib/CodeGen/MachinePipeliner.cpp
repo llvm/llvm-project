@@ -1641,7 +1641,7 @@ struct FuncUnitSorter {
   // Compute the critical resources needed by the instruction. This
   // function records the functional units needed by instructions that
   // must use only one functional unit. We use this as a tie breaker
-  // for computing the resource MII. The instrutions that require
+  // for computing the resource MII. The instructions that require
   // the same, highly used, functional unit have high priority.
   void calcCriticalResources(MachineInstr &MI) {
     unsigned SchedClass = MI.getDesc().getSchedClass();

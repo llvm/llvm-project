@@ -28,17 +28,17 @@ body:             |
     liveins: $x2
 
     %0:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @g_51
-    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit $x2 :: (load (s64))
+    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, %0, implicit $x2 :: (load (s64))
     %2:gprc = LI 0
-    %3:crrc = CMPLWI killed %2, 0
-    BCC 76, killed %3, %bb.2
+    %3:crrc = CMPLWI %2, 0
+    BCC 76, %3, %bb.2
 
   bb.1:
-    %4:g8rc = ADDI8 killed %1, 24
+    %4:g8rc = ADDI8 %1, 24
     B %bb.4
 
   bb.2:
-    %5:g8rc = ADDI8 killed %1, 24
+    %5:g8rc = ADDI8 %1, 24
     %6:g8rc = LI8 0
     %7:crrc = CMPLWI undef %8:gprc, 20
 
@@ -51,7 +51,7 @@ body:             |
   bb.4:
     %12:g8rc_and_g8rc_nox0 = PHI %4, %bb.1, %9, %bb.3
     %13:g8rc = LI8 0
-    STW8 killed %13, 0, killed %12 :: (store (s32))
+    STW8 %13, 0, %12 :: (store (s32))
     BLR8 implicit $lr8, implicit $rm
 
 ...
