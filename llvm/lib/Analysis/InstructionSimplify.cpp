@@ -7465,8 +7465,7 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 /// --> X. RM is unused: every value the round trip reaches is exact in Fmt.
 static Value *simplifyArbitraryFPRoundTrip(Type *ReturnType,
                                            ArrayRef<Value *> Args,
-                                           const SimplifyQuery &Q,
-                                           Function *CxtF) {
+                                           const SimplifyQuery &Q) {
   if (Args.size() != 4)
     return nullptr;
 
@@ -7501,8 +7500,10 @@ static Value *simplifyArbitraryFPRoundTrip(Type *ReturnType,
     return nullptr;
 
   if (!APFloat::isRepresentableAsNormalIn(*Src, Dst)) {
-    // From may be detached, but its function, not CxtF, decides the mode.
-    const Function *F = From->getParent() ? From->getFunction() : CxtF;
+    // From may be detached, but its function, not the context, decides the
+    // mode.
+    const Function *F =
+        From->getParent() ? From->getFunction() : Q.getFunction();
     if (!F)
       return nullptr;
     DenormalMode Mode = F->getDenormalMode(Dst);
@@ -7591,7 +7592,7 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
   case Intrinsic::convert_to_arbitrary_fp:
-    return simplifyArbitraryFPRoundTrip(ReturnType, Args, Q, CxtF);
+    return simplifyArbitraryFPRoundTrip(ReturnType, Args, Q);
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather: {
     Value *MaskArg = Args[1];

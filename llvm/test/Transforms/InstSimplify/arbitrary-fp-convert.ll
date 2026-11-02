@@ -54,9 +54,7 @@ define i8 @round_trip_e5m2_f80(i8 %x) {
 define i8 @round_trip_e5m2_ppcf128(i8 %x) {
 ; CHECK-LABEL: define i8 @round_trip_e5m2_ppcf128(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[F:%.*]] = call nnan ppc_fp128 @llvm.convert.from.arbitrary.fp.ppcf128.i8(i8 [[X]], metadata !"Float8E5M2")
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.ppcf128(ppc_fp128 [[F]], metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %f = call nnan ppc_fp128 @llvm.convert.from.arbitrary.fp.ppcf128.i8(i8 %x, metadata !"Float8E5M2")
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.ppcf128(ppc_fp128 %f, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
