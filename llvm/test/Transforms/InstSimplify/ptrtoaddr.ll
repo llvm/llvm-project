@@ -71,7 +71,7 @@ define i32 @ptrtoaddr_inttoptr_diff_size2() {
 ; ptrtoint keeps all pointer bits, not just the address bits.
 define i128 @ptrtoint_inttoptr_diff_size_addrsize() {
 ; CHECK-LABEL: define i128 @ptrtoint_inttoptr_diff_size_addrsize() {
-; CHECK-NEXT:    ret i128 4294967295
+; CHECK-NEXT:    ret i128 18446744073709551615
 ;
   %toptr = inttoptr i128 -1 to ptr addrspace(1)
   %toint = ptrtoint ptr addrspace(1) %toptr to i128
