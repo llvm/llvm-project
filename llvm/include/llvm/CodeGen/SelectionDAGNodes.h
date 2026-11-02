@@ -97,11 +97,14 @@ LLVM_ABI bool isConstantSplatVector(const SDNode *N, APInt &SplatValue);
 LLVM_ABI bool isConstantSplatVectorAllOnes(const SDNode *N,
                                            bool BuildVectorOnly = false);
 
-/// Return true if the specified node is a BUILD_VECTOR or SPLAT_VECTOR where
-/// all of the elements are 0 or undef, looking through bitcasts. Also recognize
-/// bitcasts of scalar constants with all bits zero to fixed-length vectors. If
-/// \p BuildVectorOnly is set to true, only recognize BUILD_VECTOR, optionally
-/// bitcast.
+/// Return true if the specified node is a BUILD_VECTOR or SPLAT_VECTOR whose
+/// elements are 0, or a bitcast of 0 to a fixed length-vector type.
+/// BUILD_VECTOR and SPLAT_VECTOR are considered to also have all zeros if
+/// they contain at least one 0 element and an arbitrary number of undef
+/// elements.
+/// Look through nested bitcasts.
+/// If BuildVectorOnly = true, only consider BUILD_VECTOR nodes, but still look
+/// through nested bitcasts.
 LLVM_ABI bool isConstantSplatVectorAllZeros(const SDNode *N,
                                             bool BuildVectorOnly = false);
 
