@@ -921,13 +921,13 @@ Fortran::lower::genCallOpAndResult(
                        mlir::ValueRange args) {
       mlir::ArrayAttr argAttrs;
       if (procAttrs &&
-        fir::bitEnumContainsAny(procAttrs.getValue(),
-                   fir::FortranProcedureFlagsEnum::bind_c))
-      argAttrs = genCUDADataArgAttrs(builder, caller,
-                      args.drop_front(callee ? 0 : 1));
+          fir::bitEnumContainsAny(procAttrs.getValue(),
+                                  fir::FortranProcedureFlagsEnum::bind_c))
+        argAttrs = genCUDADataArgAttrs(builder, caller,
+                                       args.drop_front(callee ? 0 : 1));
       return fir::CallOp::create(builder, loc, type.getResults(), callee, args,
-                   argAttrs, /*res_attrs=*/nullptr,
-                                 procAttrs, inlineAttr,
+                                 argAttrs, /*res_attrs=*/nullptr, procAttrs,
+                                 inlineAttr,
                                  /*accessGroups=*/mlir::ArrayAttr{});
     };
     if (dispatchCallees.empty()) {
