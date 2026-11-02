@@ -19,6 +19,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -294,7 +295,12 @@ void PluginManager::Initialize() {
   }
 }
 
-void PluginManager::Terminate() { GetPluginRegistry().Terminate(); }
+static void ClearScriptInterpreterErrors();
+
+void PluginManager::Terminate() {
+  GetPluginRegistry().Terminate();
+  ClearScriptInterpreterErrors();
+}
 
 llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
   static PluginNamespace PluginNamespaces[] = {
@@ -1447,12 +1453,50 @@ PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
       none_instance = instance.create_callback;
 
     if (script_lang == instance.language)
-      return instance.create_callback(debugger);
+      return instance.create_callback(debugger, script_lang);
   }
 
   // If we didn't find one, return the ScriptInterpreter for the null language.
   assert(none_instance != nullptr);
-  return none_instance(debugger);
+  return none_instance(debugger, script_lang);
+}
+
+namespace {
+struct ScriptInterpreterErrors {
+  std::mutex mutex;
+  llvm::DenseMap<lldb::ScriptLanguage, Status> errors;
+};
+} // namespace
+
+static ScriptInterpreterErrors &GetScriptInterpreterErrors() {
+  static ScriptInterpreterErrors g_errors;
+  return g_errors;
+}
+
+static void ClearScriptInterpreterErrors() {
+  ScriptInterpreterErrors &errors = GetScriptInterpreterErrors();
+  std::lock_guard<std::mutex> guard(errors.mutex);
+  errors.errors.clear();
+}
+
+void PluginManager::SetScriptInterpreterError(lldb::ScriptLanguage script_lang,
+                                              llvm::Error error) {
+  ScriptInterpreterErrors &errors = GetScriptInterpreterErrors();
+  std::lock_guard<std::mutex> guard(errors.mutex);
+  if (error)
+    errors.errors[script_lang] = Status::FromError(std::move(error));
+  else
+    errors.errors.erase(script_lang);
+}
+
+llvm::Error
+PluginManager::GetScriptInterpreterError(lldb::ScriptLanguage script_lang) {
+  ScriptInterpreterErrors &errors = GetScriptInterpreterErrors();
+  std::lock_guard<std::mutex> guard(errors.mutex);
+  auto it = errors.errors.find(script_lang);
+  if (it == errors.errors.end())
+    return llvm::Error::success();
+  return it->second.ToError();
 }
 
 FileSpec PluginManager::GetScriptInterpreterLibraryPath(

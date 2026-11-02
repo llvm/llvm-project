@@ -39,7 +39,6 @@ define amdgpu_cs_chain_preserve void @caller() {
 ; CHECK-NEXT:    s_add_u32 s0, s0, callee@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, callee@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[0:1], 0x0
-; CHECK-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[52:53]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
@@ -48,8 +47,8 @@ define amdgpu_cs_chain_preserve void @caller() {
 ; CHECK-NEXT:    s_mov_b32 s13, s64
 ; CHECK-NEXT:    s_mov_b32 s14, s55
 ; CHECK-NEXT:    s_mov_b32 s15, s54
+; CHECK-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], s[50:51]
-; CHECK-NEXT:    s_mov_b32 s0, s16
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    ; implicit-def: $vgpr0

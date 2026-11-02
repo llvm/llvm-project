@@ -83,31 +83,31 @@ Parser/Semantics, MLIR, Lowering, or the OpenMPIRBuilder.
 | Feature                                                    | Status                            | Claimed By | Comments                                                |
 |:-----------------------------------------------------------|:----------------------------------|:-----------|:--------------------------------------------------------|
 | proc_bind clause                                           | <span class="good">done</span> | | |
-| simd construct                                             | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable|
+| simd construct                                             | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer|
 | declare simd directive                                     | <span class="part">partial</span> | chichunchen | Semantics coverage exists (for example `flang/test/Semantics/OpenMP/declarative-directive01.f90`) and lowering exists for key forms (for example `flang/test/Lower/OpenMP/declare-simd-interface-body.f90`), but coverage is not yet complete for all variants. |
-| do simd construct                                          | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| do simd construct                                          | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | target data construct                                      | <span class="good">done</span> | | |
 | target construct                                           | <span class="good">done</span> | | |
 | target update construct                                    | <span class="good">done</span> | | |
 | declare target directive                                   | <span class="good">done</span> | | |
 | teams construct                                            | <span class="good">done</span> | | |
 | distribute construct                                       | <span class="good">done</span> | | |
-| distribute simd construct                                  | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| distribute simd construct                                  | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | distribute parallel loop construct                         | <span class="good">done</span> | | |
-| distribute parallel loop simd construct                    | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| distribute parallel loop simd construct                    | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | depend clause                                              | <span class="good">done</span> | | |
 | declare reduction directive                                | <span class="part">partial</span> | sshrestha-aa | Partial support, including user-defined reductions with derived types. |
 | atomic construct extensions                                | <span class="good">done</span> | | |
 | cancel construct                                           | <span class="good">done</span> | | |
 | cancellation point construct                               | <span class="good">done</span> | | |
-| parallel do simd construct                                 | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| parallel do simd construct                                 | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | target teams construct                                     | <span class="good">done</span> | | |
 | teams distribute construct                                 | <span class="good">done</span> | | |
-| teams distribute simd construct                            | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| teams distribute simd construct                            | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | target teams distribute construct                          | <span class="good">done</span> | | |
 | teams distribute parallel loop construct                   | <span class="good">done</span> | | |
 | target teams distribute parallel loop construct            | <span class="good">done</span> | | |
-| teams distribute parallel loop simd construct              | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer or allocatable |
+| teams distribute parallel loop simd construct              | <span class="part">partial</span> | | Implicit linearization is skipped if iv is a pointer |
 | target teams distribute parallel loop simd construct       | <span class="part">partial</span> | | Implicit linearization is completely skipped |
 | taskgroup construct                                        | <span class="good">done</span> | | Semantics and lowering coverage exists (`flang/test/Semantics/OpenMP/taskgroup01.f90`, `flang/test/Lower/OpenMP/taskgroup.f90`). |
 

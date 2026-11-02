@@ -1861,6 +1861,30 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("nvptx64-unknown-unknown").getDefaultLongDoubleFormat());
 }
 
+TEST(TripleTest, GetDefaultDebuggerTuning) {
+  EXPECT_EQ(DebuggerKind::LLDB,
+            Triple("x86_64-apple-darwin").getDefaultDebuggerTuning());
+  EXPECT_EQ(DebuggerKind::LLDB,
+            Triple("arm64-apple-ios").getDefaultDebuggerTuning());
+
+  EXPECT_EQ(DebuggerKind::SCE,
+            Triple("x86_64-scei-ps4").getDefaultDebuggerTuning());
+  EXPECT_EQ(DebuggerKind::SCE,
+            Triple("x86_64-sie-ps5").getDefaultDebuggerTuning());
+
+  EXPECT_EQ(DebuggerKind::DBX,
+            Triple("powerpc64-ibm-aix-xcoff").getDefaultDebuggerTuning());
+
+  EXPECT_EQ(DebuggerKind::GDB,
+            Triple("x86_64-pc-linux-gnu").getDefaultDebuggerTuning());
+  EXPECT_EQ(DebuggerKind::GDB,
+            Triple("x86_64-pc-windows-msvc").getDefaultDebuggerTuning());
+
+  EXPECT_EQ(DebuggerKind::GDB,
+            Triple("amdgpu9.00-amd-amdhsa").getDefaultDebuggerTuning());
+  EXPECT_EQ(DebuggerKind::GDB, Triple().getDefaultDebuggerTuning());
+}
+
 TEST(TripleTest, Normalization) {
 
   EXPECT_EQ("unknown", Triple::normalize(""));

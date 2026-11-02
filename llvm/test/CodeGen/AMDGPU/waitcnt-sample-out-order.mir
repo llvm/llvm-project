@@ -4,6 +4,7 @@
 
 ---
 name: waitcnt-gather-sample
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -19,6 +20,7 @@ body: |
 ...
 ---
 name: waitcnt-gather-sample-o
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -33,6 +35,7 @@ body: |
 ...
 ---
 name: waitcnt-sample-gather
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -48,6 +51,7 @@ body: |
 ...
 ---
 name: waitcnt-sample-load
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -64,6 +68,7 @@ body: |
 ...
 ---
 name: waitcnt-load-sample
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |

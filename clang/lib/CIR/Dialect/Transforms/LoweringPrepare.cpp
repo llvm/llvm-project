@@ -1052,6 +1052,7 @@ static mlir::Value lowerComplexFDiv(LoweringPreparePass &pass,
                                     rhsImag);
   }
   }
+  llvm_unreachable("fully covered switch");
 }
 
 void LoweringPreparePass::lowerComplexFDivOp(cir::ComplexFDivOp op) {
@@ -1560,9 +1561,13 @@ cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
 
 void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   CIRBaseBuilderTy builder(getContext());
+  mlir::ptr::MemorySpaceAttrInterface eltAS;
+  if (unsigned targetAS =
+          getTargetInfo().getTargetAddressSpace(clang::LangAS::Default))
+    eltAS = cir::TargetAddressSpaceAttr::get(&getContext(), targetAS);
+  cir::PointerType voidPtrTy = builder.getVoidPtrTy(eltAS);
   mlir::Attribute entry = cir::GlobalViewAttr::get(
-      builder.getVoidPtrTy(),
-      mlir::FlatSymbolRefAttr::get(global.getSymNameAttr()));
+      voidPtrTy, mlir::FlatSymbolRefAttr::get(global.getSymNameAttr()));
 
   mlir::StringAttr usedName = builder.getStringAttr("llvm.used");
   cir::GlobalOp used =
@@ -1576,8 +1581,7 @@ void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   }
   elements.push_back(entry);
 
-  cir::ArrayType arrayTy =
-      cir::ArrayType::get(builder.getVoidPtrTy(), elements.size());
+  cir::ArrayType arrayTy = cir::ArrayType::get(voidPtrTy, elements.size());
   cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
       arrayTy, mlir::ArrayAttr::get(&getContext(), elements));
 
@@ -1588,8 +1592,10 @@ void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
   }
 
   builder.setInsertionPointToStart(mlirModule.getBody());
-  used = cir::GlobalOp::create(builder, mlirModule.getLoc(),
-                               usedName.getValue(), arrayTy);
+  used = cir::GlobalOp::create(
+      builder, mlirModule.getLoc(), usedName.getValue(), arrayTy,
+      /*isConstant=*/false,
+      cir::CIRDataLayout(mlirModule).getDefaultGlobalsAddrSpace(&getContext()));
   used.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
   used.setInitialValueAttr(initAttr);
   used.setSectionAttr(builder.getStringAttr("llvm.metadata"));
@@ -3345,6 +3351,17 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
   FuncOp cudaRegisterVar;
   FuncOp cudaRegisterManagedVar;
 
+  // void __cudaRegisterSurface(void **fatbinHandle,
+  //                            const struct surfaceReference *hostVar,
+  //                            const void **deviceAddress,
+  //                            const char *deviceName,
+  //                            int type, int ext);
+  FuncOp cudaRegisterSurface = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterSurface"), loc,
+      FuncType::get(
+          {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy, intTy},
+          voidTy));
+
   auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
     auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
     auto tmpString = cir::GlobalOp::create(
@@ -3360,15 +3377,6 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
   mlir::Value fatbinHandle = *regGlobalFunc.args_begin();
 
   for (auto &[global, regAttr] : cudaDeviceVars) {
-    switch (regAttr.getKind()) {
-    case cir::CUDADeviceVarKind::Variable:
-      break;
-    case cir::CUDADeviceVarKind::Surface:
-      llvm_unreachable("Surface registration NYI");
-    case cir::CUDADeviceVarKind::Texture:
-      llvm_unreachable("Texture registration NYI");
-    }
-
     // External managed variables are registered by their defining TU.
     if (regAttr.getIsManaged() && global.isDeclaration())
       continue;
@@ -3392,6 +3400,7 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
             FuncType::get(
                 {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, sizeTy, intTy},
                 voidTy));
+
       llvm::StringRef name = global.getSymName();
       assert(name.ends_with(".managed") &&
              "HIP managed variables not transformed");
@@ -3407,29 +3416,50 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
           loc, cudaRegisterManagedVar,
           {fatbinHandle, managedPtr, hostVar, deviceName, varSize, align});
     } else {
-      // void __{cuda|hip}RegisterVar(void **fatbinHandle,
-      //                              char *hostVar, char *deviceAddress,
-      //                              const char *deviceName, int ext,
-      //                              size_t size, int constant,
-      //                              int normalized);
-      // OG ignores parameter types, treating pointers as void*.
-      if (!cudaRegisterVar)
-        cudaRegisterVar = buildRuntimeFunction(
-            globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"), loc,
-            FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
-                           sizeTy, intTy, intTy},
-                          voidTy));
       auto isExtern = ConstantOp::create(
           builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
-      auto varSize = ConstantOp::create(
-          builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
-      auto isConstant = ConstantOp::create(
-          builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
-      auto normalized =
-          ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
-      builder.createCallOp(loc, cudaRegisterVar,
-                           {fatbinHandle, hostVar, deviceName, deviceName,
-                            isExtern, varSize, isConstant, normalized});
+
+      switch (regAttr.getKind()) {
+      case cir::CUDADeviceVarKind::Variable: {
+        // void __{cuda|hip}RegisterVar(void **fatbinHandle,
+        //                              char *hostVar, char *deviceAddress,
+        //                              const char *deviceName, int ext,
+        //                              size_t size, int constant,
+        //                              int normalized);
+        // OG ignores parameter types, treating pointers as void*.
+        if (!cudaRegisterVar)
+          cudaRegisterVar = buildRuntimeFunction(
+              globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"),
+              loc,
+              FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy,
+                             intTy, sizeTy, intTy, intTy},
+                            voidTy));
+
+        auto varSize = ConstantOp::create(
+            builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
+        auto isConstant = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
+        auto normalized =
+            ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
+
+        builder.createCallOp(loc, cudaRegisterVar,
+                             {fatbinHandle, hostVar, deviceName, deviceName,
+                              isExtern, varSize, isConstant, normalized});
+        break;
+      }
+
+      case cir::CUDADeviceVarKind::Surface: {
+        cir::ConstantOp surfaceType = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getSurfTexType()));
+        builder.createCallOp(loc, cudaRegisterSurface,
+                             {fatbinHandle, hostVar, deviceName, deviceName,
+                              surfaceType, isExtern});
+        break;
+      }
+
+      case cir::CUDADeviceVarKind::Texture:
+        llvm_unreachable("Texture registration NYI");
+      }
     }
   }
 }

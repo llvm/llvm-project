@@ -3,6 +3,7 @@
 
 ---
 name: mad_cvv_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: mad_cvv_f32
@@ -19,6 +20,7 @@ body: |
 
 ---
 name: mad_vcv_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: mad_vcv_f32
@@ -35,6 +37,7 @@ body: |
 
 ---
 name: mad_vvc_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: mad_vvc_f32
@@ -51,6 +54,7 @@ body: |
 
 ---
 name: mad_vsc_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: mad_vsc_f32
@@ -67,6 +71,7 @@ body: |
 
 ---
 name: fma_cvv_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: fma_cvv_f32
@@ -83,6 +88,7 @@ body: |
 
 ---
 name: fma_vcv_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: fma_vcv_f32
@@ -99,6 +105,7 @@ body: |
 
 ---
 name: fma_vvc_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: fma_vvc_f32
@@ -115,6 +122,7 @@ body: |
 
 ---
 name: fma_vsc_f32
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: fma_vsc_f32
@@ -131,6 +139,7 @@ body: |
 
 ---
 name: mad_cvv_f16
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: mad_cvv_f16
@@ -147,6 +156,7 @@ body: |
 
 ---
 name: mad_vcv_f16
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: mad_vcv_f16
@@ -163,6 +173,7 @@ body: |
 
 ---
 name: mad_vvc_f16
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: mad_vvc_f16
@@ -179,6 +190,7 @@ body: |
 
 ---
 name: mad_vsc_f16
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: mad_vsc_f16
@@ -195,6 +207,7 @@ body: |
 
 ---
 name: fma_cvv_f16
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: fma_cvv_f16
@@ -211,6 +224,7 @@ body: |
 
 ---
 name: fma_vcv_f16
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: fma_vcv_f16
@@ -227,6 +241,7 @@ body: |
 
 ---
 name: fma_vvc_f16
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: fma_vvc_f16
@@ -243,6 +258,7 @@ body: |
 
 ---
 name: fma_vsc_f16
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-LABEL: name: fma_vsc_f16

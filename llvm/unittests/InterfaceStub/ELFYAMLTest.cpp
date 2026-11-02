@@ -185,7 +185,7 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   const char Expected[] =
       "--- !ifs-v1\n"
       "IfsVersion:      1.0\n"
-      "Target:          { ObjectFormat: ELF, Arch: AArch64, Endianness: "
+      "Target:          { ObjectFormat: ELF, Arch: aarch64, Endianness: "
       "little, BitWidth: 64 }\n"
       "Symbols:\n"
       "  - { Name: bar, Type: Func, Weak: true }\n"
