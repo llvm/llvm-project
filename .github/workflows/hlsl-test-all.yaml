@@ -51,6 +51,10 @@ jobs:
           repository: llvm/offload-golden-images
           ref: main
           path: golden-images
+      - name: Setup Windows x64
+        uses: llvm/actions/setup-windows@89a8cf80982d830faab019237860b344a6390c30 # main
+        with:
+          arch: amd64
       - name: Build DXC
         run: |
             cd DXC
