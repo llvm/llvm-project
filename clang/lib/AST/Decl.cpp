@@ -4964,8 +4964,7 @@ static bool InitializationHasSideEffects(const FieldDecl &FD) {
   return false;
 }
 
-template <typename AttrType>
-static bool HasAttribute(const QualType &T) {
+template <typename AttrType> static bool HasAttribute(const QualType &T) {
   if (const TagDecl *TD = T->getAsTagDecl())
     return TD->hasAttr<AttrType>();
   if (const TypedefType *TDT = T->getAs<TypedefType>())
