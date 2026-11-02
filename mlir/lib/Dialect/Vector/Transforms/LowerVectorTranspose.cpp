@@ -489,6 +489,59 @@ private:
   /// Options to control the vector patterns.
   vector::VectorTransposeLowering vectorTransposeLowering;
 };
+
+/// Lower a fixed-size rank-2 transpose to fixed-size interleave/deinterleave
+/// operations. The dimension of size 2 identifies the two streams that are
+/// joined or split by those operations.
+class TransposeOpToInterleaveLowering
+    : public OpRewritePattern<vector::TransposeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType srcType = op.getSourceVectorType();
+    if (srcType.isScalable() || srcType.getRank() != 2)
+      return failure();
+
+    if (op.getPermutation() != ArrayRef<int64_t>({1, 0}))
+      return rewriter.notifyMatchFailure(op, "expected a rank-2 transpose");
+
+    ArrayRef<int64_t> shape = srcType.getShape();
+    bool rowsToColumns = shape[1] == 2;
+    bool columnsToRows = shape[0] == 2;
+    if (!rowsToColumns && !columnsToRows)
+      return rewriter.notifyMatchFailure(
+          op, "expected one dimension to have size 2");
+
+    Location loc = op.getLoc();
+    VectorType dstType = op.getResultVectorType();
+    int64_t streamLength = rowsToColumns ? shape[0] : shape[1];
+    Type elementType = srcType.getElementType();
+    auto flatType = VectorType::get({2 * streamLength}, elementType);
+
+    Value flatResult;
+    if (rowsToColumns) {
+      Value flat =
+          vector::ShapeCastOp::create(rewriter, loc, flatType, op.getVector());
+      auto deinterleaved = vector::DeinterleaveOp::create(rewriter, loc, flat);
+      SmallVector<int64_t> identity;
+      identity.reserve(2 * streamLength);
+      for (int64_t i = 0; i < 2 * streamLength; ++i)
+        identity.push_back(i);
+      flatResult = vector::ShuffleOp::create(
+          rewriter, loc, deinterleaved.getResultEven(),
+          deinterleaved.getResultOdd(), identity);
+    } else {
+      Value lhs = vector::ExtractOp::create(rewriter, loc, op.getVector(), 0);
+      Value rhs = vector::ExtractOp::create(rewriter, loc, op.getVector(), 1);
+      flatResult = vector::InterleaveOp::create(rewriter, loc, lhs, rhs);
+    }
+
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, dstType, flatResult);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(
@@ -498,4 +551,9 @@ void mlir::vector::populateVectorTransposeLoweringPatterns(
                                                   benefit);
   patterns.add<TransposeOpLowering, TransposeOp2DToShuffleLowering>(
       vectorTransposeLowering, patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateVectorTransposeToInterleaveLoweringPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<TransposeOpToInterleaveLowering>(patterns.getContext(), benefit);
 }
