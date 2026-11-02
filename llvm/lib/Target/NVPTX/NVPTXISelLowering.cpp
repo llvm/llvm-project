@@ -3654,7 +3654,10 @@ static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
   return NewSt;
 }
 
-static SDValue lowerAtomicStore128(SDNode *N, SelectionDAG &DAG) {
+static SDValue lowerAtomicStore128(SDNode *N, SelectionDAG &DAG,
+                                   const NVPTXSubtarget &STI) {
+  assert(STI.hasLdStB128() &&
+         "b128 atomic stores require PTX ISA version 8.3 and target sm_70");
   AtomicSDNode *AN = cast<AtomicSDNode>(N);
   SDLoc dl(N);
 
@@ -3714,7 +3717,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
   case ISD::ATOMIC_STORE:
-    return lowerAtomicStore128(Op.getNode(), DAG);
+    return lowerAtomicStore128(Op.getNode(), DAG, STI);
   case ISD::MSTORE: {
     assert(STI.has256BitVectorLoadStore(
                cast<MemSDNode>(Op.getNode())->getAddressSpace()) &&
@@ -7948,7 +7951,10 @@ static void replaceAtomicSwap128(SDNode *N, SelectionDAG &DAG,
 }
 
 static void replaceAtomicLoad128(SDNode *N, SelectionDAG &DAG,
+                                 const NVPTXSubtarget &STI,
                                  SmallVectorImpl<SDValue> &Results) {
+  assert(STI.hasLdStB128() &&
+         "b128 atomic loads require PTX ISA version 8.3 and target sm_70");
   assert(N->getValueType(0) == MVT::i128 &&
          "Custom lowering for atomic128 only supports i128");
 
@@ -7992,7 +7998,7 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     replaceAtomicSwap128(N, DAG, STI, Results);
     return;
   case ISD::ATOMIC_LOAD:
-    replaceAtomicLoad128(N, DAG, Results);
+    replaceAtomicLoad128(N, DAG, STI, Results);
     return;
   }
 }
