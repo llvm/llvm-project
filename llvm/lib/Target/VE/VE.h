@@ -16,6 +16,8 @@
 
 #include "MCTargetDesc/VEMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -27,7 +29,12 @@ class MachineInstr;
 class PassRegistry;
 class VETargetMachine;
 
-FunctionPass *createVEISelDag(VETargetMachine &TM);
+class VEDAGToDAGISelPass : public SelectionDAGISelPass {
+public:
+  VEDAGToDAGISelPass(VETargetMachine &TM);
+};
+
+FunctionPass *createVEDAGToDAGISelLegacyPass(VETargetMachine &TM);
 FunctionPass *createLVLGenPass();
 void initializeVEAsmPrinterPass(PassRegistry &);
 void initializeVEDAGToDAGISelLegacyPass(PassRegistry &);

@@ -96,6 +96,7 @@ libc_test_library(
             "//libc:llvm_libc_types_struct_pollfd",
             "//libc:pipe",
             "//libc:poll",
+            "//libc:signal",
             "//libc:stderr",
             "//libc:stdout",
             "//libc:strsignal",

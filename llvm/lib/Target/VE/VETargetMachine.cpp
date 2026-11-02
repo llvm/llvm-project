@@ -110,7 +110,7 @@ void VEPassConfig::addIRPasses() {
 }
 
 bool VEPassConfig::addInstSelector() {
-  addPass(createVEISelDag(getVETargetMachine()));
+  addPass(createVEDAGToDAGISelLegacyPass(getVETargetMachine()));
   return false;
 }
 

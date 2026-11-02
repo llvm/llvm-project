@@ -133,7 +133,6 @@ class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(context)
 
     @skipIfNetBSD
-    @expectedFailureAll(oslist=["windows"])  # Extra threads present
     def test_stop_reply_reports_multiple_threads(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -143,7 +142,11 @@ class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True
         )
         stop_reply_threads = self.gather_stop_reply_threads(5)
-        self.assertEqual(len(stop_reply_threads), 5)
+        if self.getPlatform() == "windows":
+            # The process can also have thread pool threads started by Windows.
+            self.assertGreaterEqual(len(stop_reply_threads), 5)
+        else:
+            self.assertEqual(len(stop_reply_threads), 5)
 
     @skipIfNetBSD
     def test_no_QListThreadsInStopReply_supplies_no_threads(self):
