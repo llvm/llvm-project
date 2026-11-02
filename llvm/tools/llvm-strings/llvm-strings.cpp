@@ -42,7 +42,7 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__FreeBSD__)
 #include <iconv.h>
 #endif
 
@@ -114,6 +114,8 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 // and is close enough, as long as we make sure to avoid it for UTF-8 locales.
 // On Apple, <uchar.h> is not available, and wchar_t is not always UTF-32. We
 // implement mbrtoc() and crtomb() through iconv().
+// On FreeBSD, <uchar.h> is available but assumes wchar_t is always UTF-32, yet
+// on FreeBSD, wchar_t is not always UTF-32, so likewise use iconv().
 // On glibc, mbrtoc32() is a wrapper for mbrtowc() and never returns (size_t)-3,
 // instead it handles this case by returning 0 but setting Ch to a non-null
 // character.
@@ -129,7 +131,7 @@ static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
 static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
   return std::wcrtomb(S, Ch, MBState);
 }
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
 using char_t = char32_t;
 static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
                      std::mbstate_t *MBState) {

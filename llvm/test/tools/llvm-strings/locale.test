@@ -1,4 +1,4 @@
-REQUIRES: system-darwin
+REQUIRES: system-darwin || system-freebsd
 
 RUN: printf 'Hello\360\237\230\203\n\202\261\202\361\202\311\202\277\202\315\n' > %t
 
