@@ -102,3 +102,23 @@ define i32 @cttz_zero_poison_i32(i32 %a) nounwind {
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 true)
   ret i32 %1
 }
+
+define i8 @ctlz_zero_poison_i8(i8 %a) nounwind {
+; RV32XTHEADBB-LABEL: ctlz_zero_poison_i8:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    slli a0, a0, 24
+; RV32XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV32XTHEADBB-NEXT:    ret
+  %1 = call i8 @llvm.ctlz.i8(i8 %a, i1 true)
+  ret i8 %1
+}
+
+define i16 @ctlz_zero_poison_i16(i16 %a) nounwind {
+; RV32XTHEADBB-LABEL: ctlz_zero_poison_i16:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    slli a0, a0, 16
+; RV32XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV32XTHEADBB-NEXT:    ret
+  %1 = call i16 @llvm.ctlz.i16(i16 %a, i1 true)
+  ret i16 %1
+}
