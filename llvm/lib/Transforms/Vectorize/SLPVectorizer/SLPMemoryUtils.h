@@ -14,7 +14,6 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPMEMORYUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPMEMORYUTILS_H
 
-#include "SLPCostAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -58,6 +57,11 @@ public:
                   const DataLayout &DL, ScalarEvolution &SE,
                   bool StrictCheck = false, bool CheckType = true);
 
+  /// llvm::sortPtrAccesses() with the cached pointer distances.
+  bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
+                       ScalarEvolution &SE,
+                       SmallVectorImpl<unsigned> &SortedIndices);
+
   /// Cached llvm::isGuaranteedNotToBePoison().
   bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC);
 
@@ -76,6 +80,12 @@ private:
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes = true);
+
+/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
+/// \p IsReverse is set, or nullptr if \p Stride is not a constant.
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      const DataLayout &DL,
+                                      bool IsReverse = false);
 
 /// Casts \p V between the widened strided access type and the entry vector
 /// type \p DstTy.
@@ -102,15 +112,27 @@ const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.
-std::optional<CompressedLoadInfo>
-isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-                     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
-                     const DataLayout &DL, ScalarEvolution &SE,
-                     AssumptionCache &AC, const DominatorTree &DT,
-                     const TargetLibraryInfo &TLI,
-                     const TargetTransformInfo::TargetCostKind CostKind,
-                     const function_ref<bool(Value *)> AreAllUsersVectorized,
-                     bool ReVec, SLPAnalysisCache &Cache);
+bool isMaskedLoadCompress(
+    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+    const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
+    const DominatorTree &DT, const TargetLibraryInfo &TLI,
+    const TargetTransformInfo::TargetCostKind CostKind,
+    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
+    bool &IsMasked, unsigned &InterleaveFactor,
+    SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy,
+    SLPAnalysisCache &Cache);
+
+/// Checks if the \p VL can be transformed to a (masked)load + compress or
+/// (masked) interleaved load.
+bool isMaskedLoadCompress(
+    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+    const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
+    const DominatorTree &DT, const TargetLibraryInfo &TLI,
+    const TargetTransformInfo::TargetCostKind CostKind,
+    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
+    SLPAnalysisCache &Cache);
 
 /// Checks if the simple loads of \p VL, mixed with the undef and poison lanes,
 /// can be replaced by a single load of the whole \p VL width. The loads must be
