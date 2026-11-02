@@ -446,6 +446,10 @@ public:
   fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
        DenormalMode Mode = DenormalMode::getDynamic());
 
+  LLVM_ABI static KnownFPClass
+  fadd(const KnownFPClass &LHS, const APFloat &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fadd x, x
   LLVM_ABI static KnownFPClass
   fadd_self(const KnownFPClass &Src,
