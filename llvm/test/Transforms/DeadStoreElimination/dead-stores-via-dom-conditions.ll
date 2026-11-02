@@ -158,10 +158,8 @@ define void @remove_tautological_stores_via_trunc_nuw_dom_condition(ptr %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = trunc nuw i32 [[VAL]] to i1
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    store i32 1, ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    store i32 0, ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %val = load i32, ptr %x, align 4
