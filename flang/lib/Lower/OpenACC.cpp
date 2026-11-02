@@ -85,9 +85,9 @@ static llvm::cl::opt<bool> enableSymbolRemapping(
 static llvm::cl::opt<bool> shareSeqLoopIv(
     "openacc-share-seq-loop-iv",
     llvm::cl::desc("Do not privatize the induction variable of a seq acc.loop "
-                   "on the loop itself, so that its value is seen after the "
-                   "loop. The enclosing loop or compute construct privatizes "
-                   "it."),
+                   "nested in another acc.loop on the seq loop itself, so that "
+                   "its value is seen after the loop. The parent loop "
+                   "privatizes it."),
     llvm::cl::init(true));
 
 static llvm::cl::opt<bool> emitIndependentLoopsAsUnstructured(
@@ -2686,14 +2686,17 @@ static mlir::acc::LoopOp createLoopOp(
     }
   }
 
-  // The induction variable of an unstructured seq loop is not private to the
-  // loop: the value the loop leaves in it (e.g. on an early exit) is used after
-  // the loop. It is privatized by the enclosing loop or compute construct.
+  // The induction variable of an unstructured seq loop nested in an acc.loop is
+  // not private to the seq loop: the value the loop leaves in it (e.g. on an
+  // early exit) is used after the loop. It is privatized by the parent loop.
   const bool isSeq = llvm::any_of(seqDeviceTypes, [](mlir::Attribute attr) {
     return mlir::cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
            mlir::acc::DeviceType::None;
   });
-  const bool shareIvs = shareSeqLoopIv && isSeq && !combinedConstructs;
+  const bool hasParentLoop = mlir::isa_and_nonnull<mlir::acc::LoopOp>(
+      builder.getInsertionBlock()->getParentOp());
+  const bool shareIvs =
+      shareSeqLoopIv && isSeq && !combinedConstructs && hasParentLoop;
 
   auto loopOp = buildACCLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
