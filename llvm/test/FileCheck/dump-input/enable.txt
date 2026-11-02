@@ -87,8 +87,8 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find opt
 ; FileCheck fail, -v => dump, no trace.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
-; RUN:               -match-full-lines -v 2>&1 \
-; RUN: | FileCheck %s -match-full-lines \
+; RUN:               -match-full-lines -v 2>&1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.check \
 ; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
 
 ;--------------------------------------------------
@@ -107,8 +107,9 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find opt
 ; FileCheck fail, no -v => dump, no trace.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
-; RUN:               -match-full-lines -dump-input=fail 2>&1 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=NOTRACE,ERR,DUMP-ERR
+; RUN:               -match-full-lines -dump-input=fail 2>&1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.check \
+; RUN:             -check-prefixes=NOTRACE,ERR,DUMP-ERR
 
 ; FileCheck success, -v => no dump, no trace.
 ; RUN: %ProtectFileCheckOutput \
@@ -120,8 +121,8 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find opt
 ; FileCheck fail, -v => dump, no trace.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
-; RUN:               -match-full-lines -dump-input=fail -v 2>&1 \
-; RUN: | FileCheck %s -match-full-lines \
+; RUN:               -match-full-lines -dump-input=fail -v 2>&1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.check \
 ; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
 
 ;--------------------------------------------------
@@ -137,8 +138,8 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find opt
 ; FileCheck fail, -v => dump, no trace.
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
-; RUN:               -match-full-lines -dump-input=always -v 2>&1 \
-; RUN: | FileCheck %s -match-full-lines \
+; RUN:               -match-full-lines -dump-input=always -v 2>&1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.check \
 ; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
 
 ;--------------------------------------------------
@@ -160,8 +161,8 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find opt
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input=fail -dump-input=fail -v \
-; RUN:               2>&1 \
-; RUN: | FileCheck %s -match-full-lines \
+; RUN:               2>&1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.check \
 ; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
@@ -185,8 +186,8 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find opt
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input=fail -dump-input=never -v \
-; RUN:               2>&1 \
-; RUN: | FileCheck %s -match-full-lines \
+; RUN:               2>&1 | \
+; RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t.check \
 ; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
@@ -250,7 +251,9 @@ BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find opt
 ; DUMP-ERR-V-NEXT:check:1      ^~~~~
 ;   DUMP-ERR-NEXT:next:2'0         {   search range start (exclusive)
 ;   DUMP-ERR-NEXT:next:2'1             error: no match found in search range
+;   DUMP-ERR-NEXT:next:2'2             for: CHECK-NEXT: world
+;   DUMP-ERR-NEXT:next:2'3             at: [[CHK_FILE]]:2
 ;   DUMP-ERR-NEXT:          2: whirled 
-;   DUMP-ERR-NEXT:next:2'2     ?         possible intended match
-;   DUMP-ERR-NEXT:next:2'3             } search range end (exclusive)
+;   DUMP-ERR-NEXT:next:2'4     ?         possible intended match
+;   DUMP-ERR-NEXT:next:2'5             } search range end (exclusive)
 ;   DUMP-ERR-NEXT:>>>>>>
