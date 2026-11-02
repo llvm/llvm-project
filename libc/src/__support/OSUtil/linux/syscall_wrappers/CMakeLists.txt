@@ -679,6 +679,20 @@ add_header_library(
 )
 
 add_header_library(
+  writev
+  HDRS
+    writev.h
+  DEPENDS
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   open
   HDRS
     open.h
@@ -1489,6 +1503,20 @@ add_header_library(
     libc.src.__support.macros.config
     libc.hdr.types.ssize_t
     libc.include.sys_syscall
+)
+
+add_header_library(
+  readv
+  HDRS
+    readv.h
+  DEPENDS
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
 add_header_library(

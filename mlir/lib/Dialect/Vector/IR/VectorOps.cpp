@@ -1264,22 +1264,36 @@ static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {
   return -1;
 }
 
+// For every contraction `dim` for which:
+//  * the corresponding iteratory type matches `targetIteratorType`,
+// returns a pair: <lhsIdx, rhsIdx>, where:
+//  * {lhs|rhs}Idx is the index of `dim` in the (result of) indexing map for
+//    {lhs|rhs}.
 static std::vector<std::pair<int64_t, int64_t>>
-getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
-          IteratorType targetIteratorType, MLIRContext *context) {
+getDimPairForIterTy(ContractionOp *contract, IteratorType targetIteratorType) {
+  SmallVector<AffineMap, 4> indexingMaps(contract->getIndexingMapsArray());
+  ArrayAttr iteratorTypes = contract->getIteratorTypes();
   std::vector<std::pair<int64_t, int64_t>> dimMap;
   for (const auto &it : llvm::enumerate(iteratorTypes)) {
     auto iteratorType = llvm::cast<IteratorTypeAttr>(it.value()).getValue();
     if (iteratorType != targetIteratorType)
       continue;
     // Search lhs/rhs map results for 'targetExpr'.
-    auto targetExpr = getAffineDimExpr(it.index(), context);
+    auto targetExpr = getAffineDimExpr(it.index(), contract->getContext());
     int64_t lhsDim = getResultIndex(indexingMaps[0], targetExpr);
     int64_t rhsDim = getResultIndex(indexingMaps[1], targetExpr);
     if (lhsDim >= 0 && rhsDim >= 0)
       dimMap.emplace_back(lhsDim, rhsDim);
   }
   return dimMap;
+}
+
+std::vector<std::pair<int64_t, int64_t>> ContractionOp::getContractingDimMap() {
+  return getDimPairForIterTy(this, IteratorType::reduction);
+}
+
+std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
+  return getDimPairForIterTy(this, IteratorType::parallel);
 }
 
 void ContractionOp::getIterationBounds(
@@ -1318,18 +1332,6 @@ void ContractionOp::getIterationIndexMap(
       iterationIndexMap[index][dim.getPosition()] = i;
     }
   }
-}
-
-std::vector<std::pair<int64_t, int64_t>> ContractionOp::getContractingDimMap() {
-  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::reduction,
-                   getContext());
-}
-
-std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
-  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::parallel,
-                   getContext());
 }
 
 std::optional<SmallVector<int64_t, 4>>
