@@ -290,8 +290,8 @@ bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
       // is returned indirectly with ByVal=false. This is the RAA path and is
       // distinct from getIndirectReturnResult (plain aggregates), which uses
       // ByVal=true.
-      FI.getReturnInfo() =
-          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false);
+      FI.getReturnInfo() = ArgInfo::getIndirect(
+          RT->getAlignment(), /*ByVal=*/false, getSRetAddrSpace());
       return true;
     }
   }
