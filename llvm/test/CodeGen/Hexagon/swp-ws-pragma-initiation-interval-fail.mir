@@ -60,7 +60,7 @@ body:             |
     successors: %bb.2(0x80000000)
   
     %3:intregs, %4:intregs = L2_loadri_pi %1, 4
-    %5:intregs = A2_addi killed %3, 10
+    %5:intregs = A2_addi %3, 10
     %6:intregs = A2_addi %0, -1
     %7:intregs = COPY %6
     J2_loop0r %bb.2, %7, implicit-def $lc0, implicit-def $sa0, implicit-def $usr

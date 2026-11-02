@@ -104,6 +104,33 @@ spirv.func @cl_integer(%arg0: i32, %arg1: i32) "None" {
   spirv.Return
 }
 
+// CHECK-LABEL: @cl_count_zeros
+spirv.func @cl_count_zeros(%arg0: i32, %arg1: vector<3xi16>) "None" {
+  // CHECK: "llvm.intr.ctlz"(%{{.*}}) <{is_zero_poison = false}> : (i32) -> i32
+  %0 = spirv.CL.clz %arg0 : i32
+  // CHECK: "llvm.intr.cttz"(%{{.*}}) <{is_zero_poison = false}> : (vector<3xi16>) -> vector<3xi16>
+  %1 = spirv.CL.ctz %arg1 : vector<3xi16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// Clamp OpenCL ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @cl_clamp
+spirv.func @cl_clamp(%arg0: f32, %arg1: i16, %arg2: vector<3xi32>) "None" {
+  // CHECK: %[[FMAX:.*]] = llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  // CHECK: llvm.intr.minnum(%[[FMAX]], %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.CL.fclamp %arg0, %arg0, %arg0 : f32
+  // CHECK: %[[SMAX:.*]] = llvm.intr.smax(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  // CHECK: llvm.intr.smin(%[[SMAX]], %{{.*}}) : (i16, i16) -> i16
+  %1 = spirv.CL.s_clamp %arg1, %arg1, %arg1 : i16
+  // CHECK: %[[UMAX:.*]] = llvm.intr.umax(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  // CHECK: llvm.intr.umin(%[[UMAX]], %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  %2 = spirv.CL.u_clamp %arg2, %arg2, %arg2 : vector<3xi32>
+  spirv.Return
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.CL.mix
 //===----------------------------------------------------------------------===//
