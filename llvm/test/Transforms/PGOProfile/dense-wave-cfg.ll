@@ -3,7 +3,8 @@
 ; RUN: %python %t/raw.py > %t/loop.raw
 ; RUN: llvm-profdata merge %t/loop.raw -o %t/loop.profdata
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/loop.profdata -S %t/loop.ll -o %t/use.ll
-; RUN: FileCheck %s --check-prefix=COUNTS < %t/use.ll
+; RUN: FileCheck %s --check-prefixes=COUNTS,WAVE < %t/use.ll
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/loop.profdata -pgo-wave-metadata=false -S %t/loop.ll | FileCheck %s --check-prefix=COUNTS --implicit-check-not=wave.profile
 ; RUN: opt -passes=pgo-instr-gen,verify -pgo-instrument-entry -S %t/eh.ll | FileCheck %s --check-prefix=EH --implicit-check-not='call void @llvm.instrprof.increment'
 
 ; Dense instrumentation preserves the entry and split backedge counters,
@@ -27,9 +28,22 @@
 ; header has four times the entry wave count; sparse data cannot supply it.
 ; COUNTS-LABEL: define void @loop(
 ; COUNTS-SAME: !prof ![[ENTRY_COUNT:[0-9]+]]
+; WAVE-SAME: !wave.profile ![[WAVES:[0-9]+]]
+; WAVE: entry:
+; WAVE-NEXT: br label %header, {{.*}}!wave.profile.block ![[ENTRY:[0-9]+]]
 ; COUNTS: br i1 %done, label %exit, label %header.header_crit_edge, !prof ![[WEIGHTS:[0-9]+]]
+; WAVE-SAME: !wave.profile.block ![[HEADER:[0-9]+]]
+; WAVE: header.header_crit_edge:
+; WAVE-NEXT: br label %header, {{.*}}!wave.profile.block ![[BACKEDGE:[0-9]+]]
+; WAVE: exit:
+; WAVE-NEXT: ret void, !wave.profile.block ![[EXIT:[0-9]+]]
 ; COUNTS-DAG: ![[ENTRY_COUNT]] = !{!"function_entry_count", i64 192}
 ; COUNTS-DAG: ![[WEIGHTS]] = !{!"branch_weights", i32 192, i32 576}
+; WAVE-DAG: ![[WAVES]] = distinct !{i64 2, i64 [[FID:-?[0-9]+]], i64 3, i64 12, i64 9, i64 3}
+; WAVE-DAG: ![[ENTRY]] = !{i64 2, i64 [[FID]], i64 0, i64 1, i64 1}
+; WAVE-DAG: ![[HEADER]] = !{i64 2, i64 [[FID]], i64 1, i64 1, i64 3, i64 2}
+; WAVE-DAG: ![[BACKEDGE]] = !{i64 2, i64 [[FID]], i64 2, i64 1, i64 1}
+; WAVE-DAG: ![[EXIT]] = !{i64 2, i64 [[FID]], i64 3, i64 1}
 
 ; A catchswitch has no legal insertion point. Skip dispatch and append only
 ; exit; the sparse catch counter must remain after its catchpad.
