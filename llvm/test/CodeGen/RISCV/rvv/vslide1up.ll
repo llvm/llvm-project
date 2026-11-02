@@ -838,8 +838,7 @@ define <vscale x 2 x i32> @slide_scalar_move(<vscale x 2 x i32> %dst, <vscale x 
 ; CHECK-LABEL: slide_scalar_move:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-NEXT:    ret
   %s = call <vscale x 2 x i32> @llvm.riscv.vslideup.nxv2i32.iXLen(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, iXLen 1, iXLen %vl, iXLen 2)
   %r = call <vscale x 2 x i32> @llvm.riscv.vmv.s.x.nxv2i32.iXLen(<vscale x 2 x i32> %s, i32 %scalar, iXLen %vl)
@@ -850,8 +849,7 @@ define <vscale x 2 x i32> @slide_scalar_move_vlmax(<vscale x 2 x i32> %dst, <vsc
 ; CHECK-LABEL: slide_scalar_move_vlmax:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-NEXT:    ret
   %max = call iXLen @llvm.riscv.vsetvlimax.iXLen(iXLen 2, iXLen 0)
   %s = call <vscale x 2 x i32> @llvm.riscv.vslideup.nxv2i32.iXLen(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, iXLen 1, iXLen %max, iXLen 2)
@@ -863,8 +861,7 @@ define <vscale x 2 x i32> @slide_scalar_move_zero(<vscale x 2 x i32> %dst, <vsca
 ; CHECK-LABEL: slide_scalar_move_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-NEXT:    ret
   %s = call <vscale x 2 x i32> @llvm.riscv.vslideup.nxv2i32.iXLen(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, iXLen 1, iXLen 0, iXLen 2)
   %r = call <vscale x 2 x i32> @llvm.riscv.vmv.s.x.nxv2i32.iXLen(<vscale x 2 x i32> %s, i32 %scalar, iXLen 0)
@@ -874,10 +871,8 @@ define <vscale x 2 x i32> @slide_scalar_move_zero(<vscale x 2 x i32> %dst, <vsca
 define <vscale x 2 x i32> @slide_scalar_move_tail_agnostic(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, i32 %scalar, iXLen %vl) {
 ; CHECK-LABEL: slide_scalar_move_tail_agnostic:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
+; CHECK-NEXT:    vslide1up.vx v8, v9, a0
 ; CHECK-NEXT:    ret
   %s = call <vscale x 2 x i32> @llvm.riscv.vslideup.nxv2i32.iXLen(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, iXLen 1, iXLen %vl, iXLen 3)
   %r = call <vscale x 2 x i32> @llvm.riscv.vmv.s.x.nxv2i32.iXLen(<vscale x 2 x i32> %s, i32 %scalar, iXLen %vl)
@@ -888,8 +883,7 @@ define <vscale x 4 x i32> @slide_scalar_move_lmul2(<vscale x 4 x i32> %dst, <vsc
 ; CHECK-LABEL: slide_scalar_move_lmul2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 1
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vslide1up.vx v8, v10, a0
 ; CHECK-NEXT:    ret
   %s = call <vscale x 4 x i32> @llvm.riscv.vslideup.nxv4i32.iXLen(<vscale x 4 x i32> %dst, <vscale x 4 x i32> %src, iXLen 1, iXLen %vl, iXLen 2)
   %r = call <vscale x 4 x i32> @llvm.riscv.vmv.s.x.nxv4i32.iXLen(<vscale x 4 x i32> %s, i32 %scalar, iXLen %vl)
@@ -918,8 +912,7 @@ define <vscale x 1 x i64> @slide_scalar_move_i64(<vscale x 1 x i64> %dst, <vscal
 ; RV64-LABEL: slide_scalar_move_i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli zero, a1, e64, m1, tu, ma
-; RV64-NEXT:    vslideup.vi v8, v9, 1
-; RV64-NEXT:    vmv.s.x v8, a0
+; RV64-NEXT:    vslide1up.vx v8, v9, a0
 ; RV64-NEXT:    ret
   %s = call <vscale x 1 x i64> @llvm.riscv.vslideup.nxv1i64.iXLen(<vscale x 1 x i64> %dst, <vscale x 1 x i64> %src, iXLen 1, iXLen %vl, iXLen 2)
   %r = call <vscale x 1 x i64> @llvm.riscv.vmv.s.x.nxv1i64.iXLen(<vscale x 1 x i64> %s, i64 %scalar, iXLen %vl)
@@ -939,8 +932,7 @@ define <vscale x 2 x i32> @slide_scalar_move_mask_lane0(<vscale x 2 x i32> %dst,
 ; CHECK-NEXT:    vand.vi v10, v10, 1
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
-; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vslide1up.vx v8, v9, a0, v0.t
 ; CHECK-NEXT:    ret
   %enabled = insertelement <vscale x 2 x i1> %mask, i1 true, i64 0
   %s = call <vscale x 2 x i32> @llvm.riscv.vslideup.mask.nxv2i32.iXLen(<vscale x 2 x i32> %dst, <vscale x 2 x i32> %src, iXLen 1, <vscale x 2 x i1> %enabled, iXLen %vl, iXLen 0)

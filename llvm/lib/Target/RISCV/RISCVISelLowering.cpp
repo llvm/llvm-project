@@ -13930,6 +13930,16 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_vfmv_v_f:
     return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::riscv_vslideup:
+  case Intrinsic::riscv_vslideup_mask: {
+    bool Masked = IntNo == Intrinsic::riscv_vslideup_mask;
+    MVT VT = Op.getSimpleValueType();
+    SDValue VL = Op.getOperand(Masked ? 5 : 4);
+    SDValue Mask = Masked ? Op.getOperand(4) : getAllOnesMask(VT, VL, DL, DAG);
+    return getVSlideup(DAG, Subtarget, DL, VT, Op.getOperand(1),
+                       Op.getOperand(2), Op.getOperand(3), Mask, VL,
+                       Op.getConstantOperandVal(Masked ? 6 : 5));
+  }
   case Intrinsic::riscv_vmv_s_x: {
     SDValue Scalar = Op.getOperand(2);
 
@@ -23487,6 +23497,29 @@ static bool isVLMax(SDValue VL) {
          isAllOnesConstant(VL);
 }
 
+static SDValue combineSlideUpScalarMove(SDNode *N, SelectionDAG &DAG) {
+  SDValue Slide = N->getOperand(0);
+  SDValue VL = N->getOperand(2);
+  if (Slide.getOpcode() != RISCVISD::VSLIDEUP_VL || !Slide.hasOneUse() ||
+      !isOneConstant(Slide.getOperand(2)) || VL != Slide.getOperand(4))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Mask = Slide.getOperand(3);
+  // Scalar move is unmasked, so the slide mask must enable lane zero.
+  if (Mask.getOpcode() != RISCVISD::VMSET_VL &&
+      !DAG.isKnownNeverZero(DAG.getExtractVectorElt(DL, MVT::i1, Mask, 0)))
+    return SDValue();
+
+  // Both operations preserve the destination at VL=0. Keeping the slide's
+  // passthru also preserves inactive lanes; agnostic lanes may be refined.
+  unsigned Opc = N->getOpcode() == RISCVISD::VMV_S_X_VL
+                     ? RISCVISD::VSLIDE1UP_VL
+                     : RISCVISD::VFSLIDE1UP_VL;
+  return DAG.getNode(Opc, DL, N->getValueType(0), Slide.getOperand(0),
+                     Slide.getOperand(1), N->getOperand(1), Mask, VL);
+}
+
 static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
                                           const RISCVSubtarget &Subtarget) {
   unsigned Opcode = N->getOpcode();
@@ -26628,6 +26661,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     [[fallthrough]];
   }
   case RISCVISD::VMV_S_X_VL: {
+    if (SDValue V = combineSlideUpScalarMove(N, DAG))
+      return V;
+
     const MVT VT = N->getSimpleValueType(0);
     SDValue Passthru = N->getOperand(0);
     SDValue Scalar = N->getOperand(1);
@@ -26647,7 +26683,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     // Use M1 or smaller to avoid over constraining register allocation
     const MVT M1VT = RISCVTargetLowering::getM1VT(VT);
-    if (M1VT.bitsLT(VT)) {
+    // Wait for operand legalization before narrowing the passthru.
+    if (M1VT.bitsLT(VT) && !DCI.isBeforeLegalizeOps()) {
       SDValue M1Passthru = DAG.getExtractSubvector(DL, M1VT, Passthru, 0);
       SDValue Result =
           DAG.getNode(N->getOpcode(), DL, M1VT, M1Passthru, Scalar, VL);
@@ -26683,6 +26720,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     switch (IntNo) {
       // By default we do not combine any intrinsic.
     default:
+      return SDValue();
+    case Intrinsic::riscv_vmv_s_x:
+    case Intrinsic::riscv_vfmv_s_f:
+    case Intrinsic::riscv_vslideup:
+    case Intrinsic::riscv_vslideup_mask:
+      // Expose target nodes before masks are expanded or scalar moves are
+      // narrowed to M1. Leave illegal vector types to type legalization.
+      if (isTypeLegal(N->getValueType(0)))
+        return LowerINTRINSIC_WO_CHAIN(SDValue(N, 0), DAG);
       return SDValue();
     case Intrinsic::riscv_vcpop:
     case Intrinsic::riscv_vcpop_mask:

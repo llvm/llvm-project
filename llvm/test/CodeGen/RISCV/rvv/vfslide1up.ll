@@ -518,8 +518,7 @@ define <vscale x 2 x float> @slide_scalar_move_float(<vscale x 2 x float> %dst, 
 ; CHECK-LABEL: slide_scalar_move_float:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 1
-; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vfslide1up.vf v8, v9, fa0
 ; CHECK-NEXT:    ret
   %s = call <vscale x 2 x float> @llvm.riscv.vslideup.nxv2f32.iXLen(<vscale x 2 x float> %dst, <vscale x 2 x float> %src, iXLen 1, iXLen %vl, iXLen 2)
   %r = call <vscale x 2 x float> @llvm.riscv.vfmv.s.f.nxv2f32.iXLen(<vscale x 2 x float> %s, float %scalar, iXLen %vl)
