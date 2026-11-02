@@ -1890,9 +1890,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_nullptr_t",
+    hdrs = ["src/__support/CPP/cstddef/nullptr_t.h"],
+    deps = [
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_cstddef",
     hdrs = ["src/__support/CPP/cstddef.h"],
     deps = [
+        ":__support_cpp_nullptr_t",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
@@ -2070,6 +2079,7 @@ libc_support_library(
         "src/__support/CPP/utility/forward.h",
     ],
     deps = [
+        ":__support_cpp_nullptr_t",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_compiler",
@@ -2876,6 +2886,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_readv",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/readv.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+        ":types_struct_iovec",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_recvfrom",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/recvfrom.h"],
     target_compatible_with = select({
@@ -3343,6 +3370,22 @@ libc_support_library(
         ":hdr_stdint_proxy",
         ":types_pid_t",
         ":types_struct_rlimit",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_kill",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/kill.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_pid_t",
     ],
 )
 
@@ -4293,6 +4336,23 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_writev",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/writev.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+        ":types_struct_iovec",
     ],
 )
 
@@ -12596,6 +12656,20 @@ libc_support_library(
 ############################### __support/net #################################
 
 libc_support_library(
+    name = "__support_net_hex",
+    hdrs = ["src/__support/net/hex.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_optional",
+        ":__support_cpp_string_view",
+        ":__support_cpp_type_traits",
+        ":__support_ctype_utils",
+        ":__support_macros_config",
+        ":types_size_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_net_address",
     srcs = ["src/__support/net/address.cpp"],
     hdrs = ["src/__support/net/address.h"],
@@ -12608,6 +12682,7 @@ libc_support_library(
         ":__support_fixedvector",
         ":__support_libc_assert",
         ":__support_macros_config",
+        ":__support_net_hex",
         ":__support_str_to_integer",
         ":hdr_inet_address_macros",
         ":hdr_stdint_proxy",
@@ -18253,7 +18328,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_kill",
         ":types_pid_t",
     ],
 )
@@ -20118,6 +20193,46 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_socketpair",
         ":__support_osutil_syscall",
         ":errno",
+    ],
+)
+
+############################### sys/uio targets ################################
+
+libc_function(
+    name = "readv",
+    srcs = ["src/sys/uio/linux/readv.cpp"],
+    hdrs = ["src/sys/uio/readv.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_readv",
+        ":errno",
+        ":types_ssize_t",
+        ":types_struct_iovec",
+    ],
+)
+
+libc_function(
+    name = "writev",
+    srcs = ["src/sys/uio/linux/writev.cpp"],
+    hdrs = ["src/sys/uio/writev.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_writev",
+        ":errno",
+        ":types_ssize_t",
+        ":types_struct_iovec",
     ],
 )
 
