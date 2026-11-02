@@ -86,6 +86,9 @@ enum class ACCDataRegionFlags : int64_t {
   None = 0,
   /// The implicit data region of a compute construct.
   Implicit = 1,
+  /// The region of a structured declare directive in a local scope, which
+  /// lasts until that scope ends.
+  Declare = 2,
 };
 
 /// What a data runtime call is asked for besides mapping its operands.

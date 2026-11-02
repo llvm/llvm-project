@@ -863,6 +863,7 @@ private:
 
   SDValue ScalarizeVecRes_FIX(SDNode *N);
   SDValue ScalarizeVecRes_UnaryOpWithTwoResults(SDNode *N, unsigned ResNo);
+  SDValue ScalarizeVecRes_PartialReduction(SDNode *N);
 
   // Vector Operand Scalarization: <1 x ty> -> ty.
   bool ScalarizeVectorOperand(SDNode *N, unsigned OpNo);
@@ -878,6 +879,8 @@ private:
   SDValue ScalarizeVecOp_VSTRICT_FSETCC(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_ATOMIC_STORE(AtomicSDNode *N);
+  SDValue ScalarizeVecOp_MLOAD(MaskedLoadSDNode *N, unsigned OpNo);
+  SDValue ScalarizeVecOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_STRICT_FP_ROUND(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_FP_EXTEND(SDNode *N);

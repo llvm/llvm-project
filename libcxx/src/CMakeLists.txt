@@ -316,6 +316,12 @@ if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
     )
 endif()
 
+if (LIBCXX_PSTL_BACKEND STREQUAL "statpart")
+  list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
+    pstl/statpart.cpp
+    )
+endif()
+
 if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TIME_ZONE_DATABASE)
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     experimental/include/tzdb/time_zone_private.h
