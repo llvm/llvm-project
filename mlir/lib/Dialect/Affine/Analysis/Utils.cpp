@@ -470,25 +470,30 @@ bool MemRefDependenceGraph::init(bool fullAffineDependences) {
         memrefAndList.first);
   for (auto &baseAndMemRefs : baseToMemRefs) {
     ArrayRef<Value> memrefs = baseAndMemRefs.second;
+    if (memrefs.size() < 2)
+      continue;
+    // For each view, collect the nodes accessing it along with whether they
+    // may write to or free it.
+    SmallVector<SmallVector<std::pair<Node *, bool>>> viewAccesses;
+    for (Value memref : memrefs) {
+      auto &accesses = viewAccesses.emplace_back();
+      for (unsigned id : memrefAccesses[memref]) {
+        Node *node = getNode(id);
+        accesses.push_back(
+            {node, node->hasStore(memref) || node->hasFree(memref)});
+      }
+    }
     for (unsigned a = 0, e = memrefs.size(); a < e; ++a) {
       for (unsigned b = a + 1; b < e; ++b) {
-        for (unsigned idA : memrefAccesses[memrefs[a]]) {
-          Node *nodeA = getNode(idA);
-          bool aWrites =
-              nodeA->hasStore(memrefs[a]) || nodeA->hasFree(memrefs[a]);
-          for (unsigned idB : memrefAccesses[memrefs[b]]) {
-            if (idA == idB)
-              continue;
-            Node *nodeB = getNode(idB);
-            bool bWrites =
-                nodeB->hasStore(memrefs[b]) || nodeB->hasFree(memrefs[b]);
-            if (!aWrites && !bWrites)
+        for (auto [nodeA, aWrites] : viewAccesses[a]) {
+          for (auto [nodeB, bWrites] : viewAccesses[b]) {
+            if (nodeA == nodeB || (!aWrites && !bWrites))
               continue;
             // Edges go from the node earlier in the block to the later one.
             if (nodeA->op->isBeforeInBlock(nodeB->op))
-              addEdge(idA, idB, memrefs[a]);
+              addEdge(nodeA->id, nodeB->id, memrefs[a]);
             else
-              addEdge(idB, idA, memrefs[b]);
+              addEdge(nodeB->id, nodeA->id, memrefs[b]);
           }
         }
       }
