@@ -183,7 +183,7 @@ end subroutine
 ! The outer loop keeps its bounds on the op; the inner one, which the GOTO
 ! leaves, has none.
 ! CHECK: acc.loop gang vector private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
-! CHECK: acc.loop private({{.*}}) {
+! CHECK: acc.loop {
 ! CHECK: arith.cmpf ogt
 ! CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
 ! CHECK: acc.yield
@@ -211,7 +211,7 @@ end subroutine
 ! leaves, has none.
 ! CHECK: acc.loop gang vector private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! Inner loop stores exit selector and yields:
-! CHECK: acc.loop private({{.*}}) {
+! CHECK: acc.loop {
 ! CHECK: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
 ! CHECK: acc.yield
 ! CHECK: } seq unstructured
@@ -381,7 +381,7 @@ subroutine test_unstructured_loop_seq_goto(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_unstructured_loop_seq_goto
-! CHECK: acc.loop private({{.*}}) {
+! CHECK: acc.loop {
 ! CHECK: cf.br
 ! CHECK: } {{.*}}seq{{.*}}unstructured
 
