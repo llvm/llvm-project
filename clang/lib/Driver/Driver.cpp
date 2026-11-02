@@ -3947,9 +3947,10 @@ static StringRef getCanonicalArchString(Compilation &C,
                                         Action::OffloadKind Kind) {
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
-  // An Intel name or "generic" takes no target features, so "xe-pvc:foo" is
-  // not "xe-pvc".
-  if ((Arch.isIntel() || Arch.isGeneric()) && ArchStr.contains(':'))
+  // On SPIR-V, an Intel name or "generic" takes no target features, so
+  // "xe-pvc:foo" is not "xe-pvc".
+  if (Triple.isSPIRV() && (Arch.isIntel() || Arch.isGeneric()) &&
+      ArchStr.contains(':'))
     Arch = OffloadArch::getUnknown();
   if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
@@ -3972,7 +3973,7 @@ static StringRef getCanonicalArchString(Compilation &C,
       }
     }
   } else if (Triple.isSPIRV() && ArchStr.starts_with("igca") &&
-             !StringToOffloadArch(ArchStr).isIntelIGCA()) {
+             !Arch.isIntelIGCA()) {
     // Only an invalid IGCA target stops here; a valid one still needs the
     // SPIR-V target checks below.
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)

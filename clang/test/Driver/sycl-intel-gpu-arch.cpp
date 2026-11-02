@@ -76,10 +76,11 @@
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_40.11.0 -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-UNLISTED %s
+// CHK-BAD-ARCH-UNLISTED: error: unsupported SYCL gpu architecture: xe_40.11.0
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe_40.11.0 -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-UNLISTED %s
-// CHK-BAD-ARCH-UNLISTED: error: unsupported {{SYCL|offload}} gpu architecture: xe_40.11.0
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-UNLISTED-INFER %s
+// CHK-BAD-ARCH-UNLISTED-INFER: error: unsupported offload gpu architecture: xe_40.11.0
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc:garbage -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-SUFFIX %s
@@ -120,6 +121,7 @@
 // RUN:   --offload-targets=spirv64-intel --offload-arch=graniterapids -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=graniterapids -DTRIPLE=spirv64-intel %s
 // CHK-NOT-PLAIN: error: the target architecture '[[ARCH]]' is not supported by the target '[[TRIPLE]]'
+/// An Intel CPU is accepted on a plain SPIR-V target.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=graniterapids \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-GOOD-ARCH %s
