@@ -7,69 +7,18 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Sequence
 import argparse
 import common
-import json
 import logging
 import pathlib
 import sys
 import tabulate
-import urllib.error
-import urllib.parse
-
-
-# How many runs to ask for at once. This is the largest page size LNT allows.
-PAGE_SIZE = 10000
 
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
                     argparse.RawDescriptionHelpFormatter):
     """Show defaults, but keep the paragraphs of the description intact."""
-
-
-def get(url: str) -> Optional[dict]:
-    """GET a JSON resource, returning None if the server answers 404."""
-    logging.debug(f'GET {url}')
-    try:
-        return common.lnt_request(url)
-    except urllib.error.HTTPError as error:
-        if error.code == 404:
-            return None
-        raise common.LNTError(f'GET {url} failed with HTTP {error.code}: {error.reason}')
-    except urllib.error.URLError as error:
-        raise common.LNTError(f'GET {url} failed: {error.reason}')
-    except (json.JSONDecodeError, UnicodeDecodeError) as error:
-        raise common.LNTError(f'GET {url} returned a malformed response: {error}')
-
-
-def benchmarked_commits(lnt_url: str, test_suite: str, machine: str) -> Optional[Dict[str, int]]:
-    """
-    Return {commit: number of runs} for a machine, or None if the instance has no
-    such machine.
-    """
-    base = common.lnt_suite_url(lnt_url, test_suite)
-    # Listing runs answers 404 both for an unknown suite and for an unknown machine: tell them apart.
-    if get(base) is None:
-        raise common.LNTError(f'{lnt_url} has no test suite named {test_suite}')
-
-    counts: Dict[str, int] = {}
-    params = {'machine': machine, 'limit': PAGE_SIZE}
-    while True:
-        page = get(f'{base}/runs?{urllib.parse.urlencode(params)}')
-        if page is None:
-            if 'cursor' in params:
-                raise common.LNTError(f'machine {machine} disappeared from {lnt_url} while listing its runs')
-            return None
-        for run in page.get('items', []):
-            if 'commit' not in run:
-                raise common.LNTError(f'run {run.get("uuid")} has no commit')
-            commit = str(run['commit']).strip().lower() # normalize commit SHAs
-            counts[commit] = counts.get(commit, 0) + 1
-        cursor = (page.get('cursor') or {}).get('next')
-        if cursor is None:
-            return counts
-        params['cursor'] = cursor
 
 
 def plan(commits: Sequence[str],
@@ -152,7 +101,7 @@ def main(argv: List[str]) -> int:
     if invalid:
         raise ValueError(f'expected full 40-character SHAs on the input, got {invalid[0]!r}')
 
-    have = benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
+    have = common.benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
     if have is None:
         logging.warning(f'{args.lnt_url} has no machine named {args.machine} yet: planning as if it had no data')
         have = {}
