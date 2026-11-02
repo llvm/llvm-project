@@ -20,6 +20,9 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+
 static volatile bool signal_caught = false;
 
 static void test_sig_handler(int signo) {
@@ -51,9 +54,6 @@ public:
     ErrnoCheckingTest::TearDown();
   }
 };
-
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 // This tests if it correctly catches a pending signal.
 TEST_F(LlvmLibcSigsuspendInterruptTest, SigsuspendCaughtByHandler) {
