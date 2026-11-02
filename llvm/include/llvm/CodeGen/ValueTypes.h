@@ -126,7 +126,7 @@ namespace llvm {
       }
 
       EVT EltVT = getScalarType();
-      if (EC.isScalar())
+      if (!isVector() && EC.isScalar())
         return EltVT;
       return getVectorVT(Context, EltVT, EC);
     }

@@ -247,7 +247,7 @@ namespace llvm {
     /// the exception of the element count that is chosen by the caller.
     MVT changeElementCount(ElementCount EC) const {
       MVT EltVT = getScalarType();
-      if (EC.isScalar())
+      if (!isVector() && EC.isScalar())
         return EltVT;
       return MVT::getVectorVT(EltVT, EC);
     }
