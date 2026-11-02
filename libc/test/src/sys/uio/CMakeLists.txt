@@ -9,7 +9,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.types.struct_iovec
     libc.src.__support.common
-    libc.src.errno.errno
     libc.src.sys.uio.writev
     libc.src.unistd.close
     libc.src.unistd.pipe
@@ -26,7 +25,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.types.struct_iovec
     libc.src.__support.common
-    libc.src.errno.errno
     libc.src.sys.uio.readv
     libc.src.unistd.close
     libc.src.unistd.pipe

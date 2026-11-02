@@ -1285,14 +1285,6 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   return true;
 }
 
-static inline bool IsOpaqueConstantCall(const CallExpr *E) {
-  unsigned Builtin = E->getBuiltinCallee();
-  return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
-          Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
-          Builtin == Builtin::BI__builtin_function_start);
-}
-
 bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
                                              const Pointer &RHS);
 
@@ -1384,7 +1376,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
         return false;
       }
       if (const auto *CE = dyn_cast<CallExpr>(E);
-          CE && IsOpaqueConstantCall(CE)) {
+          CE && isOpaqueConstantCall(CE)) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
         S.FFDiag(Loc, diag::note_constexpr_opaque_call_comparison)
             << P.toDiagnosticString(S.getASTContext());

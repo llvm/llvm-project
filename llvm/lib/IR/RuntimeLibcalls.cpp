@@ -256,6 +256,12 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
     return {Type::getDoubleTy(Ctx), Attribute()};
   case LDbl:
     return {getLongDoubleType(Ctx, LdblFormat), Attribute()};
+  case X86FP80:
+    return {Type::getX86_FP80Ty(Ctx), Attribute()};
+  case FP128:
+    return {Type::getFP128Ty(Ctx), Attribute()};
+  case PPCFP128:
+    return {Type::getPPC_FP128Ty(Ctx), Attribute()};
   case Ptr:
     return {PointerType::get(Ctx, 0), Attribute()};
   case V2F32:

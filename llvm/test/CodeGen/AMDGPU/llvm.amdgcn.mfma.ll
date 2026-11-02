@@ -1803,7 +1803,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr a
 ; NOLIT-SRCC-LABEL: test_mfma_f32_32x32x4f16:
 ; NOLIT-SRCC:       ; %bb.0: ; %bb
 ; NOLIT-SRCC-NEXT:    s_load_dwordx4 s[36:39], s[4:5], 0x24
-; NOLIT-SRCC-NEXT:    v_mov_b32_e32 v32, 0
+; NOLIT-SRCC-NEXT:    v_mov_b32_e32 v29, 0
 ; NOLIT-SRCC-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOLIT-SRCC-NEXT:    s_load_dwordx16 s[16:31], s[36:37], 0x0
 ; NOLIT-SRCC-NEXT:    s_load_dwordx16 s[0:15], s[36:37], 0x40
@@ -2050,7 +2050,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x4f16(ptr addrspace(1) %arg, ptr a
 ; LIT-SRCC-LABEL: test_mfma_f32_32x32x4f16:
 ; LIT-SRCC:       ; %bb.0: ; %bb
 ; LIT-SRCC-NEXT:    s_load_dwordx4 s[36:39], s[4:5], 0x24
-; LIT-SRCC-NEXT:    v_mov_b32_e32 v32, 0
+; LIT-SRCC-NEXT:    v_mov_b32_e32 v29, 0
 ; LIT-SRCC-NEXT:    s_waitcnt lgkmcnt(0)
 ; LIT-SRCC-NEXT:    s_load_dwordx16 s[16:31], s[36:37], 0x0
 ; LIT-SRCC-NEXT:    s_load_dwordx16 s[0:15], s[36:37], 0x40
