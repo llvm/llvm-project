@@ -1787,9 +1787,16 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   DebugLoc MergedLoc =
       DebugLoc::getMergedLocation(SI.getDebugLoc(), OtherStore->getDebugLoc());
   if (MergedVal != SI.getValueOperand()) {
-    PHINode *PN =
-        PHINode::Create(SI.getValueOperand()->getType(), 2, "storemerge");
-    PN->addIncoming(SI.getValueOperand(), SI.getParent());
+    // Casting a byte to a non-byte type, or a pointer to an integer, is lossy.
+    // Merge in the byte or pointer type if either store has one.
+    Type *Ty = SI.getValueOperand()->getType();
+    if (MergedVal->getType()->isByteOrByteVectorTy() ||
+        MergedVal->getType()->isPointerTy())
+      Ty = MergedVal->getType();
+    PHINode *PN = PHINode::Create(Ty, 2, "storemerge");
+    Builder.SetInsertPoint(&SI);
+    PN->addIncoming(Builder.CreateBitOrPointerCast(SI.getValueOperand(), Ty),
+                    SI.getParent());
     Builder.SetInsertPoint(OtherStore);
     PN->addIncoming(Builder.CreateBitOrPointerCast(MergedVal, PN->getType()),
                     OtherBB);
