@@ -1870,11 +1870,6 @@ static bool isNonDerivedNonPointer(const mlir::Value &variable) {
 
 static bool isNonDerivedNonPointer(lower::AbstractConverter &converter,
                                    const semantics::Symbol &sym) {
-  const auto &ultimate = sym.GetUltimate();
-  const auto *type = ultimate.GetType();
-  if (!type || !type->AsIntrinsic() || semantics::IsAllocatable(ultimate) ||
-      semantics::IsPointer(ultimate))
-    return false;
   mlir::Value variable = converter.getSymbolAddress(sym);
   return variable && isNonDerivedNonPointer(variable);
 }
