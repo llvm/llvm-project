@@ -18,6 +18,7 @@
 // RUN:   %libomptarget-run-generic
 //
 // REQUIRES: gpu
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>
