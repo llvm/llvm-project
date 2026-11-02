@@ -130,6 +130,15 @@ spirv.func @rsqrt(%arg0: f32, %arg1: vector<3xf16>) "None" {
   spirv.Return
 }
 
+// CHECK-LABEL: @cl_count_zeros
+spirv.func @cl_count_zeros(%arg0: i32, %arg1: vector<3xi16>) "None" {
+  // CHECK: "llvm.intr.ctlz"(%{{.*}}) <{is_zero_poison = false}> : (i32) -> i32
+  %0 = spirv.CL.clz %arg0 : i32
+  // CHECK: "llvm.intr.cttz"(%{{.*}}) <{is_zero_poison = false}> : (vector<3xi16>) -> vector<3xi16>
+  %1 = spirv.CL.ctz %arg1 : vector<3xi16>
+  spirv.Return
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.CL.mix
 //===----------------------------------------------------------------------===//
