@@ -23,16 +23,16 @@
 namespace llvm::cas {
 
 /// An open file whose contents are stored in a CAS.
-class CASBackedFile : public RTTIExtends<CASBackedFile, vfs::File> {
+class LLVM_ABI CASBackedFile : public RTTIExtends<CASBackedFile, vfs::File> {
 public:
-  LLVM_ABI static const char ID;
+  static const char ID;
   /// Get the CAS reference for the contents of the file.
   virtual cas::ObjectRef getObjectRefForContent() = 0;
 
 private:
   /// Keep the file CAS-backed when it is given a fixed status, e.g. when it
   /// is read through a \c vfs::RedirectingFileSystem.
-  LLVM_ABI std::unique_ptr<vfs::File>
+  std::unique_ptr<vfs::File>
   createWithFixedStatus(std::unique_ptr<vfs::File> Self,
                         vfs::Status S) override;
 };
