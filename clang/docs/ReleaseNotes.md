@@ -1432,6 +1432,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 ### Static Analyzer
 
 #### Crash and bug fixes
+- `unix.BlockInCriticalSection` checker now recognizes `mtx_timedlock`
+  calls with 2 arguments as a locking call. This fixes false negatives.
+  (#GH237154)
 
 % comment:
 % This is for the Static Analyzer.
