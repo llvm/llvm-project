@@ -1,4 +1,4 @@
-//===- ShardingInterfaceImpl.cpp ------------------------------------------===//
+//===- ShardingExtensions.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h"
+#include "mlir/Dialect/Arith/Extensions/ShardingExtensions.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Transforms/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Shard/Interfaces/ShardingInterface.h"
+#include "mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h"
 #include "mlir/IR/DialectRegistry.h"
 
 using namespace mlir;

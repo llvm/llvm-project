@@ -1,4 +1,4 @@
-//===- ShardingInterfaceImpl.h - ------------------------------------------===//
+//===- ShardingExtensions.h - Tosa sharding extensions ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_ARITH_TRANSFORMS_SHARDINGINTERFACEIMPL_H_
-#define MLIR_DIALECT_ARITH_TRANSFORMS_SHARDINGINTERFACEIMPL_H_
+#ifndef MLIR_DIALECT_TOSA_EXTENSIONS_SHARDINGEXTENSIONS_H_
+#define MLIR_DIALECT_TOSA_EXTENSIONS_SHARDINGEXTENSIONS_H_
 
 namespace mlir {
 
 class DialectRegistry;
 
-namespace arith {
+namespace tosa {
 
 void registerShardingInterfaceExternalModels(DialectRegistry &registry);
 
-} // namespace arith
+} // namespace tosa
 } // namespace mlir
 
-#endif // MLIR_DIALECT_ARITH_TRANSFORMS_SHARDINGINTERFACEIMPL_H_
+#endif // MLIR_DIALECT_TOSA_EXTENSIONS_SHARDINGEXTENSIONS_H_
