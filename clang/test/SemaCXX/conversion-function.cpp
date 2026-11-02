@@ -566,7 +566,19 @@ namespace GH226984 {
 	template<int dependent = 0>
 	operator decltype(dependent, ref)();
 };
+struct Target {};
+class B {
+  public:
+    template<typename T = Target>
+    operator T() const { static_assert(sizeof(T) == 0); };
+};
+class C : B {
+  public: 
+    operator Target() const&;
+};
   int x = 0;
   int& y = A(x);
+  C c;
+  const Target& z = c;
 }
 #endif
