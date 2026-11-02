@@ -12,6 +12,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
+#include <optional>
 
 namespace lldb_private::dil {
 
@@ -35,38 +37,86 @@ static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
 }
 
 static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
-                                                    ExecutionContextScope &ctx,
+                                                    ExecutionContext &exe_ctx,
                                                     llvm::StringRef name) {
   uint64_t addr = valobj.GetLoadAddress();
-  ExecutionContext exe_ctx;
-  ctx.CalculateExecutionContext(exe_ctx);
   return ValueObject::CreateValueObjectFromAddress(
       name, addr, exe_ctx,
-      valobj.GetCompilerType().GetArrayElementType(&ctx).GetPointerType(),
+      valobj.GetCompilerType()
+          .GetArrayElementType(exe_ctx.GetBestExecutionContextScope())
+          .GetPointerType(),
       /* do_deref */ false);
 }
 
-static llvm::Expected<lldb::LanguageType>
-GetSourceLanguageFromCU(StackFrame &ctx) {
-  SymbolContext symbol_context =
-      ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
-  if (!symbol_context.comp_unit)
-    return llvm::createStringErrorV("no compile unit for frame: {}",
-                                    ctx.GetFunctionName());
+static llvm::Expected<SymbolContext>
+GetSymbolContexFromFrame(ExecutionContext &exe_ctx) {
+  auto frame_sp = exe_ctx.GetFrameSP();
+  if (!frame_sp)
+    return llvm::createStringError("no stack frame in execution context");
 
-  return symbol_context.comp_unit->GetLanguage();
+  SymbolContext symbol_context = frame_sp->GetSymbolContext(
+      lldb::eSymbolContextCompUnit | lldb::eSymbolContextModule);
+  if (!symbol_context.comp_unit)
+    return llvm::createStringErrorV("no compile unit for frame: {0}",
+                                    frame_sp->GetFunctionName());
+  if (!symbol_context.module_sp)
+    return llvm::createStringErrorV("no module for frame: {0}",
+                                    frame_sp->GetFunctionName());
+  return symbol_context;
 }
 
-static llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
-  SymbolContext symbol_context =
-      ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
-  if (!symbol_context.comp_unit)
-    return llvm::createStringErrorV("no compile unit for frame: {}",
-                                    ctx.GetFunctionName());
+llvm::Expected<lldb::LanguageType> Interpreter::GetSourceLanguageFromCU() {
+  llvm::Expected<SymbolContext> symbol_context =
+      GetSymbolContexFromFrame(m_exe_ctx);
+  if (!symbol_context)
+    return symbol_context.takeError();
 
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-  symbol_context = ctx.GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+  return symbol_context->comp_unit->GetLanguage();
+}
+
+llvm::Expected<lldb::TypeSystemSP> Interpreter::GetTypeSystemFromCU() {
+  lldb::LanguageType language = lldb::eLanguageTypeUnknown;
+  if (auto frame_sp = m_exe_ctx.GetFrameSP()) {
+    SymbolContext symbol_context =
+        frame_sp->GetSymbolContext(lldb::eSymbolContextCompUnit);
+    if (symbol_context.comp_unit) {
+      language = symbol_context.comp_unit->GetLanguage();
+      symbol_context = frame_sp->GetSymbolContext(lldb::eSymbolContextModule);
+      if (symbol_context.module_sp)
+        return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+    }
+  }
+
+  lldb::TargetSP target_sp = m_exe_ctx.GetTargetSP();
+  if (!target_sp)
+    return llvm::createStringError("no target for frame");
+  if (language == lldb::eLanguageTypeUnknown)
+    language = target_sp->GetLanguage().AsLanguageType();
+  return target_sp->GetScratchTypeSystemForLanguage(language);
+}
+
+// DIL normally treats '.' as member access, but register names may contain
+// periods. Reconstruct the candidate so an exact register name takes
+// precedence.
+static std::optional<std::string> GetRegisterPathName(const ASTNode &node) {
+  if (node.GetKind() == NodeKind::eIdentifierNode) {
+    std::string name_storage =
+        static_cast<const IdentifierNode &>(node).GetName();
+    llvm::StringRef name = name_storage;
+    if (name.consume_front("$"))
+      return name.str();
+    return std::nullopt;
+  }
+
+  if (node.GetKind() != NodeKind::eMemberOfNode)
+    return std::nullopt;
+  const auto &member = static_cast<const MemberOfNode &>(node);
+  if (member.GetIsArrow())
+    return std::nullopt;
+  std::optional<std::string> base_name = GetRegisterPathName(member.GetBase());
+  if (!base_name)
+    return std::nullopt;
+  return *base_name + "." + member.GetFieldName().str();
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -74,8 +124,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
   if (!valobj)
     return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
                                                 location);
-  llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
   if (!type_system)
     return type_system.takeError();
 
@@ -93,11 +142,11 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       CompilerType uint_type =
           GetBasicType(*type_system, lldb::eBasicTypeUnsignedInt);
       llvm::Expected<uint64_t> int_bit_size =
-          int_type.GetBitSize(&m_stack_frame);
+          int_type.GetBitSize(m_exe_ctx.GetBestExecutionContextScope());
       if (!int_bit_size)
         return int_bit_size.takeError();
       llvm::Expected<uint64_t> uint_bit_size =
-          uint_type.GetBitSize(&m_stack_frame);
+          uint_type.GetBitSize(m_exe_ctx.GetBestExecutionContextScope());
       if (!uint_bit_size)
         return uint_bit_size.takeError();
       if (bitfield_size < *int_bit_size ||
@@ -120,13 +169,13 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       bool resolved = valobj->ResolveValue(scalar);
       if (!resolved)
         return llvm::createStringError("invalid scalar value");
-      return ValueObject::CreateValueObjectFromScalar(m_stack_frame, scalar,
+      return ValueObject::CreateValueObjectFromScalar(m_exe_ctx, scalar,
                                                       in_type, "result");
     }
   }
 
   if (in_type.IsArrayType())
-    valobj = ArrayToPointerConversion(*valobj, m_stack_frame, "result");
+    valobj = ArrayToPointerConversion(*valobj, m_exe_ctx, "result");
 
   CompilerType promoted_type =
       valobj->GetCompilerType().GetPromotedIntegerType();
@@ -205,16 +254,17 @@ Interpreter::PromoteSignedInteger(CompilerType &lhs_type,
                                   CompilerType &rhs_type) {
   assert(lhs_type.IsInteger() && rhs_type.IsInteger());
   if (!lhs_type.IsSigned() && rhs_type.IsSigned()) {
-    llvm::Expected<uint64_t> lhs_size = lhs_type.GetBitSize(&m_stack_frame);
+    llvm::Expected<uint64_t> lhs_size =
+        lhs_type.GetBitSize(m_exe_ctx.GetBestExecutionContextScope());
     if (!lhs_size)
       return lhs_size.takeError();
-    llvm::Expected<uint64_t> rhs_size = rhs_type.GetBitSize(&m_stack_frame);
+    llvm::Expected<uint64_t> rhs_size =
+        rhs_type.GetBitSize(m_exe_ctx.GetBestExecutionContextScope());
     if (!rhs_size)
       return rhs_size.takeError();
 
     if (*rhs_size == *lhs_size) {
-      llvm::Expected<lldb::TypeSystemSP> type_system =
-          GetTypeSystemFromCU(m_stack_frame);
+      llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
       if (!type_system)
         return type_system.takeError();
       CompilerType r_type_unsigned = GetBasicType(
@@ -310,12 +360,14 @@ static lldb::VariableSP DILFindVariable(ConstString name,
 }
 
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
-                                           StackFrame &stack_frame,
-                                           lldb::TargetSP target_sp,
+                                           ExecutionContext &exe_ctx,
                                            lldb::DynamicValueType use_dynamic) {
   // Get a global variables list without the locals from the current frame
+  auto frame_sp = exe_ctx.GetFrameSP();
+  if (!frame_sp)
+    return nullptr;
   SymbolContext symbol_context =
-      stack_frame.GetSymbolContext(lldb::eSymbolContextCompUnit);
+      frame_sp->GetSymbolContext(lldb::eSymbolContextCompUnit);
   lldb::VariableListSP variable_list;
   if (symbol_context.comp_unit)
     variable_list = symbol_context.comp_unit->GetVariableList(true);
@@ -326,14 +378,16 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
     lldb::VariableSP var_sp =
         DILFindVariable(ConstString(name_ref), *variable_list);
     if (var_sp)
-      value_sp =
-          stack_frame.GetValueObjectForFrameVariable(var_sp, use_dynamic);
+      value_sp = frame_sp->GetValueObjectForFrameVariable(var_sp, use_dynamic);
   }
 
   if (value_sp)
     return value_sp;
 
   // Check for match in modules global variables.
+  auto target_sp = exe_ctx.GetTargetSP();
+  if (!target_sp)
+    return nullptr;
   VariableList modules_var_list;
   target_sp->GetImages().FindGlobalVariables(
       ConstString(name_ref), std::numeric_limits<uint32_t>::max(),
@@ -343,7 +397,8 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
     lldb::VariableSP var_sp =
         DILFindVariable(ConstString(name_ref), modules_var_list);
     if (var_sp)
-      value_sp = ValueObjectVariable::Create(&stack_frame, var_sp);
+      value_sp = ValueObjectVariable::Create(
+          exe_ctx.GetBestExecutionContextScope(), var_sp);
 
     if (value_sp)
       return value_sp;
@@ -352,9 +407,12 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
 }
 
 lldb::ValueObjectSP LookupPersistentIdentifier(llvm::StringRef name_ref,
-                                               StackFrame &stack_frame,
-                                               lldb::TargetSP target_sp,
+                                               ExecutionContext &exe_ctx,
                                                lldb::LanguageType language) {
+  auto target_sp = exe_ctx.GetTargetSP();
+  if (!target_sp)
+    return nullptr;
+
   if (name_ref.starts_with("$")) {
     if (auto *state =
             target_sp->GetPersistentExpressionStateForLanguage(language))
@@ -366,17 +424,21 @@ lldb::ValueObjectSP LookupPersistentIdentifier(llvm::StringRef name_ref,
 }
 
 lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
-                                     StackFrame &stack_frame,
+                                     ExecutionContext &exe_ctx,
                                      lldb::DynamicValueType use_dynamic) {
   // Support $rax as a special syntax for accessing registers.
   // Will return an invalid value in case the requested register doesn't exist.
+  auto frame_sp = exe_ctx.GetFrameSP();
+  if (!frame_sp)
+    return nullptr;
   if (name_ref.consume_front("$")) {
-    lldb::RegisterContextSP reg_ctx(stack_frame.GetRegisterContext());
+    lldb::RegisterContextSP reg_ctx(frame_sp->GetRegisterContext());
     if (!reg_ctx)
       return nullptr;
 
     if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name_ref))
-      return ValueObjectRegister::Create(&stack_frame, reg_ctx, reg_info);
+      return ValueObjectRegister::Create(exe_ctx.GetBestExecutionContextScope(),
+                                         reg_ctx, reg_info);
 
     return nullptr;
   }
@@ -384,8 +446,7 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
   if (!name_ref.contains("::")) {
     // Lookup in the current frame.
     // Try looking for a local variable in current scope.
-    lldb::VariableListSP variable_list(
-        stack_frame.GetInScopeVariableList(false));
+    lldb::VariableListSP variable_list(frame_sp->GetInScopeVariableList(false));
 
     lldb::ValueObjectSP value_sp;
     if (variable_list) {
@@ -393,17 +454,17 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
           variable_list->FindVariable(ConstString(name_ref));
       if (var_sp)
         value_sp =
-            stack_frame.GetValueObjectForFrameVariable(var_sp, use_dynamic);
+            frame_sp->GetValueObjectForFrameVariable(var_sp, use_dynamic);
     }
 
     if (value_sp)
       return value_sp;
 
     // Try looking for an instance variable (class member).
-    SymbolContext sc = stack_frame.GetSymbolContext(
-        lldb::eSymbolContextFunction | lldb::eSymbolContextBlock);
+    SymbolContext sc = frame_sp->GetSymbolContext(lldb::eSymbolContextFunction |
+                                                  lldb::eSymbolContextBlock);
     llvm::StringRef instance_name = sc.GetInstanceName();
-    value_sp = stack_frame.FindVariable(ConstString(instance_name));
+    value_sp = frame_sp->FindVariable(ConstString(instance_name));
     if (value_sp)
       value_sp = value_sp->GetChildMemberWithName(name_ref);
 
@@ -414,20 +475,20 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 }
 
 lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
-                                    ExecutionContextScope &ctx_scope) {
+                                    ExecutionContext &exe_ctx) {
   if (name_ref.contains("::")) {
     llvm::StringRef enum_typename, enumerator_name;
     // FIXME: Change this to a structured binding for lambda capturing
     // once we have C++20.
     std::tie(enum_typename, enumerator_name) = name_ref.rsplit("::");
-    CompilerType enum_type = ResolveTypeByName(enum_typename.str(), ctx_scope);
+    CompilerType enum_type = ResolveTypeByName(enum_typename.str(), exe_ctx);
     lldb::ValueObjectSP result;
     enum_type.ForEachEnumerator([&](const CompilerType &integer_type,
                                     ConstString name,
                                     const llvm::APSInt &value) -> bool {
       if (name == enumerator_name) {
         Scalar scalar(value);
-        result = ValueObject::CreateValueObjectFromScalar(ctx_scope, scalar,
+        result = ValueObject::CreateValueObjectFromScalar(exe_ctx, scalar,
                                                           enum_type, "result");
         return false; // Stop iterating
       }
@@ -438,11 +499,9 @@ lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
   return nullptr;
 }
 
-Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
-                         StackFrame &stack_frame,
+Interpreter::Interpreter(ExecutionContext &exe_ctx, llvm::StringRef expr,
                          lldb::DynamicValueType use_dynamic, uint32_t options)
-    : m_target(std::move(target)), m_expr(expr), m_stack_frame(stack_frame),
-      m_use_dynamic(use_dynamic) {
+    : m_exe_ctx(exe_ctx), m_expr(expr), m_use_dynamic(use_dynamic) {
 
   const bool check_ptr_vs_member =
       (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
@@ -457,6 +516,22 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
   m_check_ptr_vs_member = check_ptr_vs_member;
   m_allow_var_updates = allow_var_updates;
   m_allow_globals = !disallow_globals;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateTree(const ASTNodeUP &tree) {
+  assert(tree && "ASTNodeUP must not contain a nullptr");
+
+  auto value_or_error = Interpreter::Evaluate(*tree);
+  if (!value_or_error) {
+    auto error = value_or_error.takeError();
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "[Interpreter::Evaluate] DIL interpreter failed:\n{0}",
+             llvm::toStringWithoutConsuming(error));
+    return error;
+  }
+
+  return value_or_error;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -492,35 +567,34 @@ Interpreter::Visit(const IdentifierNode &node) {
   lldb::DynamicValueType use_dynamic = m_use_dynamic;
 
   lldb::ValueObjectSP identifier =
-      LookupIdentifier(node.GetName(), m_stack_frame, use_dynamic);
+      LookupIdentifier(node.GetName(), m_exe_ctx, use_dynamic);
 
   if (!identifier && m_allow_globals)
-    identifier = LookupGlobalIdentifier(node.GetName(), m_stack_frame, m_target,
-                                        use_dynamic);
+    identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx, use_dynamic);
 
   if (!identifier)
-    identifier = LookupEnumValue(node.GetName(), m_stack_frame);
+    identifier = LookupEnumValue(node.GetName(), m_exe_ctx);
 
   if (!identifier && node.GetName()[0] == '$') {
-    auto language = GetSourceLanguageFromCU(m_stack_frame);
-    if (!language)
-      return language.takeError();
-    identifier = LookupPersistentIdentifier(node.GetName(), m_stack_frame,
-                                            m_target, language.get());
+    auto language = GetSourceLanguageFromCU();
+    if (language)
+      identifier =
+          LookupPersistentIdentifier(node.GetName(), m_exe_ctx, language.get());
+    else
+      // Fall through to the unknown identifier diagnostic without a CU.
+      llvm::consumeError(language.takeError());
   }
 
   if (!identifier && node.GetName() == "nullptr") {
     // If we got a "nullptr" identifier, and there is no defined variable with
     // this name, resolve it as a null pointer.
-    llvm::Expected<lldb::TypeSystemSP> type_system =
-        GetTypeSystemFromCU(m_stack_frame);
+    llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
     if (!type_system)
       return type_system.takeError();
-    type_system.get()->GetPointerByteSize();
     llvm::APInt value(type_system.get()->GetPointerByteSize() * CHAR_BIT, 0);
     Scalar scalar(value);
     CompilerType type = GetBasicType(*type_system, lldb::eBasicTypeNullPtr);
-    return ValueObject::CreateValueObjectFromScalar(m_stack_frame, scalar, type,
+    return ValueObject::CreateValueObjectFromScalar(m_exe_ctx, scalar, type,
                                                     "result");
   }
 
@@ -598,7 +672,7 @@ Interpreter::Visit(const UnaryOpNode &node) {
     bool negated = scalar.UnaryNegate();
     if (negated)
       return ValueObject::CreateValueObjectFromScalar(
-          m_stack_frame, scalar, operand->GetCompilerType(), "result");
+          m_exe_ctx, scalar, operand->GetCompilerType(), "result");
     break;
   }
   case UnaryOpKind::Plus: {
@@ -655,7 +729,7 @@ Interpreter::Visit(const UnaryOpNode &node) {
     bool flipped = scalar.OnesComplement();
     if (flipped)
       return ValueObject::CreateValueObjectFromScalar(
-          m_stack_frame, scalar, operand->GetCompilerType(), "result");
+          m_exe_ctx, scalar, operand->GetCompilerType(), "result");
     break;
   }
   case UnaryOpKind::LNot: {
@@ -672,14 +746,13 @@ Interpreter::Visit(const UnaryOpNode &node) {
       return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                   node.GetLocation());
     }
-    llvm::Expected<lldb::TypeSystemSP> type_system =
-        GetTypeSystemFromCU(m_stack_frame);
+    llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
     if (!type_system)
       return type_system.takeError();
     auto value_or_err = operand->GetValueAsBool();
     if (!value_or_err)
       return value_or_err.takeError();
-    return ValueObject::CreateValueObjectFromBool(m_stack_frame, *type_system,
+    return ValueObject::CreateValueObjectFromBool(m_exe_ctx, *type_system,
                                                   !(*value_or_err), "result");
   }
   }
@@ -708,7 +781,8 @@ Interpreter::PointerOffset(lldb::ValueObjectSP ptr, lldb::ValueObjectSP offset,
   }
 
   llvm::Expected<uint64_t> byte_size =
-      ptr->GetCompilerType().GetPointeeType().GetByteSize(&m_stack_frame);
+      ptr->GetCompilerType().GetPointeeType().GetByteSize(
+          m_exe_ctx.GetBestExecutionContextScope());
   if (!byte_size)
     return byte_size.takeError();
   uint64_t ptr_addr = ptr->GetValueAsUnsigned(0);
@@ -717,10 +791,9 @@ Interpreter::PointerOffset(lldb::ValueObjectSP ptr, lldb::ValueObjectSP offset,
   else
     ptr_addr += offset_int * (*byte_size);
 
-  ExecutionContext exe_ctx(m_target.get(), false);
   Scalar scalar(ptr_addr);
   return ValueObject::CreateValueObjectFromScalar(
-      m_stack_frame, scalar, ptr->GetCompilerType(), "result");
+      m_exe_ctx, scalar, ptr->GetCompilerType(), "result");
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -742,7 +815,7 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
   }
 
   auto value_object = [this, result_type](Scalar scalar) {
-    return ValueObject::CreateValueObjectFromScalar(m_stack_frame, scalar,
+    return ValueObject::CreateValueObjectFromScalar(m_exe_ctx, scalar,
                                                     result_type, "result");
   };
 
@@ -864,7 +937,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
     }
 
     llvm::Expected<uint64_t> lhs_byte_size =
-        lhs_type.GetPointeeType().GetByteSize(&m_stack_frame);
+        lhs_type.GetPointeeType().GetByteSize(
+            m_exe_ctx.GetBestExecutionContextScope());
     if (!lhs_byte_size)
       return lhs_byte_size.takeError();
     // Since pointers have compatible types, both have the same pointee size.
@@ -880,8 +954,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
     }
     diff /= item_size;
 
-    llvm::Expected<lldb::TypeSystemSP> type_system =
-        GetTypeSystemFromCU(m_stack_frame);
+    llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
     if (!type_system)
       return type_system.takeError();
     CompilerType ptrdiff_type = type_system.get()->GetPointerDiffType(true);
@@ -890,7 +963,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
           m_expr, "unable to determine pointer diff type", location);
 
     Scalar scalar(diff);
-    return ValueObject::CreateValueObjectFromScalar(m_stack_frame, scalar,
+    return ValueObject::CreateValueObjectFromScalar(m_exe_ctx, scalar,
                                                     ptrdiff_type, "result");
   }
 
@@ -1057,9 +1130,9 @@ Interpreter::ValidateComparison(BinaryOpKind kind, lldb::ValueObjectSP &lhs,
       orig_rhs_type.IsNullPtrType() || IsLiteralZero(rhs, rhs_is_literal);
 
   if (orig_lhs_type.IsArrayType())
-    lhs = ArrayToPointerConversion(*lhs, m_stack_frame, "result");
+    lhs = ArrayToPointerConversion(*lhs, m_exe_ctx, "result");
   if (orig_rhs_type.IsArrayType())
-    rhs = ArrayToPointerConversion(*rhs, m_stack_frame, "result");
+    rhs = ArrayToPointerConversion(*rhs, m_exe_ctx, "result");
 
   CompilerType lhs_type = lhs->GetCompilerType();
   CompilerType rhs_type = rhs->GetCompilerType();
@@ -1202,8 +1275,7 @@ Interpreter::EvaluateComparison(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                                       rhs_is_literal, location))
     return error;
 
-  llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
   if (!type_system)
     return type_system.takeError();
   CompilerType boolean_type = GetBasicType(*type_system, lldb::eBasicTypeBool);
@@ -1263,7 +1335,8 @@ Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
   if (!success)
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "could not get the shift amount as an integer", location);
-  llvm::Expected<uint64_t> lhs_size = lhs_type.GetBitSize(&m_stack_frame);
+  llvm::Expected<uint64_t> lhs_size =
+      lhs_type.GetBitSize(m_exe_ctx.GetBestExecutionContextScope());
   if (!lhs_size)
     return lhs_size.takeError();
   if (amount >= *lhs_size)
@@ -1291,8 +1364,7 @@ Interpreter::EvaluateLogical(const BinaryOpNode &node) {
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node.GetLocation());
   }
-  llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
   if (!type_system)
     return type_system.takeError();
 
@@ -1304,7 +1376,7 @@ Interpreter::EvaluateLogical(const BinaryOpNode &node) {
   bool lhs_val = *lvalue_or_err;
   bool exit_early = node.GetKind() == BinaryOpKind::LAnd ? !lhs_val : lhs_val;
   if (exit_early)
-    return ValueObject::CreateValueObjectFromBool(m_stack_frame, *type_system,
+    return ValueObject::CreateValueObjectFromBool(m_exe_ctx, *type_system,
                                                   lhs_val, "result");
 
   // If the result is to be determined, evaluate the RHS.
@@ -1324,7 +1396,7 @@ Interpreter::EvaluateLogical(const BinaryOpNode &node) {
   auto rvalue_or_err = rhs->GetValueAsBool();
   if (!rvalue_or_err)
     return rvalue_or_err.takeError();
-  return ValueObject::CreateValueObjectFromBool(m_stack_frame, *type_system,
+  return ValueObject::CreateValueObjectFromBool(m_exe_ctx, *type_system,
                                                 *rvalue_or_err, "result");
 }
 
@@ -1460,6 +1532,18 @@ Interpreter::Visit(const BinaryOpNode &node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const MemberOfNode &node) {
+  if (std::optional<std::string> register_name = GetRegisterPathName(node)) {
+    auto frame_sp = m_exe_ctx.GetFrameSP();
+    lldb::RegisterContextSP reg_ctx_sp =
+        frame_sp ? frame_sp->GetRegisterContext() : nullptr;
+    if (reg_ctx_sp) {
+      if (const RegisterInfo *reg_info =
+              reg_ctx_sp->GetRegisterInfoByName(*register_name))
+        return ValueObjectRegister::Create(
+            m_exe_ctx.GetBestExecutionContextScope(), reg_ctx_sp, reg_info);
+    }
+  }
+
   auto base_or_err = Evaluate(node.GetBase());
   if (!base_or_err)
     return base_or_err;
@@ -1577,6 +1661,17 @@ Interpreter::Visit(const ArraySubscriptNode &node) {
 
   CompilerType base_type = base->GetCompilerType().GetNonReferenceType();
   base->GetExpressionPath(var_expr_path_strm);
+  if (base->GetValueType() == lldb::eValueTypeRegister &&
+      !base_type.IsPointerType() &&
+      child_idx > std::numeric_limits<uint32_t>::max()) {
+    std::string err_msg = llvm::formatv(
+        "array index {0} is not valid for \"({1}) {2}\"", child_idx,
+        base->GetTypeName().AsCString("<invalid type>"),
+        var_expr_path_strm.GetData());
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
+                                                node.GetLocation());
+  }
+
   bool is_incomplete_array = false;
   if (base_type.IsPointerType()) {
     bool is_objc_pointer = true;
@@ -1641,7 +1736,8 @@ Interpreter::Visit(const ArraySubscriptNode &node) {
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
                                                   node.GetLocation());
     }
-  } else if (base_type.IsArrayType(nullptr, nullptr, &is_incomplete_array)) {
+  } else if (base_type.IsArrayType(nullptr, nullptr, &is_incomplete_array) ||
+             base_type.IsVectorType()) {
     child_valobj_sp = base->GetChildAtIndex(child_idx);
     if (!child_valobj_sp && (is_incomplete_array || m_use_synthetic))
       child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
@@ -1768,8 +1864,8 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
   // The high index must lie within the base object's storage; a bit index past
   // its bit size shifts out of bounds when the child is later read or formatted
   // (GetMaxU64Bitfield).
-  llvm::Expected<uint64_t> base_bit_size =
-      base->GetCompilerType().GetBitSize(&m_stack_frame);
+  llvm::Expected<uint64_t> base_bit_size = base->GetCompilerType().GetBitSize(
+      m_exe_ctx.GetBestExecutionContextScope());
   if (!base_bit_size)
     return base_bit_size.takeError();
   if (static_cast<uint64_t>(last_index) >= *base_bit_size) {
@@ -1796,7 +1892,7 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
 
 llvm::Expected<CompilerType>
 Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
-                             ExecutionContextScope &ctx,
+                             ExecutionContext &exe_ctx,
                              const IntegerLiteralNode &literal) {
   // Binary, Octal, Hexadecimal and literals with a U suffix are allowed to be
   // an unsigned integer.
@@ -1818,7 +1914,8 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
     CompilerType signed_type = type_system->GetBasicTypeFromAST(signed_);
     if (!signed_type)
       continue;
-    llvm::Expected<uint64_t> size = signed_type.GetBitSize(&ctx);
+    llvm::Expected<uint64_t> size =
+        signed_type.GetBitSize(exe_ctx.GetBestExecutionContextScope());
     if (!size)
       return size.takeError();
     if (!literal.IsUnsigned() && apint.isIntN(*size - 1))
@@ -1835,20 +1932,20 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IntegerLiteralNode &node) {
-  llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
   if (!type_system)
     return type_system.takeError();
 
   llvm::Expected<CompilerType> type =
-      PickIntegerType(*type_system, m_stack_frame, node);
+      PickIntegerType(*type_system, m_exe_ctx, node);
   if (!type)
     return type.takeError();
 
   Scalar scalar = node.GetValue();
   // APInt from StringRef::getAsInteger comes with just enough bitwidth to
   // hold the value. This adjusts APInt bitwidth to match the compiler type.
-  llvm::Expected<uint64_t> type_bitsize = type->GetBitSize(&m_stack_frame);
+  llvm::Expected<uint64_t> type_bitsize =
+      type->GetBitSize(m_exe_ctx.GetBestExecutionContextScope());
   if (!type_bitsize)
     return type_bitsize.takeError();
   // Literal itself cannot be a negative value, so we do an unsigned extension.
@@ -1856,14 +1953,13 @@ Interpreter::Visit(const IntegerLiteralNode &node) {
   // If the picked compiler type is signed, make the scalar signed as well.
   if (type->IsSigned())
     scalar.MakeSigned();
-  return ValueObject::CreateValueObjectFromScalar(m_stack_frame, scalar, *type,
+  return ValueObject::CreateValueObjectFromScalar(m_exe_ctx, scalar, *type,
                                                   "result");
 }
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const FloatLiteralNode &node) {
-  llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
   if (!type_system)
     return type_system.takeError();
 
@@ -1878,19 +1974,18 @@ Interpreter::Visit(const FloatLiteralNode &node) {
         m_expr, "unable to create a const literal", node.GetLocation());
 
   Scalar scalar = node.GetValue();
-  return ValueObject::CreateValueObjectFromScalar(m_stack_frame, scalar, type,
+  return ValueObject::CreateValueObjectFromScalar(m_exe_ctx, scalar, type,
                                                   "result");
 }
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BooleanLiteralNode &node) {
   bool value = node.GetValue();
-  llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
   if (!type_system)
     return type_system.takeError();
-  return ValueObject::CreateValueObjectFromBool(m_stack_frame, *type_system,
-                                                value, "result");
+  return ValueObject::CreateValueObjectFromBool(m_exe_ctx, *type_system, value,
+                                                "result");
 }
 
 llvm::Expected<CastKind>
@@ -1915,7 +2010,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
     // size.
     uint64_t type_byte_size = 0;
     uint64_t rhs_type_byte_size = 0;
-    if (auto temp = target_type.GetByteSize(&m_stack_frame)) {
+    if (auto temp =
+            target_type.GetByteSize(m_exe_ctx.GetBestExecutionContextScope())) {
       type_byte_size = *temp;
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
@@ -1927,7 +2023,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
           target_type.TypeDescription().length());
     }
 
-    if (auto temp = source_type.GetByteSize(&m_stack_frame)) {
+    if (auto temp =
+            source_type.GetByteSize(m_exe_ctx.GetBestExecutionContextScope())) {
       rhs_type_byte_size = *temp;
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
@@ -2019,7 +2116,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
   if (op_type.IsReferenceType())
     op_type = op_type.GetNonReferenceType();
   if (target_type.IsScalarType() && op_type.IsArrayType()) {
-    operand = ArrayToPointerConversion(*operand, m_stack_frame,
+    operand = ArrayToPointerConversion(*operand, m_exe_ctx,
                                        operand->GetName().GetStringRef());
     op_type = operand->GetCompilerType();
   }
@@ -2057,10 +2154,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                         ? operand->GetLoadAddress()
                         : (op_type.IsSigned() ? operand->GetValueAsSigned(0)
                                               : operand->GetValueAsUnsigned(0));
-    llvm::StringRef name = "result";
-    ExecutionContext exe_ctx(m_target.get(), false);
-    result = ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
-                                                       target_type,
+    result = ValueObject::CreateValueObjectFromAddress("result", addr,
+                                                       m_exe_ctx, target_type,
                                                        /* do_deref */ false);
     break;
   }
@@ -2123,7 +2218,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode &node) {
   if (typearg.IsValid()) {
     if (typearg.IsReferenceType())
       typearg = typearg.GetNonReferenceType();
-    llvm::Expected<uint64_t> byte_size = typearg.GetByteSize(m_target.get());
+    llvm::Expected<uint64_t> byte_size =
+        typearg.GetByteSize(m_exe_ctx.GetTargetSP().get());
     if (!byte_size)
       return byte_size.takeError();
     size = *byte_size;
@@ -2144,8 +2240,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode &node) {
     size = *byte_size;
   }
 
-  llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_stack_frame);
+  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU();
   if (!type_system)
     return type_system.takeError();
   CompilerType size_type = type_system.get()->GetSizeType();
@@ -2153,8 +2248,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode &node) {
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "unable to determine size type", node.GetLocation());
 
-  return ValueObject::CreateValueObjectFromScalar(m_stack_frame, size,
-                                                  size_type, "result");
+  return ValueObject::CreateValueObjectFromScalar(m_exe_ctx, size, size_type,
+                                                  "result");
 }
 
 } // namespace lldb_private::dil

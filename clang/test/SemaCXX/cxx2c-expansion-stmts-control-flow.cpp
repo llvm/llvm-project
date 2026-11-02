@@ -120,7 +120,7 @@ void GH210575(int i) {
   switch (i) {
     template for (auto x : {1, 2}) {
       switch (i) {
-        bar baz(); // expected-error {{unknown type name 'bar'}}
+        bar baz(); // expected-error {{unknown type name 'bar'}} expected-warning {{empty parentheses interpreted as a function declaration}} expected-note {{replace parentheses with an initializer to declare a variable}}
       }
     }
   }

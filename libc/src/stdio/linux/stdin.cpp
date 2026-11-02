@@ -9,6 +9,7 @@
 #include "src/stdio/stdin.h"
 
 #include "hdr/types/FILE.h"
+#include "src/__support/File/file_mode.h"
 
 #ifdef LIBC_FULL_BUILD
 
@@ -21,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 constexpr size_t STDIN_BUFFER_SIZE = 512;
 uint8_t stdin_buffer[STDIN_BUFFER_SIZE];
 static LinuxFile StdIn(0, stdin_buffer, STDIN_BUFFER_SIZE, _IOFBF, false,
-                       File::ModeFlags(File::OpenMode::READ));
+                       FileMode::READ_MODE);
 
 LLVM_LIBC_VARIABLE(FILE *, stdin) = reinterpret_cast<FILE *>(&StdIn);
 

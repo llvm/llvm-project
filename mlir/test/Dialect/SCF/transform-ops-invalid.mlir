@@ -255,3 +255,98 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// An unsigned loop with lb > ub (as unsigned values) has no iterations and
+// must not be peeled.
+
+func.func @peel_front_unsigned_empty(%out: memref<8xindex>) {
+  %lb = arith.constant -1 : index
+  %ub = arith.constant 5 : index
+  %step = arith.constant 1 : index
+  scf.for unsigned %i = %lb to %ub step %step {
+    %c0 = arith.constant 0 : index
+    memref.store %i, %out[%c0] : memref<8xindex>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %loops = transform.structured.match ops{["scf.for"]} in %root
+        : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to peel the first iteration}}
+    %main, %rest = transform.loop.peel %loops peel_front = true
+        : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// signed constant bounds where ub - lb overflows int64. Must refuse.
+func.func @signed_sub_overflow(%m: memref<?xi64>) {
+  %c0 = arith.constant 0 : index
+  %lb = arith.constant 9223372036854775807 : i64
+  %ub = arith.constant -2 : i64
+  %step = arith.constant 9223372036854775806 : i64
+  scf.for %i = %lb to %ub step %step : i64 {
+    memref.store %i, %m[%c0] : memref<?xi64>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %l = transform.structured.match ops{["scf.for"]} in %root : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to peel the first iteration}}
+    %p, %r = transform.loop.peel %l peel_front = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// -----
+
+// constant bounds, exactly one iteration. Must refuse.
+func.func @const_one_iteration(%m: memref<4xindex>) {
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 4611686018427387905 : index
+  %step = arith.constant 4611686018427387904 : index
+  scf.for unsigned %i = %lb to %ub step %step {
+    memref.store %i, %m[%lb] : memref<4xindex>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %l = transform.structured.match ops{["scf.for"]} in %root : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to peel the first iteration}}
+    %p, %r = transform.loop.peel %l peel_front = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// -----
+
+// constant empty loop that looks non-empty if read as signed.
+// lb = 2^63+5 (negative as signed), ub = 5. Unsigned: ub <= lb, so refuse.
+func.func @const_empty_unsigned(%m: memref<4xindex>) {
+  %lb = arith.constant -9223372036854775803 : index
+  %ub = arith.constant 5 : index
+  %step = arith.constant 1 : index
+  scf.for unsigned %i = %lb to %ub step %step {
+    memref.store %i, %m[%step] : memref<4xindex>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %l = transform.structured.match ops{["scf.for"]} in %root : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to peel the first iteration}}
+    %p, %r = transform.loop.peel %l peel_front = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    transform.yield
+  }
+}

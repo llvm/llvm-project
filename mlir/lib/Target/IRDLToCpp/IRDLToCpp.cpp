@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -52,6 +53,8 @@ struct TypeStrings {
 struct OpStrings {
   StringRef opName;
   std::string opCppName;
+  std::string opScopedCppName;
+  SmallVector<std::string> opNameSpaces;
   SmallVector<std::string> opResultNames;
   SmallVector<std::string> opOperandNames;
   SmallVector<std::string> opRegionNames;
@@ -65,16 +68,42 @@ static std::string joinNameList(llvm::ArrayRef<std::string> names) {
   return nameArray;
 }
 
+/// Prefix identifiers that start with a digit to make them valid C++ names.
+static std::string legalizeCppName(StringRef name) {
+  if (!name.empty() && llvm::isDigit(name.front()))
+    return ("_" + name).str();
+  return name.str();
+}
+
 /// Generates the C++ type name for a TypeOp
 static std::string typeToCppName(irdl::TypeOp type) {
-  return llvm::formatv("{0}Type",
-                       convertToCamelFromSnakeCase(type.getSymName(), true));
+  return llvm::formatv("{0}Type", legalizeCppName(convertToCamelFromSnakeCase(
+                                      type.getSymName(), true)));
 }
 
 /// Generates the C++ class name for an OperationOp
 static std::string opToCppName(irdl::OperationOp op) {
-  return llvm::formatv("{0}Op",
-                       convertToCamelFromSnakeCase(op.getSymName(), true));
+  const auto opName = op.getSymName();
+  const auto periodIndex = opName.find_last_of(".");
+  const auto nameSubstr = periodIndex == std::string::npos
+                              ? opName
+                              : opName.substr(periodIndex + 1);
+  return llvm::formatv(
+      "{0}Op", legalizeCppName(convertToCamelFromSnakeCase(nameSubstr, true)));
+}
+
+/// Generates the C++ namespace components for an OperationOp.
+static SmallVector<std::string> opToCppNamespaces(irdl::OperationOp op) {
+  auto parts = SmallVector<StringRef>(llvm::split(op.getSymName(), "."));
+  parts.pop_back();
+  return llvm::map_to_vector(parts, legalizeCppName);
+}
+
+// Generates the C++ class name for an OperationOp, scoped to the namespace
+static std::string opToScopedCppName(irdl::OperationOp op) {
+  auto names = opToCppNamespaces(op);
+  names.push_back(opToCppName(op));
+  return llvm::join(names, "::");
 }
 
 /// Generates TypeStrings from a TypeOp
@@ -93,7 +122,9 @@ static OpStrings getStrings(irdl::OperationOp op) {
 
   OpStrings strings;
   strings.opName = op.getSymName();
+  strings.opNameSpaces = opToCppNamespaces(op);
   strings.opCppName = opToCppName(op);
+  strings.opScopedCppName = opToScopedCppName(op);
 
   if (operandOp) {
     strings.opOperandNames = SmallVector<std::string>(
@@ -134,6 +165,7 @@ static void fillDict(irdl::detail::dictionary &dict, const OpStrings &strings) {
 
   dict["OP_NAME"] = strings.opName;
   dict["OP_CPP_NAME"] = strings.opCppName;
+  dict["OP_SCOPED_CPP_NAME"] = strings.opScopedCppName;
   dict["OP_OPERAND_COUNT"] = std::to_string(strings.opOperandNames.size());
   dict["OP_RESULT_COUNT"] = std::to_string(strings.opResultNames.size());
   dict["OP_OPERAND_INITIALIZER_LIST"] =
@@ -141,6 +173,32 @@ static void fillDict(irdl::detail::dictionary &dict, const OpStrings &strings) {
   dict["OP_RESULT_INITIALIZER_LIST"] =
       resultCount ? joinNameList(strings.opResultNames) : "{\"\"}";
   dict["OP_REGION_COUNT"] = std::to_string(regionCount);
+  dict["NAMESPACE_OPEN"] =
+      (dict["NAMESPACE_OPEN"] +
+       llvm::join(llvm::map_range(strings.opNameSpaces,
+                                  [](llvm::StringRef ref) -> std::string {
+                                    return llvm::formatv("namespace {0} {{",
+                                                         ref);
+                                  }),
+                  "\n"))
+          .str();
+  dict["NAMESPACE_PATH"] =
+      (dict["NAMESPACE_PATH"] +
+       llvm::join(llvm::map_range(strings.opNameSpaces,
+                                  [](llvm::StringRef ref) -> std::string {
+                                    return llvm::formatv("::{0}", ref);
+                                  }),
+                  ""))
+          .str();
+  dict["NAMESPACE_CLOSE"] =
+      (llvm::join(llvm::map_range(llvm::reverse(strings.opNameSpaces),
+                                  [](llvm::StringRef ref) -> std::string {
+                                    return llvm::formatv("} // namespace {0}\n",
+                                                         ref);
+                                  }),
+                  "") +
+       dict["NAMESPACE_CLOSE"])
+          .str();
 }
 
 /// Fills a dictionary with values from DialectStrings
@@ -166,7 +224,7 @@ static LogicalResult generateTypedefList(irdl::DialectOp &dialect,
 static LogicalResult generateOpList(irdl::DialectOp &dialect,
                                     SmallVector<std::string> &opNames) {
   auto operationOps = dialect.getOps<irdl::OperationOp>();
-  auto range = llvm::map_range(operationOps, opToCppName);
+  auto range = llvm::map_range(operationOps, opToScopedCppName);
   opNames = SmallVector<std::string>(range);
   return success();
 }
@@ -281,26 +339,27 @@ static SmallVector<std::string> generateTraits(irdl::OperationOp op,
   return cppTraitNames;
 }
 
-static LogicalResult generateOperationInclude(irdl::OperationOp op,
-                                              raw_ostream &output,
-                                              irdl::detail::dictionary &dict) {
+static LogicalResult
+generateOperationInclude(irdl::OperationOp op, raw_ostream &output,
+                         const irdl::detail::dictionary &dict) {
   static const auto perOpDeclTemplate = irdl::detail::Template(
 #include "Templates/PerOperationDecl.txt"
   );
   const auto opStrings = getStrings(op);
-  fillDict(dict, opStrings);
+  auto opDict = dict;
+  fillDict(opDict, opStrings);
 
   SmallVector<std::string> traitNames = generateTraits(op, opStrings);
   if (traitNames.empty())
-    dict["OP_TEMPLATE_ARGS"] = opStrings.opCppName;
+    opDict["OP_TEMPLATE_ARGS"] = opStrings.opCppName;
   else
-    dict["OP_TEMPLATE_ARGS"] = llvm::formatv("{0}, {1}", opStrings.opCppName,
-                                             llvm::join(traitNames, ", "));
+    opDict["OP_TEMPLATE_ARGS"] = llvm::formatv("{0}, {1}", opStrings.opCppName,
+                                               llvm::join(traitNames, ", "));
 
-  generateOpGetterDeclarations(dict, opStrings);
-  generateOpBuilderDeclarations(dict, opStrings);
+  generateOpGetterDeclarations(opDict, opStrings);
+  generateOpBuilderDeclarations(opDict, opStrings);
 
-  perOpDeclTemplate.render(output, dict);
+  perOpDeclTemplate.render(output, opDict);
   return success();
 }
 
@@ -333,10 +392,16 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
     return failure();
 
   auto classDeclarations =
-      llvm::join(llvm::map_range(opNames,
-                                 [](llvm::StringRef name) -> std::string {
-                                   return llvm::formatv("class {0};", name);
-                                 }),
+      llvm::join(llvm::map_range(
+                     opNames,
+                     [](llvm::StringRef name) -> std::string {
+                       if (name.contains("::")) {
+                         auto [scope, className] = name.rsplit("::");
+                         return llvm::formatv("namespace {0} {{\nclass {1};\n}",
+                                              scope, className);
+                       }
+                       return llvm::formatv("class {0};", name);
+                     }),
                  "\n");
   const auto forwardDeclarations = llvm::formatv(
       "{1}\n{0}\n{2}", std::move(classDeclarations),
@@ -462,7 +527,8 @@ static std::string generateOpDefinition(irdl::detail::dictionary &dict,
   };
 
   auto opStrings = getStrings(op);
-  fillDict(dict, opStrings);
+  auto opDict = dict;
+  fillDict(opDict, opStrings);
 
   auto resultTypes = llvm::join(
       llvm::map_range(opStrings.opResultNames,
@@ -516,13 +582,13 @@ void {0}::build(::mlir::OpBuilder &opBuilder, ::mlir::OperationState &opState, {
       llvm::join(opStrings.opOperandNames, ",") +
           (!opStrings.opOperandNames.empty() ? "," : ""));
 
-  dict["OP_BUILD_DEFS"] = buildDefinition;
+  opDict["OP_BUILD_DEFS"] = buildDefinition;
 
-  generateVerifiers(dict, op, opStrings);
+  generateVerifiers(opDict, op, opStrings);
 
   std::string str;
   llvm::raw_string_ostream stream{str};
-  perOpDefTemplate.render(stream, dict);
+  perOpDefTemplate.render(stream, opDict);
   return str;
 }
 

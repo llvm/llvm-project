@@ -20,13 +20,13 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(ssize_t, sendfile,
                    (int out_fd, int in_fd, off_t *offset, size_t count)) {
 #ifdef SYS_sendfile
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_sendfile, in_fd,
-                                                      out_fd, offset, count);
+  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_sendfile, out_fd,
+                                                      in_fd, offset, count);
 #elif defined(SYS_sendfile64)
   // Same as sendfile but can handle large offsets
   static_assert(sizeof(off_t) == 8);
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_sendfile64, in_fd,
-                                                      out_fd, offset, count);
+  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_sendfile64, out_fd,
+                                                      in_fd, offset, count);
 #else
 #error "sendfile and sendfile64 syscalls not available."
 #endif

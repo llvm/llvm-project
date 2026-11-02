@@ -37,15 +37,16 @@ namespace clang::lifetimes {
 struct LifetimeSafetyOpts {
   /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
   /// be skipped.
-  size_t MaxCFGBlocks;
+  size_t MaxCFGBlocks = 0;
 
   /// Whether to suggest lifetime annotations.
-  bool SuggestAnnotations;
+  bool SuggestAnnotations = false;
 
-  bool CheckNoescapeViolations;
-  bool CheckLifetimeboundViolations;
-  bool CheckMisplacedLifetimebound;
-  bool CheckInapplicableLifetimebound;
+  bool CheckNoescapeViolations = false;
+  bool CheckLifetimeboundViolations = false;
+  bool CheckMisplacedLifetimebound = false;
+  bool CheckInapplicableLifetimebound = false;
+  bool CheckFieldOriginEscape = false;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -74,20 +75,32 @@ public:
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
+  // Overload for a use with only a location and no expression (e.g. a borrow
+  // captured into the object and still held at the capturing method's exit).
+  virtual void reportUseAfterScope(const Expr *IssueExpr, SourceLocation UseLoc,
+                                   const Expr *MovedExpr,
+                                   SourceLocation FreeLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
+
+  // TODO: Report where the object was destroyed when that happens before the
+  // return (inner scopes, temporaries).
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr) {}
+                                    const Expr *MovedExpr,
+                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
                                    const Expr *MovedExpr,
                                    bool IsCapturedByLambda,
-                                   SourceLocation ExpiryLoc) {}
+                                   SourceLocation ExpiryLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportDanglingGlobal(const Expr *IssueExpr,
                                     const VarDecl *DanglingGlobal,
                                     const Expr *MovedExpr,
                                     SourceLocation ExpiryLoc,
+                                    llvm::ArrayRef<const Expr *> ExprChain,
                                     bool IsMain = false) {}
 
   // Reports when a reference/iterator is used after the container operation
@@ -100,18 +113,32 @@ public:
   reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
                              const Expr *InvalidationExpr,
                              llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void
+  reportUseAfterInvalidation(const Expr *IssueExpr, SourceLocation UseLoc,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void
+  reportUseAfterInvalidation(const ParmVarDecl *PVD, SourceLocation UseLoc,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedField(const Expr *IssueExpr,
                                       const FieldDecl *Field,
-                                      const Expr *InvalidationExpr) {}
+                                      const Expr *InvalidationExpr,
+                                      llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedField(const ParmVarDecl *PVD,
                                       const FieldDecl *Field,
-                                      const Expr *InvalidationExpr) {}
+                                      const Expr *InvalidationExpr,
+                                      llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedGlobal(const Expr *IssueExpr,
                                        const VarDecl *Global,
-                                       const Expr *InvalidationExpr) {}
+                                       const Expr *InvalidationExpr,
+                                       llvm::ArrayRef<const Expr *> ExprChain) {
+  }
   virtual void reportInvalidatedGlobal(const ParmVarDecl *PVD,
                                        const VarDecl *Global,
-                                       const Expr *InvalidationExpr) {}
+                                       const Expr *InvalidationExpr,
+                                       llvm::ArrayRef<const Expr *> ExprChain) {
+  }
 
   using EscapingTarget =
       llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
@@ -160,6 +187,11 @@ public:
   virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                                   const CXXMethodDecl *MD,
                                                   const Expr *EscapeExpr) {}
+
+  // Reports when a member function returns an origin of a field.
+  virtual void reportFieldOriginEscape(const CXXMethodDecl *MD,
+                                       const FieldDecl *FD,
+                                       const Expr *EscapeExpr) {}
 
   // Adds inferred lifetime bound attribute for implicit this to its
   // TypeSourceInfo.

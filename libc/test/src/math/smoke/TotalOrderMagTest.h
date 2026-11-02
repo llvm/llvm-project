@@ -148,18 +148,16 @@ public:
   }
 };
 
-#define LIST_TOTALORDERMAG_TESTS(T, func)                                      \
-  using LlvmLibcTotalOrderMagTest = TotalOrderMagTestTemplate<T>;              \
-  TEST_F(LlvmLibcTotalOrderMagTest, XLesserThanY) { testXLesserThanY(&func); } \
-  TEST_F(LlvmLibcTotalOrderMagTest, XGreaterThanY) {                           \
-    testXGreaterThanY(&func);                                                  \
-  }                                                                            \
-  TEST_F(LlvmLibcTotalOrderMagTest, XEqualToY) { testXEqualToY(&func); }       \
-  TEST_F(LlvmLibcTotalOrderMagTest, SingleNaN) { testSingleNaN(&func); }       \
-  TEST_F(LlvmLibcTotalOrderMagTest, NaNSigns) { testNaNSigns(&func); }         \
-  TEST_F(LlvmLibcTotalOrderMagTest, QuietVsSignalingNaN) {                     \
+#define LIST_TOTALORDERMAG_TESTS(Name, T, func)                                \
+  using LlvmLibc##Name##Test = TotalOrderMagTestTemplate<T>;                   \
+  TEST_F(LlvmLibc##Name##Test, XLesserThanY) { testXLesserThanY(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, XGreaterThanY) { testXGreaterThanY(&func); }    \
+  TEST_F(LlvmLibc##Name##Test, XEqualToY) { testXEqualToY(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, SingleNaN) { testSingleNaN(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, NaNSigns) { testNaNSigns(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, QuietVsSignalingNaN) {                          \
     testQuietVsSignalingNaN(&func);                                            \
   }                                                                            \
-  TEST_F(LlvmLibcTotalOrderMagTest, NaNPayloads) { testNaNPayloads(&func); }
+  TEST_F(LlvmLibc##Name##Test, NaNPayloads) { testNaNPayloads(&func); }
 
 #endif // LIBC_TEST_SRC_MATH_SMOKE_TOTALORDERMAGTEST_H

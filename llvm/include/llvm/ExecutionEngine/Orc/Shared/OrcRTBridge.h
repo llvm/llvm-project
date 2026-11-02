@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/Compiler.h"
 
@@ -22,26 +23,20 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerInstanceName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerInitializeWrapperName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerDeinitializeWrapperName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerReleaseWrapperName;
+LLVM_ABI extern const SymbolNameSpec RegisterEHFrameSectionAllocActionName;
+LLVM_ABI extern const SymbolNameSpec DeregisterEHFrameSectionAllocActionName;
 
-LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
-LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
+LLVM_ABI extern const SymbolNameSpec RegisterJITLoaderGDBAllocActionName;
+LLVM_ABI extern const SymbolNameSpec DeregisterJITLoaderGDBAllocActionName;
 
-LLVM_ABI extern const char *RegisterJITLoaderGDBAllocActionName;
-LLVM_ABI extern const char *DeregisterJITLoaderGDBAllocActionName;
-
-LLVM_ABI extern const char *const DispatchName;
-LLVM_ABI extern const char *const DispatchCtxName;
+LLVM_ABI extern const SymbolNameSpec DispatchName;
+LLVM_ABI extern const SymbolNameSpec DispatchCtxName;
 
 /// Symbol names for the ORC runtime's StandaloneMachOUnwindInfoRegistrar
 /// SPS interface.
 struct MachOUnwindInfoRegistrarSymbolNames {
-  StringRef RegisterSectionsName;
-  StringRef DeregisterSectionsName;
+  SymbolNameSpec RegisterSectionsName;
+  SymbolNameSpec DeregisterSectionsName;
 };
 
 /// Default symbol names for the ORC runtime's
@@ -49,23 +44,7 @@ struct MachOUnwindInfoRegistrarSymbolNames {
 extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
 
-using SPSSimpleExecutorMemoryManagerReserveSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 uint64_t);
-using SPSSimpleExecutorMemoryManagerInitializeSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 shared::SPSFinalizeRequest);
-using SPSSimpleExecutorMemoryManagerDeinitializeSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-using SPSSimpleExecutorMemoryManagerReleaseSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-
 } // end namespace rt
-
-namespace rt_alt {
-LLVM_ABI extern const char *UnwindInfoManagerRegisterActionName;
-LLVM_ABI extern const char *UnwindInfoManagerDeregisterActionName;
-} // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm
 

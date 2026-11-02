@@ -26,8 +26,8 @@ void invoke_function_with_side_effects() {
 // We can however catch the inlined one of course!
 void inlined() {
   int local;
-  global = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global_backup' which will dangle}}
-  global_backup = global; 
+  global = &local;        // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global_backup' which will dangle}}
+  global_backup = global;
   global = nullptr;
 }
 
@@ -72,7 +72,7 @@ void conditional_no_escape(int c) {
   int local = 7;
   if (c)
     global = nullptr; // no-warning
-  (void)local;
+  use(local);
 }
 
 // Pointer compound assignment and increment/decrement keep the pointer in the

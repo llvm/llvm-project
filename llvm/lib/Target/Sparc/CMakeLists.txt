@@ -14,12 +14,16 @@ tablegen(LLVM SparcGenSDNodeInfo.inc -gen-sd-node-info -sdnode-namespace=SPISD)
 tablegen(LLVM SparcGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM SparcGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS SparcOptions.td)
+tablegen(LLVM SparcOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(SparcCommonTableGen)
 
 add_llvm_target(SparcCodeGen
   DelaySlotFiller.cpp
   LeonPasses.cpp
   SparcAsmPrinter.cpp
+  SparcCodeGenPassBuilder.cpp
   SparcInstrInfo.cpp
   SparcISelDAGToDAG.cpp
   SparcISelLowering.cpp
@@ -39,6 +43,8 @@ add_llvm_target(SparcCodeGen
   CodeGenTypes
   Core
   MC
+  Option
+  Passes
   SelectionDAG
   SparcDesc
   SparcInfo

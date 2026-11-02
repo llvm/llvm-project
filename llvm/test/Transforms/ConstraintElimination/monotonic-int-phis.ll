@@ -66,8 +66,7 @@ define void @test_remove_check_with_incrementing_integer_induction(i8 %len.n, i1
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i16 [[IV]], [[LEN]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i16 [[IV]], [[A]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C]], [[T_2]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[C]], true
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i16 [[IV]])

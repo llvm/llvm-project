@@ -39,8 +39,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/Module.h"
 using namespace llvm;
 using WebAssembly::SortRegionInfo;
 
@@ -54,6 +53,8 @@ class WebAssemblyCFGStackifyImpl {
   MachineDominatorTree &MDT;
   MachineLoopInfo &MLI;
   WebAssemblyExceptionInfo &WEI;
+
+  bool UsesWasmEH = false;
 
   // For each block whose label represents the end of a scope, record the block
   // which holds the beginning of the scope. This will allow us to quickly skip
@@ -608,13 +609,6 @@ void WebAssemblyCFGStackifyImpl::placeTryMarker(MachineBasicBlock &MBB) {
         if (MI.isCall()) {
           AfterSet.insert(&MI);
           ThrowingCall = &MI;
-          // Possibly throwing calls are usually wrapped by EH_LABEL
-          // instructions. We don't want to split them and the call.
-          if (MI.getIterator() != Header->begin() &&
-              std::prev(MI.getIterator())->isEHLabel()) {
-            AfterSet.insert(&*std::prev(MI.getIterator()));
-            ThrowingCall = &*std::prev(MI.getIterator());
-          }
           break;
         }
       }
@@ -624,9 +618,9 @@ void WebAssemblyCFGStackifyImpl::placeTryMarker(MachineBasicBlock &MBB) {
   // Local expression tree should go after the TRY.
   // For BLOCK placement, we start the search from the previous instruction of a
   // BB's terminator, but in TRY's case, we should start from the previous
-  // instruction of a call that can throw, or a EH_LABEL that precedes the call,
-  // because the return values of the call's previous instructions can be
-  // stackified and consumed by the throwing call.
+  // instruction of a call that can throw, because the return values of the
+  // call's previous instructions can be stackified and consumed by the throwing
+  // call.
   auto SearchStartPt = ThrowingCall ? MachineBasicBlock::iterator(ThrowingCall)
                                     : Header->getFirstTerminator();
   for (auto I = SearchStartPt, E = Header->begin(); I != E; --I) {
@@ -798,13 +792,6 @@ void WebAssemblyCFGStackifyImpl::placeTryTableMarker(MachineBasicBlock &MBB) {
         if (MI.isCall()) {
           AfterSet.insert(&MI);
           ThrowingCall = &MI;
-          // Possibly throwing calls are usually wrapped by EH_LABEL
-          // instructions. We don't want to split them and the call.
-          if (MI.getIterator() != Header->begin() &&
-              std::prev(MI.getIterator())->isEHLabel()) {
-            AfterSet.insert(&*std::prev(MI.getIterator()));
-            ThrowingCall = &*std::prev(MI.getIterator());
-          }
           break;
         }
       }
@@ -814,9 +801,9 @@ void WebAssemblyCFGStackifyImpl::placeTryTableMarker(MachineBasicBlock &MBB) {
   // Local expression tree should go after the TRY_TABLE.
   // For BLOCK placement, we start the search from the previous instruction of a
   // BB's terminator, but in TRY_TABLE's case, we should start from the previous
-  // instruction of a call that can throw, or a EH_LABEL that precedes the call,
-  // because the return values of the call's previous instructions can be
-  // stackified and consumed by the throwing call.
+  // instruction of a call that can throw, because the return values of the
+  // call's previous instructions can be stackified and consumed by the throwing
+  // call.
   auto SearchStartPt = ThrowingCall ? MachineBasicBlock::iterator(ThrowingCall)
                                     : Header->getFirstTerminator();
   for (auto I = SearchStartPt, E = Header->begin(); I != E; --I) {
@@ -1926,18 +1913,8 @@ bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
       if (EHPadStack.back() == UnwindDest)
         continue;
 
-      // Include EH_LABELs in the range before and after the invoke
-      MachineInstr *RangeBegin = &MI, *RangeEnd = &MI;
-      if (RangeBegin->getIterator() != MBB.begin() &&
-          std::prev(RangeBegin->getIterator())->isEHLabel())
-        RangeBegin = &*std::prev(RangeBegin->getIterator());
-      if (std::next(RangeEnd->getIterator()) != MBB.end() &&
-          std::next(RangeEnd->getIterator())->isEHLabel())
-        RangeEnd = &*std::next(RangeEnd->getIterator());
-
       // If not, record the range.
-      UnwindDestToTryRanges[UnwindDest].push_back(
-          TryRange(RangeBegin, RangeEnd));
+      UnwindDestToTryRanges[UnwindDest].push_back(TryRange(&MI, &MI));
       LLVM_DEBUG(dbgs() << "- Call unwind mismatch: MBB = " << getBBName(&MBB)
                         << "\nCall = " << MI
                         << "\nOriginal dest = " << getBBName(UnwindDest)
@@ -2518,12 +2495,10 @@ void WebAssemblyCFGStackifyImpl::placeMarkers(MachineFunction &MF) {
   for (auto &MBB : MF)
     placeLoopMarker(MBB);
 
-  const MCAsmInfo &MCAI = MF.getTarget().getMCAsmInfo();
   for (auto &MBB : MF) {
     if (MBB.isEHPad()) {
       // Place the TRY/TRY_TABLE for MBB if MBB is the EH pad of an exception.
-      if (MCAI.getExceptionHandlingType() == ExceptionHandling::Wasm &&
-          MF.getFunction().hasPersonalityFn()) {
+      if (UsesWasmEH) {
         if (WebAssembly::WasmUseLegacyEH)
           placeTryMarker(MBB);
         else
@@ -2535,8 +2510,7 @@ void WebAssemblyCFGStackifyImpl::placeMarkers(MachineFunction &MF) {
     }
   }
 
-  if (MCAI.getExceptionHandlingType() == ExceptionHandling::Wasm &&
-      MF.getFunction().hasPersonalityFn()) {
+  if (UsesWasmEH) {
     const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
     // Add an 'unreachable' after 'end_try_table's.
     addUnreachableAfterTryTables(MF, TII);
@@ -2697,7 +2671,10 @@ bool WebAssemblyCFGStackifyImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** CFG Stackifying **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
-  const MCAsmInfo &MCAI = MF.getTarget().getMCAsmInfo();
+
+  UsesWasmEH = MF.getFunction().hasPersonalityFn() &&
+               MF.getFunction().getParent()->getExceptionModel() ==
+                   ExceptionHandling::Wasm;
 
   // Liveness is not tracked for VALUE_STACK physreg.
   MF.getRegInfo().invalidateLiveness();
@@ -2707,8 +2684,7 @@ bool WebAssemblyCFGStackifyImpl::runOnMachineFunction(MachineFunction &MF) {
   placeMarkers(MF);
 
   // Remove unnecessary instructions possibly introduced by try/end_trys.
-  if (MCAI.getExceptionHandlingType() == ExceptionHandling::Wasm &&
-      MF.getFunction().hasPersonalityFn() && WebAssembly::WasmUseLegacyEH)
+  if (UsesWasmEH && WebAssembly::WasmUseLegacyEH)
     removeUnnecessaryInstrs(MF);
 
   // Convert MBB operands in terminators to relative depth immediates.

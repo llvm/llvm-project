@@ -933,6 +933,8 @@ Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
     return Triple::ARMSubArch_v9_6a;
   case ARM::ArchKind::ARMV9_7A:
     return Triple::ARMSubArch_v9_7a;
+  case ARM::ArchKind::ARMV9_8A:
+    return Triple::ARMSubArch_v9_8a;
   case ARM::ArchKind::ARMV8R:
     return Triple::ARMSubArch_v8r;
   case ARM::ArchKind::ARMV8MBaseline:
@@ -2506,6 +2508,8 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   case Triple::xcore:
   case Triple::xtensa:
     return ExceptionHandling::DwarfCFI;
+  case Triple::ve:
+    return ExceptionHandling::SjLj;
   default:
     break;
   }
@@ -2518,19 +2522,21 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   return ExceptionHandling::None;
 }
 
-static FloatABI::ABIType getARMDefaultFloatABI(const Triple &T) {
+static FloatABI::ABIType getARMDefaultFloatABI(const Triple &T,
+                                               StringRef ABIName) {
   Triple::EnvironmentType Env = T.getEnvironment();
   bool IsHard =
       Env == Triple::GNUEABIHF || Env == Triple::GNUEABIHFT64 ||
       Env == Triple::MuslEABIHF || Env == Triple::EABIHF ||
       (T.isOSBinFormatMachO() && T.getSubArch() == Triple::ARMSubArch_v7em) ||
-      T.isOSWindows() || ARM::computeTargetABI(T, "") == ARM::ARM_ABI_AAPCS16;
+      T.isOSWindows() ||
+      ARM::computeTargetABI(T, ABIName) == ARM::ARM_ABI_AAPCS16;
   return IsHard ? FloatABI::Hard : FloatABI::Soft;
 }
 
-FloatABI::ABIType Triple::getDefaultFloatABI() const {
+FloatABI::ABIType Triple::getDefaultFloatABI(StringRef ABIName) const {
   if (isARM() || isThumb())
-    return getARMDefaultFloatABI(*this);
+    return getARMDefaultFloatABI(*this, ABIName);
 
   // MIPS defaults to hard float, except on FreeBSD which uses soft float.
   if (isMIPS())
@@ -2543,6 +2549,8 @@ FloatABI::ABIType Triple::getDefaultFloatABI() const {
   return FloatABI::Hard;
 }
 
+ThreadModel Triple::getDefaultThreadModel() const { return ThreadModel::POSIX; }
+
 LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   switch (getArch()) {
   case loongarch64:
@@ -2550,13 +2558,17 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   case riscv64:
   case riscv32be:
   case riscv64be:
-  case sparc:
-  case sparcel:
   case sparcv9:
   case systemz:
   case ve:
   case wasm32:
   case wasm64:
+    return LongDoubleFormat::IEEEquad;
+  case sparc:
+  case sparcel:
+    // GCC uses IEEE double for bare-metal, NetBSD, and RTEMS SPARC V8 targets.
+    if (getOS() == UnknownOS || getOS() == NetBSD || getOS() == RTEMS)
+      return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case ppc:
   case ppcle:
@@ -2599,6 +2611,16 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   default:
     return LongDoubleFormat::IEEEdouble;
   }
+}
+
+DebuggerKind Triple::getDefaultDebuggerTuning() const {
+  if (isOSDarwin())
+    return DebuggerKind::LLDB;
+  if (isPS())
+    return DebuggerKind::SCE;
+  if (isOSAIX())
+    return DebuggerKind::DBX;
+  return DebuggerKind::GDB;
 }
 
 // HLSL triple environment orders are relied on in the front end

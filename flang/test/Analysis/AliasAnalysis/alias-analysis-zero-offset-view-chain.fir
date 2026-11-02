@@ -9,7 +9,7 @@
 func.func @_QPtest_embox_ref(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "b"}) {
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %ref = fir.declare %arg0(%shape) {test.ptr = "ref", uniq_name = "b"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %ref = fir.declare %arg0(%shape) uniq_name("b") {test.ptr = "ref"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %box = fir.embox %ref(%shape) {test.ptr = "box"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
   return
 }
@@ -23,7 +23,7 @@ func.func @_QPtest_declare_ref() {
   %ref = fir.alloca !fir.array<10xf32> {test.ptr = "ref"}
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %decl = fir.declare %ref(%shape) {test.ptr = "decl", uniq_name = "arr"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %decl = fir.declare %ref(%shape) uniq_name("arr") {test.ptr = "decl"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   return
 }
 
@@ -36,7 +36,7 @@ func.func @_QPtest_embox_declare_ref() {
   %ref = fir.alloca !fir.array<10xf32> {test.ptr = "ref"}
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %decl = fir.declare %ref(%shape) {uniq_name = "arr"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %decl = fir.declare %ref(%shape) uniq_name("arr") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %box = fir.embox %decl(%shape) {test.ptr = "box"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
   return
 }
@@ -48,7 +48,7 @@ func.func @_QPtest_embox_declare_ref() {
 // CHECK-DAG: addr1#0 <-> addr2#0: MustAlias
 func.func @_QPtest_sibling_box_addr(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QPtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QPtestEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %addr1 = fir.box_addr %1#0 {test.ptr = "addr1"} : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<f32>
   %addr2 = fir.box_addr %1#0 {test.ptr = "addr2"} : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<f32>
   return
