@@ -28,7 +28,8 @@ define float @vctp8(ptr %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP21]] = add i32 [[TMP12]], -4
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[TMP11]], label [[TMP22:%.*]]
 ; CHECK:       22:
-; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[TMP19]])
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x float> [ [[TMP19]], [[TMP11]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[DOTLCSSA]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = sitofp i32 [[TMP23]] to float
 ; CHECK-NEXT:    [[TMP25:%.*]] = tail call float @llvm.fabs.f32(float [[TMP24]])
 ; CHECK-NEXT:    ret float [[TMP25]]
@@ -89,7 +90,8 @@ define float @vctp16(ptr %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP21]] = add i32 [[TMP12]], -4
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[TMP11]], label [[TMP22:%.*]]
 ; CHECK:       22:
-; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[TMP19]])
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x float> [ [[TMP19]], [[TMP11]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[DOTLCSSA]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = sitofp i32 [[TMP23]] to float
 ; CHECK-NEXT:    [[TMP25:%.*]] = tail call float @llvm.fabs.f32(float [[TMP24]])
 ; CHECK-NEXT:    ret float [[TMP25]]
@@ -149,7 +151,8 @@ define float @vctpi32(ptr %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP21]] = add i32 [[TMP12]], -4
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[TMP11]], label [[TMP22:%.*]]
 ; CHECK:       22:
-; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[TMP19]])
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x float> [ [[TMP19]], [[TMP11]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[DOTLCSSA]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = sitofp i32 [[TMP23]] to float
 ; CHECK-NEXT:    [[TMP25:%.*]] = tail call float @llvm.fabs.f32(float [[TMP24]])
 ; CHECK-NEXT:    ret float [[TMP25]]
@@ -211,7 +214,8 @@ define float @vctpi64(ptr %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP23]] = add i32 [[TMP12]], -4
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[TMP11]], label [[TMP24:%.*]]
 ; CHECK:       24:
-; CHECK-NEXT:    [[TMP25:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[TMP21]])
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x float> [ [[TMP21]], [[TMP11]] ]
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call i32 @vecAddAcrossF32Mve(<4 x float> [[DOTLCSSA]])
 ; CHECK-NEXT:    [[TMP26:%.*]] = sitofp i32 [[TMP25]] to float
 ; CHECK-NEXT:    [[TMP27:%.*]] = tail call float @llvm.fabs.f32(float [[TMP26]])
 ; CHECK-NEXT:    ret float [[TMP27]]

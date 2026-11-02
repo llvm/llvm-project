@@ -23,7 +23,8 @@ define noundef i64 @test() {
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP5]], [[ICMP6]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB10]], label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[LSR_IV]], 1
+; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i32 [ [[LSR_IV]], [[BB3]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[LSR_IV_LCSSA]], 1
 ; CHECK-NEXT:    call void @foo(i32 [[TMP1]])
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb10:
@@ -31,7 +32,8 @@ define noundef i64 @test() {
 ; CHECK-NEXT:    [[ICMP12:%.*]] = icmp ult i32 [[LSR_IV_NEXT]], 1210
 ; CHECK-NEXT:    br i1 [[ICMP12]], label [[BB3]], label [[BB13:%.*]]
 ; CHECK:       bb13:
-; CHECK-NEXT:    ret i64 [[ZEXT]]
+; CHECK-NEXT:    [[ZEXT_LCSSA1:%.*]] = phi i64 [ [[ZEXT]], [[BB10]] ]
+; CHECK-NEXT:    ret i64 [[ZEXT_LCSSA1]]
 ;
 bb2:
   br label %bb3

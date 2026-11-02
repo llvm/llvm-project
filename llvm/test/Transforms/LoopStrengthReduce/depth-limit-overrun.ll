@@ -9,7 +9,6 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define void @test(i32 %A, i32 %B, i32 %C) {
 ; DEFAULT-LABEL: @test(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = mul i32 [[C:%.*]], -3
 ; DEFAULT-NEXT:    br label [[OUTER_LOOP:%.*]]
 ; DEFAULT:       outer_loop:
 ; DEFAULT-NEXT:    [[PHI2:%.*]] = phi i32 [ [[A:%.*]], [[ENTRY:%.*]] ], [ 204, [[OUTER_TAIL:%.*]] ]
@@ -17,7 +16,7 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; DEFAULT-NEXT:    [[PHI4:%.*]] = phi i32 [ [[B:%.*]], [[ENTRY]] ], [ [[I35:%.*]], [[OUTER_TAIL]] ]
 ; DEFAULT-NEXT:    br label [[GUARD:%.*]]
 ; DEFAULT:       guard:
-; DEFAULT-NEXT:    [[LCMP_MOD:%.*]] = icmp eq i32 [[C]], 0
+; DEFAULT-NEXT:    [[LCMP_MOD:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; DEFAULT-NEXT:    br i1 [[LCMP_MOD]], label [[OUTER_TAIL]], label [[PREHEADER:%.*]]
 ; DEFAULT:       preheader:
 ; DEFAULT-NEXT:    [[I15:%.*]] = shl i32 [[B]], 1
@@ -26,7 +25,6 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = add i32 [[B]], [[PHI4]]
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP4]], [[PHI2]]
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i32 14, [[TMP5]]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = add i32 [[TMP0]], [[PHI2]]
 ; DEFAULT-NEXT:    br label [[INNER_LOOP:%.*]]
 ; DEFAULT:       inner_loop:
 ; DEFAULT-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV_NEXT4:%.*]], [[INNER_LOOP]] ], [ [[TMP6]], [[PREHEADER]] ]
@@ -62,6 +60,7 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; DEFAULT-NEXT:    [[ITER_CMP:%.*]] = icmp eq i32 [[ITER_SUB]], 0
 ; DEFAULT-NEXT:    br i1 [[ITER_CMP]], label [[OUTER_TAIL_LOOPEXIT:%.*]], label [[INNER_LOOP]]
 ; DEFAULT:       outer_tail.loopexit:
+; DEFAULT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[I33]], [[INNER_LOOP]] ]
 ; DEFAULT-NEXT:    br label [[OUTER_TAIL]]
 ; DEFAULT:       outer_tail:
 ; DEFAULT-NEXT:    [[PHI7:%.*]] = phi i32 [ [[PHI2]], [[GUARD]] ], [ [[TMP7]], [[OUTER_TAIL_LOOPEXIT]] ]
@@ -73,7 +72,6 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ;
 ; LIMIT-LABEL: @test(
 ; LIMIT-NEXT:  entry:
-; LIMIT-NEXT:    [[TMP0:%.*]] = mul i32 [[C:%.*]], -3
 ; LIMIT-NEXT:    br label [[OUTER_LOOP:%.*]]
 ; LIMIT:       outer_loop:
 ; LIMIT-NEXT:    [[PHI2:%.*]] = phi i32 [ [[A:%.*]], [[ENTRY:%.*]] ], [ 204, [[OUTER_TAIL:%.*]] ]
@@ -81,7 +79,7 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; LIMIT-NEXT:    [[PHI4:%.*]] = phi i32 [ [[B:%.*]], [[ENTRY]] ], [ [[I35:%.*]], [[OUTER_TAIL]] ]
 ; LIMIT-NEXT:    br label [[GUARD:%.*]]
 ; LIMIT:       guard:
-; LIMIT-NEXT:    [[LCMP_MOD:%.*]] = icmp eq i32 [[C]], 0
+; LIMIT-NEXT:    [[LCMP_MOD:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; LIMIT-NEXT:    br i1 [[LCMP_MOD]], label [[OUTER_TAIL]], label [[PREHEADER:%.*]]
 ; LIMIT:       preheader:
 ; LIMIT-NEXT:    [[I15:%.*]] = shl i32 [[B]], 1
@@ -90,7 +88,6 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; LIMIT-NEXT:    [[TMP4:%.*]] = add i32 [[B]], [[PHI4]]
 ; LIMIT-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP4]], [[PHI2]]
 ; LIMIT-NEXT:    [[TMP6:%.*]] = sub i32 14, [[TMP5]]
-; LIMIT-NEXT:    [[TMP7:%.*]] = add i32 [[TMP0]], [[PHI2]]
 ; LIMIT-NEXT:    br label [[INNER_LOOP:%.*]]
 ; LIMIT:       inner_loop:
 ; LIMIT-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV_NEXT4:%.*]], [[INNER_LOOP]] ], [ [[TMP6]], [[PREHEADER]] ]
@@ -126,6 +123,7 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; LIMIT-NEXT:    [[ITER_CMP:%.*]] = icmp eq i32 [[ITER_SUB]], 0
 ; LIMIT-NEXT:    br i1 [[ITER_CMP]], label [[OUTER_TAIL_LOOPEXIT:%.*]], label [[INNER_LOOP]]
 ; LIMIT:       outer_tail.loopexit:
+; LIMIT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[I33]], [[INNER_LOOP]] ]
 ; LIMIT-NEXT:    br label [[OUTER_TAIL]]
 ; LIMIT:       outer_tail:
 ; LIMIT-NEXT:    [[PHI7:%.*]] = phi i32 [ [[PHI2]], [[GUARD]] ], [ [[TMP7]], [[OUTER_TAIL_LOOPEXIT]] ]

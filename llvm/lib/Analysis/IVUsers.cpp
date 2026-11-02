@@ -130,6 +130,16 @@ static bool IVUseShouldUsePostIncValue(Instruction *User, Value *Operand,
   return true;
 }
 
+static bool isLCSSAPhi(const PHINode *PN, const LoopInfo *LI,
+                       const Instruction *Op) {
+  if (!PN || PN->hasConstantValue() != Op)
+    return false;
+  const Loop *DefLoop = LI->getLoopFor(Op->getParent());
+  return DefLoop && !DefLoop->contains(PN) &&
+         all_of(PN->blocks(),
+                [&](const BasicBlock *BB) { return DefLoop->contains(BB); });
+}
+
 /// Inspect the specified instruction.  If it is a reducible SCEV, recursively
 /// add its users to the IVUsesByStride set and return true.  Otherwise, return
 /// false.
@@ -180,16 +190,17 @@ bool IVUsers::AddUsersIfInteresting(Instruction *I) {
     if (isa<PHINode>(User) && Processed.count(User))
       continue;
 
-    // Descend recursively, but not into PHI nodes outside the current loop.
-    // It's important to see the entire expression outside the loop to get
-    // choices that depend on addressing mode use right, although we won't
-    // consider references outside the loop in all cases.
+    // Descend recursively, but not into non-LCSSA PHI nodes outside the
+    // current loop. It's important to see the entire expression outside the
+    // loop to get choices that depend on addressing mode use right, although we
+    // won't consider references outside the loop in all cases.
     // If User is already in Processed, we don't want to recurse into it again,
     // but do want to record a second reference in the same instruction.
     bool AddUserToIVUsers = false;
     if (LI->getLoopFor(User->getParent()) != L) {
-      if (isa<PHINode>(User) || Processed.count(User) ||
-          !AddUsersIfInteresting(User)) {
+      auto *PN = dyn_cast<PHINode>(User);
+      if ((PN && !isLCSSAPhi(PN, LI, I)) || Processed.count(User) ||
+           !AddUsersIfInteresting(User)) {
         LLVM_DEBUG(dbgs() << "FOUND USER in other loop: " << *User << '\n'
                           << "   OF SCEV: " << *ISE << '\n');
         AddUserToIVUsers = true;

@@ -329,9 +329,10 @@ define i32 @test2() personality ptr @_except_handler3 {
 ; CHECK-NEXT:    invoke void @reserve()
 ; CHECK-NEXT:            to label [[FOR_INC]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
+; CHECK-NEXT:    [[PHI_LCSSA1:%.*]] = phi i32 [ [[PHI]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = catchswitch within none [label [[CATCH_HANDLER:%.*]]] unwind to caller
 ; CHECK:       catch.handler:
-; CHECK-NEXT:    [[PHI_LCSSA:%.*]] = phi i32 [ [[PHI]], [[CATCH_DISPATCH]] ]
+; CHECK-NEXT:    [[PHI_LCSSA:%.*]] = phi i32 [ [[PHI_LCSSA1]], [[CATCH_DISPATCH]] ]
 ; CHECK-NEXT:    [[TMP19:%.*]] = catchpad within [[TMP18]] [ptr null]
 ; CHECK-NEXT:    catchret from [[TMP19]] to label [[DONE:%.*]]
 ; CHECK:       done:

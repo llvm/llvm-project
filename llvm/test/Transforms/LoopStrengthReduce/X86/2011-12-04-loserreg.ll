@@ -66,6 +66,8 @@ define i64 @test(i64 %count, ptr nocapture %srcrow, ptr nocapture %destrow) noun
 ; CHECK-NEXT:    [[SCEVGEP16]] = getelementptr i8, ptr [[DP_036]], i64 16
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND19_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND19_PREHEADER]]:
+; CHECK-NEXT:    [[SCEVGEP8_LCSSA:%.*]] = phi ptr [ [[SCEVGEP5]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ADD_PTR_LCSSA4:%.*]] = phi ptr [ [[ADD_PTR]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[DUMMYCNT_LCSSA:%.*]] = phi i64 [ [[DUMMYCNT]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[REM:%.*]] = and i64 [[COUNT]], 3
 ; CHECK-NEXT:    [[CMP2130:%.*]] = icmp eq i64 [[REM]], 0
@@ -78,10 +80,10 @@ define i64 @test(i64 %count, ptr nocapture %srcrow, ptr nocapture %destrow) noun
 ; CHECK:       [[FOR_BODY23]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY23_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY23]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[ADD_PTR]], i64 [[TMP9]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[ADD_PTR_LCSSA4]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ADD_PTR]], i64 [[TMP10]]
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 [[TMP10]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ADD_PTR_LCSSA4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[SCEVGEP8_LCSSA]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[SCEVGEP6]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[SCEVGEP1]], align 4
 ; CHECK-NEXT:    [[CONV25:%.*]] = fptoui float [[TMP11]] to i32

@@ -9,7 +9,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 ; simplified loop nest.
 ; CHECK-LABEL: @nopreheader(
 ; CHECK: for.cond:
-; CHECK: %tmp128 = add i64 %0, %indvar65
+; CHECK: %tmp128 = add i64 %.lcssa, %indvar65
 define void @nopreheader(ptr %cmd) nounwind ssp {
 entry:
   indirectbr ptr undef, [label %while.cond]

@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=arm-eabi %s -o - | FileCheck %s
 
 ; CHECK-LABEL: t:
-; CHECK-DAG: subgt
-; CHECK-DAG: suble
+; CHECK-DAG: sub r1, r1, r0
+; CHECK-DAG: sub r0, r0, r1
 define i32 @t(i32 %a, i32 %b) {
 entry:
 	%tmp1434 = icmp eq i32 %a, %b		; <i1> [#uses=1]
