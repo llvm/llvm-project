@@ -80,11 +80,12 @@ ScriptedSyntheticChildrenPythonInterface::GetChildAtIndex(uint32_t idx) {
 
 llvm::Expected<uint32_t>
 ScriptedSyntheticChildrenPythonInterface::GetIndexOfChildWithName(
-    ConstString name) {
+    llvm::StringRef name) {
   // A provider without `get_child_index` has no child of that name, which is
   // a friendlier answer than "the method is missing".
+  std::string name_dispatch_storage = name.str();
   llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
-      DispatchToOptional("get_child_index", name.GetCString());
+      DispatchToOptional("get_child_index", name_dispatch_storage.c_str());
   if (!obj_or_err)
     return obj_or_err.takeError();
 
@@ -125,13 +126,13 @@ ScriptedSyntheticChildrenPythonInterface::GetSyntheticValue() {
                        LLVM_PRETTY_FUNCTION);
 }
 
-ConstString ScriptedSyntheticChildrenPythonInterface::GetSyntheticTypeName() {
+std::string ScriptedSyntheticChildrenPythonInterface::GetSyntheticTypeName() {
   StructuredData::ObjectSP obj =
       LogAndDefault(Dispatch("get_type_name"), LLVM_PRETTY_FUNCTION);
   if (!obj)
     return {};
 
-  return ConstString(obj->GetStringValue());
+  return obj->GetStringValue().str();
 }
 
 void ScriptedSyntheticChildrenPythonInterface::Initialize() {

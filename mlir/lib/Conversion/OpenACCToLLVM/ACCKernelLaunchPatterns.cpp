@@ -417,10 +417,8 @@ struct KernelEnvironmentLowering
       deviceAddress[operand] = pointer;
 
     SmallVector<gpu::LaunchFuncOp> launches;
-    environment.walk([&](gpu::LaunchFuncOp launch) {
-      if (launch->getParentOfType<KernelEnvironmentOp>() == environment)
-        launches.push_back(launch);
-    });
+    environment.walk(
+        [&](gpu::LaunchFuncOp launch) { launches.push_back(launch); });
     for (gpu::LaunchFuncOp launch : launches) {
       SmallVector<Value> converted;
       converted.reserve(launch->getNumOperands());

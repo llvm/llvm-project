@@ -10,6 +10,7 @@
 
 ---
 name:            test_ext_zzi_unique
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ext_zzi_unique
@@ -24,6 +25,7 @@ body:             |
 
 ---
 name:            test_ext_zzi_already_destructive
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ext_zzi_already_destructive
@@ -35,6 +37,7 @@ body:             |
 
 ---
 name:            test_ext_zzi_unique_implicit_ops
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ext_zzi_unique_implicit_ops
@@ -49,6 +52,7 @@ body:             |
 
 ---
 name:            test_ext_zzi_undef
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ext_zzi_undef

@@ -128,6 +128,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP8:%.*]] = trunc <vscale x 16 x i32> [[BROADCAST_SPLAT]] to <vscale x 16 x i16>
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[TMP0]])
+; PRED-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 [[TMP2]])
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -141,10 +142,10 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP14:%.*]] = trunc <vscale x 16 x i16> [[TMP13]] to <vscale x 16 x i8>
 ; PRED-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP14]], ptr align 1 [[TMP15]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[TMP0]])
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; PRED-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PRED-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP16]], true
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; PRED-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
@@ -494,6 +495,8 @@ exit:
   ret void
 }
 
+; Force VF 4, as extracting the mask for the replicated store makes
+; vectorization with tail-folding unprofitable otherwise.
 define void @exit_cond_zext_iv_store32(ptr %dst, i64 %N) {
 ; DEFAULT-LABEL: define void @exit_cond_zext_iv_store32(
 ; DEFAULT-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
@@ -636,7 +639,7 @@ loop:
   %iv.1.next = add i32 %iv.1, 1
   %iv.ext = zext i32 %iv.1.next to i64
   %c = icmp ult i64 %iv.ext, %N
-  br i1 %c, label %loop, label %exit
+  br i1 %c, label %loop, label %exit, !llvm.loop !0
 
 exit:
   ret void
@@ -725,3 +728,5 @@ exit:
 
 attributes #0 = { "target-features"="+sve" }
 
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.vectorize.width", i32 4}

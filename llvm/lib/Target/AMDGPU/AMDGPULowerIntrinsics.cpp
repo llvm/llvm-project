@@ -256,7 +256,7 @@ bool AMDGPULowerIntrinsicsImpl::visitMonitorSleep(IntrinsicInst &I) {
     return false;
 
   IRBuilder<> B(&I);
-  Value *NewSleep = B.getInt16(0x2000); // Maximum
+  Value *NewSleep = B.getInt16(127); // Maximum
   I.setArgOperand(0, NewSleep);
 
   return true;
