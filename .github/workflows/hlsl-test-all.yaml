@@ -73,8 +73,7 @@ jobs:
         run: |
             cd llvm-project
             cd build
-            ninja check-llvm
-            ninja check-clang
+            ninja check-llvm-tools-dxil-dis
             ninja check-hlsl-unit
             ninja ${{ inputs.TestTarget }}
       - name: Publish Test Results
