@@ -49,15 +49,9 @@ using namespace llvm::omp::target::rr;
 using namespace llvm::omp::target::debug;
 
 namespace llvm::offload::tmp {
-llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
-                                         ol_device_handle_t Device,
-                                         ol_alloc_type_t Kind, int64_t Size);
 void __ol_tgt_ReportDeallocationOfWrongPtrKind(ol_device_handle_t Device,
                                                void *Ptr,
                                                llvm::StringRef Summary);
-llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
-                             ol_device_handle_t Device, void *Ptr,
-                             ol_alloc_type_t Kind);
 } // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -503,8 +497,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
     return TargetPtr = *AllocOrErr;
   }
 
-  auto AllocOrErr = llvm::offload::tmp::__ol_tgt_MemAlloc(
-      Context, DeviceHandle, toOlAllocTy(Kind), Size);
+  auto AllocOrErr = allocCtxMem(Size, toOlAllocTy(Kind), HstPtr);
   if (!AllocOrErr) {
     REPORT() << "Failure to allocate device memory: "
              << llvm::toString(AllocOrErr.takeError());
@@ -513,9 +506,6 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   assert(*AllocOrErr && "Null pointer upon successful allocation");
 
   TargetPtr = *AllocOrErr;
-
-  llvm::omp::target::recordAllocation(DeviceID, TargetPtr, HstPtr,
-                                      toOlAllocTy(Kind));
   return TargetPtr;
 }
 
@@ -545,8 +535,7 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
     return OFFLOAD_FAIL;
   }
 
-  if (auto Err = llvm::offload::tmp::__ol_tgt_MemFree(
-          Context, DeviceHandle, TgtAllocBegin, toOlAllocTy(Kind))) {
+  if (auto Err = freeCtxMem(TgtAllocBegin)) {
     REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
              << llvm::toString(std::move(Err));
     return OFFLOAD_FAIL;
@@ -555,20 +544,23 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
   return OFFLOAD_SUCCESS;
 }
 
-llvm::Expected<void *> DeviceTy::allocCtxMem(int64_t Size,
-                                             ol_alloc_type_t Type) {
+llvm::Expected<void *> DeviceTy::allocCtxMem(int64_t Size, ol_alloc_type_t Type,
+                                             void *HstPtr) {
   if (isRecordingOrReplaying())
     return RecordReplay->allocate(Size);
 
   void *Ptr = nullptr;
-  if (auto Res = olMemAlloc(Context, DeviceHandle, Type, Size, &Ptr))
+  auto Res = Type == OL_ALLOC_TYPE_HOST
+                 ? olMemAllocHost(Context, DeviceHandle, Size, &Ptr)
+                 : olMemAlloc(Context, DeviceHandle, Type, Size, &Ptr);
+  if (Res)
     return createError(ErrorCode::BackendFailure,
                        "failed to allocate %" PRId64 " bytes on device %d: %s",
                        Size, DeviceID, Res->Details);
 
-  // The plugins track these allocations like any other, so they have to be
-  // recorded as well for the records to describe the same allocations.
-  llvm::omp::target::recordAllocation(DeviceID, Ptr, /*HstPtr=*/nullptr, Type);
+  // The plugins track all the allocations of the context, so they all have to
+  // be recorded for the records to describe the same allocations.
+  llvm::omp::target::recordAllocation(DeviceID, Ptr, HstPtr, Type);
   return Ptr;
 }
 

@@ -877,8 +877,22 @@ Expected<void *> PluginContextTy::allocateImpl(GenericDeviceTy &Device,
 Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
   assert(!Devices.empty() && "context constructed without devices");
   auto InfoOrErr = getAllocInfo(Ptr);
-  if (!InfoOrErr)
+  if (!InfoOrErr) {
+    // The context does not know the pointer: either it was never allocated or
+    // it was already deallocated. The devices that track the allocations still
+    // know the second case, and diagnose both. Without any of them there is
+    // nothing more to say than the error.
+    GenericDeviceTy *Device = nullptr;
+    for (GenericDeviceTy *Candidate : Devices) {
+      if (!Candidate->OMPX_TrackAllocationTraces)
+        continue;
+      if (!Device || Candidate->hasAllocation(Ptr))
+        Device = Candidate;
+    }
+    if (Device)
+      Device->recordDeallocation(Ptr);
     return InfoOrErr.takeError();
+  }
   GenericDeviceTy *OwnerDevice = InfoOrErr->Device;
   if (!OwnerDevice)
     OwnerDevice = Devices.front();

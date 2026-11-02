@@ -1732,26 +1732,6 @@ Error __ol_tgt_DeallocWithVirtualAddress(ol_device_handle_t Device, void *VAddr,
   return Device->Device->deallocateWithVirtualAddress(VAddr, Size);
 }
 
-// Same as olMemAlloc/olMemAllocHost, but takes the plugin allocation kind.
-llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
-                                         ol_device_handle_t Device,
-                                         ol_alloc_type_t Kind, int64_t Size) {
-  if (auto Err = Context->requireDevice(Device))
-    return std::move(Err);
-  return Context->PluginCtx->allocate(*Device->Device, Size, Kind,
-                                      /*Alignment=*/0);
-}
-
-// Same as olMemFree, but for a caller that knows the kind of memory it is
-// freeing, which decides whether the memory goes back to a pool.
-llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
-                             ol_device_handle_t Device, void *Ptr,
-                             ol_alloc_type_t Kind) {
-  if (auto Err = Context->requireDevice(Device))
-    return Err;
-  return Context->PluginCtx->deallocate(*Device->Device, Ptr, Kind);
-}
-
 // Report that \p Ptr was deallocated as another kind of memory than it was
 // allocated as. The kind is known to the caller, not to the plugin.
 void __ol_tgt_ReportDeallocationOfWrongPtrKind(ol_device_handle_t Device,

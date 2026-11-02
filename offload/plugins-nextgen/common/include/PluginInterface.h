@@ -945,6 +945,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// allocation traces are not tracked.
   void recordDeallocation(void *DevicePtr);
 
+  /// Whether \p DevicePtr is the base of an allocation this device tracks,
+  /// including one that has been deallocated since.
+  bool hasAllocation(void *DevicePtr) {
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    return AllocationTraceMap->contains(DevicePtr);
+  }
+
   /// Report that the deallocation of \p DevicePtr was asked for with another
   /// kind of memory than it was allocated as, described by \p Summary. The
   /// plugins do not know the kind of an allocation, whoever issued it does.
