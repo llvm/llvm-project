@@ -17536,9 +17536,25 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     VecTy = getWidenedType(ScalarTy, VL.size());
     [[fallthrough]];
   case Instruction::Select: {
+    const CmpInst *CondCmp = [&]() -> const CmpInst * {
+      if (ShuffleOrOp != Instruction::Select)
+        return nullptr;
+      ArrayRef<Value *> Cond = E->getOperand(0);
+      auto *Ext = dyn_cast<ExtractElementInst>(Cond.front());
+      auto *Cmp = Ext ? dyn_cast<CmpInst>(Ext->getVectorOperand()) : nullptr;
+      if (!Cmp || getNumElements(Cmp->getType()) != Cond.size() ||
+          any_of(enumerate(Cond), [&](const auto &P) {
+            return !match(P.value(), m_ExtractElt(m_Specific(Cmp),
+                                                  m_SpecificInt(P.index())));
+          }))
+        return nullptr;
+      return Cmp;
+    }();
     CmpPredicate VecPred, SwappedVecPred;
     auto MatchCmp = m_Cmp(VecPred, m_Value(), m_Value());
-    if (match(VL0, m_Select(MatchCmp, m_Value(), m_Value())) ||
+    if (CondCmp)
+      VecPred = CondCmp->getPredicate();
+    if (CondCmp || match(VL0, m_Select(MatchCmp, m_Value(), m_Value())) ||
         match(VL0, MatchCmp))
       SwappedVecPred = CmpInst::getSwappedPredicate(VecPred);
     else
@@ -17562,7 +17578,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
 
       auto *VI = cast<Instruction>(UniqueValues[Idx]);
-      CmpPredicate CurrentPred = ScalarTy->isFloatingPointTy()
+      CmpPredicate CurrentPred = CondCmp ? CondCmp->getPredicate()
+                                 : ScalarTy->isFloatingPointTy()
                                      ? CmpInst::BAD_FCMP_PREDICATE
                                      : CmpInst::BAD_ICMP_PREDICATE;
       Value *LHS = nullptr, *RHS = nullptr;
@@ -25436,7 +25453,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                 auto *CI = dyn_cast<ConstantInt>(Op);
                 return CI && CI->getValue().countr_one() >= It->second.first;
               })) {
-            V = FinalShuffle(I == 0 ? RHS : LHS, E);
+            V = I == 0 ? RHS : LHS;
+            if (V->getType() != VecTy)
+              V = Builder.CreateIntCast(V, VecTy,
+                                        GetOperandSignedness(I == 0 ? 1 : 0));
+            V = FinalShuffle(V, E);
             E->VectorizedValue = V;
             ++NumVectorInstructions;
             return V;
@@ -27023,6 +27044,26 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
   SmallDenseSet<ExtractElementInst *, 4> IgnoredExtracts;
+  // The copyable lanes are equal to their scalars. The vector is reused only
+  // if its other lanes are extracted too.
+  SmallPtrSet<const TreeEntry *, 4> ExtractedEntries;
+  for (const ExternalUser &EU : ExternalUses)
+    ExtractedEntries.insert(&EU.E);
+  SmallDenseMap<Value *, const TreeEntry *> CopyableToEntry;
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (TE->State != TreeEntry::Vectorize || !TE->hasCopyableElements() ||
+        !ExtractedEntries.contains(TE.get()) || !TE->UserTreeIndex ||
+        !TE->UserTreeIndex.UserTE->hasState() ||
+        DeletedNodes.contains(TE.get()) ||
+        TransformedToGatherNodes.contains(TE.get()) ||
+        !isa_and_nonnull<Instruction>(TE->VectorizedValue) ||
+        TE->VectorizedValue->getType()->getScalarType() !=
+            TE->Scalars.front()->getType())
+      continue;
+    for (Value *V : TE->Scalars)
+      if (TE->isCopyableElement(V))
+        CopyableToEntry.try_emplace(V, TE.get());
+  }
   // Extract all of the elements with the external uses.
   for (const auto &ExternalUse : ExternalUses) {
     Value *Scalar = ExternalUse.Scalar;
@@ -27360,8 +27401,26 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           }
         }
       } else {
-        Builder.SetInsertPoint(cast<Instruction>(User));
-        Value *NewInst = ExtractAndExtendIfNeeded(Vec);
+        auto *UserI = cast<Instruction>(User);
+        Builder.SetInsertPoint(UserI);
+        Value *NewInst = nullptr;
+        // A user, isomorphic to the user of the node with the copyable scalar,
+        // extracts it from that node, so other trees may reuse the vector.
+        if (const TreeEntry *CE = CopyableToEntry.lookup(Scalar)) {
+          const EdgeInfo &EI = CE->UserTreeIndex;
+          auto *CEVec = cast<Instruction>(CE->VectorizedValue);
+          if (UserI->getOpcode() == EI.UserTE->getOpcode() &&
+              EI.EdgeIdx < UserI->getNumOperands() &&
+              UserI->getOperand(EI.EdgeIdx) == Scalar &&
+              DT->dominates(CEVec, UserI)) {
+            NewInst = Builder.CreateExtractElement(
+                CEVec, CE->findLaneForValue(Scalar));
+            GatherShuffleExtractSeq.insert(cast<Instruction>(NewInst));
+            CSEBlocks.insert(UserI->getParent());
+          }
+        }
+        if (!NewInst)
+          NewInst = ExtractAndExtendIfNeeded(Vec);
         if (isa<StructType>(Scalar->getType()) &&
             isa_and_nonnull<ExtractValueInst>(User) &&
             !isa<StructType>(NewInst->getType())) {
@@ -36035,6 +36094,53 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   return Res;
 }
 
+bool SLPVectorizerPass::vectorizeSeedReductions(ArrayRef<Value *> Vals,
+                                                BoUpSLP &R) {
+  if (!Opts->slp_vectorize_hor)
+    return false;
+  SmallVector<Instruction *> Roots;
+  for (Value *V : Vals) {
+    auto *P = dyn_cast<PHINode>(V);
+    if (!P) {
+      if (auto *I = dyn_cast<Instruction>(V))
+        Roots.push_back(I);
+      continue;
+    }
+    if (LI->isLoopHeader(P->getParent()))
+      return false;
+    for (Value *In : P->incoming_values())
+      if (auto *I = dyn_cast<Instruction>(In))
+        Roots.push_back(I);
+  }
+  if (Roots.size() < 2)
+    return false;
+  RecurKind Kind = getRdxKind(Roots.front());
+  SmallVector<unsigned> Shape;
+  SmallPtrSet<PHINode *, 16> Accs;
+  if (Kind == RecurKind::None || any_of(Roots, [&](Instruction *I) {
+        return R.isDeleted(I) || !isReductionCandidate(I) ||
+               getRdxKind(I) != Kind ||
+               !isReductionOfConsecutiveAccumulators(
+                   I, *LI, *DL, *SE, Opts->slp_recursion_max_depth, Shape,
+                   Accs);
+      }))
+    return false;
+  // The other accumulators of the loop, vectorized across the reductions, mix
+  // with the vectorized reductions.
+  if (any_of((*Accs.begin())->getParent()->phis(),
+             [&](PHINode &P) { return P.hasOneUse() && !Accs.contains(&P); }))
+    return false;
+  bool Res = false;
+  for (Instruction *I : Roots) {
+    if (R.isDeleted(I))
+      continue;
+    HorizontalReduction HorRdx(*Opts);
+    if (HorRdx.matchAssociativeReduction(R, I, *SE, *DT, *DL, *TTI, *TLI))
+      Res |= HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT, *LI) != nullptr;
+  }
+  return Res;
+}
+
 bool SLPVectorizerPass::tryToVectorize(
     Instruction *I, BoUpSLP &R, SmallSetVector<Instruction *, 8> &FMACandidates,
     bool AllowFMACandidates) {
@@ -37175,15 +37281,25 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
 
     HaveVectorizedPhiNodes = tryToVectorizeSequence<Value>(
         *Opts, Incoming, PHICompare, AreCompatiblePHIs,
-        [this, &R, &PHICompare](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+        [this, &R, &PHICompare,
+         &AreCompatiblePHIs](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+          if (vectorizeSeedReductions(Candidates, R))
+            return true;
           // If the whole register vectors are not built in the original order,
           // the phis from the different groups, matching in the leading values,
-          // are tried together.
+          // are tried together. Only the lists, filling a single register and
+          // having compatible phis, are reordered.
+          const unsigned NumRegElts =
+              std::max(2U, R.getMaxVecRegSize() /
+                               R.getVectorElementSize(Candidates.front()));
           SmallVector<Value *> Sorted(Candidates);
           stable_sort(Sorted, [&](Value *V1, Value *V2) {
             return PHICompare(V1, V2, /*PrefixFirst=*/true);
           });
           if (!equal(Sorted, Candidates) &&
+              Candidates.size() / NumRegElts == 1 &&
+              adjacent_find(Candidates, AreCompatiblePHIs) !=
+                  Candidates.end() &&
               (tryToVectorizeList(Candidates, R, /*MaxVFOnly=*/true) ||
                tryToVectorizeList(Sorted, R, /*MaxVFOnly=*/true)))
             return true;
@@ -37880,7 +37996,10 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     return tryToVectorizeSequence<StoreInst>(
         *Opts, ReversedStores, StoreSorter, AreCompatibleStores,
         [&](ArrayRef<StoreInst *> Candidates, bool) {
-          return vectorizeStores(Candidates, R, Attempted, AllowMaskedStores);
+          SmallVector<Value *> Vals(map_range(
+              Candidates, [](StoreInst *SI) { return SI->getValueOperand(); }));
+          return vectorizeSeedReductions(Vals, R) ||
+                 vectorizeStores(Candidates, R, Attempted, AllowMaskedStores);
         },
         /*MaxVFOnly=*/false, R);
   };

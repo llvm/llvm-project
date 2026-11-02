@@ -219,8 +219,14 @@ bool Context::evaluateStringRepr(const EvalSettings &Settings,
       return false;
     }
 
-    if (!Ptr.isLive() || !Ptr.isInitialized() || Ptr.isUnknownSizeArray() ||
-        !Ptr.inArray())
+    if (Ptr.isOnePastEnd()) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+          << AK_Read;
+      return false;
+    }
+
+    if (!Ptr.isLive() || Ptr.isUnknownSizeArray() || !Ptr.inArray() ||
+        !Ptr.isReadablePointerType() || !Ptr.isInitialized())
       return false;
 
     // Must be char.

@@ -8748,6 +8748,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       // fold (sub_sat x, y) -> (and x, ~y) for bool types.
       if (Opcode == ISD::SSUBSAT || Opcode == ISD::USUBSAT)
         return getNode(ISD::AND, DL, VT, N1, getNOT(DL, N2, VT));
+      // mulhs/mulhu on i1 are always 0: the high bit of the 2-bit product of
+      // two booleans is never set. The i1 constant 1 is also -1, so folding
+      // (mulhs x, 1) to (sra x, 0) in DAGCombiner would be wrong here.
+      if (Opcode == ISD::MULHS || Opcode == ISD::MULHU)
+        return getConstant(0, DL, VT);
     }
     break;
   case ISD::SCMP:
