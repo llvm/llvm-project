@@ -777,6 +777,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (#GH212075)
 - Fixed an assertion failure in the constant evaluator after a variable redefinition
   error followed by a redeclaration with a different type. (#GH227733)
+- Fixed an assertion failure while recovering from invalid `__has_embed` parameters at the end of a preprocessing directive. (#GH236416)
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
@@ -813,6 +814,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash when a local register variable bound to a pseudo or status register by an `asm` label,
   such as `register long double t __asm("17");` (the flags register), was used as an inline asm operand.
   Such declarations are now rejected, matching GCC. (#GH225033)
+- Fixed a crash on `break` out of a `for` loop whose init-statement declares a variable in C89 mode (a Clang
+  extension), which happened at `-O1` and above or when the variable had a `cleanup` attribute. (#GH170243)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
@@ -898,9 +901,6 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
-
-- Fixed rejecting valid reference initialization with conversion function templates whose returned type is depending on 
-  template parameters. (#GH226984)
 
 - Fixed a crash when an `address_space` attribute with a dependent argument was
   written after the declarator-id, where it appertains to the declared entity
@@ -1222,6 +1222,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   parameter substituted through an alias template is used as the base of an
   unresolved name, such as `TT<T>::value` in a non-type template parameter's
   type. (#GH88592)
+- Fixed an assertion failure that caused clangd to crash on preprocessor 
+  directives that contain an undefined identifier and end inside an unfinished 
+  subexpression, e.g. due to unclosed parenthesis. (#GH226555)
+- Fixed an assertion when emitting base destructor as alias on targets (such
+  as AVR) which have different address spaces for code and data. (#GH236285)
 
 ### OpenACC Specific Changes
 
@@ -1498,11 +1503,15 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   matching the behavior of such maps outside a mapper.
 - Fixed a crash when the `safelen` and `simdlen` clauses of an OpenMP directive
   have arguments of different integer types. (#GH108367)
+- Fixed a crash when the init or increment of an OpenMP loop uses a braced
+  list, such as `int i = {0}`. (#GH202562)
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
 - Fixed a crash when the loop variable or a loop bound of an OpenMP loop has a
   `_BitInt` type wider than any standard integer type. (#GH140074)
+- Fixed a crash when a non-static data member appears in a `lastprivate` clause
+  inside a member function template of a non-template class. (#GH144302)
 - Loop-transforming constructs such as `tile` and `unroll` are now allowed
   inside a `simd` region for OpenMP 6.0 or later, which classifies them as
   simdizable.

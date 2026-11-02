@@ -2829,7 +2829,6 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
          "the new expression or address the root cause of this usage.");
   llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St;
-  APFloat Value = Result;
   bool ignored;
   St = Result.convert(Info.Ctx.getFloatTypeSemantics(DestType), RM, &ignored);
   return checkFloatingPointResultForConstantFolding(Info, E, St);
@@ -7327,7 +7326,6 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
                            MD->getParent()->isUnion()))
       return false;
 
-    LValue Obj;
     if (!handleAssignment(Info, Args[ExplicitOffset], *ObjectArg,
                           MD->getFunctionObjectParameterReferenceType(),
                           RHSValue))
