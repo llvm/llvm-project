@@ -59,7 +59,7 @@
 // CHK-CUDA: error: unsupported CUDA gpu architecture: xe-pvc
 
 /// On a plain SPIR-V target, a SYCL device must be an Intel GPU or CPU, an IGCA
-/// target or "generic".
+/// target (e.g. igca_20ca) or "generic".
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pcv -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH %s

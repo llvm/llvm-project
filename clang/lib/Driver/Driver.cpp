@@ -3990,7 +3990,7 @@ static StringRef getCanonicalArchString(Compilation &C,
   } else if (Kind == Action::OFK_SYCL && Triple.isSPIRV() &&
              !isPlainSPIRV(Triple) && Arch.isIntel()) {
     // An Intel name or IGCA target always uses a plain SPIR-V target, so
-    // reject it on any other SPIR-V target.
+    // reject it on any other SPIR-V target, e.g. spirv64-amd-amdhsa.
     C.getDriver().Diag(clang::diag::err_target_unsupported_arch)
         << ArchStr << Triple.str();
     return StringRef();
