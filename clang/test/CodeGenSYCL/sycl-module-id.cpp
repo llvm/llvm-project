@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsycl-is-device -triple spir64-unknown-unknown \
+// RUN: %clang_cc1 -fsycl-is-device -fgpu-rdc -triple spir64-unknown-unknown \
 // RUN:   -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s
 
 // Verify that the "sycl-module-id" function attribute is emitted for:

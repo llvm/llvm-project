@@ -1,9 +1,9 @@
 /// Tests that va_list layout matches the host target's getBuiltinVaListKind().
 
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-unknown-linux-gnu \
-// RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=LINUX %s
+// RUN:   -fsycl-is-device -fgpu-rdc -emit-llvm -o - %s | FileCheck --check-prefix=LINUX %s
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
-// RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=WINDOWS %s
+// RUN:   -fsycl-is-device -fgpu-rdc -emit-llvm -o - %s | FileCheck --check-prefix=WINDOWS %s
 
 [[clang::sycl_external]] int f(int n, ...) {
   __builtin_va_list ap1, ap2;

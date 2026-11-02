@@ -222,6 +222,13 @@ void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
                  SYCLKernelEntryPointAttr(SemaRef.Context, AL, TSI));
 }
 
+void SemaSYCL::handleExternalAttr(Decl *D, const ParsedAttr &AL) {
+  if (getLangOpts().SYCLIsDevice && !getLangOpts().GPURelocatableDeviceCode)
+    Diag(AL.getLoc(), diag::warn_sycl_external_ignored)
+        << AL << diag::IgnoredSyclExternalReason::NoGpuRDC;
+  handleSimpleAttribute<SYCLExternalAttr>(*this, D, AL);
+}
+
 void SemaSYCL::CheckDeviceUseOfDecl(NamedDecl *ND, SourceLocation Loc) {
   assert(getLangOpts().SYCLIsDevice &&
          "Should only be called during SYCL device compilation");
